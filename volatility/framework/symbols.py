@@ -4,9 +4,9 @@ Created on 7 Feb 2013
 @author: mike
 '''
 
-import volatility.exceptions as exceptions
+import volatility.framework.exceptions as exceptions
 
-class SymbolSpace(list):
+class SymbolSpace(dict):
     """Handles a collection of SymbolLists"""
 
     def resolve_symbol(self, symbol):
