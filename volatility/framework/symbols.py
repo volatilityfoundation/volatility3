@@ -9,7 +9,7 @@ import volatility.framework.exceptions as exceptions
 class SymbolSpace(dict):
     """Handles a collection of SymbolLists"""
 
-    def resolve_symbol(self, symbol):
+    def resolve(self, symbol):
         symarr = symbol.split("!")
         if len(symarr) == 2:
             listname = symarr[0]
