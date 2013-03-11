@@ -4,8 +4,6 @@ Created on 1 Mar 2013
 @author: mike
 '''
 
-import volatility.framework.obj as obj
-
 class ObjectTemplate(object):
     """Factory class that produces objects that adhere to the Object interface on demand
     
@@ -15,21 +13,29 @@ class ObjectTemplate(object):
        * Members, etc
        etc.
     """
-    def __init__(self, objclass, **kwargs):
+    def __init__(self, objclass, symbol_name = None, size = None, **kwargs):
         self._objclass = objclass
-        self._size = None
+        if not isinstance(size, int):
+            raise TypeError("ObjectTemplate size must be numeric, not " + str(type(size)))
+        self._size = size
+        self._symbol_name = symbol_name
         self._kwargs = kwargs
 
     @property
     def size(self):
         return self._size
 
-    def __call__(self, context, symbol_name, offset, layer_name):
+    @property
+    def symbol_name(self):
+        """Returns the name of the symbol if one was provided"""
+        return self._symbol_name
+
+    def __call__(self, context, offset, layer_name, parent = None):
         """Constructs the object
         
            Returns: an object adhereing to the Object interface 
         """
-        return self._objclass(context, layer_name, offset, symbol_name, self.size, **self._kwargs)
+        return self._objclass(context, layer_name, offset, self.symbol_name, self.size, parent, **self._kwargs)
 
 class MemberTemplate(ObjectTemplate):
     """Factory class that produces members of Structs
@@ -37,11 +43,13 @@ class MemberTemplate(ObjectTemplate):
        This is just like a normal ObjectTemplate, but contains the relative offset
        fron the parent object.
     """
-    def __init__(self, objclass, relative_offset, **kwargs):
-        self._objclass = objclass
+    def __init__(self, objclass, symbol_name = None, size = None, relative_offset = None, *args, **kwargs):
+        if not isinstance(relative_offset, int):
+            raise TypeError("MemberTemplate relative_offset must be numeric, not " + str(type(relative_offset)))
         self._reloffset = relative_offset
-        self._kwargs = kwargs
+        ObjectTemplate.__init__(self, objclass, symbol_name, size, *args, **kwargs)
 
     @property
     def relative_offset(self):
         return self._reloffset
+
