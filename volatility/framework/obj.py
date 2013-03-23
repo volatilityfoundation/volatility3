@@ -64,7 +64,7 @@ class Struct(ObjectInterface):
     """Object which can contain members that are other objects"""
 
     def __init__(self, context, layer_name, offset, symbol_name, size = None, members = None):
-        super(Struct).__init__(self, context, layer_name, offset, symbol_name, size)
+        super(Struct, self).__init__(context, layer_name, offset, symbol_name, size)
         # Members should be an iterable mapping of symbol names to callable Object Templates
         # An object template is a callable that when called with a context, offset, layer_name and symbol_name
         if not isinstance(members, collections.Iterable):

@@ -19,7 +19,7 @@ class SymbolSpace(list):
             for symlist in self:
                 if symlist.name == listname:
                     if symname in symlist:
-                        return symlist[symname]
+                        return symlist.resolve(symname)
                     else:
                         raise exceptions.SymbolNotFoundException("Symbol " + symname + " could not be found in the " + listname + " list")
             else:
@@ -40,30 +40,43 @@ class SymbolListInterface(object):
     """Handles a list of symbols"""
 
     def __init__(self, name, *args, **kwargs):
-        super(SymbolListInterface).__init__(*args, **kwargs)
+        super(SymbolListInterface, self).__init__(*args, **kwargs)
         if not isinstance(name, str) or not name:
             raise exceptions.SymbolSpaceError("Symbol lists cannot be nameless")
         self.name = name
 
+    ### Required Symbol List functions
+
+    def resolve(self, symbol):
+        """Resolves a symbol name into an object template"""
+
+    @property
+    def symbols(self):
+        """Returns an iterator of the symbol names"""
+
+    def set_object_class(self, symbol, clazz):
+        """Overrides the object class for a specific symbol"""
+
+    def get_object_class(self, symbol):
+        """Returns the class associated with a symbol"""
+
+    ### Helper functions that can be overridden
+
     def __len__(self):
         """Returns the number of items in the symbol list"""
+        return len(self.symbols)
 
     def __getitem__(self, key):
         """Resolves a symbol name into an object template"""
-
-    def __setitem__(self, key, value):
-        # TODO: Determine whether this is an appropriate design decision
-        """Overrides a symbol's class from a Struct to the value"""
-
-    def __delitem__(self, key):
-        # TODO: Determine whether this is an appropriate design decision
-        """Removes the class override back to a Struct"""
+        return self.resolve(key)
 
     def __iter__(self):
-        """Returns an iterator of the symbol names"""
+        """Returns an iterator of the available keys"""
+        return self.symbols
 
     def __contains__(self, symbol):
         """Determines whether a symbol exists in the list or not"""
+        return symbol in self.symbols
 
 class VTypeSymbolList(SymbolListInterface):
     """Symbol List that handles"""
@@ -73,32 +86,52 @@ class VTypeSymbolList(SymbolListInterface):
         self._vtypedict = vtype_dictionary
         self._classdict = {}
 
-    def __getitem__(self, key):
-        """Resolves a symbol name into an object template"""
-        size, curdict = self._vtypedict[key]
-        for item in curdict:
-            relative_offset, vtypedict = curdict[item]
-            self._vtypedict_to_template(vtypedict)
-            templates.MemberTemplate(self._classdict.get(key, obj.Struct), symbol_name = item, size = None, relative_offset = relative_offset)
-        members = [self._vtypedict_to_template(curdict[item]) for item in curdict]
-        return templates.ObjectTemplate(self._classdict.get(key, obj.Struct), symbol_name = key, size = size, members = members)
-
     def _vtypedict_to_template(self, dictionary):
         """Converts a vtypedict into an object template"""
-        print(repr(dictionary))
+        if not dictionary:
+            raise exceptions.SymbolSpaceError("Invalid vtype dictionary: " + repr(dictionary))
+        # print(repr(dictionary))
 
-    def __setitem__(self, key, value):
+        symbol_name = dictionary[0]
+        result = {"objclass": self.get_object_class(symbol_name), "symbol_name": symbol_name, "size" : 0}
+
+        # Handle specific vtypes
+        if symbol_name == 'array':
+            result["length"] = dictionary[1]
+            result["target"] = templates.ObjectTemplate(**self._vtypedict_to_template(dictionary[2]))
+            result["size"] = dictionary[1] * result["target"].size
+        elif symbol_name == 'pointer':
+            result["target"] = templates.ObjectTemplate(**self._vtypedict_to_template(dictionary[1]))
+        elif symbol_name == 'Enumeration':
+            result.update(dictionary[1])
+            result["target"] = templates.ObjectTemplate(**self._vtypedict_to_template([result["target"]]))
+        elif symbol_name == 'BitField':
+            result["fields"] = dictionary[1]
+        elif len(dictionary) > 1:
+            raise exceptions.SymbolSpaceError("Unknown vtype format: " + repr(dictionary))
+
+        # print(result)
+        return result
+
+    def set_object_class(self, key, value):
         """Overrides a symbol's class from a Struct to the value"""
         self._classdict[key] = value
 
-    def __iter__(self):
-        """Returns an iterator of the symbol names"""
-        return set(self._classdict.keys() + self._vtypedict.keys())
+    def get_object_class(self, key):
+        return self._classdict.get(key, obj.Struct)
 
-    def __contains__(self, value):
-        """Determines whether a symbol exists in the list or not"""
-        return (value in self._vtypedict or value in self._classdict)
+    @property
+    def symbols(self):
+        """Returns an iterator of the symbol names"""
+        return set(self._classdict.keys()).union(set(self._vtypedict.keys()))
 
     def resolve(self, symbolname):
         if symbolname not in self._vtypedict:
             raise exceptions.SymbolNotFoundException
+        size, curdict = self._vtypedict[symbolname]
+        members = []
+        for item in curdict:
+            relative_offset, vtypedict = curdict[item]
+            member = templates.MemberTemplate(relative_offset = relative_offset, **self._vtypedict_to_template(vtypedict))
+            members.append(member)
+        return templates.ObjectTemplate(self.get_object_class(symbolname), symbol_name = symbolname, size = size, members = members)

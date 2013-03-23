@@ -12,5 +12,6 @@ if __name__ == '__main__':
     ntkrnlmp = symbols.VTypeSymbolList('ntkrnlmp', vtypes)
     sspace = symbols.SymbolSpace()
     sspace.append(ntkrnlmp)
-    sspace.resolve('ntkrnlmp!_FXSAVE_FORMAT')
+    for i in ntkrnlmp.symbols:
+        print(sspace.resolve('ntkrnlmp!' + i))
 
