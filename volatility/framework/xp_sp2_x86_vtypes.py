@@ -4261,7 +4261,6 @@ ntkrnlmp_types = {
     'DeviceObject' : [ 0x4, ['pointer', ['_DEVICE_OBJECT']]],
 } ],
   '__unnamed_17fb' : [ 0x4, {
-    'Srb' : [ 0x0, ['pointer', ['_SCSI_REQUEST_BLOCK']]],
 } ],
   '__unnamed_17ff' : [ 0x10, {
     'Length' : [ 0x0, ['unsigned long']],
@@ -5014,7 +5013,6 @@ ntkrnlmp_types = {
     'OpenRoutine' : [ 0x2c, ['pointer', ['void']]],
     'WriteRoutine' : [ 0x30, ['pointer', ['void']]],
     'FinishRoutine' : [ 0x34, ['pointer', ['void']]],
-    'AdapterObject' : [ 0x38, ['pointer', ['_ADAPTER_OBJECT']]],
     'MappedRegisterBase' : [ 0x3c, ['pointer', ['void']]],
     'PortConfiguration' : [ 0x40, ['pointer', ['void']]],
     'CrashDump' : [ 0x44, ['unsigned char']],

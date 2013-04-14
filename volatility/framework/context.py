@@ -5,7 +5,6 @@ Created on 12 Feb 2013
 '''
 
 import volatility.framework.symbols as symbols
-import volatility.framework.exceptions as exceptions
 
 class Context(object):
     """Maintains the context within which to construct objects"""
@@ -18,14 +17,15 @@ class Context(object):
 
     def add_symbol_list(self, symbol_list):
         """Adds a symbol list to the symbol space used by the context"""
-        if symbol_list.name in self._symbol_space:
-            raise exceptions.SymbolSpaceError("Symbol list " + symbol_list.name + " already exists in this space.")
-        self._symbol_space[symbol_list.name] = symbol_list
+        self._symbol_space.append(symbol_list)
 
     def remove_symbol_list(self, symbol_list_name):
-        if not symbol_list_name in self._symbol_space:
-            raise exceptions.SymbolSpaceError("No symbol list named " + symbol_list_name + " present in the symbol space.")
-        del self._symbol_space[symbol_list_name]
+        """Removes a symbol list from the symbol space used by the context"""
+        self._symbol_space.remove(symbol_list_name)
+
+    def resolve(self, symbol_name):
+        """Resolves a symbol name from the various symbol lists in the symbol space"""
+        return self._symbol_space.resolve(symbol_name)
 
     ### Address Space Functions
 
@@ -35,7 +35,7 @@ class Context(object):
 
     ### Object Factory Functions
 
-    def object(self, symbol, offset, layername = None):
+    def object(self, symbol, layer_name, offset):
         """Object factory, takes a context, symbol, offset and optional layername
         
            Looks up the layername in the context, finds the object template based on the symbol,
@@ -44,5 +44,5 @@ class Context(object):
            Returns a fully constructed object
         """
         object_template = self._symbol_space.resolve(symbol)
-        return object_template(v)
+        return object_template(self, layer_name = layer_name, offset = offset)
 
