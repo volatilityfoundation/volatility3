@@ -4,28 +4,21 @@ Created on 12 Feb 2013
 @author: mike
 '''
 
-import volatility.framework.symbols as symbols
+import volatility.framework.interfaces as interfaces
 
-class Context(object):
+class Context(interfaces.ContextInterface):
     """Maintains the context within which to construct objects"""
 
-    def __init__(self):
-        self._symbol_space = symbols.SymbolSpace()
+    def __init__(self, symbol_space):
+        super(Context, self).__init__()
+        self._symbol_space = symbol_space
         self._layers = {}
 
     ### Symbol Space Functions
 
-    def add_symbol_list(self, symbol_list):
-        """Adds a symbol list to the symbol space used by the context"""
-        self._symbol_space.append(symbol_list)
-
-    def remove_symbol_list(self, symbol_list_name):
-        """Removes a symbol list from the symbol space used by the context"""
-        self._symbol_space.remove(symbol_list_name)
-
-    def resolve(self, symbol_name):
-        """Resolves a symbol name from the various symbol lists in the symbol space"""
-        return self._symbol_space.resolve(symbol_name)
+    @property
+    def symbol_space(self):
+        return self._symbol_space
 
     ### Address Space Functions
 
