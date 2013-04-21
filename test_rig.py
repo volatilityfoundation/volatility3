@@ -20,12 +20,12 @@ def main():
     ctx.symbol_space.append(ntkrnlmp)
     print("Symbols,", nativelst.symbols)
 
-    for _ in [1, 2]:
+    for _ in []: # 1, 2]:
         for i in list(ntkrnlmp.symbols):
             symbol = ctx.symbol_space.resolve('ntkrnlmp!' + i)
             print(symbol.symbol_name, symbol, symbol.size)
             # objthing = symbol(context, layer_name = '', offset = 0)
-
+    symbol = ctx.symbol_space.resolve('ntkrnlmp!_EPROCESS')
 
 
 if __name__ == '__main__':
@@ -33,5 +33,6 @@ if __name__ == '__main__':
     # print(timeit.Timer(main).timeit(10))
     try:
         main()
-    except:
+    except Exception as e:
+        print(repr(e))
         pdb.post_mortem()

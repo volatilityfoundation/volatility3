@@ -85,10 +85,9 @@ class VTypeSymbolTable(interfaces.SymbolTableInterface):
 
         # Otherwise
         if len(dictionary) > 1:
-            print("Symbol name", symbol_name)
             raise exceptions.SymbolSpaceError("Unknown vtype format: " + repr(dictionary))
 
-        return templates.ReferenceTemplate(symbol_name = symbol_name)
+        return templates.ReferenceTemplate(symbol_name = self.name + "!" + symbol_name)
 
     @property
     def symbols(self):

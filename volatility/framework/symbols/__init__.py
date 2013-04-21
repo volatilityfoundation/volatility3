@@ -55,8 +55,7 @@ class SymbolSpace(collections.Mapping):
             table_name = symarr[0]
             symbol_name = symarr[1]
             return self._dict[table_name].resolve(symbol_name)
-        else:
-            raise exceptions.SymbolNotFoundException("Malformed symbol name")
+        raise exceptions.SymbolNotFoundException("Malformed symbol name")
 
     def resolve(self, symbol):
         """Takes a symbol name and resolves it
@@ -64,38 +63,29 @@ class SymbolSpace(collections.Mapping):
            This method ensures that all referenced templatess (inlcuding self-referential templates)
            are satifsfied as ObjectTemplates
         """
-        resolved = {symbol: self._weak_resolve(symbol)}
-        weakref_list = [symbol]
-        while weakref_list:
-            weakref, weakref_list = resolved[weakref_list[0]], weakref_list[1:]
-            for child in weakref.children:
-                if isinstance(child, templates.ReferenceTemplate):
-                    child_resolved = self._weak_resolve(child.symbol_name)
-                    resolved[child.symbol_name] = child_resolved
-                    weakref_list.append(child.symbol_name)
-                    weakref.replace_child(child, child_resolved)
-        return resolved[symbol]
 
-#        symarr = symbol.split("!")
-#        if len(symarr) == 2:
-#            tablename = symarr[0]
-#            symname = symarr[1]
-#            untied = set()
-#            symbol = self._dict[tablename].resolve(symname)
-#        else:
-#            raise exceptions.SymbolNotFoundException("Malformed symbol name")
-#
-#
-#        elif len(symarr) == 1:
-#            # Establish skipping all elements before the symbol list to start from
-#            skip = (start_from is not None)
-#            for slist in reversed(self._dict):
-#                if skip:
-#                    skip = (slist.name != start_from)
-#                else:
-#                    if symbol in self[slist]:
-#                        return self[slist].resolve(symbol, self)
-#            else:
-#                if skip:
-#                    raise exceptions.SymbolSpaceError("Symbol search for \"" + symbol + "\" failed because symbol list \"" + start_from.name + "\" is not in the search space")
-#                raise exceptions.SymbolNotFoundException("Symbol \"" + symbol + "\" could not be found in any symbol list")
+        # Traverse down any resolutions
+
+        resolved = {symbol: self._weak_resolve(symbol)}
+        traverse_list = [symbol]
+        replacements = set()
+        # Whole Symbols that still need traversing
+        while traverse_list:
+            template_traverse_list, traverse_list = [resolved[traverse_list[0]]], traverse_list[1:]
+            # Traverse a single symbol looking for any ReferenceTemplate objects
+            while template_traverse_list:
+                traverser, template_traverse_list = template_traverse_list[0], template_traverse_list[1:]
+                for child in traverser.children:
+                    if isinstance(child, templates.ReferenceTemplate):
+                        # If we haven't seen it before, subresolve it and also add it
+                        # to the "symbols that still need traversing" list
+                        if child.symbol_name not in resolved:
+                            traverse_list.append(child.symbol_name)
+                            resolved[child.symbol_name] = self._weak_resolve(child.symbol_name)
+                        # Stash the replacement
+                        replacements.add((traverser, child))
+                    elif child.children:
+                        template_traverse_list.append(child)
+        for (parent, child) in replacements:
+            parent.replace_child(child, resolved[child.symbol_name])
+        return resolved[symbol]

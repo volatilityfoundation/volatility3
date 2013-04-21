@@ -39,7 +39,7 @@ class ObjectTemplate(interfaces.Template):
         
            We pass in the kwargs directly so they can be changed
         """
-        self.object_class.replace_child(old_child, new_child, self._kwargs)
+        self.object_class.template_replace_child(old_child, new_child, self._kwargs)
 
     def __call__(self, context, layer_name, offset, parent = None):
         """Constructs the object

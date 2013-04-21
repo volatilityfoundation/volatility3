@@ -11,7 +11,19 @@ import volatility.framework.templates as templates
 
 class Void(interfaces.ObjectInterface):
     """Returns an object to represent void/unknown types"""
-    pass
+    @classmethod
+    def template_size(cls, arguments):
+        """Dummy size for Void objects"""
+        return 0
+
+    @classmethod
+    def template_children(cls, arguments):
+        """Returns an empty list for Void objects since they can't have children"""
+        return []
+
+    @classmethod
+    def template_replace_child(cls, old_child, new_child, arguments):
+        """Dummy method that does nothing for Void objects"""
 
 class PrimitiveObject(interfaces.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
@@ -38,7 +50,8 @@ class PrimitiveObject(interfaces.ObjectInterface):
         """Since primitives have no children, this returns an empty list"""
         return []
 
-    def template_replace_child(self, old_child, new_child, arguments):
+    @classmethod
+    def template_replace_child(cls, old_child, new_child, arguments):
         """Since this template can't ever have children, this method can be empty"""
 
 class Integer(PrimitiveObject, int):
@@ -91,15 +104,39 @@ class Pointer(Integer):
         """Convenience function to access unknown attributes by getting them from the target object"""
         return getattr(self.dereference(), attr)
 
-class BitField(PrimitiveObject):
+    @classmethod
+    def template_children(cls, arguments):
+        """Returns the children of the template"""
+        if 'target' in arguments:
+            return [arguments['target']]
+        return []
+
+    @classmethod
+    def template_replace_child(cls, old_child, new_child, arguments):
+        """Substitutes the old_child for the new_child"""
+        if 'target' in arguments:
+            if arguments['target'] == old_child:
+                arguments['target'] = new_child
+
+class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
     def __new__(cls, context, layer_name, offset, symbol_name, target = None, start_bit = 0, end_bit = 0):
-        return target(context = context, layer_name = layer_name, offset = offset, symbol_name = symbol_name)
+        value = target(context = context, layer_name = layer_name, offset = offset, symbol_name = symbol_name)
+        return (value >> start_bit) & ((1 << end_bit) - 1)
+
+    @classmethod
+    def template_children(cls, arguments):
+        """Returns the target type"""
+        if 'target' in arguments:
+            return [arguments['target']]
+        return []
 
 class Enumeration(interfaces.ObjectInterface):
     """Returns an object made up of choices"""
     # FIXME: Add in body for the enumeration object
-    pass
+    @classmethod
+    def template_children(cls, arguments):
+        return []
 
 class Array(interfaces.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
@@ -156,7 +193,7 @@ class Struct(interfaces.ObjectInterface):
     def template_children(cls, arguments):
         """Method to list children of a template"""
         cls.check_members(arguments.get('members', None))
-        return arguments['members'].values()
+        return [ member for _, member in arguments['members'].values()]
 
     @classmethod
     def template_size(cls, arguments):
