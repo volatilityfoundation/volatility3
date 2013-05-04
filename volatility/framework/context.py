@@ -4,7 +4,7 @@ Created on 12 Feb 2013
 @author: mike
 '''
 
-import volatility.framework.interfaces as interfaces
+from volatility.framework import interfaces
 
 class Context(interfaces.ContextInterface):
     """Maintains the context within which to construct objects"""

@@ -4,7 +4,7 @@ Created on 1 Mar 2013
 @author: mike
 '''
 
-import volatility.framework.interfaces as interfaces
+from volatility.framework import interfaces
 
 class ObjectTemplate(interfaces.Template):
     """Factory class that produces objects that adhere to the Object interface on demand

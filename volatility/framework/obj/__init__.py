@@ -6,8 +6,8 @@ Created on 17 Feb 2013
 
 import struct
 import collections
-import volatility.framework.interfaces as interfaces
-import volatility.framework.templates as templates
+from volatility.framework import interfaces
+from volatility.framework.obj import templates
 
 class Void(interfaces.ObjectInterface):
     """Returns an object to represent void/unknown types"""

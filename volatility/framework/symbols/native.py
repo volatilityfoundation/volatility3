@@ -5,11 +5,9 @@ Created on 10 Apr 2013
 '''
 import copy
 import struct
-import volatility.framework.obj as obj
-import volatility.framework.templates as templates
-import volatility.framework.interfaces as interfaces
+from volatility.framework import obj, interfaces
 
-class NativeTable(interfaces.NativeTableInterface):
+class NativeTable(interfaces.symbols.NativeTableInterface):
     """Symbol List that handles Native types"""
 
     def __init__(self, name, native_dictionary):
@@ -35,19 +33,19 @@ class NativeTable(interfaces.NativeTableInterface):
            symbol_space is used to resolve any target symbols if they don't exist in this list
         """
         if symbol_name == 'void':
-            return templates.ObjectTemplate(obj.Void, symbol_name = symbol_name, size = 0)
+            return obj.templates.ObjectTemplate(obj.Void, symbol_name = symbol_name, size = 0)
         elif symbol_name == 'array':
-            return templates.ObjectTemplate(obj.Array, symbol_name = symbol_name, count = 0, target = self.resolve('void'), size = 0)
+            return obj.templates.ObjectTemplate(obj.Array, symbol_name = symbol_name, count = 0, target = self.resolve('void'), size = 0)
         elif symbol_name == 'Enumeration':
-            return templates.ObjectTemplate(obj.Enumeration, symbol_name = symbol_name, target = self.resolve('void'), choices = {}, size = 0)
+            return obj.templates.ObjectTemplate(obj.Enumeration, symbol_name = symbol_name, target = self.resolve('void'), choices = {}, size = 0)
         elif symbol_name == 'BitField':
-            return templates.ObjectTemplate(obj.BitField, symbol_name = symbol_name, start_bit = 0, end_bit = 0, size = 0)
+            return obj.templates.ObjectTemplate(obj.BitField, symbol_name = symbol_name, start_bit = 0, end_bit = 0, size = 0)
 
         _native_type, native_format = self._native_dictionary[symbol_name]
         native_size = struct.calcsize(native_format)
         if symbol_name == 'pointer':
-            return templates.ObjectTemplate(obj.Pointer, symbol_name = symbol_name, target = self.resolve('void'), size = native_size)
-        return templates.ObjectTemplate(self.get_symbol_class(symbol_name), symbol_name = symbol_name, struct_format = native_format, size = native_size)
+            return obj.templates.ObjectTemplate(obj.Pointer, symbol_name = symbol_name, target = self.resolve('void'), size = native_size)
+        return obj.templates.ObjectTemplate(self.get_symbol_class(symbol_name), symbol_name = symbol_name, struct_format = native_format, size = native_size)
 
 native_types = {'int' :                 (obj.Integer, '<i'),
                 'long':                 (obj.Integer, '<i'),

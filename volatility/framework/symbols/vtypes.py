@@ -5,10 +5,8 @@ Created on 10 Apr 2013
 '''
 
 import copy
-import volatility.framework.exceptions as exceptions
-import volatility.framework.interfaces as interfaces
-import volatility.framework.templates as templates
-import volatility.framework.obj as obj
+from volatility.framework import exceptions, obj
+from volatility.framework.interfaces import symbols
 
     ### TODO
     #
@@ -36,7 +34,7 @@ import volatility.framework.obj as obj
     # Need to figure out how to tell the difference for vtypes between
     # vtype list and a struct dictionary
 
-class VTypeSymbolTable(interfaces.SymbolTableInterface):
+class VTypeSymbolTable(symbols.SymbolTableInterface):
     """Symbol Table that handles vtype datastructures"""
 
     def __init__(self, name, vtype_dictionary, native_symbols = None):
@@ -87,7 +85,7 @@ class VTypeSymbolTable(interfaces.SymbolTableInterface):
         if len(dictionary) > 1:
             raise exceptions.SymbolSpaceError("Unknown vtype format: " + repr(dictionary))
 
-        return templates.ReferenceTemplate(symbol_name = self.name + "!" + symbol_name)
+        return obj.templates.ReferenceTemplate(symbol_name = self.name + "!" + symbol_name)
 
     @property
     def symbols(self):
@@ -105,4 +103,4 @@ class VTypeSymbolTable(interfaces.SymbolTableInterface):
             member = (relative_offset, self._vtypedict_to_template(vtypedict))
             members[member_name] = member
         object_class = self.get_symbol_class(symbol_name)
-        return templates.ObjectTemplate(object_class = object_class, symbol_name = symbol_name, size = size, members = members)
+        return obj.templates.ObjectTemplate(object_class = object_class, symbol_name = symbol_name, size = size, members = members)

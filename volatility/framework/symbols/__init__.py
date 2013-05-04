@@ -5,9 +5,7 @@ Created on 7 Feb 2013
 '''
 
 import collections
-from volatility.framework import obj, templates, interfaces
-from volatility.framework.exceptions import SymbolNotFoundException
-import volatility.framework.exceptions as exceptions
+from volatility.framework import obj, interfaces, exceptions
 
 class SymbolSpace(collections.Mapping):
     """Handles an ordered collection of SymbolTables
@@ -17,7 +15,7 @@ class SymbolSpace(collections.Mapping):
     """
 
     def __init__(self, native_symbols):
-        if not isinstance(native_symbols, interfaces.NativeTableInterface):
+        if not isinstance(native_symbols, interfaces.symbols.NativeTableInterface):
             raise TypeError("SymbolSpace native_symbols must be NativeSymbolInterface")
         self._dict = collections.OrderedDict()
         self._native_symbols = native_symbols
@@ -38,7 +36,7 @@ class SymbolSpace(collections.Mapping):
 
     def append(self, value):
         """Adds a symbol_list to the end of the space"""
-        if not isinstance(value, interfaces.SymbolTableInterface):
+        if not isinstance(value, interfaces.symbols.SymbolTableInterface):
             raise TypeError(value)
         if value.name in self._dict:
             del self._dict[value.name]
@@ -76,7 +74,7 @@ class SymbolSpace(collections.Mapping):
             while template_traverse_list:
                 traverser, template_traverse_list = template_traverse_list[0], template_traverse_list[1:]
                 for child in traverser.children:
-                    if isinstance(child, templates.ReferenceTemplate):
+                    if isinstance(child, obj.templates.ReferenceTemplate):
                         # If we haven't seen it before, subresolve it and also add it
                         # to the "symbols that still need traversing" list
                         if child.symbol_name not in resolved:
