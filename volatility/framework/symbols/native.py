@@ -32,6 +32,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         
            symbol_space is used to resolve any target symbols if they don't exist in this list
         """
+        additional = {}
         if symbol_name == 'void':
             return obj.templates.ObjectTemplate(obj.Void, symbol_name = symbol_name)
         elif symbol_name == 'array':
@@ -43,8 +44,11 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
 
         _native_type, native_format = self._native_dictionary[symbol_name]
         if symbol_name == 'pointer':
-            return obj.templates.ObjectTemplate(obj.Pointer, symbol_name = symbol_name, target = self.resolve('void'))
-        return obj.templates.ObjectTemplate(self.get_symbol_class(symbol_name), symbol_name = symbol_name, struct_format = native_format)
+            additional = {'target': self.resolve('void')}
+        return obj.templates.ObjectTemplate(self.get_symbol_class(symbol_name), #pylint: disable-msg=W0142
+                                            symbol_name = symbol_name,
+                                            struct_format = native_format,
+                                            **additional)
 
 native_types = {'int' :                 (obj.Integer, '<i'),
                 'long':                 (obj.Integer, '<i'),
@@ -63,5 +67,5 @@ native_types = {'int' :                 (obj.Integer, '<i'),
                 'float':                (obj.Float, "<d"),
                 'double':               (obj.Float, "<d")}
 x86NativeTable = NativeTable("native", native_types)
-native_types['pointer'] = '<Q'
+native_types['pointer'] = (obj.Pointer, '<Q')
 x64NativeTable = NativeTable("native", native_types)

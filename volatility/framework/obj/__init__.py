@@ -99,15 +99,14 @@ class Pointer(Integer):
                                       struct_format = struct_format)
         self._target = target
 
-    def derefenence(self):
+    def dereference(self):
         """Dereferences the pointer"""
         # Cache the target
         if isinstance(self._target, templates.ObjectTemplate):
-            self._target = self.target(context = self._context,
-                                       layer_name = self._layer_name,
-                                       offset = self,
-                                       self = self._target.size,
-                                       parent = self)
+            self._target = self._target(context = self._context,
+                                        layer_name = self._layer_name,
+                                        offset = self,
+                                        parent = self)
         return self._target
 
     def __getattr__(self, attr):

@@ -30,6 +30,9 @@ def test_symbols():
 def test_memory():
     nativelst = native.x86NativeTable
     virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
+    virtual_types['TEST_POINTER'] = [0x4,
+    {'point1': [0x0, ['pointer', ['TEST_SYMBOL']]]
+     }]
     virtual_types['TEST_SYMBOL'] = [0x6,
     {'test1': [0x0, ['unsigned int']],
      'test2': [0x4, ['unsigned short']]
@@ -39,10 +42,10 @@ def test_memory():
     ctx = framework.Context(nativelst)
     ctx.symbol_space.append(ntkrnlmp)
 
-    base = layers.BufferDataLayer(ctx, 'data', buffer = b"\x01\x00\x00\x00\x02\x00")
+    base = layers.BufferDataLayer(ctx, 'data', buffer = b"\x04\x00\x00\x00\x01\x00\x00\x00\x02\x00")
     ctx.memory.add_layer(base)
-    val = ctx.object('ntkrnlmp!TEST_SYMBOL', 'data', 0)
-    print(hex(val.test1), val.test1.size)
+    val = ctx.object('ntkrnlmp!TEST_POINTER', 'data', 0)
+    print(hex(val.point1.test1), val.point1.test1.size)
 
 if __name__ == '__main__':
     # import timeit
