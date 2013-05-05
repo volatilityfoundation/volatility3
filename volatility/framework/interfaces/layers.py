@@ -50,3 +50,6 @@ class TranslationLayerInterface(DataLayerInterface):
 
     def mapping(self, offset, length):
         """Returns a list of (offset, length, layer) mappings"""
+
+    def dependencies(self):
+        """Returns a list of layer names that this layer translates onto"""

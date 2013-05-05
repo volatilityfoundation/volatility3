@@ -15,3 +15,6 @@ class InvalidAddressException(VolatilityException):
 
 class SymbolSpaceError(VolatilityException):
     """Thrown when an error occurs dealing with Symbols and Symbolspaces"""
+
+class LayerException(VolatilityException):
+    """Thrown when an error occurs dealing with memory and layers"""

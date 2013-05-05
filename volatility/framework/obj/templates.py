@@ -4,9 +4,9 @@ Created on 1 Mar 2013
 @author: mike
 '''
 
-from volatility.framework import interfaces
+from volatility.framework import interfaces, validity
 
-class ObjectTemplate(interfaces.Template):
+class ObjectTemplate(interfaces.Template, validity.ValidityRoutines):
     """Factory class that produces objects that adhere to the Object interface on demand
     
        This is effectively a method of currying, but adds more structure to avoid abuse.
@@ -17,9 +17,7 @@ class ObjectTemplate(interfaces.Template):
     """
     def __init__(self, object_class = None, symbol_name = None, **kwargs):
         super(ObjectTemplate, self).__init__(symbol_name = symbol_name, **kwargs)
-        if not issubclass(object_class, interfaces.ObjectInterface):
-            raise TypeError("ObjectTemplate object_class must inherit from ObjectInterface")
-        self.object_class = object_class
+        self.object_class = self.class_check(object_class, interfaces.ObjectInterface)
 
     @property
     def size(self):
@@ -46,7 +44,11 @@ class ObjectTemplate(interfaces.Template):
         
            Returns: an object adhereing to the Object interface 
         """
-        return self.object_class(context = context, layer_name = layer_name, offset = offset, symbol_name = self.symbol_name, size = self.size, parent = parent, **self._kwargs)
+        # We always use the template size (as calculated by the object class)
+        # over the one passed in by an argument
+        self._kwargs['size'] = self.size
+        self._kwargs['symbol_name'] = self.symbol_name
+        return self.object_class(context = context, layer_name = layer_name, offset = offset, parent = parent, **self._kwargs)
 
 class ReferenceTemplate(interfaces.Template):
     """Factory class that produces objects based on a delayed reference type

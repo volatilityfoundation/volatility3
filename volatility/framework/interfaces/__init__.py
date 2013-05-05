@@ -19,10 +19,15 @@ class ContextInterface(object):
     def symbol_space(self):
         """Returns the symbol_space for the context"""
 
-    ### Address Space Functions
+    ### Memory Functions
 
-    def add_translation_layer(self, layer, name = None):
-        """Adds a named translation layer to the context"""
+    @property
+    def memory(self):
+        """Returns the memory object for the context"""
+
+    def add_layer(self, layer):
+        """Adds a named translation layer to the context memory"""
+        self.memory.add_layer(layer)
 
     ### Object Factory Functions
 
@@ -37,19 +42,19 @@ class ContextInterface(object):
 
 class ObjectInterface(validity.ValidityRoutines):
     """ A base object required to be the ancestor of every object used in volatility """
-    def __init__(self, context, layer_name, offset, symbol_name, size, **kwargs):
+    def __init__(self, context, layer_name, offset, symbol_name, size, parent = None, **kwargs):
         # Since objects are likely to be instantiated often,
         # we're only checking that a context is a context
         # Everything else may be wrong, but that will get caught later on
-        self.type_check(context, ContextInterface)
-        self._context = context
+        self._context = self.type_check(context, ContextInterface)
+        self._parent = None if not parent else self.type_check(parent, ObjectInterface)
         self._offset = offset
         self._layer_name = layer_name
         self._symbol_name = symbol_name
         self._size = size
 
     def cast(self, new_symbol_name):
-        object_template = self._context.resolve(new_symbol_name)
+        object_template = self._context.symbol_space.resolve(new_symbol_name)
         return object_template(context = self._context, layer_name = self._layer_name, offset = self._offset)
 
 class Template(object):

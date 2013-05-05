@@ -53,6 +53,8 @@ class SymbolSpace(collections.Mapping):
             table_name = symarr[0]
             symbol_name = symarr[1]
             return self._dict[table_name].resolve(symbol_name)
+        elif symbol in self.natives:
+            return self.natives.resolve(symbol)
         raise exceptions.SymbolNotFoundException("Malformed symbol name")
 
     def resolve(self, symbol):

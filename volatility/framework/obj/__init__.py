@@ -28,15 +28,19 @@ class Void(interfaces.ObjectInterface):
 class PrimitiveObject(interfaces.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
 
-    def __init__(self, context, layer_name, offset, symbol_name, struct_format = '<I', **kwargs):
-        super(PrimitiveObject, self).__init__(context = context, layer_name = layer_name, offset = offset, symbol_name = symbol_name)
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = '<I', **kwargs):
+        super(PrimitiveObject, self).__init__(context = context,
+                                              layer_name = layer_name,
+                                              offset = offset,
+                                              symbol_name = symbol_name,
+                                              size = size,
+                                              parent = parent)
         self._struct_format = struct_format
 
     @classmethod
     def _struct_value(cls, struct_format, context, layer_name, offset, symbol_name):
-        aspace = context.get_address_space(layer_name)
         length = struct.calcsize(struct_format)
-        data = aspace.read(offset, length)
+        data = context.memory.read(layer_name, offset, length)
         (value,) = struct.unpack(struct_format, data)
         return value
 
@@ -58,19 +62,19 @@ class Integer(PrimitiveObject, int):
     """Primitive Object that handles standard numeric types"""
 
     def __new__(cls, context, layer_name, offset, symbol_name, struct_format, **kwargs):
-        return cls._struct_value(struct_format, context, layer_name, offset, symbol_name)
+        return int.__new__(cls, cls._struct_value(struct_format, context, layer_name, offset, symbol_name))
 
 class Float(PrimitiveObject, float):
     """Primitive Object that handles double or floating point numbers"""
 
     def __new__(cls, context, layer_name, offset, symbol_name, struct_format, **kwargs):
-        return cls._struct_value(struct_format, context, layer_name, offset, symbol_name)
+        return float.__new__(cls, cls._struct_value(struct_format, context, layer_name, offset, symbol_name))
 
 class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes"""
 
-    def __new__(cls, context, layer_name, offset, symbol_name, length = 1):
-        return cls._struct_value(str(length) + "s", context, layer_name, offset, symbol_name)
+    def __new__(cls, context, layer_name, offset, symbol_name, length = 1, **kwargs):
+        return bytes.__new__(cls, cls._struct_value(str(length) + "s", context, layer_name, offset, symbol_name))
 
 class String(PrimitiveObject, str):
     """Primitive Object that handles string values
@@ -78,18 +82,20 @@ class String(PrimitiveObject, str):
        length: specifies the maximum possible length that the string could hold in memory
     """
 
-    def __new__(cls, context, layer_name, offset, symbol_name, length = 1):
-        return cls._struct_value(str(length) + "s", context, layer_name, offset, symbol_name)
+    def __new__(cls, context, layer_name, offset, symbol_name, length = 1, **kwargs):
+        return str.__new__(cls, cls._struct_value(str(length) + "s", context, layer_name, offset, symbol_name))
 
 class Pointer(Integer):
     """Pointer which points to another object"""
-    def __init__(self, context, layer_name, offset, symbol_name, struct_format = None, target = None):
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = None, target = None, **kwargs):
         if not isinstance(target, templates.ObjectTemplate):
             raise TypeError("Pointer targets must be an ObjectTemplate")
         super(Pointer, self).__init__(context,
                                       layer_name = layer_name,
                                       offset = offset,
                                       symbol_name = symbol_name,
+                                      size = size,
+                                      parent = parent,
                                       struct_format = struct_format)
         self._target = target
 
@@ -97,7 +103,11 @@ class Pointer(Integer):
         """Dereferences the pointer"""
         # Cache the target
         if isinstance(self._target, templates.ObjectTemplate):
-            self._target = self.target(context = self._context, layer_name = self._layer_name, offset = self, self = self._target.size, parent = self)
+            self._target = self.target(context = self._context,
+                                       layer_name = self._layer_name,
+                                       offset = self,
+                                       self = self._target.size,
+                                       parent = self)
         return self._target
 
     def __getattr__(self, attr):
@@ -120,8 +130,13 @@ class Pointer(Integer):
 
 class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
-    def __new__(cls, context, layer_name, offset, symbol_name, target = None, start_bit = 0, end_bit = 0):
-        value = target(context = context, layer_name = layer_name, offset = offset, symbol_name = symbol_name)
+    def __new__(cls, context, layer_name, offset, symbol_name, size = None, parent = None, target = None, start_bit = 0, end_bit = 0, **kwargs):
+        value = target(context = context,
+                       layer_name = layer_name,
+                       offset = offset,
+                       symbol_name = symbol_name,
+                       size = size,
+                       parent = parent)
         return (value >> start_bit) & ((1 << end_bit) - 1)
 
     @classmethod
@@ -140,10 +155,15 @@ class Enumeration(interfaces.ObjectInterface):
 
 class Array(interfaces.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, count = 0, target = None):
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, count = 0, target = None, **kwargs):
         if not isinstance(target, templates.ObjectTemplate):
             raise TypeError("Array target must be an ObjectTemplate")
-        super(Array, self).__init__(context = context, layer_name = layer_name, offset = offset, symbol_name = symbol_name, size = size)
+        super(Array, self).__init__(context = context,
+                                    layer_name = layer_name,
+                                    offset = offset,
+                                    symbol_name = symbol_name,
+                                    size = size,
+                                    parent = parent)
         self._count = count
         self._target = target
 
@@ -179,12 +199,13 @@ class Array(interfaces.ObjectInterface, collections.Sequence):
 class Struct(interfaces.ObjectInterface):
     """Object which can contain members that are other objects"""
 
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, members = None):
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, members = None, parent = None, **kwargs):
         super(Struct, self).__init__(context = context,
                                      layer_name = layer_name,
                                      offset = offset,
                                      symbol_name = symbol_name,
-                                     size = size)
+                                     size = size,
+                                     parent = parent)
         self.check_members(members)
         self._members = members
         self._concrete_members = {}

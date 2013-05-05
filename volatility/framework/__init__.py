@@ -28,5 +28,44 @@ def require_version(*args):
             if args[1] > version()[1]:
                 raise Exception("Framework version " + ".".join([str(x) for x in version()[0:1]]) + " is an older revision than the required version " + ".".join([str(x) for x in args[0:2]]))
 
+from volatility.framework import interfaces, symbols, layers
+
+class Context(interfaces.ContextInterface):
+    """Maintains the context within which to construct objects"""
+
+    def __init__(self, natives):
+        super(Context, self).__init__()
+        self._symbol_space = symbols.SymbolSpace(natives)
+        self._memory = layers.Memory()
+
+    ### Symbol Space Functions
+
+    @property
+    def symbol_space(self):
+        return self._symbol_space
+
+    @property
+    def memory(self):
+        return self._memory
+
+    ### Address Space Functions
+
+    def add_translation_layer(self, layer):
+        """Adds a named translation layer to the context"""
+        self._memory.add_layer(layer)
+
+    ### Object Factory Functions
+
+    def object(self, symbol, layer_name, offset):
+        """Object factory, takes a context, symbol, offset and optional layername
+        
+           Looks up the layername in the context, finds the object template based on the symbol,
+           and constructs an object using the object template on the layer at the offset. 
+        
+           Returns a fully constructed object
+        """
+        object_template = self._symbol_space.resolve(symbol)
+        return object_template(self, layer_name = layer_name, offset = offset)
+
 
 
