@@ -9,8 +9,7 @@ from volatility.framework import validity
 class SymbolTableInterface(validity.ValidityRoutines):
     """Handles a table of symbols"""
 
-    def __init__(self, name, native_symbols = None, *args, **kwargs):
-        super(SymbolTableInterface, self).__init__(*args, **kwargs)
+    def __init__(self, name, native_symbols = None):
         self.name = self.type_check(name or None, str)
         self._native_symbols = self.type_check(native_symbols, NativeTableInterface)
 

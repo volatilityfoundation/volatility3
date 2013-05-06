@@ -4,14 +4,16 @@ Created on 4 May 2013
 @author: mike
 '''
 
-from volatility.framework import validity, interfaces
+from volatility.framework import validity
+# We can't just import interfaces because we'd have a cycle going
+from volatility.framework.interfaces import context as context_module
 
 class DataLayerInterface(validity.ValidityRoutines):
     """A Layer that directly holds data (and does not translate it"""
 
     def __init__(self, context, name):
         self._name = self.type_check(name, str)
-        self._context = self.type_check(context, interfaces.ContextInterface)
+        self._context = self.type_check(context, context_module.ContextInterface)
 
     @property
     def name(self):
@@ -30,7 +32,7 @@ class DataLayerInterface(validity.ValidityRoutines):
         """Returns a boolean based on whether the offset is valid or not"""
 
     def read(self, offset, length, pad = False):
-        """Read takes an offset and a size and returns a bytestring of length size
+        """Read takes an offset and a size and returns 'bytes' (not 'str') of length size
         
            If there is a fault of any kind (such as a pagefault), an exception will be thrown
            unless pad is set, in which case the read errors will be replaced by null characters.

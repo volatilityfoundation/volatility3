@@ -5,7 +5,7 @@ Created on 7 Feb 2013
 '''
 
 import collections
-from volatility.framework import obj, interfaces, exceptions
+from volatility.framework import objects, interfaces, exceptions
 
 class SymbolSpace(collections.Mapping):
     """Handles an ordered collection of SymbolTables
@@ -76,7 +76,7 @@ class SymbolSpace(collections.Mapping):
             while template_traverse_list:
                 traverser, template_traverse_list = template_traverse_list[0], template_traverse_list[1:]
                 for child in traverser.children:
-                    if isinstance(child, obj.templates.ReferenceTemplate):
+                    if isinstance(child, objects.templates.ReferenceTemplate):
                         # If we haven't seen it before, subresolve it and also add it
                         # to the "symbols that still need traversing" list
                         if child.symbol_name not in resolved:

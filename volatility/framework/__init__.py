@@ -30,7 +30,7 @@ def require_version(*args):
 
 from volatility.framework import interfaces, symbols, layers
 
-class Context(interfaces.ContextInterface):
+class Context(interfaces.context.ContextInterface):
     """Maintains the context within which to construct objects"""
 
     def __init__(self, natives):

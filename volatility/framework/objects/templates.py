@@ -6,7 +6,7 @@ Created on 1 Mar 2013
 
 from volatility.framework import interfaces, validity
 
-class ObjectTemplate(interfaces.Template, validity.ValidityRoutines):
+class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
     """Factory class that produces objects that adhere to the Object interface on demand
     
        This is effectively a method of currying, but adds more structure to avoid abuse.
@@ -17,7 +17,7 @@ class ObjectTemplate(interfaces.Template, validity.ValidityRoutines):
     """
     def __init__(self, object_class = None, symbol_name = None, **kwargs):
         super(ObjectTemplate, self).__init__(symbol_name = symbol_name, **kwargs)
-        self.object_class = self.class_check(object_class, interfaces.ObjectInterface)
+        self.object_class = self.class_check(object_class, interfaces.objects.ObjectInterface)
 
     @property
     def size(self):
@@ -50,7 +50,7 @@ class ObjectTemplate(interfaces.Template, validity.ValidityRoutines):
         self._kwargs['symbol_name'] = self.symbol_name
         return self.object_class(context = context, layer_name = layer_name, offset = offset, parent = parent, **self._kwargs)
 
-class ReferenceTemplate(interfaces.Template):
+class ReferenceTemplate(interfaces.objects.Template):
     """Factory class that produces objects based on a delayed reference type
     
        It should not return any attributes 

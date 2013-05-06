@@ -5,8 +5,7 @@ Created on 10 Apr 2013
 '''
 
 import copy
-from volatility.framework import exceptions, obj
-from volatility.framework.interfaces import symbols
+from volatility.framework import exceptions, objects, interfaces
 
     ### TODO
     #
@@ -34,7 +33,7 @@ from volatility.framework.interfaces import symbols
     # Need to figure out how to tell the difference for vtypes between
     # vtype list and a struct dictionary
 
-class VTypeSymbolTable(symbols.SymbolTableInterface):
+class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
     """Symbol Table that handles vtype datastructures"""
 
     def __init__(self, name, vtype_dictionary, native_symbols = None):
@@ -43,7 +42,7 @@ class VTypeSymbolTable(symbols.SymbolTableInterface):
         self._overrides = {}
 
     def get_symbol_class(self, symbol):
-        return self._overrides.get(symbol, obj.Struct)
+        return self._overrides.get(symbol, objects.Struct)
 
     def set_symbol_class(self, symbol, clazz):
         if symbol not in self.symbols:
@@ -85,7 +84,7 @@ class VTypeSymbolTable(symbols.SymbolTableInterface):
         if len(dictionary) > 1:
             raise exceptions.SymbolSpaceError("Unknown vtype format: " + repr(dictionary))
 
-        return obj.templates.ReferenceTemplate(symbol_name = self.name + "!" + symbol_name)
+        return objects.templates.ReferenceTemplate(symbol_name = self.name + "!" + symbol_name)
 
     @property
     def symbols(self):
@@ -103,4 +102,4 @@ class VTypeSymbolTable(symbols.SymbolTableInterface):
             member = (relative_offset, self._vtypedict_to_template(vtypedict))
             members[member_name] = member
         object_class = self.get_symbol_class(symbol_name)
-        return obj.templates.ObjectTemplate(object_class = object_class, symbol_name = symbol_name, size = size, members = members)
+        return objects.templates.ObjectTemplate(object_class = object_class, symbol_name = symbol_name, size = size, members = members)

@@ -4,8 +4,8 @@ Created on 4 May 2013
 @author: mike
 '''
 
-from volatility.framework import validity, exceptions
-from volatility.framework.interfaces import layers
+from volatility.framework import validity, interfaces, exceptions
+from volatility.framework.layers import physical
 
 class Memory(validity.ValidityRoutines):
     """Container for multiple layers of data"""
@@ -14,7 +14,10 @@ class Memory(validity.ValidityRoutines):
         self._layers = {}
 
     def read(self, layer, offset, length, pad = False):
-        """Reads from a particular layer at offset for length bytes"""
+        """Reads from a particular layer at offset for length bytes
+        
+           Returns 'bytes' not 'str'
+        """
         return self[layer].read(offset, length, pad)
 
     def write(self, layer, offset, data):
@@ -26,8 +29,8 @@ class Memory(validity.ValidityRoutines):
         
            This will throw an exception if the required dependencies are not met
         """
-        self.type_check(layer, layers.DataLayerInterface)
-        if isinstance(layer, layers.TranslationLayerInterface):
+        self.type_check(layer, interfaces.layers.DataLayerInterface)
+        if isinstance(layer, interfaces.layers.TranslationLayerInterface):
             if layer.name in self._layers:
                 raise exceptions.LayerException("")
             missing_list = [sublayer for sublayer in layer.dependencies if sublayer not in self._layers]
@@ -52,31 +55,4 @@ class Memory(validity.ValidityRoutines):
 
     def check_cycles(self):
         """Runs through the available layers and identifies if there are cycles in the DAG"""
-
-class BufferDataLayer(layers.DataLayerInterface):
-    """A DataLayer class backed by a buffer in memory, designed for testing and swift data access"""
-
-    def __init__(self, context, name, buffer):
-        super(BufferDataLayer, self).__init__(context, name)
-        self._buffer = self.type_check(buffer, bytes)
-
-    @property
-    def maximum_address(self):
-        """Returns the largest available address in the space"""
-        return len(self._buffer) - 1
-
-    @property
-    def minimum_address(self):
-        return 0
-
-    def is_valid(self, offset):
-        return (offset >= self.minimum_address  and offset <= self.maximum_address)
-
-    def read(self, address, length, pad = False):
-        """Reads the data from the buffer"""
-        return self._buffer[address:address + length]
-
-    def write(self, address, data):
-        """Writes the data from to the buffer"""
-        self.type_check(data, bytes)
-        self._buffer = self._buffer[:address] + data + self._buffer[address + len(data):]
+        # TODO: Is having a cycle check necessary?

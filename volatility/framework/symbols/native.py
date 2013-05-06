@@ -4,8 +4,7 @@ Created on 10 Apr 2013
 @author: mike
 '''
 import copy
-import struct
-from volatility.framework import obj, interfaces
+from volatility.framework import objects, interfaces
 
 class NativeTable(interfaces.symbols.NativeTableInterface):
     """Symbol List that handles Native types"""
@@ -19,7 +18,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             self._overrides[native_type] = native_class
 
     def get_symbol_class(self, symbol):
-        ntype, fmt = native_types.get(symbol, (obj.Integer, ''))
+        ntype, fmt = native_types.get(symbol, (objects.Integer, ''))
         return ntype
 
     @property
@@ -27,45 +26,45 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         """Returns an iterator of the symbol names"""
         return set(self._native_dictionary.keys()).union(set(['Enumeration', 'array', 'BitField', 'void', 'pointer']))
 
-    def resolve(self, symbol_name, **kwargs):
+    def resolve(self, symbol_name):
         """Resolves a symbol name into an object template
         
            symbol_space is used to resolve any target symbols if they don't exist in this list
         """
         additional = {}
         if symbol_name == 'void':
-            return obj.templates.ObjectTemplate(obj.Void, symbol_name = symbol_name)
+            return objects.templates.ObjectTemplate(objects.Void, symbol_name = symbol_name)
         elif symbol_name == 'array':
-            return obj.templates.ObjectTemplate(obj.Array, symbol_name = symbol_name, count = 0, target = self.resolve('void'))
+            return objects.templates.ObjectTemplate(objects.Array, symbol_name = symbol_name, count = 0, target = self.resolve('void'))
         elif symbol_name == 'Enumeration':
-            return obj.templates.ObjectTemplate(obj.Enumeration, symbol_name = symbol_name, target = self.resolve('void'), choices = {})
+            return objects.templates.ObjectTemplate(objects.Enumeration, symbol_name = symbol_name, target = self.resolve('void'), choices = {})
         elif symbol_name == 'BitField':
-            return obj.templates.ObjectTemplate(obj.BitField, symbol_name = symbol_name, start_bit = 0, end_bit = 0)
+            return objects.templates.ObjectTemplate(objects.BitField, symbol_name = symbol_name, start_bit = 0, end_bit = 0)
 
         _native_type, native_format = self._native_dictionary[symbol_name]
         if symbol_name == 'pointer':
             additional = {'target': self.resolve('void')}
-        return obj.templates.ObjectTemplate(self.get_symbol_class(symbol_name), #pylint: disable-msg=W0142
+        return objects.templates.ObjectTemplate(self.get_symbol_class(symbol_name), #pylint: disable-msg=W0142
                                             symbol_name = symbol_name,
                                             struct_format = native_format,
                                             **additional)
 
-native_types = {'int' :                 (obj.Integer, '<i'),
-                'long':                 (obj.Integer, '<i'),
-                'unsigned long' :       (obj.Integer, '<I'),
-                'unsigned int' :        (obj.Integer, '<I'),
-                'pointer' :             (obj.Pointer, '<I'),
-                'char' :                (obj.Integer, '<b'),
-                'byte' :                (obj.Bytes, '<c'),
-                'unsigned char' :       (obj.Integer, '<B'),
-                'unsigned short int' :  (obj.Integer, '<H'),
-                'unsigned short' :      (obj.Integer, '<H'),
-                'unsigned be short' :   (obj.Integer, '>H'),
-                'short' :               (obj.Integer, '<h'),
-                'long long' :           (obj.Integer, '<q'),
-                'unsigned long long' :  (obj.Integer, '<Q'),
-                'float':                (obj.Float, "<d"),
-                'double':               (obj.Float, "<d")}
+native_types = {'int' :                 (objects.Integer, '<i'),
+                'long':                 (objects.Integer, '<i'),
+                'unsigned long' :       (objects.Integer, '<I'),
+                'unsigned int' :        (objects.Integer, '<I'),
+                'pointer' :             (objects.Pointer, '<I'),
+                'char' :                (objects.Integer, '<b'),
+                'byte' :                (objects.Bytes, '<c'),
+                'unsigned char' :       (objects.Integer, '<B'),
+                'unsigned short int' :  (objects.Integer, '<H'),
+                'unsigned short' :      (objects.Integer, '<H'),
+                'unsigned be short' :   (objects.Integer, '>H'),
+                'short' :               (objects.Integer, '<h'),
+                'long long' :           (objects.Integer, '<q'),
+                'unsigned long long' :  (objects.Integer, '<Q'),
+                'float':                (objects.Float, "<d"),
+                'double':               (objects.Float, "<d")}
 x86NativeTable = NativeTable("native", native_types)
-native_types['pointer'] = (obj.Pointer, '<Q')
+native_types['pointer'] = (objects.Pointer, '<Q')
 x64NativeTable = NativeTable("native", native_types)

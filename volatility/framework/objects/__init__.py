@@ -7,9 +7,9 @@ Created on 17 Feb 2013
 import struct
 import collections
 from volatility.framework import interfaces
-from volatility.framework.obj import templates
+from volatility.framework.objects import templates
 
-class Void(interfaces.ObjectInterface):
+class Void(interfaces.objects.ObjectInterface):
     """Returns an object to represent void/unknown types"""
     @classmethod
     def template_size(cls, arguments):
@@ -25,10 +25,10 @@ class Void(interfaces.ObjectInterface):
     def template_replace_child(cls, old_child, new_child, arguments):
         """Dummy method that does nothing for Void objects"""
 
-class PrimitiveObject(interfaces.ObjectInterface):
+class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
 
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = '<I', **kwargs):
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = '<I'):
         super(PrimitiveObject, self).__init__(context = context,
                                               layer_name = layer_name,
                                               offset = offset,
@@ -87,7 +87,7 @@ class String(PrimitiveObject, str):
 
 class Pointer(Integer):
     """Pointer which points to another object"""
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = None, target = None, **kwargs):
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = None, target = None):
         if not isinstance(target, templates.ObjectTemplate):
             raise TypeError("Pointer targets must be an ObjectTemplate")
         super(Pointer, self).__init__(context,
@@ -145,16 +145,16 @@ class BitField(PrimitiveObject, int):
             return [arguments['target']]
         return []
 
-class Enumeration(interfaces.ObjectInterface):
+class Enumeration(interfaces.objects.ObjectInterface):
     """Returns an object made up of choices"""
     # FIXME: Add in body for the enumeration object
     @classmethod
     def template_children(cls, arguments):
         return []
 
-class Array(interfaces.ObjectInterface, collections.Sequence):
+class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, count = 0, target = None, **kwargs):
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, count = 0, target = None):
         if not isinstance(target, templates.ObjectTemplate):
             raise TypeError("Array target must be an ObjectTemplate")
         super(Array, self).__init__(context = context,
@@ -195,10 +195,10 @@ class Array(interfaces.ObjectInterface, collections.Sequence):
         """Returns the length of the array"""
         return self._count
 
-class Struct(interfaces.ObjectInterface):
+class Struct(interfaces.objects.ObjectInterface):
     """Object which can contain members that are other objects"""
 
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, members = None, parent = None, **kwargs):
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, members = None, parent = None):
         super(Struct, self).__init__(context = context,
                                      layer_name = layer_name,
                                      offset = offset,
