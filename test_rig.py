@@ -42,14 +42,15 @@ def test_memory():
     ctx = framework.Context(nativelst)
     ctx.symbol_space.append(ntkrnlmp)
 
-    base = layers.physical.BufferDataLayer(ctx, 'data', buffer = b"\x04\x00\x00\x00\x01\x02\x03\x04\x02\x00")
+    base = layers.physical.FileLayer(ctx, 'data', filename = 'trig_data.bin')
     ctx.memory.add_layer(base)
     val = ctx.object('ntkrnlmp!TEST_POINTER', 'data', 0)
     print(hex(val.point1.test1), val.point1.test2)
 
 # TODO:
 #
-# Plugins - Tree/List input/output
+# Config system
+# Plugins - Dataout Tree/List input/output
 # Architectures
 # Scanning Framework
 # GUI/UI

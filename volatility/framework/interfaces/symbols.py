@@ -13,6 +13,8 @@ class SymbolTableInterface(validity.ValidityRoutines):
         self.name = self.type_check(name or None, str)
         self._native_symbols = self.type_check(native_symbols, NativeTableInterface)
 
+    #TODO: Add in support for constants
+
     ### Required Symbol List functions
 
     def resolve(self, symbol):
