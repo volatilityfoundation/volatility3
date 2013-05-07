@@ -19,6 +19,8 @@ class SymbolSpace(collections.Mapping):
             raise TypeError("SymbolSpace native_symbols must be NativeSymbolInterface")
         self._dict = collections.OrderedDict()
         self._native_symbols = native_symbols
+        # Permanently cache all resolved symbols
+        self._resolved = {}
 
     @property
     def natives(self):
@@ -39,11 +41,13 @@ class SymbolSpace(collections.Mapping):
         if not isinstance(value, interfaces.symbols.SymbolTableInterface):
             raise TypeError(value)
         if value.name in self._dict:
-            del self._dict[value.name]
+            self.remove(value.name)
         self._dict[value.name] = value
 
     def remove(self, key):
         """Removes a named symbol_list from the space"""
+        # Reset the resolved list, since we're removing ssome symbols
+        self._resolved = {}
         del self._dict[key]
 
     def _weak_resolve(self, symbol):
@@ -63,29 +67,28 @@ class SymbolSpace(collections.Mapping):
            This method ensures that all referenced templatess (inlcuding self-referential templates)
            are satifsfied as ObjectTemplates
         """
-
         # Traverse down any resolutions
-
-        resolved = {symbol: self._weak_resolve(symbol)}
-        traverse_list = [symbol]
-        replacements = set()
-        # Whole Symbols that still need traversing
-        while traverse_list:
-            template_traverse_list, traverse_list = [resolved[traverse_list[0]]], traverse_list[1:]
-            # Traverse a single symbol looking for any ReferenceTemplate objects
-            while template_traverse_list:
-                traverser, template_traverse_list = template_traverse_list[0], template_traverse_list[1:]
-                for child in traverser.children:
-                    if isinstance(child, objects.templates.ReferenceTemplate):
-                        # If we haven't seen it before, subresolve it and also add it
-                        # to the "symbols that still need traversing" list
-                        if child.symbol_name not in resolved:
-                            traverse_list.append(child.symbol_name)
-                            resolved[child.symbol_name] = self._weak_resolve(child.symbol_name)
-                        # Stash the replacement
-                        replacements.add((traverser, child))
-                    elif child.children:
-                        template_traverse_list.append(child)
-        for (parent, child) in replacements:
-            parent.replace_child(child, resolved[child.symbol_name])
-        return resolved[symbol]
+        if symbol not in self._resolved:
+            self._resolved[symbol] = self._weak_resolve(symbol)
+            traverse_list = [symbol]
+            replacements = set()
+            # Whole Symbols that still need traversing
+            while traverse_list:
+                template_traverse_list, traverse_list = [self._resolved[traverse_list[0]]], traverse_list[1:]
+                # Traverse a single symbol looking for any ReferenceTemplate objects
+                while template_traverse_list:
+                    traverser, template_traverse_list = template_traverse_list[0], template_traverse_list[1:]
+                    for child in traverser.children:
+                        if isinstance(child, objects.templates.ReferenceTemplate):
+                            # If we haven't seen it before, subresolve it and also add it
+                            # to the "symbols that still need traversing" list
+                            if child.symbol_name not in self._resolved:
+                                traverse_list.append(child.symbol_name)
+                                self._resolved[child.symbol_name] = self._weak_resolve(child.symbol_name)
+                            # Stash the replacement
+                            replacements.add((traverser, child))
+                        elif child.children:
+                            template_traverse_list.append(child)
+            for (parent, child) in replacements:
+                parent.replace_child(child, self._resolved[child.symbol_name])
+        return self._resolved[symbol]
