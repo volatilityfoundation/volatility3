@@ -65,7 +65,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Reads from the file at offset for length"""
         if not self.is_valid(offset):
             raise exceptions.InvalidAddressException("Offset outside of the " + self.name + " file boundaries")
-        if not self.is_valid(offset + length):
+        if not self.is_valid(offset + (length - 1)):
             raise exceptions.InvalidAddressException("Final offset outside of the " + self.name + " file boundaries")
         if length < 0:
             raise TypeError("Length must be positive")
