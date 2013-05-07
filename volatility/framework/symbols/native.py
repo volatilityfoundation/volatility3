@@ -16,6 +16,8 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         for native_type in self._native_dictionary.keys():
             native_class, _native_struct = self._native_dictionary[native_type]
             self._overrides[native_type] = native_class
+        # Create this once early, because it may get used a lot
+        self._symbols = set(self._native_dictionary.keys()).union(set(['Enumeration', 'array', 'BitField', 'void', 'pointer']))
 
     def get_symbol_class(self, symbol):
         ntype, fmt = native_types.get(symbol, (objects.Integer, ''))
@@ -24,7 +26,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
     @property
     def symbols(self):
         """Returns an iterator of the symbol names"""
-        return set(self._native_dictionary.keys()).union(set(['Enumeration', 'array', 'BitField', 'void', 'pointer']))
+        return self._symbols
 
     def resolve(self, symbol_name):
         """Resolves a symbol name into an object template
