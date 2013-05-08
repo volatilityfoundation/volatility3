@@ -11,7 +11,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
     """A DataLayer class backed by a buffer in memory, designed for testing and swift data access"""
 
     def __init__(self, context, name, buffer):
-        super(BufferDataLayer, self).__init__(context, name)
+        interfaces.layers.DataLayerInterface.__init__(self, context, name)
         self._buffer = self.type_check(buffer, bytes)
 
     @property
@@ -41,7 +41,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     """a DataLayer backed by a file on the filesystem"""
 
     def __init__(self, context, name, filename):
-        super(FileLayer, self).__init__(context, name)
+        interfaces.layers.DataLayerInterface.__init__(self, context, name)
 
         self._file = open(filename, "r+b")
         self._size = os.path.getsize(filename)
@@ -79,7 +79,10 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         return data
 
     def write(self, offset, data):
-        """Writes to the file"""
+        """Writes to the file
+        
+           This will tehcnically allow writes beyond the extent of the file
+        """
         if not self.is_valid(offset):
             raise exceptions.InvalidAddressException("Offset outside of the " + self.name + " file boundaries")
         self._file.seek(offset)

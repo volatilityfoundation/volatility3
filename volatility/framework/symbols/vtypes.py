@@ -37,7 +37,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
     """Symbol Table that handles vtype datastructures"""
 
     def __init__(self, name, vtype_dictionary, native_symbols = None):
-        super(VTypeSymbolTable, self).__init__(name, native_symbols)
+        interfaces.symbols.SymbolTableInterface.__init__(self, name, native_symbols)
         self._vtypedict = vtype_dictionary
         self._overrides = {}
 

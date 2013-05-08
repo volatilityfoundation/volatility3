@@ -34,7 +34,7 @@ class Context(interfaces.context.ContextInterface):
     """Maintains the context within which to construct objects"""
 
     def __init__(self, natives):
-        super(Context, self).__init__()
+        interfaces.context.ContextInterface.__init__(self)
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
 

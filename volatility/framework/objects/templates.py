@@ -16,7 +16,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
        etc.
     """
     def __init__(self, object_class = None, symbol_name = None, **kwargs):
-        super(ObjectTemplate, self).__init__(symbol_name = symbol_name, **kwargs)
+        interfaces.objects.Template.__init__(self, symbol_name = symbol_name, **kwargs)
         self.object_class = self.class_check(object_class, interfaces.objects.ObjectInterface)
 
     @property

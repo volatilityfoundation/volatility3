@@ -29,12 +29,13 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
 
     def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = '<I'):
-        super(PrimitiveObject, self).__init__(context = context,
-                                              layer_name = layer_name,
-                                              offset = offset,
-                                              symbol_name = symbol_name,
-                                              size = size,
-                                              parent = parent)
+        interfaces.objects.ObjectInterface.__init__(self,
+                                                    context = context,
+                                                    layer_name = layer_name,
+                                                    offset = offset,
+                                                    symbol_name = symbol_name,
+                                                    size = size,
+                                                    parent = parent)
         self._struct_format = struct_format
 
     @classmethod
@@ -90,13 +91,14 @@ class Pointer(Integer):
     def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = None, target = None):
         if not isinstance(target, templates.ObjectTemplate):
             raise TypeError("Pointer targets must be an ObjectTemplate")
-        super(Pointer, self).__init__(context,
-                                      layer_name = layer_name,
-                                      offset = offset,
-                                      symbol_name = symbol_name,
-                                      size = size,
-                                      parent = parent,
-                                      struct_format = struct_format)
+        Integer.__init__(self,
+                         context,
+                         layer_name = layer_name,
+                         offset = offset,
+                         symbol_name = symbol_name,
+                         size = size,
+                         parent = parent,
+                         struct_format = struct_format)
         self._target = target
 
     def dereference(self):
@@ -157,12 +159,13 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, count = 0, target = None):
         if not isinstance(target, templates.ObjectTemplate):
             raise TypeError("Array target must be an ObjectTemplate")
-        super(Array, self).__init__(context = context,
-                                    layer_name = layer_name,
-                                    offset = offset,
-                                    symbol_name = symbol_name,
-                                    size = size,
-                                    parent = parent)
+        interfaces.objects.ObjectInterface.__init__(self,
+                                                    context = context,
+                                                    layer_name = layer_name,
+                                                    offset = offset,
+                                                    symbol_name = symbol_name,
+                                                    size = size,
+                                                    parent = parent)
         self._count = count
         self._target = target
 
@@ -199,12 +202,13 @@ class Struct(interfaces.objects.ObjectInterface):
     """Object which can contain members that are other objects"""
 
     def __init__(self, context, layer_name, offset, symbol_name, size = None, members = None, parent = None):
-        super(Struct, self).__init__(context = context,
-                                     layer_name = layer_name,
-                                     offset = offset,
-                                     symbol_name = symbol_name,
-                                     size = size,
-                                     parent = parent)
+        interfaces.objects.ObjectInterface.__init__(self,
+                                                    context = context,
+                                                    layer_name = layer_name,
+                                                    offset = offset,
+                                                    symbol_name = symbol_name,
+                                                    size = size,
+                                                    parent = parent)
         self.check_members(members)
         self._members = members
         self._concrete_members = {}
