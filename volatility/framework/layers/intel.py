@@ -59,14 +59,14 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             # Check if we're a large page
             if large_page and (entry & (1 << 7)):
                 # We're a large page, the rest is finished below
-                # TODO: We'd have to implement PSE-36 here
+                # If we want to implement PSE-36, it would need to be done here
                 break
             # Figure out how much of the offset we should be using
             start = position
             position -= size
             index = self._mask(offset, start, position + 1) >> (position + 1)
 
-            # Grab the first chunk of the entry we should be using
+            # Grab the base address of the table we'll be getting the next entry from
             base_address = self._mask(entry, self._maxphyaddr - 1, size + self._index_shift)
             # Create the offset for the next entry
             table_offset = base_address | (index << self._index_shift)
@@ -77,11 +77,25 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         if not self._page_is_valid(entry):
             raise exceptions.InvalidAddressException("Page Fault at entry " + hex(entry) + " in page entry")
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
-        return page, 1 << position
+        return page, 1 << (position + 1)
 
     def translate(self, offset):
         """Translates a specific offset based on the paging tables"""
         result, _ = self._translate(offset)
+        return result
+
+    def mapping(self, offset, length):
+        """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
+        
+           This allows translation layers to provide maps of contiguous regions in one layer
+        """
+        result = []
+        while length > 0:
+            chunk_offset, page_size = self._translate(offset)
+            chunk_size = min(page_size - (chunk_offset % page_size), length)
+            length -= chunk_size
+            offset -= chunk_size
+            result.append((chunk_offset, chunk_size))
         return result
 
 class IntelPAE(Intel):

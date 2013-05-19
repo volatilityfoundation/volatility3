@@ -72,10 +72,11 @@ def intel32e(ctx):
 def test_translation():
     nativelst = native.x86NativeTable
     ctx = framework.Context(nativelst)
-    intel, x = intel32e(ctx)
+    intel, x = intel32(ctx)
 
     for val in x:
-        print(hex(val), hex(intel.translate(val)))
+        a, b = intel._translate(val)
+        print(hex(val), hex(a), hex(b))
     #print(bin(0x39000), bin(0xffab8020))
     #print(hex(intel.translate(0xffab8020)))
 
