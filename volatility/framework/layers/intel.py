@@ -4,55 +4,111 @@ Created on 7 May 2013
 @author: mike
 '''
 
+import math
 import struct
-from volatility.framework import interfaces
+from volatility.framework import interfaces, exceptions
 
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
 
     def __init__(self, context, name, memory_layer, pagefile_layer = None, page_map_offset = None):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, name)
-        self._basename = memory_layer
+        self._base_layer = memory_layer
         self._pagefile = pagefile_layer
-
-        # AMD64
-        #self._structure = [('pml4', 51, 40, None, 47, 9, 11, None, None, None),
-        #                   ('pdpt', 51, 40, None, 38, 9, 11, None, None, None),
-        #                   ('pd', 51, 40, None, 29, 9, 11, None, None, None),
-        #                   ('pt', 51, 40, None, 20, 9, 11, None, None, None)]
-        self._structure = [('pd', 31, 20, None, 31, 10, 11, None, None, None),
-                           ('pt', 31, 20, None, 21, 10, 11, None, None, None),
-                           ('p', 31, 20, None, 11, 10, 11, None, None, None) ]
-
         self._page_map_offset = page_map_offset
+        # All Intel address spaces work on 4096 byte pages
+        self._page_size_in_bits = 12
+
+        # These can vary depending on the type of space
+        self._entry_format = "<I"
+        self._maxphyaddr = 32
+        self._bits_per_register = 32
+        self._index_shift = int(math.log(struct.calcsize(self._entry_format), 2))
+        self._structure = [('page directory', 10, False),
+                           ('page table', 10, True)]
+
+
+    def _mask(self, value, high_bit, low_bit):
+        """Returns the bits of a value between highbit and lowbit inclusive"""
+        high_mask = (2 ** (high_bit + 1)) - 1
+        low_mask = (2 ** (low_bit)) - 1
+        mask = (high_mask ^ low_mask)
+        # print(high_bit, low_bit, bin(mask), bin(value))
+        return value & mask
+
+    def _page_is_valid(self, entry):
+        """Returns whether a particular page is valid based on its entry"""
+        return (entry & 1)
+
+    def _translate(self, offset):
+        """Translates a specific offset based on paging tables
+        
+           Returns the offset and the pagesize
+        """
+        # Setup the entry and how far we are through the offset
+        # Position maintains the number of bits left to process
+        # We or with 0x1 to ensure our page_map_offset is always valid
+        entry = self._mask(self._page_map_offset, self._bits_per_register - 1, 0) | 0x1
+        position = min(self._maxphyaddr, self._bits_per_register) - 1
+
+        # Run through the offset in various chunks
+        for (name, size, large_page) in self._structure:
+            # Check we're valid
+            if not self._page_is_valid(entry):
+                raise exceptions.InvalidAddressException("Page Fault at entry " + hex(entry) + " in table " + name)
+            # Check if we're a large page
+            if large_page and (entry & (1 << 7)):
+                # We're a large page, the rest is finished below
+                break
+            # Figure out how much of the offset we should be using
+            start = position
+            position -= size
+            index = self._mask(offset, start, position + 1) >> (position + 1)
+
+            # Grab the first chunk of the entry we should be using
+            base_address = self._mask(entry, self._maxphyaddr - 1, size + self._index_shift)
+            # Create the offset for the next entry
+            table_offset = base_address | (index << self._index_shift)
+            # Read out the new entry from memory
+            entry, = struct.unpack(self._entry_format, self._context.memory.read(self._base_layer, table_offset, struct.calcsize(self._entry_format)))
+
+        # Now we're do
+        if not self._page_is_valid(entry):
+            raise exceptions.InvalidAddressException("Page Fault at entry " + hex(entry) + " in page entry")
+        page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
+        return page, 1 << position
 
     def translate(self, offset):
         """Translates a specific offset based on the paging tables"""
-        entry = self._page_map_offset
-        for (name, entry_start, entry_len, entry_map, offset_start, offset_len, offset_map, page_start, page_len, page_map) in self._structure:
-            # Check page is present
-            # Check for large pages
-            if page_start is not None and (entry & (0x1 << 7)):
-                return self._entry(entry, offset, entry_start, entry_len, entry_map, page_start, page_len, page_map)
-            index = self._entry(entry, offset, entry_start, entry_len, entry_map, offset_start, offset_len, offset_map)
-            # print(name, "index", hex(index))
-            entry = struct.unpack("<I", self._context.memory[self._basename].read(index, 4))[0]
-            # print(name, "entry", hex(entry))
-        return index
+        result, _ = self._translate(offset)
+        return result
 
-    def _entry(self, entry, offset, entry_start, entry_length, entry_map, offset_start, offset_length, offset_map):
-        """Returns the entry to the next lookup table from the previous entry and the offset"""
-        return (self._map_and_mask(entry, entry_start, entry_length, entry_map) |
-                self._map_and_mask(offset, offset_start, offset_length, offset_map))
+class IntelPAE(Intel):
+    """Class for handling Physical Address Extensions for Intel architectures"""
 
-    def _map_and_mask(self, value, value_start, value_length, value_map = None):
-        """Returns the value starting at value_start bits, for value_length bits, and mapped to start at value_map bits"""
-        value_map = value_map or value_start
-        value_mask = ((1 << value_length) - 1) << (value_map - value_length + 1)
+    def __init__(self, *args, **kwargs):
+        Intel.__init__(self, *args, **kwargs)
 
-        # Shift the offset around
-        value = (value >> (value_start - value_length + 1)) << (value_map - value_length + 1)
-        return (value & value_mask)
+        # These can vary depending on the type of space
+        self._maxphyaddr = 36
+        self._bits_per_register = 32
+        self._entry_format = "<Q"
+        self._index_shift = int(math.log(struct.calcsize(self._entry_format), 2))
+        self._structure = [('page directory pointer', 2, False),
+                           ('page directory', 9, True),
+                           ('page table', 9, True)]
 
+class Intel32e(Intel):
 
+    def __init__(self, *args, **kwargs):
+        Intel.__init__(self, *args, **kwargs)
 
+        # These can vary depending on the type of space
+        self._maxphyaddr = 48
+        self._bits_per_register = 64
+        self._entry_format = "<Q"
+        self._index_shift = int(math.log(struct.calcsize(self._entry_format), 2))
+        self._structure = [('page map layer 4', 9, False),
+                           ('page directory pointer', 9, True),
+                           ('page directory', 9, True),
+                           ('page table', 9, True)]

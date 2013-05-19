@@ -5,7 +5,7 @@ Created on 4 May 2013
 '''
 
 from volatility.framework import validity, interfaces, exceptions
-from volatility.framework.layers import physical
+from volatility.framework.layers import physical, intel
 
 class Memory(validity.ValidityRoutines):
     """Container for multiple layers of data"""
