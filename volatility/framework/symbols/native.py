@@ -17,18 +17,18 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             native_class, _native_struct = self._native_dictionary[native_type]
             self._overrides[native_type] = native_class
         # Create this once early, because it may get used a lot
-        self._symbols = set(self._native_dictionary.keys()).union(set(['Enumeration', 'array', 'BitField', 'void', 'pointer']))
+        self._structures = set(self._native_dictionary.keys()).union(set(['Enumeration', 'array', 'BitField', 'void', 'pointer']))
 
-    def get_symbol_class(self, symbol):
-        ntype, fmt = native_types.get(symbol, (objects.Integer, ''))
+    def get_structure_class(self, name):
+        ntype, fmt = native_types.get(name, (objects.Integer, ''))
         return ntype
 
     @property
-    def symbols(self):
-        """Returns an iterator of the symbol names"""
-        return self._symbols
+    def structures(self):
+        """Returns an iterator of the structure symbol names"""
+        return self._structures
 
-    def resolve(self, symbol_name):
+    def get_structure(self, symbol_name):
         """Resolves a symbol name into an object template
         
            symbol_space is used to resolve any target symbols if they don't exist in this list
@@ -37,16 +37,16 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         if symbol_name == 'void':
             return objects.templates.ObjectTemplate(objects.Void, symbol_name = symbol_name)
         elif symbol_name == 'array':
-            return objects.templates.ObjectTemplate(objects.Array, symbol_name = symbol_name, count = 0, target = self.resolve('void'))
+            return objects.templates.ObjectTemplate(objects.Array, symbol_name = symbol_name, count = 0, target = self.get_structure('void'))
         elif symbol_name == 'Enumeration':
-            return objects.templates.ObjectTemplate(objects.Enumeration, symbol_name = symbol_name, target = self.resolve('void'), choices = {})
+            return objects.templates.ObjectTemplate(objects.Enumeration, symbol_name = symbol_name, target = self.get_structure('void'), choices = {})
         elif symbol_name == 'BitField':
             return objects.templates.ObjectTemplate(objects.BitField, symbol_name = symbol_name, start_bit = 0, end_bit = 0)
 
         _native_type, native_format = self._native_dictionary[symbol_name]
         if symbol_name == 'pointer':
-            additional = {'target': self.resolve('void')}
-        return objects.templates.ObjectTemplate(self.get_symbol_class(symbol_name), #pylint: disable-msg=W0142
+            additional = {'target': self.get_structure('void')}
+        return objects.templates.ObjectTemplate(self.get_structure_class(symbol_name), #pylint: disable-msg=W0142
                                             symbol_name = symbol_name,
                                             struct_format = native_format,
                                             **additional)

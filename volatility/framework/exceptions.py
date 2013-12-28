@@ -7,7 +7,7 @@ Created on 1 Dec 2012
 class VolatilityException(Exception):
     """Class to allow filtering of all VolatilityExceptions"""
 
-class SymbolNotFoundException(VolatilityException):
+class SymbolError(VolatilityException):
     """Thrown when a symbol lookup has failed"""
 
 class InvalidAddressException(VolatilityException):

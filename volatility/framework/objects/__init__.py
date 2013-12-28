@@ -65,17 +65,43 @@ class Integer(PrimitiveObject, int):
     def __new__(cls, context, layer_name, offset, symbol_name, struct_format, **kwargs):
         return int.__new__(cls, cls._struct_value(struct_format, context, layer_name, offset, symbol_name))
 
+    def write(self, value):
+        """Writes the object into the layer of the context at the current offset"""
+        if isinstance(value, int):
+            data = struct.pack(self._struct_format, value)
+            return self._context.memory.write(self._layer_name, self._offset, data)
+        raise TypeError("Integer objects require an integer to be written")
+
 class Float(PrimitiveObject, float):
     """Primitive Object that handles double or floating point numbers"""
 
     def __new__(cls, context, layer_name, offset, symbol_name, struct_format, **kwargs):
         return float.__new__(cls, cls._struct_value(struct_format, context, layer_name, offset, symbol_name))
 
+    def write(self, value):
+        """Writes the object into the layer of the context at the current offset"""
+        if isinstance(value, float):
+            data = struct.pack(self._struct_format, value)
+            return self._context.memory.write(self._layer_name, self._offset, data)
+        raise TypeError("Float objects require a float to be written")
+
 class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes"""
 
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, length = 1, **kwargs):
+        bytes.__init__()
+        PrimitiveObject.__init__(self, context, layer_name, offset, symbol_name, size, parent, struct_format = str(length) + 's')
+        self.length = length
+
     def __new__(cls, context, layer_name, offset, symbol_name, length = 1, **kwargs):
         return bytes.__new__(cls, cls._struct_value(str(length) + "s", context, layer_name, offset, symbol_name))
+
+    def write(self, value):
+        """Writes the object into the layer of the context at the current offset"""
+        if isinstance(value, bytes):
+            data = struct.pack(self._struct_format, value)
+            return self._context.memory.write(self._layer_name, self._offset, data)
+        raise TypeError("Bytes objects require a bytes type to be written")
 
 class String(PrimitiveObject, str):
     """Primitive Object that handles string values
@@ -83,8 +109,20 @@ class String(PrimitiveObject, str):
        length: specifies the maximum possible length that the string could hold in memory
     """
 
+    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, length = 1, **kwargs):
+        str.__init__()
+        PrimitiveObject.__init__(self, context, layer_name, offset, symbol_name, size, parent, struct_format = str(length) + 's')
+        self.length = length
+
     def __new__(cls, context, layer_name, offset, symbol_name, length = 1, **kwargs):
         return str.__new__(cls, cls._struct_value(str(length) + "s", context, layer_name, offset, symbol_name))
+
+    def write(self, value):
+        """Writes the object into the layer of the context at the current offset"""
+        if isinstance(value, str):
+            data = struct.pack(self._struct_format, value)
+            return self._context.memory.write(self._layer_name, self._offset, data)
+        raise TypeError("String objects require a string to be written")
 
 class Pointer(Integer):
     """Pointer which points to another object"""
@@ -147,12 +185,18 @@ class BitField(PrimitiveObject, int):
             return [arguments['target']]
         return []
 
+    def write(self, value):
+        raise NotImplementedError("Writing to BitFields is not yet implemented")
+
 class Enumeration(interfaces.objects.ObjectInterface):
     """Returns an object made up of choices"""
     # FIXME: Add in body for the enumeration object
     @classmethod
     def template_children(cls, arguments):
         return []
+
+    def write(self, value):
+        raise NotImplementedError("Writing to Enumerations is not yet implemented")
 
 class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
@@ -197,6 +241,9 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     def __len__(self):
         """Returns the length of the array"""
         return self._count
+
+    def write(self, value):
+        raise NotImplementedError("Writing to Arrays is not yet implemented")
 
 class Struct(interfaces.objects.ObjectInterface):
     """Object which can contain members that are other objects"""
@@ -253,3 +300,6 @@ class Struct(interfaces.objects.ObjectInterface):
             self._concrete_members[attr] = member
             return member
         raise AttributeError("'" + self._symbol_name + "' Struct has no attribute '" + attr + "'")
+
+    def write(self, value):
+        raise TypeError("Structs cannot be written to directly, invidivual members must be written instead")

@@ -21,7 +21,11 @@ class ObjectInterface(validity.ValidityRoutines):
         self._symbol_name = symbol_name
         self._size = size
 
+    def write(self, value):
+        """Writes the new value into the format at the offset the object currently resides at"""
+
     def cast(self, new_symbol_name):
+        """Returns a new object at the offset and from the layer that the current object inhabits"""
         object_template = self._context.symbol_space.resolve(new_symbol_name)
         return object_template(context = self._context, layer_name = self._layer_name, offset = self._offset)
 

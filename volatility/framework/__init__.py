@@ -64,7 +64,7 @@ class Context(interfaces.context.ContextInterface):
         
            Returns a fully constructed object
         """
-        object_template = self._symbol_space.resolve(symbol)
+        object_template = self._symbol_space.get_structure(symbol)
         return object_template(self, layer_name = layer_name, offset = offset)
 
 

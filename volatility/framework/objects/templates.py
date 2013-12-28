@@ -56,5 +56,5 @@ class ReferenceTemplate(interfaces.objects.Template):
        It should not return any attributes 
     """
     def __call__(self, context, *args, **kwargs):
-        template = context.symbol_space.resolve(self._symbol_name)
+        template = context.symbol_space.get_structure(self._symbol_name)
         return template(context = context, *args, **kwargs)

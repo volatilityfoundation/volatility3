@@ -4,70 +4,87 @@ Created on 4 May 2013
 @author: mike
 '''
 
-from volatility.framework import validity
+from volatility.framework import validity, exceptions
 
 class SymbolTableInterface(validity.ValidityRoutines):
     """Handles a table of symbols"""
 
-    def __init__(self, name, native_symbols = None):
+    def __init__(self, name, native_structures = None):
         self.name = self.type_check(name or None, str)
-        self._native_symbols = self.type_check(native_symbols, NativeTableInterface)
+        self._native_structures = self.type_check(native_structures, NativeTableInterface)
 
-    #TODO: Add in support for constants
+    ### Required Constant symbol functions
 
-    ### Required Symbol List functions
+    def get_constant(self, name):
+        """Resolves a symbol name into a constant
+        
+           If the symbol isn't found, it raises a SymbolError exception
+        """
 
-    def resolve(self, symbol):
+    @ property
+    def constants(self):
+        """Returns an iterator of the constant symbols"""
+
+    ### Required Structure symbol functions
+
+    def get_structure(self, name):
         """Resolves a symbol name into an object template
         
-           If the symbol isn't found it raises a SymbolNotFound exception
+           If the symbol isn't found it raises a SymbolError exception
         """
 
     @property
-    def symbols(self):
-        """Returns an iterator of the symbol names"""
+    def structures(self):
+        """Returns an iterator of the structure symbols"""
 
     ### Native Type Handler
 
     @property
     def natives(self):
         """Returns None or a symbol_space for handling space specific native types"""
-        return self._native_symbols
+        return self._native_structures
 
     ### Functions for overriding classes
 
-    def set_symbol_class(self, symbol, clazz):
-        """Overrides the object class for a specific symbol
+    def set_structure_class(self, name, clazz):
+        """Overrides the object class for a specific structure symbol
 
-           Symbol *must* be present in self.symbols
+           Name *must* be present in self.structures
         """
 
-    def get_symbol_class(self, symbol):
-        """Returns the class associated with a symbol"""
+    def get_structure_class(self, name):
+        """Returns the class associated with a structure symbol"""
 
-    def del_symbol_class(self, symbol):
-        """Removes the associated class override for a specific symbol"""
+    def del_structure_class(self, name):
+        """Removes the associated class override for a specific structure symbol"""
 
-    ### Helper functions that can be overridden
-
-    def __len__(self):
-        """Returns the number of items in the symbol list"""
-        return len(self.symbols)
-
-    def __getitem__(self, key):
-        """Resolves a symbol name into an object template
-
-           Note, this method cannot sub-resolve throughout a whole symbol space
-        """
-        return self.resolve(key)
-
-    def __iter__(self):
-        """Returns an iterator of the available keys"""
-        return self.symbols
-
-    def __contains__(self, symbol):
-        """Determines whether a symbol exists in the list or not"""
-        return symbol in self.symbols
+#    ### Helper functions that can be overridden
+#
+#    def __len__(self):
+#        """Returns the number of items in the symbol list"""
+#        return len(self.structures)
+#
+#    def __getitem__(self, key):
+#        """Resolves a symbol name into an object template
+#
+#           Note, this method cannot sub-resolve throughout a whole symbol space
+#        """
+#        return self.get_structure(key)
+#
+#    def __iter__(self):
+#        """Returns an iterator of the available keys"""
+#        return self.structures
+#
+#    def __contains__(self, symbol):
+#        """Determines whether a symbol exists in the list or not"""
+#        return symbol in self.structures
 
 class NativeTableInterface(SymbolTableInterface):
     """Class to distinguish NativeSymbolLists from other symbol lists"""
+
+    def constant(self):
+        raise exceptions.SymbolError("NativeTables never hold constants")
+
+    @property
+    def constants(self):
+        return []

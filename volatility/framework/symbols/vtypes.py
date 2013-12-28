@@ -36,22 +36,22 @@ from volatility.framework import exceptions, objects, interfaces
 class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
     """Symbol Table that handles vtype datastructures"""
 
-    def __init__(self, name, vtype_dictionary, native_symbols = None):
-        interfaces.symbols.SymbolTableInterface.__init__(self, name, native_symbols)
+    def __init__(self, name, vtype_dictionary, native_structures = None):
+        interfaces.symbols.SymbolTableInterface.__init__(self, name, native_structures)
         self._vtypedict = vtype_dictionary
         self._overrides = {}
 
-    def get_symbol_class(self, symbol):
-        return self._overrides.get(symbol, objects.Struct)
+    def get_structure_class(self, name):
+        return self._overrides.get(name, objects.Struct)
 
-    def set_symbol_class(self, symbol, clazz):
-        if symbol not in self.symbols:
-            raise ValueError("Symbol " + symbol + " not in " + self.name + " SymbolTable")
-        self._overrides[symbol] = clazz
+    def set_structure_class(self, name, clazz):
+        if name not in self.structures:
+            raise ValueError("Symbol " + name + " not in " + self.name + " SymbolTable")
+        self._overrides[name] = clazz
 
-    def del_symbol_class(self, symbol):
-        if symbol in self._overrides:
-            del self._overrides[symbol]
+    def del_structure_class(self, name):
+        if name in self._overrides:
+            del self._overrides[name]
 
     def _vtypedict_to_template(self, dictionary):
         """Converts a vtypedict into an object template"""
@@ -60,9 +60,9 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         symbol_name = dictionary[0]
 
-        if symbol_name in self.natives:
+        if symbol_name in self.natives.structures:
             # The symbol is a native type
-            native_template = self.natives.resolve(symbol_name)
+            native_template = self.natives.get_structure(symbol_name)
 
             # Add specific additional parameters, etc
             update = {}
@@ -87,19 +87,19 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
         return objects.templates.ReferenceTemplate(symbol_name = self.name + "!" + symbol_name)
 
     @property
-    def symbols(self):
+    def structures(self):
         """Returns an iterator of the symbol names"""
         return self._vtypedict.keys()
 
-    def resolve(self, symbol_name):
+    def get_structure(self, symbol_name):
         """Resolves an individual symbol"""
         if symbol_name not in self._vtypedict:
-            raise exceptions.SymbolNotFoundException
+            raise exceptions.SymbolError
         size, curdict = self._vtypedict[symbol_name]
         members = {}
         for member_name in curdict:
             relative_offset, vtypedict = curdict[member_name]
             member = (relative_offset, self._vtypedict_to_template(vtypedict))
             members[member_name] = member
-        object_class = self.get_symbol_class(symbol_name)
+        object_class = self.get_structure_class(symbol_name)
         return objects.templates.ObjectTemplate(object_class = object_class, symbol_name = symbol_name, size = size, members = members)

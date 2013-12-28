@@ -18,14 +18,26 @@ def test_symbols():
 
     ctx = framework.Context(nativelst)
     # ctx.symbol_space.append(nativelst)
-    ctx.symbol_space.append(ntkrnlmp)
-    print("Symbols,", nativelst.symbols)
+    ctx = utils_load_as()
+    print("Symbols,", nativelst.structures)
 
-    for i in list(ntkrnlmp.symbols):
-        symbol = ctx.symbol_space.resolve('ntkrnlmp!' + i)
+    for i in list(ntkrnlmp.structures):
+        symbol = ctx.symbol_space.get_structure('ntkrnlmp!' + i)
         print(symbol.symbol_name, symbol, symbol.size)
         _objthing = symbol(ctx, layer_name = '', offset = 0)
-    symbol = ctx.symbol_space.resolve('ntkrnlmp!_EPROCESS')
+    symbol = ctx.symbol_space.get_structure('ntkrnlmp!_EPROCESS')
+
+def utils_load_as():
+    nativelst = native.x86NativeTable
+
+    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
+
+    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, nativelst)
+
+    ctx = framework.Context(nativelst)
+    # ctx.symbol_space.append(nativelst)
+    ctx.symbol_space.append(ntkrnlmp)
+    return ctx
 
 def test_memory():
     nativelst = native.x86NativeTable
@@ -46,6 +58,14 @@ def test_memory():
     ctx.memory.add_layer(base)
     val = ctx.object('ntkrnlmp!TEST_POINTER', 'data', 0)
     print(hex(val.point1.test1), val.point1.test2)
+
+def test_kdbgfind(ctx):
+    ctx = utils_load_as()
+    base = layers.physical.FileLayer(ctx, 'data', filename = '/home/mike/memory/xp-laptop-2005-06-25.img')
+    ctx.memory.add_layer(base)
+    intel = layers.intel.Intel(ctx, 'intel', 'data', page_map_offset = 0x39000)
+    ctx.memory.add_layer(intel)
+
 
 def intel32(ctx):
     base = layers.physical.FileLayer(ctx, 'data', filename = '/home/mike/memory/xp-laptop-2005-06-25.img')
@@ -94,9 +114,9 @@ if __name__ == '__main__':
     # import timeit
     # print(timeit.Timer(main).timeit(10))
     try:
-        # test_symbols()
+        test_symbols()
         # test_memory()
-        test_translation()
+        # test_translation()
     except Exception as e:
         print(repr(e))
         pdb.post_mortem()

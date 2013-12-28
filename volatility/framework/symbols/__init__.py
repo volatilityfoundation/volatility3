@@ -14,18 +14,18 @@ class SymbolSpace(collections.Mapping):
        proceed down through the ranks if a namespace isn't specified.
     """
 
-    def __init__(self, native_symbols):
-        if not isinstance(native_symbols, interfaces.symbols.NativeTableInterface):
-            raise TypeError("SymbolSpace native_symbols must be NativeSymbolInterface")
+    def __init__(self, native_structures):
+        if not isinstance(native_structures, interfaces.symbols.NativeTableInterface):
+            raise TypeError("SymbolSpace native_structures must be NativeSymbolInterface")
         self._dict = collections.OrderedDict()
-        self._native_symbols = native_symbols
+        self._native_structures = native_structures
         # Permanently cache all resolved symbols
         self._resolved = {}
 
     @property
     def natives(self):
         """Returns the native_types for this symbol space"""
-        return self._native_symbols
+        return self._native_structures
 
     def __len__(self):
         return len(self._dict)
@@ -46,7 +46,7 @@ class SymbolSpace(collections.Mapping):
 
     def remove(self, key):
         """Removes a named symbol_list from the space"""
-        # Reset the resolved list, since we're removing ssome symbols
+        # Reset the resolved list, since we're removing some symbols
         self._resolved = {}
         del self._dict[key]
 
@@ -56,16 +56,16 @@ class SymbolSpace(collections.Mapping):
         if len(symarr) == 2:
             table_name = symarr[0]
             symbol_name = symarr[1]
-            return self._dict[table_name].resolve(symbol_name)
-        elif symbol in self.natives:
-            return self.natives.resolve(symbol)
-        raise exceptions.SymbolNotFoundException("Malformed symbol name")
+            return self._dict[table_name].get_structure(symbol_name)
+        elif symbol in self.natives.structures:
+            return self.natives.get_structure(symbol)
+        raise exceptions.SymbolError("Malformed symbol name")
 
-    def resolve(self, symbol):
+    def get_structure(self, symbol):
         """Takes a symbol name and resolves it
         
-           This method ensures that all referenced templatess (inlcuding self-referential templates)
-           are satifsfied as ObjectTemplates
+           This method ensures that all referenced templates (including self-referential templates)
+           are satisfied as ObjectTemplates
         """
         # Traverse down any resolutions
         if symbol not in self._resolved:
