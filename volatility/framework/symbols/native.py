@@ -28,26 +28,26 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         """Returns an iterator of the structure symbol names"""
         return self._structures
 
-    def get_structure(self, symbol_name):
+    def get_structure(self, structure_name):
         """Resolves a symbol name into an object template
         
            symbol_space is used to resolve any target symbols if they don't exist in this list
         """
         additional = {}
-        if symbol_name == 'void':
-            return objects.templates.ObjectTemplate(objects.Void, symbol_name = symbol_name)
-        elif symbol_name == 'array':
-            return objects.templates.ObjectTemplate(objects.Array, symbol_name = symbol_name, count = 0, target = self.get_structure('void'))
-        elif symbol_name == 'Enumeration':
-            return objects.templates.ObjectTemplate(objects.Enumeration, symbol_name = symbol_name, target = self.get_structure('void'), choices = {})
-        elif symbol_name == 'BitField':
-            return objects.templates.ObjectTemplate(objects.BitField, symbol_name = symbol_name, start_bit = 0, end_bit = 0)
+        if structure_name == 'void':
+            return objects.templates.ObjectTemplate(objects.Void, structure_name = structure_name)
+        elif structure_name == 'array':
+            return objects.templates.ObjectTemplate(objects.Array, structure_name = structure_name, count = 0, target = self.get_structure('void'))
+        elif structure_name == 'Enumeration':
+            return objects.templates.ObjectTemplate(objects.Enumeration, structure_name = structure_name, target = self.get_structure('void'), choices = {})
+        elif structure_name == 'BitField':
+            return objects.templates.ObjectTemplate(objects.BitField, structure_name = structure_name, start_bit = 0, end_bit = 0)
 
-        _native_type, native_format = self._native_dictionary[symbol_name]
-        if symbol_name == 'pointer':
+        _native_type, native_format = self._native_dictionary[structure_name]
+        if structure_name == 'pointer':
             additional = {'target': self.get_structure('void')}
-        return objects.templates.ObjectTemplate(self.get_structure_class(symbol_name), #pylint: disable-msg=W0142
-                                            symbol_name = symbol_name,
+        return objects.templates.ObjectTemplate(self.get_structure_class(structure_name), #pylint: disable-msg=W0142
+                                            structure_name = structure_name,
                                             struct_format = native_format,
                                             **additional)
 

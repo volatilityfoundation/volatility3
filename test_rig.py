@@ -10,20 +10,20 @@ from volatility.framework import xp_sp2_x86_vtypes, layers
 from volatility.framework.symbols import vtypes, native
 
 def test_symbols():
-    nativelst = native.x86NativeTable
+    native_list = native.x86NativeTable
 
     virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
 
-    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, nativelst)
+    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, native_list)
 
-    ctx = framework.Context(nativelst)
-    # ctx.symbol_space.append(nativelst)
+    ctx = framework.Context(native_list)
+    # ctx.symbol_space.append(native_list)
     ctx = utils_load_as()
-    print("Symbols,", nativelst.structures)
+    print("Symbols,", native_list.structures)
 
     for i in list(ntkrnlmp.structures):
         symbol = ctx.symbol_space.get_structure('ntkrnlmp!' + i)
-        print(symbol.symbol_name, symbol, symbol.size)
+        print(symbol.structure_name, symbol, symbol.size)
         _objthing = symbol(ctx, layer_name = '', offset = 0)
     symbol = ctx.symbol_space.get_structure('ntkrnlmp!_EPROCESS')
 

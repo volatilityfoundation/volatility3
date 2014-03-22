@@ -55,8 +55,8 @@ class SymbolSpace(collections.Mapping):
         symarr = symbol.split("!")
         if len(symarr) == 2:
             table_name = symarr[0]
-            symbol_name = symarr[1]
-            return self._dict[table_name].get_structure(symbol_name)
+            structure_name = symarr[1]
+            return self._dict[table_name].get_structure(structure_name)
         elif symbol in self.natives.structures:
             return self.natives.get_structure(symbol)
         raise exceptions.SymbolError("Malformed symbol name")
@@ -82,13 +82,13 @@ class SymbolSpace(collections.Mapping):
                         if isinstance(child, objects.templates.ReferenceTemplate):
                             # If we haven't seen it before, subresolve it and also add it
                             # to the "symbols that still need traversing" list
-                            if child.symbol_name not in self._resolved:
-                                traverse_list.append(child.symbol_name)
-                                self._resolved[child.symbol_name] = self._weak_resolve(child.symbol_name)
+                            if child.structure_name not in self._resolved:
+                                traverse_list.append(child.structure_name)
+                                self._resolved[child.structure_name] = self._weak_resolve(child.structure_name)
                             # Stash the replacement
                             replacements.add((traverser, child))
                         elif child.children:
                             template_traverse_list.append(child)
             for (parent, child) in replacements:
-                parent.replace_child(child, self._resolved[child.symbol_name])
+                parent.replace_child(child, self._resolved[child.structure_name])
         return self._resolved[symbol]

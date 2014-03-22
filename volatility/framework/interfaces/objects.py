@@ -10,7 +10,7 @@ from volatility.framework.interfaces import context as context_module
 
 class ObjectInterface(validity.ValidityRoutines):
     """ A base object required to be the ancestor of every object used in volatility """
-    def __init__(self, context, layer_name, offset, symbol_name, size, parent = None):
+    def __init__(self, context, layer_name, offset, structure_name, size, parent = None):
         # Since objects are likely to be instantiated often,
         # we're only checking that a context is a context
         # Everything else may be wrong, but that will get caught later on
@@ -18,15 +18,15 @@ class ObjectInterface(validity.ValidityRoutines):
         self._parent = None if not parent else self.type_check(parent, ObjectInterface)
         self._offset = offset
         self._layer_name = layer_name
-        self._symbol_name = symbol_name
+        self._structure_name = structure_name
         self._size = size
 
     def write(self, value):
         """Writes the new value into the format at the offset the object currently resides at"""
 
-    def cast(self, new_symbol_name):
+    def cast(self, new_structure_name):
         """Returns a new object at the offset and from the layer that the current object inhabits"""
-        object_template = self._context.symbol_space.resolve(new_symbol_name)
+        object_template = self._context.symbol_space.resolve(new_structure_name)
         return object_template(context = self._context, layer_name = self._layer_name, offset = self._offset)
 
 class Template(object):
@@ -34,15 +34,15 @@ class Template(object):
     
        This is effectively a class for currying object calls
     """
-    def __init__(self, symbol_name = None, **kwargs):
+    def __init__(self, structure_name = None, **kwargs):
         """Stores the keyword arguments for later use"""
         self._kwargs = kwargs
-        self._symbol_name = symbol_name
+        self._structure_name = structure_name
 
     @property
-    def symbol_name(self):
+    def structure_name(self):
         """Returns the name of the particular symbol"""
-        return self._symbol_name
+        return self._structure_name
 
     @property
     def arguments(self):

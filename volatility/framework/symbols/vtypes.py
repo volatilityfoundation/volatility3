@@ -58,23 +58,23 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
         if not dictionary:
             raise exceptions.SymbolSpaceError("Invalid vtype dictionary: " + repr(dictionary))
 
-        symbol_name = dictionary[0]
+        structure_name = dictionary[0]
 
-        if symbol_name in self.natives.structures:
+        if structure_name in self.natives.structures:
             # The symbol is a native type
-            native_template = self.natives.get_structure(symbol_name)
+            native_template = self.natives.get_structure(structure_name)
 
             # Add specific additional parameters, etc
             update = {}
-            if symbol_name == 'array':
+            if structure_name == 'array':
                 update['count'] = dictionary[1],
                 update['target'] = self._vtypedict_to_template(dictionary[2])
-            elif symbol_name == 'pointer':
+            elif structure_name == 'pointer':
                 update["target"] = self._vtypedict_to_template(dictionary[1])
-            elif symbol_name == 'Enumeration':
+            elif structure_name == 'Enumeration':
                 update = copy.deepcopy(dictionary[1])
                 update["target"] = self._vtypedict_to_template([update['target']])
-            elif symbol_name == 'BitField':
+            elif structure_name == 'BitField':
                 update = dictionary[1]
                 update['target'] = self._vtypedict_to_template([update['native_type']])
             native_template.update_arguments(**update) #pylint: disable-msg=W0142
@@ -84,22 +84,22 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
         if len(dictionary) > 1:
             raise exceptions.SymbolSpaceError("Unknown vtype format: " + repr(dictionary))
 
-        return objects.templates.ReferenceTemplate(symbol_name = self.name + "!" + symbol_name)
+        return objects.templates.ReferenceTemplate(structure_name = self.name + "!" + structure_name)
 
     @property
     def structures(self):
         """Returns an iterator of the symbol names"""
         return self._vtypedict.keys()
 
-    def get_structure(self, symbol_name):
+    def get_structure(self, structure_name):
         """Resolves an individual symbol"""
-        if symbol_name not in self._vtypedict:
+        if structure_name not in self._vtypedict:
             raise exceptions.SymbolError
-        size, curdict = self._vtypedict[symbol_name]
+        size, curdict = self._vtypedict[structure_name]
         members = {}
         for member_name in curdict:
             relative_offset, vtypedict = curdict[member_name]
             member = (relative_offset, self._vtypedict_to_template(vtypedict))
             members[member_name] = member
-        object_class = self.get_structure_class(symbol_name)
-        return objects.templates.ObjectTemplate(object_class = object_class, symbol_name = symbol_name, size = size, members = members)
+        object_class = self.get_structure_class(structure_name)
+        return objects.templates.ObjectTemplate(object_class = object_class, structure_name = structure_name, size = size, members = members)

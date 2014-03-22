@@ -28,18 +28,18 @@ class Void(interfaces.objects.ObjectInterface):
 class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
 
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = '<I'):
+    def __init__(self, context, layer_name, offset, structure_name, size = None, parent = None, struct_format = '<I'):
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
                                                     layer_name = layer_name,
                                                     offset = offset,
-                                                    symbol_name = symbol_name,
+                                                    structure_name = structure_name,
                                                     size = size,
                                                     parent = parent)
         self._struct_format = struct_format
 
     @classmethod
-    def _struct_value(cls, struct_format, context, layer_name, offset, symbol_name):
+    def _struct_value(cls, struct_format, context, layer_name, offset, structure_name):
         length = struct.calcsize(struct_format)
         data = context.memory.read(layer_name, offset, length)
         (value,) = struct.unpack(struct_format, data)
@@ -62,8 +62,8 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
 class Integer(PrimitiveObject, int):
     """Primitive Object that handles standard numeric types"""
 
-    def __new__(cls, context, layer_name, offset, symbol_name, struct_format, **kwargs):
-        return int.__new__(cls, cls._struct_value(struct_format, context, layer_name, offset, symbol_name))
+    def __new__(cls, context, layer_name, offset, structure_name, struct_format, **kwargs):
+        return int.__new__(cls, cls._struct_value(struct_format, context, layer_name, offset, structure_name))
 
     def write(self, value):
         """Writes the object into the layer of the context at the current offset"""
@@ -75,8 +75,8 @@ class Integer(PrimitiveObject, int):
 class Float(PrimitiveObject, float):
     """Primitive Object that handles double or floating point numbers"""
 
-    def __new__(cls, context, layer_name, offset, symbol_name, struct_format, **kwargs):
-        return float.__new__(cls, cls._struct_value(struct_format, context, layer_name, offset, symbol_name))
+    def __new__(cls, context, layer_name, offset, structure_name, struct_format, **kwargs):
+        return float.__new__(cls, cls._struct_value(struct_format, context, layer_name, offset, structure_name))
 
     def write(self, value):
         """Writes the object into the layer of the context at the current offset"""
@@ -88,13 +88,13 @@ class Float(PrimitiveObject, float):
 class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes"""
 
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, length = 1, **kwargs):
+    def __init__(self, context, layer_name, offset, structure_name, size = None, parent = None, length = 1, **kwargs):
         bytes.__init__()
-        PrimitiveObject.__init__(self, context, layer_name, offset, symbol_name, size, parent, struct_format = str(length) + 's')
+        PrimitiveObject.__init__(self, context, layer_name, offset, structure_name, size, parent, struct_format = str(length) + 's')
         self.length = length
 
-    def __new__(cls, context, layer_name, offset, symbol_name, length = 1, **kwargs):
-        return bytes.__new__(cls, cls._struct_value(str(length) + "s", context, layer_name, offset, symbol_name))
+    def __new__(cls, context, layer_name, offset, structure_name, length = 1, **kwargs):
+        return bytes.__new__(cls, cls._struct_value(str(length) + "s", context, layer_name, offset, structure_name))
 
     def write(self, value):
         """Writes the object into the layer of the context at the current offset"""
@@ -109,13 +109,13 @@ class String(PrimitiveObject, str):
        length: specifies the maximum possible length that the string could hold in memory
     """
 
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, length = 1, **kwargs):
+    def __init__(self, context, layer_name, offset, structure_name, size = None, parent = None, length = 1, **kwargs):
         str.__init__()
-        PrimitiveObject.__init__(self, context, layer_name, offset, symbol_name, size, parent, struct_format = str(length) + 's')
+        PrimitiveObject.__init__(self, context, layer_name, offset, structure_name, size, parent, struct_format = str(length) + 's')
         self.length = length
 
-    def __new__(cls, context, layer_name, offset, symbol_name, length = 1, **kwargs):
-        return str.__new__(cls, cls._struct_value(str(length) + "s", context, layer_name, offset, symbol_name))
+    def __new__(cls, context, layer_name, offset, structure_name, length = 1, **kwargs):
+        return str.__new__(cls, cls._struct_value(str(length) + "s", context, layer_name, offset, structure_name))
 
     def write(self, value):
         """Writes the object into the layer of the context at the current offset"""
@@ -126,14 +126,14 @@ class String(PrimitiveObject, str):
 
 class Pointer(Integer):
     """Pointer which points to another object"""
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, struct_format = None, target = None):
+    def __init__(self, context, layer_name, offset, structure_name, size = None, parent = None, struct_format = None, target = None):
         if not isinstance(target, templates.ObjectTemplate):
             raise TypeError("Pointer targets must be an ObjectTemplate")
         Integer.__init__(self,
                          context,
                          layer_name = layer_name,
                          offset = offset,
-                         symbol_name = symbol_name,
+                         structure_name = structure_name,
                          size = size,
                          parent = parent,
                          struct_format = struct_format)
@@ -169,11 +169,11 @@ class Pointer(Integer):
 
 class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
-    def __new__(cls, context, layer_name, offset, symbol_name, size = None, parent = None, target = None, start_bit = 0, end_bit = 0, **kwargs):
+    def __new__(cls, context, layer_name, offset, structure_name, size = None, parent = None, target = None, start_bit = 0, end_bit = 0, **kwargs):
         value = target(context = context,
                        layer_name = layer_name,
                        offset = offset,
-                       symbol_name = symbol_name,
+                       structure_name = structure_name,
                        size = size,
                        parent = parent)
         return (value >> start_bit) & ((1 << end_bit) - 1)
@@ -200,14 +200,14 @@ class Enumeration(interfaces.objects.ObjectInterface):
 
 class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, parent = None, count = 0, target = None):
+    def __init__(self, context, layer_name, offset, structure_name, size = None, parent = None, count = 0, target = None):
         if not isinstance(target, templates.ObjectTemplate):
             raise TypeError("Array target must be an ObjectTemplate")
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
                                                     layer_name = layer_name,
                                                     offset = offset,
-                                                    symbol_name = symbol_name,
+                                                    structure_name = structure_name,
                                                     size = size,
                                                     parent = parent)
         self._count = count
@@ -248,12 +248,12 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
 class Struct(interfaces.objects.ObjectInterface):
     """Object which can contain members that are other objects"""
 
-    def __init__(self, context, layer_name, offset, symbol_name, size = None, members = None, parent = None):
+    def __init__(self, context, layer_name, offset, structure_name, size = None, members = None, parent = None):
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
                                                     layer_name = layer_name,
                                                     offset = offset,
-                                                    symbol_name = symbol_name,
+                                                    structure_name = structure_name,
                                                     size = size,
                                                     parent = parent)
         self.check_members(members)
@@ -284,7 +284,7 @@ class Struct(interfaces.objects.ObjectInterface):
     @classmethod
     def check_members(cls, members):
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
-        # An object template is a callable that when called with a context, offset, layer_name and symbol_name
+        # An object template is a callable that when called with a context, offset, layer_name and structure_name
         if not isinstance(members, collections.Iterable):
             raise TypeError("Struct members parameter must be iterable not " + type(members))
         if not all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()]):
@@ -299,7 +299,7 @@ class Struct(interfaces.objects.ObjectInterface):
             member = member(context = self._context, layer_name = self._layer_name, offset = self._offset + relative_offset, parent = self)
             self._concrete_members[attr] = member
             return member
-        raise AttributeError("'" + self._symbol_name + "' Struct has no attribute '" + attr + "'")
+        raise AttributeError("'" + self._structure_name + "' Struct has no attribute '" + attr + "'")
 
     def write(self, value):
         raise TypeError("Structs cannot be written to directly, invidivual members must be written instead")

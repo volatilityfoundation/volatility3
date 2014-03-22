@@ -15,8 +15,8 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
        * Members, etc
        etc.
     """
-    def __init__(self, object_class = None, symbol_name = None, **kwargs):
-        interfaces.objects.Template.__init__(self, symbol_name = symbol_name, **kwargs)
+    def __init__(self, object_class = None, structure_name = None, **kwargs):
+        interfaces.objects.Template.__init__(self, structure_name = structure_name, **kwargs)
         self.object_class = self.class_check(object_class, interfaces.objects.ObjectInterface)
 
     @property
@@ -47,7 +47,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         # We always use the template size (as calculated by the object class)
         # over the one passed in by an argument
         self._kwargs['size'] = self.size
-        self._kwargs['symbol_name'] = self.symbol_name
+        self._kwargs['structure_name'] = self.structure_name
         return self.object_class(context = context, layer_name = layer_name, offset = offset, parent = parent, **self._kwargs)
 
 class ReferenceTemplate(interfaces.objects.Template):
@@ -56,5 +56,5 @@ class ReferenceTemplate(interfaces.objects.Template):
        It should not return any attributes 
     """
     def __call__(self, context, *args, **kwargs):
-        template = context.symbol_space.get_structure(self._symbol_name)
+        template = context.symbol_space.get_structure(self._structure_name)
         return template(context = context, *args, **kwargs)
