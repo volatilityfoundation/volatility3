@@ -89,7 +89,7 @@ class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes"""
 
     def __init__(self, context, layer_name, offset, structure_name, size = None, parent = None, length = 1, **kwargs):
-        bytes.__init__()
+        bytes.__init__(self)
         PrimitiveObject.__init__(self, context, layer_name, offset, structure_name, size, parent, struct_format = str(length) + 's')
         self.length = length
 
@@ -110,7 +110,7 @@ class String(PrimitiveObject, str):
     """
 
     def __init__(self, context, layer_name, offset, structure_name, size = None, parent = None, length = 1, **kwargs):
-        str.__init__()
+        str.__init__(self)
         PrimitiveObject.__init__(self, context, layer_name, offset, structure_name, size, parent, struct_format = str(length) + 's')
         self.length = length
 

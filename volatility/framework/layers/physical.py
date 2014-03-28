@@ -26,7 +26,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 
     def is_valid(self, offset):
         """Returns whether the offset is valid or not"""
-        return (offset >= self.minimum_address  and offset <= self.maximum_address)
+        return offset >= self.minimum_address and offset <= self.maximum_address
 
     def read(self, address, length, pad = False):
         """Reads the data from the buffer"""

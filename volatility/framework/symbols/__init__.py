@@ -34,7 +34,7 @@ class SymbolSpace(collections.Mapping):
         return self._dict[i]
 
     def __iter__(self):
-        return self._dict.__iter__(self)
+        return self._dict.__iter__()
 
     def append(self, value):
         """Adds a symbol_list to the end of the space"""

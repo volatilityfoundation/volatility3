@@ -1,12 +1,13 @@
-'''
+"""
 Created on 4 May 2013
 
 @author: mike
-'''
+"""
 
 from volatility.framework import validity, exceptions
 # We can't just import interfaces because we'd have a cycle going
 from volatility.framework.interfaces import context as context_module
+
 
 class DataLayerInterface(validity.ValidityRoutines):
     """A Layer that directly holds data (and does not translate it"""
@@ -23,10 +24,12 @@ class DataLayerInterface(validity.ValidityRoutines):
     @property
     def maximum_address(self):
         """Returns the maximum valid address of the space"""
+        raise NotImplementedError("Maximum Address has not been implemented")
 
     @property
     def minimum_address(self):
         """Returns the minimum valid address of the space"""
+        raise NotImplementedError("Minimum Address has not been implemented")
 
     def is_valid(self, offset):
         """Returns a boolean based on whether the offset is valid or not"""
@@ -34,7 +37,7 @@ class DataLayerInterface(validity.ValidityRoutines):
     def read(self, offset, length, pad = False):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size
         
-           If there is a fault of any kind (such as a pagefault), an exception will be thrown
+           If there is a fault of any kind (such as a page fault), an exception will be thrown
            unless pad is set, in which case the read errors will be replaced by null characters.
         """
 
@@ -44,6 +47,7 @@ class DataLayerInterface(validity.ValidityRoutines):
            Any unavailable sections in the underlying bases will cause an exception to be thrown.
            Note: Writes are not atomic, therefore some data can be written, even if an exception is thrown.
         """
+
 
 class TranslationLayerInterface(DataLayerInterface):
 
@@ -55,6 +59,7 @@ class TranslationLayerInterface(DataLayerInterface):
         
            This allows translation layers to provide maps of contiguous regions in one layer
         """
+        return []
 
     def dependencies(self):
         """Returns a list of layer names that this layer translates onto"""

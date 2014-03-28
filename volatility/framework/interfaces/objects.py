@@ -34,7 +34,7 @@ class Template(object):
     
        This is effectively a class for currying object calls
     """
-    def __init__(self, structure_name = None, **kwargs):
+    def __init__(self, structure_name: str = None, **kwargs):
         """Stores the keyword arguments for later use"""
         self._kwargs = kwargs
         self._structure_name = structure_name
@@ -53,8 +53,13 @@ class Template(object):
         """Updates the keyword arguments"""
         self._kwargs.update(newargs)
 
-    def __call__(self, context, layer_name, offset, parent = None):
+    def __call__(self, context: context_module.ContextInterface, layer_name: str, offset: int, parent: ObjectInterface = None):
         """Constructs the object
         
-           Returns: an object adhereing to the Object interface 
+        :param context:
+        :param layer_name:
+        :param offset:
+        :param parent:
+
+        :return O   Returns: an object adhereing to the Object interface
         """
