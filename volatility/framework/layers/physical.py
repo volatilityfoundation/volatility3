@@ -1,8 +1,8 @@
-'''
+"""
 Created on 6 May 2013
 
 @author: mike
-'''
+"""
 
 import os.path
 from volatility.framework import interfaces, exceptions
@@ -26,7 +26,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 
     def is_valid(self, offset):
         """Returns whether the offset is valid or not"""
-        return offset >= self.minimum_address and offset <= self.maximum_address
+        return self.minimum_address <= offset <= self.maximum_address
 
     def read(self, address, length, pad = False):
         """Reads the data from the buffer"""
@@ -59,7 +59,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     def is_valid(self, offset):
         """Returns whether the offset is valid or not"""
-        return (offset >= self.minimum_address and offset <= self.maximum_address)
+        return self.minimum_address <= offset <= self.maximum_address
 
     def read(self, offset, length, pad = False):
         """Reads from the file at offset for length"""
@@ -75,13 +75,14 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             if pad:
                 data += (b"\x00" * (length - len(data)))
             else:
-                raise exceptions.InvalidAddressException("Could not read sufficient bytes from the " + self.name + " file")
+                raise exceptions.InvalidAddressException("Could not read sufficient bytes from the " +
+                                                         self.name + " file")
         return data
 
     def write(self, offset, data):
         """Writes to the file
         
-           This will tehcnically allow writes beyond the extent of the file
+           This will technically allow writes beyond the extent of the file
         """
         if not self.is_valid(offset):
             raise exceptions.InvalidAddressException("Offset outside of the " + self.name + " file boundaries")

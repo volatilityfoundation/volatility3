@@ -23,10 +23,13 @@ def require_version(*args):
     """Checks the required version of a plugin"""
     if len(args):
         if args[0] != version()[0]:
-            raise Exception("Framework version " + str(version()[0]) + " is incompatible with required version " + str(args[0]))
+            raise Exception("Framework version " + str(version()[0]) +
+                            " is incompatible with required version " + str(args[0]))
         if len(args) > 1:
             if args[1] > version()[1]:
-                raise Exception("Framework version " + ".".join([str(x) for x in version()[0:1]]) + " is an older revision than the required version " + ".".join([str(x) for x in args[0:2]]))
+                raise Exception("Framework version " + ".".join([str(x) for x in version()[0:1]]) +
+                                " is an older revision than the required version " +
+                                ".".join([str(x) for x in args[0:2]]))
 
 from volatility.framework import interfaces, symbols, layers
 

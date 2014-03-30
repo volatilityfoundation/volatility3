@@ -1,8 +1,8 @@
-'''
+"""
 Created on 4 May 2013
 
 @author: mike
-'''
+"""
 
 from volatility.framework import validity, exceptions
 
@@ -20,10 +20,12 @@ class SymbolTableInterface(validity.ValidityRoutines):
         
            If the symbol isn't found, it raises a SymbolError exception
         """
+        raise NotImplementedError("Abstract property get_constant not implemented by subclass.")
 
     @ property
     def constants(self):
         """Returns an iterator of the constant symbols"""
+        raise NotImplementedError("Abstract property constants not implemented by subclass.")
 
     ### Required Structure symbol functions
 
@@ -32,10 +34,12 @@ class SymbolTableInterface(validity.ValidityRoutines):
         
            If the symbol isn't found it raises a SymbolError exception
         """
+        raise NotImplementedError("Abstract method get_structure not implemented by subclass.")
 
     @property
     def structures(self):
         """Returns an iterator of the structure symbols"""
+        raise NotImplementedError("Abstract property structures not implemented by subclass.")
 
     ### Native Type Handler
 
@@ -51,12 +55,15 @@ class SymbolTableInterface(validity.ValidityRoutines):
 
            Name *must* be present in self.structures
         """
+        raise NotImplementedError("Abstract method set_structure_class not implemented yet.")
 
     def get_structure_class(self, name):
         """Returns the class associated with a structure symbol"""
+        raise NotImplementedError("Abstract method get_structure_class not implemented yet.")
 
     def del_structure_class(self, name):
         """Removes the associated class override for a specific structure symbol"""
+        raise NotImplementedError("Abstract method del_structure_class not implemented yet.")
 
 #    ### Helper functions that can be overridden
 #
@@ -82,6 +89,7 @@ class SymbolTableInterface(validity.ValidityRoutines):
 class NativeTableInterface(SymbolTableInterface):
     """Class to distinguish NativeSymbolLists from other symbol lists"""
 
+    @staticmethod
     def constant(self):
         raise exceptions.SymbolError("NativeTables never hold constants")
 

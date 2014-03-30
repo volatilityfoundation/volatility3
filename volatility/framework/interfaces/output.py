@@ -20,9 +20,11 @@ class TreeRow(validity.ValidityRoutines):
 
     def add_child(self, child):
         """Appends a child to the current Row"""
+        raise NotImplementedError("Abstract method add_child not implemented.")
 
     def insert_child(self, child, position):
         """Adds a child at the specified position"""
+        raise NotImplementedError("Abstract method insert_child not implemented")
 
     def clear(self):
         """Removes all children from this row"""
@@ -64,4 +66,4 @@ class TreeGrid(TreeRow):
         """Takes a list of values and verified them against the column types"""
         for i in range(len(self._columns)):
             if not isinstance(values[i], self._columns[i]):
-                raise TypeError("Column ")
+                raise TypeError("Column type " + str(i) + " is incorrect.")

@@ -1,8 +1,8 @@
-'''
+"""
 Created on 1 Dec 2012
 
 @author: mike
-'''
+"""
 
 class VolatilityException(Exception):
     """Class to allow filtering of all VolatilityExceptions"""

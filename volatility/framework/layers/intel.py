@@ -1,8 +1,8 @@
-'''
+"""
 Created on 7 May 2013
 
 @author: mike
-'''
+"""
 
 import math
 import struct
@@ -27,18 +27,19 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         self._structure = [('page directory', 10, False),
                            ('page table', 10, True)]
 
-
-    def _mask(self, value, high_bit, low_bit):
+    @staticmethod
+    def _mask(value, high_bit, low_bit):
         """Returns the bits of a value between highbit and lowbit inclusive"""
         high_mask = (2 ** (high_bit + 1)) - 1
-        low_mask = (2 ** (low_bit)) - 1
+        low_mask = (2 ** low_bit) - 1
         mask = (high_mask ^ low_mask)
         # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask
 
-    def _page_is_valid(self, entry):
+    @staticmethod
+    def _page_is_valid(entry):
         """Returns whether a particular page is valid based on its entry"""
-        return (entry & 1)
+        return entry & 1
 
     def _translate(self, offset):
         """Translates a specific offset based on paging tables
@@ -71,7 +72,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             # Create the offset for the next entry
             table_offset = base_address | (index << self._index_shift)
             # Read out the new entry from memory
-            entry, = struct.unpack(self._entry_format, self._context.memory.read(self._base_layer, table_offset, struct.calcsize(self._entry_format)))
+            entry, = struct.unpack(self._entry_format, self._context.memory.read(self._base_layer, table_offset,
+                                                                                 struct.calcsize(self._entry_format)))
 
         # Now we're do
         if not self._page_is_valid(entry):
@@ -132,7 +134,8 @@ class Intel32e(Intel):
 
 class WindowsMixin(object):
 
-    def _page_is_valid(self, entry):
+    @staticmethod
+    def _page_is_valid(entry):
         """Returns whether a particular page is valid based on its entry
         
            Windows uses additional "available" bits to store flags

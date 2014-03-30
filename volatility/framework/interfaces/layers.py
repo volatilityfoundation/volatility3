@@ -61,8 +61,10 @@ class TranslationLayerInterface(DataLayerInterface):
         """
         return []
 
+    @property
     def dependencies(self):
         """Returns a list of layer names that this layer translates onto"""
+        raise NotImplementedError("Abstract method dependencies")
 
     ### Read/Write functions for mapped pages
 
