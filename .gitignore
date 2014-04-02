@@ -1,2 +1,4 @@
 __pycache__
 *.pyc
+doc/build
+doc/source/volatility.*

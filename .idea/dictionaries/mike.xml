@@ -2,6 +2,7 @@
   <dictionary name="mike">
     <words>
       <w>iter</w>
+      <w>renderers</w>
       <w>struct</w>
     </words>
   </dictionary>

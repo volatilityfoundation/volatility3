@@ -1,0 +1,864 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AnalysisUIOptions">
+    <option name="ANALYSIS_IN_BACKGROUND" value="true" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="e675951f-ed7f-4f62-ae66-a3ceef1f9e8e" name="Default" comment="">
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/doc/Makefile" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/doc/source/conf.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/doc/source/index.rst" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/doc/make.bat" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/dictionaries/mike.xml" afterPath="$PROJECT_DIR$/.idea/dictionaries/mike.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/volatility/framework/interfaces/objects.py" afterPath="$PROJECT_DIR$/volatility/framework/interfaces/objects.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test_rig.py" afterPath="$PROJECT_DIR$/test_rig.py" />
+    </list>
+    <ignored path="volatility3.iws" />
+    <ignored path=".idea/workspace.xml" />
+    <option name="TRACKING_ENABLED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ChangesViewManager" flattened_view="true" show_ignored="false" />
+  <component name="CreatePatchCommitExecutor">
+    <option name="PATCH_PATH" value="" />
+  </component>
+  <component name="DaemonCodeAnalyzer">
+    <disable_hints />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
+  <component name="FavoritesManager">
+    <favorites_list name="volatility3" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf>
+      <file leaf-file-name="renderers.py" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/renderers.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="18" column="52" selection-start="679" selection-end="679" vertical-scroll-proportion="0.397351" vertical-offset="15" max-vertical-offset="1290">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="index.rst" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/doc/source/index.rst">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="20" column="15" selection-start="447" selection-end="447" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="420">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="validity.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/volatility/framework/validity.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="18" column="8" selection-start="618" selection-end="618" vertical-scroll-proportion="0.0" vertical-offset="270" max-vertical-offset="570">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="basic.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/volatility/framework/renderers/basic.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="12" column="0" selection-start="347" selection-end="347" vertical-scroll-proportion="0.0" vertical-offset="180" max-vertical-offset="270">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FindManager">
+    <FindUsagesManager>
+      <setting name="OPEN_NEW_TAB" value="false" />
+    </FindUsagesManager>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="changedFiles">
+      <list>
+        <option value="$PROJECT_DIR$/volatility/framework/config.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/objects/templates.py" />
+        <option value="$PROJECT_DIR$/test_rig.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/symbols/native.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/symbols/__init__.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/interfaces/context.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/__init__.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/exceptions.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/validity.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/interfaces/plugins.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/interfaces/symbols.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/layers/__init__.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/interfaces/__init__.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/layers/intel.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/layers/physical.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/objects/__init__.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/plugins/output.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/output/__init__.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/interfaces/output.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/output/basic.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/interfaces/layers.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/renderers/basic.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/interfaces/renderers.py" />
+        <option value="$PROJECT_DIR$/sphinx/conf.py" />
+        <option value="$PROJECT_DIR$/volatility/conf.py" />
+        <option value="$PROJECT_DIR$/doc/source/conf.py" />
+        <option value="$PROJECT_DIR$/volatility/framework/interfaces/objects.py" />
+        <option value="$PROJECT_DIR$/doc/source/index.rst" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds">
+    <option name="x" value="-1" />
+    <option name="y" value="27" />
+    <option name="width" value="1922" />
+    <option name="height" value="1054" />
+  </component>
+  <component name="ProjectInspectionProfilesVisibleTreeState">
+    <entry key="Project Default">
+      <profile-state>
+        <expanded-state>
+          <State>
+            <id />
+          </State>
+          <State>
+            <id>HTML</id>
+          </State>
+          <State>
+            <id>Python</id>
+          </State>
+        </expanded-state>
+        <selected-state>
+          <State>
+            <id>Buildout</id>
+          </State>
+        </selected-state>
+      </profile-state>
+    </entry>
+  </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="false">
+    <OptionsSetting value="true" id="Add" />
+    <OptionsSetting value="true" id="Remove" />
+    <OptionsSetting value="true" id="Checkout" />
+    <OptionsSetting value="true" id="Update" />
+    <OptionsSetting value="true" id="Status" />
+    <OptionsSetting value="true" id="Edit" />
+    <ConfirmationsSetting value="0" id="Add" />
+    <ConfirmationsSetting value="0" id="Remove" />
+  </component>
+  <component name="ProjectReloadState">
+    <option name="STATE" value="0" />
+  </component>
+  <component name="ProjectView">
+    <navigator currentView="ProjectPane" proportions="" version="1" splitterProportion="0.5">
+      <flattenPackages />
+      <showMembers />
+      <showModules />
+      <showLibraryContents />
+      <hideEmptyPackages />
+      <abbreviatePackageNames />
+      <autoscrollToSource />
+      <autoscrollFromSource />
+      <sortByType />
+    </navigator>
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility3" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility3" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility3" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility3" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility3" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility3" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility3" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="doc" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility3" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="volatility3" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="doc" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="source" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+        </subPane>
+      </pane>
+      <pane id="Scope">
+        <subPane subId="Problems" />
+      </pane>
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="options.lastSelected" value="preferences.externalTools" />
+    <property name="options.splitter.main.proportions" value="0.3" />
+    <property name="options.splitter.details.proportions" value="0.47605363" />
+    <property name="options.searchVisible" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/doc/build" />
+    <property name="recentsLimit" value="5" />
+    <property name="SearchEverywhereHistory" value="" />
+    <property name="FullScreen" value="false" />
+    <property name="restartRequiresConfirmation" value="true" />
+  </component>
+  <component name="PyConsoleOptionsProvider">
+    <option name="myPythonConsoleState">
+      <console-settings />
+    </option>
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/doc" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/volatility/framework/output" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python docs.Create Sphinx Documentation">
+    <configuration default="false" name="test_rig" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_rig.py" />
+      <option name="PARAMETERS" value="" />
+      <RunnerSettings RunnerId="PythonRunner" />
+      <ConfigurationWrapper RunnerId="PythonRunner" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="py.test">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="testToRun" value="" />
+      <option name="keywords" value="" />
+      <option name="params" value="" />
+      <option name="USE_PARAM" value="false" />
+      <option name="USE_KEYWORD" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Nosetests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="PARAMS" value="" />
+      <option name="USE_PARAM" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <method />
+    </configuration>
+    <configuration default="true" type="docs" factoryName="Docutils task">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="docutils_input_file" value="" />
+      <option name="docutils_output_file" value="" />
+      <option name="docutils_params" value="" />
+      <option name="docutils_task" value="" />
+      <option name="docutils_open_in_browser" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="docs" factoryName="Sphinx task">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="docutils_input_file" value="" />
+      <option name="docutils_output_file" value="" />
+      <option name="docutils_params" value="" />
+      <option name="docutils_task" value="" />
+      <option name="docutils_open_in_browser" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Unittests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <option name="PUREUNITTEST" value="true" />
+      <option name="PARAMS" value="" />
+      <option name="USE_PARAM" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Doctests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method />
+    </configuration>
+    <configuration default="true" type="tests" factoryName="Attests">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="CLASS_NAME" value="" />
+      <option name="METHOD_NAME" value="" />
+      <option name="FOLDER_NAME" value="" />
+      <option name="TEST_TYPE" value="TEST_SCRIPT" />
+      <option name="PATTERN" value="" />
+      <option name="USE_PATTERN" value="false" />
+      <method />
+    </configuration>
+    <configuration default="false" name="Create Sphinx Documentation" type="docs" factoryName="Sphinx task">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="/usr/bin/python3.3" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="docutils_input_file" value="$PROJECT_DIR$/doc/source" />
+      <option name="docutils_output_file" value="$PROJECT_DIR$/doc/build" />
+      <option name="docutils_params" value="" />
+      <option name="docutils_task" value="html" />
+      <option name="docutils_open_in_browser" value="false" />
+      <RunnerSettings RunnerId="PythonRunner" />
+      <ConfigurationWrapper RunnerId="PythonRunner" />
+      <method />
+    </configuration>
+    <configuration default="false" name="Coverage" type="docs" factoryName="Sphinx task">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs />
+      <option name="SDK_HOME" value="/usr/bin/python3.3" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="volatility3" />
+      <option name="docutils_input_file" value="" />
+      <option name="docutils_output_file" value="" />
+      <option name="docutils_params" value="" />
+      <option name="docutils_task" value="coverage" />
+      <option name="docutils_open_in_browser" value="false" />
+      <method />
+    </configuration>
+    <list size="3">
+      <item index="0" class="java.lang.String" itemvalue="Python docs.Create Sphinx Documentation" />
+      <item index="1" class="java.lang.String" itemvalue="Python docs.Coverage" />
+      <item index="2" class="java.lang.String" itemvalue="Python.test_rig" />
+    </list>
+    <recent_temporary>
+      <list size="1">
+        <item index="0" class="java.lang.String" itemvalue="Python.test_rig" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="ShelveChangesManager" show_recycled="false" />
+  <component name="SvnConfiguration" maxAnnotateRevisions="500" myUseAcceleration="nothing" myAutoUpdateAfterCommit="false" cleanupOnStartRun="false" SSL_PROTOCOLS="all">
+    <option name="USER" value="" />
+    <option name="PASSWORD" value="" />
+    <option name="mySSHConnectionTimeout" value="30000" />
+    <option name="mySSHReadTimeout" value="30000" />
+    <option name="LAST_MERGED_REVISION" />
+    <option name="MERGE_DRY_RUN" value="false" />
+    <option name="MERGE_DIFF_USE_ANCESTRY" value="true" />
+    <option name="UPDATE_LOCK_ON_DEMAND" value="false" />
+    <option name="IGNORE_SPACES_IN_MERGE" value="false" />
+    <option name="CHECK_NESTED_FOR_QUICK_MERGE" value="false" />
+    <option name="IGNORE_SPACES_IN_ANNOTATE" value="true" />
+    <option name="SHOW_MERGE_SOURCES_IN_ANNOTATE" value="true" />
+    <option name="FORCE_UPDATE" value="false" />
+    <option name="IGNORE_EXTERNALS" value="false" />
+    <myIsUseDefaultProxy>false</myIsUseDefaultProxy>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="e675951f-ed7f-4f62-ae66-a3ceef1f9e8e" name="Default" comment="" />
+      <created>1395489341752</created>
+      <updated>1395489341752</updated>
+    </task>
+    <task id="LOCAL-00001" summary="Tidy up several areas using PyCharm corrections.">
+      <created>1396140391030</created>
+      <updated>1396140391030</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
+    <servers />
+  </component>
+  <component name="TodoView" selected-index="0">
+    <todo-panel id="selected-file">
+      <are-packages-shown value="false" />
+      <are-modules-shown value="false" />
+      <flatten-packages value="false" />
+      <is-autoscroll-to-source value="false" />
+    </todo-panel>
+    <todo-panel id="all">
+      <are-packages-shown value="false" />
+      <are-modules-shown value="false" />
+      <flatten-packages value="false" />
+      <is-autoscroll-to-source value="false" />
+    </todo-panel>
+    <todo-panel id="default-changelist">
+      <are-packages-shown value="false" />
+      <are-modules-shown value="false" />
+      <flatten-packages value="false" />
+      <is-autoscroll-to-source value="false" />
+    </todo-panel>
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="-1" y="27" width="1922" height="1054" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32908705" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3297062" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.18854167" sideWeight="0.50106156" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.18854167" sideWeight="0.49893844" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3280255" sideWeight="0.5" order="6" side_tool="true" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32908705" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32908705" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
+      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.3280255" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+    </layout>
+  </component>
+  <component name="Vcs.Log.UiProperties">
+    <option name="RECENTLY_FILTERED_USER_GROUPS">
+      <collection />
+    </option>
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="myTodoPanelSettings">
+      <TodoPanelSettings />
+    </option>
+    <MESSAGE value="Tidy up several areas using PyCharm corrections." />
+    <option name="LAST_COMMIT_MESSAGE" value="Tidy up several areas using PyCharm corrections." />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/renderers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="22" column="39" selection-start="824" selection-end="824" vertical-scroll-proportion="0.0" vertical-offset="15" max-vertical-offset="1305">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/validity.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="18" column="8" selection-start="618" selection-end="618" vertical-scroll-proportion="0.0" vertical-offset="270" max-vertical-offset="570">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/renderers/basic.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="12" column="0" selection-start="347" selection-end="347" vertical-scroll-proportion="0.0" vertical-offset="180" max-vertical-offset="270">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/renderers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="66" column="40" selection-start="2453" selection-end="2453" vertical-scroll-proportion="0.0" vertical-offset="430" max-vertical-offset="1080">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/context.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="36" column="30" selection-start="968" selection-end="968" vertical-scroll-proportion="0.0" vertical-offset="540" max-vertical-offset="720" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/objects.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="63" column="17" selection-start="2432" selection-end="2432" vertical-scroll-proportion="0.0" vertical-offset="945" max-vertical-offset="1065" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/context.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="36" column="30" selection-start="968" selection-end="968" vertical-scroll-proportion="0.0" vertical-offset="540" max-vertical-offset="720" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/objects.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="63" column="17" selection-start="2432" selection-end="2432" vertical-scroll-proportion="0.0" vertical-offset="76" max-vertical-offset="1065" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/symbols.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="8" column="0" selection-start="101" selection-end="101" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1440" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test_rig.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="97" column="15" selection-start="4550" selection-end="4550" vertical-scroll-proportion="0.0" vertical-offset="1455" max-vertical-offset="1920" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/layers/physical.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="61" column="16" selection-start="2037" selection-end="2037" vertical-scroll-proportion="0.0" vertical-offset="915" max-vertical-offset="1425" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/symbols/native.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="22" column="40" selection-start="880" selection-end="880" vertical-scroll-proportion="0.0" vertical-offset="330" max-vertical-offset="1185" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/symbols/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="36" column="35" selection-start="1086" selection-end="1086" vertical-scroll-proportion="0.0" vertical-offset="540" max-vertical-offset="1500" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/context.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="15" column="8" selection-start="282" selection-end="282" vertical-scroll-proportion="0.0" vertical-offset="29" max-vertical-offset="675" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/layers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="67" column="54" selection-start="2455" selection-end="2455" vertical-scroll-proportion="0.0" vertical-offset="809" max-vertical-offset="1470" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/objects/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="293" column="58" selection-start="13524" selection-end="13524" vertical-scroll-proportion="0.0" vertical-offset="4395" max-vertical-offset="4665" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/xp_sp2_x86_vtypes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="27" column="4" selection-start="894" selection-end="894" vertical-scroll-proportion="0.0" vertical-offset="405" max-vertical-offset="81360" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="90" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/config.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="4" column="3" selection-start="44" selection-end="44" vertical-scroll-proportion="0.0" vertical-offset="60" max-vertical-offset="1125" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="90" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/config.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="10" column="48" selection-start="243" selection-end="243" vertical-scroll-proportion="0.0" vertical-offset="150" max-vertical-offset="1125" />
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/.PyCharm30/system/python_stubs/-1247971766/builtins.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="712" column="8" selection-start="25666" selection-end="25666" vertical-scroll-proportion="0.33260393" vertical-offset="10376" max-vertical-offset="84420" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="914" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/objects/templates.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="8" column="0" selection-start="101" selection-end="101" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="990" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test_rig.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="97" column="15" selection-start="4550" selection-end="4550" vertical-scroll-proportion="0.0" vertical-offset="1218" max-vertical-offset="1875" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/symbols/native.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="73" column="0" selection-start="3752" selection-end="3752" vertical-scroll-proportion="0.0" vertical-offset="565" max-vertical-offset="1170" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/config.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="23" column="25" selection-start="614" selection-end="614" vertical-scroll-proportion="0.26258206" vertical-offset="105" max-vertical-offset="1125" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/exceptions.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="20" column="0" selection-start="601" selection-end="601" vertical-scroll-proportion="0.32822758" vertical-offset="0" max-vertical-offset="914" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/xp_sp2_x86_vtypes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="63" column="48" selection-start="2246" selection-end="2246" vertical-scroll-proportion="0.59933406" vertical-offset="405" max-vertical-offset="81360" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/symbols.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="9" column="32" selection-start="188" selection-end="188" vertical-scroll-proportion="0.016411379" vertical-offset="120" max-vertical-offset="1560" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/layers/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="59" column="50" selection-start="2297" selection-end="2297" vertical-scroll-proportion="0.8264463" vertical-offset="370" max-vertical-offset="975" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/layers/intel.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="137" column="23" selection-start="5744" selection-end="5744" vertical-scroll-proportion="0.7210066" vertical-offset="1366" max-vertical-offset="2280" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/layers/physical.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="84" column="29" selection-start="3086" selection-end="3086" vertical-scroll-proportion="0.80306345" vertical-offset="511" max-vertical-offset="1425" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/objects/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="198" column="42" selection-start="8751" selection-end="8751" vertical-scroll-proportion="0.3322314" vertical-offset="2724" max-vertical-offset="4725" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/plugins.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="33" column="0" selection-start="1032" selection-end="1032" vertical-scroll-proportion="0.5251641" vertical-offset="0" max-vertical-offset="914" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/plugins/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="914" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="3" selection-start="3" selection-end="3" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1200" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/symbols/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="36" column="35" selection-start="1086" selection-end="1086" vertical-scroll-proportion="0.21444201" vertical-offset="329" max-vertical-offset="1485" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/renderers/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="32" column="32" selection-start="1095" selection-end="1095" vertical-scroll-proportion="0.7933884" vertical-offset="0" max-vertical-offset="705" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/layers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="54" column="85" selection-start="1946" selection-end="1946" vertical-scroll-proportion="0.3322314" vertical-offset="609" max-vertical-offset="1575" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/renderers/basic.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="12" column="0" selection-start="347" selection-end="347" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="270">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/source/conf.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="20" column="52" selection-start="735" selection-end="735" vertical-scroll-proportion="0.22350994" vertical-offset="150" max-vertical-offset="4110" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="10" column="0" selection-start="351" selection-end="351" vertical-scroll-proportion="0.24834438" vertical-offset="0" max-vertical-offset="604" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/context.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="12" column="0" selection-start="229" selection-end="229" vertical-scroll-proportion="0.19701986" vertical-offset="61" max-vertical-offset="720" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/objects.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="46" column="13" selection-start="1888" selection-end="1888" vertical-scroll-proportion="0.3294702" vertical-offset="461" max-vertical-offset="1095" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/source/volatility.framework.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="960" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/source/volatility.framework.symbols.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="604" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/source/modules.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="604" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/validity.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="18" column="8" selection-start="618" selection-end="618" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="570">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/doc/source/index.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="20" column="15" selection-start="447" selection-end="447" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="420">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/volatility/framework/interfaces/renderers.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="18" column="52" selection-start="679" selection-end="679" vertical-scroll-proportion="0.397351" vertical-offset="15" max-vertical-offset="1290">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+  </component>
+  <component name="masterDetails">
+    <states>
+      <state key="ScopeChooserConfigurable.UI">
+        <settings>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+    </states>
+  </component>
+</project>
+
