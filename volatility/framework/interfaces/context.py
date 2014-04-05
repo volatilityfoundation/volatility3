@@ -6,7 +6,7 @@ Created on 6 May 2013
 
 
 class ContextInterface(object):
-    """Class for providing the interface for the Context object"""
+    """All context-like objects must adhere to the following interface."""
 
     def __init__(self):
         """Initializes the context with a symbol_space"""
