@@ -38,7 +38,7 @@ class ConfigurationGroup(validity.ValidityRoutines):
         self._options = {}
 
     def __getattr__(self, attr):
-        """Locates an option within a configurationgroup and returns it"""
+        """Locates an option within a ConfigurationGroup and returns it"""
         if attr in self._options:
             return self._options[attr]
 
@@ -56,7 +56,7 @@ class Configuration(validity.ValidityRoutines):
         self._config_groups = {}
 
     def __getattr__(self, attr):
-        """Locates a group within the configuration and returns it"""
+        """Locates a group within the Configuration and returns it"""
         if attr in self._config_groups:
             return self._config_groups[attr]
         raise AttributeError("Attribute " + attr + " not found in the configuration")

@@ -19,20 +19,26 @@ class PluginInterface(validity.ValidityRoutines):
         return self._context
 
     def establish_context(self):
-        """Alters the context to ensure the plugin can run"""
+        """Alters the context to ensure the plugin can run.
+
+        This function constructs the necessary address spaces and symbol spaces that the plugin will need.
+        """
         raise NotImplementedError("Abstract method establish_context must be overridden by plugins.")
 
     def plugin_options(self, config_group = None):
         """Modifies the passed in ConfigGroup object to contain the required options"""
         raise NotImplementedError("Abstract method plugin_options must be overridden by plugins")
 
-    def __call__(self):
+    def __call__(self, context):
         """Executes the functionality of the code
-        
-           Returns an OutputUI object
+
+        @:param
+
+        :return: a TreeGrid object that can then be passed to a Renderer.
+        :rtype: TreeGrid
         """
 
 
-# Needs to say what it can/can't handle (validate context)
-# Needs to offer available options'
-# Figure out how to handle global config options
+# TODO: Needs to say what it can/can't handle (validate context)
+# TODO: Needs to offer available options'
+# TODO: Figure out how to handle global config options
