@@ -17,7 +17,16 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
     """
     def __init__(self, object_class = None, structure_name = None, **kwargs):
         interfaces.objects.Template.__init__(self, structure_name = structure_name, **kwargs)
-        self.object_class = self.class_check(object_class, interfaces.objects.ObjectInterface)
+        self.class_check(object_class, interfaces.objects.ObjectInterface)
+        self.object_class = object_class
+
+    @classmethod
+    def template_children(cls, **kwargs):
+        raise NotImplementedError("Abstract method template_children not implemented yet.")
+
+    @classmethod
+    def template_size(cls, **kwargs):
+        raise NotImplementedError("Abstract method template_size not implemented yet.")
 
     @property
     def size(self):

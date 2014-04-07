@@ -10,7 +10,8 @@ class Option(validity.ValidityRoutines):
     """Class to handle a single specific configuration option"""
     def __init__(self, name, option_type, definition = None, description = None):
         """Creates a new option"""
-        self._option_type = self.type_check(option_type, type)
+        self.type_check(option_type, type)
+        self._option_type = option_type
         self._name = name
         self._description = description
         self._definition = definition
@@ -45,8 +46,8 @@ class ConfigurationGroup(validity.ValidityRoutines):
     def __setattr__(self, name, value):
         if name == '_options':
             setattr(self, name, value)
-        if self.type_check(value, Option):
-            self._options[name] = value
+        self.type_check(value, Option)
+        self._options[name] = value
         raise TypeError("Attribute " + name + " must be an Option object")
 
 class Configuration(validity.ValidityRoutines):
@@ -64,6 +65,6 @@ class Configuration(validity.ValidityRoutines):
     def __setattr__(self, attr, value):
         if attr == '_config_groups':
             setattr(self, attr, value)
-        if self.type_check(value, ConfigurationGroup):
-            self._config_groups[attr] = value
+        self.type_check(value, ConfigurationGroup)
+        self._config_groups[attr] = value
         raise TypeError("Attribute " + attr + " must be a ConfigurationGroup")

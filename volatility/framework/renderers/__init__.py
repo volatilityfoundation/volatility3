@@ -54,6 +54,7 @@ class TreeGrid(TreeRow):
     """Class providing the interface for a TreeGrid (which contains TreeRows)"""
 
     simple_types = {int, str, float, bytes}
+    column_formats = {"address"}
 
     def __init__(self, columns):
         """Constructs a TreeGrid object using a specific set of columns
@@ -66,14 +67,12 @@ class TreeGrid(TreeRow):
         for (name, column_type, column_format) in columns:
             is_simple_type = False
             for t in self.simple_types:
-                try:
-                    self.class_check(column_type, t)
-                    is_simple_type = True
-                except TypeError:
-                    pass
+                is_simple_type = is_simple_type or issubclass(column_type, t)
             if not is_simple_type:
                 raise TypeError("Column " + name + "'s type " + column_type.__class__.__name__ +
                                 " is not a simple type")
+            if not column_format is None and not column_format in self.column_formats:
+                raise TypeError("Column " + name + "'s format " + column_format + " is not an accepted formatter.")
         self._columns = columns
 
         # We can use the special type None because we're the top level node without values

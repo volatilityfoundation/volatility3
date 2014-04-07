@@ -10,8 +10,11 @@ class SymbolTableInterface(validity.ValidityRoutines):
     """Handles a table of symbols"""
 
     def __init__(self, name, native_structures = None):
-        self.name = self.type_check(name or None, str)
-        self._native_structures = self.type_check(native_structures, NativeTableInterface)
+        self.type_check(native_structures, NativeTableInterface)
+        if name:
+            self.type_check(name, str)
+        self.name = name or None
+        self._native_structures = native_structures
 
     ### Required Constant symbol functions
 

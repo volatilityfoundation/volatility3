@@ -12,7 +12,8 @@ class PluginInterface(validity.ValidityRoutines):
     """Class that defines the interface all Plugins must maintain"""
 
     def __init__(self, context):
-        self._context = self.type_check(context, context_module.ContextInterface)
+        self.type_check(context, context_module.ContextInterface)
+        self._context = context
 
     @property
     def context(self):

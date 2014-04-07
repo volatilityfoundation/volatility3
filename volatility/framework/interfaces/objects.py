@@ -12,10 +12,15 @@ class ObjectInterface(validity.ValidityRoutines):
     """ A base object required to be the ancestor of every object used in volatility """
     def __init__(self, context, layer_name, offset, structure_name, size, parent = None):
         # Since objects are likely to be instantiated often,
-        # we're only checking that a context is a context
+        # we're only checking that context, offset and parent
         # Everything else may be wrong, but that will get caught later on
-        self._context = self.type_check(context, context_module.ContextInterface)
-        self._parent = None if not parent else self.type_check(parent, ObjectInterface)
+        self.type_check(context, context_module.ContextInterface)
+        self.type_check(offset, int)
+        if parent:
+            self.type_check(parent, ObjectInterface)
+
+        self._context = context
+        self._parent = None if not parent else parent
         self._offset = offset
         self._layer_name = layer_name
         self._structure_name = structure_name
