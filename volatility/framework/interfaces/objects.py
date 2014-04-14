@@ -1,15 +1,18 @@
-'''
+"""
 Created on 6 May 2013
 
 @author: mike
-'''
+"""
 
 import copy
 from volatility.framework import validity
 from volatility.framework.interfaces import context as context_module
+from abc import ABCMeta, abstractmethod
 
 class ObjectInterface(validity.ValidityRoutines):
     """ A base object required to be the ancestor of every object used in volatility """
+    __metaclass__ = ABCMeta
+
     def __init__(self, context, layer_name, offset, structure_name, size, parent = None):
         # Since objects are likely to be instantiated often,
         # we're only checking that context, offset and parent
@@ -26,6 +29,7 @@ class ObjectInterface(validity.ValidityRoutines):
         self._structure_name = structure_name
         self._size = size
 
+    @abstractmethod
     def write(self, value):
         """Writes the new value into the format at the offset the object currently resides at"""
 

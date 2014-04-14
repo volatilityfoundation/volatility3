@@ -3,24 +3,27 @@ Created on 6 May 2013
 
 @author: mike
 """
-
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 class ContextInterface(object):
-    """All context-like objects must adhere to the following interface."""
+    """All context-like objects must adhere to the following interface.
+
+    This interface is present to avoid import dependency cycles.
+    """
+    __metaclass__ = ABCMeta
 
     def __init__(self):
         """Initializes the context with a symbol_space"""
 
     ### Symbol Space Functions
 
-    @property
+    @abstractproperty
     def symbol_space(self):
         """Returns the symbol_space for the context"""
-        raise NotImplementedError("Symbol_space has not been implemented.")
 
     ### Memory Functions
 
-    @property
+    @abstractproperty
     def memory(self):
         """Returns the memory object for the context"""
         raise NotImplementedError("Memory has not been implemented.")
@@ -31,6 +34,7 @@ class ContextInterface(object):
 
     ### Object Factory Functions
 
+    @abstractmethod
     def object(self, symbol, layer_name, offset):
         """Object factory, takes a context, symbol, offset and optional layer_name
         

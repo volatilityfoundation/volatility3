@@ -7,10 +7,11 @@ Created on 4 May 2013
 from volatility.framework import validity, exceptions
 # We can't just import interfaces because we'd have a cycle going
 from volatility.framework.interfaces import context as context_module
-
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 class DataLayerInterface(validity.ValidityRoutines):
     """A Layer that directly holds data (and does not translate it"""
+    __metaclass__ = ABCMeta
 
     def __init__(self, context, name):
         self.type_check(name, str)
@@ -23,19 +24,19 @@ class DataLayerInterface(validity.ValidityRoutines):
         """Returns the layer name"""
         return self._name
 
-    @property
+    @abstractproperty
     def maximum_address(self):
         """Returns the maximum valid address of the space"""
-        raise NotImplementedError("Maximum Address has not been implemented")
 
-    @property
+    @abstractproperty
     def minimum_address(self):
         """Returns the minimum valid address of the space"""
-        raise NotImplementedError("Minimum Address has not been implemented")
 
+    @abstractmethod
     def is_valid(self, offset):
         """Returns a boolean based on whether the offset is valid or not"""
 
+    @abstractmethod
     def read(self, offset, length, pad = False):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size
         
@@ -43,6 +44,7 @@ class DataLayerInterface(validity.ValidityRoutines):
            unless pad is set, in which case the read errors will be replaced by null characters.
         """
 
+    @abstractmethod
     def write(self, offset, data):
         """Writes a chunk of data at offset.  
         
@@ -53,9 +55,11 @@ class DataLayerInterface(validity.ValidityRoutines):
 
 class TranslationLayerInterface(DataLayerInterface):
 
+    @abstractmethod
     def translate(self, offset):
         """Returns a tuple of (offset, layer) indicating the translation of input domain to the output range"""
 
+    @abstractmethod
     def mapping(self, offset, length):
         """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
         
@@ -63,10 +67,9 @@ class TranslationLayerInterface(DataLayerInterface):
         """
         return []
 
-    @property
+    @abstractproperty
     def dependencies(self):
         """Returns a list of layer names that this layer translates onto"""
-        raise NotImplementedError("Abstract method dependencies")
 
     ### Read/Write functions for mapped pages
 
@@ -76,7 +79,8 @@ class TranslationLayerInterface(DataLayerInterface):
         output = b""
         for (offset, mapped_offset, length, layer) in self.mapping(offset, length):
             if not pad and offset > current_offset:
-                raise exceptions.InvalidAddressException("Layer " + self.name + " cannot map offset " + current_offset)
+                raise exceptions.InvalidAddressException("Layer " + self.name + " cannot map offset " +
+                                                         str(current_offset))
             elif offset > current_offset:
                 output += b"\x00" * (current_offset - offset)
                 current_offset = offset
