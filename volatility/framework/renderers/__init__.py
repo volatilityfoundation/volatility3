@@ -1,4 +1,3 @@
-import copy
 import collections
 
 __author__ = 'mike'
@@ -39,7 +38,7 @@ class TreeRow(validity.ValidityRoutines):
 
     @property
     def values(self):
-        return copy.deepcopy(self._values)
+        return self._values
 
     @property
     def children(self):
