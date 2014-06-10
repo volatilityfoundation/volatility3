@@ -9,6 +9,7 @@ from volatility.framework import validity, exceptions
 from volatility.framework.interfaces import context as context_module
 from abc import ABCMeta, abstractmethod, abstractproperty
 
+
 class DataLayerInterface(validity.ValidityRoutines):
     """A Layer that directly holds data (and does not translate it"""
     __metaclass__ = ABCMeta
@@ -39,22 +40,21 @@ class DataLayerInterface(validity.ValidityRoutines):
     @abstractmethod
     def read(self, offset, length, pad = False):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size
-        
+
            If there is a fault of any kind (such as a page fault), an exception will be thrown
            unless pad is set, in which case the read errors will be replaced by null characters.
         """
 
     @abstractmethod
     def write(self, offset, data):
-        """Writes a chunk of data at offset.  
-        
+        """Writes a chunk of data at offset.
+
            Any unavailable sections in the underlying bases will cause an exception to be thrown.
            Note: Writes are not atomic, therefore some data can be written, even if an exception is thrown.
         """
 
 
 class TranslationLayerInterface(DataLayerInterface):
-
     @abstractmethod
     def translate(self, offset):
         """Returns a tuple of (offset, layer) indicating the translation of input domain to the output range"""
@@ -62,7 +62,7 @@ class TranslationLayerInterface(DataLayerInterface):
     @abstractmethod
     def mapping(self, offset, length):
         """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
-        
+
            This allows translation layers to provide maps of contiguous regions in one layer
         """
         return []
@@ -71,7 +71,7 @@ class TranslationLayerInterface(DataLayerInterface):
     def dependencies(self):
         """Returns a list of layer names that this layer translates onto"""
 
-    ### Read/Write functions for mapped pages
+    # ## Read/Write functions for mapped pages
 
     def read(self, offset, length, pad = False):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""

@@ -5,7 +5,9 @@ Created on 6 May 2013
 """
 
 import os.path
+
 from volatility.framework import interfaces, exceptions
+
 
 class BufferDataLayer(interfaces.layers.DataLayerInterface):
     """A DataLayer class backed by a buffer in memory, designed for testing and swift data access"""
@@ -36,6 +38,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
         """Writes the data from to the buffer"""
         self.type_check(data, bytes)
         self._buffer = self._buffer[:address] + data + self._buffer[address + len(data):]
+
 
 class FileLayer(interfaces.layers.DataLayerInterface):
     """a DataLayer backed by a file on the filesystem"""
@@ -81,7 +84,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     def write(self, offset, data):
         """Writes to the file
-        
+
            This will technically allow writes beyond the extent of the file
         """
         if not self.is_valid(offset):

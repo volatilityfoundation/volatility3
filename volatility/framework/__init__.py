@@ -1,4 +1,4 @@
-###
+# ##
 #
 # Libtool version scheme
 #
@@ -11,13 +11,15 @@
 # 3. If only additions to the interface have been made, increment age
 # 4. If changes or removals of the interface have been made, set age to 0
 
-_current = 3    # Number of releases of the library with any change
-_revision = 0   # Number of changes that don't affect the interface
-_age = 0        # Number of consecutive versions of the interface the current version supports
+CURRENT = 3  # Number of releases of the library with any change
+REVISION = 0  # Number of changes that don't affect the interface
+AGE = 0  # Number of consecutive versions of the interface the current version supports
+
 
 def version():
     """Provides the so version number of the library"""
-    return _current - _age, _age, _revision
+    return CURRENT - AGE, AGE, REVISION
+
 
 def require_version(*args):
     """Checks the required version of a plugin"""
@@ -31,7 +33,9 @@ def require_version(*args):
                                 " is an older revision than the required version " +
                                 ".".join([str(x) for x in args[0:2]]))
 
+
 from volatility.framework import interfaces, symbols, layers
+
 
 class Context(interfaces.context.ContextInterface):
     """Maintains the context within which to construct objects
@@ -54,7 +58,7 @@ class Context(interfaces.context.ContextInterface):
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
 
-    ### Symbol Space Functions
+    # ## Symbol Space Functions
 
     @property
     def symbol_space(self):
@@ -67,7 +71,7 @@ class Context(interfaces.context.ContextInterface):
         """A Memory object, allowing access to all data and translation layers currently available within the context"""
         return self._memory
 
-    ### Address Space Functions
+    # ## Address Space Functions
 
     def add_translation_layer(self, layer):
         """Adds a named translation layer to the context
@@ -78,14 +82,14 @@ class Context(interfaces.context.ContextInterface):
         """
         self._memory.add_layer(layer)
 
-    ### Object Factory Functions
+    # ## Object Factory Functions
 
     def object(self, symbol, layer_name, offset):
         """Object factory, takes a context, symbol, offset and optional layername
-        
+
         Looks up the layername in the context, finds the object template based on the symbol,
         and constructs an object using the object template on the layer at the offset.
-        
+
         :return: A fully constructed object
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """

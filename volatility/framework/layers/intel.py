@@ -6,7 +6,9 @@ Created on 7 May 2013
 
 import math
 import struct
+
 from volatility.framework import interfaces, exceptions
+
 
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
@@ -43,7 +45,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     def _translate(self, offset):
         """Translates a specific offset based on paging tables
-        
+
            Returns the offset and the pagesize
         """
         # Setup the entry and how far we are through the offset
@@ -88,7 +90,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     def mapping(self, offset, length):
         """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
-        
+
            This allows translation layers to provide maps of contiguous regions in one layer
         """
         result = []
@@ -99,6 +101,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             offset -= chunk_size
             result.append((chunk_offset, chunk_size))
         return result
+
 
 class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel architectures"""
@@ -116,8 +119,8 @@ class IntelPAE(Intel):
                            ('page directory', 9, True),
                            ('page table', 9, True)]
 
-class Intel32e(Intel):
 
+class Intel32e(Intel):
     def __init__(self, *args, **kwargs):
         Intel.__init__(self, *args, **kwargs)
 
@@ -132,17 +135,17 @@ class Intel32e(Intel):
                            ('page directory', 9, True),
                            ('page table', 9, True)]
 
-class WindowsMixin(object):
 
+class WindowsMixin(object):
     @staticmethod
     def _page_is_valid(entry):
         """Returns whether a particular page is valid based on its entry
-        
+
            Windows uses additional "available" bits to store flags
            These flags allow windows to determine whether a page is still valid
-           
+
            Bit 11 is the transition flag, and Bit 10 is the prototype flag
-           
+
            For more information, see Windows Internals (6th Ed, Part 2, pages 268-269)
         """
-        return (entry & 1) or ((entry & 1 << 11) and not (entry & 1 << 10))
+        return (entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10)

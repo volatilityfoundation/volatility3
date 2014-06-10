@@ -7,6 +7,7 @@ Created on 4 May 2013
 from volatility.framework import validity, interfaces, exceptions
 from volatility.framework.layers import physical, intel
 
+
 class Memory(validity.ValidityRoutines):
     """Container for multiple layers of data"""
 
@@ -15,7 +16,7 @@ class Memory(validity.ValidityRoutines):
 
     def read(self, layer, offset, length, pad = False):
         """Reads from a particular layer at offset for length bytes
-        
+
            Returns 'bytes' not 'str'
         """
         return self[layer].read(offset, length, pad)
@@ -26,7 +27,7 @@ class Memory(validity.ValidityRoutines):
 
     def add_layer(self, layer):
         """Adds a layer to memory model
-        
+
            This will throw an exception if the required dependencies are not met
         """
         self.type_check(layer, interfaces.layers.DataLayerInterface)
@@ -41,7 +42,7 @@ class Memory(validity.ValidityRoutines):
 
     def del_layer(self, name):
         """Removes the layer called name
-        
+
            This will throw an exception if other layers depend upon this layer
         """
         for layer in self._layers:

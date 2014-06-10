@@ -5,9 +5,11 @@ Created on 6 May 2013
 """
 
 import copy
+from abc import ABCMeta, abstractmethod
+
 from volatility.framework import validity
 from volatility.framework.interfaces import context as context_module
-from abc import ABCMeta, abstractmethod
+
 
 class ObjectInterface(validity.ValidityRoutines):
     """ A base object required to be the ancestor of every object used in volatility """
@@ -38,11 +40,13 @@ class ObjectInterface(validity.ValidityRoutines):
         object_template = self._context.symbol_space.resolve(new_structure_name)
         return object_template(context = self._context, layer_name = self._layer_name, offset = self._offset)
 
+
 class Template(object):
     """Class for all Factories that take offsets, and data layers and produce objects
-    
+
        This is effectively a class for currying object calls
     """
+
     def __init__(self, structure_name = None, **kwargs):
         """Stores the keyword arguments for later use"""
         self._kwargs = kwargs

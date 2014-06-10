@@ -82,8 +82,8 @@ class TreeGrid(TreeRow):
         converted_columns = []
         for (name, column_type, column_format) in columns:
             is_simple_type = False
-            for t in self.simple_types:
-                is_simple_type = is_simple_type or issubclass(column_type, t)
+            for stype in self.simple_types:
+                is_simple_type = is_simple_type or issubclass(column_type, stype)
             if not is_simple_type:
                 raise TypeError("Column " + name + "'s type " + column_type.__class__.__name__ +
                                 " is not a simple type")
@@ -135,7 +135,7 @@ class FormatSpecification(object):
 
     # noinspection PyShadowingBuiltins
     def __init__(self, fill = None, align = None, sign = None, alt = None, zero = None, width = None,
-                 precision = None, type = None):
+                 precision = None, type = None):  # pylint: disable=W0622
         self._fill = fill
         self._align = align
         self._sign = sign

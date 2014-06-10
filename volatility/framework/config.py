@@ -6,8 +6,10 @@ Created on 7 May 2013
 
 from volatility.framework import validity
 
+
 class Option(validity.ValidityRoutines):
     """Class to handle a single specific configuration option"""
+
     def __init__(self, name, option_type, definition = None, description = None):
         """Creates a new option"""
         self.type_check(option_type, type)
@@ -18,19 +20,23 @@ class Option(validity.ValidityRoutines):
 
     @property
     def option_type(self):
+        """The data type of the Option, such as string, integer, etc"""
         return self._option_type
 
     @property
     def name(self):
+        """The name of the Option."""
         return self._name
 
     @property
     def description(self):
+        """A short description of what the Option is designed to affect or achieve."""
         return self._description
 
     @property
     def definition(self):
         return self._definition
+
 
 class ConfigurationGroup(validity.ValidityRoutines):
     """Class to handle configuration groups, contains options"""
@@ -49,6 +55,7 @@ class ConfigurationGroup(validity.ValidityRoutines):
         self.type_check(value, Option)
         self._options[name] = value
         raise TypeError("Attribute " + name + " must be an Option object")
+
 
 class Configuration(validity.ValidityRoutines):
     """Class to handle configuration, contains configuration groups"""

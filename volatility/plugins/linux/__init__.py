@@ -1,1 +1,1 @@
-__author__ = 'mike'
+"""All Linux-related plugins"""

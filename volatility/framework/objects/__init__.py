@@ -6,11 +6,14 @@ Created on 17 Feb 2013
 
 import struct
 import collections
+
 from volatility.framework import interfaces
 from volatility.framework.objects import templates
 
+
 class Void(interfaces.objects.ObjectInterface):
     """Returns an object to represent void/unknown types"""
+
     @classmethod
     def template_size(cls, arguments):
         """Dummy size for Void objects"""
@@ -24,6 +27,7 @@ class Void(interfaces.objects.ObjectInterface):
     @classmethod
     def template_replace_child(cls, old_child, new_child, arguments):
         """Dummy method that does nothing for Void objects"""
+
 
 class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
@@ -59,6 +63,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     def template_replace_child(cls, old_child, new_child, arguments):
         """Since this template can't ever have children, this method can be empty"""
 
+
 class Integer(PrimitiveObject, int):
     """Primitive Object that handles standard numeric types"""
 
@@ -72,6 +77,7 @@ class Integer(PrimitiveObject, int):
             return self._context.memory.write(self._layer_name, self._offset, data)
         raise TypeError("Integer objects require an integer to be written")
 
+
 class Float(PrimitiveObject, float):
     """Primitive Object that handles double or floating point numbers"""
 
@@ -84,6 +90,7 @@ class Float(PrimitiveObject, float):
             data = struct.pack(self._struct_format, value)
             return self._context.memory.write(self._layer_name, self._offset, data)
         raise TypeError("Float objects require a float to be written")
+
 
 class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes"""
@@ -104,9 +111,10 @@ class Bytes(PrimitiveObject, bytes):
             return self._context.memory.write(self._layer_name, self._offset, data)
         raise TypeError("Bytes objects require a bytes type to be written")
 
+
 class String(PrimitiveObject, str):
     """Primitive Object that handles string values
-    
+
        length: specifies the maximum possible length that the string could hold in memory
     """
 
@@ -126,8 +134,10 @@ class String(PrimitiveObject, str):
             return self._context.memory.write(self._layer_name, self._offset, data)
         raise TypeError("String objects require a string to be written")
 
+
 class Pointer(Integer):
     """Pointer which points to another object"""
+
     def __init__(self, context, layer_name, offset, structure_name, size = None,
                  parent = None, struct_format = None, target = None):
         if not isinstance(target, templates.ObjectTemplate):
@@ -170,8 +180,10 @@ class Pointer(Integer):
             if arguments['target'] == old_child:
                 arguments['target'] = new_child
 
+
 class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
+
     def __new__(cls, context, layer_name, offset, structure_name, size = None,
                 parent = None, target = None, start_bit = 0, end_bit = 0, **kwargs):
         value = target(context = context,
@@ -192,6 +204,7 @@ class BitField(PrimitiveObject, int):
     def write(self, value):
         raise NotImplementedError("Writing to BitFields is not yet implemented")
 
+
 class Enumeration(interfaces.objects.ObjectInterface):
     """Returns an object made up of choices"""
     # FIXME: Add in body for the enumeration object
@@ -202,8 +215,10 @@ class Enumeration(interfaces.objects.ObjectInterface):
     def write(self, value):
         raise NotImplementedError("Writing to Enumerations is not yet implemented")
 
+
 class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
+
     def __init__(self, context, layer_name, offset, structure_name, size = None,
                  parent = None, count = 0, target = None):
         if not isinstance(target, templates.ObjectTemplate):
@@ -250,6 +265,7 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
 
     def write(self, value):
         raise NotImplementedError("Writing to Arrays is not yet implemented")
+
 
 class Struct(interfaces.objects.ObjectInterface):
     """Object which can contain members that are other objects"""

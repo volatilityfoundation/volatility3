@@ -1,10 +1,9 @@
-from framework.renderers import FormatSpecification
-
 __author__ = 'mike'
+
+import sys
 
 from volatility.framework.interfaces import renderers as interface
 from volatility.framework import renderers
-import sys
 
 
 class TextRenderer(interface.Renderer):
@@ -40,8 +39,9 @@ class TextRenderer(interface.Renderer):
         # Then print out the headers and the values at their appropriate spacings
         # Potentially warn if the output is likely to be longer than the display area.
 
-        headers = [("{0:" + FormatSpecification(width = column_maximum_widths[column.index], fill = ' ',
-                                                align = '^').to_string() + "}").format(column.name) for column in
+        headers = [("{0:" + renderers.FormatSpecification(width = column_maximum_widths[column.index], fill = ' ',
+                                                          align = '^').to_string() + "}").format(column.name) for column
+                   in
                    grid.columns]
         print(sep.join(headers))
 

@@ -6,6 +6,7 @@ Created on 4 May 2013
 
 from volatility.framework import validity, exceptions
 
+
 class SymbolTableInterface(validity.ValidityRoutines):
     """Handles a table of symbols"""
 
@@ -16,11 +17,11 @@ class SymbolTableInterface(validity.ValidityRoutines):
         self.name = name or None
         self._native_structures = native_structures
 
-    ### Required Constant symbol functions
+    # ## Required Constant symbol functions
 
     def get_constant(self, name):
         """Resolves a symbol name into a constant
-        
+
            If the symbol isn't found, it raises a SymbolError exception
         """
         raise NotImplementedError("Abstract property get_constant not implemented by subclass.")
@@ -30,11 +31,11 @@ class SymbolTableInterface(validity.ValidityRoutines):
         """Returns an iterator of the constant symbols"""
         raise NotImplementedError("Abstract property constants not implemented by subclass.")
 
-    ### Required Structure symbol functions
+    # ## Required Structure symbol functions
 
     def get_structure(self, name):
         """Resolves a symbol name into an object template
-        
+
            If the symbol isn't found it raises a SymbolError exception
         """
         raise NotImplementedError("Abstract method get_structure not implemented by subclass.")
@@ -44,7 +45,7 @@ class SymbolTableInterface(validity.ValidityRoutines):
         """Returns an iterator of the structure symbols"""
         raise NotImplementedError("Abstract property structures not implemented by subclass.")
 
-    ### Native Type Handler
+    # ## Native Type Handler
 
     @property
     def natives(self):
@@ -68,10 +69,11 @@ class SymbolTableInterface(validity.ValidityRoutines):
         """Removes the associated class override for a specific structure symbol"""
         raise NotImplementedError("Abstract method del_structure_class not implemented yet.")
 
-#    ### Helper functions that can be overridden
+
+# ### Helper functions that can be overridden
 #
-#    def __len__(self):
-#        """Returns the number of items in the symbol list"""
+# def __len__(self):
+# """Returns the number of items in the symbol list"""
 #        return len(self.structures)
 #
 #    def __getitem__(self, key):
@@ -93,7 +95,7 @@ class NativeTableInterface(SymbolTableInterface):
     """Class to distinguish NativeSymbolLists from other symbol lists"""
 
     @staticmethod
-    def constant(self):
+    def constant():
         raise exceptions.SymbolError("NativeTables never hold constants")
 
     @property

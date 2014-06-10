@@ -5,33 +5,35 @@ Created on 10 Apr 2013
 '''
 
 import copy
+
 from volatility.framework import exceptions, objects, interfaces
 
-    ### TODO
-    #
-    # All symbol lists should take a label to an object template
-    #
-    # Templates for targets etc should be looked up recursively just like anything else
-    # We therefore need a way to unroll rolled-up types
-    # Generate mangled names on the fly (prohibits external calling)
-    #
-    # Symbol list could be a dict with knowledge of its parent?
-    # Class split is arbitrary, it's an extension for developers
-    # Object template should contain both class and initial parameters
-    #
-    #
-    # *** Resolution should not happen in the resolve function
-    #     It should only happen on access of contained types ***
-    #
-    # Recursive objects can be fixed by having caching the objects
-    # (however, they have to be built first!)
-    #
-    # Single hop resolution is probably the solution
-    # Could probably deal iwth it by having a property that caches
-    # for container types
-    #
-    # Need to figure out how to tell the difference for vtypes between
-    # vtype list and a struct dictionary
+
+# ## TODO
+#
+# All symbol lists should take a label to an object template
+#
+# Templates for targets etc should be looked up recursively just like anything else
+# We therefore need a way to unroll rolled-up types
+# Generate mangled names on the fly (prohibits external calling)
+#
+# Symbol list could be a dict with knowledge of its parent?
+# Class split is arbitrary, it's an extension for developers
+# Object template should contain both class and initial parameters
+#
+#
+# *** Resolution should not happen in the resolve function
+# It should only happen on access of contained types ***
+#
+# Recursive objects can be fixed by having caching the objects
+# (however, they have to be built first!)
+#
+# Single hop resolution is probably the solution
+# Could probably deal iwth it by having a property that caches
+# for container types
+#
+# Need to figure out how to tell the difference for vtypes between
+# vtype list and a struct dictionary
 
 class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
     """Symbol Table that handles vtype datastructures"""
@@ -77,7 +79,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             elif structure_name == 'BitField':
                 update = dictionary[1]
                 update['target'] = self._vtypedict_to_template([update['native_type']])
-            native_template.update_arguments(**update) #pylint: disable-msg=W0142
+            native_template.update_arguments(**update)  # pylint: disable=W0142
             return native_template
 
         # Otherwise
@@ -102,4 +104,5 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             member = (relative_offset, self._vtypedict_to_template(vtypedict))
             members[member_name] = member
         object_class = self.get_structure_class(structure_name)
-        return objects.templates.ObjectTemplate(object_class = object_class, structure_name = structure_name, size = size, members = members)
+        return objects.templates.ObjectTemplate(object_class = object_class, structure_name = structure_name,
+                                                size = size, members = members)

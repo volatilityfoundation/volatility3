@@ -5,11 +5,13 @@ Created on 7 Feb 2013
 '''
 
 import collections
+
 from volatility.framework import objects, interfaces, exceptions
+
 
 class SymbolSpace(collections.Mapping):
     """Handles an ordered collection of SymbolTables
-    
+
        This collection is ordered so that resolution of symbols can
        proceed down through the ranks if a namespace isn't specified.
     """
@@ -63,7 +65,7 @@ class SymbolSpace(collections.Mapping):
 
     def get_structure(self, symbol):
         """Takes a symbol name and resolves it
-        
+
            This method ensures that all referenced templates (including self-referential templates)
            are satisfied as ObjectTemplates
         """
