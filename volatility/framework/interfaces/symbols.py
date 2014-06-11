@@ -52,7 +52,7 @@ class SymbolTableInterface(validity.ValidityRoutines):
         """Returns None or a symbol_space for handling space specific native types"""
         return self._native_structures
 
-    ### Functions for overriding classes
+    # ## Functions for overriding classes
 
     def set_structure_class(self, name, clazz):
         """Overrides the object class for a specific structure symbol
@@ -74,7 +74,7 @@ class SymbolTableInterface(validity.ValidityRoutines):
 #
 # def __len__(self):
 # """Returns the number of items in the symbol list"""
-#        return len(self.structures)
+# return len(self.structures)
 #
 #    def __getitem__(self, key):
 #        """Resolves a symbol name into an object template

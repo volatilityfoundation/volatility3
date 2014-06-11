@@ -1,4 +1,3 @@
-
 from volatility.framework import renderers
 from volatility.framework.renderers import basic
 

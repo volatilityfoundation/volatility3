@@ -1,7 +1,8 @@
+"""Renderers
+
+Renderers display the unified output format in some manner (be it text or file or graphical output"""
+
 import collections
-
-__author__ = 'mike'
-
 import re
 
 from volatility.framework import validity
@@ -38,6 +39,7 @@ class TreeRow(validity.ValidityRoutines):
 
     @property
     def values(self):
+        """The individual cell values of the row"""
         return self._values
 
     @property

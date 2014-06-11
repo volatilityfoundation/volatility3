@@ -5,9 +5,11 @@ Created on 10 Mar 2013
 """
 
 import pdb
+
 from volatility import framework
 from volatility.framework import xp_sp2_x86_vtypes, layers
 from volatility.framework.symbols import vtypes, native
+
 
 def test_symbols():
     native_list = native.x86NativeTable
@@ -27,6 +29,7 @@ def test_symbols():
         _ = symbol(ctx, layer_name = '', offset = 0)
     symbol = ctx.symbol_space.get_structure('ntkrnlmp!_EPROCESS')
 
+
 def utils_load_as():
     nativelst = native.x86NativeTable
 
@@ -38,6 +41,7 @@ def utils_load_as():
     # ctx.symbol_space.append(nativelst)
     ctx.symbol_space.append(ntkrnlmp)
     return ctx
+
 
 def test_memory():
     nativelst = native.x86NativeTable
@@ -53,6 +57,7 @@ def test_memory():
     ctx.memory.add_layer(base)
     val = ctx.object('ntkrnlmp!TEST_POINTER', 'data', 0)
     print(hex(val.point1.test1), val.point1.test2)
+
 
 def test_kdbgfind(ctx):
     ctx = utils_load_as()
@@ -74,6 +79,7 @@ def intel32(ctx):
          0x822148f0, 0x81ed84e8]
     return intel, x
 
+
 def intelpae(ctx):
     base = layers.physical.FileLayer(ctx, 'data', filename = '/home/mike/memory/private/jon-fres.dmp')
     ctx.memory.add_layer(base)
@@ -82,6 +88,7 @@ def intelpae(ctx):
          0x8188db58, 0x81884a40, 0x818766b0, 0x8185a948, 0x8183ad70, 0x81826020, 0x818a64c8, 0x81818020, 0x81800020,
          0x817ff460, 0x817eb020, 0x817e9020, 0x817a62a8, 0x817a4b28, 0x81865020, 0x817972c0]
     return intel, x
+
 
 def intel32e(ctx):
     base = layers.physical.FileLayer(ctx, 'data', filename = '/home/mike/memory/private/ikelos-winxpsp2-x64.dmp')
@@ -104,8 +111,8 @@ def test_translation():
     for val in x:
         a, b = intel._translate(val)
         print(hex(val), hex(a), hex(b))
-    #print(bin(0x39000), bin(0xffab8020))
-    #print(hex(intel.translate(0xffab8020)))
+        # print(bin(0x39000), bin(0xffab8020))
+        #print(hex(intel.translate(0xffab8020)))
 
 
 # TODO:

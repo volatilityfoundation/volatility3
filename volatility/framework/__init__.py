@@ -1,3 +1,5 @@
+"""Volatility 3 framework"""
+
 # ##
 #
 # Libtool version scheme

@@ -1,4 +1,7 @@
-__author__ = 'mike'
+"""Volatility 3 Constants
+
+Stores all the constant values that are generally fixed throughout volatiltiy
+This includes default scanning block sizes, etc."""
 
 import os.path
 

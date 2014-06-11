@@ -1,15 +1,17 @@
 from abc import abstractmethod, ABCMeta
+
 from volatility.framework import validity
+
 
 __author__ = 'mike'
 
-class Renderer(validity.ValidityRoutines):
 
+class Renderer(validity.ValidityRoutines):
     __metaclass__ = ABCMeta
 
     def __init__(self, options):
         """Accepts an options object to configure the renderers"""
-        #FIXME: Once the config option objects are in place, put the type_check in place
+        # FIXME: Once the config option objects are in place, put the type_check in place
 
     @abstractmethod
     def get_render_options(self):
