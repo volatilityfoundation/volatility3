@@ -5,9 +5,10 @@ Created on 10 Mar 2013
 """
 
 import pdb
+# import logging
 
 from volatility import framework
-from volatility.framework import xp_sp2_x86_vtypes, layers
+from volatility.framework import xp_sp2_x86_vtypes, layers, plugins
 from volatility.framework.symbols import vtypes, native
 
 
@@ -125,6 +126,9 @@ def test_translation():
 #
 
 if __name__ == '__main__':
+    # logger = logging.getLogger()
+    # logger.setLevel(logging.DEBUG)
+    plugins.import_plugins()
     # import timeit
     # print(timeit.Timer(main).timeit(10))
     try:

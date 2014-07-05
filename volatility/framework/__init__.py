@@ -38,7 +38,6 @@ def require_version(*args):
 
 from volatility.framework import interfaces, symbols, layers
 
-
 class Context(interfaces.context.ContextInterface):
     """Maintains the context within which to construct objects
 
@@ -80,7 +79,8 @@ class Context(interfaces.context.ContextInterface):
 
         :param layer: The layer to be added to the memory
         :type layer: volatility.framework.interfaces.layers.DataLayerInterface
-        :raises volatility.framework.exceptions.LayerException: if the layer is already present, or has unmet dependencies
+        :raises volatility.framework.exceptions.LayerException: if the layer is already present, or has
+        unmet dependencies
         """
         self._memory.add_layer(layer)
 
