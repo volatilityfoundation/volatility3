@@ -118,11 +118,13 @@ def test_translation():
 
 # TODO:
 #
-# Config system
-# Plugins - Dataout Tree/List input/output
-# Architectures
-# Scanning Framework
-# GUI/UI
+# X - Config system
+# X - Dataout Tree/List input/output
+#   - Plugins taking TranslationLayers
+#   - Plugins
+#   - Architectures
+#   - Scanning Framework
+#   - GUI/UI
 #
 
 if __name__ == '__main__':

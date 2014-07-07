@@ -31,9 +31,10 @@ def import_plugins():
                     module = path.replace(os.path.sep, ".")
                     if module not in sys.modules:
                         try:
-                            logging.debug("Importing " + module)
-                            __import__(module)
+                            logging.debug("Importing volatility.plugins." + module)
+                            __import__("volatility.plugins." + module)
                         except ImportError:
                             logger.warning("Failed to import module " + module + " based on file " + path)
+                            raise
                     else:
                         logger.info("Skipping existing module " + module)
