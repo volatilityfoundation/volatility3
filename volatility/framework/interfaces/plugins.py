@@ -31,10 +31,30 @@ class PluginInterface(validity.ValidityRoutines):
         return self._context
 
     @abstractmethod
+    @classmethod
+    def determine_inputs(cls):
+        """Returns the accepted inputs
+
+           This should be a dictionary of TranslationLayer names matched to TranslationLayer types
+        """
+
+    def verify_inputs(self):
+        """Verifies the inputs basedo on the output of determine_inputs"""
+        inputs = self.determine_inputs()
+        for tl_name, tl_type in inputs.items():
+            layer = self.context.memory.get(tl_name, None)
+            if layer is not None:
+                if layer.__class__.__name__ != tl_type:
+                    raise TypeError("Layer " + tl_name + " is not of type " + tl_type + " (" +
+                                    layer.__class__.__name__ + " instead).")
+            else:
+                raise TypeError("Layer " + tl_name + " has not been populated.")
+
+    @abstractmethod
     def establish_context(self):
         """Alters the context to ensure the plugin can run.
 
-        This function constructs the necessary address spaces and symbol spaces that the plugin will need.
+        This function constructs the necessary symbol spaces that the plugin will need.
         """
 
     @abstractmethod
