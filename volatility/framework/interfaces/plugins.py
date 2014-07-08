@@ -13,10 +13,13 @@ from volatility.framework.interfaces import context as context_module
 #   - Take in relevant number of TranslationLayers (of specified type)
 #   - Outputs TreeGrid
 #
-#
-#
-#
-#
+#  Should the plugin handle constructing the translation layers from the filenames or should the library have routines for it?
+#  Outwardly, the user specifies an OS, version, architecture triple and images.
+#  The UI checks the plugin against the OS/Version/Arch triple
+#  The UI constructs the TranslationLayers and names them according to the plugin's input layer names
+#  The UI constructs the appropriate default symbol spaces
+#  The plugin accepts the context and modifies as necessary
+#  The plugin runs and produces a TreeGrid output
 
 class PluginInterface(validity.ValidityRoutines):
     """Class that defines the interface all Plugins must maintain"""
@@ -29,25 +32,6 @@ class PluginInterface(validity.ValidityRoutines):
     @property
     def context(self):
         return self._context
-
-    @classmethod
-    @abstractmethod
-    def determine_inputs(cls):
-        """Returns the accepted inputs
-
-           This should be a dictionary of TranslationLayer names matched to TranslationLayer types
-        """
-
-    def verify_inputs(self):
-        """Verifies the inputs based on the output of determine_inputs"""
-        inputs = self.determine_inputs()
-        for tl_name, tl_type in inputs.items():
-            layer = self.context.memory.get(tl_name, None)
-            if layer is not None:
-                if not layer.can_handle(tl_type):
-                    raise TypeError("Layer " + tl_name + " cannot handle type " + tl_type + )
-            else:
-                raise TypeError("Layer " + tl_name + " has not been populated.")
 
     @abstractmethod
     def establish_context(self):
