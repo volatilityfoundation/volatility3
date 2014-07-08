@@ -30,8 +30,8 @@ class PluginInterface(validity.ValidityRoutines):
     def context(self):
         return self._context
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def determine_inputs(cls):
         """Returns the accepted inputs
 
@@ -39,14 +39,13 @@ class PluginInterface(validity.ValidityRoutines):
         """
 
     def verify_inputs(self):
-        """Verifies the inputs basedo on the output of determine_inputs"""
+        """Verifies the inputs based on the output of determine_inputs"""
         inputs = self.determine_inputs()
         for tl_name, tl_type in inputs.items():
             layer = self.context.memory.get(tl_name, None)
             if layer is not None:
-                if layer.__class__.__name__ != tl_type:
-                    raise TypeError("Layer " + tl_name + " is not of type " + tl_type + " (" +
-                                    layer.__class__.__name__ + " instead).")
+                if not layer.can_handle(tl_type):
+                    raise TypeError("Layer " + tl_name + " cannot handle type " + tl_type + )
             else:
                 raise TypeError("Layer " + tl_name + " has not been populated.")
 
