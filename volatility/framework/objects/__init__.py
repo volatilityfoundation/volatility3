@@ -285,8 +285,7 @@ class Struct(interfaces.objects.ObjectInterface):
     @classmethod
     def template_children(cls, arguments):
         """Method to list children of a template"""
-        cls.check_members(arguments.get('members', None))
-        return [member for _, member in arguments['members'].values()]
+        return [member for _, member in cls._template_members(arguments).values()]
 
     @classmethod
     def template_size(cls, arguments):
@@ -302,6 +301,22 @@ class Struct(interfaces.objects.ObjectInterface):
             relative_offset, member_template = arguments['members'][member]
             if member_template == old_child:
                 arguments['members'][member] = (relative_offset, new_child)
+
+    @classmethod
+    def template_relative_child_offset(cls, arguments, child):
+        """Returns the relative offset of a child to its parent"""
+        retlist = cls._template_members(arguments).get(child, None)
+        if retlist is None:
+            raise IndexError("Member " + child + " not present in template")
+        return retlist[0]
+
+    @classmethod
+    def _template_members(cls, arguments):
+        """Returns the dictionary of member_names to (relative_offset, member) as provided in the template arguments"""
+        if 'members' not in arguments:
+            raise TypeError("Members not found in template arguments")
+        cls.check_members(arguments.get('members', None))
+        return arguments['members']
 
     @classmethod
     def check_members(cls, members):

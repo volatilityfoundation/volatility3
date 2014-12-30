@@ -43,6 +43,13 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         """
         return self.object_class.template_children(self._kwargs)
 
+    def relative_child_offset(self, child):
+        """A function that returns the relative offset of a child from its parent offset
+
+           This may throw exceptions including ChildNotFoundException and NotImplementedError
+        """
+        return self.object_class.template_relative_child_offset(self._kwargs, child)
+
     def replace_child(self, old_child, new_child):
         """A function for replacing one child with another
 
