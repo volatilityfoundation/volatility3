@@ -230,7 +230,7 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
                                                     structure_name = structure_name,
                                                     size = size,
                                                     parent = parent)
-        self._count = count
+        self._count = self._type_check(count, int)
         self._target = target
 
     @classmethod
