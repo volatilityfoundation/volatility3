@@ -70,6 +70,7 @@ class TranslationLayerInterface(DataLayerInterface):
     @abstractproperty
     def dependencies(self):
         """Returns a list of layer names that this layer translates onto"""
+        return []
 
     # ## Read/Write functions for mapped pages
 
@@ -86,7 +87,7 @@ class TranslationLayerInterface(DataLayerInterface):
                 current_offset = offset
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
-            output += self._context.memory.read(mapped_offset, length, layer, pad)
+            output += self._context.memory.read(layer, mapped_offset, length, pad)
             current_offset += length
         return output
 
@@ -99,7 +100,7 @@ class TranslationLayerInterface(DataLayerInterface):
                 raise exceptions.InvalidAddressException("Layer " + self.name + " cannot map offset " + current_offset)
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
-            self._context.memory.write(mapped_offset, length, layer)
+            self._context.memory.write(layer, mapped_offset, length)
             current_offset += length
 
 

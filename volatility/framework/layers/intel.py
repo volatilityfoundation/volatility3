@@ -97,9 +97,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         while length > 0:
             chunk_offset, page_size = self._translate(offset)
             chunk_size = min(page_size - (chunk_offset % page_size), length)
+            result.append((offset, chunk_offset, chunk_size, self._base_layer))
             length -= chunk_size
-            offset -= chunk_size
-            result.append((chunk_offset, chunk_size))
+            offset += chunk_size
         return result
 
 
