@@ -5,9 +5,12 @@ import os
 import sys
 import logging
 import inspect
+
 import volatility.plugins as plugins
 
+
 logger = logging.getLogger(__name__)
+
 
 def class_subclasses(cls):
     """Returns all the (recursive) subclasses of a given class"""

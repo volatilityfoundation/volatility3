@@ -9,7 +9,7 @@ from volatility.framework import validity
 from volatility.framework.interfaces import context as context_module
 
 #
-#  Plugins
+# Plugins
 #   - Take in relevant number of TranslationLayers (of specified type)
 #   - Outputs TreeGrid
 #

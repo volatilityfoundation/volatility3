@@ -113,14 +113,14 @@ def test_translation():
         a, b = intel._translate(val)
         print(hex(val), hex(a), hex(b))
         # print(bin(0x39000), bin(0xffab8020))
-        #print(hex(intel.translate(0xffab8020)))
+        # print(hex(intel.translate(0xffab8020)))
 
 
 # TODO:
 #
 # X - Config system
 # X - Dataout Tree/List input/output
-#   - Plugins taking TranslationLayers
+# - Plugins taking TranslationLayers
 #   - Plugins
 #   - Architectures
 #   - Scanning Framework

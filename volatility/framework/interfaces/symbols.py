@@ -76,8 +76,8 @@ class SymbolTableInterface(validity.ValidityRoutines):
 # """Returns the number of items in the symbol list"""
 # return len(self.structures)
 #
-#    def __getitem__(self, key):
-#        """Resolves a symbol name into an object template
+# def __getitem__(self, key):
+# """Resolves a symbol name into an object template
 #
 #           Note, this method cannot sub-resolve throughout a whole symbol space
 #        """
