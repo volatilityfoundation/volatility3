@@ -28,16 +28,19 @@ def import_plugins():
         raise TypeError("Plugins.__path__ must be a list of paths")
     for path in plugins.__path__:
         for root, _, files in os.walk(path, followlinks = True):
+            # TODO: Figure out how to import pycache files
+            if root.endswith("__pycache__"):
+                continue
             for f in files:
                 if (f.endswith(".py") or f.endswith(".pyc") or f.endswith(".pyo")) and not f.startswith("__"):
                     path = os.path.join(root[len(path) + len(os.path.sep):], f[:f.rfind(".")])
                     module = path.replace(os.path.sep, ".")
                     if module not in sys.modules:
                         try:
-                            logging.debug("Importing volatility.plugins." + module)
-                            __import__("volatility.plugins." + module)
+                            logging.debug("Importing volatility.plugins." + str(module))
+                            __import__("volatility.plugins." + str(module))
                         except ImportError:
-                            logger.warning("Failed to import module " + module + " based on file " + path)
+                            logger.warning("Failed to import module " + str(module) + " based on file " + path)
                             raise
                     else:
-                        logger.info("Skipping existing module " + module)
+                        logger.info("Skipping existing module " + str(module))
