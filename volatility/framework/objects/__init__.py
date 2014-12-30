@@ -256,6 +256,8 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
 
     def __getitem__(self, i):
         """Returns the i-th item from the array"""
+        if i >= self._count or 0 > i:
+            raise IndexError
         return self._target(context = self._context, layer_name = self._layer_name,
                             offset = self._offset + (self._target.size * i), parent = self)
 

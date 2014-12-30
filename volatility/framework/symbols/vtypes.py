@@ -69,7 +69,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             # Add specific additional parameters, etc
             update = {}
             if structure_name == 'array':
-                update['count'] = dictionary[1],
+                update['count'] = dictionary[1]
                 update['target'] = self._vtypedict_to_template(dictionary[2])
             elif structure_name == 'pointer':
                 update["target"] = self._vtypedict_to_template(dictionary[1])
