@@ -116,6 +116,23 @@ def test_translation():
         # print(hex(intel.translate(0xffab8020)))
 
 
+def test_plugin():
+    nativelst = native.x86NativeTable
+    ctx = framework.Context(nativelst)
+
+    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
+    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, nativelst)
+    ctx.symbol_space.append(ntkrnlmp)
+
+    base = layers.physical.FileLayer(ctx, 'data', filename = '/home/mike/memory/private/jon-fres.dmp')
+    ctx.add_layer(base)
+    intel = layers.intel.IntelPAE(ctx, 'intel', 'data', page_map_offset = 0x319000)
+    ctx.add_layer(intel)
+
+    import volatility.plugins.windows.pslist as pslist
+
+    x = pslist.pslist.kernel_process_from_physical_process(ctx, 'data', 'intel', 0x192ad18)
+
 # TODO:
 #
 # X - Config system
@@ -134,9 +151,10 @@ if __name__ == '__main__':
     # import timeit
     # print(timeit.Timer(main).timeit(10))
     try:
-        test_symbols()
+        # test_symbols()
         # test_memory()
         # test_translation()
+        test_plugin()
     except Exception as e:
         print(repr(e))
         pdb.post_mortem()
