@@ -270,7 +270,10 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
 
 
 class Struct(interfaces.objects.ObjectInterface):
-    """Object which can contain members that are other objects"""
+    """Object which can contain members that are other objects
+
+       Keep the number of methods in this class low or very specific, since each one could overload a valid member.
+    """
 
     def __init__(self, context, layer_name, offset, structure_name, size = None, members = None, parent = None):
         interfaces.objects.ObjectInterface.__init__(self,
@@ -280,14 +283,9 @@ class Struct(interfaces.objects.ObjectInterface):
                                                     structure_name = structure_name,
                                                     size = size,
                                                     parent = parent)
-        self.check_members(members)
+        self._check_members(members)
         self._members = members
         self._concrete_members = {}
-
-    @classmethod
-    def template_children(cls, arguments):
-        """Method to list children of a template"""
-        return [member for _, member in cls._template_members(arguments).values()]
 
     @classmethod
     def template_size(cls, arguments):
@@ -295,6 +293,11 @@ class Struct(interfaces.objects.ObjectInterface):
         if arguments.get('size', None) is None:
             raise TypeError("Struct ObjectTemplate not provided with a size")
         return arguments['size']
+
+    @classmethod
+    def template_children(cls, arguments):
+        """Method to list children of a template"""
+        return [member for _, member in cls._template_members(arguments).values()]
 
     @classmethod
     def template_replace_child(cls, old_child, new_child, arguments):
@@ -317,17 +320,21 @@ class Struct(interfaces.objects.ObjectInterface):
         """Returns the dictionary of member_names to (relative_offset, member) as provided in the template arguments"""
         if 'members' not in arguments:
             raise TypeError("Members not found in template arguments")
-        cls.check_members(arguments.get('members', None))
+        cls._check_members(arguments.get('members', None))
         return arguments['members']
 
     @classmethod
-    def check_members(cls, members):
+    def _check_members(cls, members):
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
         # An object template is a callable that when called with a context, offset, layer_name and structure_name
         if not isinstance(members, collections.Mapping):
             raise TypeError("Struct members parameter must be a mapping not " + type(members))
         if not all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()]):
             raise TypeError("Struct members must be a tuple of relative_offsets and templates")
+
+    def member(self, attr = 'member'):
+        """Specificly named method for retrieving members."""
+        return self.__getattr__(attr)
 
     def __getattr__(self, attr):
         """Method for accessing members of the structure"""
