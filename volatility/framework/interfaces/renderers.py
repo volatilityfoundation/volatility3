@@ -11,7 +11,7 @@ class Renderer(validity.ValidityRoutines):
 
     def __init__(self, options):
         """Accepts an options object to configure the renderers"""
-        # FIXME: Once the config option objects are in place, put the type_check in place
+        # FIXME: Once the config option objects are in place, put the _type_check in place
 
     @abstractmethod
     def get_render_options(self):

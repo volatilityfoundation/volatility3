@@ -12,9 +12,9 @@ class TreeRow(validity.ValidityRoutines):
     """Class providing the interface for an individual Row of the TreeGrid"""
 
     def __init__(self, treegrid, values):
-        self.type_check(treegrid, TreeGrid)
+        self._type_check(treegrid, TreeGrid)
         if not isinstance(self, TreeGrid):
-            self.type_check(values, list)
+            self._type_check(values, list)
             treegrid.validate_values(values)
         self._treegrid = treegrid
         self._children = []
@@ -22,12 +22,12 @@ class TreeRow(validity.ValidityRoutines):
 
     def add_child(self, child):
         """Appends a child to the current Row"""
-        self.type_check(child, TreeRow)
+        self._type_check(child, TreeRow)
         self._children += [child]
 
     def insert_child(self, child, position):
         """Inserts a child at a specific position in the current Row"""
-        self.type_check(child, TreeRow)
+        self._type_check(child, TreeRow)
         self._children = self._children[:position] + [child] + self._children[:position]
 
     def clear(self):
@@ -80,7 +80,7 @@ class TreeGrid(TreeRow):
 
         :param columns: A list of column tuples made up of (name, type and format_hint).
         """
-        self.type_check(columns, list)
+        self._type_check(columns, list)
         converted_columns = []
         for (name, column_type, column_format) in columns:
             is_simple_type = False

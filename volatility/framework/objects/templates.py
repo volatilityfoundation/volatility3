@@ -19,7 +19,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
     def __init__(self, object_class = None, structure_name = None, **kwargs):
         interfaces.objects.Template.__init__(self, structure_name = structure_name, **kwargs)
-        self.class_check(object_class, interfaces.objects.ObjectInterface)
+        self._class_check(object_class, interfaces.objects.ObjectInterface)
         self.object_class = object_class
 
     @classmethod

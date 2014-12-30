@@ -19,10 +19,10 @@ class ObjectInterface(validity.ValidityRoutines):
         # Since objects are likely to be instantiated often,
         # we're only checking that context, offset and parent
         # Everything else may be wrong, but that will get caught later on
-        self.type_check(context, context_module.ContextInterface)
-        self.type_check(offset, int)
+        self._type_check(context, context_module.ContextInterface)
+        self._type_check(offset, int)
         if parent:
-            self.type_check(parent, ObjectInterface)
+            self._type_check(parent, ObjectInterface)
 
         self._context = context
         self._parent = None if not parent else parent

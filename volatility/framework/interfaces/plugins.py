@@ -26,7 +26,7 @@ class PluginInterface(validity.ValidityRoutines):
     __metaclass__ = ABCMeta
 
     def __init__(self, context):
-        self.type_check(context, context_module.ContextInterface)
+        self._type_check(context, context_module.ContextInterface)
         self._context = context
 
     @property

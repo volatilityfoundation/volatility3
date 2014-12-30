@@ -30,7 +30,7 @@ class Memory(validity.ValidityRoutines):
 
            This will throw an exception if the required dependencies are not met
         """
-        self.type_check(layer, interfaces.layers.DataLayerInterface)
+        self._type_check(layer, interfaces.layers.DataLayerInterface)
         if isinstance(layer, interfaces.layers.TranslationLayerInterface):
             if layer.name in self._layers:
                 raise exceptions.LayerException("Layer " + layer.name + " already exists.")

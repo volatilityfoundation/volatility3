@@ -18,7 +18,7 @@ class TextRenderer(interface.Renderer):
 
     def render(self, grid):
         """Renders a text grid based on the contents of each element"""
-        self.type_check(grid, renderers.TreeGrid)
+        self._type_check(grid, renderers.TreeGrid)
 
         # FIXME: Separator should come from options
         sep = " | "

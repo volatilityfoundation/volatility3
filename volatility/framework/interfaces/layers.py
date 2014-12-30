@@ -15,8 +15,8 @@ class DataLayerInterface(validity.ValidityRoutines):
     __metaclass__ = ABCMeta
 
     def __init__(self, context, name):
-        self.type_check(name, str)
-        self.type_check(context, context_module.ContextInterface)
+        self._type_check(name, str)
+        self._type_check(context, context_module.ContextInterface)
         self._name = name
         self._context = context
 
