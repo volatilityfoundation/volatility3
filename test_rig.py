@@ -5,7 +5,7 @@ Created on 10 Mar 2013
 """
 
 import pdb
-# import logging
+import logging
 
 from volatility import framework
 from volatility.framework import xp_sp2_x86_vtypes, layers, plugins
@@ -121,15 +121,15 @@ def test_translation():
 # X - Config system
 # X - Dataout Tree/List input/output
 # - Plugins taking TranslationLayers
-#   - Plugins
-#   - Architectures
-#   - Scanning Framework
-#   - GUI/UI
+# - Plugins
+# - Architectures
+# - Scanning Framework
+# - GUI/UI
 #
 
 if __name__ == '__main__':
-    # logger = logging.getLogger()
-    # logger.setLevel(logging.DEBUG)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
     plugins.import_plugins()
     # import timeit
     # print(timeit.Timer(main).timeit(10))
