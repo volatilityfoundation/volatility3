@@ -10,8 +10,8 @@ from volatility.framework.interfaces import context as context_module
 
 #
 # Plugins
-#   - Take in relevant number of TranslationLayers (of specified type)
-#   - Outputs TreeGrid
+# - Take in relevant number of TranslationLayers (of specified type)
+# - Outputs TreeGrid
 #
 #  Should the plugin handle constructing the translation layers from the filenames or should the library have routines for it?
 #  Outwardly, the user specifies an OS, version, architecture triple and images.
