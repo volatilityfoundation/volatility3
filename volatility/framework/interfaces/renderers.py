@@ -6,9 +6,7 @@ from volatility.framework import validity
 __author__ = 'mike'
 
 
-class Renderer(validity.ValidityRoutines):
-    __metaclass__ = ABCMeta
-
+class Renderer(validity.ValidityRoutines, metaclass = ABCMeta):
     def __init__(self, options):
         """Accepts an options object to configure the renderers"""
         # FIXME: Once the config option objects are in place, put the _type_check in place

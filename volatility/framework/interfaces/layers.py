@@ -10,9 +10,8 @@ from volatility.framework.interfaces import context as context_module
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-class DataLayerInterface(validity.ValidityRoutines):
+class DataLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it"""
-    __metaclass__ = ABCMeta
 
     def __init__(self, context, name):
         self._type_check(name, str)
@@ -54,7 +53,7 @@ class DataLayerInterface(validity.ValidityRoutines):
         """
 
 
-class TranslationLayerInterface(DataLayerInterface):
+class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     @abstractmethod
     def translate(self, offset):
         """Returns a tuple of (offset, layer) indicating the translation of input domain to the output range"""
@@ -67,7 +66,8 @@ class TranslationLayerInterface(DataLayerInterface):
         """
         return []
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def dependencies(self):
         """Returns a list of layer names that this layer translates onto"""
         return []

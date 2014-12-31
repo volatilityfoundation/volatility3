@@ -11,9 +11,8 @@ from volatility.framework import validity
 from volatility.framework.interfaces import context as context_module
 
 
-class ObjectInterface(validity.ValidityRoutines):
+class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """ A base object required to be the ancestor of every object used in volatility """
-    __metaclass__ = ABCMeta
 
     def __init__(self, context, layer_name, offset, structure_name, size, parent = None):
         # Since objects are likely to be instantiated often,
@@ -39,6 +38,26 @@ class ObjectInterface(validity.ValidityRoutines):
         """Returns a new object at the offset and from the layer that the current object inhabits"""
         object_template = self._context.symbol_space.resolve(new_structure_name)
         return object_template(context = self._context, layer_name = self._layer_name, offset = self._offset)
+
+    @classmethod
+    @abstractmethod
+    def template_replace_child(cls, old_child, new_child, arguments):
+        """Substitutes the old_child for the new_child"""
+
+    @classmethod
+    @abstractmethod
+    def template_size(cls, arguments):
+        """Returns the size of the template object"""
+
+    @classmethod
+    @abstractmethod
+    def template_children(cls, arguments):
+        """Returns the children of the template"""
+
+    @classmethod
+    @abstractmethod
+    def template_relative_child_offset(cls, arguments, child):
+        """Returns the relative offset from the head of the parent data to the child member"""
 
 
 class Template(object):

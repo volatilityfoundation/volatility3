@@ -12,6 +12,7 @@ from volatility.framework import interfaces, exceptions
 
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
+    minimum_address = 0
 
     def __init__(self, context, name, memory_layer, page_map_offset):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, name)
@@ -28,6 +29,10 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         self._index_shift = int(math.log(struct.calcsize(self._entry_format), 2))
         self._structure = [('page directory', 10, False),
                            ('page table', 10, True)]
+
+    @property
+    def maximum_address(self):
+        return (2 ** self._maxvirtaddr) - 1
 
     @staticmethod
     def _mask(value, high_bit, low_bit):
@@ -83,6 +88,14 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
         return page, 1 << (position + 1)
 
+    def is_valid(self, offset):
+        """Returns whether the address offset can be translated to a valid address"""
+        try:
+            self._traslate(offset)
+        except exceptions.InvalidAddressException:
+            return False
+        return True
+
     def translate(self, offset):
         """Translates a specific offset based on the paging tables"""
         result, _ = self._translate(offset)
@@ -101,6 +114,12 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             length -= chunk_size
             offset += chunk_size
         return result
+
+    @property
+    def dependencies(self):
+        """Returns a list of the lower layers that this layer is dependent upon"""
+        # TODO: Add in the whole buffalo
+        return [self._base_layer]
 
 
 class IntelPAE(Intel):

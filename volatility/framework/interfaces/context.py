@@ -6,12 +6,11 @@ Created on 6 May 2013
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-class ContextInterface(object):
+class ContextInterface(object, metaclass = ABCMeta):
     """All context-like objects must adhere to the following interface.
 
     This interface is present to avoid import dependency cycles.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self):
         """Initializes the context with a symbol_space"""
