@@ -9,6 +9,12 @@ import collections
 from volatility.framework import objects, interfaces, exceptions
 
 
+class SymbolType(object):
+    # Suitably random values until we make this an Enum and require python >= 3.4
+    STRUCTURE = 143534545
+    CONSTANT = 28293045
+
+
 class SymbolSpace(collections.Mapping):
     """Handles an ordered collection of SymbolTables
 
@@ -52,27 +58,34 @@ class SymbolSpace(collections.Mapping):
         self._resolved = {}
         del self._dict[key]
 
-    def _weak_resolve(self, symbol):
+    def _weak_resolve(self, resolve_type, name):
         """Takes a symbol name and resolves it with ReferentialTemplates"""
-        symarr = symbol.split("!")
-        if len(symarr) == 2:
-            table_name = symarr[0]
-            structure_name = symarr[1]
-            return self._dict[table_name].get_structure(structure_name)
-        elif symbol in self.natives.structures:
-            return self.natives.get_structure(symbol)
+        if resolve_type == SymbolType.STRUCTURE:
+            get_function = 'get_structure'
+        elif resolve_type == SymbolType.CONSTANT:
+            get_function = 'get_constant'
+        else:
+            raise ValueError("Weak_resolve called without a proper SymbolType.")
+
+        name_array = name.split("!")
+        if len(name_array) == 2:
+            table_name = name_array[0]
+            component_name = name_array[1]
+            return getattr(self._dict[table_name], get_function)(component_name)
+        elif name in self.natives.structures:
+            return getattr(self.natives, get_function)(name)
         raise exceptions.SymbolError("Malformed symbol name")
 
-    def get_structure(self, symbol):
+    def get_structure(self, structure_name):
         """Takes a symbol name and resolves it
 
            This method ensures that all referenced templates (including self-referential templates)
            are satisfied as ObjectTemplates
         """
         # Traverse down any resolutions
-        if symbol not in self._resolved:
-            self._resolved[symbol] = self._weak_resolve(symbol)
-            traverse_list = [symbol]
+        if structure_name not in self._resolved:
+            self._resolved[structure_name] = self._weak_resolve(SymbolType.STRUCTURE, structure_name)
+            traverse_list = [structure_name]
             replacements = set()
             # Whole Symbols that still need traversing
             while traverse_list:
@@ -86,11 +99,16 @@ class SymbolSpace(collections.Mapping):
                             # to the "symbols that still need traversing" list
                             if child.structure_name not in self._resolved:
                                 traverse_list.append(child.structure_name)
-                                self._resolved[child.structure_name] = self._weak_resolve(child.structure_name)
+                                self._resolved[child.structure_name] = self._weak_resolve(SymbolType.STRUCTURE,
+                                                                                          child.structure_name)
                             # Stash the replacement
                             replacements.add((traverser, child))
                         elif child.children:
                             template_traverse_list.append(child)
             for (parent, child) in replacements:
                 parent.replace_child(child, self._resolved[child.structure_name])
-        return self._resolved[symbol]
+        return self._resolved[structure_name]
+
+    def get_constant(self, constant_name):
+        """Look-up a constant name across all the contained symbol spaces"""
+        return self._weak_resolve(SymbolType.CONSTANT, constant_name)
