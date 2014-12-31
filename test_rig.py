@@ -120,8 +120,11 @@ def test_plugin():
     nativelst = native.x86NativeTable
     ctx = framework.Context(nativelst)
 
+    import volatility.framework.symbols.windows as windows
+
     virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
     ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, nativelst)
+    ntkrnlmp.set_structure_class('_ETHREAD', windows._ETHREAD)
     ctx.symbol_space.append(ntkrnlmp)
 
     base = layers.physical.FileLayer(ctx, 'data', filename = '/home/mike/memory/private/jon-fres.dmp')
@@ -131,7 +134,8 @@ def test_plugin():
 
     import volatility.plugins.windows.pslist as pslist
 
-    x = pslist.pslist.kernel_process_from_physical_process(ctx, 'data', 'intel', 0x192ad18)
+    eproc = pslist.pslist.kernel_process_from_physical_process(ctx, 'data', 'intel', 0x192ad18)
+    print(eproc.UniqueProcessId)
 
 # TODO:
 #
