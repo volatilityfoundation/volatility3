@@ -36,7 +36,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     def cast(self, new_structure_name):
         """Returns a new object at the offset and from the layer that the current object inhabits"""
-        object_template = self._context.symbol_space.resolve(new_structure_name)
+        object_template = self._context.symbol_space.get_structure(new_structure_name)
         return object_template(context = self._context, layer_name = self._layer_name, offset = self._offset)
 
     @classmethod
