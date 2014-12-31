@@ -28,6 +28,14 @@ class Void(interfaces.objects.ObjectInterface):
     def template_replace_child(cls, old_child, new_child, arguments):
         """Dummy method that does nothing for Void objects"""
 
+    @classmethod
+    def template_relative_child_offset(cls, arguments, child):
+        """Dummy method that does nothing for Void objects"""
+
+    def write(self, value):
+        """Dummy method that does nothing for Void objects"""
+        raise TypeError("Cannot write data to a void, recast as another object")
+
 
 class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
@@ -62,6 +70,10 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     @classmethod
     def template_replace_child(cls, old_child, new_child, arguments):
         """Since this template can't ever have children, this method can be empty"""
+
+    @classmethod
+    def template_relative_child_offset(cls, arguments, child):
+        """Since this template can't ever have children, this method can be empty as well"""
 
 
 class Integer(PrimitiveObject, int):
@@ -262,6 +274,13 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
         if 'target' in arguments:
             if arguments['target'] == old_child:
                 arguments['target'] = new_child
+
+    @classmethod
+    def template_relative_child_offset(cls, arguments, child):
+        """Returns the relative offset from the head of the parent data to the child member"""
+        if 'target' in arguments and child == 'target':
+            return 0
+        raise IndexError("Member " + child + " not present in array template")
 
     def __getitem__(self, i):
         """Returns the i-th item from the array"""
