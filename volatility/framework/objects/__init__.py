@@ -161,9 +161,10 @@ class Pointer(Integer):
            If layer_name is None, it defaults to the same layer that the pointer is currently instantiated in.
         """
         if layer_name is None:
-            self._target_layer_name = self._layer_name
+            layer_name = self._layer_name
         # Cache the target
         if self._cache is None or (self._cache_layer_name != layer_name):
+            self._cache_layer_name = self._layer_name
             self._cache = self._target(context = self._context,
                                        layer_name = layer_name,
                                        offset = self,
