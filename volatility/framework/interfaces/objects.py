@@ -11,6 +11,21 @@ from volatility.framework import validity
 from volatility.framework.interfaces import context as context_module
 
 
+class TemplateInformation(validity.ValidityRoutines):
+    def __init__(self, structure_name, size, **additional):
+        self._structure_name = structure_name
+        self._size = size
+        self._additional = additional
+
+
+class ObjectInformation(validity.ValidityRoutines):
+    def __init__(self, layer_name, offset, member_name = None, parent = None):
+        self._layer_name = layer_name
+        self._offset = offset
+        self._member_name = member_name
+        self._parent = parent
+
+
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """ A base object required to be the ancestor of every object used in volatility """
 
