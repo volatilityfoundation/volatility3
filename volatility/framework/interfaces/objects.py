@@ -85,13 +85,13 @@ class Template(object):
         """Updates the keyword arguments"""
         self._kwargs.update(newargs)
 
-    def __call__(self, context: context_module.ContextInterface, layer_name, offset, parent = None):
+    def __call__(self, context, layer_name, offset, parent = None):
         """Constructs the object
 
         :type context: framework.interfaces.context.ContextInterface
+        :type layer_name: str
         :type offset: int
         :type parent: ObjectInterface
-        :type layer_name: str
         :param context:
         :param layer_name:
         :param offset:
