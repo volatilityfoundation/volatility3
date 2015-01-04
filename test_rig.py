@@ -20,7 +20,7 @@ def test_symbols():
 
     ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, native_list)
 
-    ctx = framework.Context(native_list)
+    # ctx = framework.Context(native_list)
     # ctx.symbol_space.append(native_list)
     ctx = utils_load_as()
     print("Symbols,", native_list.structures)
@@ -30,6 +30,7 @@ def test_symbols():
         print(symbol.volinfo.structure_name, symbol, symbol.volinfo.size)
         _ = symbol(ctx, objects.ObjectInformation(layer_name = '', offset = 0))
     symbol = ctx.symbol_space.get_structure('ntkrnlmp!_EPROCESS')
+    return symbol
 
 
 def utils_load_as():
@@ -61,7 +62,7 @@ def test_memory():
     print(hex(val.point1.test1), val.point1.test2)
 
 
-def test_kdbgfind(ctx):
+def test_kdbgfind():
     ctx = utils_load_as()
     base = layers.physical.FileLayer(ctx, 'data', filename = '/home/mike/memory/xp-laptop-2005-06-25.img')
     ctx.memory.add_layer(base)

@@ -37,7 +37,7 @@ class Memory(validity.ValidityRoutines):
             missing_list = [sublayer for sublayer in layer.dependencies if sublayer not in self._layers]
             if missing_list:
                 raise exceptions.LayerException("Layer " + layer.name +
-                                                " has unmet dependencies of " + ", ".join(missing_list + "."))
+                                                " has unmet dependencies of " + ", ".join(missing_list) + ".")
         self._layers[layer.name] = layer
 
     def del_layer(self, name):

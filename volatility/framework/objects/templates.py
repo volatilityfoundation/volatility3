@@ -1,8 +1,8 @@
-'''
+"""
 Created on 1 Mar 2013
 
 @author: mike
-'''
+"""
 
 from volatility.framework import interfaces, validity
 
