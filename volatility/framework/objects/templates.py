@@ -24,14 +24,6 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         self._class_check(object_class, interfaces.objects.ObjectInterface)
         self.update_volinfo(object_class = object_class)
 
-    @classmethod
-    def template_children(cls):
-        raise NotImplementedError("Abstract method _template_children not implemented yet.")
-
-    @classmethod
-    def template_size(cls):
-        raise NotImplementedError("Abstract method _template_size not implemented yet.")
-
     @property
     def size(self):
         """Returns the size of the template"""
@@ -80,6 +72,6 @@ class ReferenceTemplate(interfaces.objects.Template):
        It should not return any attributes
     """
 
-    def __call__(self, context, object_info, **arguments):
+    def __call__(self, context, object_info):
         template = context.symbol_space.get_structure(self.volinfo.structure_name)
-        return template(context = context, object_info = object_info, **arguments)
+        return template(context = context, object_info = object_info)
