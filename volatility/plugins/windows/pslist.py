@@ -22,10 +22,4 @@ class PsList(plugins.PluginInterface):
         return ethread.owning_process()
 
     def __call__(self, ctx):
-        print(repr(self.kernel_process_from_physical_process(ctx, 'intel', 0x192ad18)))
-
-
-if __name__ == '__main__':
-    x = pslist(ctx)
-    x.determine_inputs()
-    x(6)
+        print(repr(self.kernel_process_from_physical_process(ctx, 'base', 'intel', offset = 0x192ad18)))
