@@ -1,5 +1,7 @@
 __author__ = 'mike'
 
+import collections.abc
+
 import volatility.framework.objects as objects
 
 
@@ -9,7 +11,7 @@ class _ETHREAD(objects.Struct):
         return self.ThreadsProcess.dereference(kernel_layer)
 
 
-class _LIST_ENTRY(objects.Struct):
+class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
     def to_list(self, structure, member, forward = True, sentinel = True, layer = None):
         """Returns an iterator of the entries in the list"""
 
@@ -31,3 +33,6 @@ class _LIST_ENTRY(objects.Struct):
 
             seen.add(link.offset)
             link = getattr(link, direction).dereference()
+
+    def __iter__(self):
+        self.to_list(self.parent.volinfo.structure_name, self.volinfo.member_name)
