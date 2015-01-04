@@ -21,7 +21,7 @@ class pslist(plugins.PluginInterface):
         # Get the process from the thread object in kernel space
         return ethread.owning_process()
 
-    def __call__(self, ctx, **kwargs):
+    def __call__(self, ctx):
         print(repr(self.kernel_process_from_physical_process(ctx, 'intel', 0x192ad18)))
 
 

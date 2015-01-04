@@ -112,19 +112,19 @@ class Template(validity.ValidityRoutines):
        This is effectively a class for currying object calls
     """
 
-    def __init__(self, structure_name, **kwargs):
+    def __init__(self, structure_name, **arguments):
         """Stores the keyword arguments for later use"""
         # Allow the updating of template arguments whilst still in template form
-        self._volinfo = collections.ChainMap(kwargs, {'structure_name': structure_name})
+        self._volinfo = collections.ChainMap(arguments, {'structure_name': structure_name})
 
     @property
     def volinfo(self):
         """Returns a volatility information object, much like the ObjectInterface provides"""
-        return ReadOnlyInformation(self._volinfo)
+        return ReadOnlyMapping(self._volinfo)
 
-    def update_volinfo(self, **newargs):
+    def update_volinfo(self, **new_arguments):
         """Updates the keyword arguments"""
-        self._volinfo.update(newargs)
+        self._volinfo.update(new_arguments)
 
     def __call__(self, context, object_info):
         """Constructs the object

@@ -17,19 +17,19 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
        etc.
     """
 
-    def __init__(self, object_class = None, structure_name = None, **kwargs):
+    def __init__(self, object_class = None, structure_name = None, **arguments):
         interfaces.objects.Template.__init__(self,
                                              structure_name = structure_name,
-                                             **kwargs)
+                                             **arguments)
         self._class_check(object_class, interfaces.objects.ObjectInterface)
         self.update_volinfo(object_class = object_class)
 
     @classmethod
-    def template_children(cls, **kwargs):
+    def template_children(cls):
         raise NotImplementedError("Abstract method template_children not implemented yet.")
 
     @classmethod
-    def template_size(cls, **kwargs):
+    def template_size(cls):
         raise NotImplementedError("Abstract method template_size not implemented yet.")
 
     @property
@@ -66,12 +66,12 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         """
         # We always use the template size (as calculated by the object class)
         # over the one passed in by an argument
-        kwargs = {}
-        kwargs.update(self.volinfo)
-        del kwargs['object_class']
+        arguments = {}
+        arguments.update(self.volinfo)
+        del arguments['object_class']
         return self.volinfo.object_class(context = context,
                                          object_info = object_info,
-                                         **kwargs)
+                                         **arguments)
 
 
 class ReferenceTemplate(interfaces.objects.Template):
@@ -80,6 +80,6 @@ class ReferenceTemplate(interfaces.objects.Template):
        It should not return any attributes
     """
 
-    def __call__(self, context, object_info, **kwargs):
+    def __call__(self, context, object_info, **arguments):
         template = context.symbol_space.get_structure(self.volinfo.structure_name)
-        return template(context = context, object_info = object_info, **kwargs)
+        return template(context = context, object_info = object_info, **arguments)
