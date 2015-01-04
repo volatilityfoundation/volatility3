@@ -15,21 +15,21 @@ class Void(interfaces.objects.ObjectInterface):
     """Returns an object to represent void/unknown types"""
 
     @classmethod
-    def template_size(cls, template):
+    def _template_size(cls, template):
         """Dummy size for Void objects"""
         return 0
 
     @classmethod
-    def template_children(cls, template):
+    def _template_children(cls, template):
         """Returns an empty list for Void objects since they can't have children"""
         return []
 
     @classmethod
-    def template_replace_child(cls, template, old_child, new_child):
+    def _template_replace_child(cls, template, old_child, new_child):
         """Dummy method that does nothing for Void objects"""
 
     @classmethod
-    def template_relative_child_offset(cls, template, child):
+    def _template_relative_child_offset(cls, template, child):
         """Dummy method that does nothing for Void objects"""
 
     def write(self, value):
@@ -68,21 +68,21 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         return value
 
     @classmethod
-    def template_size(cls, template):
+    def _template_size(cls, template):
         """Returns the size of the templated object"""
         return struct.calcsize(template.volinfo.struct_format)
 
     @classmethod
-    def template_children(cls, template):
+    def _template_children(cls, template):
         """Since primitives have no children, this returns an empty list"""
         return []
 
     @classmethod
-    def template_replace_child(cls, old_child, new_child, volinfo):
+    def _template_replace_child(cls, template, old_child, new_child):
         """Since this template can't ever have children, this method can be empty"""
 
     @classmethod
-    def template_relative_child_offset(cls, volinfo, child):
+    def _template_relative_child_offset(cls, template, child):
         """Since this template can't ever have children, this method can be empty as well"""
 
     def write(self, value):
@@ -166,14 +166,14 @@ class Pointer(Integer):
         return getattr(self.dereference(), attr)
 
     @classmethod
-    def template_children(cls, template):
+    def _template_children(cls, template):
         """Returns the children of the template"""
         if 'target' in template.volinfo:
             return [template.volinfo.target]
         return []
 
     @classmethod
-    def template_replace_child(cls, template, old_child, new_child):
+    def _template_replace_child(cls, template, old_child, new_child):
         """Substitutes the old_child for the new_child"""
         if 'target' in template.volinfo:
             if template.volinfo.target == old_child:
@@ -198,7 +198,7 @@ class BitField(PrimitiveObject, int):
         self._volinfo['end_bit'] = end_bit
 
     @classmethod
-    def template_children(cls, template):
+    def _template_children(cls, template):
         """Returns the target type"""
         if 'target' in template.volinfo:
             return [template.volinfo.target]
@@ -212,7 +212,7 @@ class Enumeration(interfaces.objects.ObjectInterface):
     """Returns an object made up of choices"""
     # FIXME: Add in body for the enumeration object
     @classmethod
-    def template_children(cls, volinfo):
+    def _template_children(cls, template):
         return []
 
     def write(self, value):
@@ -232,28 +232,28 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
         self._volinfo['target'] = target
 
     @classmethod
-    def template_size(cls, template):
+    def _template_size(cls, template):
         """Returns the size of the array, based on the count and the target"""
         if 'target' not in template.volinfo and 'count' not in template.volinfo:
             raise TypeError("Array ObjectTemplate must be provided a count and target")
         return template.volinfo.get('target', None).size * template.volinfo.get('count', 0)
 
     @classmethod
-    def template_children(cls, template):
+    def _template_children(cls, template):
         """Returns the children of the template"""
         if 'target' in template.volinfo:
             return [template.volinfo.target]
         return []
 
     @classmethod
-    def template_replace_child(cls, template, old_child, new_child):
+    def _template_replace_child(cls, template, old_child, new_child):
         """Substitutes the old_child for the new_child"""
         if 'target' in template.volinfo:
             if template.volinfo['target'] == old_child:
                 template.update_volinfo(target = new_child)
 
     @classmethod
-    def template_relative_child_offset(cls, template, child):
+    def _template_relative_child_offset(cls, template, child):
         """Returns the relative offset from the head of the parent data to the child member"""
         if 'target' in template and child == 'target':
             return 0
@@ -291,19 +291,19 @@ class Struct(interfaces.objects.ObjectInterface):
         self._concrete_members = {}
 
     @classmethod
-    def template_size(cls, template):
+    def _template_size(cls, template):
         """Method to return the size of this structure"""
         if template.volinfo.get('size', None) is None:
             raise TypeError("Struct ObjectTemplate not provided with a size")
         return template.volinfo['size']
 
     @classmethod
-    def template_children(cls, template):
+    def _template_children(cls, template):
         """Method to list children of a template"""
         return [member for _, member in cls._template_members(template).values()]
 
     @classmethod
-    def template_replace_child(cls, template, old_child, new_child):
+    def _template_replace_child(cls, template, old_child, new_child):
         """Replace a child elements within the arguments handed to the template"""
         for member in cls._template_members(template).get('members', {}):
             relative_offset, member_template = template.volinfo.members[member]
@@ -315,7 +315,7 @@ class Struct(interfaces.objects.ObjectInterface):
                 template.update_volinfo(members = tmp_list)
 
     @classmethod
-    def template_relative_child_offset(cls, template, child):
+    def _template_relative_child_offset(cls, template, child):
         """Returns the relative offset of a child to its parent"""
         retlist = cls._template_members(template).get(child, None)
         if retlist is None:

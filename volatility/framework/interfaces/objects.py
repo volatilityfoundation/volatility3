@@ -87,22 +87,22 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     @classmethod
     @abstractmethod
-    def template_replace_child(cls, template, old_child, new_child):
+    def _template_replace_child(cls, template, old_child, new_child):
         """Substitutes the old_child for the new_child"""
 
     @classmethod
     @abstractmethod
-    def template_size(cls, template):
+    def _template_size(cls, template):
         """Returns the size of the template object"""
 
     @classmethod
     @abstractmethod
-    def template_children(cls, template):
+    def _template_children(cls, template):
         """Returns the children of the template"""
 
     @classmethod
     @abstractmethod
-    def template_relative_child_offset(cls, template, child):
+    def _template_relative_child_offset(cls, template, child):
         """Returns the relative offset from the head of the parent data to the child member"""
 
 

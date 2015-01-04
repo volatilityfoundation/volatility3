@@ -26,16 +26,16 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
     @classmethod
     def template_children(cls):
-        raise NotImplementedError("Abstract method template_children not implemented yet.")
+        raise NotImplementedError("Abstract method _template_children not implemented yet.")
 
     @classmethod
     def template_size(cls):
-        raise NotImplementedError("Abstract method template_size not implemented yet.")
+        raise NotImplementedError("Abstract method _template_size not implemented yet.")
 
     @property
     def size(self):
         """Returns the size of the template"""
-        return self.volinfo.object_class.template_size(self)
+        return self.volinfo.object_class._template_size(self)
 
     @property
     def children(self):
@@ -43,21 +43,21 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
            This is used to traverse the template tree
         """
-        return self.volinfo.object_class.template_children(self)
+        return self.volinfo.object_class._template_children(self)
 
     def relative_child_offset(self, child):
         """A function that returns the relative offset of a child from its parent offset
 
            This may throw exceptions including ChildNotFoundException and NotImplementedError
         """
-        return self.volinfo.object_class.template_relative_child_offset(self, child)
+        return self.volinfo.object_class._template_relative_child_offset(self, child)
 
     def replace_child(self, old_child, new_child):
         """A function for replacing one child with another
 
            We pass in the kwargs directly so they can be changed
         """
-        self.volinfo.object_class.template_replace_child(self, old_child, new_child)
+        self.volinfo.object_class._template_replace_child(self, old_child, new_child)
 
     def __call__(self, context, object_info):
         """Constructs the object
