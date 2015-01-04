@@ -11,7 +11,7 @@ from volatility.framework import validity
 from volatility.framework.interfaces import context as context_module
 
 
-class ReadOnlyInformation(validity.ValidityRoutines, collections.abc.Mapping):
+class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
     """A read-only mapping of various values that offer attribute access as well"""
 
     def __init__(self, dict):
@@ -36,17 +36,17 @@ class ReadOnlyInformation(validity.ValidityRoutines, collections.abc.Mapping):
         return len(self._dict)
 
 
-class ObjectInformation(ReadOnlyInformation):
+class ObjectInformation(ReadOnlyMapping):
     """Contains information useful/pertinent only to an individual object (like an instance)"""
 
     def __init__(self, layer_name, offset, member_name = None, parent = None):
         self._type_check(offset, int)
         if parent:
             self._type_check(parent, ObjectInterface)
-        ReadOnlyInformation.__init__(self, {'layer_name': layer_name,
-                                            'offset': offset,
-                                            'member_name': member_name,
-                                            'parent': parent})
+        ReadOnlyMapping.__init__(self, {'layer_name': layer_name,
+                                        'offset': offset,
+                                        'member_name': member_name,
+                                        'parent': parent})
 
 
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
@@ -72,7 +72,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def volinfo(self):
         """Returns the volatility specific object information"""
         # Wrap the outgoing volinfo in a read-only proxy
-        return ReadOnlyInformation(self._volinfo)
+        return ReadOnlyMapping(self._volinfo)
 
     @abstractmethod
     def write(self, value):
