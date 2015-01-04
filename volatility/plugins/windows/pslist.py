@@ -3,7 +3,7 @@ import inspect
 import volatility.framework.interfaces.plugins as plugins
 
 
-class pslist(plugins.PluginInterface):
+class PsList(plugins.PluginInterface):
     @classmethod
     def determine_inputs(cls):
         print(inspect.getfullargspec(cls.__call__))

@@ -136,7 +136,7 @@ def test_plugin():
 
     import volatility.plugins.windows.pslist as pslist
 
-    eproc = pslist.pslist.kernel_process_from_physical_process(ctx, 'data', 'intel', 0x192ad18)
+    eproc = pslist.PsList.kernel_process_from_physical_process(ctx, 'data', 'intel', 0x192ad18)
     print(eproc.UniqueProcessId)
 
 # TODO:
