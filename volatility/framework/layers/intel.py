@@ -125,8 +125,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel architectures"""
 
-    def __init__(self, *args, **kwargs):
-        Intel.__init__(self, *args, **kwargs)
+    def __init__(self, context, name, memory_layer, page_map_offset):
+        Intel.__init__(self, context, name, memory_layer, page_map_offset)
 
         # These can vary depending on the type of space
         self._entry_format = "<Q"
@@ -140,8 +140,8 @@ class IntelPAE(Intel):
 
 
 class Intel32e(Intel):
-    def __init__(self, *args, **kwargs):
-        Intel.__init__(self, *args, **kwargs)
+    def __init__(self, context, name, memory_layer, page_map_offset):
+        Intel.__init__(self, context, name, memory_layer, page_map_offset)
 
         # These can vary depending on the type of space
         self._entry_format = "<Q"
