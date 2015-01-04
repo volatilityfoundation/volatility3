@@ -126,7 +126,7 @@ class Template(validity.ValidityRoutines):
         """Updates the keyword arguments"""
         self._volinfo.update(newargs)
 
-    def __call__(self, context, object_info, **kwargs):
+    def __call__(self, context, object_info):
         """Constructs the object
 
         :type context: framework.interfaces.context.ContextInterface

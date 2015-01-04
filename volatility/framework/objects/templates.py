@@ -59,13 +59,14 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         """
         self.volinfo.object_class.template_replace_child(self, old_child, new_child)
 
-    def __call__(self, context, object_info, **kwargs):
+    def __call__(self, context, object_info):
         """Constructs the object
 
            Returns: an object adhereing to the Object interface
         """
         # We always use the template size (as calculated by the object class)
         # over the one passed in by an argument
+        kwargs = {}
         kwargs.update(self.volinfo)
         del kwargs['object_class']
         return self.volinfo.object_class(context = context,
@@ -79,6 +80,6 @@ class ReferenceTemplate(interfaces.objects.Template):
        It should not return any attributes
     """
 
-    def __call__(self, context, *args, **kwargs):
+    def __call__(self, context, object_info, **kwargs):
         template = context.symbol_space.get_structure(self.volinfo.structure_name)
-        return template(context = context, *args, **kwargs)
+        return template(context = context, object_info = object_info, **kwargs)
