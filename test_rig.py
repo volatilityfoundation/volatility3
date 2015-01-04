@@ -8,6 +8,7 @@ import pdb
 import logging
 
 from volatility import framework
+from volatility.framework.interfaces import objects
 from volatility.framework import xp_sp2_x86_vtypes, layers, plugins
 from volatility.framework.symbols import vtypes, native
 
@@ -26,8 +27,8 @@ def test_symbols():
 
     for i in list(ntkrnlmp.structures):
         symbol = ctx.symbol_space.get_structure('ntkrnlmp!' + i)
-        print(symbol.structure_name, symbol, symbol.size)
-        _ = symbol(ctx, layer_name = '', offset = 0)
+        print(symbol.volinfo.structure_name, symbol, symbol.volinfo.size)
+        _ = symbol(ctx, objects.ObjectInformation(layer_name = '', offset = 0))
     symbol = ctx.symbol_space.get_structure('ntkrnlmp!_EPROCESS')
 
 
