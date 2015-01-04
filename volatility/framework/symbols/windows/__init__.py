@@ -14,7 +14,7 @@ class _LIST_ENTRY(objects.Struct):
         """Returns an iterator of the entries in the list"""
 
         if layer is None:
-            layer = self._layer_name
+            layer = self.volinfo.layer_name
 
         relative_offset = self._context.symbolspace.relative_child_offset(structure, member)
 

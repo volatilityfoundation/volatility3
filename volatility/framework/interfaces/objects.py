@@ -52,12 +52,11 @@ class ObjectInformation(ReadOnlyInformation):
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """ A base object required to be the ancestor of every object used in volatility """
 
-    def __init__(self, context, object_info, template_info):
+    def __init__(self, context, structure_name, object_info, **kwargs):
         # Since objects are likely to be instantiated often,
         # we're only checking that context, offset and parent
         # Everything else may be wrong, but that will get caught later on
         self._type_check(context, context_module.ContextInterface)
-        self._type_check(template_info, ReadOnlyInformation)
         self._type_check(object_info, ObjectInformation)
 
         # Add an empty dictionary at the start to allow objects to add their own data to the volinfo object
@@ -66,7 +65,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         # This allows objects to MASSIVELY MESS with their own internal representation!!!
         # Changes to offset, structure_name, etc should NEVER be done
         #
-        self._volinfo = collections.ChainMap({}, object_info, template_info)
+        self._volinfo = collections.ChainMap({}, object_info, {'structure_name': structure_name}, kwargs)
         self._context = context
 
     @property

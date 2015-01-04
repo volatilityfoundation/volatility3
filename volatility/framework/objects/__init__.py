@@ -39,32 +39,38 @@ class Void(interfaces.objects.ObjectInterface):
 
 class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
-    _struct_format = '<I'
     _struct_type = int
 
-    def __init__(self, context, object_info, template_info):
+    def __init__(self, context, structure_name, object_info, struct_format):
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
-                                                    template_info = template_info,
-                                                    object_info = object_info)
+                                                    structure_name = structure_name,
+                                                    object_info = object_info,
+                                                    struct_format = struct_format)
+        self._struct_format = struct_format
 
-    def __new__(cls, context, template_info, object_info, **kwargs):
+    def __new__(cls, context, structure_name, object_info, struct_format, **kwargs):
+        """Creates the appropriate class and returns it so that the native type is inherritted
+
+        The only reason the **kwargs is added, is so that the inherriting types can override __init__
+        without needing to override __new__"""
         return cls._struct_type.__new__(cls,
                                         cls._struct_value(context,
+                                                          struct_format,
                                                           object_info.layer_name,
                                                           object_info.offset))
 
     @classmethod
-    def _struct_value(cls, context, layer_name, offset):
-        length = struct.calcsize(cls._struct_format)
+    def _struct_value(cls, context, struct_format, layer_name, offset):
+        length = struct.calcsize(struct_format)
         data = context.memory.read(layer_name, offset, length)
-        (value,) = struct.unpack(cls._struct_format, data)
+        (value,) = struct.unpack(struct_format, data)
         return value
 
     @classmethod
     def template_size(cls, template):
         """Returns the size of the templated object"""
-        return struct.calcsize(cls._struct_format)
+        return struct.calcsize(template.volinfo.struct_format)
 
     @classmethod
     def template_children(cls, template):
@@ -82,7 +88,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     def write(self, value):
         """Writes the object into the layer of the context at the current offset"""
         if isinstance(value, self._struct_type):
-            data = struct.pack(self._struct_format, value)
+            data = struct.pack(self.volinfo.struct_format, value)
             return self._context.memory.write(self.volinfo.layer_name, self.volinfo.offset, data)
         raise TypeError(
             repr(self.__class__.__name__) + " objects require a " + repr(type(self._struct_type)) + " to be written")
@@ -94,19 +100,21 @@ class Integer(PrimitiveObject, int):
 
 class Float(PrimitiveObject, float):
     """Primitive Object that handles double or floating point numbers"""
-    _struct_format = '<f'
     _struct_type = float
 
 
 class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes"""
-    _struct_format = '1s'
     _struct_type = bytes
 
-    def __init__(self, context, template_info, object_info, length = 1):
+    def __init__(self, context, structure_name, object_info, struct_format, length = 1):
         self._struct_format = str(length) + 's'
+        PrimitiveObject.__init__(self,
+                                 context,
+                                 structure_name = structure_name,
+                                 object_info = object_info,
+                                 struct_format = struct_format)
         self._volinfo['length'] = length
-        PrimitiveObject.__init__(self, context, template_info, object_info)
 
 
 # TODO: Fix up strings unpacking to include an encoding
@@ -115,25 +123,28 @@ class String(PrimitiveObject, str):
 
        length: specifies the maximum possible length that the string could hold in memory
     """
-    _struct_format = '1s'
     _struct_type = str
 
-    def __init__(self, context, template_info, object_info, length = 1, encoding = 'ascii'):
+    def __init__(self, context, structure_name, object_info, struct_format, length = 1, encoding = 'ascii'):
         self._struct_format = str(length) + 's'
         self._volinfo['length'] = length
-        PrimitiveObject.__init__(self, context, template_info, object_info)
+        PrimitiveObject.__init__(self,
+                                 context = context,
+                                 structure_name = structure_name,
+                                 object_info = object_info,
+                                 struct_format = struct_format)
 
 
 class Pointer(Integer):
     """Pointer which points to another object"""
-    _struct_format = '<I'
 
-    def __init__(self, context, object_info, template_info, target = None):
+    def __init__(self, context, structure_name, object_info, struct_format, target = None):
         self._type_check(target, templates.ObjectTemplate)
         Integer.__init__(self,
-                         context,
-                         object_info,
-                         template_info)
+                         context = context,
+                         object_info = object_info,
+                         structure_name = structure_name,
+                         struct_format = struct_format)
         self._volinfo['target'] = target
 
     def dereference(self, layer_name = None):
@@ -143,11 +154,12 @@ class Pointer(Integer):
            If layer_name is None, it defaults to the same layer that the pointer is currently instantiated in.
         """
         if layer_name is None:
-            layer_name = self._layer_name
-        return self._target(context = self._context,
-                            object_info = collections.ChainMap({'layer_name': layer_name,
-                                                                'offset': self,
-                                                                'parent': self}, self.volinfo))
+            layer_name = self.volinfo.layer_name
+        return self.volinfo.target(context = self._context,
+                                   object_info = interfaces.objects.ObjectInformation(
+                                       layer_name = layer_name,
+                                       offset = self,
+                                       parent = self))
 
     def __getattr__(self, attr):
         """Convenience function to access unknown attributes by getting them from the target object"""
@@ -171,14 +183,16 @@ class Pointer(Integer):
 class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
 
-    def __new__(cls, context, object_info, template_info, target = None, start_bit = 0, end_bit = 0, **kwargs):
+    def __new__(cls, context, structure_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
+        cls._type_check(target, Integer)
         value = target(context = context,
+                       structure_name = structure_name,
                        object_info = object_info,
-                       template_info = template_info)
+                       struct_format = struct_format)
         return cls._struct_type.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))
 
-    def __init__(self, context, object_info, template_info, target = None, start_bit = 0, end_bit = 0):
-        PrimitiveObject.__init__(self, context, object_info, template_info)
+    def __init__(self, context, structure_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
+        PrimitiveObject.__init__(self, context, structure_name, object_info, struct_format)
         self._volinfo['target'] = target
         self._volinfo['start_bit'] = start_bit
         self._volinfo['end_bit'] = end_bit
@@ -208,12 +222,12 @@ class Enumeration(interfaces.objects.ObjectInterface):
 class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
 
-    def __init__(self, context, object_info, template_info, count = 0, target = None):
+    def __init__(self, context, structure_name, object_info, count = 0, target = None):
         self._type_check(target, templates.ObjectTemplate)
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
-                                                    object_info = object_info,
-                                                    template_info = template_info)
+                                                    structure_name = structure_name,
+                                                    object_info = object_info)
         self._volinfo['count'] = self._type_check(count, int)
         self._volinfo['target'] = target
 
@@ -266,12 +280,14 @@ class Struct(interfaces.objects.ObjectInterface):
        Keep the number of methods in this class low or very specific, since each one could overload a valid member.
     """
 
-    def __init__(self, context, object_info, template_info):
+    def __init__(self, context, structure_name, object_info, size, members):
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
+                                                    structure_name = structure_name,
                                                     object_info = object_info,
-                                                    template_info = template_info)
-        self._check_members(template_info.members)
+                                                    size = size,
+                                                    members = members)
+        self._check_members(members)
         self._concrete_members = {}
 
     @classmethod

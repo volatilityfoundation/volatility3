@@ -66,9 +66,10 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         """
         # We always use the template size (as calculated by the object class)
         # over the one passed in by an argument
+        kwargs.update(self.volinfo)
+        del kwargs['object_class']
         return self.volinfo.object_class(context = context,
                                          object_info = object_info,
-                                         template_info = self.volinfo,
                                          **kwargs)
 
 
