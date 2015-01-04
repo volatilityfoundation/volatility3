@@ -1,6 +1,6 @@
 """Volatility 3 Constants
 
-Stores all the constant values that are generally fixed throughout volatiltiy
+Stores all the constant values that are generally fixed throughout volatility
 This includes default scanning block sizes, etc."""
 
 import os.path

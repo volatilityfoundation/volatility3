@@ -14,8 +14,8 @@ from volatility.framework.interfaces import context as context_module
 class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
     """A read-only mapping of various values that offer attribute access as well"""
 
-    def __init__(self, dict):
-        self._dict = dict
+    def __init__(self, dictionary):
+        self._dict = dictionary
 
     def __getattr__(self, attr):
         """Returns the item as an attribute"""
