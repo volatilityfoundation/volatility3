@@ -29,7 +29,7 @@ from volatility.framework import exceptions, objects, interfaces
 # (however, they have to be built first!)
 #
 # Single hop resolution is probably the solution
-# Could probably deal iwth it by having a property that caches
+# Could probably deal with it by having a property that caches
 # for container types
 #
 # Need to figure out how to tell the difference for vtypes between
@@ -104,7 +104,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             member = (relative_offset, self._vtypedict_to_template(vtypedict))
             members[member_name] = member
         object_class = self.get_structure_class(structure_name)
-        return objects.templates.ObjectTemplate(structure_name = structure_name,
+        return objects.templates.ObjectTemplate(structure_name = self.name + "!" + structure_name,
                                                 object_class = object_class,
                                                 size = size,
                                                 members = members)
