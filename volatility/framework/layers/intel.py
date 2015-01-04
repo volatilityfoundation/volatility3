@@ -12,7 +12,6 @@ from volatility.framework import interfaces, exceptions
 
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
-    minimum_address = 0
 
     def __init__(self, context, name, memory_layer, page_map_offset):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, name)
@@ -29,6 +28,10 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         self._index_shift = int(math.log(struct.calcsize(self._entry_format), 2))
         self._structure = [('page directory', 10, False),
                            ('page table', 10, True)]
+
+    @property
+    def minimum_address(self):
+        return 0
 
     @property
     def maximum_address(self):
