@@ -13,22 +13,22 @@ from volatility.framework import interfaces, exceptions
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
     minimum_address = 0
+    # All Intel address spaces work on 4096 byte pages
+    _page_size_in_bits = 12
+
+    # These can vary depending on the type of space
+    _entry_format = "<I"
+    _bits_per_register = 32
+    _maxphyaddr = 32
+    _maxvirtaddr = _maxphyaddr
+    _index_shift = int(math.log(struct.calcsize(_entry_format), 2))
+    _structure = [('page directory', 10, False),
+                  ('page table', 10, True)]
 
     def __init__(self, context, name, memory_layer, page_map_offset):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, name)
         self._base_layer = memory_layer
         self._page_map_offset = page_map_offset
-        # All Intel address spaces work on 4096 byte pages
-        self._page_size_in_bits = 12
-
-        # These can vary depending on the type of space
-        self._entry_format = "<I"
-        self._bits_per_register = 32
-        self._maxphyaddr = 32
-        self._maxvirtaddr = self._maxphyaddr
-        self._index_shift = int(math.log(struct.calcsize(self._entry_format), 2))
-        self._structure = [('page directory', 10, False),
-                           ('page table', 10, True)]
 
     @property
     def maximum_address(self):
@@ -124,35 +124,26 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
 class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel architectures"""
-
-    def __init__(self, *args, **kwargs):
-        Intel.__init__(self, *args, **kwargs)
-
-        # These can vary depending on the type of space
-        self._entry_format = "<Q"
-        self._bits_per_register = 32
-        self._maxphyaddr = 40
-        self._maxvirtaddr = self._maxphyaddr
-        self._index_shift = int(math.log(struct.calcsize(self._entry_format), 2))
-        self._structure = [('page directory pointer', 2, False),
-                           ('page directory', 9, True),
-                           ('page table', 9, True)]
+    # These can vary depending on the type of space
+    _entry_format = "<Q"
+    _bits_per_register = 32
+    _maxphyaddr = 40
+    _maxvirtaddr = _maxphyaddr
+    _structure = [('page directory pointer', 2, False),
+                  ('page directory', 9, True),
+                  ('page table', 9, True)]
 
 
 class Intel32e(Intel):
-    def __init__(self, *args, **kwargs):
-        Intel.__init__(self, *args, **kwargs)
-
-        # These can vary depending on the type of space
-        self._entry_format = "<Q"
-        self._bits_per_register = 64
-        self._maxphyaddr = 52
-        self._maxvirtaddr = 48
-        self._index_shift = int(math.log(struct.calcsize(self._entry_format), 2))
-        self._structure = [('page map layer 4', 9, False),
-                           ('page directory pointer', 9, True),
-                           ('page directory', 9, True),
-                           ('page table', 9, True)]
+    # These can vary depending on the type of space
+    _entry_format = "<Q"
+    _bits_per_register = 64
+    _maxphyaddr = 52
+    _maxvirtaddr = 48
+    _structure = [('page map layer 4', 9, False),
+                  ('page directory pointer', 9, True),
+                  ('page directory', 9, True),
+                  ('page table', 9, True)]
 
 
 class WindowsMixin(object):
