@@ -91,7 +91,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def is_valid(self, offset):
         """Returns whether the address offset can be translated to a valid address"""
         try:
-            self._traslate(offset)
+            self._translate(offset)
         except exceptions.InvalidAddressException:
             return False
         return True
