@@ -97,16 +97,16 @@ class SymbolSpace(collections.Mapping):
                         if isinstance(child, objects.templates.ReferenceTemplate):
                             # If we haven't seen it before, subresolve it and also add it
                             # to the "symbols that still need traversing" list
-                            if child.structure_name not in self._resolved:
-                                traverse_list.append(child.structure_name)
-                                self._resolved[child.structure_name] = self._weak_resolve(SymbolType.STRUCTURE,
-                                                                                          child.structure_name)
+                            if child.volinfo.structure_name not in self._resolved:
+                                traverse_list.append(child.volinfo.structure_name)
+                                self._resolved[child.volinfo.structure_name] = self._weak_resolve(SymbolType.STRUCTURE,
+                                                                                                  child.volinfo.structure_name)
                             # Stash the replacement
                             replacements.add((traverser, child))
                         elif child.children:
                             template_traverse_list.append(child)
             for (parent, child) in replacements:
-                parent.replace_child(child, self._resolved[child.structure_name])
+                parent.replace_child(child, self._resolved[child.volinfo.structure_name])
         return self._resolved[structure_name]
 
     def get_constant(self, constant_name):

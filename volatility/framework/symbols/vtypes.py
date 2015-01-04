@@ -79,7 +79,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             elif structure_name == 'BitField':
                 update = dictionary[1]
                 update['target'] = self._vtypedict_to_template([update['native_type']])
-            native_template.update_arguments(**update)  # pylint: disable=W0142
+            native_template.update_volinfo(**update)  # pylint: disable=W0142
             return native_template
 
         # Otherwise
@@ -104,5 +104,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             member = (relative_offset, self._vtypedict_to_template(vtypedict))
             members[member_name] = member
         object_class = self.get_structure_class(structure_name)
-        return objects.templates.ObjectTemplate(object_class = object_class, structure_name = structure_name,
-                                                size = size, members = members)
+        return objects.templates.ObjectTemplate(structure_name = structure_name,
+                                                object_class = object_class,
+                                                size = size,
+                                                members = members)

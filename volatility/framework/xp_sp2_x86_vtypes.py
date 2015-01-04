@@ -4144,7 +4144,7 @@ ntkrnlmp_types = {
     '_IO_STATUS_BLOCK': [0x8, {
         'Status': [0x0, ['long']],
         'Pointer': [0x0, ['pointer', ['void']]],
-        'Information': [0x4, ['unsigned long']],
+        'ReadOnlyInformation': [0x4, ['unsigned long']],
     }],
     '_LPCP_MESSAGE': [0x30, {
         'Entry': [0x0, ['_LIST_ENTRY']],

@@ -38,6 +38,7 @@ def require_version(*args):
 
 from volatility.framework import interfaces, symbols, layers
 
+
 class Context(interfaces.context.ContextInterface):
     """Maintains the context within which to construct objects
 
@@ -86,7 +87,7 @@ class Context(interfaces.context.ContextInterface):
 
     # ## Object Factory Functions
 
-    def object(self, symbol, layer_name, offset):
+    def object(self, symbol, layer_name, offset, **kwargs):
         """Object factory, takes a context, symbol, offset and optional layername
 
         Looks up the layername in the context, finds the object template based on the symbol,
@@ -96,7 +97,9 @@ class Context(interfaces.context.ContextInterface):
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
         object_template = self._symbol_space.get_structure(symbol)
-        return object_template(self, layer_name = layer_name, offset = offset)
+        return object_template(self,
+                               interfaces.objects.ObjectInformation(layer_name = layer_name, offset = offset),
+                               **kwargs)
 
 
 
