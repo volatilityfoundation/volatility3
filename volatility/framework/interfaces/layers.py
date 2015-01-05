@@ -33,7 +33,7 @@ class DataLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """Returns the minimum valid address of the space"""
 
     @abstractmethod
-    def is_valid(self, offset):
+    def is_valid(self, offset, length = 1):
         """Returns a boolean based on whether the offset is valid or not"""
 
     @abstractmethod

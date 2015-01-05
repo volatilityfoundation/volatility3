@@ -26,12 +26,15 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
         """Returns the smallest available address in the space"""
         return 0
 
-    def is_valid(self, offset):
+    def is_valid(self, offset, length = 1):
         """Returns whether the offset is valid or not"""
-        return self.minimum_address <= offset <= self.maximum_address
+        return (self.minimum_address <= offset <= self.maximum_address and
+                self.minimum_address <= offset + length - 1 <= self.maximum_address)
 
     def read(self, address, length, pad = False):
         """Reads the data from the buffer"""
+        if not self.is_valid(address, length):
+            raise exceptions.InvalidAddressException("Offset outside of the buffer boundaries")
         return self._buffer[address:address + length]
 
     def write(self, address, data):
@@ -60,16 +63,15 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Returns the smallest available address in the space"""
         return 0
 
-    def is_valid(self, offset):
+    def is_valid(self, offset, length = 1):
         """Returns whether the offset is valid or not"""
-        return self.minimum_address <= offset <= self.maximum_address
+        return (self.minimum_address <= offset <= self.maximum_address and
+                self.minimum_address <= offset + length - 1 <= self.maximum_address)
 
     def read(self, offset, length, pad = False):
         """Reads from the file at offset for length"""
-        if not self.is_valid(offset):
+        if not self.is_valid(offset, length):
             raise exceptions.InvalidAddressException("Offset outside of the " + self.name + " file boundaries")
-        if not self.is_valid(offset + (length - 1)):
-            raise exceptions.InvalidAddressException("Final offset outside of the " + self.name + " file boundaries")
         if length < 0:
             raise TypeError("Length must be positive")
         self._file.seek(offset)
@@ -87,7 +89,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
            This will technically allow writes beyond the extent of the file
         """
-        if not self.is_valid(offset):
-            raise exceptions.InvalidAddressException("Offset outside of the " + self.name + " file boundaries")
+        if not self.is_valid(offset, len(data)):
+            raise exceptions.InvalidAddressException("Data segment outside of the " + self.name + " file boundaries")
         self._file.seek(offset)
         self._file.write(data)

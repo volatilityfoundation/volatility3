@@ -91,13 +91,13 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
         return page, 1 << (position + 1)
 
-    def is_valid(self, offset):
+    def is_valid(self, offset, length = 1):
         """Returns whether the address offset can be translated to a valid address"""
         try:
-            self._translate(offset)
+            return all([self._context.memory[self._base_layer].is_valid(mapped_offset) for _, mapped_offset, _, _ in
+                        self.mapping(offset, length)])
         except exceptions.InvalidAddressException:
             return False
-        return True
 
     def translate(self, offset):
         """Translates a specific offset based on the paging tables"""
