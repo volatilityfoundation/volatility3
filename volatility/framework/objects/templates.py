@@ -27,7 +27,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
     @property
     def size(self):
         """Returns the size of the template"""
-        return self.vol.object_class._template_size(self)
+        return self.vol.object_class.VolTemplateProxy.size(self)
 
     @property
     def children(self):
@@ -35,35 +35,33 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
            This is used to traverse the template tree
         """
-        return self.vol.object_class._template_children(self)
+        return self.vol.object_class.VolTemplateProxy.children(self)
 
     def relative_child_offset(self, child):
         """A function that returns the relative offset of a child from its parent offset
 
            This may throw exceptions including ChildNotFoundException and NotImplementedError
         """
-        return self.vol.object_class._template_relative_child_offset(self, child)
+        return self.vol.object_class.VolTemplateProxy.relative_child_offset(self, child)
 
     def replace_child(self, old_child, new_child):
         """A function for replacing one child with another
 
            We pass in the kwargs directly so they can be changed
         """
-        self.vol.object_class._template_replace_child(self, old_child, new_child)
+        return self.vol.object_class.VolTemplateProxy.replace_child(self, old_child, new_child)
 
     def __call__(self, context, object_info):
         """Constructs the object
 
            Returns: an object adhereing to the Object interface
         """
-        # We always use the template size (as calculated by the object class)
-        # over the one passed in by an argument
         arguments = {}
         arguments.update(self.vol)
         del arguments['object_class']
         return self.vol.object_class(context = context,
-                                         object_info = object_info,
-                                         **arguments)
+                                     object_info = object_info,
+                                     **arguments)
 
 
 class ReferenceTemplate(interfaces.objects.Template):

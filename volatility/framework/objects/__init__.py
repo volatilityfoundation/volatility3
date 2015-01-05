@@ -14,23 +14,11 @@ from volatility.framework.objects import templates
 class Void(interfaces.objects.ObjectInterface):
     """Returns an object to represent void/unknown types"""
 
-    @classmethod
-    def _template_size(cls, template):
-        """Dummy size for Void objects"""
-        return 0
-
-    @classmethod
-    def _template_children(cls, template):
-        """Returns an empty list for Void objects since they can't have children"""
-        return []
-
-    @classmethod
-    def _template_replace_child(cls, template, old_child, new_child):
-        """Dummy method that does nothing for Void objects"""
-
-    @classmethod
-    def _template_relative_child_offset(cls, template, child):
-        """Dummy method that does nothing for Void objects"""
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+        @classmethod
+        def size(cls, template):
+            """Dummy size for Void objects"""
+            raise TypeError("Void types are incomplete, cannot contain data and do not have a size.")
 
     def write(self, value):
         """Dummy method that does nothing for Void objects"""
@@ -67,23 +55,11 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         (value,) = struct.unpack(struct_format, data)
         return value
 
-    @classmethod
-    def _template_size(cls, template):
-        """Returns the size of the templated object"""
-        return struct.calcsize(template.vol.struct_format)
-
-    @classmethod
-    def _template_children(cls, template):
-        """Since primitives have no children, this returns an empty list"""
-        return []
-
-    @classmethod
-    def _template_replace_child(cls, template, old_child, new_child):
-        """Since this template can't ever have children, this method can be empty"""
-
-    @classmethod
-    def _template_relative_child_offset(cls, template, child):
-        """Since this template can't ever have children, this method can be empty as well"""
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+        @classmethod
+        def size(cls, template):
+            """Returns the size of the templated object"""
+            return struct.calcsize(template.vol.struct_format)
 
     def write(self, value):
         """Writes the object into the layer of the context at the current offset"""
@@ -156,28 +132,33 @@ class Pointer(Integer):
         if layer_name is None:
             layer_name = self.vol.layer_name
         return self.vol.target(context = self._context,
-                                   object_info = interfaces.objects.ObjectInformation(
-                                       layer_name = layer_name,
-                                       offset = self,
-                                       parent = self))
+                               object_info = interfaces.objects.ObjectInformation(
+                                   layer_name = layer_name,
+                                   offset = self,
+                                   parent = self))
 
     def __getattr__(self, attr):
         """Convenience function to access unknown attributes by getting them from the target object"""
         return getattr(self.dereference(), attr)
 
-    @classmethod
-    def _template_children(cls, template):
-        """Returns the children of the template"""
-        if 'target' in template.vol:
-            return [template.vol.target]
-        return []
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+        @classmethod
+        def size(cls, template):
+            return Integer.VolTemplateProxy.size(cls, template)
 
-    @classmethod
-    def _template_replace_child(cls, template, old_child, new_child):
-        """Substitutes the old_child for the new_child"""
-        if 'target' in template.vol:
-            if template.vol.target == old_child:
-                template.update_vol(target = new_child)
+        @classmethod
+        def children(cls, template):
+            """Returns the children of the template"""
+            if 'target' in template.vol:
+                return [template.vol.target]
+            return []
+
+        @classmethod
+        def replace_child(cls, template, old_child, new_child):
+            """Substitutes the old_child for the new_child"""
+            if 'target' in template.vol:
+                if template.vol.target == old_child:
+                    template.update_vol(target = new_child)
 
 
 class BitField(PrimitiveObject, int):
@@ -211,9 +192,6 @@ class BitField(PrimitiveObject, int):
 class Enumeration(interfaces.objects.ObjectInterface):
     """Returns an object made up of choices"""
     # FIXME: Add in body for the enumeration object
-    @classmethod
-    def _template_children(cls, template):
-        return []
 
     def write(self, value):
         raise NotImplementedError("Writing to Enumerations is not yet implemented")
@@ -231,40 +209,41 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
         self._vol['count'] = self._type_check(count, int)
         self._vol['target'] = target
 
-    @classmethod
-    def _template_size(cls, template):
-        """Returns the size of the array, based on the count and the target"""
-        if 'target' not in template.vol and 'count' not in template.vol:
-            raise TypeError("Array ObjectTemplate must be provided a count and target")
-        return template.vol.get('target', None).size * template.vol.get('count', 0)
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+        @classmethod
+        def size(cls, template):
+            """Returns the size of the array, based on the count and the target"""
+            if 'target' not in template.vol and 'count' not in template.vol:
+                raise TypeError("Array ObjectTemplate must be provided a count and target")
+            return template.vol.get('target', None).size * template.vol.get('count', 0)
 
-    @classmethod
-    def _template_children(cls, template):
-        """Returns the children of the template"""
-        if 'target' in template.vol:
-            return [template.vol.target]
-        return []
+        @classmethod
+        def children(cls, template):
+            """Returns the children of the template"""
+            if 'target' in template.vol:
+                return [template.vol.target]
+            return []
 
-    @classmethod
-    def _template_replace_child(cls, template, old_child, new_child):
-        """Substitutes the old_child for the new_child"""
-        if 'target' in template.vol:
-            if template.vol['target'] == old_child:
-                template.update_vol(target = new_child)
+        @classmethod
+        def replace_child(cls, template, old_child, new_child):
+            """Substitutes the old_child for the new_child"""
+            if 'target' in template.vol:
+                if template.vol['target'] == old_child:
+                    template.update_vol(target = new_child)
 
-    @classmethod
-    def _template_relative_child_offset(cls, template, child):
-        """Returns the relative offset from the head of the parent data to the child member"""
-        if 'target' in template and child == 'target':
-            return 0
-        raise IndexError("Member " + child + " not present in array template")
+        @classmethod
+        def relative_child_offset(cls, template, child):
+            """Returns the relative offset from the head of the parent data to the child member"""
+            if 'target' in template and child == 'target':
+                return 0
+            raise IndexError("Member " + child + " not present in array template")
 
     def __getitem__(self, i):
         """Returns the i-th item from the array"""
         if i >= self.vol.count or 0 > i:
             raise IndexError
         return self.vol.target(context = self._context, layer_name = self.vol.layer_name,
-                                   offset = self.vol.offset + (self.vol.target.size * i), parent = self)
+                               offset = self.vol.offset + (self.vol.target.size * i), parent = self)
 
     def __len__(self):
         """Returns the length of the array"""
@@ -290,45 +269,38 @@ class Struct(interfaces.objects.ObjectInterface):
         self._check_members(members)
         self._concrete_members = {}
 
-    @classmethod
-    def _template_size(cls, template):
-        """Method to return the size of this structure"""
-        if template.vol.get('size', None) is None:
-            raise TypeError("Struct ObjectTemplate not provided with a size")
-        return template.vol['size']
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+        @classmethod
+        def size(cls, template):
+            """Method to return the size of this structure"""
+            if template.vol.get('size', None) is None:
+                raise TypeError("Struct ObjectTemplate not provided with a size")
+            return template.vol.size
 
-    @classmethod
-    def _template_children(cls, template):
-        """Method to list children of a template"""
-        return [member for _, member in cls._template_members(template).values()]
+        @classmethod
+        def children(cls, template):
+            """Method to list children of a template"""
+            return [member for _, member in template.vol.members.values()]
 
-    @classmethod
-    def _template_replace_child(cls, template, old_child, new_child):
-        """Replace a child elements within the arguments handed to the template"""
-        for member in cls._template_members(template).get('members', {}):
-            relative_offset, member_template = template.vol.members[member]
-            if member_template == old_child:
-                # Members will give access to the mutable members list,
-                # but in case that ever changes, do the update correctly
-                tmp_list = template.vol.members
-                tmp_list[member] = (relative_offset, new_child)
-                template.update_vol(members = tmp_list)
+        @classmethod
+        def replace_child(cls, template, old_child, new_child):
+            """Replace a child elements within the arguments handed to the template"""
+            for member in template.vol.members.get('members', {}):
+                relative_offset, member_template = template.vol.members[member]
+                if member_template == old_child:
+                    # Members will give access to the mutable members list,
+                    # but in case that ever changes, do the update correctly
+                    tmp_list = template.vol.members
+                    tmp_list[member] = (relative_offset, new_child)
+                    template.update_vol(members = tmp_list)
 
-    @classmethod
-    def _template_relative_child_offset(cls, template, child):
-        """Returns the relative offset of a child to its parent"""
-        retlist = cls._template_members(template).get(child, None)
-        if retlist is None:
-            raise IndexError("Member " + child + " not present in template")
-        return retlist[0]
-
-    @classmethod
-    def _template_members(cls, template):
-        """Returns the dictionary of member_names to (relative_offset, member) as provided in the template arguments"""
-        if 'members' not in template.vol:
-            raise TypeError("Members not found in template arguments")
-        cls._check_members(template.vol.members)
-        return template.vol.members.copy()
+        @classmethod
+        def relative_child_offset(cls, template, child):
+            """Returns the relative offset of a child to its parent"""
+            retlist = template.vol.members.get(child, None)
+            if retlist is None:
+                raise IndexError("Member " + child + " not present in template")
+            return retlist[0]
 
     @classmethod
     def _check_members(cls, members):
@@ -340,7 +312,7 @@ class Struct(interfaces.objects.ObjectInterface):
             raise TypeError("Struct members must be a tuple of relative_offsets and templates")
 
     def member(self, attr = 'member'):
-        """Specificly named method for retrieving members."""
+        """Specifically named method for retrieving members."""
         return self.__getattr__(attr)
 
     def __getattr__(self, attr):

@@ -86,25 +86,29 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                                object_info = ObjectInformation(layer_name = self.vol.layer_name,
                                                                offset = self.vol.offset))
 
-    @classmethod
-    @abstractmethod
-    def _template_replace_child(cls, template, old_child, new_child):
-        """Substitutes the old_child for the new_child"""
+    class VolTemplateProxy(object, metaclass = ABCMeta):
+        """A container for proxied methods that the ObjectTemplate of this object will call.
 
-    @classmethod
-    @abstractmethod
-    def _template_size(cls, template):
-        """Returns the size of the template object"""
+        They are class methods rather than static methods, to allow for code reuse."""
 
-    @classmethod
-    @abstractmethod
-    def _template_children(cls, template):
-        """Returns the children of the template"""
+        @classmethod
+        @abstractmethod
+        def size(cls, template):
+            """Returns the size of the template object"""
 
-    @classmethod
-    @abstractmethod
-    def _template_relative_child_offset(cls, template, child):
-        """Returns the relative offset from the head of the parent data to the child member"""
+        @classmethod
+        def children(cls, template):
+            """Returns the children of the template"""
+            return []
+
+        @classmethod
+        def replace_child(cls, template, old_child, new_child):
+            """Substitutes the old_child for the new_child"""
+
+        @classmethod
+        def relative_child_offset(cls, template, child):
+            """Returns the relative offset from the head of the parent data to the child member"""
+            raise KeyError(repr(template.vol.structure_name) + " does not contain any children.")
 
 
 class Template(validity.ValidityRoutines):
