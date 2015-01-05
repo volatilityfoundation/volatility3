@@ -139,5 +139,5 @@ class Template(validity.ValidityRoutines):
         :param context:
         :param object_info:
 
-        :return O   Returns: an object adhereing to the Object interface
+        :return O   Returns: an object adhering to the Object interface
         """
