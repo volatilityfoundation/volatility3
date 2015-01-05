@@ -59,20 +59,20 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._type_check(context, context_module.ContextInterface)
         self._type_check(object_info, ObjectInformation)
 
-        # Add an empty dictionary at the start to allow objects to add their own data to the volinfo object
+        # Add an empty dictionary at the start to allow objects to add their own data to the vol object
         #
         # NOTE:
         # This allows objects to MASSIVELY MESS with their own internal representation!!!
         # Changes to offset, structure_name, etc should NEVER be done
         #
-        self._volinfo = collections.ChainMap({}, object_info, {'structure_name': structure_name}, kwargs)
+        self._vol = collections.ChainMap({}, object_info, {'structure_name': structure_name}, kwargs)
         self._context = context
 
     @property
-    def volinfo(self):
+    def vol(self):
         """Returns the volatility specific object information"""
-        # Wrap the outgoing volinfo in a read-only proxy
-        return ReadOnlyMapping(self._volinfo)
+        # Wrap the outgoing vol in a read-only proxy
+        return ReadOnlyMapping(self._vol)
 
     @abstractmethod
     def write(self, value):
@@ -82,8 +82,8 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """Returns a new object at the offset and from the layer that the current object inhabits"""
         object_template = self._context.symbol_space.get_structure(new_structure_name)
         return object_template(context = self._context,
-                               layer_name = self.volinfo.layer_name,
-                               offset = self.volinfo.offset)
+                               layer_name = self.vol.layer_name,
+                               offset = self.vol.offset)
 
     @classmethod
     @abstractmethod
@@ -115,16 +115,16 @@ class Template(validity.ValidityRoutines):
     def __init__(self, structure_name, **arguments):
         """Stores the keyword arguments for later use"""
         # Allow the updating of template arguments whilst still in template form
-        self._volinfo = collections.ChainMap(arguments, {'structure_name': structure_name})
+        self._vol = collections.ChainMap(arguments, {'structure_name': structure_name})
 
     @property
-    def volinfo(self):
+    def vol(self):
         """Returns a volatility information object, much like the ObjectInterface provides"""
-        return ReadOnlyMapping(self._volinfo)
+        return ReadOnlyMapping(self._vol)
 
-    def update_volinfo(self, **new_arguments):
+    def update_vol(self, **new_arguments):
         """Updates the keyword arguments"""
-        self._volinfo.update(new_arguments)
+        self._vol.update(new_arguments)
 
     def __call__(self, context, object_info):
         """Constructs the object

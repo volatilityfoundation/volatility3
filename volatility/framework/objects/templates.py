@@ -22,12 +22,12 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
                                              structure_name = structure_name,
                                              **arguments)
         self._class_check(object_class, interfaces.objects.ObjectInterface)
-        self.update_volinfo(object_class = object_class)
+        self.update_vol(object_class = object_class)
 
     @property
     def size(self):
         """Returns the size of the template"""
-        return self.volinfo.object_class._template_size(self)
+        return self.vol.object_class._template_size(self)
 
     @property
     def children(self):
@@ -35,21 +35,21 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
            This is used to traverse the template tree
         """
-        return self.volinfo.object_class._template_children(self)
+        return self.vol.object_class._template_children(self)
 
     def relative_child_offset(self, child):
         """A function that returns the relative offset of a child from its parent offset
 
            This may throw exceptions including ChildNotFoundException and NotImplementedError
         """
-        return self.volinfo.object_class._template_relative_child_offset(self, child)
+        return self.vol.object_class._template_relative_child_offset(self, child)
 
     def replace_child(self, old_child, new_child):
         """A function for replacing one child with another
 
            We pass in the kwargs directly so they can be changed
         """
-        self.volinfo.object_class._template_replace_child(self, old_child, new_child)
+        self.vol.object_class._template_replace_child(self, old_child, new_child)
 
     def __call__(self, context, object_info):
         """Constructs the object
@@ -59,9 +59,9 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         # We always use the template size (as calculated by the object class)
         # over the one passed in by an argument
         arguments = {}
-        arguments.update(self.volinfo)
+        arguments.update(self.vol)
         del arguments['object_class']
-        return self.volinfo.object_class(context = context,
+        return self.vol.object_class(context = context,
                                          object_info = object_info,
                                          **arguments)
 
@@ -73,5 +73,5 @@ class ReferenceTemplate(interfaces.objects.Template):
     """
 
     def __call__(self, context, object_info):
-        template = context.symbol_space.get_structure(self.volinfo.structure_name)
+        template = context.symbol_space.get_structure(self.vol.structure_name)
         return template(context = context, object_info = object_info)

@@ -27,7 +27,7 @@ def test_symbols():
 
     for i in list(ntkrnlmp.structures):
         symbol = ctx.symbol_space.get_structure('ntkrnlmp!' + i)
-        print(symbol.volinfo.structure_name, symbol, symbol.volinfo.size)
+        print(symbol.vol.structure_name, symbol, symbol.vol.size)
         _ = symbol(ctx, objects.ObjectInformation(layer_name = '', offset = 0))
     symbol = ctx.symbol_space.get_structure('ntkrnlmp!_EPROCESS')
     return symbol

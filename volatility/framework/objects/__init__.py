@@ -70,7 +70,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     @classmethod
     def _template_size(cls, template):
         """Returns the size of the templated object"""
-        return struct.calcsize(template.volinfo.struct_format)
+        return struct.calcsize(template.vol.struct_format)
 
     @classmethod
     def _template_children(cls, template):
@@ -88,8 +88,8 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     def write(self, value):
         """Writes the object into the layer of the context at the current offset"""
         if isinstance(value, self._struct_type):
-            data = struct.pack(self.volinfo.struct_format, value)
-            return self._context.memory.write(self.volinfo.layer_name, self.volinfo.offset, data)
+            data = struct.pack(self.vol.struct_format, value)
+            return self._context.memory.write(self.vol.layer_name, self.vol.offset, data)
         raise TypeError(
             repr(self.__class__.__name__) + " objects require a " + repr(type(self._struct_type)) + " to be written")
 
@@ -114,7 +114,7 @@ class Bytes(PrimitiveObject, bytes):
                                  structure_name = structure_name,
                                  object_info = object_info,
                                  struct_format = struct_format)
-        self._volinfo['length'] = length
+        self._vol['length'] = length
 
 
 # TODO: Fix up strings unpacking to include an encoding
@@ -127,7 +127,7 @@ class String(PrimitiveObject, str):
 
     def __init__(self, context, structure_name, object_info, struct_format, length = 1, encoding = 'ascii'):
         self._struct_format = str(length) + 's'
-        self._volinfo['length'] = length
+        self._vol['length'] = length
         PrimitiveObject.__init__(self,
                                  context = context,
                                  structure_name = structure_name,
@@ -145,7 +145,7 @@ class Pointer(Integer):
                          object_info = object_info,
                          structure_name = structure_name,
                          struct_format = struct_format)
-        self._volinfo['target'] = target
+        self._vol['target'] = target
 
     def dereference(self, layer_name = None):
         """Dereferences the pointer
@@ -154,8 +154,8 @@ class Pointer(Integer):
            If layer_name is None, it defaults to the same layer that the pointer is currently instantiated in.
         """
         if layer_name is None:
-            layer_name = self.volinfo.layer_name
-        return self.volinfo.target(context = self._context,
+            layer_name = self.vol.layer_name
+        return self.vol.target(context = self._context,
                                    object_info = interfaces.objects.ObjectInformation(
                                        layer_name = layer_name,
                                        offset = self,
@@ -168,16 +168,16 @@ class Pointer(Integer):
     @classmethod
     def _template_children(cls, template):
         """Returns the children of the template"""
-        if 'target' in template.volinfo:
-            return [template.volinfo.target]
+        if 'target' in template.vol:
+            return [template.vol.target]
         return []
 
     @classmethod
     def _template_replace_child(cls, template, old_child, new_child):
         """Substitutes the old_child for the new_child"""
-        if 'target' in template.volinfo:
-            if template.volinfo.target == old_child:
-                template.update_volinfo(target = new_child)
+        if 'target' in template.vol:
+            if template.vol.target == old_child:
+                template.update_vol(target = new_child)
 
 
 class BitField(PrimitiveObject, int):
@@ -193,15 +193,15 @@ class BitField(PrimitiveObject, int):
 
     def __init__(self, context, structure_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
         PrimitiveObject.__init__(self, context, structure_name, object_info, struct_format)
-        self._volinfo['target'] = target
-        self._volinfo['start_bit'] = start_bit
-        self._volinfo['end_bit'] = end_bit
+        self._vol['target'] = target
+        self._vol['start_bit'] = start_bit
+        self._vol['end_bit'] = end_bit
 
     @classmethod
     def _template_children(cls, template):
         """Returns the target type"""
-        if 'target' in template.volinfo:
-            return [template.volinfo.target]
+        if 'target' in template.vol:
+            return [template.vol.target]
         return []
 
     def write(self, value):
@@ -228,29 +228,29 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
                                                     context = context,
                                                     structure_name = structure_name,
                                                     object_info = object_info)
-        self._volinfo['count'] = self._type_check(count, int)
-        self._volinfo['target'] = target
+        self._vol['count'] = self._type_check(count, int)
+        self._vol['target'] = target
 
     @classmethod
     def _template_size(cls, template):
         """Returns the size of the array, based on the count and the target"""
-        if 'target' not in template.volinfo and 'count' not in template.volinfo:
+        if 'target' not in template.vol and 'count' not in template.vol:
             raise TypeError("Array ObjectTemplate must be provided a count and target")
-        return template.volinfo.get('target', None).size * template.volinfo.get('count', 0)
+        return template.vol.get('target', None).size * template.vol.get('count', 0)
 
     @classmethod
     def _template_children(cls, template):
         """Returns the children of the template"""
-        if 'target' in template.volinfo:
-            return [template.volinfo.target]
+        if 'target' in template.vol:
+            return [template.vol.target]
         return []
 
     @classmethod
     def _template_replace_child(cls, template, old_child, new_child):
         """Substitutes the old_child for the new_child"""
-        if 'target' in template.volinfo:
-            if template.volinfo['target'] == old_child:
-                template.update_volinfo(target = new_child)
+        if 'target' in template.vol:
+            if template.vol['target'] == old_child:
+                template.update_vol(target = new_child)
 
     @classmethod
     def _template_relative_child_offset(cls, template, child):
@@ -261,14 +261,14 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
 
     def __getitem__(self, i):
         """Returns the i-th item from the array"""
-        if i >= self.volinfo.count or 0 > i:
+        if i >= self.vol.count or 0 > i:
             raise IndexError
-        return self.volinfo.target(context = self._context, layer_name = self.volinfo.layer_name,
-                                   offset = self.volinfo.offset + (self.volinfo.target.size * i), parent = self)
+        return self.vol.target(context = self._context, layer_name = self.vol.layer_name,
+                                   offset = self.vol.offset + (self.vol.target.size * i), parent = self)
 
     def __len__(self):
         """Returns the length of the array"""
-        return self.volinfo.count
+        return self.vol.count
 
     def write(self, value):
         raise NotImplementedError("Writing to Arrays is not yet implemented")
@@ -293,9 +293,9 @@ class Struct(interfaces.objects.ObjectInterface):
     @classmethod
     def _template_size(cls, template):
         """Method to return the size of this structure"""
-        if template.volinfo.get('size', None) is None:
+        if template.vol.get('size', None) is None:
             raise TypeError("Struct ObjectTemplate not provided with a size")
-        return template.volinfo['size']
+        return template.vol['size']
 
     @classmethod
     def _template_children(cls, template):
@@ -306,13 +306,13 @@ class Struct(interfaces.objects.ObjectInterface):
     def _template_replace_child(cls, template, old_child, new_child):
         """Replace a child elements within the arguments handed to the template"""
         for member in cls._template_members(template).get('members', {}):
-            relative_offset, member_template = template.volinfo.members[member]
+            relative_offset, member_template = template.vol.members[member]
             if member_template == old_child:
                 # Members will give access to the mutable members list,
                 # but in case that ever changes, do the update correctly
-                tmp_list = template.volinfo.members
+                tmp_list = template.vol.members
                 tmp_list[member] = (relative_offset, new_child)
-                template.update_volinfo(members = tmp_list)
+                template.update_vol(members = tmp_list)
 
     @classmethod
     def _template_relative_child_offset(cls, template, child):
@@ -325,10 +325,10 @@ class Struct(interfaces.objects.ObjectInterface):
     @classmethod
     def _template_members(cls, template):
         """Returns the dictionary of member_names to (relative_offset, member) as provided in the template arguments"""
-        if 'members' not in template.volinfo:
+        if 'members' not in template.vol:
             raise TypeError("Members not found in template arguments")
-        cls._check_members(template.volinfo.members)
-        return template.volinfo.members.copy()
+        cls._check_members(template.vol.members)
+        return template.vol.members.copy()
 
     @classmethod
     def _check_members(cls, members):
@@ -347,16 +347,16 @@ class Struct(interfaces.objects.ObjectInterface):
         """Method for accessing members of the structure"""
         if attr in self._concrete_members:
             return self._concrete_members[attr]
-        elif attr in self.volinfo.members:
-            relative_offset, member = self.volinfo.members[attr]
+        elif attr in self.vol.members:
+            relative_offset, member = self.vol.members[attr]
             member = member(context = self._context,
-                            object_info = interfaces.objects.ObjectInformation(layer_name = self.volinfo.layer_name,
-                                                                               offset = self.volinfo.offset + relative_offset,
+                            object_info = interfaces.objects.ObjectInformation(layer_name = self.vol.layer_name,
+                                                                               offset = self.vol.offset + relative_offset,
                                                                                member_name = attr,
                                                                                parent = self))
             self._concrete_members[attr] = member
             return member
-        raise AttributeError("'" + self.volinfo.structure_name + "' Struct has no attribute '" + attr + "'")
+        raise AttributeError("'" + self.vol.structure_name + "' Struct has no attribute '" + attr + "'")
 
     def write(self, value):
         raise TypeError("Structs cannot be written to directly, individual members must be written instead")
