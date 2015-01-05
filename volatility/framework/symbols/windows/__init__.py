@@ -18,21 +18,24 @@ class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
         if layer is None:
             layer = self.volinfo.layer_name
 
-        relative_offset = self._context.symbolspace.relative_child_offset(structure, member)
+        relative_offset = self._context.symbol_space.get_structure(structure).relative_child_offset(member)
 
-        direction = 'BLink'
+        direction = 'Blink'
         if forward:
-            direction = 'FLink'
+            direction = 'Flink'
         link = getattr(self, direction).dereference()
 
-        seen = set()
-        while link.offset not in seen:
+        if not sentinel:
+            yield self._context.object(structure, layer, offset = self.volinfo.offset - relative_offset)
 
-            object = self._context.Object(structure, layer, offset = link.offset)
-            yield object
+        seen = set([self.volinfo.offset])
+        while link.volinfo.offset not in seen:
 
-            seen.add(link.offset)
+            obj = self._context.object(structure, layer, offset = link.volinfo.offset - relative_offset)
+            yield obj
+
+            seen.add(link.volinfo.offset)
             link = getattr(link, direction).dereference()
 
     def __iter__(self):
-        self.to_list(self.parent.volinfo.structure_name, self.volinfo.member_name)
+        return self.to_list(self.volinfo.parent.volinfo.structure_name, self.volinfo.member_name)
