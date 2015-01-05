@@ -111,6 +111,12 @@ def test_translation():
     ctx = framework.Context(nativelst)
     intel, x = intel32(ctx)
 
+    base = layers.physical.BufferDataLayer(ctx, 'base', buffer = b" ")
+
+    print(base.is_valid(0), base.is_valid(0) == True)
+    print(base.is_valid(1), base.is_valid(1) == False)
+    print(base.is_valid(0, 2), base.is_valid(0, 2) == False)
+
     for val in x:
         a, b = intel._translate(val)
         print(hex(val), hex(a), hex(b))
