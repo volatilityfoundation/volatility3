@@ -87,7 +87,7 @@ class Context(interfaces.context.ContextInterface):
 
     # ## Object Factory Functions
 
-    def object(self, symbol, layer_name, offset, **kwargs):
+    def object(self, symbol, layer_name, offset, **arguments):
         """Object factory, takes a context, symbol, offset and optional layername
 
         Looks up the layername in the context, finds the object template based on the symbol,
@@ -97,9 +97,10 @@ class Context(interfaces.context.ContextInterface):
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
         object_template = self._symbol_space.get_structure(symbol)
-        return object_template(self,
-                               interfaces.objects.ObjectInformation(layer_name = layer_name, offset = offset),
-                               **kwargs)
+        object_template.update_vol(**arguments)
+        return object_template(context = self,
+                               object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
+                                                                                  offset = offset))
 
 
 
