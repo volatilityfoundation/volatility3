@@ -30,10 +30,3 @@ class ValidityRoutines(object):
         """
         assert issubclass(klass, valid_class), self.__class__.__name__ + " expected " + \
                                                valid_class.__name__ + ", not " + klass.__name__
-
-    def _confirm(self, assertion, error):
-        """Acts like an assertion, but will not be disabled when __debug__ is disabled"""
-        if not assertion:
-            if error is None:
-                error = "An unspecified Assertion was not met in " + self.__class__.__name__
-            raise AssertionError(error)
