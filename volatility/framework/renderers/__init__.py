@@ -3,300 +3,275 @@
 Renderers display the unified output format in some manner (be it text or file or graphical output"""
 
 import collections
-import re
 
-from volatility.framework import validity
+from volatility.framework import interfaces
 
 
-class TreeRow(validity.ValidityRoutines):
-    """Class providing the interface for an individual Row of the TreeGrid"""
+class TreeNode(collections.Sequence):
+    """Class representing a particular node in a tree grid"""
 
-    def __init__(self, treegrid, values):
-        self._type_check(treegrid, TreeGrid)
-        if not isinstance(self, TreeGrid):
-            self._type_check(values, list)
-            treegrid.validate_values(values)
+    def __init__(self, path, treegrid, parent, values):
+        if not isinstance(treegrid, TreeGrid):
+            raise TypeError("Treegrid must be an instance of TreeGrid")
         self._treegrid = treegrid
-        self._children = []
-        self._values = values
+        self._parent = parent
+        self._path = path
+        self._validate_values(values)
+        self._values = treegrid.RowStructure(*values)
 
-    def add_child(self, child):
-        """Appends a child to the current Row"""
-        self._type_check(child, TreeRow)
-        self._children += [child]
+    def __repr__(self):
+        return "<TreeNode [" + self._path + "] - " + repr(self._values) + ">"
 
-    def insert_child(self, child, position):
-        """Inserts a child at a specific position in the current Row"""
-        self._type_check(child, TreeRow)
-        self._children = self._children[:position] + [child] + self._children[:position]
+    def __getitem__(self, item):
+        return self._treegrid.children(self).__getitem__(item)
 
-    def clear(self):
-        """Removes all children from this row
+    def __len__(self):
+        return len(self._treegrid.children(self))
 
-        :rtype : None
-        """
-        self._children = []
+    def _validate_values(self, values):
+        """A function for raising exceptions if a given set of values is invalid according to the column properties."""
+        if not (isinstance(values, list) and len(values) == len(self._treegrid.columns)):
+            raise TypeError(
+                "Values must be a list of objects made up of simple types and number the same as the columns")
+        for index in range(len(self._treegrid.columns)):
+            column = self._treegrid.columns[index]
+            if not isinstance(values[index], column.type):
+                raise TypeError(
+                    "Values item with index " + repr(index) + " is the wrong type for column " + \
+                    repr(column.name) + " (got " + str(type(values[index])) + " but expected " + \
+                    str(column.type) + ")")
 
     @property
     def values(self):
-        """The individual cell values of the row"""
+        """Returns the list of values from the particular node, based on column.index"""
         return self._values
 
     @property
-    def children(self):
-        """Returns an iterator of the children of the current row
+    def path(self):
+        """Returns a path identifying string
 
-        :rtype : iterator of TreeRows
+        This should be seen as opaque by external classes,
+        Parsing of path locations based on this string are not guaranteed to remain stable.
         """
-        for child in self._children:
-            yield child
+        return self._path
 
-    def iterator(self, level = 0):
-        """Returns an iterator of all rows with their depths
+    @property
+    def parent(self):
+        """Returns the parent node of this node or None"""
+        return self._parent
 
-        :type level: int
-        :param level: Indicates the depth of the current iterator
+    @property
+    def path_depth(self):
+        """Return the path depth of the current node"""
+        return len(self.path.split(TreeGrid.path_sep))
+
+    def path_changed(self, path, added = False):
+        """Updates the path based on the addition or removal of a node higher up in the tree
+
+           This should only be called by the containing TreeGrid and expects to only be called for affected nodes.
         """
-        yield (level, self)
-        for child in self.children:
-            for grandchild in child.iterator(level + 1):
-                yield grandchild
+        components = self._path.split(TreeGrid.path_sep)
+        changed = path.split(TreeGrid.path_sep)
+        changed_index = len(changed) - 1
+        if int(components[changed_index]) >= int(changed[-1]):
+            components[changed_index] = str(int(components[changed_index]) + (1 if added else -1))
+        self._path = TreeGrid.path_sep.join(components)
 
 
-Column = collections.namedtuple('Column', ['index', 'name', 'type', 'format'])
+class TreeGrid(object):
+    """Class providing the interface for a TreeGrid (which contains TreeNodes)
 
+    The structure of a TreeGrid is designed to maintain the structure of the tree in a single object.
+    For this reason each TreeNode does not hold its children, they are managed by the top level object.
+    This leaves the Nodes as simple data carries and prevents them being used to manipulate the tree as a whole.
+    This is a data structure, and is not expected to be modified much once created.
 
-class TreeGrid(TreeRow):
-    """Class providing the interface for a TreeGrid (which contains TreeRows)"""
+    Carrying the children under the parent makes recursion easier, but then every node is its own little tree
+    and must have all the supporting tree functions.  It also allows for a node to be present in several different trees,
+    and to create cycles.
+    """
 
-    simple_types = set((int, str, float, bytes))
+    simple_types = set([int, str, float, bytes])
+    path_sep = "|"
 
-    def __init__(self, columns):
+    def __init__(self, columns, generator):
         """Constructs a TreeGrid object using a specific set of columns
 
         The TreeGrid itself is a root element, that can have children but no values.
-        The format_hint is a suggestion to the renderer as to how the field should be portrayed as a string,
-        but it should be noted that the renderer is not under obligation to use it.
+        The TreeGrid does *not* contain any information about formatting,
+        these are up to the renderers and plugins.
 
-        :param columns: A list of column tuples made up of (name, type and format_hint).
+        :param columns: A list of column tuples made up of (name, type).
+        :param generator: A generator that populates the tree/grid structure
         """
-        self._type_check(columns, list)
+        self._populated = False
+        self._children = []
         converted_columns = []
-        for (name, column_type, column_format) in columns:
+        if len(columns) < 1:
+            raise ValueError("Columns must be a list containing at least one column")
+        for (name, column_type) in columns:
             is_simple_type = False
             for stype in self.simple_types:
                 is_simple_type = is_simple_type or issubclass(column_type, stype)
             if not is_simple_type:
                 raise TypeError("Column " + name + "'s type " + column_type.__class__.__name__ +
                                 " is not a simple type")
-            if isinstance(column_format, str):
-                column_format = FormatSpecification.from_specification(column_format)
-            if not (column_format is None or isinstance(column_format, FormatSpecification)):
-                raise TypeError(
-                    "Column " + name + "'s format " + repr(column_format) + " is not an accepted formatter.")
-            converted_columns.append(Column(len(converted_columns), name, column_type, column_format))
+            converted_columns.append(interfaces.renderers.Column(len(converted_columns), name, column_type))
+        self.RowStructure = collections.namedtuple("RowStructure",
+                                                   [self._sanitize(column.name) for column in converted_columns])
         self._columns = converted_columns
+        if generator is None:
+            generator = []
+        generator = iter(generator)
 
-        # We can use the special type None because we're the top level node without values
-        TreeRow.__init__(self, self, None)
+        self._generator = generator
+
+    def _sanitize(self, text):
+        output = ""
+        for letter in text.lower():
+            if letter != ' ':
+                output += (letter if letter in 'abcdefghiljklmnopqrstuvwxyz_' else '_')
+        return output
+
+    def populate(self, func = None, initial_accumulator = None):
+        """Generator that returns the next available Node
+
+           This is equivalent to a one-time visit.
+        """
+        accumulator = initial_accumulator
+        if func is None:
+            func = lambda _x, _y: None
+
+        if not self.populated:
+            prev_nodes = []
+            for (level, item) in self._generator:
+                parent_index = min(len(prev_nodes), level)
+                parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
+                treenode = self._append(parent, item)
+                prev_nodes = prev_nodes[0: parent_index] + [treenode]
+                accumulator = func(treenode, accumulator)
+        self._populated = True
+
+    @property
+    def populated(self):
+        """Indicates that population has completed and the tree may now be manipulated separately"""
+        return self._populated
 
     @property
     def columns(self):
-        """Returns list of tuples of (name, type and format_hint)"""
-        for column in self._columns:
-            yield column
+        """Returns the available columns and their ordering and types"""
+        return self._columns
 
-    def validate_values(self, values):
-        """Takes a list of values and verified them against the column types"""
-        if len(values) != len(self._columns):
-            raise ValueError("The length of the values provided does not match the number of columns.")
-        for column in self._columns:
-            if not isinstance(values[column.index], column.type):
-                raise TypeError("Column type " + str(column.index) + " is incorrect.")
+    def children(self, node):
+        """Returns the subnodes of a particular node in order"""
+        return [node for node, _ in self._find_children(node)]
 
-    def iterator(self, level = 0):
-        """Returns an iterator of all rows with their depths
+    def _find_children(self, node):
+        """Returns the children list associated with a particular node
 
-        :type level: int
-        :param level: Indicates the depth of the current iterator
+           Returns None if the node does not exist
         """
-        for child in self.children:
-            for grandchild in child.iterator(level + 1):
-                yield grandchild
+        children = self._children
+        try:
+            if node is not None:
+                for path_component in node.path.split(self.path_sep):
+                    _, children = children[int(path_component)]
+        except IndexError:
+            return []
+        return children
 
+    def values(self, node):
+        """Returns the values for a particular node
 
-class FormatSpecification(object):
-    valid_types = "bcdeEfFgGnosxX%"
-    pattern = re.compile("^((?P<fill>.)?(?P<align>[<>=^]))?" +
-                         "(?P<sign>[ +-])?" +
-                         "(?P<alt>#)?" +
-                         "?(?P<zero>0)?" +
-                         "(?P<width>[0-9]+)?" +
-                         "(?P<precision>[.][0-9]+)?" +
-                         "(?P<type>[" + valid_types + "])?$")
-
-    # noinspection PyShadowingBuiltins
-    def __init__(self, fill = None, align = None, sign = None, alt = None, zero = None, width = None,
-                 precision = None, type = None):  # pylint: disable=W0622
-        self._fill = fill
-        self._align = align
-        self._sign = sign
-        self._alt = alt
-        self._zero = zero
-        self._width = width
-        self._precision = precision
-        self._type = type
-
-    @classmethod
-    def from_specification(cls, format_spec):
-        """Converts a format_specification string into a FormatSpecification object
-
-        :param format_spec: Format specification string
-        :type format_spec: str
-
-        :rtype: FormatSpecification
-        :return: A FormatSpecification object with the various parameters parsed
+           The values returned are mutable,
         """
-        result = cls.pattern.match(format_spec)
-        if not result:
-            raise ValueError("Invalid format specification identified.")
-        return cls(result.group('fill'),
-                   result.group('align'),
-                   result.group('sign'),
-                   bool(result.group('alt')),
-                   bool(result.group('zero')),
-                   int(result.group('width')) if result.group('width') else None,
-                   int(result.group('precision')[1:]) if result.group('precision') else None,
-                   result.group('type'))
+        if node is None:
+            raise ValueError("Node must be a valid node within the TreeGrid")
+        return node.values
 
-    @property
-    def fill(self):
-        """Selects a character to fill out the empty space after a specific alignment has been chosen."""
-        return self._fill
+    def _append(self, parent, values):
+        """Adds a new node at the top level if parent is None, or under the parent node otherwise, after all other children."""
+        children = self.children(parent)
+        return self._insert(parent, len(children), values)
 
-    @property
-    def align(self):
-        """Determines how to align the text
+    def _insert(self, parent, position, values):
+        """Inserts an element into the tree at a specific position"""
+        parent_path = ""
+        children = self._find_children(parent)
+        if parent is not None:
+            parent_path = parent.path + self.path_sep
+        newpath = parent_path + str(position)
+        tree_item = TreeNode(newpath, self, parent, values)
+        for node, _ in children[position:]:
+            self.visit(node, lambda child, _: child.path_changed(newpath, True))
+        children.insert(position, (tree_item, []))
+        return tree_item
 
-        '>' will align to the right (default for numbers)
-        '<' will align to the left (default for strings)
-        '^' will align to the center
-        '=' is only valid for numeric types and will force the padding to go after the sign but before digits
+    def is_ancestor(self, node, descendant):
+        """Returns true if descendent is a child, grandchild, etc of node"""
+        return descendant.path.startswith(node.path)
 
-        The alignment option has no meaning if the width is not specified, as it will default to the same width as the
-        data.
+    def path_depth(self, node):
+        """Returns the path depth of a particular node"""
+        return node.path_depth
+
+    def max_depth(self):
+        """Returns the maximum depth of the tree"""
+        return self.visit(None, lambda n, a: max(a, self.path_depth(n)), )
+
+    def path_is_valid(self, node):
+        """Returns True is a given path is valid for this treegrid"""
+        return node in self.children(node.parent)
+
+    def visit(self, node, function, initial_accumulator = None, sort_key = None):
+        """Visits all the nodes in a tree, calling function on each one.
+
+           function should have the signature function(node, accumulator) and return new_accumulator
+           If accumulators are not needed, the function must still accept a second parameter.
+
+           The order of that the nodes are visited is always depth first, however, the order children are traversed can
+           be set based on a sort_key function which should accept a node's values and return something that can be
+           sorted to receive the desired order (similar to the sort/sorted key).
+
+           We use the private _find_children function so that we don't have to re-traverse the tree
+           for every node we descend further down
         """
-        return self._align
+        if not self.populated:
+            self.populate()
 
-    @property
-    def sign(self):
-        """Determines whether to insert a sign
+        # Find_nodes is path dependent, whereas _visit is not
+        # So in case the function modifies the node's path, find the nodes first
+        children = self._find_children(node)
+        accumulator = initial_accumulator
+        # We split visit into two, so that we don't have to keep calling find_children to traverse the tree
+        if node is not None:
+            accumulator = function(node, initial_accumulator)
+        if children is not None:
+            if sort_key is not None:
+                children = sorted(children, key = lambda x: sort_key(x[0].values))
+            accumulator = self._visit(children, function, accumulator, sort_key)
+        return accumulator
 
-        '+' indicates a sign should be present on both positive and negative numbers
-        '-' indicates that a sign should be present only on negative numbers (the default)
-        ' ' indicates that a leading space should be used on positive numbers, and a minus sign on negative ones
-        """
-        return self._sign
+    def _visit(self, list_of_children, function, accumulator, sort_key = None):
+        """Visits all the nodes in a tree, calling function on each one"""
+        if list_of_children is not None:
+            for n, children in list_of_children:
+                accumulator = function(n, accumulator)
+                if sort_key is not None:
+                    children = sorted(children, key = lambda x: sort_key(x[0].values))
+                accumulator = self._visit(children, function, accumulator, sort_key)
+        return accumulator
 
-    @property
-    def alt(self):
-        """Specifies whether an alternate form should be used.
 
-        This option is only valid for integer, float, complex and Decimal types. For integers, when binary, octal, or
-        hexadecimal output is used, this option adds the prefix respective '0b', '0o', or '0x' to the output value. For
-        floats, complex and Decimal the alternate form causes the result of the conversion to always contain a
-        decimal-point character, even if no digits follow it. Normally, a decimal-point character appears in the result
-        of these conversions only if a digit follows it. In addition, for 'g' and 'G' conversions, trailing zeros are
-        not removed from the result.
-        """
-        return self._alt
+class ColumnSortKey(interfaces.renderers.ColumnSortKey):
+    def __init__(self, treegrid, column_name):
+        self._index = None
+        for i in treegrid.columns:
+            if i.name.lower() == column_name.lower():
+                self._index = i.index
+        if self._index is None:
+            raise ValueError("Column " + column_name + " not found in TreeGrid columns")
 
-    @property
-    def zero(self):
-        """Specifies whether to enable sign-aware zero-padding for numeric types.
-
-        This is equivalent to a fill character of '0' with an alignment type of '='.
-        """
-        return self._zero
-
-    @property
-    def width(self):
-        """Specifies a decimal integer defining the minimum field width.
-
-        If not specified, then the field width will be determined by the content.
-        """
-        return self._width
-
-    @property
-    def precision(self):
-        """Specifies a decimal number indicating how many digits after the decimal point should be displayed.
-
-        This specifies a decimal number indicating how many digits should be displayed after the decimal point for a
-        floating point value formatted with 'f' and 'F', or before and after the decimal point for a floating point
-        value formatted with 'g' or 'G'. For non-number types the field indicates the maximum field size - in other
-        words, how many characters will be used from the field content. The precision is not allowed for integer values.
-        """
-        return self._precision
-
-    @property
-    def type(self):
-        """Specifies the type conversion
-
-        For complete documentation, see the Format Specification Mini-Language in the python string documentation.
-        """
-        return self._type
-
-    @fill.setter
-    def fill(self, value):
-        if value and not (isinstance(value, str) and len(value) == 1):
-            raise ValueError("Fill value must be a single character string.")
-        self._fill = value or None
-
-    @align.setter
-    def align(self, value):
-        if value and not (value in "<>^=" and len(value) == 1):
-            raise ValueError("Alignment value must be one of '<', '>', '=' or '^', not '" + value + "'.")
-        self._align = value or None
-
-    @sign.setter
-    def sign(self, value):
-        if value and not (value in "" and len(value) == 1):
-            raise ValueError("Sign value must be one of '-', '+' or ' ', not '" + value + "'.")
-        self._sign = value or None
-
-    @alt.setter
-    def alt(self, value):
-        self._alt = bool(value)
-
-    @zero.setter
-    def zero(self, value):
-        self._zero = bool(value)
-
-    @width.setter
-    def width(self, value):
-        self._width = int(value)
-
-    @precision.setter
-    def precision(self, value):
-        self._precision = int(value)
-
-    @type.setter
-    def type(self, value):
-        if not (value in self.valid_types and len(value) == 1):
-            raise ValueError("Invalid type value provided.")
-        self._type = value
-
-    def to_string(self):
-        return str(self)
-
-    def __str__(self):
-        """"""
-        spec = ((self.fill if self.fill and self.align else '') +
-                (self.align or '') +
-                (self.sign or '') +
-                ('#' if self.alt else '') +
-                ('0' if self.zero else '') +
-                (str(self.width) if self.width else '') +
-                (("." + str(self.precision)) if self.precision or self.precision == 0 else '') +
-                (self.type or ''))
-        return spec
+    def key(self, values):
+        """The key function passed as the sort key"""
+        return values[self._index]

@@ -23,3 +23,7 @@ class SymbolSpaceError(VolatilityException):
 
 class LayerException(VolatilityException):
     """Thrown when an error occurs dealing with memory and layers"""
+
+
+class TreePopulationError(Exception):
+    """Exception class for accessing functions on an partially populated tree."""
