@@ -7,7 +7,7 @@ import collections
 from volatility.framework import interfaces
 
 
-class TreeNode(collections.Sequence):
+class TreeNode(interfaces.renderers.TreeNode):
     """Class representing a particular node in a tree grid"""
 
     def __init__(self, path, treegrid, parent, values):
@@ -78,7 +78,7 @@ class TreeNode(collections.Sequence):
         self._path = TreeGrid.path_sep.join(components)
 
 
-class TreeGrid(object):
+class TreeGrid(interfaces.renderers.TreeGrid):
     """Class providing the interface for a TreeGrid (which contains TreeNodes)
 
     The structure of a TreeGrid is designed to maintain the structure of the tree in a single object.
@@ -91,7 +91,6 @@ class TreeGrid(object):
     and to create cycles.
     """
 
-    simple_types = set([int, str, float, bytes])
     path_sep = "|"
 
     def __init__(self, columns, generator):
@@ -211,17 +210,9 @@ class TreeGrid(object):
         """Returns true if descendent is a child, grandchild, etc of node"""
         return descendant.path.startswith(node.path)
 
-    def path_depth(self, node):
-        """Returns the path depth of a particular node"""
-        return node.path_depth
-
     def max_depth(self):
         """Returns the maximum depth of the tree"""
         return self.visit(None, lambda n, a: max(a, self.path_depth(n)), )
-
-    def path_is_valid(self, node):
-        """Returns True is a given path is valid for this treegrid"""
-        return node in self.children(node.parent)
 
     def visit(self, node, function, initial_accumulator = None, sort_key = None):
         """Visits all the nodes in a tree, calling function on each one.
