@@ -44,3 +44,32 @@ class ContextInterface(object, metaclass = ABCMeta):
            Returns a fully constructed object
         """
 
+
+class ContextFactory(object, metaclass = ABCMeta):
+    """Class to establish and load the appropriate components of the context for a given operating system"""
+
+    def establish_context(self):
+        """Constructs a standard context based on the architecture information
+
+        The context is modified
+        """
+        context = self.construct_context()
+        self.construct_physical_layers(context)
+        self.construct_architecture(context)
+        self.construct_os_symbols(context)
+
+    @abstractmethod
+    def construct_context(self):
+        """Returns a context based on some native types"""
+
+    @abstractmethod
+    def construct_physical_layers(self, context):
+        """Adds a 'physical' layer to the context that should be used by the architecture, and any additional layers that might be usable by the architecture"""
+
+    @abstractmethod
+    def construct_architecture(self, context):
+        """Applies the architecture mapping layer, using the primary 'physical' layer and any other layers it can additionally make use of"""
+
+    @abstractmethod
+    def construct_os_symbols(self, context):
+        """Add the appropriate symbols for the operating system"""
