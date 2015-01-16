@@ -1,5 +1,5 @@
 import volatility
-from volatility.framework.interfaces import layers
+from volatility.framework import layers
 from volatility.framework.symbols import vtypes, native, windows
 
 __author__ = 'mike'
@@ -7,7 +7,7 @@ __author__ = 'mike'
 from volatility.framework import interfaces
 
 
-class ContextPhysicalLoader(interfaces.context.ContextFactory):
+class ContextPhysicalLoaderInterface(interfaces.context.ContextFactoryInterface):
     def construct_physical_layers(self, context):
         # TODO: Add in the physical layer automagic to determine the layering
         # Ideally allow for the plugin to specify the layering, but if not then guess at the best one
@@ -17,14 +17,14 @@ class ContextPhysicalLoader(interfaces.context.ContextFactory):
 
 ### NATIVE TYPES
 
-class Context32Bit(ContextPhysicalLoader):
+class Context32Bit(ContextPhysicalLoaderInterface):
     def construct_context(self):
         """Creates a base context with the 32-bit NativeTables"""
         native_list = native.x86NativeTable
         return volatility.framework.Context(native_list)
 
 
-class Context64Bit(ContextPhysicalLoader):
+class Context64Bit(ContextPhysicalLoaderInterface):
     def construct_context(self):
         """Creates a base context with the 32-bit NativeTables"""
         native_list = native.x64NativeTable
@@ -61,11 +61,11 @@ class ContextWindowsX86(ContextIntel):
     def __init__(self):
         from volatility.framework import xp_sp2_x86_vtypes
 
-        self.virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
+        self._virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
 
     def construct_os_symbols(self, context):
         virtual_types = self._virtual_types
-        ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types)
+        ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, context.symbol_space.natives)
         ntkrnlmp.set_structure_class('_ETHREAD', windows._ETHREAD)
         ntkrnlmp.set_structure_class('_LIST_ENTRY', windows._LIST_ENTRY)
         context.symbol_space.append(ntkrnlmp)

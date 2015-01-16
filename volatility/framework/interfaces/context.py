@@ -45,10 +45,10 @@ class ContextInterface(object, metaclass = ABCMeta):
         """
 
 
-class ContextFactory(object, metaclass = ABCMeta):
+class ContextFactoryInterface(object, metaclass = ABCMeta):
     """Class to establish and load the appropriate components of the context for a given operating system"""
 
-    def establish_context(self):
+    def __call__(self):
         """Constructs a standard context based on the architecture information
 
         The context is modified
@@ -57,6 +57,7 @@ class ContextFactory(object, metaclass = ABCMeta):
         self.construct_physical_layers(context)
         self.construct_architecture(context)
         self.construct_os_symbols(context)
+        return context
 
     @abstractmethod
     def construct_context(self):

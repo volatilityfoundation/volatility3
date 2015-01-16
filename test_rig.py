@@ -16,16 +16,12 @@ from volatility.framework.symbols import vtypes, native
 def test_symbols():
     native_list = native.x86NativeTable
 
-    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
-
-    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, native_list)
-
     # ctx = framework.Context(native_list)
     # ctx.symbol_space.append(native_list)
     ctx = utils_load_as()
-    print("Symbols,", native_list.structures)
+    print("Symbols,", ctx.symbol_space.natives.structures)
 
-    for i in list(ntkrnlmp.structures):
+    for i in list(ctx.symbol_space['ntkrnlmp'].structures):
         symbol = ctx.symbol_space.get_structure('ntkrnlmp!' + i)
         print(symbol.vol.structure_name, symbol, symbol.vol.size)
         _ = symbol(ctx, objects.ObjectInformation(layer_name = '', offset = 0))
@@ -34,26 +30,16 @@ def test_symbols():
 
 
 def utils_load_as():
-    nativelst = native.x86NativeTable
-
-    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
-
-    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, nativelst)
-
-    ctx = framework.Context(nativelst)
-    # ctx.symbol_space.append(nativelst)
-    ctx.symbol_space.append(ntkrnlmp)
-    return ctx
+    return framework.contexts.ContextWindowsX86()()
 
 
 def test_memory():
-    nativelst = native.x86NativeTable
+    ctx = utils_load_as()
     virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
     virtual_types['TEST_POINTER'] = [0x4, {'point1': [0x0, ['pointer', ['TEST_SYMBOL']]]}]
     virtual_types['TEST_SYMBOL'] = [0x6, {'test1': [0x0, ['unsigned int']], 'test2': [0x4, ['unsigned short']]}]
-    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, nativelst)
+    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
 
-    ctx = framework.Context(nativelst)
     ctx.symbol_space.append(ntkrnlmp)
 
     base = layers.physical.FileLayer(ctx, 'data', filename = 'trig_data.bin')
@@ -125,16 +111,7 @@ def test_translation():
 
 
 def test_plugin():
-    nativelst = native.x86NativeTable
-    ctx = framework.Context(nativelst)
-
-    import volatility.framework.symbols.windows as windows
-
-    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
-    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, nativelst)
-    ntkrnlmp.set_structure_class('_ETHREAD', windows._ETHREAD)
-    ntkrnlmp.set_structure_class('_LIST_ENTRY', windows._LIST_ENTRY)
-    ctx.symbol_space.append(ntkrnlmp)
+    ctx = utils_load_as()
 
     base = layers.physical.FileLayer(ctx, 'data', filename = '/home/mike/memory/private/jon-fres.dmp')
     ctx.add_layer(base)
