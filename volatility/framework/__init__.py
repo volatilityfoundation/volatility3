@@ -48,7 +48,7 @@ class Context(interfaces.context.ContextInterface):
     for creating new objects.
     """
 
-    def __init__(self, natives):
+    def __init__(self, natives = symbols.native.x86NativeTable):
         """Initializes the context.
 
         This initializes the context and provides a default set of native types for the empty symbol space.
