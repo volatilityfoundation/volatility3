@@ -10,10 +10,11 @@ from volatility.framework import validity
 class Option(validity.ValidityRoutines):
     """Class to handle a single specific configuration option"""
 
-    def __init__(self, name, option_type, definition = None, description = None):
+    def __init__(self, name, option_type, definition = None, description = None, default = None):
         """Creates a new option"""
         self._type_check(option_type, type)
         self._option_type = option_type
+        self._default = default
         self._name = name
         self._description = description
         self._definition = definition
