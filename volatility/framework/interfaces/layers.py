@@ -77,19 +77,19 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     def read(self, offset, length, pad = False):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
         current_offset = offset
-        output = b""
+        output = []
         for (offset, mapped_offset, length, layer) in self.mapping(offset, length):
             if not pad and offset > current_offset:
                 raise exceptions.InvalidAddressException("Layer " + self.name + " cannot map offset " +
                                                          str(current_offset))
             elif offset > current_offset:
-                output += b"\x00" * (current_offset - offset)
+                output += [b"\x00" * (current_offset - offset)]
                 current_offset = offset
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
-            output += self._context.memory.read(layer, mapped_offset, length, pad)
+            output += [self._context.memory.read(layer, mapped_offset, length, pad)]
             current_offset += length
-        return output
+        return "".join(output)
 
     def write(self, offset, value):
         """Writes a value at offset, distributing the writing across any underlying mapping"""
