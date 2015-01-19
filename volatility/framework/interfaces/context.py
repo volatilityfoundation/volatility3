@@ -45,32 +45,12 @@ class ContextInterface(object, metaclass = ABCMeta):
         """
 
 
-class ContextFactoryInterface(object, metaclass = ABCMeta):
-    """Class to establish and load the appropriate components of the context for a given operating system"""
-
-    def __call__(self):
-        """Constructs a standard context based on the architecture information
-
-        The context is modified
-        """
-        context = self.construct_context()
-        self.construct_physical_layers(context)
-        self.construct_architecture(context)
-        self.construct_os_symbols(context)
-        return context
+class ContextModifierInterface(object, metaclass = ABCMeta):
+    @classmethod
+    @abstractmethod
+    def get_config_options(cls):
+        """Returns all the options that might need to be passed to modify the context"""
 
     @abstractmethod
-    def construct_context(self):
-        """Returns a context based on some native types"""
-
-    @abstractmethod
-    def construct_physical_layers(self, context):
-        """Adds a 'physical' layer to the context that should be used by the architecture, and any additional layers that might be usable by the architecture"""
-
-    @abstractmethod
-    def construct_architecture(self, context):
-        """Applies the architecture mapping layer, using the primary 'physical' layer and any other layers it can additionally make use of"""
-
-    @abstractmethod
-    def construct_os_symbols(self, context):
-        """Add the appropriate symbols for the operating system"""
+    def __call__(self, context):
+        """Modifies the context in place"""

@@ -7,6 +7,7 @@ Created on 7 Feb 2013
 import collections
 
 from volatility.framework import objects, interfaces, exceptions
+from volatility.framework.symbols import native, vtypes
 
 
 class SymbolType(object):
@@ -100,7 +101,7 @@ class SymbolSpace(collections.Mapping):
                             if child.vol.structure_name not in self._resolved:
                                 traverse_list.append(child.vol.structure_name)
                                 self._resolved[child.vol.structure_name] = self._weak_resolve(SymbolType.STRUCTURE,
-                                                                                                  child.vol.structure_name)
+                                                                                              child.vol.structure_name)
                             # Stash the replacement
                             replacements.add((traverser, child))
                         elif child.children:

@@ -15,7 +15,7 @@ class SymbolTableInterface(validity.ValidityRoutines):
         if name:
             self._type_check(name, str)
         self.name = name or None
-        self._native_structures = native_structures
+        self.natives = native_structures
 
     # ## Required Constant symbol functions
 
@@ -51,6 +51,15 @@ class SymbolTableInterface(validity.ValidityRoutines):
     def natives(self):
         """Returns None or a symbol_space for handling space specific native types"""
         return self._native_structures
+
+    @natives.setter
+    def natives(self, value):
+        """Checks the natives value and then applies it internally
+
+           WARNING: This allows changing the underlying size of all the other structures referenced in the symbolspace
+        """
+        self._type_check(value, NativeTableInterface)
+        self._native_structures = value
 
     # ## Functions for overriding classes
 
