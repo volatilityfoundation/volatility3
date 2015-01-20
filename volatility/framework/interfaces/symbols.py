@@ -79,27 +79,6 @@ class SymbolTableInterface(validity.ValidityRoutines):
         raise NotImplementedError("Abstract method del_structure_class not implemented yet.")
 
 
-# ### Helper functions that can be overridden
-#
-# def __len__(self):
-# """Returns the number of items in the symbol list"""
-# return len(self.structures)
-#
-# def __getitem__(self, key):
-# """Resolves a symbol name into an object template
-#
-#           Note, this method cannot sub-resolve throughout a whole symbol space
-#        """
-#        return self.get_structure(key)
-#
-#    def __iter__(self):
-#        """Returns an iterator of the available keys"""
-#        return self.structures
-#
-#    def __contains__(self, symbol):
-#        """Determines whether a symbol exists in the list or not"""
-#        return symbol in self.structures
-
 class NativeTableInterface(SymbolTableInterface):
     """Class to distinguish NativeSymbolLists from other symbol lists"""
 
