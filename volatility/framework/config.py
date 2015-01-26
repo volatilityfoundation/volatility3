@@ -84,7 +84,7 @@ class Group(ConfigurationCommonInterface):
 
 if __name__ == '__main__':
     root = Group(name = 'volatility')
-    root.core = Group(name = 'core') *
+    root.core = Group(name = 'core')
     import pdb
 
     pdb.set_trace()
