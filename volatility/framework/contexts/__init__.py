@@ -21,7 +21,6 @@ class ContextFactory(validity.ValidityRoutines, list):
         for modifier in self:
             modifier.get_config_options()
 
-
     def __call__(self):
         """Constructs a standard context based on the architecture information
 
