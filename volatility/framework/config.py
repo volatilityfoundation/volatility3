@@ -3,21 +3,33 @@ Created on 7 May 2013
 
 @author: mike
 """
+import re
 
 from volatility.framework import validity
 
 
-class Option(validity.ValidityRoutines):
+class ConfigurationCommonInterface(validity.ValidityRoutines):
+    """Allows the Configuration components to be composable"""
+
+    def __init__(self, name = None):
+        self._type_check(name, str)
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
+
+
+class Option(ConfigurationCommonInterface):
     """Class to handle a single specific configuration option"""
 
-    def __init__(self, name, option_type, definition = None, description = None, default = None):
+    def __init__(self, name, option_type, description = None, default = None):
         """Creates a new option"""
+        ConfigurationCommonInterface.__init__(self, name)
         self._type_check(option_type, type)
         self._option_type = option_type
         self._default = default
-        self._name = name
         self._description = description
-        self._definition = definition
 
     @property
     def option_type(self):
@@ -34,45 +46,45 @@ class Option(validity.ValidityRoutines):
         """A short description of what the Option is designed to affect or achieve."""
         return self._description
 
-    @property
-    def definition(self):
-        return self._definition
+
+# TODO: OptionTypes such as choice, list and so on
 
 
-class ConfigurationGroup(validity.ValidityRoutines):
+class Group(ConfigurationCommonInterface):
     """Class to handle configuration groups, contains options"""
 
-    def __init__(self):
-        self._options = {}
+    def __init__(self, name = None):
+        self.__setattr__('_mapping', [], True)
+        self.__setattr__('_name', name, True)
+        if False:
+            # Code here for IDEs that attempt to figure out what's going on with all the magic we're doing
+            self._mapping = None
+            ConfigurationCommonInterface.__init__(self, name)
 
-    def __getattr__(self, attr):
-        """Locates an option within a ConfigurationGroup and returns it"""
-        if attr in self._options:
-            return self._options[attr]
+    @property
+    def keys(self):
+        return self._mapping
 
-    def __setattr__(self, name, value):
-        if name == '_options':
-            setattr(self, name, value)
-        self._type_check(value, Option)
-        self._options[name] = value
-        raise TypeError("Attribute " + name + " must be an Option object")
+    def __setattr__(self, key, value, force = False):
+        """Type checks values, and only allows those who name matches their key"""
+        if force:
+            return super(Group, self).__setattr__(key, value)
+
+        if key == 'name':
+            raise KeyError("Name is a reserved attribute of Configuration items.")
+
+        self._type_check(value, ConfigurationCommonInterface)
+        if not re.match('^[A-Za-z][A-Za-z0-9_]*$', value.name):
+            raise KeyError("Configuration item names must only be lowercase letters.")
+        if key != value.name:
+            raise KeyError("Key and value.name must match")
+        self._mapping.append(key)
+        return super(Group, self).__setattr__(key, value)
 
 
-class Configuration(validity.ValidityRoutines):
-    """Class to handle configuration, contains configuration groups"""
+if __name__ == '__main__':
+    root = Group(name = 'volatility')
+    root.core = Group(name = 'core') *
+    import pdb
 
-    def __init__(self):
-        self._config_groups = {}
-
-    def __getattr__(self, attr):
-        """Locates a group within the Configuration and returns it"""
-        if attr in self._config_groups:
-            return self._config_groups[attr]
-        raise AttributeError("Attribute " + attr + " not found in the configuration")
-
-    def __setattr__(self, attr, value):
-        if attr == '_config_groups':
-            setattr(self, attr, value)
-        self._type_check(value, ConfigurationGroup)
-        self._config_groups[attr] = value
-        raise TypeError("Attribute " + attr + " must be a ConfigurationGroup")
+    pdb.set_trace()
