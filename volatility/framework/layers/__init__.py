@@ -50,6 +50,7 @@ class Memory(validity.ValidityRoutines):
             if depend_list:
                 raise exceptions.LayerException("Layer " + layer.name +
                                                 " is depended upon by " + ", ".join(depend_list))
+        self._layers[name].destroy()
         del self._layers[name]
 
     def __getitem__(self, name):

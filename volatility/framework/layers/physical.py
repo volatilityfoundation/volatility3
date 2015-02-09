@@ -93,3 +93,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             raise exceptions.InvalidAddressException("Data segment outside of the " + self.name + " file boundaries")
         self._file.seek(offset)
         self._file.write(data)
+
+    def destroy(self):
+        """Closes the file handle"""
+        self._file.close()
