@@ -3,73 +3,42 @@ Created on 7 May 2013
 
 @author: mike
 """
-from abc import abstractmethod, ABCMeta
 import re
 
-from volatility.framework import validity
+from volatility.framework.interfaces.config import GenericRequirement, ConfigurationInterface
 
 
-class ConfigurationCommonInterface(validity.ValidityRoutines):
-    """Allows the Configuration components to be composable"""
-
-    def __init__(self, name = None):
-        self._type_check(name, str)
-        self._name = name
-
-    @property
-    def name(self):
-        return self._name
-
-
-class GenericOption(ConfigurationCommonInterface, ABCMeta):
-    """Class to handle a single specific configuration option"""
-
-    def __init__(self, name, description = None, default = None):
-        """Creates a new option"""
-        ConfigurationCommonInterface.__init__(self, name)
-        self._default = default
-        self._description = description
-        self._value = None
-
-    @property
-    def name(self):
-        """The name of the Option."""
-        return self._name
-
-    @property
-    def description(self):
-        """A short description of what the Option is designed to affect or achieve."""
-        return self._description
-
-    @property
-    def value(self):
-        """Returns the value of the option, or not if it has not yet been set"""
-        return self._value
-
-    @abstractmethod
-    def set_value(self, value):
-        """Populates the value doing typing checking/casting in the process"""
-        pass
-
-
-class BooleanOption(GenericOption):
+class BooleanRequirement(GenericRequirement):
     def __init__(self, *args, **kwargs):
-        GenericOption.__init__(*args, **kwargs)
+        GenericRequirement.__init__(*args, **kwargs)
 
     def set_value(self, value):
         self._value = bool(value)
 
 
-class ListOption(GenericOption):
+class AddressSpaceRequirement(GenericRequirement):
+    """Class maintaining the limitations on what sort of address spaces are acceptable"""
+
+    # TODO: derive acceptable OSes from the address_space information
+    # TODO: derive acceptable arches from the available layers
+    def __init__(self, layer_name, astype, os, architectures, *args, **kwargs):
+        GenericRequirement.__init__(self, *args, **kwargs)
+        self.layer_name = layer_name
+        self.astype = astype
+        self.os = os
+        self.arches = architectures
+
+
+class ListRequirement(GenericRequirement):
     def __init__(self, min_elements, max_elements, element_type, *args, **kwargs):
-        GenericOption.__init__(self, *args, **kwargs)
-        self.element_type = self._type_check(element_type, GenericOption)
+        GenericRequirement.__init__(self, *args, **kwargs)
+        self.element_type = any([self._type_check(element_type, BooleanRequirement)])
         self.min_elements = min_elements
         self.max_elements = max_elements
 
     def set_value(self, value):
         self._type_check(value, list)
-        all([self._type_check(element) for element in value])
+        all([self._type_check(element, self.element_type) for element in value])
         if not (self.min_elements <= len(value) <= self.max_elements):
             raise TypeError("List option provided more or less elements than allowed.")
         self._value = value
@@ -78,7 +47,7 @@ class ListOption(GenericOption):
 # TODO: OptionTypes such as choice, list and so on
 
 
-class Group(ConfigurationCommonInterface):
+class Group(ConfigurationInterface):
     """Class to handle configuration groups, contains options"""
 
     def __init__(self, name = None):
@@ -87,7 +56,7 @@ class Group(ConfigurationCommonInterface):
         if False:
             # Code here for IDEs that attempt to figure out what's going on with all the magic we're doing
             self._mapping = None
-            ConfigurationCommonInterface.__init__(self, name)
+            ConfigurationInterface.__init__(self, name)
 
     @property
     def keys(self):
@@ -99,7 +68,7 @@ class Group(ConfigurationCommonInterface):
             if key == 'name':
                 raise KeyError("Name is a reserved attribute of Configuration items.")
 
-            self._type_check(value, ConfigurationCommonInterface)
+            self._type_check(value, ConfigurationInterface)
             if not re.match('^[A-Za-z][A-Za-z0-9_]*$', value.name):
                 raise KeyError("Configuration item names must only be lowercase letters.")
             if key != value.name:
