@@ -52,6 +52,14 @@ class DataLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
            Note: Writes are not atomic, therefore some data can be written, even if an exception is thrown.
         """
 
+    def destroy(self):
+        """Allows DataLayers to close any open handles, etc.
+
+           Systems that make use of Data Layers should called destroy when they are done with them.
+           This will close all handles, and make the object unreadable
+           (exceptions will be thrown using a DataLayer after destruction)"""
+        pass
+
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     @abstractmethod
