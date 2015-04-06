@@ -3,3 +3,4 @@ __pycache__
 doc/build
 doc/source/volatility.*
 workspace.xml
+.idea
