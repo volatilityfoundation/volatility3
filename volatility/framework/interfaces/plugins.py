@@ -33,15 +33,12 @@ class PluginInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return self._context
 
     @abstractmethod
-    def establish_context(self):
-        """Alters the context to ensure the plugin can run.
+    def requirements(self):
+        """Returns a ConfigGroup object to contain the required options"""
+        pass
 
-        This function constructs the necessary symbol spaces that the plugin will need.
-        """
-
-    @abstractmethod
-    def plugin_options(self, config_group = None):
-        """Modifies the passed in ConfigGroup object to contain the required options"""
+    def check_requirements(self):
+        pass
 
     @abstractmethod
     def __call__(self, context):
