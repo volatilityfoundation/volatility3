@@ -34,11 +34,12 @@ class PluginInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     @abstractmethod
     def requirements(self):
-        """Returns a ConfigGroup object to contain the required options"""
+        """Returns a list of requirements options"""
         pass
 
     def check_requirements(self):
-        pass
+        for requirement in self.requirements():
+            requirement.check_value(requirement.value, self._context)
 
     @abstractmethod
     def __call__(self, context):

@@ -37,6 +37,7 @@ class ListRequirement(GenericRequirement):
         self.max_elements = max_elements
 
     def check_value(self, value, context):
+        """Check the types on each of the returned values and then call the element type's check for each one"""
         self._type_check(value, list)
         if not all([self._type_check(element, self.element_type) for element in value]):
             raise TypeError("At least one element in the list is not of the correct type.")
