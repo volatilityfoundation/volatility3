@@ -33,16 +33,17 @@ class PluginInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return self._context
 
     @abstractmethod
-    def requirements(self):
+    @classmethod
+    def requirements(cls):
         """Returns a list of requirements options"""
-        pass
+        return []
 
     def check_requirements(self):
         for requirement in self.requirements():
             requirement.check_value(requirement.value, self._context)
 
     @abstractmethod
-    def __call__(self, context):
+    def __call__(self):
         """Executes the functionality of the code
 
         @:param
