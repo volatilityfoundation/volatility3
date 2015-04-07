@@ -54,7 +54,7 @@ class TranslationLayerInput(GenericInput):
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
         if value not in context.memory:
             raise IndexError(value + " is not memory layer")
-        
+
 
 class ChoiceInput(GenericInput):
     """Allows one from a choice of strings
