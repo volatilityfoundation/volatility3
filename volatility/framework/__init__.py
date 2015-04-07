@@ -36,7 +36,7 @@ def require_version(*args):
                                 ".".join([str(x) for x in args[0:2]]))
 
 
-from volatility.framework import interfaces, symbols, layers, contexts
+from volatility.framework import interfaces, symbols, layers, contexts, config
 
 
 class Context(interfaces.context.ContextInterface):
@@ -59,6 +59,7 @@ class Context(interfaces.context.ContextInterface):
         interfaces.context.ContextInterface.__init__(self)
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
+        self.config = config.Config()
 
     # ## Symbol Space Functions
 

@@ -6,9 +6,10 @@ Created on 4 May 2013
 
 from volatility.framework import validity, interfaces, exceptions
 from volatility.framework.layers import physical, intel
+import collections.abc
 
 
-class Memory(validity.ValidityRoutines):
+class Memory(validity.ValidityRoutines, collections.abc.Mapping):
     """Container for multiple layers of data"""
 
     def __init__(self):
@@ -56,6 +57,12 @@ class Memory(validity.ValidityRoutines):
     def __getitem__(self, name):
         """Returns the layer of specified name"""
         return self._layers[name]
+
+    def __len__(self):
+        return len(self._layers)
+
+    def __iter__(self):
+        return iter(self._layers)
 
     def check_cycles(self):
         """Runs through the available layers and identifies if there are cycles in the DAG"""

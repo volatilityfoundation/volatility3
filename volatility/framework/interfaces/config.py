@@ -6,7 +6,7 @@ from volatility.framework import validity
 __author__ = 'mike'
 
 
-class GenericRequirement(validity.ValidityRoutines, metaclass = ABCMeta):
+class GenericInput(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to handle a single specific configuration option"""
 
     def __init__(self, name, description = None, default = None, optional = False):
@@ -16,15 +16,24 @@ class GenericRequirement(validity.ValidityRoutines, metaclass = ABCMeta):
         self._type_check(name, str)
         self._name = name
         self._description = description
-        self.value = None
+        self._value = None
         self._optional = optional
 
     @property
-    def name(self):
-        return self._name
+    def value(self):
+        """Returns the value or the default if the value is not set"""
+        if self._value is None:
+            return self._default
+        return self._value
+
+    @value.setter
+    def value(self, data):
+        """Sets the value to that of the input data"""
+        self._value = data
 
     @property
     def optional(self):
+        """Whether the option is required for or not"""
         return self._optional
 
     @property
@@ -38,11 +47,26 @@ class GenericRequirement(validity.ValidityRoutines, metaclass = ABCMeta):
         return self._description
 
     @abstractmethod
-    def check_value(self, value, context):
+    def validate_input(self, value, context):
         """Validates the value against a context
 
-        Returns True if the value is valid
         Throws exceptions if the valid is invalid"""
         pass
 
+    def validate(self, context):
+        """Validates the currently set value"""
+        return self.validate_input(self.value, context)
 
+class ConfigInterface(validity.ValidityRoutines):
+    """Class to hold and provide a namespace for plugins and core options"""
+    @abstractmethod
+    def add_item(self, namespace, item):
+        pass
+
+    @abstractmethod
+    def __contains__(self, item):
+        pass
+
+    @abstractmethod
+    def __len__(self):
+        pass
