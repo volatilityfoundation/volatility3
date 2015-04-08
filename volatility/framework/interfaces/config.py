@@ -6,7 +6,7 @@ from volatility.framework import validity
 __author__ = 'mike'
 
 
-class GenericInput(validity.ValidityRoutines, metaclass = ABCMeta):
+class GenericRequirement(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to handle a single specific configuration option"""
 
     def __init__(self, name, description = None, default = None, optional = False):

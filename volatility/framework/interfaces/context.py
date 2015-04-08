@@ -48,7 +48,7 @@ class ContextInterface(object, metaclass = ABCMeta):
 class ContextModifierInterface(object, metaclass = ABCMeta):
     @classmethod
     @abstractmethod
-    def get_config_options(cls):
+    def requirements(cls):
         """Returns all the options that might need to be passed to modify the context"""
 
     @abstractmethod

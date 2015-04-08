@@ -5,7 +5,7 @@ import volatility.framework.interfaces.plugins as plugins
 
 class PsList(plugins.PluginInterface):
     @classmethod
-    def determine_inputs(cls):
+    def requirements(cls):
         print(inspect.getfullargspec(cls.__call__))
         return {"primary": "Intel"}
 
@@ -21,5 +21,5 @@ class PsList(plugins.PluginInterface):
         # Get the process from the thread object in kernel space
         return ethread.owning_process()
 
-    def __call__(self, ctx):
-        print(repr(self.kernel_process_from_physical_process(ctx, 'base', 'intel', offset = 0x192ad18)))
+    def __call__(self):
+        print(repr(self.kernel_process_from_physical_process(self.context, 'base', 'intel', offset = 0x192ad18)))

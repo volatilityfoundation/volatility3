@@ -15,7 +15,7 @@ class ContextFactory(validity.ValidityRoutines, list):
         self._type_check(value)
         super(ContextFactory, self).__setitem__(key, value)
 
-    def get_config_options(self):
+    def get_config_requirements(self):
         """Returns all the possible configuration options that might be required for this particular ContextFactory"""
         # TODO: Chainmap the options from each component
         for modifier in self:

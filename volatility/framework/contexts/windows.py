@@ -12,7 +12,7 @@ class WindowsContextModifier(interfaces.context.ContextModifierInterface):
         self._virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
 
     @classmethod
-    def get_config_options(cls):
+    def requirements(cls):
         pass
 
     def __call__(self, context):

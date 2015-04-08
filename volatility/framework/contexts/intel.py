@@ -1,4 +1,4 @@
-from volatility.framework import interfaces, layers
+from volatility.framework import interfaces, layers, config
 
 __author__ = 'mike'
 
@@ -8,8 +8,13 @@ class IntelContextModifier(interfaces.context.ContextModifierInterface):
         pass
 
     @classmethod
-    def get_config_options(cls):
-        pass
+    def requirements(cls):
+        return [config.ChoiceRequirement(name = "architecture",
+                                         choices = ["auto", "pae", "32", "64"],
+                                         description = "Determines the memory image",
+                                         default = "auto"),
+                config.IntRequirement(name = "pagemapoffset",
+                                      description = "Offset to the directory table base")]
 
     def __call__(self, context):
         # TODO: Attempt to determine whether the image is 32, PAE or x64 (although the context must already know whether it is x64)

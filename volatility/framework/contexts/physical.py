@@ -8,7 +8,7 @@ class PhysicalContextModifier(interfaces.context.ContextModifierInterface):
         self.filename = '/home/mike/memory/private/jon-fres.dmp'
 
     @classmethod
-    def get_config_options(cls):
+    def requirements(cls):
         pass
 
     def __call__(self, context):
