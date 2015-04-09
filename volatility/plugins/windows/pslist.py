@@ -1,4 +1,5 @@
 import inspect
+from volatility.framework import config
 
 import volatility.framework.interfaces.plugins as plugins
 
@@ -6,8 +7,11 @@ import volatility.framework.interfaces.plugins as plugins
 class PsList(plugins.PluginInterface):
     @classmethod
     def requirements(cls):
-        print(inspect.getfullargspec(cls.__call__))
-        return {"primary": "Intel"}
+        return [config.TranslationLayerRequirement(name = 'primary',
+                                                   description = 'Kernel Address Space'),
+                config.IntRequirement(name = 'pid',
+                                      description = "Process ID",
+                                      optional = True)]
 
     @staticmethod
     def kernel_process_from_physical_process(ctx, physical_layer, kernel_layer, offset):

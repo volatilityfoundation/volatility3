@@ -59,9 +59,20 @@ class Context(interfaces.context.ContextInterface):
         interfaces.context.ContextInterface.__init__(self)
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
-        self.config = config.Config()
+        self._config = config.ConfigGroup(name = 'volatility')
 
     # ## Symbol Space Functions
+
+    @property
+    def config(self):
+        """Returns the configuration object for this context"""
+        return self._config
+
+    @config.setter
+    def config(self, value):
+        if not isinstance(value, config.ConfigGroup):
+            raise TypeError("Configuration must of type ConfigGroup")
+        self._config = value
 
     @property
     def symbol_space(self):

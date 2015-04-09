@@ -38,7 +38,8 @@ class CommandLine():
         reqs = plugin.requirements()
         for req in reqs:
             if isinstance(req, config.TranslationLayerRequirement):
-                pass
+                # The name given to the root config doesn't matter, so go with volatility
+                context_config = config.ConfigGroup('volatility')
 
 
 def main():

@@ -18,6 +18,10 @@ class ContextInterface(object, metaclass = ABCMeta):
     # ## Symbol Space Functions
 
     @abstractproperty
+    def config(self):
+        """Returns the configuration object for this context"""
+
+    @abstractproperty
     def symbol_space(self):
         """Returns the symbol_space for the context"""
 
@@ -46,6 +50,12 @@ class ContextInterface(object, metaclass = ABCMeta):
 
 
 class ContextModifierInterface(object, metaclass = ABCMeta):
+    def __init__(self, namespace):
+        self.namespace = namespace
+
+    def config_get(self, context):
+        return context.config[self.namespace]
+
     @classmethod
     @abstractmethod
     def requirements(cls):

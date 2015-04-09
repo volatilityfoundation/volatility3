@@ -5,25 +5,7 @@ Created on 7 May 2013
 """
 import re
 
-from volatility.framework.interfaces.config import GenericRequirement, ConfigInterface
-
-class Config(ConfigInterface):
-    """Class to hold and provide a namespace for plugins and core options"""
-    def __init__(self):
-        self._namespace = {'core': {}}
-
-    def add_item(self, namespace, item):
-        self._type_check(namespace, str)
-        self._type_check(item, GenericRequirement)
-        subconfig = self._namespace.get(namespace,{})
-        subconfig[item.name] = item
-        self._namespace[namespace] = subconfig
-
-    def __contains__(self, item):
-        return (item in self._namespace)
-
-    def __len__(self):
-        return len(self._namespace)
+from volatility.framework.interfaces.config import GenericRequirement, ConfigGroup
 
 class InstanceRequirement(GenericRequirement):
     instance_type = bool
