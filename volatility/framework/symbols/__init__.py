@@ -5,6 +5,7 @@ Created on 7 Feb 2013
 """
 
 import collections.abc
+import warnings
 
 from volatility.framework import objects, interfaces, exceptions
 from volatility.framework.symbols import native, vtypes
@@ -23,14 +24,9 @@ class SymbolSpace(collections.abc.Mapping):
        proceed down through the ranks if a namespace isn't specified.
     """
 
-    def _check_initialized(self, natives = None):
-        """Sets the natives value to a object adhereing to the NativeSymbolInterface"""
-        if not isinstance(natives or self._native_structures, interfaces.symbols.NativeTableInterface):
-            raise TypeError("SymbolSpace native_structures must be NativeSymbolInterface")
-
     def __init__(self, native_structures = None):
-        if native_structures is not None:
-            self._check_initialized(native_structures)
+        if not isinstance(native_structures, interfaces.symbols.NativeTableInterface):
+            raise TypeError("SymbolSpace native_structures must be NativeSymbolInterface")
         self._dict = collections.OrderedDict()
         self._native_structures = native_structures
         # Permanently cache all resolved symbols
@@ -43,7 +39,7 @@ class SymbolSpace(collections.abc.Mapping):
 
     @natives.setter
     def natives(self, native_structures):
-        self._check_initialized(native_structures)
+        warnings.warn("Resetting the native type can cause have drastic effects on memory analysis using this space")
         self._native_structures = native_structures
 
     def __len__(self):
@@ -60,7 +56,6 @@ class SymbolSpace(collections.abc.Mapping):
 
     def append(self, value):
         """Adds a symbol_list to the end of the space"""
-        self._check_initialized()
         if not isinstance(value, interfaces.symbols.SymbolTableInterface):
             raise TypeError(value)
         if value.name in self._dict:
@@ -97,8 +92,6 @@ class SymbolSpace(collections.abc.Mapping):
            This method ensures that all referenced templates (including self-referential templates)
            are satisfied as ObjectTemplates
         """
-        self._check_initialized()
-
         # Traverse down any resolutions
         if structure_name not in self._resolved:
             self._resolved[structure_name] = self._weak_resolve(SymbolType.STRUCTURE, structure_name)
@@ -128,6 +121,4 @@ class SymbolSpace(collections.abc.Mapping):
 
     def get_constant(self, constant_name):
         """Look-up a constant name across all the contained symbol spaces"""
-        self._check_initialized()
-
         return self._weak_resolve(SymbolType.CONSTANT, constant_name)
