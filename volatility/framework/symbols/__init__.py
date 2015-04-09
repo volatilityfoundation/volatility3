@@ -30,7 +30,7 @@ class SymbolSpace(collections.abc.Mapping):
 
     def __init__(self, native_structures = None):
         if native_structures is not None:
-            self._check_initialized()
+            self._check_initialized(native_structures)
         self._dict = collections.OrderedDict()
         self._native_structures = native_structures
         # Permanently cache all resolved symbols
