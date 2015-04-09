@@ -8,7 +8,10 @@ class PsList(plugins.PluginInterface):
     @classmethod
     def requirements(cls):
         return [config.TranslationLayerRequirement(name = 'primary',
-                                                   description = 'Kernel Address Space'),
+                                                   description = 'Kernel Address Space',
+                                                   os_type = 'windows',
+                                                   architectures = None,
+                                                   layer_type = 'kernel'),
                 config.IntRequirement(name = 'pid',
                                       description = "Process ID",
                                       optional = True)]
