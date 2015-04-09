@@ -8,6 +8,7 @@ import pdb
 import logging
 
 from volatility import framework
+from volatility.framework.contexts import Context
 from volatility.framework.interfaces import objects
 from volatility.framework import xp_sp2_x86_vtypes, layers, plugins
 from volatility.framework.symbols import vtypes, native
@@ -99,7 +100,7 @@ def intel32e(ctx):
 
 def test_translation():
     nativelst = native.x86NativeTable
-    ctx = framework.Context(nativelst)
+    ctx = Context(nativelst)
     intel, x = intel32(ctx)
 
     base = layers.physical.BufferDataLayer(ctx, 'base', buffer = b" ")

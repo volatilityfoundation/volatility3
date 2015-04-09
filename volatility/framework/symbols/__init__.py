@@ -4,7 +4,7 @@ Created on 7 Feb 2013
 @author: mike
 """
 
-import collections
+import collections.abc
 
 from volatility.framework import objects, interfaces, exceptions
 from volatility.framework.symbols import native, vtypes
@@ -16,16 +16,21 @@ class SymbolType(object):
     CONSTANT = 28293045
 
 
-class SymbolSpace(collections.Mapping):
+class SymbolSpace(collections.abc.Mapping):
     """Handles an ordered collection of SymbolTables
 
        This collection is ordered so that resolution of symbols can
        proceed down through the ranks if a namespace isn't specified.
     """
 
-    def __init__(self, native_structures):
-        if not isinstance(native_structures, interfaces.symbols.NativeTableInterface):
+    def _check_initialized(self, natives = None):
+        """Sets the natives value to a object adhereing to the NativeSymbolInterface"""
+        if not isinstance(natives or self._native_structures, interfaces.symbols.NativeTableInterface):
             raise TypeError("SymbolSpace native_structures must be NativeSymbolInterface")
+
+    def __init__(self, native_structures = None):
+        if native_structures is not None:
+            self._check_initialized()
         self._dict = collections.OrderedDict()
         self._native_structures = native_structures
         # Permanently cache all resolved symbols
@@ -36,17 +41,26 @@ class SymbolSpace(collections.Mapping):
         """Returns the native_types for this symbol space"""
         return self._native_structures
 
+    @natives.setter
+    def natives(self, native_structures):
+        self._check_initialized(native_structures)
+        self._native_structures = native_structures
+
     def __len__(self):
+        """Returns the number of tables within the space"""
         return len(self._dict)
 
     def __getitem__(self, i):
+        """Returns a specific table from the space"""
         return self._dict[i]
 
     def __iter__(self):
+        """Iterates through all available tables in the symbol space"""
         return self._dict.__iter__()
 
     def append(self, value):
         """Adds a symbol_list to the end of the space"""
+        self._check_initialized()
         if not isinstance(value, interfaces.symbols.SymbolTableInterface):
             raise TypeError(value)
         if value.name in self._dict:
@@ -83,6 +97,8 @@ class SymbolSpace(collections.Mapping):
            This method ensures that all referenced templates (including self-referential templates)
            are satisfied as ObjectTemplates
         """
+        self._check_initialized()
+
         # Traverse down any resolutions
         if structure_name not in self._resolved:
             self._resolved[structure_name] = self._weak_resolve(SymbolType.STRUCTURE, structure_name)
@@ -112,4 +128,6 @@ class SymbolSpace(collections.Mapping):
 
     def get_constant(self, constant_name):
         """Look-up a constant name across all the contained symbol spaces"""
+        self._check_initialized()
+
         return self._weak_resolve(SymbolType.CONSTANT, constant_name)
