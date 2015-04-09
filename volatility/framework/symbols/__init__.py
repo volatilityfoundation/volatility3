@@ -56,7 +56,7 @@ class SymbolSpace(collections.abc.Mapping):
 
     def __iter__(self):
         """Iterates through all available tables in the symbol space"""
-        return self._dict.__iter__()
+        return iter(self._dict)
 
     def append(self, value):
         """Adds a symbol_list to the end of the space"""
