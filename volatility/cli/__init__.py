@@ -19,6 +19,8 @@ class CommandLine():
         ver = volatility.framework.version()
         sys.stdout.write("Volatility Framework 3 (version " + "{0}.{1}.{2}".format(ver[0], ver[1], ver[2]) + ")\n")
 
+        volatility.framework.require_version(3,0,0)
+
         #TODO: Get global config options
         plugins.import_plugins()
 
@@ -30,17 +32,19 @@ class CommandLine():
 
     def construct_context_factory(self):
         """Turns a configuration from a plugin into a """
-        factory = contexts.ContextFactory([contexts.physical.PhysicalContextModifier(None),
-                                           contexts.intel.IntelContextModifier(None),
-                                           contexts.windows.WindowsContextModifier(None)])
+        factory = contexts.ContextFactory([contexts.physical.PhysicalContextModifier,
+                                           contexts.intel.IntelContextModifier,
+                                           contexts.windows.WindowsContextModifier])
+        return factory
 
     def handle_plugin_requirements(self, plugin):
         """Populates the input values for the plugin"""
         reqs = plugin.requirements()
         for req in reqs:
             if isinstance(req, config.TranslationLayerRequirement):
-                # The name given to the root config doesn't matter, so go with volatility
-                pass
+                # Choose an appropriate ContextFactory
+                factory = self.construct_context_factory()
+                facreqs = factory.requirements()
 
 
 def main():

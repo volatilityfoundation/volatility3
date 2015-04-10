@@ -6,16 +6,19 @@ from volatility.framework import validity
 
 __author__ = 'mike'
 
+NAMESPACE_DIVIDER = "."
+
+def namespace_join(pathlist):
+    return NAMESPACE_DIVIDER.join(pathlist)
 
 class ConfigurationItem(validity.ValidityRoutines):
     """Class to distinguish configuration elements from everything else"""
-    namespace_divider = "."
 
     def __init__(self, name):
         validity.ValidityRoutines.__init__(self)
         self._type_check(name, str)
-        if self.namespace_divider in name:
-            raise ValueError("Name cannot contain the namespace divider (" + self.namespace_divider + ")")
+        if NAMESPACE_DIVIDER in name:
+            raise ValueError("Name cannot contain the namespace divider (" + NAMESPACE_DIVIDER + ")")
         self._name = name
 
     @property
@@ -34,10 +37,10 @@ class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
         if not isinstance(item, ConfigurationItem):
             raise TypeError("Only ConfigurationItem objects can be added to a ConfigGroup")
         if namespace:
-            ns_split = namespace.split(self.namespace_divider)
+            ns_split = namespace.split(NAMESPACE_DIVIDER)
             if ns_split[0] not in self:
                 self._namespace[ns_split[0]] == ConfigGroup(ns_split[0])
-            return self._namespace[ns_split[0]].add_item(self, item, self.namespace_divider.join(ns_split[1:]))
+            return self._namespace[ns_split[0]].add_item(self, item, namespace_join(ns_split[1:]))
         self._namespace[item.name] = item
 
     def __iter__(self):
@@ -45,17 +48,17 @@ class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
 
     def __getitem__(self, item):
         self._type_check(item, str)
-        item_split = item.split(self.namespace_divider)
+        item_split = item.split(NAMESPACE_DIVIDER)
         if len(item_split) > 1:
-            return self._namespace[item_split[0]][self.namespace_divider.join(item_split[1:])]
+            return self._namespace[item_split[0]][namespace_join(item_split[1:])]
         # Let namespace produce the index error if necessary
         return self._namespace[item_split[0]]
 
     def __contains__(self, item):
-        item_split = item.split(self.namespace_divider)
+        item_split = item.split(NAMESPACE_DIVIDER)
         if len(item_split) > 1:
             if item_split[0] in self._namespace:
-                return self.namespace_divider.join(item_split[1:]) in self._namespace[item_split[0]]
+                return namespace_join(item_split[1:]) in self._namespace[item_split[0]]
             else:
                 return False
         return item in self._namespace

@@ -29,4 +29,6 @@ class PsList(plugins.PluginInterface):
         return ethread.owning_process()
 
     def __call__(self):
-        print(repr(self.kernel_process_from_physical_process(self.context, 'base', 'intel', offset = 0x192ad18)))
+        eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'primary', 0x192ad18)
+        for proc in eproc.ActiveProcessLinks:
+            print(proc.UniqueProcessId)

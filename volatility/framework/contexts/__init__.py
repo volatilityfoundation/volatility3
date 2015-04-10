@@ -1,4 +1,5 @@
 from volatility.framework import validity, interfaces, symbols, layers, config
+from volatility.framework.interfaces.context import ContextModifierInterface
 from volatility.framework.symbols import native
 import volatility
 
@@ -6,29 +7,37 @@ import volatility
 __author__ = 'mike'
 
 from volatility.framework.contexts import intel, physical, windows
+from volatility.framework import config
 
 
 class ContextFactory(validity.ValidityRoutines, list):
     """Class to establish and load the appropriate components of the context for a given operating system"""
 
     def __setitem__(self, key, value):
-        self._type_check(value)
+        self._class_check(value, ContextModifierInterface)
         super(ContextFactory, self).__setitem__(key, value)
 
-    def get_config_requirements(self):
+    def requirements(self):
         """Returns all the possible configuration options that might be required for this particular ContextFactory"""
-        # TODO: Chainmap the options from each component
-        for modifier in self:
-            modifier.get_config_options()
+        groups = []
+        for index in range(len(self)):
+            modifier = self[index]
+            group = config.ConfigGroup(modifier.__name__ + str(index))
+            for req in modifier.requirements():
+                group.add_item(req)
+            groups.append(group)
+        return groups
 
-    def __call__(self):
+    def __call__(self, namespace):
         """Constructs a standard context based on the architecture information
 
         Returns a new context with all appropriate modifications (symbols, layers, etc)
         """
+        #TODO: Figure out, or change later, what the native table should be
         context = Context(native.x86NativeTable)
 
-        for modifier in self:
+        for index in range(len(self)):
+            modifier = self[index](config.namespace_join(namespace + [self[index].__name__ + str(index)]))
             modifier(context = context)
         return context
 
