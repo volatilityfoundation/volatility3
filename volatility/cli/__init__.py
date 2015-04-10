@@ -26,25 +26,31 @@ class CommandLine():
 
         #TODO: Choose a plugin
         plugin = volatility.plugins.windows.pslist.PsList
-        self.handle_plugin_requirements(plugin)
+        context = self.handle_plugin_requirements(plugin)
 
-        #TODO: Figure out the base native types from the plugin
+        plugin(context)
 
-    def construct_context_factory(self):
+    def construct_layer_factory(self, name):
         """Turns a configuration from a plugin into a """
-        factory = contexts.ContextFactory([contexts.physical.PhysicalContextModifier,
-                                           contexts.intel.IntelContextModifier,
-                                           contexts.windows.WindowsContextModifier])
+        factory = contexts.LayerFactory(name, [contexts.physical.PhysicalContextModifier,
+                                               contexts.intel.IntelContextModifier,
+                                               contexts.windows.WindowsContextModifier])
         return factory
 
     def handle_plugin_requirements(self, plugin):
         """Populates the input values for the plugin"""
         reqs = plugin.requirements()
+        context = contexts.Context()
+
         for req in reqs:
             if isinstance(req, config.TranslationLayerRequirement):
-                # Choose an appropriate ContextFactory
-                factory = self.construct_context_factory()
+                # Choose an appropriate LayerFactory
+                factory = self.construct_layer_factory(config.namespace_join([plugin.__name__, req.name]))
                 facreqs = factory.requirements()
+                #TODO: Do something clever with the facreqs
+                context = factory(context)
+        return context
+
 
 
 def main():

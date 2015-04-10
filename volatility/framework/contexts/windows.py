@@ -13,7 +13,7 @@ class WindowsContextModifier(interfaces.context.ContextModifierInterface):
 
     @classmethod
     def requirements(cls):
-        pass
+        return []
 
     def __call__(self, context):
         virtual_types = self._virtual_types

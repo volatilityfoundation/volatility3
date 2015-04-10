@@ -14,7 +14,10 @@ class PsList(plugins.PluginInterface):
                                                    layer_type = 'kernel'),
                 config.IntRequirement(name = 'pid',
                                       description = "Process ID",
-                                      optional = True)]
+                                      optional = True),
+                config.IntRequirement(name = 'offset',
+                                      description = 'Address of any process',
+                                      default = 0x192ad18)]
 
     @staticmethod
     def kernel_process_from_physical_process(ctx, physical_layer, kernel_layer, offset):
@@ -29,6 +32,7 @@ class PsList(plugins.PluginInterface):
         return ethread.owning_process()
 
     def __call__(self):
-        eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'primary', 0x192ad18)
+        self.validate_inputs()
+        eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'primary', self.get_config('offset'))
         for proc in eproc.ActiveProcessLinks:
             print(proc.UniqueProcessId)

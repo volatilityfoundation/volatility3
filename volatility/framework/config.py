@@ -7,6 +7,9 @@ import re
 
 from volatility.framework.interfaces.config import GenericRequirement, ConfigGroup
 
+# Intentionally reimport namespace_join so it's accessible from the main config module
+from volatility.framework.interfaces.config import namespace_join
+
 class InstanceRequirement(GenericRequirement):
     instance_type = bool
 
@@ -42,7 +45,7 @@ class ChoiceRequirement(GenericRequirement):
     """Allows one from a choice of strings
     """
     def __init__(self, choices, *args, **kwargs):
-        GenericRequirement.__init__(*args, **kwargs)
+        GenericRequirement.__init__(self, *args, **kwargs)
         if not isinstance(choices, list) or any([not isinstance(choice, str) for choice in choices]):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self._choices = choices

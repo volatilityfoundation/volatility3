@@ -39,14 +39,14 @@ class PluginInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """Returns a list of requirements options"""
         return
 
-    def get_input(self, name, core = False):
+    def get_config(self, name, core = False):
         if core:
             return self._context.config.get("core", name)
         return self._context.config.get(self.__name__, name)
 
     def validate_inputs(self):
         for option in self.requirements():
-            option.validate_input(self.get_input(option.name).value, self.context)
+            option.validate_input(self.get_config(option.name).value, self.context)
 
     @abstractmethod
     def __call__(self):

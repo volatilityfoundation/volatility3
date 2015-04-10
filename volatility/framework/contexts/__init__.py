@@ -10,15 +10,32 @@ from volatility.framework.contexts import intel, physical, windows
 from volatility.framework import config
 
 
-class ContextFactory(validity.ValidityRoutines, list):
+class LayerFactory(validity.ValidityRoutines, list):
     """Class to establish and load the appropriate components of the context for a given operating system"""
 
+    def __init__(self, name, lst = None):
+        if lst is None:
+            lst = []
+        self._type_check(lst, list)
+        self._type_check(name, str)
+        self._name = name
+
+        validity.ValidityRoutines.__init__(self)
+        list.__init__(self, [])
+        for element in lst:
+            self.append(element)
+
+    @property
+    def name(self):
+        return self._name
+
     def __setitem__(self, key, value):
+        print("Running setitem")
         self._class_check(value, ContextModifierInterface)
-        super(ContextFactory, self).__setitem__(key, value)
+        super(LayerFactory, self).__setitem__(key, value)
 
     def requirements(self):
-        """Returns all the possible configuration options that might be required for this particular ContextFactory"""
+        """Returns all the possible configuration options that might be required for this particular LayerFactory"""
         groups = []
         for index in range(len(self)):
             modifier = self[index]
@@ -28,16 +45,13 @@ class ContextFactory(validity.ValidityRoutines, list):
             groups.append(group)
         return groups
 
-    def __call__(self, namespace):
+    def __call__(self, context):
         """Constructs a standard context based on the architecture information
 
         Returns a new context with all appropriate modifications (symbols, layers, etc)
         """
-        #TODO: Figure out, or change later, what the native table should be
-        context = Context(native.x86NativeTable)
-
         for index in range(len(self)):
-            modifier = self[index](config.namespace_join(namespace + [self[index].__name__ + str(index)]))
+            modifier = self[index](config.namespace_join([self.name, self[index].__name__ + str(index)]))
             modifier(context = context)
         return context
 

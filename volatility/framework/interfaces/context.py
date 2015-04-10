@@ -60,6 +60,7 @@ class ContextModifierInterface(object, metaclass = ABCMeta):
     @abstractmethod
     def requirements(cls):
         """Returns all the options that might need to be passed to modify the context"""
+        return []
 
     @abstractmethod
     def __call__(self, context):
