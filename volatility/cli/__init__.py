@@ -11,7 +11,7 @@ from volatility.framework import plugins, config, contexts
 logging.basicConfig(filename='example.log',level = logging.DEBUG)
 logger = logging.getLogger("volatility")
 
-class CommandLine():
+class CommandLine(object):
     def __init__(self):
         pass
 
@@ -43,12 +43,17 @@ class CommandLine():
         context = contexts.Context()
 
         for req in reqs:
+            context.config.add_item(req, plugin.__name__)
             if isinstance(req, config.TranslationLayerRequirement):
-                # Choose an appropriate LayerFactory
-                factory = self.construct_layer_factory(config.namespace_join([plugin.__name__, req.name]))
+                # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
+                namespace = config.namespace_join([plugin.__name__, req.name + "_layer"])
+                factory = self.construct_layer_factory(namespace)
                 facreqs = factory.requirements()
+                for facreq in facreqs:
+                    context.config.add_item(facreq, namespace = namespace)
                 #TODO: Do something clever with the facreqs
                 context = factory(context)
+                context.config.get(config.namespace_join([plugin.__name__, req.name])).value = 'primary'
         return context
 
 

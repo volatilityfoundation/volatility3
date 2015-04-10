@@ -39,8 +39,8 @@ class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
         if namespace:
             ns_split = namespace.split(NAMESPACE_DIVIDER)
             if ns_split[0] not in self:
-                self._namespace[ns_split[0]] == ConfigGroup(ns_split[0])
-            return self._namespace[ns_split[0]].add_item(self, item, namespace_join(ns_split[1:]))
+                self._namespace[ns_split[0]] = ConfigGroup(ns_split[0])
+            return self._namespace[ns_split[0]].add_item(item, namespace_join(ns_split[1:]))
         self._namespace[item.name] = item
 
     def __iter__(self):
@@ -53,6 +53,10 @@ class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
             return self._namespace[item_split[0]][namespace_join(item_split[1:])]
         # Let namespace produce the index error if necessary
         return self._namespace[item_split[0]]
+
+    def get_value(self, item):
+        """Returns the value of the requirement, not the requirement itself"""
+        return self.get(item).value
 
     def __contains__(self, item):
         item_split = item.split(NAMESPACE_DIVIDER)

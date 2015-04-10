@@ -33,6 +33,6 @@ class PsList(plugins.PluginInterface):
 
     def __call__(self):
         self.validate_inputs()
-        eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'primary', self.get_config('offset'))
+        eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'primary', self.config.get_value('offset'))
         for proc in eproc.ActiveProcessLinks:
             print(proc.UniqueProcessId)

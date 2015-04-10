@@ -5,8 +5,8 @@ Created on 6 May 2013
 """
 from abc import abstractmethod, ABCMeta
 
-from volatility.framework import validity
-from volatility.framework.interfaces import context as context_module
+from volatility.framework import validity, config
+from volatility.framework.interfaces import context as interfaces_context
 
 #
 # Plugins
@@ -25,7 +25,7 @@ class PluginInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class that defines the interface all Plugins must maintain"""
 
     def __init__(self, context):
-        self._type_check(context, context_module.ContextInterface)
+        self._type_check(context, interfaces_context.ContextInterface)
         self._context = context
         self.validate_inputs()
 
@@ -39,14 +39,15 @@ class PluginInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """Returns a list of requirements options"""
         return
 
-    def get_config(self, name, core = False):
+    @property
+    def config(self, core = False):
         if core:
-            return self._context.config.get("core", name)
-        return self._context.config.get(self.__name__, name)
+            return self._context.config.get("core")
+        return self._context.config.get(self.__class__.__name__)
 
     def validate_inputs(self):
         for option in self.requirements():
-            option.validate_input(self.get_config(option.name).value, self.context)
+            option.validate_input(self.config.get_value(option.name), self.context)
 
     @abstractmethod
     def __call__(self):

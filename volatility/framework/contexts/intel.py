@@ -16,7 +16,8 @@ class IntelContextModifier(interfaces.context.ContextModifierInterface):
                                          description = 'Name of the layer to be added to the memory space',
                                          default = 'intel'),
                 config.StringRequirement(name = 'physical_layer',
-                                         description = "Layer name for the physical layer"),
+                                         description = "Layer name for the physical layer",
+                                         default = 'physical'),
                 config.StringRequirement(name = 'swap_layer',
                                          description = "Layer name for the swap layer",
                                          optional = True)]
@@ -36,5 +37,7 @@ class IntelContextModifier(interfaces.context.ContextModifierInterface):
             #TODO: Add automagic here
             layer = layers.intel.IntelPAE
 
-        intel = layer(context, config.get('layer_name'), config.get('physical_layer'), page_map_offset = config.get('pagemapoffset'))
+        intel = layer(context, config.get_value('layer_name'),
+                               config.get_value('physical_layer'),
+                               page_map_offset = config.get_value('page_map_offset'))
         context.add_layer(intel)
