@@ -30,10 +30,9 @@ class CommandLine():
 
     def construct_context_factory(self):
         """Turns a configuration from a plugin into a """
-        c = contexts
-        factory = c.ContextFactory([c.physical.PhysicalContextModifier(None),
-                                    c.intel.IntelContextModifier(None),
-                                    c.windows.WindowsContextModifier(None)])
+        factory = contexts.ContextFactory([contexts.physical.PhysicalContextModifier(None),
+                                           contexts.intel.IntelContextModifier(None),
+                                           contexts.windows.WindowsContextModifier(None)])
 
     def handle_plugin_requirements(self, plugin):
         """Populates the input values for the plugin"""
