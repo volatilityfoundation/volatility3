@@ -14,23 +14,33 @@ def namespace_join(pathlist):
 class ConfigurationItem(validity.ValidityRoutines):
     """Class to distinguish configuration elements from everything else"""
 
-    def __init__(self, name):
+    def __init__(self, name, optional):
         validity.ValidityRoutines.__init__(self)
         self._type_check(name, str)
         if NAMESPACE_DIVIDER in name:
             raise ValueError("Name cannot contain the namespace divider (" + NAMESPACE_DIVIDER + ")")
         self._name = name
+        self._optional = optional
 
     @property
     def name(self):
         """The name of the Option."""
         return self._name
 
+    @property
+    def optional(self):
+        """Whether the option is required for or not"""
+        return self._optional
+
+    @abstractmethod
+    def validate(self, context):
+        """Validates the currently set value"""
+        pass
 
 class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
     """Class to hold and provide a namespace for plugins and core options"""
     def __init__(self, name):
-        ConfigurationItem.__init__(self, name)
+        ConfigurationItem.__init__(self, name, optional = False)
         self._namespace = {}
 
     def add_item(self, item, namespace = None):
@@ -69,6 +79,10 @@ class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
 
     def __len__(self):
         return len(self._namespace)
+
+    def validate(self, context):
+        """Validates the current value, which for groups cannot be set, so always returns True"""
+        return all([ self[subitem].validate(context) for subitem in self._namespace if not self[subitem].optional])
 
 class GenericRequirement(ConfigurationItem, metaclass = ABCMeta):
     """Class to handle a single specific configuration option"""

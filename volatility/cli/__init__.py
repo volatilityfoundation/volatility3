@@ -54,7 +54,10 @@ class CommandLine(object):
                 facreqs = factory.requirements()
                 for facreq in facreqs:
                     context.config.add_item(facreq, namespace = namespace)
-                #TODO: Validate factory requirements
+
+                # TODO: Allow for values to be set
+                for facreq in facreqs:
+                    facreq.validate(context)
                 context = factory(context)
                 context.config.get(config.namespace_join([plugin.__name__, req.name])).value = 'intel'
         return context
