@@ -28,7 +28,10 @@ class CommandLine(object):
         plugin = volatility.plugins.windows.pslist.PsList
         context = self.handle_plugin_requirements(plugin)
 
-        plugin(context)
+        # Construct the plugin
+        runner = plugin(context)
+        # Run the plugin
+        runner()
 
     def construct_layer_factory(self, name):
         """Turns a configuration from a plugin into a """
@@ -51,9 +54,9 @@ class CommandLine(object):
                 facreqs = factory.requirements()
                 for facreq in facreqs:
                     context.config.add_item(facreq, namespace = namespace)
-                #TODO: Do something clever with the facreqs
+                #TODO: Validate factory requirements
                 context = factory(context)
-                context.config.get(config.namespace_join([plugin.__name__, req.name])).value = 'primary'
+                context.config.get(config.namespace_join([plugin.__name__, req.name])).value = 'intel'
         return context
 
 
