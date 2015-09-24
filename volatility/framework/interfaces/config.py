@@ -3,18 +3,19 @@ import collections.abc
 
 from volatility.framework import validity
 
-
 __author__ = 'mike'
 
 NAMESPACE_DIVIDER = "."
 
+
 def namespace_join(pathlist):
     return NAMESPACE_DIVIDER.join(pathlist)
+
 
 class ConfigurationItem(validity.ValidityRoutines):
     """Class to distinguish configuration elements from everything else"""
 
-    def __init__(self, name, optional):
+    def __init__(self, name, optional = False):
         validity.ValidityRoutines.__init__(self)
         self._type_check(name, str)
         if NAMESPACE_DIVIDER in name:
@@ -37,8 +38,10 @@ class ConfigurationItem(validity.ValidityRoutines):
         """Validates the currently set value"""
         pass
 
+
 class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
     """Class to hold and provide a namespace for plugins and core options"""
+
     def __init__(self, name):
         ConfigurationItem.__init__(self, name, optional = False)
         self._namespace = {}
@@ -82,7 +85,8 @@ class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
 
     def validate(self, context):
         """Validates the current value, which for groups cannot be set, so always returns True"""
-        return all([ self[subitem].validate(context) for subitem in self._namespace if not self[subitem].optional])
+        return all([self[subitem].validate(context) for subitem in self._namespace if not self[subitem].optional])
+
 
 class GenericRequirement(ConfigurationItem, metaclass = ABCMeta):
     """Class to handle a single specific configuration option"""
