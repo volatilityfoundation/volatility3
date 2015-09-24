@@ -5,6 +5,8 @@ Created on 6 May 2013
 """
 from abc import ABCMeta, abstractmethod, abstractproperty
 
+from volatility.framework import validity
+
 
 class ContextInterface(object, metaclass = ABCMeta):
     """All context-like objects must adhere to the following interface.
@@ -49,9 +51,14 @@ class ContextInterface(object, metaclass = ABCMeta):
         """
 
 
-class ContextModifierInterface(object, metaclass = ABCMeta):
+class ContextModifierInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def __init__(self, namespace):
-        self.namespace = namespace
+        """Initializes the context modifier
+
+        :param namespace: Specifies the namespace for all configuration options to be specified under
+        :type namespace: str
+        """
+        self.namespace = self._type_check(namespace, str)
 
     def config_get(self, context):
         return context.config[self.namespace]

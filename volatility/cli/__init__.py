@@ -1,15 +1,15 @@
-from volatility import framework
-
 __author__ = 'mike'
 
 import sys
 import logging
+
 import volatility.framework
 import volatility.plugins
 from volatility.framework import plugins, config, contexts
 
-logging.basicConfig(filename='example.log',level = logging.DEBUG)
+logging.basicConfig(filename = 'example.log', level = logging.DEBUG)
 logger = logging.getLogger("volatility")
+
 
 class CommandLine(object):
     def __init__(self):
@@ -19,12 +19,12 @@ class CommandLine(object):
         ver = volatility.framework.version()
         sys.stdout.write("Volatility Framework 3 (version " + "{0}.{1}.{2}".format(ver[0], ver[1], ver[2]) + ")\n")
 
-        volatility.framework.require_version(3,0,0)
+        volatility.framework.require_version(3, 0, 0)
 
-        #TODO: Get global config options
+        # TODO: Get global config options
         plugins.import_plugins()
 
-        #TODO: Choose a plugin
+        # TODO: Choose a plugin
         plugin = volatility.plugins.windows.pslist.PsList
         context = self.handle_plugin_requirements(plugin)
 
@@ -54,6 +54,7 @@ class CommandLine(object):
                 facreqs = factory.requirements()
                 for facreq in facreqs:
                     context.config.add_item(facreq, namespace = namespace)
+                    print(facreq.name)
 
                 # TODO: Allow for values to be set
                 for facreq in facreqs:
@@ -61,7 +62,6 @@ class CommandLine(object):
                 context = factory(context)
                 context.config.get(config.namespace_join([plugin.__name__, req.name])).value = 'intel'
         return context
-
 
 
 def main():
