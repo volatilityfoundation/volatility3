@@ -15,7 +15,7 @@ def namespace_join(pathlist):
 class ConfigurationItem(validity.ValidityRoutines):
     """Class to distinguish configuration elements from everything else"""
 
-    def __init__(self, name, optional = False):
+    def __init__(self, name, optional):
         validity.ValidityRoutines.__init__(self)
         self._type_check(name, str)
         if NAMESPACE_DIVIDER in name:
@@ -28,18 +28,18 @@ class ConfigurationItem(validity.ValidityRoutines):
         """The name of the Option."""
         return self._name
 
-    @property
-    def optional(self):
-        """Whether the option is required for or not"""
-        return self._optional
-
     @abstractmethod
     def validate(self, context):
         """Validates the currently set value"""
         pass
 
+    @property
+    def optional(self):
+        """Whether the option is required for or not"""
+        return self._optional
 
-class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
+
+class ConfigurationGroup(ConfigurationItem, collections.abc.Mapping):
     """Class to hold and provide a namespace for plugins and core options"""
 
     def __init__(self, name):
@@ -48,11 +48,11 @@ class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
 
     def add_item(self, item, namespace = None):
         if not isinstance(item, ConfigurationItem):
-            raise TypeError("Only ConfigurationItem objects can be added to a ConfigGroup")
+            raise TypeError("Only ConfigurationItem objects can be added to a ConfigurationGroup")
         if namespace:
             ns_split = namespace.split(NAMESPACE_DIVIDER)
             if ns_split[0] not in self:
-                self._namespace[ns_split[0]] = ConfigGroup(ns_split[0])
+                self._namespace[ns_split[0]] = ConfigurationGroup(ns_split[0])
             return self._namespace[ns_split[0]].add_item(item, namespace_join(ns_split[1:]))
         self._namespace[item.name] = item
 
@@ -91,13 +91,12 @@ class ConfigGroup(ConfigurationItem, collections.abc.Mapping):
 class GenericRequirement(ConfigurationItem, metaclass = ABCMeta):
     """Class to handle a single specific configuration option"""
 
-    def __init__(self, name, description = None, default = None, optional = False):
+    def __init__(self, name, description = None, default = None, optional = None):
         """Creates a new option"""
-        ConfigurationItem.__init__(self, name)
+        ConfigurationItem.__init__(self, name, optional)
         self._default = default
         self._description = description
         self._value = None
-        self._optional = optional
 
     @property
     def value(self):
@@ -112,9 +111,9 @@ class GenericRequirement(ConfigurationItem, metaclass = ABCMeta):
         self._value = data
 
     @property
-    def optional(self):
-        """Whether the option is required for or not"""
-        return self._optional
+    def default(self):
+        """Returns the default value if one is set"""
+        return self._default
 
     @property
     def description(self):

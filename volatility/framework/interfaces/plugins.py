@@ -5,8 +5,9 @@ Created on 6 May 2013
 """
 from abc import abstractmethod, ABCMeta
 
-from volatility.framework import validity, config
+from volatility.framework import validity
 from volatility.framework.interfaces import context as interfaces_context
+
 
 #
 # Plugins
@@ -48,7 +49,6 @@ class PluginInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def validate_inputs(self):
         for option in self.requirements():
             if not option.optional:
-                print("Validate", option.name)
                 option.validate_input(self.config.get_value(option.name), self.context)
 
     @abstractmethod
@@ -60,7 +60,6 @@ class PluginInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         :return: a TreeGrid object that can then be passed to a Renderer.
         :rtype: TreeGrid
         """
-
 
 # TODO: Needs to say what it can/can't handle (validate context)
 # TODO: Needs to offer available options'

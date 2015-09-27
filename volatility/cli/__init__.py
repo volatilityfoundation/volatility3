@@ -1,3 +1,7 @@
+import argparse
+
+from volatility.cli import argparse_adapter
+
 __author__ = 'mike'
 
 import sys
@@ -27,6 +31,14 @@ class CommandLine(object):
         # TODO: Choose a plugin
         plugin = volatility.plugins.windows.pslist.PsList
         context = self.handle_plugin_requirements(plugin)
+        parser = argparse.ArgumentParser(prog = 'volatility',
+                                         description = "An open-source memory forensics framework")
+        argparse_adapter.adapt_config(context.config, parser)
+
+        # Run the argparser
+        parser.parse_args()
+
+        # Validate the requirement
 
         # Construct the plugin
         runner = plugin(context)
@@ -46,7 +58,6 @@ class CommandLine(object):
         context = contexts.Context()
 
         for req in reqs:
-            context.config.add_item(req, plugin.__name__)
             if isinstance(req, config.TranslationLayerRequirement):
                 # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
                 namespace = config.namespace_join([plugin.__name__, req.name + "_layer"])
@@ -54,13 +65,8 @@ class CommandLine(object):
                 facreqs = factory.requirements()
                 for facreq in facreqs:
                     context.config.add_item(facreq, namespace = namespace)
-                    print(facreq.name)
-
-                # TODO: Allow for values to be set
-                for facreq in facreqs:
-                    facreq.validate(context)
-                context = factory(context)
-                context.config.get(config.namespace_join([plugin.__name__, req.name])).value = 'intel'
+            else:
+                context.config.add_item(req, plugin.__name__)
         return context
 
 

@@ -39,7 +39,7 @@ class LayerFactory(validity.ValidityRoutines, list):
         groups = []
         for index in range(len(self)):
             modifier = self[index]
-            group = config.ConfigGroup(modifier.__name__ + str(index))
+            group = config.ConfigurationGroup(modifier.__name__ + str(index))
             for req in modifier.requirements():
                 group.add_item(req)
             groups.append(group)
@@ -76,7 +76,7 @@ class Context(interfaces.context.ContextInterface):
         interfaces.context.ContextInterface.__init__(self)
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
-        self._config = config.ConfigGroup(name = 'volatility')
+        self._config = config.ConfigurationGroup(name = 'volatility')
 
     # ## Symbol Space Functions
 
@@ -87,8 +87,8 @@ class Context(interfaces.context.ContextInterface):
 
     @config.setter
     def config(self, value):
-        if not isinstance(value, config.ConfigGroup):
-            raise TypeError("Configuration must of type ConfigGroup")
+        if not isinstance(value, config.ConfigurationGroup):
+            raise TypeError("Configuration must of type ConfigurationGroup")
         self._config = value
 
     @property
