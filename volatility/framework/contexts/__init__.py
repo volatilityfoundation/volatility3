@@ -31,7 +31,6 @@ class LayerFactory(validity.ValidityRoutines, list):
         return self._name
 
     def __setitem__(self, key, value):
-        print("Running setitem")
         self._class_check(value, ContextModifierInterface)
         super(LayerFactory, self).__setitem__(key, value)
 

@@ -38,7 +38,8 @@ class CommandLine(object):
         # Run the argparser
         parser.parse_args()
 
-        # Validate the requirement
+        # Generate the layers from the arguments
+
 
         # Construct the plugin
         runner = plugin(context)
@@ -67,8 +68,7 @@ class CommandLine(object):
                 # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
                 namespace = configuration.namespace_join([plugin.__name__, req.name + "_layer"])
                 factory = self.construct_translation_layer_factory(namespace, req)
-                facreqs = factory.requirements()
-                for facreq in facreqs:
+                for facreq in factory.requirements():
                     context.config.add_item(facreq, namespace = namespace)
             else:
                 context.config.add_item(req, plugin.__name__)
