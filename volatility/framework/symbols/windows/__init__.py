@@ -28,7 +28,7 @@ class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
         if not sentinel:
             yield self._context.object(structure, layer, offset = self.vol.offset - relative_offset)
 
-        seen = set([self.vol.offset])
+        seen = {self.vol.offset}
         while link.vol.offset not in seen:
 
             obj = self._context.object(structure, layer, offset = link.vol.offset - relative_offset)

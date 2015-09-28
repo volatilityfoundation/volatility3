@@ -78,7 +78,7 @@ class TreeGrid(object, metaclass = ABCMeta):
     and to create cycles.
     """
 
-    simple_types = set([int, str, float, bytes])
+    simple_types = {int, str, float, bytes}
 
     def __init__(self, columns, generator):
         """Constructs a TreeGrid object using a specific set of columns
@@ -129,7 +129,8 @@ class TreeGrid(object, metaclass = ABCMeta):
     def max_depth(self):
         """Returns the maximum depth of the tree"""
 
-    def path_depth(self, node):
+    @staticmethod
+    def path_depth(node):
         """Returns the path depth of a particular node"""
         return node.path_depth
 

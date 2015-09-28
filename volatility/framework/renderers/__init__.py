@@ -125,7 +125,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
         self._generator = generator
 
-    def _sanitize(self, text):
+    @staticmethod
+    def _sanitize(text):
         output = ""
         for letter in text.lower():
             if letter != ' ':

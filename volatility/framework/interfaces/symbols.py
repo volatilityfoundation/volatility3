@@ -15,7 +15,7 @@ class SymbolTableInterface(validity.ValidityRoutines):
         if name:
             self._type_check(name, str)
         self.name = name or None
-        self.natives = native_structures
+        self.native_structures = native_structures
 
     # ## Required Constant symbol functions
 
