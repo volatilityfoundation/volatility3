@@ -1,4 +1,4 @@
-from volatility.framework import interfaces, layers, config
+from volatility.framework import interfaces, layers, configuration
 
 __author__ = 'mike'
 
@@ -6,10 +6,10 @@ __author__ = 'mike'
 class PhysicalContextModifier(interfaces.context.ContextModifierInterface):
     @classmethod
     def requirements(cls):
-        return [config.StringRequirement(name = 'location',
+        return [configuration.StringRequirement(name = 'location',
                                          description = 'URL to the physical address space',
                                          default = '/home/mike/memory/jon-fres.dmp'),
-                config.StringRequirement(name = 'layer_name',
+                configuration.StringRequirement(name = 'layer_name',
                                          description = 'Layer name for the physical space',
                                          default = 'physical')]
 

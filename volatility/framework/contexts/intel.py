@@ -1,4 +1,4 @@
-from volatility.framework import interfaces, layers, config
+from volatility.framework import interfaces, layers, configuration
 
 __author__ = 'mike'
 
@@ -6,19 +6,19 @@ __author__ = 'mike'
 class IntelContextModifier(interfaces.context.ContextModifierInterface):
     @classmethod
     def requirements(cls):
-        return [config.ChoiceRequirement(name = "architecture",
+        return [configuration.ChoiceRequirement(name = "architecture",
                                          choices = ["auto", "pae", "32", "64"],
                                          description = "Determines the memory image",
                                          default = "auto"),
-                config.IntRequirement(name = "page_map_offset",
+                configuration.IntRequirement(name = "page_map_offset",
                                       description = "Offset to the directory table base"),
-                config.StringRequirement(name = 'layer_name',
+                configuration.StringRequirement(name = 'layer_name',
                                          description = 'Name of the layer to be added to the memory space',
                                          default = 'intel'),
-                config.StringRequirement(name = 'physical_layer',
+                configuration.StringRequirement(name = 'physical_layer',
                                          description = "Layer name for the physical layer",
                                          default = 'physical'),
-                config.StringRequirement(name = 'swap_layer',
+                configuration.StringRequirement(name = 'swap_layer',
                                          description = "Layer name for the swap layer",
                                          optional = True)]
 

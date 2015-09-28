@@ -1,5 +1,5 @@
 import inspect
-from volatility.framework import config
+from volatility.framework import configuration
 
 import volatility.framework.interfaces.plugins as plugins
 
@@ -7,15 +7,15 @@ import volatility.framework.interfaces.plugins as plugins
 class PsList(plugins.PluginInterface):
     @classmethod
     def requirements(cls):
-        return [config.TranslationLayerRequirement(name = 'primary',
+        return [configuration.TranslationLayerRequirement(name = 'primary',
                                                    description = 'Kernel Address Space',
                                                    os_type = 'windows',
                                                    architectures = None,
                                                    layer_type = 'kernel'),
-                config.IntRequirement(name = 'pid',
+                configuration.IntRequirement(name = 'pid',
                                       description = "Process ID",
                                       optional = True),
-                config.IntRequirement(name = 'offset',
+                configuration.IntRequirement(name = 'offset',
                                       description = 'Address of any process',
                                       default = 0x192ad18)]
 

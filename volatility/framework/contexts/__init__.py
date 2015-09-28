@@ -1,4 +1,4 @@
-from volatility.framework import validity, interfaces, symbols, layers, config
+from volatility.framework import validity, interfaces, symbols, layers, configuration
 from volatility.framework.interfaces.context import ContextModifierInterface
 from volatility.framework.symbols import native
 import volatility
@@ -7,7 +7,7 @@ import volatility
 __author__ = 'mike'
 
 from volatility.framework.contexts import intel, physical, windows
-from volatility.framework import config
+from volatility.framework import configuration
 
 
 class LayerFactory(validity.ValidityRoutines, list):
@@ -39,7 +39,7 @@ class LayerFactory(validity.ValidityRoutines, list):
         groups = []
         for index in range(len(self)):
             modifier = self[index]
-            group = config.ConfigurationGroup(modifier.__name__ + str(index))
+            group = configuration.ConfigurationGroup(modifier.__name__ + str(index))
             for req in modifier.requirements():
                 group.add_item(req)
             groups.append(group)
@@ -51,7 +51,7 @@ class LayerFactory(validity.ValidityRoutines, list):
         Returns a new context with all appropriate modifications (symbols, layers, etc)
         """
         for index in range(len(self)):
-            modifier = self[index](config.namespace_join([self.name, self[index].__name__ + str(index)]))
+            modifier = self[index](configuration.namespace_join([self.name, self[index].__name__ + str(index)]))
             modifier(context = context)
         return context
 
@@ -76,7 +76,7 @@ class Context(interfaces.context.ContextInterface):
         interfaces.context.ContextInterface.__init__(self)
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
-        self._config = config.ConfigurationGroup(name = 'volatility')
+        self._config = configuration.ConfigurationGroup(name = 'volatility')
 
     # ## Symbol Space Functions
 
@@ -87,7 +87,7 @@ class Context(interfaces.context.ContextInterface):
 
     @config.setter
     def config(self, value):
-        if not isinstance(value, config.ConfigurationGroup):
+        if not isinstance(value, configuration.ConfigurationGroup):
             raise TypeError("Configuration must of type ConfigurationGroup")
         self._config = value
 

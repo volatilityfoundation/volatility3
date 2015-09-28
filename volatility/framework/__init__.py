@@ -36,7 +36,7 @@ def require_version(*args):
                                 ".".join([str(x) for x in args[0:2]]))
 
 
-from volatility.framework import interfaces, symbols, layers, contexts, config
+from volatility.framework import interfaces, symbols, layers, contexts, configuration
 
 
 

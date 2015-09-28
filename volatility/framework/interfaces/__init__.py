@@ -7,4 +7,4 @@ Created on 12 Apr 2013
 # Import the submodules we want people to be able to use without importing them themselves
 # This will also avoid namespace issues, because people can use interfaces.layers to
 # avoid clashing with the layers package
-from volatility.framework.interfaces import config, context, layers, objects, plugins, renderers, symbols
+from volatility.framework.interfaces import configuration, context, layers, objects, plugins, renderers, symbols

@@ -5,10 +5,10 @@ Created on 7 May 2013
 """
 import re
 
-from volatility.framework.interfaces.config import GenericRequirement, ConfigurationGroup
+from volatility.framework.interfaces.configuration import GenericRequirement, ConfigurationGroup
 
 # Intentionally reimport namespace_join so it's accessible from the main config module
-from volatility.framework.interfaces.config import namespace_join
+from volatility.framework.interfaces.configuration import namespace_join
 
 class InstanceRequirement(GenericRequirement):
     instance_type = bool

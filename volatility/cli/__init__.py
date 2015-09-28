@@ -9,7 +9,7 @@ import logging
 
 import volatility.framework
 import volatility.plugins
-from volatility.framework import plugins, config, contexts
+from volatility.framework import plugins, configuration, contexts
 
 logging.basicConfig(filename = 'example.log', level = logging.DEBUG)
 logger = logging.getLogger("volatility")
@@ -58,9 +58,9 @@ class CommandLine(object):
         context = contexts.Context()
 
         for req in reqs:
-            if isinstance(req, config.TranslationLayerRequirement):
+            if isinstance(req, configuration.TranslationLayerRequirement):
                 # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
-                namespace = config.namespace_join([plugin.__name__, req.name + "_layer"])
+                namespace = configuration.namespace_join([plugin.__name__, req.name + "_layer"])
                 factory = self.construct_layer_factory(namespace)
                 facreqs = factory.requirements()
                 for facreq in facreqs:
