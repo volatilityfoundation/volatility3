@@ -45,11 +45,15 @@ class CommandLine(object):
         # Run the plugin
         runner()
 
-    def construct_layer_factory(self, name):
-        """Turns a configuration from a plugin into a """
-        factory = contexts.LayerFactory(name, [contexts.physical.PhysicalContextModifier,
-                                               contexts.intel.IntelContextModifier,
-                                               contexts.windows.WindowsContextModifier])
+    @staticmethod
+    def construct_translation_layer_factory(name, requirement):
+        """Create a factory that can provides requirements for the configuration
+           The factory also populates the
+        """
+        factory = contexts.LayerFactory(name, requirement,
+                                        [contexts.physical.PhysicalContextModifier,
+                                         contexts.intel.IntelContextModifier,
+                                         contexts.windows.WindowsContextModifier])
         return factory
 
     def handle_plugin_requirements(self, plugin):
@@ -58,10 +62,11 @@ class CommandLine(object):
         context = contexts.Context()
 
         for req in reqs:
+            context.config.add_item(req, plugin.__name__)
             if isinstance(req, configuration.TranslationLayerRequirement):
                 # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
                 namespace = configuration.namespace_join([plugin.__name__, req.name + "_layer"])
-                factory = self.construct_layer_factory(namespace)
+                factory = self.construct_translation_layer_factory(namespace, req)
                 facreqs = factory.requirements()
                 for facreq in facreqs:
                     context.config.add_item(facreq, namespace = namespace)

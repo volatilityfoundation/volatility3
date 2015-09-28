@@ -33,9 +33,9 @@ def test_symbols():
 def utils_load_as():
     # TODO: This should hold the smarts for determining the physical layers and guessing at various values and so on
     c = framework.contexts
-    factory = c.LayerFactory([c.physical.PhysicalContextModifier,
-                              c.intel.IntelContextModifier,
-                              c.windows.WindowsContextModifier])
+    factory = c.LayerFactory("name", "", [c.physical.PhysicalContextModifier,
+                                          c.intel.IntelContextModifier,
+                                          c.windows.WindowsContextModifier])
     return factory()
 
 

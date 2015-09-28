@@ -13,12 +13,13 @@ from volatility.framework import configuration
 class LayerFactory(validity.ValidityRoutines, list):
     """Class to establish and load the appropriate components of the context for a given operating system"""
 
-    def __init__(self, name, lst = None):
+    def __init__(self, name, requirement, lst = None):
         if lst is None:
             lst = []
         self._type_check(lst, list)
         self._type_check(name, str)
         self._name = name
+        self._req = requirement
 
         validity.ValidityRoutines.__init__(self)
         list.__init__(self, [])
@@ -51,6 +52,7 @@ class LayerFactory(validity.ValidityRoutines, list):
         Returns a new context with all appropriate modifications (symbols, layers, etc)
         """
         for index in range(len(self)):
+            print("TODO: update top level req based on modifier reqs being updated")
             modifier = self[index](configuration.namespace_join([self.name, self[index].__name__ + str(index)]))
             modifier(context = context)
         return context
