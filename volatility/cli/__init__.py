@@ -28,7 +28,7 @@ class CommandLine(object):
 
         # TODO: Choose a plugin
         plugin = volatility.plugins.windows.pslist.PsList
-        context = self.handle_plugin_requirements(plugin)
+        context, req_mapping = self.handle_plugin_requirements(plugin)
         parser = argparse.ArgumentParser(prog = 'volatility',
                                          description = "An open-source memory forensics framework")
         argparse_adapter.adapt_config(context.config, parser)
@@ -37,7 +37,9 @@ class CommandLine(object):
         parser.parse_args()
 
         # Generate the layers from the arguments
-
+        for req in req_mapping:
+            factory = req_mapping[req]
+            factory
 
         # Construct the plugin
         runner = plugin(context)
@@ -58,6 +60,7 @@ class CommandLine(object):
     def handle_plugin_requirements(self, plugin):
         """Populates the input values for the plugin"""
         reqs = plugin.requirements()
+        req_mapping = {}
         context = contexts.Context()
 
         for req in reqs:
@@ -66,11 +69,12 @@ class CommandLine(object):
                 # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
                 namespace = interfaces.configuration.namespace_join([plugin.__name__, req.name + "_layer"])
                 factory = self.construct_translation_layer_factory(namespace, req)
+                req_mapping[req] = factory
                 for facreq in factory.requirements():
                     context.config.add_item(facreq, namespace = namespace)
             else:
                 context.config.add_item(req, plugin.__name__)
-        return context
+        return context, req_mapping
 
 
 def main():
