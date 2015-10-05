@@ -1,4 +1,4 @@
-from volatility.framework import validity, interfaces, symbols, layers, configuration
+from volatility.framework import validity, interfaces, symbols, layers
 from volatility.framework.interfaces.context import ContextModifierInterface
 from volatility.framework.symbols import native
 import volatility
@@ -39,7 +39,7 @@ class LayerFactory(validity.ValidityRoutines, list):
         groups = []
         for index in range(len(self)):
             modifier = self[index]
-            group = configuration.ConfigurationGroup(modifier.__name__ + str(index))
+            group = interfaces.configuration.ConfigurationGroup(modifier.__name__ + str(index))
             for req in modifier.requirements():
                 group.add_item(req)
             groups.append(group)
@@ -52,7 +52,7 @@ class LayerFactory(validity.ValidityRoutines, list):
         """
         for index in range(len(self)):
             print("TODO: update top level req based on modifier reqs being updated")
-            modifier = self[index](configuration.namespace_join([self.name, self[index].__name__ + str(index)]))
+            modifier = self[index](interfaces.configuration.namespace_join([self.name, self[index].__name__ + str(index)]))
             modifier(context = context)
         return context
 
@@ -77,7 +77,7 @@ class Context(interfaces.context.ContextInterface):
         interfaces.context.ContextInterface.__init__(self)
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
-        self._config = configuration.ConfigurationGroup(name = 'volatility')
+        self._config = interfaces.configuration.ConfigurationGroup(name = 'volatility')
 
     # ## Symbol Space Functions
 
@@ -88,7 +88,7 @@ class Context(interfaces.context.ContextInterface):
 
     @config.setter
     def config(self, value):
-        if not isinstance(value, configuration.ConfigurationGroup):
+        if not isinstance(value, interfaces.configuration.ConfigurationGroup):
             raise TypeError("Configuration must of type ConfigurationGroup")
         self._config = value
 

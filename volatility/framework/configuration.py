@@ -3,26 +3,28 @@ Created on 7 May 2013
 
 @author: mike
 """
-import re
 
-from volatility.framework.interfaces.configuration import GenericRequirement, ConfigurationGroup
+from volatility.framework.interfaces.configuration import GenericRequirement
+
 
 # Intentionally reimport namespace_join so it's accessible from the main config module
-from volatility.framework.interfaces.configuration import namespace_join
 
 class InstanceRequirement(GenericRequirement):
     instance_type = bool
 
     def validate_input(self, value, context):
         if not isinstance(value, self.instance_type):
-            raise TypeError(self.name + " input only accepts " + self.instance_type.__name__+ " type")
+            raise TypeError(self.name + " input only accepts " + self.instance_type.__name__ + " type")
+
 
 class IntRequirement(InstanceRequirement):
     instance_type = int
 
+
 class StringRequirement(InstanceRequirement):
-    #TODO: Maybe add string length limits?
+    # TODO: Maybe add string length limits?
     instance_type = str
+
 
 class TranslationLayerRequirement(GenericRequirement):
     """Class maintaining the limitations on what sort of address spaces are acceptable"""
@@ -38,12 +40,13 @@ class TranslationLayerRequirement(GenericRequirement):
     def validate_input(self, value, context):
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
         if value not in context.memory:
-            raise IndexError(value + " is not memory layer")
+            raise IndexError((value or "") + " is not a memory layer")
 
 
 class ChoiceRequirement(GenericRequirement):
     """Allows one from a choice of strings
     """
+
     def __init__(self, choices, *args, **kwargs):
         GenericRequirement.__init__(self, *args, **kwargs)
         if not isinstance(choices, list) or any([not isinstance(choice, str) for choice in choices]):
@@ -54,6 +57,7 @@ class ChoiceRequirement(GenericRequirement):
         """Validates the provided value to ensure it is one of the available choices"""
         if value not in self._choices:
             raise ValueError("Value is not within the set of available choices")
+
 
 class ListRequirement(GenericRequirement):
     def __init__(self, min_elements, max_elements, element_type, *args, **kwargs):

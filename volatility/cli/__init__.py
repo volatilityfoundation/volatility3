@@ -1,15 +1,13 @@
 import argparse
-
-from volatility.cli import argparse_adapter
-
-__author__ = 'mike'
-
 import sys
 import logging
 
+from volatility.cli import argparse_adapter
 import volatility.framework
 import volatility.plugins
-from volatility.framework import plugins, configuration, contexts
+from volatility.framework import interfaces, plugins, configuration, contexts
+
+__author__ = 'mike'
 
 logging.basicConfig(filename = 'example.log', level = logging.DEBUG)
 logger = logging.getLogger("volatility")
@@ -66,7 +64,7 @@ class CommandLine(object):
             context.config.add_item(req, plugin.__name__)
             if isinstance(req, configuration.TranslationLayerRequirement):
                 # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
-                namespace = configuration.namespace_join([plugin.__name__, req.name + "_layer"])
+                namespace = interfaces.configuration.namespace_join([plugin.__name__, req.name + "_layer"])
                 factory = self.construct_translation_layer_factory(namespace, req)
                 for facreq in factory.requirements():
                     context.config.add_item(facreq, namespace = namespace)
