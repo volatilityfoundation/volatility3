@@ -70,5 +70,5 @@ class ContextModifierInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return []
 
     @abstractmethod
-    def __call__(self, context):
+    def modify_context(self, context):
         """Modifies the context in place"""

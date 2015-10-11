@@ -15,7 +15,7 @@ class WindowsContextModifier(interfaces.context.ContextModifierInterface):
     def requirements(cls):
         return []
 
-    def __call__(self, context):
+    def modify_context(self, context):
         virtual_types = self._virtual_types
         ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, context.symbol_space.natives)
         ntkrnlmp.set_structure_class('_ETHREAD', windows._ETHREAD)

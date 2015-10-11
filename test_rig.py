@@ -36,7 +36,7 @@ def utils_load_as():
     factory = c.LayerFactory("name", "", [c.physical.PhysicalContextModifier,
                                           c.intel.IntelContextModifier,
                                           c.windows.WindowsContextModifier])
-    return factory()
+    return factory(c.Context())
 
 
 def test_memory():

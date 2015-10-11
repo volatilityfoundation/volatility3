@@ -51,8 +51,8 @@ class LayerFactory(validity.ValidityRoutines, list):
         Returns a new context with all appropriate modifications (symbols, layers, etc)
         """
         for index in range(len(self)):
-            modifier = self[index](interfaces.configuration.namespace_join([self.name, self[index].__name__ + str(index)]))
-            modifier(context = context)
+            namespace = interfaces.configuration.namespace_join([self.name, self[index].__name__ + str(index)])
+            self[index](namespace).modify_context(context = context)
         return context
 
 

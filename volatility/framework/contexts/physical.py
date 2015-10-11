@@ -13,7 +13,7 @@ class PhysicalContextModifier(interfaces.context.ContextModifierInterface):
                                          description = 'Layer name for the physical space',
                                          default = 'physical')]
 
-    def __call__(self, context):
+    def modify_context(self, context):
         # Ideally allow for the plugin to specify the layering, but if not then guess at the best one
         modconfig = self.config_get(context)
         base = layers.physical.FileLayer(context,

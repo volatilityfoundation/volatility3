@@ -24,7 +24,7 @@ class IntelContextModifier(interfaces.context.ContextModifierInterface):
                                          description = "Layer name for the swap layer",
                                          optional = True)]
 
-    def __call__(self, context):
+    def modify_context(self, context):
         # TODO: Attempt to determine whether the image is 32, PAE or x64 (although the context must already know whether it is x64)
         config = self.config_get(context)
 
