@@ -52,7 +52,7 @@ class PluginInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                 option.validate_input(self.config.get_value(option.name), self.context)
 
     @abstractmethod
-    def __call__(self):
+    def run(self):
         """Executes the functionality of the code
 
         @:param

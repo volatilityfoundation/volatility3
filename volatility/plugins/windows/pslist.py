@@ -31,7 +31,7 @@ class PsList(plugins.PluginInterface):
         # Get the process from the thread object in kernel space
         return ethread.owning_process()
 
-    def __call__(self):
+    def run(self):
         self.validate_inputs()
         eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'intel', self.config.get_value('offset'))
         for proc in eproc.ActiveProcessLinks:

@@ -41,10 +41,8 @@ class CommandLine(object):
             factory = req_mapping[req]
             req.value = factory(context)
 
-        # Construct the plugin
-        runner = plugin(context)
-        # Run the plugin
-        runner()
+        # Construct and run the plugin
+        plugin(context).run()
 
     @staticmethod
     def construct_translation_layer_factory(name, requirement):
