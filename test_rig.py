@@ -14,13 +14,30 @@ from volatility.framework import xp_sp2_x86_vtypes, layers, plugins
 from volatility.framework.symbols import vtypes, native
 
 
-def test_symbols():
+def utils_load_as():
+    # TODO: This should hold the smarts for determining the physical layers and guessing at various values and so on
     native_list = native.x86NativeTable
+    ctx = framework.contexts.Context(native_list)
+    ctx.symbol_space.append(native_list)
 
-    # ctx = framework.Context(native_list)
-    # ctx.symbol_space.append(native_list)
+    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
+    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
+
+    ctx.symbol_space.append(ntkrnlmp)
+
+    return ctx
+
+def test_symbols():
     ctx = utils_load_as()
     print("Symbols,", ctx.symbol_space.natives.structures)
+
+    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
+    virtual_types['TEST_POINTER'] = [0x4, {'point1': [0x0, ['pointer', ['TEST_SYMBOL']]]}]
+    virtual_types['TEST_SYMBOL'] = [0x6, {'test1': [0x0, ['unsigned int']], 'test2': [0x4, ['unsigned short']]}]
+    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
+
+    ctx.symbol_space.append(ntkrnlmp)
+
 
     for i in list(ctx.symbol_space['ntkrnlmp'].structures):
         symbol = ctx.symbol_space.get_structure('ntkrnlmp!' + i)
@@ -29,41 +46,24 @@ def test_symbols():
     symbol = ctx.symbol_space.get_structure('ntkrnlmp!_EPROCESS')
     return symbol
 
-
-def utils_load_as():
-    # TODO: This should hold the smarts for determining the physical layers and guessing at various values and so on
-    c = framework.contexts
-    factory = c.LayerFactory("name", "", [c.physical.PhysicalContextModifier,
-                                          c.intel.IntelContextModifier,
-                                          c.windows.WindowsContextModifier])
-    return factory(c.Context())
-
-
 def test_memory():
     ctx = utils_load_as()
-    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
-    virtual_types['TEST_POINTER'] = [0x4, {'point1': [0x0, ['pointer', ['TEST_SYMBOL']]]}]
-    virtual_types['TEST_SYMBOL'] = [0x6, {'test1': [0x0, ['unsigned int']], 'test2': [0x4, ['unsigned short']]}]
-    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
-
-    ctx.symbol_space.append(ntkrnlmp)
 
     base = layers.physical.FileLayer(ctx, 'physical', filename = 'trig_data.bin')
     ctx.memory.add_layer(base)
     val = ctx.object('ntkrnlmp!TEST_POINTER', 'physical', 0)
     print(hex(val.point1.test1), val.point1.test2)
 
-
 def test_kdbgfind():
     ctx = utils_load_as()
-    base = layers.physical.FileLayer(ctx, 'physical', filename = '/home/mike/memory/xp-laptop-2005-06-25.img')
+    base = layers.physical.FileLayer(ctx, 'physical', filename = '/run/media/mike/disk/memory/xp-laptop-2005-06-25.img')
     ctx.memory.add_layer(base)
     intel = layers.intel.Intel(ctx, 'kernel', 'physical', page_map_offset = 0x39000)
     ctx.memory.add_layer(intel)
 
 
 def intel32(ctx):
-    base = layers.physical.FileLayer(ctx, 'physical', filename = '/home/mike/memory/xp-laptop-2005-06-25.img')
+    base = layers.physical.FileLayer(ctx, 'physical', filename = '/run/media/mike/disk/memory/xp-laptop-2005-06-25.img')
     ctx.memory.add_layer(base)
     intel = layers.intel.Intel(ctx, 'kernel', 'physical', page_map_offset = 0x39000)
     x = [0x823c87c0, 0x81fdf020, 0x81f5a3b8, 0x81f8eb10, 0x820e0da0, 0x82199668, 0x81fa5aa0, 0x81fa8650, 0x81faba78,
@@ -76,7 +76,7 @@ def intel32(ctx):
 
 
 def intelpae(ctx):
-    base = layers.physical.FileLayer(ctx, 'physical', filename = '/home/mike/memory/private/jon-fres.dmp')
+    base = layers.physical.FileLayer(ctx, 'physical', filename = '/run/media/mike/disk/memory/private/jon-fres.dmp')
     ctx.memory.add_layer(base)
     intel = layers.intel.IntelPAE(ctx, 'intel', 'physical', page_map_offset = 0x319000)
     x = [0x81bcc830, 0x81989940, 0x81915020, 0x8192ad18, 0x818fa7b8, 0x818f6da0, 0x818d1020, 0x818b2878, 0x8189f180,
@@ -86,7 +86,7 @@ def intelpae(ctx):
 
 
 def intel32e(ctx):
-    base = layers.physical.FileLayer(ctx, 'data', filename = '/home/mike/memory/private/ikelos-winxpsp2-x64.dmp')
+    base = layers.physical.FileLayer(ctx, 'data', filename = '/run/media/mike/disk/memory/private/ikelos-winxpsp2-x64.dmp')
     ctx.memory.add_layer(base)
     intel = layers.intel.Intel32e(ctx, 'kernel', 'data', page_map_offset = 0x3c3000)
     x = [0xfffffadffa517c20, 0xfffffadffa2c9510, 0xfffffadffb16a660, 0xfffffadff9d77c20, 0xfffffadffb0fe040,
@@ -118,6 +118,10 @@ def test_translation():
 
 def test_plugin():
     ctx = utils_load_as()
+    base = layers.physical.FileLayer(ctx, 'physical', filename = '/run/media/mike/disk/memory/xp-laptop-2005-06-25.img')
+    ctx.memory.add_layer(base)
+    intel = layers.intel.Intel(ctx, 'kernel', 'physical', page_map_offset = 0x39000)
+    ctx.memory.add_layer(intel)
 
     import volatility.plugins.windows.pslist as pslist
 
@@ -143,9 +147,13 @@ if __name__ == '__main__':
     # import timeit
     # print(timeit.Timer(main).timeit(10))
     try:
-        # test_symbols()
-        # test_memory()
-        # test_translation()
+        print("[!] Testing Symbols")
+        test_symbols()
+        print("[!] Testing Memory")
+        test_memory()
+        print("[!] Testing Intel Translations")
+        test_translation()
+        print("[!] Testing Plugin")
         test_plugin()
     except Exception as e:
         print(repr(e))
