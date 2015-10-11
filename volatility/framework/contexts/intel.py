@@ -11,14 +11,16 @@ class IntelContextModifier(interfaces.context.ContextModifierInterface):
                                          description = "Determines the memory image",
                                          default = "auto"),
                 configuration.IntRequirement(name = "page_map_offset",
-                                      description = "Offset to the directory table base"),
+                                         description = "Offset to the directory table base"),
                 configuration.StringRequirement(name = 'layer_name',
                                          description = 'Name of the layer to be added to the memory space',
                                          default = 'intel'),
-                configuration.StringRequirement(name = 'physical_layer',
-                                         description = "Layer name for the physical layer",
-                                         default = 'physical'),
-                configuration.StringRequirement(name = 'swap_layer',
+                configuration.TranslationLayerRequirement(name = 'physical_layer',
+                                         description = 'Physical Address Space',
+                                         os_type = 'windows',
+                                         architectures = None,
+                                         layer_type = 'physical'),
+                configuration.TranslationLayerRequirement(name = 'swap_layer',
                                          description = "Layer name for the swap layer",
                                          optional = True)]
 
@@ -38,6 +40,6 @@ class IntelContextModifier(interfaces.context.ContextModifierInterface):
             layer = layers.intel.IntelPAE
 
         intel = layer(context, config.get_value('layer_name'),
-                               config.get_value('physical_layer'),
+                               config.get_value('physical_layer').name,
                                page_map_offset = config.get_value('page_map_offset'))
         context.add_layer(intel)

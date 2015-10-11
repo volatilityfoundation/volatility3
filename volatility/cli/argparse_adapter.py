@@ -11,7 +11,7 @@ def StoreItemFactory(config_item):
             super(StoreItemAction, self).__init__(option_strings, dest, **kwargs)
 
         def __call__(self, parser, namespace, values, option_string = None):
-            config_item.value = values[0]
+            config_item.value = values
 
     return StoreItemAction
 

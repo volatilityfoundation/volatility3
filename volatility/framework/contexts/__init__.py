@@ -51,7 +51,6 @@ class LayerFactory(validity.ValidityRoutines, list):
         Returns a new context with all appropriate modifications (symbols, layers, etc)
         """
         for index in range(len(self)):
-            print("TODO: update top level req based on modifier reqs being updated")
             modifier = self[index](interfaces.configuration.namespace_join([self.name, self[index].__name__ + str(index)]))
             modifier(context = context)
         return context
