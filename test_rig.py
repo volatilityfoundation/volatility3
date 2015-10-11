@@ -8,7 +8,7 @@ import pdb
 import logging
 
 from volatility import framework
-from volatility.framework.contexts import Context
+from volatility.framework import contexts
 from volatility.framework.interfaces import objects
 from volatility.framework import xp_sp2_x86_vtypes, layers, plugins
 from volatility.framework.symbols import vtypes, native
@@ -20,12 +20,10 @@ def utils_load_as():
     ctx = framework.contexts.Context(native_list)
     ctx.symbol_space.append(native_list)
 
-    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
-    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
-
-    ctx.symbol_space.append(ntkrnlmp)
+    contexts.windows.WindowsContextModifier(ctx.config).modify_context(ctx)
 
     return ctx
+
 
 def test_symbols():
     ctx = utils_load_as()
@@ -38,13 +36,13 @@ def test_symbols():
 
     ctx.symbol_space.append(ntkrnlmp)
 
-
     for i in list(ctx.symbol_space['ntkrnlmp'].structures):
         symbol = ctx.symbol_space.get_structure('ntkrnlmp!' + i)
         print(symbol.vol.structure_name, symbol, symbol.vol.size)
         _ = symbol(ctx, objects.ObjectInformation(layer_name = '', offset = 0))
     symbol = ctx.symbol_space.get_structure('ntkrnlmp!_EPROCESS')
     return symbol
+
 
 def test_memory():
     ctx = utils_load_as()
@@ -53,6 +51,7 @@ def test_memory():
     ctx.memory.add_layer(base)
     val = ctx.object('ntkrnlmp!TEST_POINTER', 'physical', 0)
     print(hex(val.point1.test1), val.point1.test2)
+
 
 def test_kdbgfind():
     ctx = utils_load_as()
@@ -86,7 +85,8 @@ def intelpae(ctx):
 
 
 def intel32e(ctx):
-    base = layers.physical.FileLayer(ctx, 'data', filename = '/run/media/mike/disk/memory/private/ikelos-winxpsp2-x64.dmp')
+    base = layers.physical.FileLayer(ctx, 'data',
+                                     filename = '/run/media/mike/disk/memory/private/ikelos-winxpsp2-x64.dmp')
     ctx.memory.add_layer(base)
     intel = layers.intel.Intel32e(ctx, 'kernel', 'data', page_map_offset = 0x3c3000)
     x = [0xfffffadffa517c20, 0xfffffadffa2c9510, 0xfffffadffb16a660, 0xfffffadff9d77c20, 0xfffffadffb0fe040,
@@ -100,7 +100,7 @@ def intel32e(ctx):
 
 def test_translation():
     nativelst = native.x86NativeTable
-    ctx = Context(nativelst)
+    ctx = contexts.Context(nativelst)
     intel, x = intel32(ctx)
 
     base = layers.physical.BufferDataLayer(ctx, 'base', buffer = b" ")
@@ -125,9 +125,11 @@ def test_plugin():
 
     import volatility.plugins.windows.pslist as pslist
 
-    eproc = pslist.PsList.kernel_process_from_physical_process(ctx, 'physical', 'kernel', 0x192ad18)
+    # _ETHREAD physical offset for System process of xp-laptop-2005-06-25
+    eproc = pslist.PsList.kernel_process_from_physical_process(ctx, 'physical', 'kernel', 0x23c87c0)
     for proc in eproc.ActiveProcessLinks:
         print(proc.UniqueProcessId)
+
 
 # TODO:
 #
