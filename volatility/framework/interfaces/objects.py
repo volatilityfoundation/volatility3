@@ -4,6 +4,7 @@ Created on 6 May 2013
 @author: mike
 """
 
+import collections
 import collections.abc
 from abc import ABCMeta, abstractmethod
 

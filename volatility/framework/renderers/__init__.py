@@ -37,8 +37,8 @@ class TreeNode(interfaces.renderers.TreeNode):
             column = self._treegrid.columns[index]
             if not isinstance(values[index], column.type):
                 raise TypeError(
-                    "Values item with index " + repr(index) + " is the wrong type for column " + \
-                    repr(column.name) + " (got " + str(type(values[index])) + " but expected " + \
+                    "Values item with index " + repr(index) + " is the wrong type for column " +
+                    repr(column.name) + " (got " + str(type(values[index])) + " but expected " +
                     str(column.type) + ")")
 
     @property
@@ -140,7 +140,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """
         accumulator = initial_accumulator
         if func is None:
-            func = lambda _x, _y: None
+            def func(_x, _y):
+                return None
 
         if not self.populated:
             prev_nodes = []

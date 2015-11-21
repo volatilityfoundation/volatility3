@@ -6,7 +6,8 @@ __author__ = 'mike'
 
 class WindowsContextModifier(interfaces.context.ContextModifierInterface):
     # TODO: Only import the vtypes only when necessary
-    def __init__(self, config):
+    def __init__(self, namespace):
+        interfaces.context.ContextModifierInterface.__init__(namespace)
         from volatility.framework import xp_sp2_x86_vtypes
 
         self._virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types

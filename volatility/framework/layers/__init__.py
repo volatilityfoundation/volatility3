@@ -4,9 +4,10 @@ Created on 4 May 2013
 @author: mike
 """
 
+import collections.abc
+
 from volatility.framework import validity, interfaces, exceptions
 from volatility.framework.layers import physical, intel
-import collections.abc
 
 
 class Memory(validity.ValidityRoutines, collections.abc.Mapping):

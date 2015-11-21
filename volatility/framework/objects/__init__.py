@@ -4,8 +4,8 @@ Created on 17 Feb 2013
 @author: mike
 """
 
-import struct
 import collections
+import struct
 
 from volatility.framework import interfaces
 from volatility.framework.objects import templates
@@ -191,6 +191,7 @@ class BitField(PrimitiveObject, int):
 
 class Enumeration(interfaces.objects.ObjectInterface):
     """Returns an object made up of choices"""
+
     # FIXME: Add in body for the enumeration object
 
     def write(self, value):

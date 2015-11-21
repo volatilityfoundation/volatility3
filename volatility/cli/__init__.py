@@ -1,10 +1,10 @@
 import argparse
-import sys
 import logging
+import sys
 
-from volatility.cli import argparse_adapter
 import volatility.framework
 import volatility.plugins
+from volatility.cli import argparse_adapter
 from volatility.framework import interfaces, plugins, configuration, contexts
 
 __author__ = 'mike'
@@ -73,7 +73,6 @@ class CommandLine(object):
             else:
                 context.config.add_item(req, plugin.__name__)
         return context, req_mapping
-
 
 
 def main():

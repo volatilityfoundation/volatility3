@@ -1,13 +1,12 @@
 # TODO: Code to import all the py/pyc files available (but not both).
 # TODO: Code to return a none-instantiated list of plugin classes.
 
+import inspect
+import logging
 import os
 import sys
-import logging
-import inspect
 
 import volatility.plugins as plugins
-
 
 logger = logging.getLogger(__name__)
 

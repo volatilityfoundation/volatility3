@@ -1,8 +1,8 @@
-__author__ = 'mike'
-
 import collections.abc
 
 from volatility.framework import objects
+
+__author__ = 'mike'
 
 
 class _ETHREAD(objects.Struct):

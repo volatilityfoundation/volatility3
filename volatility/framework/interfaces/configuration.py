@@ -1,5 +1,5 @@
-from abc import ABCMeta, abstractmethod
 import collections.abc
+from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
 

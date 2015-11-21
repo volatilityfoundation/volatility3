@@ -1,8 +1,7 @@
-from abc import abstractmethod, ABCMeta
 import collections
+from abc import abstractmethod, ABCMeta
 
 from volatility.framework import validity
-
 
 __author__ = 'mike'
 
@@ -91,7 +90,6 @@ class TreeGrid(object, metaclass = ABCMeta):
         :param generator: A generator that populates the tree/grid structure
         """
 
-
     @abstractmethod
     def populate(self, func = None, initial_accumulator = None):
         """Generator that returns the next available Node
@@ -108,7 +106,6 @@ class TreeGrid(object, metaclass = ABCMeta):
     @abstractmethod
     def columns(self):
         """Returns the available columns and their ordering and types"""
-        return self._columns
 
     @abstractmethod
     def children(self, node):

@@ -1,23 +1,21 @@
-import inspect
-from volatility.framework import configuration
-
 import volatility.framework.interfaces.plugins as plugins
+from volatility.framework import configuration
 
 
 class PsList(plugins.PluginInterface):
     @classmethod
     def requirements(cls):
         return [configuration.TranslationLayerRequirement(name = 'primary',
-                                                   description = 'Kernel Address Space',
-                                                   os_type = 'windows',
-                                                   architectures = None,
-                                                   layer_type = 'kernel'),
+                                                          description = 'Kernel Address Space',
+                                                          os_type = 'windows',
+                                                          architectures = None,
+                                                          layer_type = 'kernel'),
                 configuration.IntRequirement(name = 'pid',
-                                      description = "Process ID",
-                                      optional = True),
+                                             description = "Process ID",
+                                             optional = True),
                 configuration.IntRequirement(name = 'offset',
-                                      description = 'Address of any process',
-                                      default = 0x192ad18)]
+                                             description = 'Address of any process',
+                                             default = 0x192ad18)]
 
     @staticmethod
     def kernel_process_from_physical_process(ctx, physical_layer, kernel_layer, offset):
@@ -33,6 +31,7 @@ class PsList(plugins.PluginInterface):
 
     def run(self):
         self.validate_inputs()
-        eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'intel', self.config.get_value('offset'))
+        eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'intel',
+                                                          self.config.get_value('offset'))
         for proc in eproc.ActiveProcessLinks:
             print(proc.UniqueProcessId)

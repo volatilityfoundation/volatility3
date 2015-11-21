@@ -37,6 +37,3 @@ def require_version(*args):
 
 
 from volatility.framework import interfaces, symbols, layers, contexts, configuration
-
-
-

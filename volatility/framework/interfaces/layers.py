@@ -110,5 +110,3 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 raise exceptions.LayerException("Mapping returned an overlapping element")
             self._context.memory.write(layer, mapped_offset, length)
             current_offset += length
-
-

@@ -4,13 +4,13 @@ Created on 10 Mar 2013
 @author: mike
 """
 
-import pdb
 import logging
+import pdb
 
 from volatility import framework
 from volatility.framework import contexts
-from volatility.framework.interfaces import objects
 from volatility.framework import xp_sp2_x86_vtypes, layers, plugins
+from volatility.framework.interfaces import objects
 from volatility.framework.symbols import vtypes, native
 
 

@@ -26,7 +26,7 @@ class SymbolTableInterface(validity.ValidityRoutines):
         """
         raise NotImplementedError("Abstract property get_constant not implemented by subclass.")
 
-    @ property
+    @property
     def constants(self):
         """Returns an iterator of the constant symbols"""
         raise NotImplementedError("Abstract property constants not implemented by subclass.")

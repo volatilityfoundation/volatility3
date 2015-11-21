@@ -1,13 +1,8 @@
 from volatility.framework import validity, interfaces, symbols, layers
+from volatility.framework.contexts import intel, physical, windows
 from volatility.framework.interfaces.context import ContextModifierInterface
-from volatility.framework.symbols import native
-import volatility
-
 
 __author__ = 'mike'
-
-from volatility.framework.contexts import intel, physical, windows
-from volatility.framework import configuration
 
 
 class LayerFactory(validity.ValidityRoutines, list):
