@@ -1,8 +1,9 @@
 import argparse
 
-from volatility.framework import interfaces, configuration
-
 __author__ = 'mike'
+
+from volatility.framework import interfaces
+from volatility.framework import configuration
 
 
 def StoreItemFactory(config_item):
@@ -18,7 +19,7 @@ def StoreItemFactory(config_item):
 
 def adapt_config(config, parser, group = None):
     """Constructs an argument parser based on a volatility configuration"""
-    if not group and not isinstance(config, interfaces.configuration.ConfigurationGroup):
+    if not group and not isinstance(config, interfaces.configuration.ConfigurationSchemaGroup):
         raise TypeError("adapt_config expects a ConfigurationItem, not a " + type(config).__name__)
 
     for item in flatten_configuration(config):
@@ -32,7 +33,7 @@ def adapt_config(config, parser, group = None):
 def flatten_configuration(config):
     output = {}
     for item in config:
-        if isinstance(config[item], interfaces.configuration.ConfigurationGroup):
+        if isinstance(config[item], interfaces.configuration.ConfigurationSchemaGroup):
             for k, v in flatten_configuration(config[item]).items():
                 output[item + "." + k] = v
         else:

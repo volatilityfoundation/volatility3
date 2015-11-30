@@ -65,7 +65,7 @@ class CommandLine(object):
             context.config.add_item(req, plugin.__name__)
             if isinstance(req, configuration.TranslationLayerRequirement):
                 # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
-                namespace = interfaces.configuration.namespace_join([plugin.__name__, req.name + "_layer"])
+                namespace = interfaces.configuration.schema_name_join([plugin.__name__, req.name + "_layer"])
                 factory = self.construct_translation_layer_factory(namespace, req)
                 req_mapping[req] = factory
                 for facreq in factory.requirements():

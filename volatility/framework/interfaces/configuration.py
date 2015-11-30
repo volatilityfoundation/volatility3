@@ -1,101 +1,100 @@
-import collections.abc
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
 
 __author__ = 'mike'
 
-NAMESPACE_DIVIDER = "."
+SCHEMA_NAME_DIVIDER = "."
 
 
-def namespace_join(pathlist):
-    return NAMESPACE_DIVIDER.join(pathlist)
+def schema_name_join(pathlist):
+    return SCHEMA_NAME_DIVIDER.join(pathlist)
 
 
-class ConfigurationItem(validity.ValidityRoutines):
+class ConfigurationSchemaNode(validity.ValidityRoutines):
     """Class to distinguish configuration elements from everything else"""
 
-    def __init__(self, name, optional):
+    def __init__(self, name, description = None, default = None, optional = False):
         validity.ValidityRoutines.__init__(self)
         self._type_check(name, str)
-        if NAMESPACE_DIVIDER in name:
-            raise ValueError("Name cannot contain the namespace divider (" + NAMESPACE_DIVIDER + ")")
+        if SCHEMA_NAME_DIVIDER in name:
+            raise ValueError("Name cannot contain the namespace divider (" + SCHEMA_NAME_DIVIDER + ")")
         self._name = name
+        self._description = description or ""
+        self._default = default
         self._optional = optional
+        self._children = {}
 
     @property
     def name(self):
         """The name of the Option."""
         return self._name
 
-    @abstractmethod
-    def validate(self, context):
-        """Validates the currently set value"""
-        pass
+    @property
+    def description(self):
+        """A short description of what the Option is designed to affect or achieve."""
+        return self._description
+
+    @property
+    def default(self):
+        """Returns the default value if one is set"""
+        return self._default
 
     @property
     def optional(self):
         """Whether the option is required for or not"""
         return self._optional
 
+    # Child operations
 
-class ConfigurationGroup(ConfigurationItem, collections.abc.Mapping):
-    """Class to hold and provide a namespace for plugins and core options"""
-
-    def __init__(self, name):
-        ConfigurationItem.__init__(self, name, optional = False)
-        self._namespace = {}
-
-    def add_item(self, item, namespace = None):
-        if not isinstance(item, ConfigurationItem):
+    def add_item(self, item):
+        """Add a child to the configuration schema"""
+        if not isinstance(item, ConfigurationSchemaNode):
             raise TypeError("Only ConfigurationItem objects can be added to a ConfigurationGroup")
-        if namespace:
-            ns_split = namespace.split(NAMESPACE_DIVIDER)
-            if ns_split[0] not in self:
-                self._namespace[ns_split[0]] = ConfigurationGroup(ns_split[0])
-            return self._namespace[ns_split[0]].add_item(item, namespace_join(ns_split[1:]))
-        self._namespace[item.name] = item
+        self._children[item.name] = item
 
     def __iter__(self):
-        return iter(self._namespace)
+        """Iterate through all the child configuration schemas"""
+        return iter(self._children)
 
     def __getitem__(self, item):
+        """Returns a single child configuration schema by name"""
         self._type_check(item, str)
-        item_split = item.split(NAMESPACE_DIVIDER)
+        item_split = item.split(SCHEMA_NAME_DIVIDER)
         if len(item_split) > 1:
-            return self._namespace[item_split[0]][namespace_join(item_split[1:])]
+            return self._children[item_split[0]][schema_name_join(item_split[1:])]
         # Let namespace produce the index error if necessary
-        return self._namespace[item_split[0]]
-
-    def get_value(self, item):
-        """Returns the value of the requirement, not the requirement itself"""
-        return self.get(item).value
+        return self._children[item_split[0]]
 
     def __contains__(self, item):
-        item_split = item.split(NAMESPACE_DIVIDER)
+        """Determine membership"""
+        item_split = item.split(SCHEMA_NAME_DIVIDER)
         if len(item_split) > 1:
-            if item_split[0] in self._namespace:
-                return namespace_join(item_split[1:]) in self._namespace[item_split[0]]
+            if item_split[0] in self._children:
+                return schema_name_join(item_split[1:]) in self._children[item_split[0]]
             else:
                 return False
-        return item in self._namespace
+        return item in self._children
 
     def __len__(self):
-        return len(self._namespace)
+        return len(self._children)
 
-    def validate(self, context):
-        """Validates the current value, which for groups cannot be set, so always returns True"""
-        return all([self[subitem].validate(context) for subitem in self._namespace if not self[subitem].optional])
+    # Validation routines
+
+    @abstractmethod
+    def validate(self, value, context):
+        """Method to validate the value for the configuration object against a context
+
+           Raises a ValueError if the value provided is invalid for some reason.
+        """
 
 
-class GenericRequirement(ConfigurationItem, metaclass = ABCMeta):
+class GenericRequirement(ConfigurationSchemaNode, metaclass = ABCMeta):
     """Class to handle a single specific configuration option"""
 
     def __init__(self, name, description = None, default = None, optional = None):
         """Creates a new option"""
-        ConfigurationItem.__init__(self, name, optional)
-        self._default = default
-        self._description = description
+        ConfigurationSchemaNode.__init__(self, name, description = description, default = default, optional = optional)
         self._value = None
 
     @property
@@ -110,23 +109,15 @@ class GenericRequirement(ConfigurationItem, metaclass = ABCMeta):
         """Sets the value to that of the input data"""
         self._value = data
 
-    @property
-    def default(self):
-        """Returns the default value if one is set"""
-        return self._default
-
-    @property
-    def description(self):
-        """A short description of what the Option is designed to affect or achieve."""
-        return self._description
-
-    @abstractmethod
-    def validate_input(self, value, context):
-        """Validates the value against a context
-
-        Throws exceptions if the valid is invalid"""
-        pass
-
-    def validate(self, context):
+    def self_validate(self, context):
         """Validates the currently set value"""
-        return self.validate_input(self.value, context)
+        return self.validate(self.value, context)
+
+
+class Configurable(metaclass = ABCMeta):
+    """Class to allow objects to have requirements and populate the context config tree"""
+
+    @classmethod
+    @abstractmethod
+    def get_schema(self):
+        """Returns a list of configuration schema nodes for this object"""
