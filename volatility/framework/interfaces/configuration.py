@@ -7,6 +7,22 @@ __author__ = 'mike'
 SCHEMA_NAME_DIVIDER = "."
 
 
+# Design requirements:
+#  Plugins can be queried for their requirements without instantiating them
+#  The context can record validated data
+#  Configurables can have multiple identical (but differently named) requirement trees (based off the same schema)
+#  Instantiated plugins can pre-populate the context with (validated) da (in order to force layer names)
+#  Translation layer requirements can specify a layer name (or generate one if not specified)
+#    Still not decided whether the layer holds the name chosen (and this can be pre-populated) or if it's specified
+#    as part of the requirement, which then returns true/false if it could be fulfilled
+
+# Non-instantiated plugin
+# -> Requirement schema nodes (instantiated)
+#    (Translation layers contain all information required)
+# Instantiate plugin
+# -> Requirement schema nodes (instantiated) wrapped in value reader/writer/valdiator
+
+
 def schema_name_join(pathlist):
     return SCHEMA_NAME_DIVIDER.join(pathlist)
 
