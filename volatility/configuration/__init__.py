@@ -32,6 +32,8 @@ class TranslationLayerRequirement(ConfigurationSchemaNode, Configurable):
 
     def validate(self, value, context):
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
+        if not isinstance(value, str):
+            raise TypeError("TranslationLayerRequirements only accepts string labels")
         if value not in context.memory:
             raise IndexError((value or "") + " is not a memory layer")
 
@@ -71,7 +73,7 @@ class ListRequirement(ConfigurationSchemaNode):
         [self.element_type.validate(element, context) for element in value]
 
 # class DisjunctionRequirement(ConfigurationSchemaNode):
-#     """Class allow any of multiple requirements"""
+#     """Class allowing any of multiple requirements"""
 #
 #     def __init__(self, requirements, *args, **kwargs):
 #
@@ -80,7 +82,7 @@ class ListRequirement(ConfigurationSchemaNode):
 #
 #
 # class ConjunctionRequierment(ConfigurationSchemaNode):
-#     """Class require all of multiple requirements"""
+#     """Class requiring all of multiple requirements"""
 #
 #     def __init__(self, requirements, *args, **kwargs):
 # # TODO: Type check requirements to ensure it's a dictionary of requirements

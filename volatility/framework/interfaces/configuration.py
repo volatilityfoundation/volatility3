@@ -139,5 +139,5 @@ class Configurable(metaclass = ABCMeta):
 
     @classmethod
     @abstractmethod
-    def get_schema(self):
+    def get_schema(cls):
         """Returns a list of configuration schema nodes for this object"""
