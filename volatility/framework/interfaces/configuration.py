@@ -16,6 +16,10 @@ SCHEMA_NAME_DIVIDER = "."
 #    Still not decided whether the layer holds the name chosen (and this can be pre-populated) or if it's specified
 #    as part of the requirement, which then returns true/false if it could be fulfilled
 
+# Still need to link schema in to config values
+#   Need to allow config values to be recovered by complete sub-path
+#   Configurables need to hold a hook into the config tree to get their own sub components
+
 # Non-instantiated plugin
 # -> Requirement schema nodes (instantiated)
 #    (Translation layers contain all information required)

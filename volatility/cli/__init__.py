@@ -36,6 +36,9 @@ class CommandLine(object):
         # Run the argparser
         parser.parse_args()
 
+        # Determine the selected plugin
+        # Translate the parsed args to a context configuration
+
         # Generate the layers from the arguments
         for req in req_mapping:
             factory = req_mapping[req]
