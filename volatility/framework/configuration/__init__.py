@@ -72,17 +72,28 @@ class ListRequirement(ConfigurationSchemaNode):
             raise TypeError("List option provided more or less elements than allowed.")
         [self.element_type.validate(element, context) for element in value]
 
-# class DisjunctionRequirement(ConfigurationSchemaNode):
-#     """Class allowing any of multiple requirements"""
-#
-#     def __init__(self, requirements, *args, **kwargs):
-#
-#
-# # TODO: Type check requirements to ensure it's a dictionary of requirements
-#
-#
-# class ConjunctionRequierment(ConfigurationSchemaNode):
-#     """Class requiring all of multiple requirements"""
-#
-#     def __init__(self, requirements, *args, **kwargs):
-# # TODO: Type check requirements to ensure it's a dictionary of requirements
+
+class DisjunctionRequirement(ConfigurationSchemaNode):
+    """Class allowing any of multiple requirements"""
+
+    def __init__(self, requirements, *args, **kwargs):
+        # TODO: Type check requirements to ensure it's a dictionary of requirements
+        ConfigurationSchemaNode.__init__(self, *args, **kwargs)
+        for requirement in requirements:
+            self.add_item(requirement)
+
+    def validate(self, value, context):
+        pass
+
+
+class ConjunctionRequierment(ConfigurationSchemaNode):
+    """Class requiring all of multiple requirements"""
+
+    def __init__(self, requirements, *args, **kwargs):
+        # TODO: Type check requirements to ensure it's a dictionary of requirements
+        ConfigurationSchemaNode.__init__(self, *args, **kwargs)
+        for requirement in requirements:
+            self.add_item(requirement)
+
+    def validate(self, value, context):
+        pass

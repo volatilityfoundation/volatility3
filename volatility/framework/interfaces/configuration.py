@@ -104,6 +104,7 @@ class ConfigurationSchemaNode(validity.ValidityRoutines):
     @abstractmethod
     def validate(self, value, context):
         """Method to validate the value for the configuration object against a context
+           This must validate its own children (so that conjunction/disjunction can work)
 
            Raises a ValueError if the value provided is invalid for some reason.
         """
