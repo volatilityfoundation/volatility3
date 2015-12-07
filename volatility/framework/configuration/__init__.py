@@ -27,6 +27,20 @@ class StringRequirement(InstanceRequirement):
 class TranslationLayerRequirement(ConfigurationSchemaNode, Configurable):
     """Class maintaining the limitations on what sort of address spaces are acceptable"""
 
+    def __init__(self, name, layer_name):
+        """Constructs a Translation Layer Requirement
+
+        :param name:
+        :param layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
+        :return:
+        """
+        self._layer_name = layer_name
+
+    def get_schema(cls):
+        # Runs through each of the available translation layers, determining what they're capable of,
+        # and adding their requirements (tagged with their class) to a Disjunction config schema node
+        pass
+
     # TODO: Add requirements: acceptable OSes from the address_space information
     # TODO: Add requirements: acceptable arches from the available layers
 
