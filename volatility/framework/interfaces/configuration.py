@@ -28,7 +28,13 @@ SCHEMA_NAME_DIVIDER = "."
 
 
 def schema_name_join(pathlist):
+    """Returns the path string of a list of path components for a schema"""
     return SCHEMA_NAME_DIVIDER.join(pathlist)
+
+
+def schema_name_split(path):
+    """Returns the path components of a schema name"""
+    return path.split(SCHEMA_NAME_DIVIDER)
 
 
 class ConfigurationSchemaNode(validity.ValidityRoutines):
@@ -69,8 +75,7 @@ class ConfigurationSchemaNode(validity.ValidityRoutines):
 
     def add_item(self, item):
         """Add a child to the configuration schema"""
-        if not isinstance(item, ConfigurationSchemaNode):
-            raise TypeError("Only ConfigurationItem objects can be added to a ConfigurationGroup")
+        self._type_check(item, ConfigurationSchemaNode)
         self._children[item.name] = item
 
     def __iter__(self):
@@ -102,37 +107,42 @@ class ConfigurationSchemaNode(validity.ValidityRoutines):
     # Validation routines
 
     @abstractmethod
-    def validate(self, config_location, context):
+    def validate(self, value, context, valid_children = None):
         """Method to validate the value stored at config_location for the configuration object against a context
            This must validate its own children (so that conjunction/disjunction can work)
 
-           Raises a ValueError if the value provided is invalid for some reason.
+           Raises a ValueError based on whether the item is valid or not
         """
 
 
-class GenericRequirement(ConfigurationSchemaNode, metaclass = ABCMeta):
-    """Class to handle a single specific configuration option"""
+class ConfigurationItem(validity.ValidityRoutines):
+    """Class for wrapping ConfigurationSchemaNodes to create specific configuration items"""
 
-    def __init__(self, name, description = None, default = None, optional = None):
-        """Creates a new option"""
-        ConfigurationSchemaNode.__init__(self, name, description = description, default = default, optional = optional)
-        self._value = None
+    def __init__(self, schema, config_location_prefix = None):
+        """"""
+        validity.ValidityRoutines.__init__(self)
+        self._schema = self._type_check(schema, ConfigurationSchemaNode)
+        if config_location_prefix is None:
+            config_location_prefix = "core"
+        self._config_location = schema_name_join(
+                schema_name_split(self._type_check(config_location_prefix, str)) +
+                [self._schema.name])
 
-    @property
-    def value(self):
-        """Returns the value or the default if the value is not set"""
-        if self._value is None:
-            return self._default
-        return self._value
+        self._children = []
 
-    @value.setter
-    def value(self, data):
-        """Sets the value to that of the input data"""
-        self._value = data
+        for child in self._schema:
+            self._children.append(
+                    ConfigurationItem(child, self._config_location))
 
-    def self_validate(self, context):
-        """Validates the currently set value"""
-        return self.validate(self.value, context)
+    def valid(self, context):
+        child_results = []
+        for child in self._children:
+            child_results.append(child.valid(context))
+        try:
+            self._schema.validate(context.config[self._config_location], context, child_results)
+            return True
+        except ValueError:
+            return False
 
 
 class Configurable(metaclass = ABCMeta):
