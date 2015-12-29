@@ -115,7 +115,7 @@ class Pointer(Integer):
     """Pointer which points to another object"""
 
     def __init__(self, context, structure_name, object_info, struct_format, target = None):
-        self._type_check(target, templates.ObjectTemplate)
+        self._check_type(target, templates.ObjectTemplate)
         Integer.__init__(self,
                          context = context,
                          object_info = object_info,
@@ -165,7 +165,7 @@ class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
 
     def __new__(cls, context, structure_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
-        cls._type_check(target, Integer)
+        cls._check_type(target, Integer)
         value = target(context = context,
                        structure_name = structure_name,
                        object_info = object_info,
@@ -202,12 +202,12 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
 
     def __init__(self, context, structure_name, object_info, count = 0, target = None):
-        self._type_check(target, templates.ObjectTemplate)
+        self._check_type(target, templates.ObjectTemplate)
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
                                                     structure_name = structure_name,
                                                     object_info = object_info)
-        self._vol['count'] = self._type_check(count, int)
+        self._vol['count'] = self._check_type(count, int)
         self._vol['target'] = target
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):

@@ -8,7 +8,7 @@ Created on 4 May 2013
 class ValidityRoutines(object):
     """Class to hold all validation routines, such as type checking"""
 
-    def _type_check(self, value, valid_type):
+    def _check_type(self, value, valid_type):
         """Checks that value is an instance of valid_type, and returns value if it is, or throws a TypeError otherwise
 
         :param value: The value of which to validate the type
@@ -21,7 +21,7 @@ class ValidityRoutines(object):
             value).__name__
         return value
 
-    def _class_check(self, klass, valid_class):
+    def _check_class(self, klass, valid_class):
         """Checks that class is an instance of valid_class, and returns klass if it is, or throws a TypeError otherwise
 
         :param klass: Class to validate

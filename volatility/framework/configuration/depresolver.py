@@ -14,7 +14,7 @@ class TranslationLayerDependencyResolver(validity.ValidityRoutines):
 
     def resolve_dependencies(self, configurable):
         """Takes a configurable and produces a priority ordered tree of possible solutions to satisfy the various requirements"""
-        self._type_check(configurable, interfaces.configuration.Configurable)
+        self._check_type(configurable, interfaces.configuration.Configurable)
 
         for requirement in configurable.get_schemas():
             pass

@@ -15,8 +15,8 @@ class DataLayerInterface(validity.ValidityRoutines, configuration.Configurable, 
     """A Layer that directly holds data (and does not translate it"""
 
     def __init__(self, context, name):
-        self._type_check(name, str)
-        self._type_check(context, context_module.ContextInterface)
+        self._check_type(name, str)
+        self._check_type(context, context_module.ContextInterface)
         self._name = name
         self._context = context
 

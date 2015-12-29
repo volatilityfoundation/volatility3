@@ -26,7 +26,7 @@ class PluginInterface(validity.ValidityRoutines, interfaces.configuration.Config
     """Class that defines the interface all Plugins must maintain"""
 
     def __init__(self, context):
-        self._type_check(context, interfaces.context.ContextInterface)
+        self._check_type(context, interfaces.context.ContextInterface)
         self._context = context
         self.validate_inputs()
 

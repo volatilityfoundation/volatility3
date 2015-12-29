@@ -58,7 +58,7 @@ class ContextModifierInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         :param namespace: Specifies the namespace for all configuration options to be specified under
         :type namespace: str
         """
-        self.namespace = self._type_check(namespace, str)
+        self.namespace = self._check_type(namespace, str)
 
     def config_get(self, context):
         return context.config[self.namespace]

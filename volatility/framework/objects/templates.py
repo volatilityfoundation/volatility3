@@ -21,7 +21,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         interfaces.objects.Template.__init__(self,
                                              structure_name = structure_name,
                                              **arguments)
-        self._class_check(object_class, interfaces.objects.ObjectInterface)
+        self._check_class(object_class, interfaces.objects.ObjectInterface)
         self.update_vol(object_class = object_class)
 
     @property

@@ -11,8 +11,8 @@ class LayerFactory(validity.ValidityRoutines, list):
     def __init__(self, name, requirement, lst = None):
         if lst is None:
             lst = []
-        self._type_check(lst, list)
-        self._type_check(name, str)
+        self._check_type(lst, list)
+        self._check_type(name, str)
         self._name = name
         self._req = requirement
 
@@ -26,7 +26,7 @@ class LayerFactory(validity.ValidityRoutines, list):
         return self._name
 
     def __setitem__(self, key, value):
-        self._class_check(value, ContextModifierInterface)
+        self._check_class(value, ContextModifierInterface)
         super(LayerFactory, self).__setitem__(key, value)
 
     def requirements(self):

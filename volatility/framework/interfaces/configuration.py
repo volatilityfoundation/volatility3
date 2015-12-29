@@ -38,7 +38,7 @@ class ConfigurationSchemaNode(validity.ValidityRoutines):
 
     def __init__(self, name, description = None, default = None, optional = False):
         validity.ValidityRoutines.__init__(self)
-        self._type_check(name, str)
+        self._check_type(name, str)
         if SCHEMA_NAME_DIVIDER in name:
             raise ValueError("Name cannot contain the namespace divider (" + SCHEMA_NAME_DIVIDER + ")")
         self._name = name

@@ -11,9 +11,9 @@ class SymbolTableInterface(validity.ValidityRoutines):
     """Handles a table of symbols"""
 
     def __init__(self, name, native_structures = None):
-        self._type_check(native_structures, NativeTableInterface)
+        self._check_type(native_structures, NativeTableInterface)
         if name:
-            self._type_check(name, str)
+            self._check_type(name, str)
         self.name = name or None
         self._native_structures = native_structures
 
@@ -58,7 +58,7 @@ class SymbolTableInterface(validity.ValidityRoutines):
 
            WARNING: This allows changing the underlying size of all the other structures referenced in the symbolspace
         """
-        self._type_check(value, NativeTableInterface)
+        self._check_type(value, NativeTableInterface)
         self._native_structures = value
 
     # ## Functions for overriding classes

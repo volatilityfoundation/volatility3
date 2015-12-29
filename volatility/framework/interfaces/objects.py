@@ -41,9 +41,9 @@ class ObjectInformation(ReadOnlyMapping):
     """Contains information useful/pertinent only to an individual object (like an instance)"""
 
     def __init__(self, layer_name, offset, member_name = None, parent = None):
-        self._type_check(offset, int)
+        self._check_type(offset, int)
         if parent:
-            self._type_check(parent, ObjectInterface)
+            self._check_type(parent, ObjectInterface)
         ReadOnlyMapping.__init__(self, {'layer_name': layer_name,
                                         'offset': offset,
                                         'member_name': member_name,
@@ -57,8 +57,8 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         # Since objects are likely to be instantiated often,
         # we're only checking that context, offset and parent
         # Everything else may be wrong, but that will get caught later on
-        self._type_check(context, context_module.ContextInterface)
-        self._type_check(object_info, ObjectInformation)
+        self._check_type(context, context_module.ContextInterface)
+        self._check_type(object_info, ObjectInformation)
 
         # Add an empty dictionary at the start to allow objects to add their own data to the vol object
         #
