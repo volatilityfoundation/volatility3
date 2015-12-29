@@ -9,22 +9,18 @@ SCHEMA_NAME_DIVIDER = "."
 
 # Design requirements:
 #  Plugins can be queried for their requirements without instantiating them
-#  The context can record validated data
-#  Configurables can have multiple identical (but differently named) requirement trees (based off the same schema)
-#  Instantiated plugins can pre-populate the context with (validated) da (in order to force layer names)
+#  The context can record config data
 #  Translation layer requirements can specify a layer name (or generate one if not specified)
-#    Still not decided whether the layer holds the name chosen (and this can be pre-populated) or if it's specified
-#    as part of the requirement, which then returns true/false if it could be fulfilled
+#    It's specified as part of the requirement, which then validates true/false if it could be fulfilled
 
 # Still need to link schema in to config values
 #   Need to allow config values to be recovered by complete sub-path
-#   Configurables need to hold a hook into the config tree to get their own sub components
 
 # Non-instantiated plugin
 # -> Requirement schema nodes (instantiated)
 #    (Translation layers contain all information required)
-# Instantiate plugin
-# -> Requirement schema nodes (instantiated) wrapped in value reader/writer/valdiator
+# Dependency solver
+#   Attempts to fill all dependencies by traversing the various available classes to find a solution
 
 
 def schema_name_join(pathlist):
@@ -49,7 +45,6 @@ class ConfigurationSchemaNode(validity.ValidityRoutines):
         self._description = description or ""
         self._default = default
         self._optional = optional
-        self._children = {}
 
     @property
     def name(self):
@@ -71,78 +66,14 @@ class ConfigurationSchemaNode(validity.ValidityRoutines):
         """Whether the option is required for or not"""
         return self._optional
 
-    # Child operations
-
-    def add_item(self, item):
-        """Add a child to the configuration schema"""
-        self._type_check(item, ConfigurationSchemaNode)
-        self._children[item.name] = item
-
-    def __iter__(self):
-        """Iterate through all the child configuration schemas"""
-        return iter(self._children)
-
-    def __getitem__(self, item):
-        """Returns a single child configuration schema by name"""
-        self._type_check(item, str)
-        item_split = item.split(SCHEMA_NAME_DIVIDER)
-        if len(item_split) > 1:
-            return self._children[item_split[0]][schema_name_join(item_split[1:])]
-        # Let namespace produce the index error if necessary
-        return self._children[item_split[0]]
-
-    def __contains__(self, item):
-        """Determine membership"""
-        item_split = item.split(SCHEMA_NAME_DIVIDER)
-        if len(item_split) > 1:
-            if item_split[0] in self._children:
-                return schema_name_join(item_split[1:]) in self._children[item_split[0]]
-            else:
-                return False
-        return item in self._children
-
-    def __len__(self):
-        return len(self._children)
-
     # Validation routines
 
     @abstractmethod
-    def validate(self, value, context, valid_children = None):
+    def validate(self, value, context):
         """Method to validate the value stored at config_location for the configuration object against a context
-           This must validate its own children (so that conjunction/disjunction can work)
 
            Raises a ValueError based on whether the item is valid or not
         """
-
-
-class ConfigurationItem(validity.ValidityRoutines):
-    """Class for wrapping ConfigurationSchemaNodes to create specific configuration items"""
-
-    def __init__(self, schema, config_location_prefix = None):
-        """"""
-        validity.ValidityRoutines.__init__(self)
-        self._schema = self._type_check(schema, ConfigurationSchemaNode)
-        if config_location_prefix is None:
-            config_location_prefix = "core"
-        self._config_location = schema_name_join(
-                schema_name_split(self._type_check(config_location_prefix, str)) +
-                [self._schema.name])
-
-        self._children = []
-
-        for child in self._schema:
-            self._children.append(
-                    ConfigurationItem(child, self._config_location))
-
-    def valid(self, context):
-        child_results = []
-        for child in self._children:
-            child_results.append(child.valid(context))
-        try:
-            self._schema.validate(context.config[self._config_location], context, child_results)
-            return True
-        except ValueError:
-            return False
 
 
 class Configurable(metaclass = ABCMeta):
@@ -152,3 +83,9 @@ class Configurable(metaclass = ABCMeta):
     @abstractmethod
     def get_schema(cls):
         """Returns a list of configuration schema nodes for this object"""
+        return []
+
+    def create_configuration(self, location, context):
+        """Pins the configuration schemas to a location within the context's config storage"""
+        for requirement in self.get_schema():
+            pass

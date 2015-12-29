@@ -1,7 +1,6 @@
 # TODO: Code to import all the py/pyc files available (but not both).
 # TODO: Code to return a none-instantiated list of plugin classes.
 
-import inspect
 import logging
 import os
 import sys
@@ -9,16 +8,6 @@ import sys
 import volatility.plugins as plugins
 
 logger = logging.getLogger(__name__)
-
-
-def class_subclasses(cls):
-    """Returns all the (recursive) subclasses of a given class"""
-    if not inspect.isclass(cls):
-        raise TypeError(repr(cls) + " is not a class.")
-    for clazz in cls.__subclasses__():
-        yield clazz
-        for return_value in class_subclasses(clazz):
-            yield return_value
 
 
 def import_plugins():

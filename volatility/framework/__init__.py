@@ -1,4 +1,5 @@
 """Volatility 3 framework"""
+import inspect
 
 # ##
 #
@@ -34,6 +35,16 @@ def require_version(*args):
                 raise Exception("Framework version " + ".".join([str(x) for x in version()[0:1]]) +
                                 " is an older revision than the required version " +
                                 ".".join([str(x) for x in args[0:2]]))
+
+
+def class_subclasses(cls):
+    """Returns all the (recursive) subclasses of a given class"""
+    if not inspect.isclass(cls):
+        raise TypeError(repr(cls) + " is not a class.")
+    for clazz in cls.__subclasses__():
+        yield clazz
+        for return_value in class_subclasses(clazz):
+            yield return_value
 
 
 from volatility.framework import interfaces, symbols, layers, contexts, configuration

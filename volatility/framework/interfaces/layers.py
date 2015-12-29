@@ -6,11 +6,12 @@ Created on 4 May 2013
 
 from volatility.framework import validity, exceptions
 # We can't just import interfaces because we'd have a cycle going
+from volatility.framework.interfaces import configuration
 from volatility.framework.interfaces import context as context_module
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-class DataLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+class DataLayerInterface(validity.ValidityRoutines, configuration.Configurable, metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it"""
 
     def __init__(self, context, name):
@@ -59,6 +60,11 @@ class DataLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
            This will close all handles, and make the object unreadable
            (exceptions will be thrown using a DataLayer after destruction)"""
         pass
+
+    @abstractmethod
+    @classmethod
+    def get_schema(cls):
+        """Returns a list of requirements for this type of layer"""
 
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
