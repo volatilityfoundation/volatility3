@@ -6,7 +6,7 @@ Created on 6 May 2013
 
 import os.path
 
-from volatility.framework import interfaces, exceptions
+from volatility.framework import interfaces, exceptions, configuration
 
 
 class BufferDataLayer(interfaces.layers.DataLayerInterface):
@@ -97,3 +97,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def destroy(self):
         """Closes the file handle"""
         self._file.close()
+
+    @classmethod
+    def get_schema(cls):
+        return [configuration.StringRequirement(name = 'filename', optional = False)]

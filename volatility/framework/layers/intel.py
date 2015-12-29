@@ -7,6 +7,7 @@ Created on 7 May 2013
 import math
 import struct
 
+import volatility.framework.configuration as configuration
 from volatility.framework import interfaces, exceptions
 
 
@@ -123,6 +124,12 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         """Returns a list of the lower layers that this layer is dependent upon"""
         # TODO: Add in the whole buffalo
         return [self._base_layer]
+
+    @classmethod
+    def get_schema(cls):
+        return [configuration.TranslationLayerRequirement(name = 'memory_layer', optional = False),
+                configuration.TranslationLayerRequirement(name = 'swap_layer', optional = True),
+                configuration.IntRequirement(name = 'page_map_offset', optional = False)]
 
 
 class IntelPAE(Intel):
