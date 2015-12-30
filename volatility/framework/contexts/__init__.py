@@ -23,7 +23,7 @@ class Context(interfaces.context.ContextInterface):
         interfaces.context.ContextInterface.__init__(self)
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
-        self._config = interfaces.configuration.ConfigurationSchemaGroup(name = 'volatility')
+        self._config = {}
 
     # ## Symbol Space Functions
 
@@ -34,8 +34,8 @@ class Context(interfaces.context.ContextInterface):
 
     @config.setter
     def config(self, value):
-        if not isinstance(value, interfaces.configuration.ConfigurationSchemaGroup):
-            raise TypeError("Configuration must of type ConfigurationGroup")
+        if not isinstance(value, dict):
+            raise TypeError("Configuration must be of type Dict")
         self._config = value
 
     @property

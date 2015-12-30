@@ -42,6 +42,11 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
         self._check_type(data, bytes)
         self._buffer = self._buffer[:address] + data + self._buffer[address + len(data):]
 
+    @classmethod
+    def get_schema(cls):
+        # No real requirements (only the buffer).  Need to figure out if there's a better way of representing this
+        return []
+
 
 class FileLayer(interfaces.layers.DataLayerInterface):
     """a DataLayer backed by a file on the filesystem"""

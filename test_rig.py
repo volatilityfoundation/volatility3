@@ -11,7 +11,7 @@ from volatility import framework
 from volatility.framework import contexts
 from volatility.framework import xp_sp2_x86_vtypes, layers, plugins
 from volatility.framework.interfaces import objects
-from volatility.framework.symbols import vtypes, native
+from volatility.framework.symbols import vtypes, native, windows
 
 
 def utils_load_as():
@@ -20,7 +20,14 @@ def utils_load_as():
     ctx = framework.contexts.Context(native_list)
     ctx.symbol_space.append(native_list)
 
-    contexts.windows.WindowsContextModifier(ctx.config).modify_context(ctx)
+    from volatility.framework import xp_sp2_x86_vtypes
+
+    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
+    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
+    ntkrnlmp.set_structure_class('_ETHREAD', windows._ETHREAD)
+    ntkrnlmp.set_structure_class('_LIST_ENTRY', windows._LIST_ENTRY)
+    ctx.symbol_space.append(ntkrnlmp)
+    # contexts.windows.WindowsContextModifier(ctx.config).modify_context(ctx)
 
     return ctx
 
