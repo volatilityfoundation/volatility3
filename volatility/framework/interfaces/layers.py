@@ -61,8 +61,8 @@ class DataLayerInterface(validity.ValidityRoutines, configuration.Configurable, 
            (exceptions will be thrown using a DataLayer after destruction)"""
         pass
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def get_schema(cls):
         """Returns a list of requirements for this type of layer"""
 

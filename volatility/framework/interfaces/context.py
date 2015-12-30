@@ -6,6 +6,7 @@ Created on 6 May 2013
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from volatility.framework import validity
+from volatility.framework.interfaces import configuration
 
 
 class ContextInterface(object, metaclass = ABCMeta):
@@ -51,7 +52,7 @@ class ContextInterface(object, metaclass = ABCMeta):
         """
 
 
-class ContextModifierInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+class ContextModifierInterface(validity.ValidityRoutines, configuration.Configurable, metaclass = ABCMeta):
     def __init__(self, namespace):
         """Initializes the context modifier
 
@@ -62,12 +63,6 @@ class ContextModifierInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     def config_get(self, context):
         return context.config[self.namespace]
-
-    @classmethod
-    @abstractmethod
-    def requirements(cls):
-        """Returns all the options that might need to be passed to modify the context"""
-        return []
 
     @abstractmethod
     def modify_context(self, context):

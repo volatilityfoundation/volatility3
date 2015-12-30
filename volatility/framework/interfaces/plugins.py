@@ -5,8 +5,9 @@ Created on 6 May 2013
 """
 from abc import abstractmethod, ABCMeta
 
-from volatility.framework import interfaces
 from volatility.framework import validity
+from volatility.framework.interfaces import configuration as configuration_interface
+from volatility.framework.interfaces import context as context_interface
 
 
 #
@@ -22,11 +23,11 @@ from volatility.framework import validity
 #  The plugin accepts the context and modifies as necessary
 #  The plugin runs and produces a TreeGrid output
 
-class PluginInterface(validity.ValidityRoutines, interfaces.configuration.Configurable, metaclass = ABCMeta):
+class PluginInterface(validity.ValidityRoutines, configuration_interface.Configurable, metaclass = ABCMeta):
     """Class that defines the interface all Plugins must maintain"""
 
     def __init__(self, context):
-        self._check_type(context, interfaces.context.ContextInterface)
+        self._check_type(context, context_interface.ContextInterface)
         self._context = context
         self.validate_inputs()
 

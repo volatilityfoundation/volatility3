@@ -7,16 +7,15 @@ Created on 7 May 2013
 import math
 import struct
 
-import volatility.framework.configuration as configuration
-from volatility.framework import interfaces, exceptions
+from volatility.framework import interfaces, exceptions, configuration
 
 
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
 
-    def __init__(self, context, name, memory_layer, page_map_offset):
+    def __init__(self, context, name, physical_layer, page_map_offset):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, name)
-        self._base_layer = memory_layer
+        self._base_layer = physical_layer
         self._page_map_offset = page_map_offset
         # All Intel address spaces work on 4096 byte pages
         self._page_size_in_bits = 12
@@ -135,8 +134,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel architectures"""
 
-    def __init__(self, context, name, memory_layer, page_map_offset):
-        Intel.__init__(self, context, name, memory_layer, page_map_offset)
+    def __init__(self, context, name, physical_layer, page_map_offset):
+        Intel.__init__(self, context, name, physical_layer, page_map_offset)
 
         # These can vary depending on the type of space
         self._entry_format = "<Q"
@@ -150,8 +149,8 @@ class IntelPAE(Intel):
 
 
 class Intel32e(Intel):
-    def __init__(self, context, name, memory_layer, page_map_offset):
-        Intel.__init__(self, context, name, memory_layer, page_map_offset)
+    def __init__(self, context, name, physical_layer, page_map_offset):
+        Intel.__init__(self, context, name, physical_layer, page_map_offset)
 
         # These can vary depending on the type of space
         self._entry_format = "<Q"

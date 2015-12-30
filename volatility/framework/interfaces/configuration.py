@@ -76,7 +76,7 @@ class ConfigurationSchemaNode(validity.ValidityRoutines):
         """
 
 
-class Configurable(metaclass = ABCMeta):
+class Configurable(object, metaclass = ABCMeta):
     """Class to allow objects to have requirements and populate the context config tree"""
 
     @classmethod

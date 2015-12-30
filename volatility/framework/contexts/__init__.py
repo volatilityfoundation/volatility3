@@ -1,54 +1,6 @@
-from volatility.framework import validity, interfaces, symbols, layers
-from volatility.framework.contexts import intel, physical, windows
-from volatility.framework.interfaces.context import ContextModifierInterface
+from volatility.framework import interfaces, symbols, layers
 
 __author__ = 'mike'
-
-
-class LayerFactory(validity.ValidityRoutines, list):
-    """Class to establish and load the appropriate components of the context for a given operating system"""
-
-    def __init__(self, name, requirement, lst = None):
-        if lst is None:
-            lst = []
-        self._check_type(lst, list)
-        self._check_type(name, str)
-        self._name = name
-        self._req = requirement
-
-        validity.ValidityRoutines.__init__(self)
-        list.__init__(self, [])
-        for element in lst:
-            self.append(element)
-
-    @property
-    def name(self):
-        return self._name
-
-    def __setitem__(self, key, value):
-        self._check_class(value, ContextModifierInterface)
-        super(LayerFactory, self).__setitem__(key, value)
-
-    def requirements(self):
-        """Returns all the possible configuration options that might be required for this particular LayerFactory"""
-        groups = []
-        for index in range(len(self)):
-            modifier = self[index]
-            group = interfaces.configuration.ConfigurationSchemaGroup(modifier.__name__ + str(index))
-            for req in modifier.requirements():
-                group.add_item(req)
-            groups.append(group)
-        return groups
-
-    def __call__(self, context):
-        """Constructs a standard context based on the architecture information
-
-        Returns a new context with all appropriate modifications (symbols, layers, etc)
-        """
-        for index in range(len(self)):
-            namespace = interfaces.configuration.schema_name_join([self.name, self[index].__name__ + str(index)])
-            self[index](namespace).modify_context(context = context)
-        return context
 
 
 class Context(interfaces.context.ContextInterface):

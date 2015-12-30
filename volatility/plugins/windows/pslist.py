@@ -4,12 +4,11 @@ from volatility.framework import configuration
 
 class PsList(plugins.PluginInterface):
     @classmethod
-    def requirements(cls):
+    def get_schema(cls):
         return [configuration.TranslationLayerRequirement(name = 'primary',
                                                           description = 'Kernel Address Space',
                                                           os_type = 'windows',
-                                                          architectures = None,
-                                                          layer_type = 'kernel'),
+                                                          architectures = None),
                 configuration.IntRequirement(name = 'pid',
                                              description = "Process ID",
                                              optional = True),

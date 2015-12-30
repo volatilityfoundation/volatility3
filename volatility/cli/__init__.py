@@ -6,6 +6,7 @@ import volatility.framework
 import volatility.plugins
 from volatility.cli import argparse_adapter
 from volatility.framework import interfaces, plugins, configuration, contexts
+from volatility.framework.configuration import depresolver
 
 __author__ = 'mike'
 
@@ -37,6 +38,9 @@ class CommandLine(object):
         parser.parse_args()
 
         # Determine the selected plugin
+        # Resolve the dependencies on that plugin
+        dldr = depresolver.DataLayerDependencyResolver(plugin)
+
         # Translate the parsed args to a context configuration
 
         # Generate the layers from the arguments
@@ -46,17 +50,6 @@ class CommandLine(object):
 
         # Construct and run the plugin
         plugin(context).run()
-
-    @staticmethod
-    def construct_translation_layer_factory(name, requirement):
-        """Create a factory that can provides requirements for the configuration
-           The factory also populates the
-        """
-        factory = contexts.LayerFactory(name, requirement,
-                                        [contexts.physical.PhysicalContextModifier,
-                                         contexts.intel.IntelContextModifier,
-                                         contexts.windows.WindowsContextModifier])
-        return factory
 
     def collect_plugin_requirements(self, plugin):
         """Generates the requirements necessary for the plugin"""
@@ -69,10 +62,6 @@ class CommandLine(object):
             if isinstance(req, configuration.TranslationLayerRequirement):
                 # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
                 namespace = interfaces.configuration.schema_name_join([plugin.__name__, req.name + "_layer"])
-                factory = self.construct_translation_layer_factory(namespace, req)
-                req_mapping[req] = factory
-                for facreq in factory.requirements():
-                    context.config.add_item(facreq, namespace = namespace)
             else:
                 context.config.add_item(req, plugin.__name__)
         return context, req_mapping
