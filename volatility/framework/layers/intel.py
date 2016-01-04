@@ -13,9 +13,13 @@ from volatility.framework import interfaces, exceptions, configuration
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
 
-    def __init__(self, context, name, physical_layer, page_map_offset):
+    metadata = {"type": "memory",
+                "architecture": "ia32"
+                }
+
+    def __init__(self, context, name, page_map_offset, memory_layer, swao_layer):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, name)
-        self._base_layer = physical_layer
+        self._base_layer = memory_layer
         self._page_map_offset = page_map_offset
         # All Intel address spaces work on 4096 byte pages
         self._page_size_in_bits = 12
@@ -126,8 +130,12 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     @classmethod
     def get_schema(cls):
-        return [configuration.TranslationLayerRequirement(name = 'memory_layer', optional = False),
-                configuration.TranslationLayerRequirement(name = 'swap_layer', optional = True),
+        return [configuration.TranslationLayerRequirement(name = 'memory_layer',
+                                                          constraints = {"type": "physical"},
+                                                          optional = False),
+                configuration.TranslationLayerRequirement(name = 'swap_layer',
+                                                          constraints = {"type": "physical"},
+                                                          optional = True),
                 configuration.IntRequirement(name = 'page_map_offset', optional = False)]
 
 
@@ -149,6 +157,10 @@ class IntelPAE(Intel):
 
 
 class Intel32e(Intel):
+    metadata = {"type": "memory",
+                "architecture": "ia64"
+                }
+
     def __init__(self, context, name, physical_layer, page_map_offset):
         Intel.__init__(self, context, name, physical_layer, page_map_offset)
 

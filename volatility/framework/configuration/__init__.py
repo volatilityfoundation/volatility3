@@ -28,7 +28,7 @@ class TranslationLayerRequirement(ConfigurationSchemaNode):
     """Class maintaining the limitations on what sort of address spaces are acceptable"""
 
     def __init__(self, name, description = None, default = None,
-                 optional = False, layer_name = None):
+                 optional = False, layer_name = None, constraints = None):
         """Constructs a Translation Layer Requirement
 
         The configuration option's value will be the name of the layer once it exists in the store
@@ -37,11 +37,16 @@ class TranslationLayerRequirement(ConfigurationSchemaNode):
         :param layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
         :return:
         """
-        ConfigurationSchemaNode.__init__(name, description, default, optional)
+        ConfigurationSchemaNode.__init__(self, name, description, default, optional)
+        self._constraints = constraints or {}
         self._layer_name = layer_name
 
     # TODO: Add requirements: acceptable OSes from the address_space information
     # TODO: Add requirements: acceptable arches from the available layers
+
+    @property
+    def constraints(self):
+        return self._constraints
 
     def validate(self, value, context):
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""

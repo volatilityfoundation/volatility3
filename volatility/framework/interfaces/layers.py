@@ -14,6 +14,8 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 class DataLayerInterface(validity.ValidityRoutines, configuration.Configurable, metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it"""
 
+    metadata = {"type": "interface"}
+
     def __init__(self, context, name):
         self._check_type(name, str)
         self._check_type(context, context_module.ContextInterface)
@@ -62,12 +64,15 @@ class DataLayerInterface(validity.ValidityRoutines, configuration.Configurable, 
         pass
 
     @classmethod
-    @abstractmethod
     def get_schema(cls):
         """Returns a list of requirements for this type of layer"""
+        return []
 
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
+    # Unfortunately class attributes can't easily be inheritted from parent classes
+    metadata = {"type": "interface"}
+
     @abstractmethod
     def translate(self, offset):
         """Returns a tuple of (offset, layer) indicating the translation of input domain to the output range"""

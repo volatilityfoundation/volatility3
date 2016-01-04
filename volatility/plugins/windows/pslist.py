@@ -7,8 +7,8 @@ class PsList(plugins.PluginInterface):
     def get_schema(cls):
         return [configuration.TranslationLayerRequirement(name = 'primary',
                                                           description = 'Kernel Address Space',
-                                                          os_type = 'windows',
-                                                          architectures = None),
+                                                          constraints = {"type": "memory",
+                                                                         "architecture": "ia32"}),
                 configuration.IntRequirement(name = 'pid',
                                              description = "Process ID",
                                              optional = True),
