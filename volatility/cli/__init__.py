@@ -29,27 +29,22 @@ class CommandLine(object):
 
         # TODO: Choose a plugin
         plugin = volatility.plugins.windows.pslist.PsList
-        context, req_mapping = self.collect_plugin_requirements(plugin)
         parser = argparse.ArgumentParser(prog = 'volatility',
                                          description = "An open-source memory forensics framework")
-        argparse_adapter.adapt_config(context.config, parser)
+        # argparse_adapter.adapt_config(context.config, parser)
 
         # Run the argparser
         parser.parse_args()
 
         # Determine the selected plugin
         # Resolve the dependencies on that plugin
-        dldr = depresolver.DataLayerDependencyResolver(plugin)
+        dldr = depresolver.DataLayerDependencyResolver()
+        print("DEPS RESOLVED", dldr.resolve_dependencies(plugin))
 
         # Translate the parsed args to a context configuration
 
-        # Generate the layers from the arguments
-        for req in req_mapping:
-            factory = req_mapping[req]
-            req.value = factory(context)
-
         # Construct and run the plugin
-        plugin(context).run()
+        # plugin(context).run()
 
     def collect_plugin_requirements(self, plugin):
         """Generates the requirements necessary for the plugin"""
