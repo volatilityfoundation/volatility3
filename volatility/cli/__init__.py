@@ -5,7 +5,7 @@ import sys
 import volatility.framework
 import volatility.plugins
 from volatility.cli import argparse_adapter
-from volatility.framework import interfaces, plugins, configuration, contexts
+from volatility.framework import plugins
 from volatility.framework.configuration import depresolver
 
 __author__ = 'mike'
@@ -45,21 +45,6 @@ class CommandLine(object):
 
         # Construct and run the plugin
         # plugin(context).run()
-
-    def collect_plugin_requirements(self, plugin):
-        """Generates the requirements necessary for the plugin"""
-        reqs = plugin.requirements()
-        req_mapping = {}
-        context = contexts.Context()
-
-        for req in reqs:
-            context.config.add_item(req, plugin.__name__)
-            if isinstance(req, configuration.TranslationLayerRequirement):
-                # Choose an appropriate LayerFactory (add layer to the req.name so we don't blat the requirement itself
-                namespace = interfaces.configuration.schema_name_join([plugin.__name__, req.name + "_layer"])
-            else:
-                context.config.add_item(req, plugin.__name__)
-        return context, req_mapping
 
 
 def main():

@@ -27,9 +27,7 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
            layer_class satisfies it"""
         satisfied = True
         for k, v in requirement.constraints.items():
-            print("Constraint", k, v)
             if k in layer_class.metadata:
-                print(layer_class.__class__.__name__, layer_class.metadata)
                 if isinstance(v, list):
                     satisfied = satisfied and layer_class.metadata[k] not in v
                 else:
@@ -44,25 +42,28 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
         """
         self._check_class(configurable, configuration.Configurable)
 
-        possible_array = []
+        fulfillment = {}
 
         for requirement in configurable.get_schema():
-            print("GET_SCHEMA", requirement)
             # If the requirement is a layer/configurable
             if isinstance(requirement, framework.configuration.TranslationLayerRequirement):
-                possibilities = {}
+                # Find all the different ways to fulfill it (recursively)
+                # TODO: Ensure no cycles or loops
+                possibilities = Possibility()
                 for potential_layer in self.layer_cache:
                     if self.satisfies(potential_layer, requirement):
-                        print("Resolving sub-dependencies", potential_layer)
                         possibility = self.resolve_dependencies(potential_layer)
                         # Only add a possibility if there are suitable lower layers for it
                         if possibility:
                             possibilities[potential_layer] = possibility
-                possible_array.append(possibilities)
+                fulfillment[requirement.name] = possibilities
             else:
-                possible_array.append(requirement)
-                # Recurse over it
-                print(requirement.name)
                 # Add all base-type requirements
                 # Add all optional base-type requirements in order
-        return possible_array
+                fulfillment[requirement.name] = requirement
+        return fulfillment
+
+
+class Possibility(dict):
+    """Class to differentiate between different available options for completion of a requirement"""
+    pass
