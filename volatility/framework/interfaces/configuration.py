@@ -33,7 +33,7 @@ def schema_name_split(path):
     return path.split(SCHEMA_NAME_DIVIDER)
 
 
-class ConfigurationSchemaNode(validity.ValidityRoutines):
+class ConfigurationSchemaNode(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to distinguish configuration elements from everything else"""
 
     def __init__(self, name, description = None, default = None, optional = False):

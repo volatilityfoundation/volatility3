@@ -38,7 +38,6 @@ class PluginInterface(validity.ValidityRoutines, configuration_interface.Configu
         return self._context
 
     @classmethod
-    @abstractmethod
     def get_schema(cls):
         """Returns a list of configuration schema items"""
         return []

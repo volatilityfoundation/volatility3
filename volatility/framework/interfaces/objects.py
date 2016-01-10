@@ -87,13 +87,12 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                                object_info = ObjectInformation(layer_name = self.vol.layer_name,
                                                                offset = self.vol.offset))
 
-    class VolTemplateProxy(object, metaclass = ABCMeta):
+    class VolTemplateProxy(object):
         """A container for proxied methods that the ObjectTemplate of this object will call.
 
         They are class methods rather than static methods, to allow for code reuse."""
 
         @classmethod
-        @abstractmethod
         def size(cls, template):
             """Returns the size of the template object"""
 
