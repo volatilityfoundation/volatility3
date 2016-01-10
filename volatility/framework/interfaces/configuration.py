@@ -76,16 +76,10 @@ class ConfigurationSchemaNode(validity.ValidityRoutines):
         """
 
 
-class Configurable(object, metaclass = ABCMeta):
+class Configurable(object):
     """Class to allow objects to have requirements and populate the context config tree"""
 
     @classmethod
-    @abstractmethod
     def get_schema(cls):
         """Returns a list of configuration schema nodes for this object"""
         return []
-
-    def create_configuration(self, location, context):
-        """Pins the configuration schemas to a location within the context's config storage"""
-        for requirement in self.get_schema():
-            pass

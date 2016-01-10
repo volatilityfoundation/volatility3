@@ -34,7 +34,10 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                     satisfied = satisfied and (layer_class.metadata[k] == v)
         return satisfied
 
-    def resolve_dependencies(self, configurable):
+    def resolve_dependencies(self, deptree, context):
+        pass
+
+    def build_tree(self, configurable, path = None):
         """Takes a configurable class and produces a priority ordered tree of possible solutions to satisfy the various requirements
 
            The return should include each of the potential nodes (and requirements, including optional ones) allowing the UI
@@ -42,32 +45,57 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
         """
         self._check_class(configurable, configuration.Configurable)
 
-        fulfillment = {}
+        if path is None:
+            path = []
+        deptree = []
+        deptree_names = set()
 
         for requirement in configurable.get_schema():
+
+            # Choose a name for the node/leaf
+            node_name = requirement.name
+            if node_name in deptree_names:
+                node_name += str(len([x for x in deptree_names if x.startswith(requirement.name)]))
+            node_path = path + [node_name]
+
             # If the requirement is a layer/configurable
             if isinstance(requirement, framework.configuration.TranslationLayerRequirement):
                 # Find all the different ways to fulfill it (recursively)
                 # TODO: Ensure no cycles or loops
-                possibilities = Possibility()
+                branches = {}
                 for potential_layer in self.layer_cache:
                     if self.satisfies(potential_layer, requirement):
-                        possibility = self.resolve_dependencies(potential_layer)
+                        branch = self.build_tree(potential_layer, path = node_path)
                         # Only add a possibility if there are suitable lower layers for it
-                        if possibility:
-                            possibilities[potential_layer] = possibility
-                fulfillment[requirement.name] = possibilities
+                        if branch:
+                            branches[potential_layer] = branch
+                deptree.append(Node(node_path, requirement = requirement, branches = branches))
             else:
                 # Add all base-type requirements
                 # Add all optional base-type requirements in order
-                fulfillment[requirement.name] = requirement
-        return fulfillment
-
-    def all_possible_requirements(self, deptree):
+                deptree.append(Leaf(node_path, requirement))
+        return deptree
 
 
+class Leaf(object):
+    def __init__(self, path, requirement = None):
+        self.requirement = requirement
+        self._path = path
+
+    @property
+    def path(self):
+        return configuration.schema_name_join(self._path)
+
+    def __repr__(self):
+        return "<Leaf: " + self.path + " " + repr(self.requirement) + ">"
 
 
-class Possibility(dict):
-    """Class to differentiate between different available options for completion of a requirement"""
-    pass
+class Node(Leaf):
+    def __init__(self, path, requirement = None, branches = None):
+        Leaf.__init__(self, path, requirement)
+        self.branches = branches
+        if branches is None:
+            self.branches = {}
+
+    def __repr__(self):
+        return "<Node: " + self.path + " " + repr(self.branches) + ">"

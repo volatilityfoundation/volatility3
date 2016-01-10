@@ -39,10 +39,11 @@ class CommandLine(object):
         # Determine the selected plugin
         # Resolve the dependencies on that plugin
         dldr = depresolver.DataLayerDependencyResolver()
-        dependencies = dldr.resolve_dependencies(plugin)
+        dependencies = dldr.build_tree(plugin)
 
         # TODO: write functions that determine all possible options/requirements for this plugin
         # (flatten the tree, treating disjunctions as conjunctions)
+        print(list(dependencies))
 
 
         # TODO: Write functions that walk the tree and produce instances of each of the requirements
