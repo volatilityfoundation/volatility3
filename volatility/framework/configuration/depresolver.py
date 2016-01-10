@@ -63,6 +63,10 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                 fulfillment[requirement.name] = requirement
         return fulfillment
 
+    def all_possible_requirements(self, deptree):
+
+
+
 
 class Possibility(dict):
     """Class to differentiate between different available options for completion of a requirement"""
