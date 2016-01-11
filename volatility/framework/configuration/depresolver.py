@@ -35,7 +35,12 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
         return satisfied
 
     def resolve_dependencies(self, deptree, context, path = None):
-        """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates"""
+        """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
+
+            @param path: A list of path components to access the deptree's configuration details
+        """
+        # TODO: Simplify config system access to ensure easier code
+        # TODO: Improve logging/output of this code to diagnose errors
         if path is None:
             path = []
         for node in deptree:
@@ -54,11 +59,8 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                                 configuration.schema_name_join(path + [node.requirement.name, n.requirement.name]))) for
                                                  n
                                                  in subtree])
-                        print("REQDICT", requirement_dict)
                         context.add_layer(branch(context, layer_name, **requirement_dict))
                         context.config[configuration.schema_name_join(path + [node.requirement.name])] = layer_name
-                        print("CONFIG", context.config)
-                        print("Memory", context.memory)
                         break
                 else:
                     return False
@@ -75,7 +77,9 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
     def build_tree(self, configurable, path = None):
         """Takes a configurable class and produces a priority ordered tree of possible solutions to satisfy the various requirements
 
-           The return should include each of the potential nodes (and requirements, including optional ones) allowing the UI
+           @param configurable: A Configurable type that requires its dependency tree constructing
+           @param path: A list of path components indicating where the configurable resides in the config namespace
+           @return deptree: The returned tree should include each of the potential nodes (and requirements, including optional ones) allowing the UI
            to decide the layer build-path and get all the necessary variables from the user for that path.
         """
         self._check_class(configurable, configuration.Configurable)
@@ -119,6 +123,7 @@ class Leaf(object):
 
     @property
     def path(self):
+        """Returns the string version of the path components for this node"""
         return configuration.schema_name_join(self._path)
 
     def __repr__(self):
