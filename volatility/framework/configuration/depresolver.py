@@ -34,8 +34,43 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                     satisfied = satisfied and (layer_class.metadata[k] == v)
         return satisfied
 
-    def resolve_dependencies(self, deptree, context):
-        pass
+    def resolve_dependencies(self, deptree, context, path = None):
+        """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates"""
+        if path is None:
+            path = []
+        for node in deptree:
+            if isinstance(node, Node) and not node.requirement.optional:
+                for branch, subtree in node.branches.items():
+                    if self.resolve_dependencies(subtree, context, path = path + [node.requirement.name]):
+                        # Generate a layer name
+                        layer_name = node.requirement.name
+                        counter = 2
+                        while layer_name in context.memory:
+                            layer_name = node.requirement.name + str(counter)
+                            counter += 1
+
+                        # Construct the layer
+                        requirement_dict = dict([(n.requirement.name, context.config.get(
+                                configuration.schema_name_join(path + [node.requirement.name, n.requirement.name]))) for
+                                                 n
+                                                 in subtree])
+                        print("REQDICT", requirement_dict)
+                        context.add_layer(branch(context, layer_name, **requirement_dict))
+                        context.config[configuration.schema_name_join(path + [node.requirement.name])] = layer_name
+                        print("CONFIG", context.config)
+                        print("Memory", context.memory)
+                        break
+                else:
+                    return False
+            try:
+                print("NODE", node, "OPTIONAL", node.requirement.optional)
+                value = context.config[configuration.schema_name_join(path + [node.requirement.name])]
+                print("TEST", value)
+                node.requirement.validate(value, context)
+            except BaseException as e:
+                if not node.requirement.optional:
+                    return False
+        return True
 
     def build_tree(self, configurable, path = None):
         """Takes a configurable class and produces a priority ordered tree of possible solutions to satisfy the various requirements

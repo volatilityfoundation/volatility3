@@ -5,7 +5,7 @@ import sys
 import volatility.framework
 import volatility.plugins
 from volatility.cli import argparse_adapter
-from volatility.framework import plugins
+from volatility.framework import plugins, contexts
 from volatility.framework.configuration import depresolver
 
 __author__ = 'mike'
@@ -40,6 +40,13 @@ class CommandLine(object):
         # Resolve the dependencies on that plugin
         dldr = depresolver.DataLayerDependencyResolver()
         dependencies = dldr.build_tree(plugin)
+
+        # UI fills in the config:
+        ctx = contexts.Context()
+        ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
+        ctx.config["pslist.primary.page_map_offset"] = 0x39000
+
+        print(dldr.resolve_dependencies(dependencies, context = ctx, path = ["pslist"]))
 
         # TODO: write functions that determine all possible options/requirements for this plugin
         # (flatten the tree, treating disjunctions as conjunctions)
