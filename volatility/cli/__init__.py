@@ -41,28 +41,27 @@ class CommandLine(object):
         dldr = depresolver.DataLayerDependencyResolver()
         dependencies = dldr.build_tree(plugin)
 
-        # UI fills in the config:
-        ctx = contexts.Context()
-        ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
-        ctx.config["pslist.primary.page_map_offset"] = 0x39000
-
-        print(dldr.resolve_dependencies(dependencies, context = ctx, path = ["pslist"]))
-
         # TODO: write functions that determine all possible options/requirements for this plugin
         # (flatten the tree, treating disjunctions as conjunctions)
-        print(list(dependencies))
+        # print(list(dependencies))
 
 
         # TODO: Write functions that walk the tree and produce instances of each of the requirements
         # (to allow a registry-like tree of config values that can be populated by the user)
 
         # TODO: Walk down the tree attempting to fulfil each requirement (recursive) and backtrack when necessary
-
-
         # Translate the parsed args to a context configuration
 
-        # Construct and run the plugin
-        # plugin(context).run()
+
+        # UI fills in the config:
+        ctx = contexts.Context()
+        ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
+        ctx.config["pslist.primary.page_map_offset"] = 0x39000
+        ctx.config["pslist.offset"] = 0x823c87c0
+
+        if dldr.validate_dependencies(dependencies, context = ctx, path = ["pslist"]):
+            # Construct and run the plugin
+            plugin(ctx).run()
 
 
 def main():

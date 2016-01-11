@@ -34,7 +34,7 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                     satisfied = satisfied and (layer_class.metadata[k] == v)
         return satisfied
 
-    def resolve_dependencies(self, deptree, context, path = None):
+    def validate_dependencies(self, deptree, context, path = None):
         """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
 
             @param path: A list of path components to access the deptree's configuration details
@@ -46,7 +46,7 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
         for node in deptree:
             if isinstance(node, Node) and not node.requirement.optional:
                 for branch, subtree in node.branches.items():
-                    if self.resolve_dependencies(subtree, context, path = path + [node.requirement.name]):
+                    if self.validate_dependencies(subtree, context, path = path + [node.requirement.name]):
                         # Generate a layer name
                         layer_name = node.requirement.name
                         counter = 2

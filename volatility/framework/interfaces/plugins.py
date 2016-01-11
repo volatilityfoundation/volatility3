@@ -51,7 +51,7 @@ class PluginInterface(validity.ValidityRoutines, configuration_interface.Configu
     def validate_inputs(self):
         for option in self.get_schema():
             if not option.optional:
-                option.validate_input(self.config.get_value(option.name), self.context)
+                option.validate(self.config.get_value(option.name), self.context)
 
     @abstractmethod
     def run(self):
