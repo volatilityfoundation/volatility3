@@ -17,7 +17,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 "architecture": "ia32"
                 }
 
-    def __init__(self, context, name, page_map_offset, memory_layer, swao_layer):
+    def __init__(self, context, name, page_map_offset, memory_layer, swap_layer):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, name)
         self._base_layer = memory_layer
         self._page_map_offset = page_map_offset
@@ -142,8 +142,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel architectures"""
 
-    def __init__(self, context, name, physical_layer, page_map_offset):
-        Intel.__init__(self, context, name, physical_layer, page_map_offset)
+    def __init__(self, *args, **kwargs):
+        Intel.__init__(self, *args, **kwargs)
 
         # These can vary depending on the type of space
         self._entry_format = "<Q"
@@ -161,8 +161,8 @@ class Intel32e(Intel):
                 "architecture": "ia64"
                 }
 
-    def __init__(self, context, name, physical_layer, page_map_offset):
-        Intel.__init__(self, context, name, physical_layer, page_map_offset)
+    def __init__(self, *args, **kwargs):
+        Intel.__init__(self, *args, **kwargs)
 
         # These can vary depending on the type of space
         self._entry_format = "<Q"
