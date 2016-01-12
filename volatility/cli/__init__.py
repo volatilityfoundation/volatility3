@@ -59,7 +59,7 @@ class CommandLine(object):
         ctx.config["pslist.primary.page_map_offset"] = 0x39000
         ctx.config["pslist.offset"] = 0x823c87c0
 
-        if dldr.validate_dependencies(dependencies, context = ctx, path = ["pslist"]):
+        if dldr.validate_dependencies(dependencies, context = ctx, path = plugin.__name__.lower()):
             # Construct and run the plugin
             plugin(ctx).run()
 

@@ -37,16 +37,18 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
     def validate_dependencies(self, deptree, context, path = None):
         """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
 
-            @param path: A list of path components to access the deptree's configuration details
+            @param path: A path to access the deptree's configuration details
         """
         # TODO: Simplify config system access to ensure easier code
         # TODO: Improve logging/output of this code to diagnose errors
         if path is None:
-            path = []
+            path = ""
         for node in deptree:
+            node_path = path + configuration.CONFIG_SEPARATOR + node.requirement.name
             if isinstance(node, Node) and not node.requirement.optional:
+                node_config = context.config.branch(node_path)
                 for branch, subtree in node.branches.items():
-                    if self.validate_dependencies(subtree, context, path = path + [node.requirement.name]):
+                    if self.validate_dependencies(subtree, context, path = node_path):
                         # Generate a layer name
                         layer_name = node.requirement.name
                         counter = 2
@@ -55,18 +57,15 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                             counter += 1
 
                         # Construct the layer
-                        requirement_dict = dict([(n.requirement.name, context.config.get(
-                                configuration.schema_name_join(path + [node.requirement.name, n.requirement.name]))) for
-                                                 n
-                                                 in subtree])
+                        requirement_dict = node_config
                         context.add_layer(branch(context, layer_name, **requirement_dict))
-                        context.config[configuration.schema_name_join(path + [node.requirement.name])] = layer_name
+                        context.config[node_path] = layer_name
                         break
                 else:
                     return False
             try:
                 print("NODE", node, "OPTIONAL", node.requirement.optional)
-                value = context.config[configuration.schema_name_join(path + [node.requirement.name])]
+                value = context.config[node_path]
                 print("TEST", value)
                 node.requirement.validate(value, context)
             except BaseException as e:

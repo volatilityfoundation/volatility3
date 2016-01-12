@@ -1,4 +1,5 @@
 from volatility.framework import interfaces, symbols, layers
+from volatility.framework.interfaces.configuration import HierarchicalDict
 
 __author__ = 'mike'
 
@@ -23,19 +24,19 @@ class Context(interfaces.context.ContextInterface):
         interfaces.context.ContextInterface.__init__(self)
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
-        self._config = {}
+        self._config = HierarchicalDict(interfaces.configuration.CONFIG_SEPARATOR)
 
     # ## Symbol Space Functions
 
     @property
     def config(self):
-        """Returns the configuration object for this context"""
+        """Returns a mutable copy of the configuration, but does not allow the whole configuration to be altered"""
         return self._config
 
     @config.setter
     def config(self, value):
-        if not isinstance(value, dict):
-            raise TypeError("Configuration must be of type Dict")
+        if not isinstance(value, HierarchicalDict):
+            raise TypeError("Config must be of type HierarchicalDict")
         self._config = value
 
     @property
