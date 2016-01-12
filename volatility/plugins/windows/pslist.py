@@ -29,7 +29,6 @@ class PsList(plugins.PluginInterface):
         return ethread.owning_process()
 
     def run(self):
-        self.validate_inputs()
         eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'intel',
                                                           self.config.get_value('offset'))
         for proc in eproc.ActiveProcessLinks:

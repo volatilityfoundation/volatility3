@@ -31,7 +31,7 @@ class PluginInterface(validity.ValidityRoutines, configuration_interface.Configu
         configuration_interface.Configurable.__init__(self)
         self._check_type(context, context_interface.ContextInterface)
         self._context = context
-        self.validate_inputs()
+        # self.validate_inputs()
 
     @property
     def context(self):
