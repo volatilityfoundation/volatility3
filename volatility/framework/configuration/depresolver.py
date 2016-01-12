@@ -74,18 +74,16 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                     return False
         return True
 
-    def build_tree(self, configurable, path = None):
+    def build_tree(self, configurable):
         """Takes a configurable class and produces a priority ordered tree of possible solutions to satisfy the various requirements
 
            @param configurable: A Configurable type that requires its dependency tree constructing
-           @param path: A list of path components indicating where the configurable resides in the config namespace
+           @param path: A path indicating where the configurable resides in the config namespace
            @return deptree: The returned tree should include each of the potential nodes (and requirements, including optional ones) allowing the UI
            to decide the layer build-path and get all the necessary variables from the user for that path.
         """
         self._check_class(configurable, configuration.Configurable)
 
-        if path is None:
-            path = []
         deptree = []
         deptree_names = set()
 
@@ -95,7 +93,6 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
             node_name = requirement.name
             if node_name in deptree_names:
                 node_name += str(len([x for x in deptree_names if x.startswith(requirement.name)]))
-            node_path = path + [node_name]
 
             # If the requirement is a layer/configurable
             if isinstance(requirement, framework.configuration.TranslationLayerRequirement):
@@ -104,38 +101,32 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                 branches = {}
                 for potential_layer in self.layer_cache:
                     if self.satisfies(potential_layer, requirement):
-                        branch = self.build_tree(potential_layer, path = node_path)
+                        branch = self.build_tree(potential_layer)
                         # Only add a possibility if there are suitable lower layers for it
                         if branch:
                             branches[potential_layer] = branch
-                deptree.append(Node(node_path, requirement = requirement, branches = branches))
+                deptree.append(Node(requirement = requirement, branches = branches))
             else:
                 # Add all base-type requirements
                 # Add all optional base-type requirements in order
-                deptree.append(Leaf(node_path, requirement))
+                deptree.append(Leaf(requirement))
         return deptree
 
 
 class Leaf(object):
-    def __init__(self, path, requirement = None):
+    def __init__(self, requirement = None):
         self.requirement = requirement
-        self._path = path
-
-    @property
-    def path(self):
-        """Returns the string version of the path components for this node"""
-        return configuration.schema_name_join(self._path)
 
     def __repr__(self):
-        return "<Leaf: " + self.path + " " + repr(self.requirement) + ">"
+        return "<Leaf: " + repr(self.requirement) + ">"
 
 
 class Node(Leaf):
-    def __init__(self, path, requirement = None, branches = None):
-        Leaf.__init__(self, path, requirement)
+    def __init__(self, requirement = None, branches = None):
+        Leaf.__init__(self, requirement)
         self.branches = branches
         if branches is None:
             self.branches = {}
 
     def __repr__(self):
-        return "<Node: " + self.path + " " + repr(self.branches) + ">"
+        return "<Node: " + repr(self.branches) + ">"
