@@ -18,7 +18,7 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                     new_v = self.metadata.get(k, set())
                     new_v.add(v)
                 else:
-                    new_v = self.metadata.get(k, set()) + v
+                    new_v = self.metadata.get(k, set()).union(set(v))
                 self.metadata[k] = new_v
                 self.layer_cache.append(layer_class)
 
