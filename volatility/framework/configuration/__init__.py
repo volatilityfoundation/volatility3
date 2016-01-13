@@ -4,10 +4,10 @@ Created on 7 May 2013
 @author: mike
 """
 
-from volatility.framework.interfaces.configuration import ConfigurationSchemaNode
+from volatility.framework.interfaces.configuration import RequirementInterface
 
 
-class InstanceRequirement(ConfigurationSchemaNode):
+class InstanceRequirement(RequirementInterface):
     instance_type = bool
 
     def validate(self, value, _context):
@@ -24,7 +24,7 @@ class StringRequirement(InstanceRequirement):
     instance_type = str
 
 
-class TranslationLayerRequirement(ConfigurationSchemaNode):
+class TranslationLayerRequirement(RequirementInterface):
     """Class maintaining the limitations on what sort of address spaces are acceptable"""
 
     def __init__(self, name, description = None, default = None,
@@ -37,7 +37,7 @@ class TranslationLayerRequirement(ConfigurationSchemaNode):
         :param layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
         :return:
         """
-        ConfigurationSchemaNode.__init__(self, name, description, default, optional)
+        RequirementInterface.__init__(self, name, description, default, optional)
         self._constraints = constraints or {}
         self._layer_name = layer_name
 
@@ -56,11 +56,11 @@ class TranslationLayerRequirement(ConfigurationSchemaNode):
             raise IndexError((value or "") + " is not a memory layer")
 
 
-class ChoiceRequirement(ConfigurationSchemaNode):
+class ChoiceRequirement(RequirementInterface):
     """Allows one from a choice of strings"""
 
     def __init__(self, choices, *args, **kwargs):
-        ConfigurationSchemaNode.__init__(self, *args, **kwargs)
+        RequirementInterface.__init__(self, *args, **kwargs)
         if not isinstance(choices, list) or any([not isinstance(choice, str) for choice in choices]):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self._choices = choices
@@ -71,12 +71,12 @@ class ChoiceRequirement(ConfigurationSchemaNode):
             raise ValueError("Value is not within the set of available choices")
 
 
-class ListRequirement(ConfigurationSchemaNode):
+class ListRequirement(RequirementInterface):
     def __init__(self, element_type, max_elements, min_elements, *args, **kwargs):
-        ConfigurationSchemaNode.__init__(self, *args, **kwargs)
+        RequirementInterface.__init__(self, *args, **kwargs)
         if isinstance(element_type, ListRequirement):
             raise TypeError("ListRequirements cannot contain ListRequirements")
-        self.element_type = self._check_type(element_type, ConfigurationSchemaNode)
+        self.element_type = self._check_type(element_type, RequirementInterface)
         self.min_elements = min_elements
         self.max_elements = max_elements
 

@@ -24,7 +24,7 @@ CONFIG_SEPARATOR = "."
 # Dependency solver
 #   Attempts to fill all dependencies by traversing the various available classes to find a solution
 
-class ConfigurationSchemaNode(validity.ValidityRoutines, metaclass = ABCMeta):
+class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to distinguish configuration elements from everything else"""
 
     def __init__(self, name, description = None, default = None, optional = False):
