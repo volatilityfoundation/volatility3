@@ -57,7 +57,7 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                             counter += 1
 
                         # Construct the layer
-                        requirement_dict = node_config
+                        requirement_dict = node_config.data
                         context.add_layer(branch(context, layer_name, **requirement_dict))
                         context.config[node_path] = layer_name
                         break
