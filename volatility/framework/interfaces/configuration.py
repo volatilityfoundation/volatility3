@@ -81,6 +81,10 @@ class HierarchicalDict(collections.Mapping):
     def separator(self):
         return self._separator
 
+    @property
+    def data(self):
+        return self._data.copy()
+
     def _key_head(self, key):
         """Returns the first division of a key based on the dict separator,
            or the full key if the separator is not present
