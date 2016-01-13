@@ -17,7 +17,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 "architecture": "ia32"
                 }
 
-    def __init__(self, context, name, page_map_offset, memory_layer, swap_layer):
+    def __init__(self, context, name, page_map_offset, memory_layer, swap_layer = None):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, name)
         self._base_layer = memory_layer
         self._page_map_offset = page_map_offset
