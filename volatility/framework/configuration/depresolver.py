@@ -1,6 +1,7 @@
 import volatility.framework as framework
 import volatility.framework.validity as validity
 from volatility.framework.interfaces import layers, configuration
+from volatility.framework.interfaces.configuration import RequirementTreeLeaf, RequirementTreeNode
 
 
 class DataLayerDependencyResolver(validity.ValidityRoutines):
@@ -45,7 +46,7 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
             path = ""
         for node in deptree:
             node_path = path + configuration.CONFIG_SEPARATOR + node.requirement.name
-            if isinstance(node, Node) and not node.requirement.optional:
+            if isinstance(node, RequirementTreeNode) and not node.requirement.optional:
                 node_config = context.config.branch(node_path)
                 for possible_layer, subtree in node.branches.items():
                     if self.validate_dependencies(subtree, context, path = node_path):
@@ -102,28 +103,11 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                         # Only add a possibility if there are suitable lower layers for it
                         if branch:
                             branches[potential_layer] = branch
-                deptree.append(Node(requirement = requirement, branches = branches))
+                deptree.append(RequirementTreeNode(requirement = requirement, branches = branches))
             else:
                 # Add all base-type requirements
                 # Add all optional base-type requirements in order
-                deptree.append(Leaf(requirement))
+                deptree.append(RequirementTreeLeaf(requirement))
         return deptree
 
 
-class Leaf(object):
-    def __init__(self, requirement = None):
-        self.requirement = requirement
-
-    def __repr__(self):
-        return "<Leaf: " + repr(self.requirement) + ">"
-
-
-class Node(Leaf):
-    def __init__(self, requirement = None, branches = None):
-        Leaf.__init__(self, requirement)
-        self.branches = branches
-        if branches is None:
-            self.branches = {}
-
-    def __repr__(self):
-        return "<Node: " + repr(self.requirement) + " Candidates: " + repr(self.branches) + ">"

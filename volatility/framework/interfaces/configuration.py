@@ -196,3 +196,22 @@ class Configurable(validity.ValidityRoutines):
     @property
     def config(self):
         return self._context.config.branch(self._config_path)
+
+
+class RequirementTreeLeaf(object):
+    def __init__(self, requirement = None):
+        self.requirement = requirement
+
+    def __repr__(self):
+        return "<Leaf: " + repr(self.requirement) + ">"
+
+
+class RequirementTreeNode(RequirementTreeLeaf):
+    def __init__(self, requirement = None, branches = None):
+        RequirementTreeLeaf.__init__(self, requirement)
+        self.branches = branches
+        if branches is None:
+            self.branches = {}
+
+    def __repr__(self):
+        return "<Node: " + repr(self.requirement) + " Candidates: " + repr(self.branches) + ">"
