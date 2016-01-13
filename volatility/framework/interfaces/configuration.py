@@ -100,15 +100,15 @@ class HierarchicalDict(collections.Mapping):
 
     def __iter__(self):
         """Returns an iterator object that supports the iterator protocol"""
-        return self
+        return self.generator()
 
-    def __next__(self):
+    def generator(self):
         """Yields the next element in the iterator"""
         for key in self._data:
             yield key
-        for subdict in self._subdict:
-            for key in subdict:
-                yield key
+        for subdict_key in self._subdict:
+            for key in self._subdict[subdict_key]:
+                yield subdict_key + self.separator + key
 
     def __getitem__(self, key):
         """Gets an item, traversing down the trees to get to the final value"""
