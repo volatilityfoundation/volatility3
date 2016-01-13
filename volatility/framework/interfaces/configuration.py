@@ -173,7 +173,7 @@ class HierarchicalDict(collections.Mapping):
 
 
 class Configurable(validity.ValidityRoutines):
-    """Class to allow objects to have requirements and populate the context config tree"""
+    """Class to allow objects to have requirements and read configuration data from the context config tree"""
 
     def __init__(self, context, config_path):
         validity.ValidityRoutines.__init__(self)
