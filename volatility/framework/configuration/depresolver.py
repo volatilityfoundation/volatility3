@@ -64,9 +64,7 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
                 else:
                     return False
             try:
-                print("NODE", node, "OPTIONAL", node.requirement.optional)
                 value = context.config[node_path]
-                print("TEST", value)
                 node.requirement.validate(value, context)
             except BaseException as e:
                 if not node.requirement.optional:
@@ -128,4 +126,4 @@ class Node(Leaf):
             self.branches = {}
 
     def __repr__(self):
-        return "<Node: " + repr(self.branches) + ">"
+        return "<Node: " + repr(self.requirement) + " Candidates: " + repr(self.branches) + ">"

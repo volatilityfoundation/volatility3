@@ -37,6 +37,9 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._default = default
         self._optional = optional
 
+    def __repr__(self):
+        return "<" + self.__class__.__name__ + ": " + self.name + ">"
+
     @property
     def name(self):
         """The name of the Option."""
