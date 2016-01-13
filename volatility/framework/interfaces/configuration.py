@@ -9,21 +9,6 @@ __author__ = 'mike'
 CONFIG_SEPARATOR = "."
 
 
-# Design requirements:
-#  Plugins can be queried for their requirements without instantiating them
-#  The context can record config data
-#  Translation layer requirements can specify a layer name (or generate one if not specified)
-#    It's specified as part of the requirement, which then validates true/false if it could be fulfilled
-
-# Still need to link schema in to config values
-#   Need to allow config values to be recovered by complete sub-path
-
-# Non-instantiated plugin
-# -> Requirement schema nodes (instantiated)
-#    (Translation layers contain all information required)
-# Dependency solver
-#   Attempts to fill all dependencies by traversing the various available classes to find a solution
-
 class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to distinguish configuration elements from everything else"""
 
