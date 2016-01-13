@@ -4,23 +4,22 @@ Created on 4 May 2013
 @author: mike
 """
 
-from volatility.framework import validity, exceptions
+from volatility.framework import exceptions, validity
 # We can't just import interfaces because we'd have a cycle going
 from volatility.framework.interfaces import configuration
-from volatility.framework.interfaces import context as context_module
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-class DataLayerInterface(validity.ValidityRoutines, configuration.Configurable, metaclass = ABCMeta):
+class DataLayerInterface(configuration.Configurable, validity.ValidityRoutines, metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it"""
 
     metadata = {"type": "interface"}
 
-    def __init__(self, context, name):
+    def __init__(self, context, config_path, name):
+        validity.ValidityRoutines.__init__(self)
+        configuration.Configurable.__init__(self, context, config_path)
         self._check_type(name, str)
-        self._check_type(context, context_module.ContextInterface)
         self._name = name
-        self._context = context
 
     @property
     def name(self):

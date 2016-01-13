@@ -14,8 +14,8 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 
     metadata = {"type": "physical"}
 
-    def __init__(self, context, name, buffer):
-        interfaces.layers.DataLayerInterface.__init__(self, context, name)
+    def __init__(self, context, config_path, name, buffer):
+        interfaces.layers.DataLayerInterface.__init__(self, context, config_path, name)
         self._buffer = self._check_type(buffer, bytes)
 
     @property
@@ -55,8 +55,8 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     metadata = {"type": "physical"}
 
-    def __init__(self, context, name, filename):
-        interfaces.layers.DataLayerInterface.__init__(self, context, name)
+    def __init__(self, context, config_path, name, filename):
+        interfaces.layers.DataLayerInterface.__init__(self, context, config_path, name)
 
         self._file = open(filename, "r+b")
         self._size = os.path.getsize(filename)

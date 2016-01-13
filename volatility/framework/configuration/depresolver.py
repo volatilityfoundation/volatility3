@@ -47,7 +47,7 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
             node_path = path + configuration.CONFIG_SEPARATOR + node.requirement.name
             if isinstance(node, Node) and not node.requirement.optional:
                 node_config = context.config.branch(node_path)
-                for branch, subtree in node.branches.items():
+                for possible_layer, subtree in node.branches.items():
                     if self.validate_dependencies(subtree, context, path = node_path):
                         # Generate a layer name
                         layer_name = node.requirement.name
@@ -58,7 +58,7 @@ class DataLayerDependencyResolver(validity.ValidityRoutines):
 
                         # Construct the layer
                         requirement_dict = node_config.data
-                        context.add_layer(branch(context, layer_name, **requirement_dict))
+                        context.add_layer(possible_layer(context, node_path, layer_name, **requirement_dict))
                         context.config[node_path] = layer_name
                         break
                 else:

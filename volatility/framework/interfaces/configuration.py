@@ -2,6 +2,7 @@ import collections
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
+from volatility.framework.interfaces import context as context_interface
 
 __author__ = 'mike'
 
@@ -168,10 +169,27 @@ class HierarchicalDict(collections.Mapping):
             return self._subdict[key]
 
 
-class Configurable(object):
+class Configurable(validity.ValidityRoutines):
     """Class to allow objects to have requirements and populate the context config tree"""
+
+    def __init__(self, context, config_path):
+        validity.ValidityRoutines.__init__(self)
+        self._context = self._check_type(context, context_interface.ContextInterface)
+        self._config_path = self._check_type(config_path, str)
+
+    @property
+    def context(self):
+        return self._context
+
+    @property
+    def config_path(self):
+        return self._config_path
 
     @classmethod
     def get_schema(cls):
         """Returns a list of configuration schema nodes for this object"""
         return []
+
+    @property
+    def config(self):
+        return self._context.config.branch(self._config_path)

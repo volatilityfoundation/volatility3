@@ -30,6 +30,6 @@ class PsList(plugins.PluginInterface):
 
     def run(self):
         eproc = self.kernel_process_from_physical_process(self.context, 'physical', 'intel',
-                                                          self.config.get_value('offset'))
+                                                          self.config['offset'])
         for proc in eproc.ActiveProcessLinks:
             print(proc.UniqueProcessId)
