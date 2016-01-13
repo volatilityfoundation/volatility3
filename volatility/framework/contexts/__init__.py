@@ -24,7 +24,7 @@ class Context(interfaces.context.ContextInterface):
         interfaces.context.ContextInterface.__init__(self)
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
-        self._config = HierarchicalDict(interfaces.configuration.CONFIG_SEPARATOR)
+        self._config = HierarchicalDict()
 
     # ## Symbol Space Functions
 

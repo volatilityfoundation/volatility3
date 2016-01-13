@@ -56,7 +56,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
 
 class HierarchicalDict(collections.Mapping):
-    def __init__(self, separator, initial_dict = None):
+    def __init__(self, separator = CONFIG_SEPARATOR, initial_dict = None):
         if not (isinstance(separator, str) and len(separator) == 1):
             raise TypeError("Separator must be a one character string")
         self._separator = separator
