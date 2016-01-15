@@ -4,7 +4,7 @@ from volatility.framework.interfaces import layers, configuration
 from volatility.framework.interfaces.configuration import RequirementTreeLeaf, RequirementTreeNode
 
 
-class DataLayerDependencyResolver(validity.ValidityRoutines):
+class DependencyResolver(validity.ValidityRoutines):
     def __init__(self):
         # Maintain a cache of translation layers
         self.layer_cache = []

@@ -38,7 +38,7 @@ class CommandLine(object):
 
         # Determine the selected plugin
         # Resolve the dependencies on that plugin
-        dldr = depresolver.DataLayerDependencyResolver()
+        dldr = depresolver.DependencyResolver()
         dependencies = dldr.build_tree(plugin)
 
         # UI fills in the config:
