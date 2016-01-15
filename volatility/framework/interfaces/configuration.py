@@ -200,3 +200,25 @@ class RequirementTreeNode(RequirementTreeLeaf):
 
     def __repr__(self):
         return "<Node: " + repr(self.requirement) + " Candidates: " + repr(self.branches) + ">"
+
+
+class ConstrainedInterface(validity.ValidityRoutines):
+    """Class that specifies capabiltiies that must be provided to succeed"""
+
+    def __init__(self, constraints = None):
+        if constraints is None:
+            constraints = {}
+        validity.ValidityRoutines.__init__(self)
+        if not self._check_type(constraints, dict):
+            raise TypeError("Constraints must be a dictionary")
+        self._constraints = constraints
+
+    @property
+    def constraints(self):
+        """Returns a dictionary of requirements that must be met by a provider"""
+        return self._constraints.copy()
+
+
+class ProviderInterface(object):
+    """Class that allows providers to meet constraints on requirements"""
+    provides = {}

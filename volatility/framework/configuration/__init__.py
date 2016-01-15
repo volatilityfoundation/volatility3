@@ -4,10 +4,10 @@ Created on 7 May 2013
 @author: mike
 """
 
-from volatility.framework.interfaces.configuration import RequirementInterface
+from volatility.framework.interfaces import configuration as config_interface
 
 
-class InstanceRequirement(RequirementInterface):
+class InstanceRequirement(config_interface.RequirementInterface):
     instance_type = bool
 
     def validate(self, value, _context):
@@ -24,7 +24,7 @@ class StringRequirement(InstanceRequirement):
     instance_type = str
 
 
-class TranslationLayerRequirement(RequirementInterface):
+class TranslationLayerRequirement(config_interface.RequirementInterface, config_interface.ConstrainedInterface):
     """Class maintaining the limitations on what sort of address spaces are acceptable"""
 
     def __init__(self, name, description = None, default = None,
@@ -37,16 +37,12 @@ class TranslationLayerRequirement(RequirementInterface):
         :param layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
         :return:
         """
-        RequirementInterface.__init__(self, name, description, default, optional)
-        self._constraints = constraints or {}
+        config_interface.RequirementInterface.__init__(self, name, description, default, optional)
+        config_interface.ConstrainedInterface.__init__(self, constraints)
         self._layer_name = layer_name
 
     # TODO: Add requirements: acceptable OSes from the address_space information
     # TODO: Add requirements: acceptable arches from the available layers
-
-    @property
-    def constraints(self):
-        return self._constraints
 
     def validate(self, value, context):
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
@@ -56,11 +52,19 @@ class TranslationLayerRequirement(RequirementInterface):
             raise IndexError((value or "") + " is not a memory layer")
 
 
-class ChoiceRequirement(RequirementInterface):
+class SymbolRequirement(config_interface.RequirementInterface, config_interface.ConstrainedInterface):
+    """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
+
+    def __init__(self, name, description = None, default = None, optional = False, constraints = None):
+        config_interface.RequirementInterface.__init__(self, name, description, default, optional)
+        config_interface.ConstrainedInterface.__init__(self, constraints)
+
+
+class ChoiceRequirement(config_interface.RequirementInterface):
     """Allows one from a choice of strings"""
 
     def __init__(self, choices, *args, **kwargs):
-        RequirementInterface.__init__(self, *args, **kwargs)
+        config_interface.RequirementInterface.__init__(self, *args, **kwargs)
         if not isinstance(choices, list) or any([not isinstance(choice, str) for choice in choices]):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self._choices = choices
@@ -71,12 +75,12 @@ class ChoiceRequirement(RequirementInterface):
             raise ValueError("Value is not within the set of available choices")
 
 
-class ListRequirement(RequirementInterface):
+class ListRequirement(config_interface.RequirementInterface):
     def __init__(self, element_type, max_elements, min_elements, *args, **kwargs):
-        RequirementInterface.__init__(self, *args, **kwargs)
+        config_interface.RequirementInterface.__init__(self, *args, **kwargs)
         if isinstance(element_type, ListRequirement):
             raise TypeError("ListRequirements cannot contain ListRequirements")
-        self.element_type = self._check_type(element_type, RequirementInterface)
+        self.element_type = self._check_type(element_type, config_interface.RequirementInterface)
         self.min_elements = min_elements
         self.max_elements = max_elements
 
