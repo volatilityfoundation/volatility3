@@ -202,7 +202,7 @@ class RequirementTreeNode(RequirementTreeLeaf):
         return "<Node: " + repr(self.requirement) + " Candidates: " + repr(self.branches) + ">"
 
 
-class ConstrainedInterface(validity.ValidityRoutines):
+class ConstraintInterface(validity.ValidityRoutines):
     """Class that specifies capabiltiies that must be provided to succeed"""
 
     def __init__(self, constraints = None):

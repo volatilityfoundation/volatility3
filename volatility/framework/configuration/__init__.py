@@ -24,7 +24,7 @@ class StringRequirement(InstanceRequirement):
     instance_type = str
 
 
-class TranslationLayerRequirement(config_interface.RequirementInterface, config_interface.ConstrainedInterface):
+class TranslationLayerRequirement(config_interface.RequirementInterface, config_interface.ConstraintInterface):
     """Class maintaining the limitations on what sort of address spaces are acceptable"""
 
     def __init__(self, name, description = None, default = None,
@@ -38,7 +38,7 @@ class TranslationLayerRequirement(config_interface.RequirementInterface, config_
         :return:
         """
         config_interface.RequirementInterface.__init__(self, name, description, default, optional)
-        config_interface.ConstrainedInterface.__init__(self, constraints)
+        config_interface.ConstraintInterface.__init__(self, constraints)
         self._layer_name = layer_name
 
     # TODO: Add requirements: acceptable OSes from the address_space information
@@ -52,12 +52,12 @@ class TranslationLayerRequirement(config_interface.RequirementInterface, config_
             raise IndexError((value or "") + " is not a memory layer")
 
 
-class SymbolRequirement(config_interface.RequirementInterface, config_interface.ConstrainedInterface):
+class SymbolRequirement(config_interface.RequirementInterface, config_interface.ConstraintInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
 
     def __init__(self, name, description = None, default = None, optional = False, constraints = None):
         config_interface.RequirementInterface.__init__(self, name, description, default, optional)
-        config_interface.ConstrainedInterface.__init__(self, constraints)
+        config_interface.ConstraintInterface.__init__(self, constraints)
 
 
 class ChoiceRequirement(config_interface.RequirementInterface):
