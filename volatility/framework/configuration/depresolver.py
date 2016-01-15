@@ -10,10 +10,10 @@ class DependencyResolver(validity.ValidityRoutines):
         self.layer_cache = []
         self.symbol_cache = []
         self.provides = {}
-        self.build_caches(layers.DataLayerInterface, self.layer_cache)
-        # self.build_caches(, self.symbol_cache)
+        self._build_caches(layers.DataLayerInterface, self.layer_cache)
+        # self._build_caches(, self.symbol_cache)
 
-    def build_caches(self, clazz, cache):
+    def _build_caches(self, clazz, cache):
         self.provides = {}
         for provider in framework.class_subclasses(clazz):
             for k, v in provider.provides.items():
