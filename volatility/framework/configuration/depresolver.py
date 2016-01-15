@@ -8,31 +8,33 @@ class DependencyResolver(validity.ValidityRoutines):
     def __init__(self):
         # Maintain a cache of translation layers
         self.layer_cache = []
-        self.metadata = {}
-        self.populate_metadata()
+        self.symbol_cache = []
+        self.provides = {}
+        self.populate_metadata(layers.DataLayerInterface, self.layer_cache)
+        # self.populate_metadata(, self.symbol_cache)
 
-    def populate_metadata(self):
-        self.metadata = {}
-        for layer_class in framework.class_subclasses(layers.DataLayerInterface):
-            for k, v in layer_class.metadata.items():
+    def populate_metadata(self, clazz, cache):
+        self.provides = {}
+        for provider in framework.class_subclasses(clazz):
+            for k, v in provider.provides.items():
                 if not isinstance(v, list):
-                    new_v = self.metadata.get(k, set())
+                    new_v = self.provides.get(k, set())
                     new_v.add(v)
                 else:
-                    new_v = self.metadata.get(k, set()).union(set(v))
-                self.metadata[k] = new_v
-                self.layer_cache.append(layer_class)
+                    new_v = self.provides.get(k, set()).union(set(v))
+                self.provides[k] = new_v
+                cache.append(provider)
 
-    def satisfies(self, layer_class, requirement):
+    def satisfies(self, provider, requirement):
         """Takes the requirement (which should always be a TranslationLayerRequirement) and determines if the
            layer_class satisfies it"""
         satisfied = True
         for k, v in requirement.constraints.items():
-            if k in layer_class.metadata:
+            if k in provider.provides:
                 if isinstance(v, list):
-                    satisfied = satisfied and layer_class.metadata[k] not in v
+                    satisfied = satisfied and provider.provides[k] not in v
                 else:
-                    satisfied = satisfied and (layer_class.metadata[k] == v)
+                    satisfied = satisfied and (provider.provides[k] == v)
         return satisfied
 
     def validate_dependencies(self, deptree, context, path = None):
@@ -48,20 +50,22 @@ class DependencyResolver(validity.ValidityRoutines):
             node_path = path + configuration.CONFIG_SEPARATOR + node.requirement.name
             if isinstance(node, RequirementTreeNode) and not node.requirement.optional:
                 node_config = context.config.branch(node_path)
-                for possible_layer, subtree in node.branches.items():
+                for provider, subtree in node.branches.items():
                     if self.validate_dependencies(subtree, context, path = node_path):
-                        # Generate a layer name
-                        layer_name = node.requirement.name
-                        counter = 2
-                        while layer_name in context.memory:
-                            layer_name = node.requirement.name + str(counter)
-                            counter += 1
+                        if issubclass(provider, layers.DataLayerInterface):
+                            # Generate a layer name
+                            layer_name = node.requirement.name
+                            counter = 2
+                            while layer_name in context.memory:
+                                layer_name = node.requirement.name + str(counter)
+                                counter += 1
 
-                        # Construct the layer
-                        requirement_dict = node_config.data
-                        context.add_layer(possible_layer(context, node_path, layer_name, **requirement_dict))
-                        context.config[node_path] = layer_name
-                        break
+                            # Construct the layer
+                            requirement_dict = node_config.data
+                            context.add_layer(provider(context, node_path, layer_name, **requirement_dict))
+                            context.config[node_path] = layer_name
+                            break
+                            # elif issubclass(provider, )
                 else:
                     return False
             try:
@@ -104,10 +108,13 @@ class DependencyResolver(validity.ValidityRoutines):
                         if branch:
                             branches[potential_layer] = branch
                 deptree.append(RequirementTreeNode(requirement = requirement, branches = branches))
+            elif isinstance(requirement, framework.configuration.SymbolRequirement):
+                branches = {}
+                for potential_symbol_space in self.symbol_cache:
+                    if self.satisfies(potential_symbol_space, requirement):
+                        branch = self.build_tree()
             else:
                 # Add all base-type requirements
                 # Add all optional base-type requirements in order
                 deptree.append(RequirementTreeLeaf(requirement))
         return deptree
-
-

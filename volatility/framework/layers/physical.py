@@ -12,7 +12,7 @@ from volatility.framework import interfaces, exceptions, configuration
 class BufferDataLayer(interfaces.layers.DataLayerInterface):
     """A DataLayer class backed by a buffer in memory, designed for testing and swift data access"""
 
-    metadata = {"type": "physical"}
+    provides = {"type": "physical"}
 
     def __init__(self, context, config_path, name, buffer):
         interfaces.layers.DataLayerInterface.__init__(self, context, config_path, name)
@@ -53,7 +53,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 class FileLayer(interfaces.layers.DataLayerInterface):
     """a DataLayer backed by a file on the filesystem"""
 
-    metadata = {"type": "physical"}
+    provides = {"type": "physical"}
 
     def __init__(self, context, config_path, name, filename):
         interfaces.layers.DataLayerInterface.__init__(self, context, config_path, name)

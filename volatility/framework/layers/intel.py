@@ -13,7 +13,7 @@ from volatility.framework import interfaces, exceptions, configuration
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
 
-    metadata = {"type": "memory",
+    provides = {"type": "memory",
                 "architecture": "ia32"
                 }
 
@@ -157,7 +157,7 @@ class IntelPAE(Intel):
 
 
 class Intel32e(Intel):
-    metadata = {"type": "memory",
+    provides = {"type": "memory",
                 "architecture": "ia64"
                 }
 

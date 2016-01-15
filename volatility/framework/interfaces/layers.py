@@ -10,14 +10,16 @@ from volatility.framework.interfaces import configuration
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-class DataLayerInterface(configuration.Configurable, validity.ValidityRoutines, metaclass = ABCMeta):
+class DataLayerInterface(configuration.Configurable, configuration.ProviderInterface,
+                         validity.ValidityRoutines, metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it"""
 
-    metadata = {"type": "interface"}
+    provides = {"type": "interface"}
 
     def __init__(self, context, config_path, name):
-        validity.ValidityRoutines.__init__(self)
         configuration.Configurable.__init__(self, context, config_path)
+        configuration.ProviderInterface.__init__(self)
+        validity.ValidityRoutines.__init__(self)
         self._check_type(name, str)
         self._name = name
 
@@ -70,7 +72,7 @@ class DataLayerInterface(configuration.Configurable, validity.ValidityRoutines, 
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     # Unfortunately class attributes can't easily be inheritted from parent classes
-    metadata = {"type": "interface"}
+    provides = {"type": "interface"}
 
     @abstractmethod
     def translate(self, offset):
