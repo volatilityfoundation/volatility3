@@ -10,15 +10,13 @@ from volatility.framework.interfaces import configuration
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 
-class DataLayerInterface(configuration.ConfigurableInterface, configuration.ProviderInterface,
-                         validity.ValidityRoutines, metaclass = ABCMeta):
+class DataLayerInterface(configuration.ProviderInterface, validity.ValidityRoutines, metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it"""
 
     provides = {"type": "interface"}
 
     def __init__(self, context, config_path, name):
-        configuration.ConfigurableInterface.__init__(self, context, config_path)
-        configuration.ProviderInterface.__init__(self)
+        configuration.ProviderInterface.__init__(self, context, config_path)
         validity.ValidityRoutines.__init__(self)
         self._check_type(name, str)
         self._name = name
@@ -68,6 +66,22 @@ class DataLayerInterface(configuration.ConfigurableInterface, configuration.Prov
     def get_schema(cls):
         """Returns a list of requirements for this type of layer"""
         return []
+
+    @classmethod
+    def fulfill(cls, context, requirement, config_path):
+        # Generate a layer name
+        node_config = context.config.branch(config_path)
+        layer_name = requirement.name
+        counter = 2
+        while layer_name in context.memory:
+            layer_name = requirement.name + str(counter)
+            counter += 1
+
+        # Construct the layer
+        requirement_dict = node_config.data
+        print("Requirement_dict", cls, requirement_dict)
+        context.add_layer(cls(context, config_path, layer_name, **requirement_dict))
+        context.config[config_path] = layer_name
 
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):

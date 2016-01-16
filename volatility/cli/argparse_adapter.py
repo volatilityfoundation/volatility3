@@ -1,5 +1,7 @@
 import argparse
 
+import volatility.framework.configuration.requirements
+
 __author__ = 'mike'
 
 from volatility.framework import interfaces
@@ -23,7 +25,7 @@ def adapt_config(config, parser, group = None):
         raise TypeError("adapt_config expects a ConfigurationItem, not a " + type(config).__name__)
 
     for item in flatten_configuration(config):
-        if not isinstance(config[item], configuration.TranslationLayerRequirement):
+        if not isinstance(config[item], volatility.framework.configuration.requirements.TranslationLayerRequirement):
             parser.add_argument("--" + item.replace('.', '-'),
                                 default = config[item].default,
                                 action = StoreItemFactory(config[item]),

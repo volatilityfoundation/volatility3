@@ -5,6 +5,7 @@ Created on 4 May 2013
 """
 
 from volatility.framework import validity, exceptions
+from volatility.framework.interfaces import configuration
 
 
 class SymbolTableInterface(validity.ValidityRoutines):
@@ -89,3 +90,7 @@ class NativeTableInterface(SymbolTableInterface):
     @property
     def constants(self):
         return []
+
+
+class SymbolTableProviderInterface(configuration.ProviderInterface):
+    pass

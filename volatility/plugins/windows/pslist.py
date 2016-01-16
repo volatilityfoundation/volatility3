@@ -1,3 +1,4 @@
+import volatility.framework.configuration.requirements
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import configuration
 
@@ -5,16 +6,21 @@ from volatility.framework import configuration
 class PsList(plugins.PluginInterface):
     @classmethod
     def get_schema(cls):
-        return [configuration.TranslationLayerRequirement(name = 'primary',
-                                                          description = 'Kernel Address Space',
-                                                          constraints = {"type": "memory",
-                                                                         "architecture": "ia32"}),
-                configuration.IntRequirement(name = 'pid',
-                                             description = "Process ID",
-                                             optional = True),
-                configuration.IntRequirement(name = 'offset',
-                                             description = 'Address of any process',
-                                             default = 0x192ad18)]
+        return [volatility.framework.configuration.requirements.TranslationLayerRequirement(name = 'primary',
+                                                                                            description = 'Kernel Address Space',
+                                                                                            constraints = {"type": "memory",
+                                                                         "architecture": ["ia32", "pae"]}),
+                volatility.framework.configuration.requirements.SymbolRequirement(name = "ntkrnlmp",
+                                                                                  description = "Windows OS",
+                                                                                  constraints = {"type": "symbols",
+                                                               "os": "windows",
+                                                               "architecture": ["ia32", "pae"]}),
+                volatility.framework.configuration.requirements.IntRequirement(name = 'pid',
+                                                                               description = "Process ID",
+                                                                               optional = True),
+                volatility.framework.configuration.requirements.IntRequirement(name = 'offset',
+                                                                               description = 'Address of any process',
+                                                                               default = 0x192ad18)]
 
     @staticmethod
     def kernel_process_from_physical_process(ctx, physical_layer, kernel_layer, offset):

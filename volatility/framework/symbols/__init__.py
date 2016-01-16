@@ -9,7 +9,7 @@ import collections.abc
 import warnings
 
 from volatility.framework import objects, interfaces, exceptions
-from volatility.framework.symbols import native, vtypes
+from volatility.framework.symbols import native, vtypes, windows
 
 
 class SymbolType(object):
@@ -40,7 +40,9 @@ class SymbolSpace(collections.abc.Mapping):
 
     @natives.setter
     def natives(self, native_structures):
-        warnings.warn("Resetting the native type can cause have drastic effects on memory analysis using this space")
+        if native_structures is not None:
+            warnings.warn(
+                "Resetting the native type can cause have drastic effects on memory analysis using this space")
         self._native_structures = native_structures
 
     def __len__(self):

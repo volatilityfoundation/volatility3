@@ -6,6 +6,7 @@ Created on 6 May 2013
 
 import os.path
 
+import volatility.framework.configuration.requirements
 from volatility.framework import interfaces, exceptions, configuration
 
 
@@ -109,4 +110,4 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     @classmethod
     def get_schema(cls):
-        return [configuration.StringRequirement(name = 'filename', optional = False)]
+        return [volatility.framework.configuration.requirements.StringRequirement(name = 'filename', optional = False)]

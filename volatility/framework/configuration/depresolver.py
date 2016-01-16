@@ -118,3 +118,32 @@ class DependencyResolver(validity.ValidityRoutines):
                 # Add all optional base-type requirements in order
                 deptree.append(RequirementTreeLeaf(requirement))
         return deptree
+
+
+class DependencyError(Exception):
+    pass
+
+
+class RequirementTreeLeaf(validity.ValidityRoutines):
+    def __init__(self, requirement = None):
+        validity.ValidityRoutines.__init__(self)
+        self._check_type(requirement, configuration.RequirementInterface)
+        self.requirement = requirement
+
+    def __repr__(self):
+        return "<Leaf: " + repr(self.requirement) + ">"
+
+
+class RequirementTreeNode(RequirementTreeLeaf):
+    def __init__(self, requirement = None, candidates = None):
+        RequirementTreeLeaf.__init__(self, requirement)
+        for k in candidates:
+            self._check_class(k, configuration.ProviderInterface)
+            for node in candidates[k]:
+                self._check_type(node, RequirementTreeLeaf)
+        self.candidates = candidates
+        if candidates is None:
+            self.candidates = {}
+
+    def __repr__(self):
+        return "<Node: " + repr(self.requirement) + " Candidates: " + repr(self.candidates) + ">"

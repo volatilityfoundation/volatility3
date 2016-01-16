@@ -80,13 +80,13 @@ class ConfigurableInterface(validity.ValidityRoutines):
         return self._context.config.branch(self._config_path)
 
 
-class ConstraintInterface(validity.ValidityRoutines):
-    """Class that specifies capabiltiies that must be provided to succeed"""
+class ConstraintInterface(RequirementInterface):
+    """Class that specifies capabilities that must be provided to succeed"""
 
-    def __init__(self, constraints = None):
+    def __init__(self, name, description = None, default = None, optional = False, constraints = None):
         if constraints is None:
             constraints = {}
-        validity.ValidityRoutines.__init__(self)
+        RequirementInterface.__init__(self, name, description = description, default = default, optional = optional)
         if not self._check_type(constraints, dict):
             raise TypeError("Constraints must be a dictionary")
         self._constraints = constraints
@@ -97,6 +97,14 @@ class ConstraintInterface(validity.ValidityRoutines):
         return self._constraints.copy()
 
 
-class ProviderInterface(object):
-    """Class that allows providers to meet constraints on requirements"""
+class ProviderInterface(ConfigurableInterface):
+    """Class that allows providers to meet constraints on requirements
+
+       All providers are configurable, but having the interfaces as separate classes
+       would allow us to disentangle them in the future if necessary.
+    """
     provides = {}
+
+    @classmethod
+    def fulfill(cls, context, requirement, config_path):
+        """Fulfills a context's requirement, altering the context appropriately"""

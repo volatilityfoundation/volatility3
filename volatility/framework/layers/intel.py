@@ -7,6 +7,7 @@ Created on 7 May 2013
 import math
 import struct
 
+import volatility.framework.configuration.requirements
 from volatility.framework import interfaces, exceptions, configuration
 
 
@@ -130,13 +131,13 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     @classmethod
     def get_schema(cls):
-        return [configuration.TranslationLayerRequirement(name = 'memory_layer',
-                                                          constraints = {"type": "physical"},
-                                                          optional = False),
-                configuration.TranslationLayerRequirement(name = 'swap_layer',
-                                                          constraints = {"type": "physical"},
-                                                          optional = True),
-                configuration.IntRequirement(name = 'page_map_offset', optional = False)]
+        return [volatility.framework.configuration.requirements.TranslationLayerRequirement(name = 'memory_layer',
+                                                                                            constraints = {"type": "physical"},
+                                                                                            optional = False),
+                volatility.framework.configuration.requirements.TranslationLayerRequirement(name = 'swap_layer',
+                                                                                            constraints = {"type": "physical"},
+                                                                                            optional = True),
+                volatility.framework.configuration.requirements.IntRequirement(name = 'page_map_offset', optional = False)]
 
 
 class IntelPAE(Intel):
