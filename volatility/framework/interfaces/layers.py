@@ -78,9 +78,14 @@ class DataLayerInterface(configuration.ProviderInterface, validity.ValidityRouti
             counter += 1
 
         # Construct the layer
-        requirement_dict = node_config.data
-        print("Requirement_dict", requirement_dict)
-        context.add_layer(cls(context, config_path, layer_name, **requirement_dict))
+        requirement_dict = {}
+        for req in cls.get_schema():
+            if req.name in node_config.data:
+                requirement_dict[req.name] = node_config.data[req.name]
+        # Fulfillment must happen, exceptions happening here mean the requirements aren't correct
+        # and these need to be raised and fixed, rather than caught and ignored
+        layer = cls(context, config_path, layer_name, **requirement_dict)
+        context.add_layer(layer)
         context.config[config_path] = layer_name
 
 
