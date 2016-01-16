@@ -25,11 +25,9 @@ class WindowsKernelSymbolProvider(interfaces.symbols.SymbolTableProviderInterfac
 
     @classmethod
     def fulfill(cls, context, requirement, config_path):
-        config = context.config.branch(config_path)
-
         # Delay importing to reduce unnecessary memory and time wastage
         try:
-            module = importlib.import_module(cls.vtype_pymodule, "volatility.framework.symbols.windows")
+            module = importlib.import_module("volatility.framework.symbols.windows." + cls.vtype_pymodule)
         except ImportError:
             raise TypeError("VType Provider interface cannot be used to fulfill a requirement")
         virtual_types = getattr(module, cls.vtype_variable)
@@ -44,7 +42,7 @@ class WindowsKernelSymbolProvider(interfaces.symbols.SymbolTableProviderInterfac
         vtype_table.set_structure_class('_LIST_ENTRY', basic._LIST_ENTRY)
 
         context.symbol_space.append(vtype_table)
-        config[requirement.name] = cls.space_name
+        context.config[config_path] = cls.space_name
 
 
 class XPSP2WindowsKernelSymbolProvider(WindowsKernelSymbolProvider):
