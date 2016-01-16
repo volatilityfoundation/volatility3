@@ -1,20 +1,18 @@
 import volatility.framework as framework
 import volatility.framework.validity as validity
-from volatility.framework.configuration import RequirementTreeLeaf, RequirementTreeNode
-from volatility.framework.interfaces import layers, configuration
+from volatility.framework.interfaces import configuration
 
 
 class DependencyResolver(validity.ValidityRoutines):
     def __init__(self):
         # Maintain a cache of translation layers
-        self.layer_cache = []
-        self.symbol_cache = []
+        self.configurable_cache = []
         self.provides = {}
-        self._build_caches(layers.DataLayerInterface, self.layer_cache)
-        # self._build_caches(, self.symbol_cache)
+        self.providers_cache = set(self._build_caches(configuration.ProviderInterface))
 
-    def _build_caches(self, clazz, cache):
+    def _build_caches(self, clazz):
         self.provides = {}
+        cache = set()
         for provider in framework.class_subclasses(clazz):
             for k, v in provider.provides.items():
                 if not isinstance(v, list):
@@ -23,7 +21,8 @@ class DependencyResolver(validity.ValidityRoutines):
                 else:
                     new_v = self.provides.get(k, set()).union(set(v))
                 self.provides[k] = new_v
-                cache.append(provider)
+                cache.add(provider)
+        return cache
 
     def satisfies(self, provider, requirement):
         """Takes the requirement (which should always be a TranslationLayerRequirement) and determines if the
@@ -31,11 +30,18 @@ class DependencyResolver(validity.ValidityRoutines):
         satisfied = True
         for k, v in requirement.constraints.items():
             if k in provider.provides:
-                if isinstance(v, list):
-                    satisfied = satisfied and provider.provides[k] not in v
-                else:
-                    satisfied = satisfied and (provider.provides[k] == v)
+                satisfied = satisfied and bool(self.common_provision(provider.provides[k], v))
         return satisfied
+
+    def common_provision(self, value1, value2):
+        """Normalizes individual values down to singleton lists, then tests for overlap between the two lists"""
+        if not isinstance(value1, list):
+            value1 = [value1]
+        if not isinstance(value2, list):
+            value2 = [value2]
+        set1 = set(value1)
+        set2 = set(value2)
+        return set1.intersection(set2)
 
     def validate_dependencies(self, deptree, context, path = None):
         """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
@@ -49,23 +55,10 @@ class DependencyResolver(validity.ValidityRoutines):
         for node in deptree:
             node_path = path + configuration.CONFIG_SEPARATOR + node.requirement.name
             if isinstance(node, RequirementTreeNode) and not node.requirement.optional:
-                node_config = context.config.branch(node_path)
-                for provider, subtree in node.branches.items():
-                    if self.validate_dependencies(subtree, context, path = node_path):
-                        if issubclass(provider, layers.DataLayerInterface):
-                            # Generate a layer name
-                            layer_name = node.requirement.name
-                            counter = 2
-                            while layer_name in context.memory:
-                                layer_name = node.requirement.name + str(counter)
-                                counter += 1
-
-                            # Construct the layer
-                            requirement_dict = node_config.data
-                            context.add_layer(provider(context, node_path, layer_name, **requirement_dict))
-                            context.config[node_path] = layer_name
-                            break
-                            # elif issubclass(provider, )
+                for provider in node.candidates:
+                    if self.validate_dependencies(node.candidates[provider], context, path = node_path):
+                        provider.fulfill(context, node.requirement, node_path)
+                        break
                 else:
                     return False
             try:
@@ -77,9 +70,9 @@ class DependencyResolver(validity.ValidityRoutines):
         return True
 
     def build_tree(self, configurable):
-        """Takes a configurable class and produces a priority ordered tree of possible solutions to satisfy the various requirements
+        """Takes a configurable and produces a priority ordered tree of possible solutions to satisfy the various requirements
 
-           @param configurable: A Configurable type that requires its dependency tree constructing
+           @param configurable: A configurable class that requires its dependency tree constructing
            @param path: A path indicating where the configurable resides in the config namespace
            @return deptree: The returned tree should include each of the potential nodes (and requirements, including optional ones) allowing the UI
            to decide the layer build-path and get all the necessary variables from the user for that path.
@@ -87,36 +80,29 @@ class DependencyResolver(validity.ValidityRoutines):
         self._check_class(configurable, configuration.ConfigurableInterface)
 
         deptree = []
-        deptree_names = set()
 
-        for requirement in configurable.get_schema():
-
-            # Choose a name for the node/leaf
-            node_name = requirement.name
-            if node_name in deptree_names:
-                node_name += str(len([x for x in deptree_names if x.startswith(requirement.name)]))
-
-            # If the requirement is a layer/configurable
-            if isinstance(requirement, framework.configuration.TranslationLayerRequirement):
-                # Find all the different ways to fulfill it (recursively)
-                # TODO: Ensure no cycles or loops
-                branches = {}
-                for potential_layer in self.layer_cache:
-                    if self.satisfies(potential_layer, requirement):
-                        branch = self.build_tree(potential_layer)
-                        # Only add a possibility if there are suitable lower layers for it
-                        if branch:
-                            branches[potential_layer] = branch
-                deptree.append(RequirementTreeNode(requirement = requirement, branches = branches))
-            elif isinstance(requirement, framework.configuration.SymbolRequirement):
-                branches = {}
-                for potential_symbol_space in self.symbol_cache:
-                    if self.satisfies(potential_symbol_space, requirement):
-                        branch = self.build_tree()
+        for subreq in configurable.get_schema():
+            # Find all the different ways to fulfill it (recursively)
+            # TODO: Ensure no cycles or loops
+            if not isinstance(subreq, configuration.ConstraintInterface):
+                deptree.append(RequirementTreeLeaf(requirement = subreq))
             else:
-                # Add all base-type requirements
-                # Add all optional base-type requirements in order
-                deptree.append(RequirementTreeLeaf(requirement))
+                candidates = {}
+                satisfiable = False
+                for potential in self.providers_cache:
+                    if self.satisfies(potential, subreq):
+                        try:
+                            candidate = self.build_tree(potential)
+                            candidates[potential] = candidate
+                            satisfiable = True
+                        except DependencyError:
+                            pass
+                # Check we've satisfied one of the possibilities, exception if we haven't
+                if not satisfiable:
+                    raise DependencyError("No solutions to fulfill requirement " + repr(subreq))
+                # Construct the appropriate Requirement node
+                if candidates:
+                    deptree.append(RequirementTreeNode(requirement = subreq, candidates = candidates))
         return deptree
 
 
