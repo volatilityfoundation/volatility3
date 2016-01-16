@@ -9,9 +9,10 @@ import pdb
 
 from volatility import framework
 from volatility.framework import contexts
-from volatility.framework import xp_sp2_x86_vtypes, layers, plugins
+from volatility.framework import layers, plugins
 from volatility.framework.interfaces import objects
 from volatility.framework.symbols import vtypes, native, windows
+from volatility.framework.symbols.windows import xp_sp2_x86_vtypes
 
 
 def utils_load_as():
@@ -20,7 +21,7 @@ def utils_load_as():
     ctx = framework.contexts.Context(native_list)
     ctx.symbol_space.append(native_list)
 
-    from volatility.framework import xp_sp2_x86_vtypes
+    from volatility.framework.symbols.windows import xp_sp2_x86_vtypes
 
     virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
     ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
