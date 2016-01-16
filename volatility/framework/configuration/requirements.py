@@ -18,6 +18,10 @@ class StringRequirement(InstanceRequirement):
     instance_type = str
 
 
+class BytesRequirement(InstanceRequirement):
+    instance_type = bytes
+
+
 class TranslationLayerRequirement(config_interface.ConstraintInterface):
     """Class maintaining the limitations on what sort of address spaces are acceptable"""
 

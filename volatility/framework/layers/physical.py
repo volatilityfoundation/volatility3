@@ -6,8 +6,8 @@ Created on 6 May 2013
 
 import os.path
 
-import volatility.framework.configuration.requirements
-from volatility.framework import interfaces, exceptions, configuration
+from volatility.framework import interfaces, exceptions
+from volatility.framework.configuration import requirements
 
 
 class BufferDataLayer(interfaces.layers.DataLayerInterface):
@@ -48,7 +48,8 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
     @classmethod
     def get_schema(cls):
         # No real requirements (only the buffer).  Need to figure out if there's a better way of representing this
-        return []
+        return [requirements.BytesRequirement(name = 'buffer', description = "The direct bytes to interact with",
+                                              optional = False)]
 
 
 class FileLayer(interfaces.layers.DataLayerInterface):
@@ -110,4 +111,4 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     @classmethod
     def get_schema(cls):
-        return [volatility.framework.configuration.requirements.StringRequirement(name = 'filename', optional = False)]
+        return [requirements.StringRequirement(name = 'filename', optional = False)]
