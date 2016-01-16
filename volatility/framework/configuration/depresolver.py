@@ -62,7 +62,8 @@ class DependencyResolver(validity.ValidityRoutines):
                         provider.fulfill(context, node.requirement, node_path)
                         break
                 else:
-                    logging.debug("Unable to fulfill requirement " + repr(node.requirement))
+                    logging.debug(
+                        "Unable to fulfill requirement " + repr(node.requirement) + " - no fulfillable candidates")
                     return False
             try:
                 value = context.config[node_path]
