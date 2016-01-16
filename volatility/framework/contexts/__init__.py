@@ -1,5 +1,5 @@
 from volatility.framework import interfaces, symbols, layers
-from volatility.framework.interfaces.configuration import HierarchicalDict
+from volatility.framework.configuration import HierarchicalDict
 
 __author__ = 'mike'
 

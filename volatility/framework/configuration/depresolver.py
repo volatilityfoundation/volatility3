@@ -1,7 +1,7 @@
 import volatility.framework as framework
 import volatility.framework.validity as validity
+from volatility.framework.configuration import RequirementTreeLeaf, RequirementTreeNode
 from volatility.framework.interfaces import layers, configuration
-from volatility.framework.interfaces.configuration import RequirementTreeLeaf, RequirementTreeNode
 
 
 class DependencyResolver(validity.ValidityRoutines):
@@ -84,7 +84,7 @@ class DependencyResolver(validity.ValidityRoutines):
            @return deptree: The returned tree should include each of the potential nodes (and requirements, including optional ones) allowing the UI
            to decide the layer build-path and get all the necessary variables from the user for that path.
         """
-        self._check_class(configurable, configuration.Configurable)
+        self._check_class(configurable, configuration.ConfigurableInterface)
 
         deptree = []
         deptree_names = set()

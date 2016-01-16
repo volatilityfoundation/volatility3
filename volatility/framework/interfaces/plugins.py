@@ -23,12 +23,12 @@ from volatility.framework.interfaces import context as context_interface
 #  The plugin accepts the context and modifies as necessary
 #  The plugin runs and produces a TreeGrid output
 
-class PluginInterface(configuration_interface.Configurable, validity.ValidityRoutines, metaclass = ABCMeta):
+class PluginInterface(configuration_interface.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
     """Class that defines the interface all Plugins must maintain"""
 
     def __init__(self, context, config_path):
         validity.ValidityRoutines.__init__(self)
-        configuration_interface.Configurable.__init__(self, context, config_path)
+        configuration_interface.ConfigurableInterface.__init__(self, context, config_path)
         self._check_type(context, context_interface.ContextInterface)
         # self.validate_inputs()
 
