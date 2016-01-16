@@ -1,3 +1,5 @@
+import logging
+
 import volatility.framework as framework
 import volatility.framework.validity as validity
 from volatility.framework.interfaces import configuration
@@ -60,12 +62,16 @@ class DependencyResolver(validity.ValidityRoutines):
                         provider.fulfill(context, node.requirement, node_path)
                         break
                 else:
+                    logging.debug("Unable to fulfill requirement " + repr(node.requirement))
                     return False
             try:
                 value = context.config[node_path]
                 node.requirement.validate(value, context)
-            except BaseException as e:
+            except Exception as e:
                 if not node.requirement.optional:
+                    logging.debug(
+                            "Unable to fulfill non-optional requirement " + repr(node.requirement) +
+                            " [" + str(e) + "]")
                     return False
         return True
 

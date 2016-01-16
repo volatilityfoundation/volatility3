@@ -1,7 +1,7 @@
 import importlib
 
-import volatility.framework.configuration.requirements
 from volatility.framework import interfaces
+from volatility.framework.configuration import requirements
 from volatility.framework.symbols import vtypes, native
 from volatility.framework.symbols.windows import basic
 
@@ -13,6 +13,7 @@ class X86NativeSymbolProvider(interfaces.symbols.SymbolTableProviderInterface):
     @classmethod
     def fulfill(cls, context, requirement, config_path):
         context.symbol_space.natives = native.x86NativeTable
+        context.config[config_path] = "natives"
 
 
 class WindowsKernelSymbolProvider(interfaces.symbols.SymbolTableProviderInterface):
@@ -61,7 +62,6 @@ class XPSP2WindowsKernelSymbolProvider(WindowsKernelSymbolProvider):
 
     @classmethod
     def get_schema(cls):
-        return [volatility.framework.configuration.requirements.SymbolRequirement("natives",
-                                                                                  description = "Native Symbols for x86",
-                                                                                  constraints = {"type": "natives",
-                                                                                                 "architecture": "ia32"})]
+        return [requirements.NativeSymbolRequirement("natives", description = "Native Symbols for x86",
+                                                     constraints = {"type": "natives",
+                                                                    "architecture": "ia32"})]

@@ -79,7 +79,7 @@ class DataLayerInterface(configuration.ProviderInterface, validity.ValidityRouti
 
         # Construct the layer
         requirement_dict = node_config.data
-        print("Requirement_dict", cls, requirement_dict)
+        print("Requirement_dict", requirement_dict)
         context.add_layer(cls(context, config_path, layer_name, **requirement_dict))
         context.config[config_path] = layer_name
 

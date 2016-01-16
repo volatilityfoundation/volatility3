@@ -59,6 +59,12 @@ class SymbolRequirement(config_interface.ConstraintInterface):
             raise IndexError((value or "") + " is not present in the symbol space")
 
 
+class NativeSymbolRequirement(SymbolRequirement):
+    def validate(self, value, context):
+        if not isinstance(value, str):
+            raise TypeError("SymbolRequirement only accepts string labels")
+
+
 class ChoiceRequirement(config_interface.RequirementInterface):
     """Allows one from a choice of strings"""
 
