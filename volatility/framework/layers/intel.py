@@ -8,12 +8,13 @@ import math
 import struct
 
 import volatility.framework.configuration.requirements
-from volatility.framework import interfaces, exceptions, configuration
+from volatility.framework import interfaces, exceptions
 
 
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
 
+    priority = 40
     provides = {"type": "memory",
                 "architecture": "ia32"
                 }
@@ -143,6 +144,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel architectures"""
 
+    priority = 35
+
     def __init__(self, *args, **kwargs):
         Intel.__init__(self, *args, **kwargs)
 
@@ -158,6 +161,7 @@ class IntelPAE(Intel):
 
 
 class Intel32e(Intel):
+    priority = 30
     provides = {"type": "memory",
                 "architecture": "ia64"
                 }

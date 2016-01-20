@@ -1,4 +1,5 @@
 import logging
+from collections import OrderedDict
 
 import volatility.framework as framework
 import volatility.framework.validity as validity
@@ -10,7 +11,8 @@ class DependencyResolver(validity.ValidityRoutines):
         # Maintain a cache of translation layers
         self.configurable_cache = []
         self.provides = {}
-        self.providers_cache = set(self._build_caches(configuration.ProviderInterface))
+        self.providers_cache = sorted(list(self._build_caches(configuration.ProviderInterface)),
+                                      key = lambda x: -x.priority)
 
     def _build_caches(self, clazz):
         self.provides = {}
@@ -94,7 +96,7 @@ class DependencyResolver(validity.ValidityRoutines):
             if not isinstance(subreq, configuration.ConstraintInterface):
                 deptree.append(RequirementTreeLeaf(requirement = subreq))
             else:
-                candidates = {}
+                candidates = OrderedDict()
                 satisfiable = False
                 for potential in self.providers_cache:
                     if self.satisfies(potential, subreq):
@@ -136,7 +138,7 @@ class RequirementTreeNode(RequirementTreeLeaf):
                 self._check_type(node, RequirementTreeLeaf)
         self.candidates = candidates
         if candidates is None:
-            self.candidates = {}
+            self.candidates = OrderedDict()
 
     def __repr__(self):
         return "<Node: " + repr(self.requirement) + " Candidates: " + repr(self.candidates) + ">"

@@ -104,6 +104,7 @@ class ProviderInterface(ConfigurableInterface):
        would allow us to disentangle them in the future if necessary.
     """
     provides = {}
+    priority = 10
 
     @classmethod
     def fulfill(cls, context, requirement, config_path):
