@@ -1,6 +1,5 @@
-import binascii
+import argparse
 import struct
-import sys
 
 import volatility.framework
 from volatility.framework import layers
@@ -9,9 +8,6 @@ from volatility.framework.symbols import native
 __author__ = 'mike'
 
 PAGE_SIZE = 0x1000
-POINTER_SIZE = 8
-STRUCT = "Q"
-BIT = 64
 
 
 def utils_load_as():
@@ -27,72 +23,54 @@ def utils_load_as():
     return ctx
 
 
-class DTBFinderX64(object):
+class DTBFinder(object):
     def __init__(self, ctx):
         self.ctx = ctx
         self.page_map = {}
 
-    def store_page_mappings(self, offset):
-        page = self.ctx.memory.read('data', offset, PAGE_SIZE)
-        self.page_map[offset] = [x & 0xFFFFFFFFFFFFF000 for x in
-                                 struct.unpack("<" + STRUCT * int(PAGE_SIZE / POINTER_SIZE), page) if (x & 1 == 1)]
-
-    def scan(self, magic = 0x1ED):
+    def scan(self, pointer_size, pointer_struct, magic):
         for offset in range(self.ctx.memory['data'].minimum_address, self.ctx.memory['data'].maximum_address,
                             PAGE_SIZE):
-            null = struct.unpack("<" + STRUCT, self.ctx.memory.read('data', offset, POINTER_SIZE))[0]
-            val = self.ctx.memory.read('data', offset + (magic * POINTER_SIZE), POINTER_SIZE)
-            test_val = struct.unpack("<" + STRUCT, val)[0] & 0xFFFFFFFFFFFFF000
-            offsetstr = ("{0:#0" + str((POINTER_SIZE * 2) + 2) + "x}").format(offset)
-            testvalstr = ("{0:#0" + str((POINTER_SIZE * 2) + 2) + "x}").format(test_val)
+            null = struct.unpack("<" + pointer_struct, self.ctx.memory.read('data', offset, pointer_size))[0]
+            val = self.ctx.memory.read('data', offset + (magic * pointer_size), pointer_size)
+            test_val = struct.unpack("<" + pointer_struct, val)[0] & 0xFFFFFFFFFFFFF000
+            offsetstr = ("{0:#0" + str((pointer_size * 2) + 2) + "x}").format(offset)
+            testvalstr = ("{0:#0" + str((pointer_size * 2) + 2) + "x}").format(test_val)
             if offset == test_val and offset != 0:
-                self.store_page_mappings(offset)
                 print("MATCH at", offsetstr, "with magic", magic, "null", null)
-                # print("Offset", offsetstr, "Value", testvalstr)
 
-        # print(repr(self.page_map))
-        self.process_page_map()
+    def scan32(self):
+        self.scan(4, "I", 0x300)
 
-    def process_page_map(self):
-        for offset in self.page_map:
+    def scan64(self):
+        self.scan(8, "Q", 0x1ED)
 
-            # Read through each of the entries to see how close it is to the actual DTB
-            bitmap = ""
-            for index in range(0, PAGE_SIZE, POINTER_SIZE):
-                val = self.ctx.memory.read('data', offset + index, POINTER_SIZE)
-                correct_val = self.ctx.memory.read('data', 0x0000000000124000 + index, POINTER_SIZE)
-                if val == 0:
-                    bitmap += "."
-                else:
-                    bitmap += ("1" if val == correct_val else "0")
-            print("{0:#018x}".format(offset), bitmap, "\n")
-
-            # if offset == 0x00000000003c3000:
-            # if offset == 0x0000000000124000:
-            #                print(sorted("{0:#018x}".format(x) for x in self.page_map[offset] if x != 0))
-            #                print(sorted("{0:#018x}".format(x) for x in self.page_map.keys() if x != 0))
-            #                break
-            # for value in self.page_map[index]:
-            # if value in self.page_map.keys():
-            #        counts["{0:#018x}".format(value)] = counts.get("{0:#018x}".format(value), 0) + 1
-
-
-def display_dtb(ctx, dtb_offset):
-    data = ctx.memory['data'].read(dtb_offset, PAGE_SIZE)
-    for index in range(int(PAGE_SIZE / POINTER_SIZE)):
-        value = data[index * POINTER_SIZE:(index + 1) * POINTER_SIZE]
-        if binascii.hexlify(value) != b"0000000000000000":
-            print("Index", index, "Value", binascii.hexlify(value))
+    def scanpae(self):
+        self.scan(8, "Q", 0x3)
 
 
 if __name__ == '__main__':
 
-    if BIT == 32:
-        POINTER_SIZE = 4
-        STRUCT = "I"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--32bit", action = "store_true", dest = "bit32", help = "32-bit tests")
+    parser.add_argument("--64bit", action = "store_true", dest = "bit64", help = "64-bit tests")
+    parser.add_argument("--pae", action = "store_true", help = "pae tests")
+    parser.add_argument("-f", "--file", metavar = "FILE", action = "store", help = "FILE to read for testing")
+
+    args = parser.parse_args()
 
     ctx = utils_load_as()
-    data = layers.physical.FileLayer(ctx, 'name', 'data', filename = sys.argv[1])
+    data = layers.physical.FileLayer(ctx, 'name', 'data', filename = args.file)
     ctx.memory.add_layer(data)
+
+    df = DTBFinder(ctx)
     # display_dtb(ctx, int(sys.argv[2], 16))
-    DTBFinderX64(ctx).scan()
+    if args.bit64:
+        print("[*] Start 64-bit scan")
+        df.scan64()
+    if args.bit32:
+        print("[*] Start 32-bit scan")
+        df.scan32()
+    if args.pae:
+        print("[*] Start pae scan")
+        df.scanpae()
