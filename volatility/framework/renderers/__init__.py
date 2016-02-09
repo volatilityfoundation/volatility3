@@ -30,7 +30,7 @@ class TreeNode(interfaces.renderers.TreeNode):
 
     def _validate_values(self, values):
         """A function for raising exceptions if a given set of values is invalid according to the column properties."""
-        if not (isinstance(values, list) and len(values) == len(self._treegrid.columns)):
+        if not (isinstance(values, collections.Sequence) and len(values) == len(self._treegrid.columns)):
             raise TypeError(
                 "Values must be a list of objects made up of simple types and number the same as the columns")
         for index in range(len(self._treegrid.columns)):
