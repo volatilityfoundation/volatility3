@@ -1,5 +1,6 @@
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
+from volatility.framework.renderers import TreeGrid
 
 
 class PsList(plugins.PluginInterface):
@@ -32,6 +33,11 @@ class PsList(plugins.PluginInterface):
         # Get the process from the thread object in kernel space
         return ethread.owning_process()
 
+    def _generator(self, eproc):
+        for proc in eproc.ActiveProcessLinks:
+            print(proc.UniqueProcessId, proc.InheritedFromUniqueProcessId)
+            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId))
+
     def run(self):
 
         # Use the primary twice until we figure out how to specify base layers of a particular translation layer
@@ -39,5 +45,7 @@ class PsList(plugins.PluginInterface):
                                                           self.config['primary'],
                                                           self.config['primary'],
                                                           self.config['offset'])
-        for proc in eproc.ActiveProcessLinks:
-            print(proc.UniqueProcessId)
+
+        return TreeGrid([("PID", int),
+                         ("PPID", int)],
+                        self._generator(eproc))

@@ -8,6 +8,7 @@ from volatility.cli import argparse_adapter
 from volatility.framework import plugins, contexts
 from volatility.framework.configuration import depresolver
 from volatility.framework.configuration.depresolver import DependencyError
+from volatility.framework.renderers.text import TextRenderer
 
 __author__ = 'mike'
 
@@ -53,7 +54,7 @@ class CommandLine(object):
         config_path = plugin.__name__.lower()
         if dldr.validate_dependencies(dependencies, context = ctx, path = config_path):
             # Construct and run the plugin
-            plugin(ctx, config_path).run()
+            TextRenderer().render(plugin(ctx, config_path).run())
         else:
             raise DependencyError("Unable to validate all the dependencies, please check configuration parameters")
 
