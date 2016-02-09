@@ -29,15 +29,18 @@ class DTBFinder(object):
         self.page_map = {}
 
     def scan(self, pointer_size, pointer_struct, magic):
-        for offset in range(self.ctx.memory['data'].minimum_address, self.ctx.memory['data'].maximum_address,
+        for offset in range(self.ctx.memory['data'].minimum_address,
+                            self.ctx.memory['data'].maximum_address - PAGE_SIZE,
                             PAGE_SIZE):
             null = struct.unpack("<" + pointer_struct, self.ctx.memory.read('data', offset, pointer_size))[0]
             val = self.ctx.memory.read('data', offset + (magic * pointer_size), pointer_size)
             test_val = struct.unpack("<" + pointer_struct, val)[0] & 0xFFFFFFFFFFFFF000
+            mask = struct.unpack("<" + pointer_struct, val)[0] & 0xFFF
             offsetstr = ("{0:#0" + str((pointer_size * 2) + 2) + "x}").format(offset)
             testvalstr = ("{0:#0" + str((pointer_size * 2) + 2) + "x}").format(test_val)
             if offset == test_val and offset != 0:
-                print("MATCH at", offsetstr, "with magic", magic, "null", null)
+                if (mask & 0xFF0) == 0x60:
+                    print("MATCH at", offsetstr, "with magic", magic, "with mask", "{0:#04x}".format(mask))
 
     def scan32(self):
         self.scan(4, "I", 0x300)
