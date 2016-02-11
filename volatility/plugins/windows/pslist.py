@@ -35,7 +35,6 @@ class PsList(plugins.PluginInterface):
 
     def _generator(self, eproc):
         for proc in eproc.ActiveProcessLinks:
-            print(proc.UniqueProcessId, proc.InheritedFromUniqueProcessId)
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId))
 
     def run(self):
