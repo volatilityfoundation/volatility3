@@ -36,18 +36,28 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
 
            symbol_space is used to resolve any target symbols if they don't exist in this list
         """
+        # TODO: Add strings and bytes to this set
         additional = {}
+        obj = None
         if structure_name == 'void':
-            return objects.templates.ObjectTemplate(objects.Void, structure_name = structure_name)
+            obj = objects.Void
         elif structure_name == 'array':
-            return objects.templates.ObjectTemplate(objects.Array, structure_name = structure_name, count = 0,
-                                                    target = self.get_structure('void'))
+            obj = objects.Array
+            additional = {"count": 0, "target": self.get_structure('void')}
         elif structure_name == 'Enumeration':
-            return objects.templates.ObjectTemplate(objects.Enumeration, structure_name = structure_name,
-                                                    target = self.get_structure('void'), choices = {})
+            obj = objects.Enumeration
+            additional = {"target": self.get_structure('void'), "choices": {}}
         elif structure_name == 'BitField':
-            return objects.templates.ObjectTemplate(objects.BitField, structure_name = structure_name, start_bit = 0,
-                                                    end_bit = 0)
+            obj = objects.BitField
+            additional = {"start_bit": 0, "end_bit": 0}
+        elif structure_name == 'String':
+            obj = objects.String
+            additional = {"length": 0}
+        elif structure_name == 'Bytes':
+            obj = objects.Bytes
+            additional = {"length": 0}
+        if obj is not None:
+            return objects.templates.ObjectTemplate(obj, structure_name = structure_name, **additional)
 
         _native_type, native_format = self._native_dictionary[structure_name]
         if structure_name == 'pointer':
