@@ -3,7 +3,7 @@ import importlib
 from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.symbols import vtypes, native
-from volatility.framework.symbols.windows import basic
+from volatility.framework.symbols.windows import extensions
 
 
 class X86NativeSymbolProvider(interfaces.symbols.SymbolTableProviderInterface):
@@ -38,8 +38,8 @@ class WindowsKernelSymbolProvider(interfaces.symbols.SymbolTableProviderInterfac
         vtype_table = vtypes.VTypeSymbolTable(cls.space_name, virtual_types, context.symbol_space.natives)
 
         # Set-up windows specific types
-        vtype_table.set_structure_class('_ETHREAD', basic._ETHREAD)
-        vtype_table.set_structure_class('_LIST_ENTRY', basic._LIST_ENTRY)
+        vtype_table.set_structure_class('_ETHREAD', extensions._ETHREAD)
+        vtype_table.set_structure_class('_LIST_ENTRY', extensions._LIST_ENTRY)
 
         context.symbol_space.append(vtype_table)
         context.config[config_path] = cls.space_name
