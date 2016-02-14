@@ -79,13 +79,17 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def write(self, value):
         """Writes the new value into the format at the offset the object currently resides at"""
 
-    def cast(self, new_structure_name):
+    def cast(self, new_structure_name, **additional):
         """Returns a new object at the offset and from the layer that the current object inhabits"""
+        # TODO: Carefully consider the implications of casting and how it should work
         object_template = self._context.symbol_space.get_structure(new_structure_name)
-        object_template.update_vol(self.vol)
+        object_template.update_vol(**additional)
+        object_info = ObjectInformation(layer_name = self.vol.layer_name,
+                                        offset = self.vol.offset,
+                                        member_name = self.vol.member_name,
+                                        parent = self.vol.parent)
         return object_template(context = self._context,
-                               object_info = ObjectInformation(layer_name = self.vol.layer_name,
-                                                               offset = self.vol.offset))
+                               object_info = object_info)
 
     class VolTemplateProxy(object):
         """A container for proxied methods that the ObjectTemplate of this object will call.
