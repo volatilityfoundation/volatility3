@@ -92,16 +92,16 @@ class Bytes(PrimitiveObject, bytes):
                                                     struct_format = str(length) + "s")
         self._vol['length'] = length
 
-    def __new__(cls, context, structure_name, object_info, **kwargs):
+    def __new__(cls, context, structure_name, object_info, length = 1, **kwargs):
         """Creates the appropriate class and returns it so that the native type is inherritted
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
         without needing to override __new__"""
-        return bytes.__new__(cls,
-                             cls._struct_value(context,
-                                               struct_format = str(kwargs["length"]) + "s",
-                                               layer_name = object_info.layer_name,
-                                               offset = object_info.offset))
+        return cls._struct_type.__new__(cls,
+                                        cls._struct_value(context,
+                                                          struct_format = str(length) + "s",
+                                                          layer_name = object_info.layer_name,
+                                                          offset = object_info.offset))
 
 
 # TODO: Fix up strings unpacking to include an encoding
@@ -112,14 +112,33 @@ class String(PrimitiveObject, str):
     """
     _struct_type = str
 
-    def __init__(self, context, structure_name, object_info, struct_format, length = 1, encoding = 'ascii'):
-        self._struct_format = str(length) + 's'
-        self._vol['length'] = length
+    def __init__(self, context, structure_name, object_info, max_length = 1, encoding = "utf-8", errors = None):
         PrimitiveObject.__init__(self,
                                  context = context,
                                  structure_name = structure_name,
                                  object_info = object_info,
-                                 struct_format = struct_format)
+                                 struct_format = str(max_length) + 's')
+        self._vol["max_length"] = max_length
+        self._vol['encoding'] = encoding
+        self._vol['errors'] = errors
+
+    def __new__(cls, context, structure_name, object_info, max_length = 1, encoding = "utf-8", errors = None, **kwargs):
+        """Creates the appropriate class and returns it so that the native type is inherited
+
+        The only reason the **kwargs is added, is so that the inherriting types can override __init__
+        without needing to override __new__"""
+        params = {}
+        if encoding:
+            params['encoding'] = encoding
+        if errors:
+            params['errors'] = errors
+        value = cls._struct_type.__new__(cls,
+                                         cls._struct_value(context,
+                                                           struct_format = str(max_length) + "s",
+                                                           layer_name = object_info.layer_name,
+                                                           offset = object_info.offset),
+                                         **params)
+        return value
 
 
 class Pointer(Integer):

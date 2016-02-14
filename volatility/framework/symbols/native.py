@@ -36,7 +36,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
 
            symbol_space is used to resolve any target symbols if they don't exist in this list
         """
-        # TODO: Add strings and bytes to this set
+        # NOTE: These need updating whenever the object init signatures change
         additional = {}
         obj = None
         if structure_name == 'void':
@@ -52,7 +52,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             additional = {"start_bit": 0, "end_bit": 0}
         elif structure_name == 'String':
             obj = objects.String
-            additional = {"length": 0}
+            additional = {"max_length": 0}
         elif structure_name == 'Bytes':
             obj = objects.Bytes
             additional = {"length": 0}
