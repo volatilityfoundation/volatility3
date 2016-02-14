@@ -138,6 +138,7 @@ class String(PrimitiveObject, str):
                                                            layer_name = object_info.layer_name,
                                                            offset = object_info.offset),
                                          **params)
+        # We don't truncate on "\x00" because the string decoder does that for us
         return value
 
 
