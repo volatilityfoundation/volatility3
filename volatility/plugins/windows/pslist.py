@@ -35,7 +35,9 @@ class PsList(plugins.PluginInterface):
 
     def _generator(self, eproc):
         for proc in eproc.ActiveProcessLinks:
-            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId))
+            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
+                       proc.ImageFileName.cast("String", max_length = proc.ImageFileName.vol.count,
+                                               errors = 'replace')))
 
     def run(self):
 
@@ -46,5 +48,6 @@ class PsList(plugins.PluginInterface):
                                                           self.config['offset'])
 
         return TreeGrid([("PID", int),
-                         ("PPID", int)],
+                         ("PPID", int),
+                         ("ImageFileName", str)],
                         self._generator(eproc))
