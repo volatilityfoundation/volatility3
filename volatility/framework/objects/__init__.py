@@ -8,6 +8,7 @@ import collections
 import struct
 
 from volatility.framework import interfaces
+from volatility.framework.interfaces.objects import ObjectInformation
 from volatility.framework.objects import templates
 
 
@@ -83,14 +84,24 @@ class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes"""
     _struct_type = bytes
 
-    def __init__(self, context, structure_name, object_info, struct_format, length = 1):
-        self._struct_format = str(length) + 's'
-        PrimitiveObject.__init__(self,
-                                 context,
-                                 structure_name = structure_name,
-                                 object_info = object_info,
-                                 struct_format = struct_format)
+    def __init__(self, context, structure_name, object_info, length = 1):
+        interfaces.objects.ObjectInterface.__init__(self,
+                                                    context = context,
+                                                    structure_name = structure_name,
+                                                    object_info = object_info,
+                                                    struct_format = str(length) + "s")
         self._vol['length'] = length
+
+    def __new__(cls, context, structure_name, object_info, **kwargs):
+        """Creates the appropriate class and returns it so that the native type is inherritted
+
+        The only reason the **kwargs is added, is so that the inherriting types can override __init__
+        without needing to override __new__"""
+        return bytes.__new__(cls,
+                             cls._struct_value(context,
+                                               struct_format = str(kwargs["length"]) + "s",
+                                               layer_name = object_info.layer_name,
+                                               offset = object_info.offset))
 
 
 # TODO: Fix up strings unpacking to include an encoding

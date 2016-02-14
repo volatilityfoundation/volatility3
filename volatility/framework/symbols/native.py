@@ -20,7 +20,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             self._overrides[native_type] = native_class
         # Create this once early, because it may get used a lot
         self._structures = set(self._native_dictionary).union(
-            {'Enumeration', 'array', 'BitField', 'void', 'pointer'})
+            {'Enumeration', 'array', 'BitField', 'void', 'pointer', 'String', 'Bytes'})
 
     def get_structure_class(self, name):
         ntype, fmt = native_types.get(name, (objects.Integer, ''))
