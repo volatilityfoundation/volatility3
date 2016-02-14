@@ -254,8 +254,10 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
         """Returns the i-th item from the array"""
         if i >= self.vol.count or 0 > i:
             raise IndexError
-        return self.vol.target(context = self._context, layer_name = self.vol.layer_name,
-                               offset = self.vol.offset + (self.vol.target.size * i), parent = self)
+        object_info = ObjectInformation(layer_name = self.vol.layer_name,
+                                        offset = self.vol.offset + (self.vol.target.size * i),
+                                        parent = self)
+        return self.vol.target(context = self._context, object_info = object_info)
 
     def __len__(self):
         """Returns the length of the array"""
