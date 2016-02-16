@@ -24,11 +24,28 @@ class DtbTest(object):
     ptr_size = 4
     ptr_struct = "I"
     ptr_reference = 0x300
+    super_bit = 2
 
-    def run(self, value, page_offset):
-        ptr = struct.unpack("<" + self.ptr_struct, value)[0]
+    def unpack(self, value):
+        return struct.unpack("<" + self.ptr_struct, value)[0]
+
+    def run(self, page_offset, ctx):
+        value = ctx.memory.read('data', page_offset + (self.ptr_reference * self.ptr_size),
+                                self.ptr_size)
+        ptr = self.unpack(value)
         if ptr != 0 and (ptr & 0xFFFFFFFFFFFFF000 == page_offset) and (ptr & 0xFF0 == 0x60):
-            return hex(ptr & 0xFFFFFFFFFFFFF000)
+            dtb = (ptr & 0xFFFFFFFFFFFFF000)
+            return self.second_pass(dtb, ctx)
+
+    def second_pass(self, dtb, ctx):
+        data = ctx.memory.read("data", dtb, PAGE_SIZE)
+        usr_count = 0
+        for i in range(0, PAGE_SIZE, self.ptr_size):
+            val = self.unpack(data[i:i + self.ptr_size])
+            if val & 0x1:
+                usr_count += 1 if (val & 0x4) else 0
+        if usr_count:
+            return usr_count, dtb
 
 
 class Test32bit(DtbTest):
@@ -51,6 +68,13 @@ class TestPaebit(DtbTest):
     ptr_struct = "Q"
     ptr_reference = 0x3
 
+    def second_pass(self, dtb, ctx):
+        dtb -= 0x4000
+        data = ctx.memory.read("data", dtb, PAGE_SIZE)
+        val = self.unpack(data[3 * self.ptr_size: 4 * self.ptr_size])
+        if (val & 0xFFFFFFFFFFFFF000 == dtb + 0x4000) and (val & 0xFFF == 0x001):
+            return val, dtb
+
 
 class DTBFinder(object):
     def __init__(self, ctx, tests):
@@ -64,8 +88,7 @@ class DTBFinder(object):
                             self.ctx.memory['data'].maximum_address - PAGE_SIZE,
                             PAGE_SIZE):
             for test in self.tests:
-                val = test.run(
-                    self.ctx.memory.read('data', offset + (test.ptr_reference * test.ptr_size), test.ptr_size), offset)
+                val = test.run(offset, self.ctx)
                 if val:
                     self.hits[test.name] = self.hits.get(test.name, []) + [val]
 
@@ -97,7 +120,10 @@ if __name__ == '__main__':
     print("[*] Scanning...")
     df.scan()
     print("[*] Results")
-    print(df.hits)
+    for key in tests:
+        hits = df.hits.get(key.name, [])
+        if hits:
+            print(key.name + ": " + hex(min(hits)[1]))
     print("[*] OS Guess")
     guesses = []
     for key in df.hits:
