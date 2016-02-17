@@ -33,17 +33,24 @@ class DtbTest(object):
         value = ctx.memory.read('data', page_offset + (self.ptr_reference * self.ptr_size),
                                 self.ptr_size)
         ptr = self.unpack(value)
-        if ptr != 0 and (ptr & 0xFFFFFFFFFFFFF000 == page_offset) and (ptr & 0xFF0 == 0x60):
+        # The value *must* be present (bit 0) since it's a mapped page
+        # It's almost always writable (bit 1)
+        # It's occasionally Super, but not reliably so, haven't checked when/why not
+        # The top 3-bits are usually ignore (which in practice means 0
+        # Need to find out why the middle 3-bits are usually 6 (0110)
+        if ptr != 0 and (ptr & 0xFFFFFFFFFFFFF000 == page_offset) & (ptr & 0xFF1 == 0x61):
             dtb = (ptr & 0xFFFFFFFFFFFFF000)
             return self.second_pass(dtb, ctx)
 
     def second_pass(self, dtb, ctx):
         data = ctx.memory.read("data", dtb, PAGE_SIZE)
-        usr_count = 0
+        usr_count, sup_count = 0, 0
         for i in range(0, PAGE_SIZE, self.ptr_size):
             val = self.unpack(data[i:i + self.ptr_size])
             if val & 0x1:
+                sup_count += 0 if (val & 0x4) else 1
                 usr_count += 1 if (val & 0x4) else 0
+        # print(hex(dtb), usr_count, sup_count, usr_count + sup_count)
         if usr_count:
             return usr_count, dtb
 
