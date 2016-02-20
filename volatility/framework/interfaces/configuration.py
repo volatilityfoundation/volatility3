@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
+# We must import interfaces.context this way, since we can't import our parent without cause a loop
+from volatility.framework.interfaces import context as interfaces_context
 from volatility.framework import validity
-from volatility.framework.interfaces import context as context_interface
 
 __author__ = 'mike'
 
@@ -59,7 +60,7 @@ class ConfigurableInterface(validity.ValidityRoutines):
 
     def __init__(self, context, config_path):
         validity.ValidityRoutines.__init__(self)
-        self._context = self._check_type(context, context_interface.ContextInterface)
+        self._context = self._check_type(context, interfaces_context.ContextInterface)
         self._config_path = self._check_type(config_path, str)
 
     @property
@@ -111,12 +112,35 @@ class ProviderInterface(ConfigurableInterface):
         """Fulfills a context's requirement, altering the context appropriately"""
 
 
-class ConfigurableVisitorInterface(validity.ValidityRoutines):
-    pass
-
-
 class RequirementTreeNode(validity.ValidityRoutines):
+    def __init__(self, requirement = None):
+        validity.ValidityRoutines.__init__(self)
+        if requirement is not None:
+            self._check_type(requirement, RequirementInterface)
+        self.requirement = requirement
+
     @property
     def optional(self):
         """Determines whether the elements within this tree are required for proper operation"""
-        return False
+        if self.requirement is None:
+            return False
+        return self.requirement.optional
+
+    def traverse(self, visitor, config_path = None, short_circuit = False):
+        """Applies the function visitor to each node
+
+        The visitor callable should have a signature of visitor(node, config_path) => Bool
+
+        When short_circuit is True:
+          RequirementChoices will stop as soon as one traversal responds with True
+          RequirementLists will stop as soon as one traversal responds with False
+        When short_circuit is False the return value of children are always ignored
+
+        Returns the result from visitor applied to the node
+        """
+
+
+class ReqTreeVisitorInterface(validity.ValidityRoutines):
+    def __call__(self, node, config_path):
+        """Gets call for a specific node and config_path"""
+        pass

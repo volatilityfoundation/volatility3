@@ -46,12 +46,6 @@ class DependencyResolver(validity.ValidityRoutines):
         set2 = set(value2)
         return set1.intersection(set2)
 
-    def configurable_visitor(self, deptree, context, path = None, visitor = None):
-        """Visits each provider and attempts to apply suitable information to help """
-        self._check_type(deptree, RequirementTreeList)
-        self._check_type(context, interfaces.context.ContextInterface)
-        self._check_type(visitor, interfaces.configuration.ConfigurableVisitorInterface)
-
     def validate_dependencies(self, deptree, context, path = None):
         """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
 
@@ -90,6 +84,23 @@ class DependencyResolver(validity.ValidityRoutines):
                         " [" + str(e) + "]")
                     return False
         return True
+
+    def validate_dependencies2(self, deptree, context, path = None):
+        """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
+
+            DEPTREE = [ REQUIREMENTS ... ]
+            REQUIREMENT = ( NODE | LEAF )
+            NODE = req, { candidate : DEPTREE, ... }
+            LEAF = req
+
+            @param path: A path to access the deptree's configuration details
+        """
+        if path is None:
+            path = ""
+
+        self._check_type(deptree, RequirementTreeList)
+        visitor = ValidatorVisitor(context)
+        return deptree.traverse(visitor, path, True)
 
     def build_tree(self, configurable):
         """Takes a configurable and produces a priority ordered tree of possible solutions to satisfy the various requirements
@@ -132,23 +143,58 @@ class DependencyError(Exception):
     pass
 
 
+class ValidatorVisitor(interfaces.configuration.ReqTreeVisitorInterface):
+    def __init__(self, context):
+        self.ctx = context
+
+    def __call__(self, node, config_path):
+        """Returns whether a node is valid"""
+        if node.requirement is None:
+            return True
+
+        if isinstance(node, RequirementTreeChoice) and not node.requirement.optional:
+            for provider in node.candidates:
+                try:
+                    provider.fulfill(self.ctx, node.requirement, config_path)
+                    break
+                except Exception as e:
+                    pass
+            else:
+                logging.debug(
+                    "Unable to fulfill requirement " + repr(node.requirement) + " - no fulfillable candidates")
+                return False
+
+        try:
+            value = self.ctx.config[config_path]
+            node.requirement.validate(value, self.ctx)
+            return True
+        except Exception as e:
+            if not node.requirement.optional:
+                logging.debug(
+                    "Unable to fulfill non-optional requirement " + repr(node.requirement) +
+                    " [" + str(e) + "]")
+                return False
+            else:
+                return True
+
+
 ##########################
 # Requirement tree classes
 ##########################
 
 
 class RequirementTreeReq(interfaces.configuration.RequirementTreeNode):
-    def __init__(self, requirement = None):
-        validity.ValidityRoutines.__init__(self)
-        self._check_type(requirement, interfaces.configuration.RequirementInterface)
-        self.requirement = requirement
-
     def __repr__(self):
         return "<Leaf: " + repr(self.requirement) + ">"
 
-    @property
-    def optional(self):
-        return self.requirement.optional
+    def traverse(self, visitor, config_path = None, short_circuit = False):
+        if config_path is None:
+            config_path = self.requirement.name
+        else:
+            self._check_type(config_path, str)
+            config_path += interfaces.configuration.CONFIG_SEPARATOR + self.requirement.name
+
+        return visitor(self, config_path)
 
 
 class RequirementTreeChoice(RequirementTreeReq):
@@ -164,17 +210,40 @@ class RequirementTreeChoice(RequirementTreeReq):
     def __repr__(self):
         return "<Choice: " + repr(self.requirement) + " Candidates: " + repr(self.candidates) + ">"
 
+    def traverse(self, visitor, config_path = None, short_circuit = False):
+        if config_path is None:
+            config_path = self.requirement.name
+        else:
+            self._check_type(config_path, str)
+            config_path += interfaces.configuration.CONFIG_SEPARATOR + self.requirement.name
+
+        success = False
+        for node in self.candidates.values():
+            success = success or node.traverse(visitor, config_path, short_circuit)
+            if short_circuit and success:
+                return visitor(self, config_path)
+        return visitor(self, config_path)
+
 
 class RequirementTreeList(interfaces.configuration.RequirementTreeNode):
     def __init__(self, children = None):
+        interfaces.configuration.RequirementTreeNode.__init__(self, None)
         self._check_type(children, list)
         for child in children:
             self._check_type(child, interfaces.configuration.RequirementTreeNode)
         self.children = children
 
-    @property
-    def optional(self):
-        return False
-
     def __repr__(self):
         return "<List Children: " + repr(self.children) + ">"
+
+    def traverse(self, visitor, config_path = None, short_circuit = False):
+        if config_path is None:
+            config_path = ""
+        self._check_type(config_path, str)
+
+        success = True
+        for node in self.children:
+            success = success and node.traverse(visitor, config_path, short_circuit)
+            if short_circuit and not success:
+                return False
+        return success and visitor(self, config_path)
