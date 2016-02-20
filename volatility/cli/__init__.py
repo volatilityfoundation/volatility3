@@ -41,7 +41,7 @@ class CommandLine(object):
         # Determine the selected plugin
         # Resolve the dependencies on that plugin
         dldr = depresolver.DependencyResolver()
-        dependencies = dldr.build_tree(plugin)
+        deptree = dldr.build_tree(plugin)
 
         # UI fills in the config:
         ctx = contexts.Context()
@@ -51,8 +51,7 @@ class CommandLine(object):
 
         # Walk down the tree attempting to fulfil each requirement (recursive) and backtrack when necessary
         # Translate the parsed args to a context configuration
-        config_path = plugin.__name__.lower()
-        if dldr.validate_dependencies(dependencies, context = ctx, path = config_path):
+        if dldr.validate_dependencies(deptree, context = ctx, path = config_path):
             # Construct and run the plugin
             TextRenderer().render(plugin(ctx, config_path).run())
         else:

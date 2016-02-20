@@ -109,3 +109,14 @@ class ProviderInterface(ConfigurableInterface):
     @classmethod
     def fulfill(cls, context, requirement, config_path):
         """Fulfills a context's requirement, altering the context appropriately"""
+
+
+class ConfigurableVisitorInterface(validity.ValidityRoutines):
+    pass
+
+
+class RequirementTreeNode(validity.ValidityRoutines):
+    @property
+    def optional(self):
+        """Determines whether the elements within this tree are required for proper operation"""
+        return False

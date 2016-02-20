@@ -60,6 +60,9 @@ class DependencyResolver(validity.ValidityRoutines):
         # TODO: Improve logging/output of this code to diagnose errors
         if path is None:
             path = ""
+
+        self._check_type(deptree, RequirementTreeList)
+
         for node in deptree.children:
             node_path = path + interfaces.configuration.CONFIG_SEPARATOR + node.requirement.name
             if isinstance(node, RequirementTreeChoice) and not node.requirement.optional:
@@ -179,18 +182,8 @@ class ValidateDependenciesVisitor(TreeVisitor):
 # Requirement tree classes
 ##########################
 
-class RequirementTreeNode(validity.ValidityRoutines):
-    @property
-    def optional(self):
-        """Determines whether the elements within this tree are required for proper operation"""
-        return False
 
-    def accept(self, visitor):
-        """Takes in a vistor and applies to itself and any child nodes appropriately"""
-        return visitor.visit(self)
-
-
-class RequirementTreeReq(RequirementTreeNode):
+class RequirementTreeReq(interfaces.configuration.RequirementTreeNode):
     def __init__(self, requirement = None):
         validity.ValidityRoutines.__init__(self)
         self._check_type(requirement, interfaces.configuration.RequirementInterface)
