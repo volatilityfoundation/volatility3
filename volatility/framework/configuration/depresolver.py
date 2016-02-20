@@ -2,8 +2,7 @@ import logging
 from collections import OrderedDict
 
 import volatility.framework as framework
-import volatility.framework.validity as validity
-from volatility.framework.interfaces import configuration
+from volatility.framework import validity, interfaces
 
 
 class DependencyResolver(validity.ValidityRoutines):
@@ -11,7 +10,7 @@ class DependencyResolver(validity.ValidityRoutines):
         # Maintain a cache of translation layers
         self.configurable_cache = []
         self.provides = {}
-        self.providers_cache = sorted(list(self._build_caches(configuration.ProviderInterface)),
+        self.providers_cache = sorted(list(self._build_caches(interfaces.configuration.ProviderInterface)),
                                       key = lambda x: -x.priority)
 
     def _build_caches(self, clazz):
@@ -50,22 +49,27 @@ class DependencyResolver(validity.ValidityRoutines):
     def validate_dependencies(self, deptree, context, path = None):
         """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
 
+            DEPTREE = [ REQUIREMENTS ... ]
+            REQUIREMENT = ( NODE | LEAF )
+            NODE = req, { candidate : DEPTREE, ... }
+            LEAF = req
+
             @param path: A path to access the deptree's configuration details
         """
         # TODO: Simplify config system access to ensure easier code
         # TODO: Improve logging/output of this code to diagnose errors
         if path is None:
             path = ""
-        for node in deptree:
-            node_path = path + configuration.CONFIG_SEPARATOR + node.requirement.name
-            if isinstance(node, RequirementTreeNode) and not node.requirement.optional:
+        for node in deptree.children:
+            node_path = path + interfaces.configuration.CONFIG_SEPARATOR + node.requirement.name
+            if isinstance(node, RequirementTreeChoice) and not node.requirement.optional:
                 for provider in node.candidates:
                     if self.validate_dependencies(node.candidates[provider], context, path = node_path):
                         provider.fulfill(context, node.requirement, node_path)
                         break
                 else:
                     logging.debug(
-                            "Unable to fulfill requirement " + repr(node.requirement) + " - no fulfillable candidates")
+                        "Unable to fulfill requirement " + repr(node.requirement) + " - no fulfillable candidates")
                     return False
             try:
                 value = context.config[node_path]
@@ -73,8 +77,8 @@ class DependencyResolver(validity.ValidityRoutines):
             except Exception as e:
                 if not node.requirement.optional:
                     logging.debug(
-                            "Unable to fulfill non-optional requirement " + repr(node.requirement) +
-                            " [" + str(e) + "]")
+                        "Unable to fulfill non-optional requirement " + repr(node.requirement) +
+                        " [" + str(e) + "]")
                     return False
         return True
 
@@ -86,15 +90,15 @@ class DependencyResolver(validity.ValidityRoutines):
            @return deptree: The returned tree should include each of the potential nodes (and requirements, including optional ones) allowing the UI
            to decide the layer build-path and get all the necessary variables from the user for that path.
         """
-        self._check_class(configurable, configuration.ConfigurableInterface)
+        self._check_class(configurable, interfaces.configuration.ConfigurableInterface)
 
         deptree = []
 
         for subreq in configurable.get_schema():
             # Find all the different ways to fulfill it (recursively)
             # TODO: Ensure no cycles or loops
-            if not isinstance(subreq, configuration.ConstraintInterface):
-                deptree.append(RequirementTreeLeaf(requirement = subreq))
+            if not isinstance(subreq, interfaces.configuration.ConstraintInterface):
+                deptree.append(RequirementTreeReq(requirement = subreq))
             else:
                 candidates = OrderedDict()
                 satisfiable = False
@@ -111,34 +115,132 @@ class DependencyResolver(validity.ValidityRoutines):
                     raise DependencyError("No solutions to fulfill requirement " + repr(subreq))
                 # Construct the appropriate Requirement node
                 if candidates:
-                    deptree.append(RequirementTreeNode(requirement = subreq, candidates = candidates))
-        return deptree
+                    deptree.append(RequirementTreeChoice(requirement = subreq, candidates = candidates))
+        return RequirementTreeList(deptree)
 
 
 class DependencyError(Exception):
     pass
 
 
-class RequirementTreeLeaf(validity.ValidityRoutines):
+###################################
+# Hierarchical Tree Visitor classes
+###################################
+
+class TreeVisitor(validity.ValidityRoutines):
+    def visit_enter(self, node):
+        """Visits a node on entering a branch
+
+           Returns a boolean indicating whether to continue visiting children
+        """
+        return True
+
+    def visit_leave(self, node):
+        """Visits a node on leaving a branch
+
+           Returns a boolean indicating whether to continue visiting further siblings
+        """
+        return True
+
+    def visit(self, node):
+        """Visits the actual leaf node
+
+           Returns boolean indicating whether to continue visiting further siblings
+        """
+        return True
+
+
+class ValidateDependenciesVisitor(TreeVisitor):
+    def __init__(self, context, node_path = None):
+        self.context = self._check_type(context, context.Context)
+        if node_path is None:
+            node_path = ""
+        self.node_path = self._check_type(node_path, str)
+
+    def visit_enter(self, node):
+        return True
+
+    def visit_leave(self, node):
+        return self.visit(node)
+
+    def visit(self, node):
+        try:
+            value = self.context.config[self.node_path]
+            node.requirement.validate(value, self.context)
+        except Exception as e:
+            if not node.requirement.optional:
+                logging.debug("Unable to fulfill non-optional requirement " +
+                              repr(node.requirement) + " [" + str(e) + "]")
+                return False
+        return True
+
+
+##########################
+# Requirement tree classes
+##########################
+
+class RequirementTreeNode(validity.ValidityRoutines):
+    @property
+    def optional(self):
+        """Determines whether the elements within this tree are required for proper operation"""
+        return False
+
+    def accept(self, visitor):
+        """Takes in a vistor and applies to itself and any child nodes appropriately"""
+        return visitor.visit(self)
+
+
+class RequirementTreeReq(RequirementTreeNode):
     def __init__(self, requirement = None):
         validity.ValidityRoutines.__init__(self)
-        self._check_type(requirement, configuration.RequirementInterface)
+        self._check_type(requirement, interfaces.configuration.RequirementInterface)
         self.requirement = requirement
 
     def __repr__(self):
         return "<Leaf: " + repr(self.requirement) + ">"
 
+    @property
+    def optional(self):
+        return self.requirement.optional
 
-class RequirementTreeNode(RequirementTreeLeaf):
+
+class RequirementTreeChoice(RequirementTreeReq):
     def __init__(self, requirement = None, candidates = None):
-        RequirementTreeLeaf.__init__(self, requirement)
+        RequirementTreeReq.__init__(self, requirement)
         for k in candidates:
-            self._check_class(k, configuration.ProviderInterface)
-            for node in candidates[k]:
-                self._check_type(node, RequirementTreeLeaf)
+            self._check_class(k, interfaces.configuration.ProviderInterface)
+            self._check_type(candidates[k], RequirementTreeList)
         self.candidates = candidates
         if candidates is None:
             self.candidates = OrderedDict()
 
     def __repr__(self):
         return "<Node: " + repr(self.requirement) + " Candidates: " + repr(self.candidates) + ">"
+
+    def accept(self, visitor):
+        if (visitor.visit_enter(self)):
+            for candidate in self.candidates:
+                if not self.candidates[candidate].apply(visitor):
+                    break
+
+        return visitor.visit_leave(self)
+
+
+class RequirementTreeList(RequirementTreeNode):
+    def __init__(self, children = None):
+        self._check_type(children, list)
+        for child in children:
+            self._check_type(child, RequirementTreeNode)
+        self.children = children
+
+    @property
+    def optional(self):
+        return False
+
+    def accept(self, visitor):
+        if (visitor.visit_enter(self)):
+            for candidate in self.children:
+                if not candidate.apply(visitor):
+                    break
+
+        return visitor.visit_leave(self)
