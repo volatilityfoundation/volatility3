@@ -6,6 +6,7 @@ import volatility.framework
 import volatility.plugins
 from volatility.cli import argparse_adapter
 from volatility.framework import plugins, contexts
+from volatility.framework.automagic import windows as windows_automagic
 from volatility.framework.configuration import depresolver
 from volatility.framework.configuration.depresolver import DependencyError
 from volatility.framework.renderers.text import TextRenderer
@@ -48,6 +49,16 @@ class CommandLine(object):
         ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
         ctx.config["pslist.primary.page_map_offset"] = 0x39000
         ctx.config["pslist.offset"] = 0x823c87c0
+
+        config_path = plugin.__name__.lower()
+
+        windows = True
+        if windows:
+            # Traverse the dependency tree and tag the config with the appropriate page_map_offset values where not already applied
+            wdf = windows_automagic.WindowsDtbFinder(volatility.framework.class_subclasses(windows_automagic.DtbTest))
+            dldr.configurable_visitor(deptree, context = ctx, path = config_path,
+                                      visitor = windows_automagic.PageMapOffsetHelper())
+            print(repr(deptree))
 
         # Walk down the tree attempting to fulfil each requirement (recursive) and backtrack when necessary
         # Translate the parsed args to a context configuration

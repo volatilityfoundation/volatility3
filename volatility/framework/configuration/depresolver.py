@@ -46,6 +46,12 @@ class DependencyResolver(validity.ValidityRoutines):
         set2 = set(value2)
         return set1.intersection(set2)
 
+    def configurable_visitor(self, deptree, context, path = None, visitor = None):
+        """Visits each provider and attempts to apply suitable information to help """
+        self._check_type(deptree, RequirementTreeList)
+        self._check_type(context, interfaces.context.ContextInterface)
+        self._check_type(visitor, interfaces.configuration.ConfigurableVisitorInterface)
+
     def validate_dependencies(self, deptree, context, path = None):
         """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
 
