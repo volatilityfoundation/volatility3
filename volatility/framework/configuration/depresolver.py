@@ -126,58 +126,6 @@ class DependencyError(Exception):
     pass
 
 
-###################################
-# Hierarchical Tree Visitor classes
-###################################
-
-class TreeVisitor(validity.ValidityRoutines):
-    def visit_enter(self, node):
-        """Visits a node on entering a branch
-
-           Returns a boolean indicating whether to continue visiting children
-        """
-        return True
-
-    def visit_leave(self, node):
-        """Visits a node on leaving a branch
-
-           Returns a boolean indicating whether to continue visiting further siblings
-        """
-        return True
-
-    def visit(self, node):
-        """Visits the actual leaf node
-
-           Returns boolean indicating whether to continue visiting further siblings
-        """
-        return True
-
-
-class ValidateDependenciesVisitor(TreeVisitor):
-    def __init__(self, context, node_path = None):
-        self.context = self._check_type(context, context.Context)
-        if node_path is None:
-            node_path = ""
-        self.node_path = self._check_type(node_path, str)
-
-    def visit_enter(self, node):
-        return True
-
-    def visit_leave(self, node):
-        return self.visit(node)
-
-    def visit(self, node):
-        try:
-            value = self.context.config[self.node_path]
-            node.requirement.validate(value, self.context)
-        except Exception as e:
-            if not node.requirement.optional:
-                logging.debug("Unable to fulfill non-optional requirement " +
-                              repr(node.requirement) + " [" + str(e) + "]")
-                return False
-        return True
-
-
 ##########################
 # Requirement tree classes
 ##########################
@@ -208,32 +156,19 @@ class RequirementTreeChoice(RequirementTreeReq):
             self.candidates = OrderedDict()
 
     def __repr__(self):
-        return "<Node: " + repr(self.requirement) + " Candidates: " + repr(self.candidates) + ">"
-
-    def accept(self, visitor):
-        if (visitor.visit_enter(self)):
-            for candidate in self.candidates:
-                if not self.candidates[candidate].apply(visitor):
-                    break
-
-        return visitor.visit_leave(self)
+        return "<Choice: " + repr(self.requirement) + " Candidates: " + repr(self.candidates) + ">"
 
 
-class RequirementTreeList(RequirementTreeNode):
+class RequirementTreeList(interfaces.configuration.RequirementTreeNode):
     def __init__(self, children = None):
         self._check_type(children, list)
         for child in children:
-            self._check_type(child, RequirementTreeNode)
+            self._check_type(child, interfaces.configuration.RequirementTreeNode)
         self.children = children
 
     @property
     def optional(self):
         return False
 
-    def accept(self, visitor):
-        if (visitor.visit_enter(self)):
-            for candidate in self.children:
-                if not candidate.apply(visitor):
-                    break
-
-        return visitor.visit_leave(self)
+    def __repr__(self):
+        return "<List Children: " + repr(self.children) + ">"
