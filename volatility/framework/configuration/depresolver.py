@@ -182,7 +182,7 @@ class RequirementTreeChoice(RequirementTreeReq):
 
         success = False
         for node in self.candidates.values():
-            success = success or node.traverse(visitor, config_path, short_circuit)
+            success = node.traverse(visitor, config_path, short_circuit) or success
             if short_circuit and success:
                 break
         return visitor(self, config_path)
@@ -206,7 +206,7 @@ class RequirementTreeList(interfaces.configuration.RequirementTreeNode):
 
         success = True
         for node in self.children:
-            success = success and node.traverse(visitor, config_path, short_circuit)
+            success = node.traverse(visitor, config_path, short_circuit) and success
             if short_circuit and not success:
                 break
         return visitor(self, config_path)
