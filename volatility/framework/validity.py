@@ -18,7 +18,7 @@ class ValidityRoutines(object):
         """
         assert isinstance(value,
                           valid_type), self.__class__.__name__ + " expected " + valid_type.__name__ + ", not " + type(
-                value).__name__
+            value).__name__
         return value
 
     def _check_class(self, klass, valid_class):
@@ -31,3 +31,4 @@ class ValidityRoutines(object):
         """
         assert issubclass(klass,
                           valid_class), self.__class__.__name__ + " expected " + valid_class.__name__ + ", not " + klass.__name__
+        return klass

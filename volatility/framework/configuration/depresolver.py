@@ -56,51 +56,12 @@ class DependencyResolver(validity.ValidityRoutines):
 
             @param path: A path to access the deptree's configuration details
         """
-        # TODO: Simplify config system access to ensure easier code
-        # TODO: Improve logging/output of this code to diagnose errors
-        if path is None:
-            path = ""
-
-        self._check_type(deptree, RequirementTreeList)
-
-        for node in deptree.children:
-            node_path = path + interfaces.configuration.CONFIG_SEPARATOR + node.requirement.name
-            if isinstance(node, RequirementTreeChoice) and not node.requirement.optional:
-                for provider in node.candidates:
-                    if self.validate_dependencies(node.candidates[provider], context, path = node_path):
-                        provider.fulfill(context, node.requirement, node_path)
-                        break
-                else:
-                    logging.debug(
-                        "Unable to fulfill requirement " + repr(node.requirement) + " - no fulfillable candidates")
-                    return False
-            try:
-                value = context.config[node_path]
-                node.requirement.validate(value, context)
-            except Exception as e:
-                if not node.requirement.optional:
-                    logging.debug(
-                        "Unable to fulfill non-optional requirement " + repr(node.requirement) +
-                        " [" + str(e) + "]")
-                    return False
-        return True
-
-    def validate_dependencies2(self, deptree, context, path = None):
-        """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
-
-            DEPTREE = [ REQUIREMENTS ... ]
-            REQUIREMENT = ( NODE | LEAF )
-            NODE = req, { candidate : DEPTREE, ... }
-            LEAF = req
-
-            @param path: A path to access the deptree's configuration details
-        """
         if path is None:
             path = ""
 
         self._check_type(deptree, RequirementTreeList)
         visitor = ValidatorVisitor(context)
-        return deptree.traverse(visitor, path, True)
+        return deptree.traverse(visitor, path, short_circuit = True)
 
     def build_tree(self, configurable):
         """Takes a configurable and produces a priority ordered tree of possible solutions to satisfy the various requirements
