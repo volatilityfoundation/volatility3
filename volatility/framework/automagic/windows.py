@@ -117,5 +117,4 @@ class PageMapOffsetHelper(interfaces.configuration.ReqTreeVisitorInterface):
                     for test in useful:
                         if hits.get(test.layer_type, []):
                             self.ctx.config[prefix + "page_table_offset"] = hits[test.layer_type][0][1]
-                            print("CONFIG", dict(self.ctx.config))
         return True

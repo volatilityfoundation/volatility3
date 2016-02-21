@@ -210,3 +210,22 @@ class RequirementTreeList(interfaces.configuration.RequirementTreeNode):
             if short_circuit and not success:
                 break
         return visitor(self, config_path)
+
+
+class PrettyPrinter(interfaces.configuration.ReqTreeVisitorInterface):
+    def __init__(self):
+        self.lines = []
+
+    def run(self, deptree):
+        deptree.traverse(self,
+                         config_path = "pprinter",
+                         short_circuit = False)
+        for line in self.lines:
+            print(*line)
+
+    def __call__(self, node, config_path):
+        depth = config_path.count(interfaces.configuration.CONFIG_SEPARATOR)
+        lines = [("." * depth, config_path, type(node))]
+        if node.requirement is not None:
+            lines.append((" " * depth, node.requirement))
+        self.lines = lines + self.lines
