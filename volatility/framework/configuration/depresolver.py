@@ -59,7 +59,7 @@ class DependencyResolver(validity.ValidityRoutines):
         if path is None:
             path = ""
 
-        self._check_type(deptree, RequirementTreeList)
+        self._check_type(deptree, interfaces.configuration.RequirementTreeNode)
         visitor = ValidatorVisitor(context)
         return deptree.traverse(visitor, path, short_circuit = True)
 
@@ -114,16 +114,18 @@ class ValidatorVisitor(interfaces.configuration.ReqTreeVisitorInterface):
             return True
 
         if isinstance(node, RequirementTreeChoice) and not node.requirement.optional:
-            for provider in node.candidates:
-                try:
-                    provider.fulfill(self.ctx, node.requirement, config_path)
-                    break
-                except Exception as e:
-                    pass
-            else:
-                logging.debug(
-                    "Unable to fulfill requirement " + repr(node.requirement) + " - no fulfillable candidates")
-                return False
+            if self.ctx.config.get(config_path, None) is None:
+                # Only try to provide when we're not already sorted
+                for provider in node.candidates:
+                    try:
+                        provider.fulfill(self.ctx, node.requirement, config_path)
+                        break
+                    except Exception as e:
+                        pass
+                else:
+                    logging.debug(
+                        "Unable to fulfill requirement " + repr(node.requirement) + " - no fulfillable candidates")
+                    return False
 
         try:
             value = self.ctx.config[config_path]

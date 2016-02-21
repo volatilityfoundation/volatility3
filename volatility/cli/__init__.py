@@ -55,10 +55,9 @@ class CommandLine(object):
         windows = True
         if windows:
             # Traverse the dependency tree and tag the config with the appropriate page_map_offset values where not already applied
-            wdf = windows_automagic.WindowsDtbFinder(volatility.framework.class_subclasses(windows_automagic.DtbTest))
-            dldr.configurable_visitor(deptree, context = ctx, path = config_path,
-                                      visitor = windows_automagic.PageMapOffsetHelper())
-            print(repr(deptree))
+            deptree.traverse(windows_automagic.PageMapOffsetHelper(context = ctx),
+                             config_path = config_path,
+                             short_circuit = False)
 
         # Walk down the tree attempting to fulfil each requirement (recursive) and backtrack when necessary
         # Translate the parsed args to a context configuration
