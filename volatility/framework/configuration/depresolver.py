@@ -171,7 +171,7 @@ class RequirementTreeChoice(RequirementTreeReq):
             self.candidates = OrderedDict()
 
     def __repr__(self):
-        return "<Choice: " + repr(self.requirement) + " Candidates: " + repr(self.candidates) + ">"
+        return "<Choice: " + repr(self.requirement) + " Candidates: " + repr(dict(self.candidates).keys()) + ">"
 
     def traverse(self, visitor, config_path = None, short_circuit = False):
         if config_path is None:
@@ -197,7 +197,7 @@ class RequirementTreeList(interfaces.configuration.RequirementTreeNode):
         self.children = children
 
     def __repr__(self):
-        return "<List Children: " + repr(self.children) + ">"
+        return "<List " + hex(self.__hash__()) + ">"
 
     def traverse(self, visitor, config_path = None, short_circuit = False):
         if config_path is None:
