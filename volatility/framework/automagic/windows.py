@@ -128,6 +128,8 @@ class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
                     for test in useful:
                         if hits.get(test.layer_type, []):
                             self.ctx.config[prefix + "page_map_offset"] = hits[test.layer_type][0][1]
+                        else:
+                            del node.candidates[test.layer_type]
         return True
 
 
