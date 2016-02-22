@@ -100,6 +100,11 @@ class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
         self.ctx = self._check_type(context, interfaces.context.ContextInterface)
         self.tests = dict([(test.layer_type, test) for test in [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]])
 
+    def branch_leave(self, node, config_path):
+        """Ensure we're called on internal nodes as well as external"""
+        self(node, config_path)
+        return True
+
     def __call__(self, node, config_path):
         if isinstance(node, depresolver.RequirementTreeChoice):
             useful = []
@@ -111,10 +116,10 @@ class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
                                                                        config_path)
                 prefix = config_path + configuration.CONFIG_SEPARATOR
                 memory_layer = self.ctx.config.get(prefix + "memory_layer", None)
-                page_table_offset = self.ctx.config.get(prefix + "page_table_offset", None)
+                page_table_offset = self.ctx.config.get(prefix + "page_map_offset", None)
                 if page_table_offset is None and memory_layer is not None:
                     hits = scan(self.ctx, memory_layer, useful)
                     for test in useful:
                         if hits.get(test.layer_type, []):
-                            self.ctx.config[prefix + "page_table_offset"] = hits[test.layer_type][0][1]
+                            self.ctx.config[prefix + "page_map_offset"] = hits[test.layer_type][0][1]
         return True
