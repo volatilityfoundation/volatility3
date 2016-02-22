@@ -95,7 +95,7 @@ class DtbTestPae(DtbTest):
             return val, dtb
 
 
-class PageMapOffsetHelper(interfaces.configuration.ReqTreeVisitorInterface):
+class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
     def __init__(self, context):
         self.ctx = self._check_type(context, interfaces.context.ContextInterface)
         self.tests = dict([(test.layer_type, test) for test in [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]])

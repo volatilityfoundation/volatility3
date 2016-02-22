@@ -119,13 +119,6 @@ class RequirementTreeNode(validity.ValidityRoutines):
             self._check_type(requirement, RequirementInterface)
         self.requirement = requirement
 
-    @property
-    def optional(self):
-        """Determines whether the elements within this tree are required for proper operation"""
-        if self.requirement is None:
-            return False
-        return self.requirement.optional
-
     def traverse(self, visitor, config_path = None, short_circuit = False):
         """Applies the function visitor to each node
 
@@ -140,7 +133,24 @@ class RequirementTreeNode(validity.ValidityRoutines):
         """
 
 
-class ReqTreeVisitorInterface(validity.ValidityRoutines):
+class HierachicalVisitor(validity.ValidityRoutines):
+    def branch_enter(self, node, config_path):
+        """Called on entering a branch of a tree
+
+           Returns a boolean indicating whether to process any children of this node
+        """
+        return True
+
+    def branch_leave(self, node, config_path):
+        """Called on leaving a branch of a tree
+
+           Returns a boolean indicating whether to process any further siblings of this node
+        """
+        return True
+
     def __call__(self, node, config_path):
-        """Gets call for a specific node and config_path"""
-        pass
+        """Designed to be called on each LEAF node in a tree
+
+           Returns a boolean indiciating whether to process any further siblings of this node
+        """
+        return True
