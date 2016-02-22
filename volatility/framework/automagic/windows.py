@@ -163,11 +163,10 @@ if __name__ == '__main__':
     print("[*] Scanning...")
     hits = scan(ctx, "data", tests)
     print("[*] Results")
-    print(hits)
     for key in tests:
         arch_hits = hits.get(key.layer_type, [])
         if arch_hits:
-            print(key.layer_type.__name__ + ": " + hex(min(arch_hits)[1]))
+            print(key.layer_type.__name__ + ": " + repr([hex(x[1]) for x in sorted(arch_hits)]))
     print("[*] OS Guess")
     guesses = []
     for key in hits:
