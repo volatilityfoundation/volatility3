@@ -49,8 +49,8 @@ class CommandLine(object):
         ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
         ctx.config["pslist.offset"] = 0x823c87c0
 
-        # ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/private/mhl-dreamon.dmp"
-        # ctx.config["pslist.offset"] = 0x823c87c0
+        ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/private/jon-fres.dmp"
+        ctx.config["pslist.offset"] = 0x81bcc830
 
         # ctx.config["pslist.primary.page_map_offset"] = 0x39000
 
