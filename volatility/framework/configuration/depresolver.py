@@ -61,7 +61,8 @@ class DependencyResolver(validity.ValidityRoutines):
 
         self._check_type(deptree, interfaces.configuration.RequirementTreeNode)
         visitor = ValidatorVisitor(context)
-        return deptree.traverse(visitor, path, short_circuit = True)
+        deptree.traverse(visitor, path, short_circuit = True)
+        return visitor.is_valid()
 
     def build_tree(self, configurable):
         """Takes a configurable and produces a priority ordered tree of possible solutions to satisfy the various requirements
@@ -104,18 +105,61 @@ class DependencyError(Exception):
     pass
 
 
-class ValidatorVisitor(interfaces.configuration.ReqTreeVisitorInterface):
+##########################
+# Visitors
+##########################
+
+
+class ValidatorVisitor(interfaces.configuration.HierachicalVisitor):
     def __init__(self, context):
         self.ctx = context
+        self.stack = [(None, [])]
+
+    def is_valid(self):
+        _, result_list = self.stack[0]
+        return result_list[0]
+
+    def branch_enter(self, node, config_path):
+        self.stack.append((node, []))
+        return True
+
+    def branch_leave(self, node, config_path):
+        (_, child_results), self.stack = self.stack[-1], self.stack[:-1]
+        _, stack = self.stack[-1]
+        if isinstance(node, RequirementTreeChoice):
+            # Don't bother validating if the choice didn't have one success
+            if not any(child_results):
+                # Choice requirements can still be valid even if their requirements failed if they are optional
+                stack.append(node.requirement.optional)
+                return True
+        else:
+            # Don't bother validating if the list failed
+            if not all(child_results):
+                # List requirements always fail if one inside fails to validate
+                # (since optional requirements in the list should validate as true)
+                stack.append(False)
+                return True
+        # If we haven't already determined the result
+        if node.requirement is not None:
+            return self(node, config_path)
+        else:
+            stack.append(True)
+            return True
 
     def __call__(self, node, config_path):
         """Returns whether a node is valid"""
-        if node.requirement is None:
-            return True
+        # Determine if we should
+        branch_node, branch_results = self.stack[-1]
 
+        if isinstance(branch_node, RequirementTreeChoice) and branch_results and branch_results[-1] == True:
+            return False
+        if isinstance(branch_node, RequirementTreeList) and branch_results and branch_results[-1] == False:
+            return False
+
+        # Attempt to fulfill the provider
         if isinstance(node, RequirementTreeChoice) and not node.requirement.optional:
+            # Only try to provide when we're not already sorted
             if self.ctx.config.get(config_path, None) is None:
-                # Only try to provide when we're not already sorted
                 for provider in node.candidates:
                     try:
                         provider.fulfill(self.ctx, node.requirement, config_path)
@@ -125,20 +169,42 @@ class ValidatorVisitor(interfaces.configuration.ReqTreeVisitorInterface):
                 else:
                     logging.debug(
                         "Unable to fulfill requirement " + repr(node.requirement) + " - no fulfillable candidates")
-                    return False
+                    branch_results.append(False)
+                    return True
 
         try:
             value = self.ctx.config[config_path]
             node.requirement.validate(value, self.ctx)
-            return True
+            branch_results.append(True)
         except Exception as e:
             if not node.requirement.optional:
                 logging.debug(
-                    "Unable to fulfill non-optional requirement " + repr(node.requirement) +
-                    " [" + str(e) + "]")
-                return False
-            else:
-                return True
+                    "Unable to fulfill non-optional requirement " + repr(node.requirement) + " [" + str(e) + "]")
+            branch_results.append(node.requirement.optional)
+        return True
+
+
+class PrettyPrinter(interfaces.configuration.HierachicalVisitor):
+    def __init__(self):
+        self.lines = []
+
+    def run(self, deptree):
+        deptree.traverse(self,
+                         config_path = "pprinter",
+                         short_circuit = False)
+        for line in self.lines:
+            print(*line)
+
+    def branch_leave(self, node, config_path):
+        return self(node, config_path)
+
+    def __call__(self, node, config_path):
+        depth = config_path.count(interfaces.configuration.CONFIG_SEPARATOR)
+        lines = [("." * depth, config_path, type(node))]
+        if node.requirement is not None:
+            lines.append((" " * depth, node.requirement))
+        self.lines = lines + self.lines
+        return True
 
 
 ##########################
@@ -180,12 +246,13 @@ class RequirementTreeChoice(RequirementTreeReq):
             self._check_type(config_path, str)
             config_path += interfaces.configuration.CONFIG_SEPARATOR + self.requirement.name
 
-        success = False
-        for node in self.candidates.values():
-            success = node.traverse(visitor, config_path, short_circuit) or success
-            if short_circuit and success:
-                break
-        return visitor(self, config_path)
+        if visitor.branch_enter(self, config_path):
+            for node in self.candidates.values():
+                cont = node.traverse(visitor, config_path, short_circuit)
+                if not cont:
+                    break
+
+        return visitor.branch_leave(self, config_path)
 
 
 class RequirementTreeList(interfaces.configuration.RequirementTreeNode):
@@ -204,28 +271,10 @@ class RequirementTreeList(interfaces.configuration.RequirementTreeNode):
             config_path = ""
         self._check_type(config_path, str)
 
-        success = True
-        for node in self.children:
-            success = node.traverse(visitor, config_path, short_circuit) and success
-            if short_circuit and not success:
-                break
-        return visitor(self, config_path)
+        if visitor.branch_enter(self, config_path):
+            for node in self.children:
+                cont = node.traverse(visitor, config_path, short_circuit)
+                if not cont:
+                    break
 
-
-class PrettyPrinter(interfaces.configuration.ReqTreeVisitorInterface):
-    def __init__(self):
-        self.lines = []
-
-    def run(self, deptree):
-        deptree.traverse(self,
-                         config_path = "pprinter",
-                         short_circuit = False)
-        for line in self.lines:
-            print(*line)
-
-    def __call__(self, node, config_path):
-        depth = config_path.count(interfaces.configuration.CONFIG_SEPARATOR)
-        lines = [("." * depth, config_path, type(node))]
-        if node.requirement is not None:
-            lines.append((" " * depth, node.requirement))
-        self.lines = lines + self.lines
+        return visitor.branch_leave(self, config_path)

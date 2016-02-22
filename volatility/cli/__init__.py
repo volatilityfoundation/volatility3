@@ -47,7 +47,7 @@ class CommandLine(object):
         # UI fills in the config:
         ctx = contexts.Context()
         ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
-        ctx.config["pslist.primary.page_map_offset"] = 0x39000
+        # ctx.config["pslist.primary.page_map_offset"] = 0x39000
         ctx.config["pslist.offset"] = 0x823c87c0
 
         config_path = plugin.__name__.lower()
