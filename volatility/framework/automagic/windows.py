@@ -1,3 +1,9 @@
+if __name__ == "__main__":
+    import os
+    import sys
+
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+
 import struct
 
 from volatility.framework import interfaces, layers, validity, configuration
@@ -123,3 +129,45 @@ class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
                         if hits.get(test.layer_type, []):
                             self.ctx.config[prefix + "page_map_offset"] = hits[test.layer_type][0][1]
         return True
+
+
+if __name__ == '__main__':
+    import argparse
+
+    from volatility.framework.symbols import native
+    from volatility.framework import contexts
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--32bit", action = "store_false", dest = "bit32", help = "Disable 32-bit run")
+    parser.add_argument("--64bit", action = "store_false", dest = "bit64", help = "Disable 64-bit run")
+    parser.add_argument("--pae", action = "store_false", help = "Disable pae run")
+    parser.add_argument("-f", "--file", metavar = "FILE", action = "store", help = "FILE to read for testing")
+
+    args = parser.parse_args()
+
+    nativelst = native.x86NativeTable
+    ctx = contexts.Context(nativelst)
+    data = layers.physical.FileLayer(ctx, 'name', 'data', filename = args.file)
+    ctx.memory.add_layer(data)
+
+    tests = []
+    if args.bit32:
+        tests.append(DtbTest32bit())
+    if args.bit64:
+        tests.append(DtbTest64bit())
+    if args.pae:
+        tests.append(DtbTestPae())
+
+    print("[*] Scanning...")
+    hits = scan(ctx, "data", tests)
+    print("[*] Results")
+    print(hits)
+    for key in tests:
+        arch_hits = hits.get(key.layer_type, [])
+        if arch_hits:
+            print(key.layer_type.__name__ + ": " + hex(min(arch_hits)[1]))
+    print("[*] OS Guess")
+    guesses = []
+    for key in hits:
+        guesses.append((len(hits[key]), key.__name__))
+    print(max(guesses)[1])
