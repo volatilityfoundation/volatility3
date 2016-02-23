@@ -32,11 +32,12 @@ def scan(ctx, layer_name, tests):
 class DtbTest(validity.ValidityRoutines):
     super_bit = 2
 
-    def __init__(self, layer_type = None, ptr_size = None, ptr_struct = None, ptr_reference = None):
+    def __init__(self, layer_type = None, ptr_size = None, ptr_struct = None, ptr_reference = None, mask = None):
         self.layer_type = self._check_class(layer_type, interfaces.layers.TranslationLayerInterface)
         self.ptr_size = self._check_type(ptr_size, int)
         self.ptr_struct = self._check_type(ptr_struct, str)
         self.ptr_reference = self._check_type(ptr_reference, int)
+        self.mask = self._check_type(mask, int)
 
     def unpack(self, value):
         return struct.unpack("<" + self.ptr_struct, value)[0]
@@ -50,8 +51,8 @@ class DtbTest(validity.ValidityRoutines):
         # It's occasionally Super, but not reliably so, haven't checked when/why not
         # The top 3-bits are usually ignore (which in practice means 0
         # Need to find out why the middle 3-bits are usually 6 (0110)
-        if ptr != 0 and (ptr & 0xFFFFFFFFFFFFF000 == page_offset) & (ptr & 0xFF1 == 0x61):
-            dtb = (ptr & 0xFFFFFFFFFFFFF000)
+        if ptr != 0 and (ptr & self.mask == page_offset) & (ptr & 0xFF1 == 0x61):
+            dtb = (ptr & self.mask)
             return self.second_pass(dtb, ctx, layer_name)
 
     def second_pass(self, dtb, ctx, layer_name):
@@ -73,7 +74,8 @@ class DtbTest32bit(DtbTest):
                          layer_type = layers.intel.Intel,
                          ptr_size = 4,
                          ptr_struct = "I",
-                         ptr_reference = 0x300)
+                         ptr_reference = 0x300,
+                         mask = 0xFFFFF000)
 
 
 class DtbTest64bit(DtbTest):
@@ -82,7 +84,8 @@ class DtbTest64bit(DtbTest):
                          layer_type = layers.intel.Intel32e,
                          ptr_size = 8,
                          ptr_struct = "Q",
-                         ptr_reference = 0x1ED)
+                         ptr_reference = 0x1ED,
+                         mask = 0x3FFFFFFFFFF000)
 
 
 class DtbTestPae(DtbTest):
@@ -91,13 +94,14 @@ class DtbTestPae(DtbTest):
                          layer_type = layers.intel.IntelPAE,
                          ptr_size = 8,
                          ptr_struct = "Q",
-                         ptr_reference = 0x3)
+                         ptr_reference = 0x3,
+                         mask = 0x3FFFFFFFFFF000)
 
     def second_pass(self, dtb, ctx, layer_name):
         dtb -= 0x4000
         data = ctx.memory.read(layer_name, dtb, PAGE_SIZE)
         val = self.unpack(data[3 * self.ptr_size: 4 * self.ptr_size])
-        if (val & 0xFFFFFFFFFFFFF000 == dtb + 0x4000) and (val & 0xFFF == 0x001):
+        if (val & self.mask == dtb + 0x4000) and (val & 0xFFF == 0x001):
             return val, dtb
 
 
