@@ -105,6 +105,24 @@ class DtbTestPae(DtbTest):
             return val, dtb
 
 
+class SelfReferentialTest(object):
+    def __init__(self):
+        self.ptr_struct = "Q"
+        self.ptr_size = 8
+        self.layer_type = layers.intel.Intel32e
+        self.mask = 0x3FFFFFFFFFF000
+
+    def run(self, page_offset, ctx, layer_name):
+        data = ctx.memory.read(layer_name, page_offset, PAGE_SIZE)
+        response = None
+        for i in range(0, PAGE_SIZE, self.ptr_size):
+            value = struct.unpack("<" + self.ptr_struct, data[i:i + self.ptr_size])[0] & self.mask
+            if value == page_offset and value != 0:
+                response = i // self.ptr_size, page_offset
+                print(hex(response[1]), hex(response[0]))
+        return response
+
+
 class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
     def __init__(self, context):
         self.ctx = self._check_type(context, interfaces.context.ContextInterface)
@@ -147,6 +165,7 @@ if __name__ == '__main__':
     parser.add_argument("--32bit", action = "store_false", dest = "bit32", help = "Disable 32-bit run")
     parser.add_argument("--64bit", action = "store_false", dest = "bit64", help = "Disable 64-bit run")
     parser.add_argument("--pae", action = "store_false", help = "Disable pae run")
+    parser.add_argument("--generic", action = "store_true", help = "Enable generic scan")
     parser.add_argument("-f", "--file", metavar = "FILE", action = "store", help = "FILE to read for testing")
 
     args = parser.parse_args()
@@ -163,6 +182,8 @@ if __name__ == '__main__':
         tests.append(DtbTest64bit())
     if args.pae:
         tests.append(DtbTestPae())
+    if args.generic:
+        tests.append(SelfReferentialTest())
 
     print("[*] Scanning...")
     hits = scan(ctx, "data", tests)
