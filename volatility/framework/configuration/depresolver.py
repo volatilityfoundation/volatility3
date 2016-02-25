@@ -5,6 +5,27 @@ import volatility.framework as framework
 from volatility.framework import validity, interfaces
 
 
+def satisfies(provider, requirement):
+    """Takes the requirement (which should always be a TranslationLayerRequirement) and determines if the
+       layer_class satisfies it"""
+    satisfied = True
+    for k, v in requirement.constraints.items():
+        if k in provider.provides:
+            satisfied = satisfied and bool(common_provision(provider.provides[k], v))
+    return satisfied
+
+
+def common_provision(value1, value2):
+    """Normalizes individual values down to singleton lists, then tests for overlap between the two lists"""
+    if not isinstance(value1, list):
+        value1 = [value1]
+    if not isinstance(value2, list):
+        value2 = [value2]
+    set1 = set(value1)
+    set2 = set(value2)
+    return set1.intersection(set2)
+
+
 class DependencyResolver(validity.ValidityRoutines):
     def __init__(self):
         # Maintain a cache of translation layers
@@ -26,25 +47,6 @@ class DependencyResolver(validity.ValidityRoutines):
                 self.provides[k] = new_v
                 cache.add(provider)
         return cache
-
-    def satisfies(self, provider, requirement):
-        """Takes the requirement (which should always be a TranslationLayerRequirement) and determines if the
-           layer_class satisfies it"""
-        satisfied = True
-        for k, v in requirement.constraints.items():
-            if k in provider.provides:
-                satisfied = satisfied and bool(self.common_provision(provider.provides[k], v))
-        return satisfied
-
-    def common_provision(self, value1, value2):
-        """Normalizes individual values down to singleton lists, then tests for overlap between the two lists"""
-        if not isinstance(value1, list):
-            value1 = [value1]
-        if not isinstance(value2, list):
-            value2 = [value2]
-        set1 = set(value1)
-        set2 = set(value2)
-        return set1.intersection(set2)
 
     def validate_dependencies(self, deptree, context, path = None):
         """Takes a dependency tree and attempts to resolve the tree by validating each branch and using the first that successfully validates
@@ -85,7 +87,7 @@ class DependencyResolver(validity.ValidityRoutines):
                 candidates = OrderedDict()
                 satisfiable = False
                 for potential in self.providers_cache:
-                    if self.satisfies(potential, subreq):
+                    if satisfies(potential, subreq):
                         try:
                             candidate = self.build_tree(potential)
                             candidates[potential] = candidate
@@ -161,11 +163,13 @@ class ValidatorVisitor(interfaces.configuration.HierachicalVisitor):
             # Only try to provide when we're not already sorted
             if self.ctx.config.get(config_path, None) is None:
                 for provider in node.candidates:
-                    try:
-                        provider.fulfill(self.ctx, node.requirement, config_path)
-                        break
-                    except Exception as e:
-                        pass
+                    # Recheck the requirements in case the deptree has changed
+                    if satisfies(provider, node.requirement):
+                        try:
+                            provider.fulfill(self.ctx, node.requirement, config_path)
+                            break
+                        except Exception as e:
+                            pass
                 else:
                     logging.debug(
                         "Unable to fulfill requirement " + repr(node.requirement) + " - no fulfillable candidates")
