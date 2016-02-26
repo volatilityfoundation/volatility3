@@ -25,7 +25,7 @@ def scan(ctx, layer_name, tests):
         for test in tests:
             val = test.run(offset, ctx, layer_name)
             if val:
-                hits[test.layer_type] = sorted(hits.get(test.layer_type, []) + [val])
+                hits[test.layer_type] = [x for _, x in sorted(hits.get(test.layer_type, []) + [val])]
     return hits
 
 
@@ -149,7 +149,7 @@ class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
                     hits = scan(self.ctx, memory_layer, useful)
                     for test in useful:
                         if hits.get(test.layer_type, []):
-                            self.ctx.config[prefix + "page_map_offset"] = hits[test.layer_type][0][1]
+                            self.ctx.config[prefix + "page_map_offset"] = hits[test.layer_type][0]
                         else:
                             # Delete the node rather than fixing the constraints,
                             # since the requirements haven't changed, but some of the candidates are no longer valid
@@ -165,18 +165,22 @@ if __name__ == '__main__':
     from volatility.framework import contexts
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
     parser.add_argument("--32bit", action = "store_false", dest = "bit32", help = "Disable 32-bit run")
     parser.add_argument("--64bit", action = "store_false", dest = "bit64", help = "Disable 64-bit run")
     parser.add_argument("--pae", action = "store_false", help = "Disable pae run")
     parser.add_argument("--generic", action = "store_true", help = "Enable generic scan")
-    parser.add_argument("-f", "--file", metavar = "FILE", action = "store", help = "FILE to read for testing")
 
     args = parser.parse_args()
 
     nativelst = native.x86NativeTable
     ctx = contexts.Context(nativelst)
-    data = layers.physical.FileLayer(ctx, 'name', 'data', filename = args.file)
-    ctx.memory.add_layer(data)
+    for filename in args.filenames:
+        data = layers.physical.FileLayer(ctx,
+                                         'config' + str(args.filenames.index(filename)),
+                                         'data' + str(args.filenames.index(filename)),
+                                         filename = filename)
+        ctx.memory.add_layer(data)
 
     tests = []
     if args.bit32:
@@ -188,15 +192,18 @@ if __name__ == '__main__':
     if args.generic:
         tests.append(SelfReferentialTest())
 
-    print("[*] Scanning...")
-    hits = scan(ctx, "data", tests)
-    print("[*] Results")
-    for key in tests:
-        arch_hits = hits.get(key.layer_type, [])
-        if arch_hits:
-            print(key.layer_type.__name__ + ": " + repr([hex(x[1]) for x in sorted(arch_hits)]))
-    print("[*] OS Guess")
-    guesses = []
-    for key in hits:
-        guesses.append((len(hits[key]), key.__name__))
-    print(max(guesses)[1])
+    for i in range(len(args.filenames)):
+        print("[*] Scanning " + args.filenames[i] + "...")
+        hits = scan(ctx, "data" + str(i), tests)
+        for key in tests:
+            arch_hits = hits.get(key.layer_type, [])
+            if arch_hits:
+                print("   ", key.layer_type.__name__ + ": " + repr([hex(x) for x in sorted(arch_hits)]))
+        guesses = []
+        for key in hits:
+            guesses.append((len(hits[key]), key.__name__, hits[key]))
+        if guesses:
+            _, arch, dtbs = max(guesses)
+            print("[!] OS Guess:", arch, "with DTB", hex(dtbs[0]))
+        else:
+            print("[X] No DTBs found")
