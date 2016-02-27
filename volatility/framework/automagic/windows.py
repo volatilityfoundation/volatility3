@@ -120,7 +120,7 @@ class SelfReferentialTest(object):
             if value == page_offset and value != 0:
                 response = i // self.ptr_size, page_offset
                 print(hex(response[1]), hex(response[0]))
-        return response
+        return 1, response
 
 
 class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
