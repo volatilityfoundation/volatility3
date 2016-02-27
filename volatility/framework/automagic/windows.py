@@ -25,7 +25,10 @@ def scan(ctx, layer_name, tests):
         for test in tests:
             val = test.run(offset, ctx, layer_name)
             if val:
-                hits[test.layer_type] = [x for _, x in sorted(hits.get(test.layer_type, []) + [val])]
+                hits[test.layer_type] = sorted(hits.get(test.layer_type, []) + [val])
+    # Don't reduce the tuple until after all the sorting's complete
+    for test in tests:
+        hits[test.layer_type] = [x for _, x in hits.get(test.layer_type, [])]
     return hits
 
 
