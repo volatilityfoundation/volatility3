@@ -67,8 +67,9 @@ class DtbTest(validity.ValidityRoutines):
                 sup_count += 0 if (val & 0x4) else 1
                 usr_count += 1 if (val & 0x4) else 0
         # print(hex(dtb), usr_count, sup_count, usr_count + sup_count)
-        if usr_count:
-            return usr_count, dtb
+        # We sometimes find bogus DTBs at 0x16000 with a very low sup_count and 0 usr_count
+        if usr_count or sup_count > 5:
+            return (usr_count, -sup_count), dtb
 
 
 class DtbTest32bit(DtbTest):
