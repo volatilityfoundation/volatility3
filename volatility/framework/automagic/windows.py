@@ -114,7 +114,7 @@ class SelfReferentialTest(object):
 
     def run(self, page_offset, ctx, layer_name):
         data = ctx.memory.read(layer_name, page_offset, PAGE_SIZE)
-        response = None
+        response = (None, None)
         for i in range(0, PAGE_SIZE, self.ptr_size):
             value = struct.unpack("<" + self.ptr_struct, data[i:i + self.ptr_size])[0] & self.mask
             if value == page_offset and value != 0:
