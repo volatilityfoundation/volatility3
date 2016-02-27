@@ -195,18 +195,22 @@ if __name__ == '__main__':
     if args.generic:
         tests.append(SelfReferentialTest())
 
-    for i in range(len(args.filenames)):
-        print("[*] Scanning " + args.filenames[i] + "...")
-        hits = scan(ctx, "data" + str(i), tests)
-        for key in tests:
-            arch_hits = hits.get(key.layer_type, [])
-            if arch_hits:
-                print("   ", key.layer_type.__name__ + ": " + repr([hex(x) for x in sorted(arch_hits)]))
-        guesses = []
-        for key in hits:
-            guesses.append((len(hits[key]), key.__name__, hits[key]))
-        if guesses:
-            _, arch, dtbs = max(guesses)
-            print("[!] OS Guess:", arch, "with DTB", hex(dtbs[0]))
-        else:
-            print("[X] No DTBs found")
+    if tests:
+        for i in range(len(args.filenames)):
+            print("[*] Scanning " + args.filenames[i] + "...")
+            hits = scan(ctx, "data" + str(i), tests)
+            for key in tests:
+                arch_hits = hits.get(key.layer_type, [])
+                if arch_hits:
+                    print("   ", key.layer_type.__name__ + ": " + repr([hex(x) for x in sorted(arch_hits)]))
+            guesses = []
+            for key in hits:
+                guesses.append((len(hits[key]), key.__name__, hits[key]))
+            num, arch, dtbs = max(guesses)
+            if num:
+                print("[!] OS Guess:", arch, "with DTB", hex(dtbs[0]))
+            else:
+                print("[X] No DTBs found")
+            print()
+    else:
+        print("[X] No tests selected")
