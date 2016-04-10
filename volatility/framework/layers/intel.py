@@ -91,7 +91,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             entry, = struct.unpack(self._entry_format, self._context.memory.read(self._base_layer, table_offset,
                                                                                  struct.calcsize(self._entry_format)))
 
-        # Now we're do
+        # Now we're done
         if not self._page_is_valid(entry):
             raise exceptions.InvalidAddressException("Page Fault at entry " + hex(entry) + " in page entry")
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
@@ -105,16 +105,14 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         except exceptions.InvalidAddressException:
             return False
 
-    def translate(self, offset):
-        """Translates a specific offset based on the paging tables"""
-        result, _ = self._translate(offset)
-        return result
-
     def mapping(self, offset, length):
         """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
 
            This allows translation layers to provide maps of contiguous regions in one layer
         """
+        if length == 0:
+            mapped_offset, _ = self._translate(offset)
+            return [(offset, mapped_offset, length, self._base_layer)]
         result = []
         while length > 0:
             chunk_offset, page_size = self._translate(offset)
