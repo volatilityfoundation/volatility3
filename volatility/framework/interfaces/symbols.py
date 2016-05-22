@@ -3,6 +3,7 @@ Created on 4 May 2013
 
 @author: mike
 """
+import bisect
 
 from volatility.framework import validity, exceptions, constants
 from volatility.framework.interfaces import configuration
@@ -55,10 +56,6 @@ class SymbolTableInterface(validity.ValidityRoutines):
         """
         raise NotImplementedError("Abstract property get_symbol not implemented by subclass.")
 
-    def get_symbol_type(self, name):
-        """Resolves a symbol name into a symbol and then resolves the symbol's type"""
-        return self.get_type(self.get_symbol(name).type_name)
-
     @property
     def symbols(self):
         """Returns an iterator of the Symbols"""
@@ -110,6 +107,30 @@ class SymbolTableInterface(validity.ValidityRoutines):
     def del_type_class(self, name):
         """Removes the associated class override for a specific Symbol type"""
         raise NotImplementedError("Abstract method del_type_class not implemented yet.")
+
+    # ## Convenience functions for location symbols
+
+    def get_symbol_type(self, name):
+        """Resolves a symbol name into a symbol and then resolves the symbol's type"""
+        return self.get_type(self.get_symbol(name).type_name)
+
+    def get_symbols_by_type(self, type_name):
+        """Returns the name of all symbols in this table that have type matching type_name"""
+        for symbol in self.symbols:
+            # This allows for searching with and without the table name (in case multiple tables contain
+            # the same symbol name and we've not specifically been told which one)
+            if symbol.type_name == type_name or (symbol.type_name.endswith(constants.BANG + type_name)):
+                yield symbol.name
+
+    def get_symbols_by_location(self, offset):
+        """Returns the name of all symbols in this table that have type matching type_name"""
+        sort_symbols = [(s.offset, s) for s in sorted(self.symbols, key = lambda x: x.offset)]
+        result = bisect.bisect_left(sort_symbols, offset)
+        if result == len(sort_symbols):
+            raise StopIteration
+        closest_symbol = sort_symbols[result][1]
+        if closest_symbol.offset == offset:
+            yield closest_symbol.name
 
 
 class NativeTableInterface(SymbolTableInterface):

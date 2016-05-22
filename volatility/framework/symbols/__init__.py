@@ -33,6 +33,18 @@ class SymbolSpace(collections.abc.Mapping):
         # Permanently cache all resolved symbols
         self._resolved = {}
 
+    def get_symbols_by_type(self, type_name):
+        """Returns all symbols based """
+        for table in self._dict.keys():
+            for symbol_name in self._dict[table].get_symbols_by_type(type_name):
+                yield table + constants.BANG + symbol_name
+
+    def get_symbols_by_location(self, offset):
+        """Returns all symbols that exist at a specific relative offset"""
+        for table in self._dict.values():
+            for symbol_name in self._dict[table].get_symbols_by_location(offset = offset):
+                yield table + constants.BANG + symbol_name
+
     @property
     def natives(self):
         """Returns the native_types for this symbol space"""
