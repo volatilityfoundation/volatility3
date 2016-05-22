@@ -4,13 +4,15 @@ Created on 4 May 2013
 @author: mike
 """
 
-from volatility.framework import validity, exceptions
+from volatility.framework import validity, exceptions, constants
 from volatility.framework.interfaces import configuration
 
 
 class Symbol(validity.ValidityRoutines):
     def __init__(self, name, offset, type_name = None):
         self._name = self._check_type(name, str)
+        if constants.BANG in self._name:
+            raise ValueError("Symbol names cannot contain the symbol differentiator (" + constants.BANG + ")")
         self._location = None
         self._offset = self._check_type(offset, int)
         if type_name is None:

@@ -8,7 +8,7 @@ import collections
 import collections.abc
 import warnings
 
-from volatility.framework import objects, interfaces, exceptions
+from volatility.framework import objects, interfaces, exceptions, constants
 from volatility.framework.symbols import native, vtypes, windows
 
 
@@ -80,7 +80,7 @@ class SymbolSpace(collections.abc.Mapping):
         else:
             raise ValueError("Weak_resolve called without a proper SymbolType.")
 
-        name_array = name.split("!")
+        name_array = name.split(constants.BANG)
         if len(name_array) == 2:
             table_name = name_array[0]
             component_name = name_array[1]

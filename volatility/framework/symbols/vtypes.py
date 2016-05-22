@@ -6,7 +6,7 @@ Created on 10 Apr 2013
 
 import copy
 
-from volatility.framework import exceptions, objects, interfaces
+from volatility.framework import exceptions, objects, interfaces, constants
 
 
 # ## TODO
@@ -86,7 +86,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
         if len(dictionary) > 1:
             raise exceptions.SymbolSpaceError("Unknown vtype format: " + repr(dictionary))
 
-        return objects.templates.ReferenceTemplate(type_name = self.name + "!" + type_name)
+        return objects.templates.ReferenceTemplate(type_name = self.name + constants.BANG + type_name)
 
     @property
     def types(self):
@@ -104,7 +104,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             member = (relative_offset, self._vtypedict_to_template(vtypedict))
             members[member_name] = member
         object_class = self.get_type_class(type_name)
-        return objects.templates.ObjectTemplate(type_name = self.name + "!" + type_name,
+        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
                                                 object_class = object_class,
                                                 size = size,
                                                 members = members)
