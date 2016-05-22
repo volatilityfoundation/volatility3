@@ -62,7 +62,9 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def __init__(self, context, config_path, name, filename):
         interfaces.layers.DataLayerInterface.__init__(self, context, config_path, name)
 
-        self._file = open(filename, "r+b")
+        # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
+        mode = "rb"
+        self._file = open(filename, mode)
         self._size = os.path.getsize(filename)
 
     @property
