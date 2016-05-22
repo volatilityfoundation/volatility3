@@ -39,9 +39,15 @@ class SymbolSpace(collections.abc.Mapping):
             for symbol_name in self._dict[table].get_symbols_by_type(type_name):
                 yield table + constants.BANG + symbol_name
 
-    def get_symbols_by_location(self, offset):
+    def get_symbols_by_location(self, offset, table_name = None):
         """Returns all symbols that exist at a specific relative offset"""
-        for table in self._dict.values():
+        table_list = self._dict.values()
+        if table_name is not None:
+            if table_name in self._dict:
+                table_list = [self._dict[table_name]]
+            else:
+                table_list = []
+        for table in table_list:
             for symbol_name in self._dict[table].get_symbols_by_location(offset = offset):
                 yield table + constants.BANG + symbol_name
 
