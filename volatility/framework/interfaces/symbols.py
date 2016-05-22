@@ -8,6 +8,32 @@ from volatility.framework import validity, exceptions
 from volatility.framework.interfaces import configuration
 
 
+class Symbol(validity.ValidityRoutines):
+    def __init__(self, name, offset, type_name = None):
+        self._name = self._check_type(name, str)
+        self._location = None
+        self._offset = self._check_type(offset, int)
+        if type_name is None:
+            type_name = name
+        self._type_name = self._check_type(type_name, str)
+        # Scope and location can be added at a later date
+
+    @property
+    def name(self):
+        """Returns the name of the symbol"""
+        return self._name
+
+    @property
+    def type_name(self):
+        """Returns the name of the type that the symbol represents"""
+        return self._type_name
+
+    @property
+    def offset(self):
+        """Returns the relative offset of the symbol within the compilation unit"""
+        return self._offset
+
+
 class SymbolTableInterface(validity.ValidityRoutines):
     """Handles a table of symbols"""
 
