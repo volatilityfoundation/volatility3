@@ -27,7 +27,7 @@ class PsList(plugins.PluginInterface):
         # Get the process in the physical space
         flateproc = ctx.object("ntkrnlmp!_EPROCESS", physical_layer, offset = offset)
         # Determine the relative offset from the Thread head to the ThreadListEntry
-        reloff = ctx.symbol_space.get_structure("ntkrnlmp!_ETHREAD").relative_child_offset("ThreadListEntry")
+        reloff = ctx.symbol_space.get_type("ntkrnlmp!_ETHREAD").relative_child_offset("ThreadListEntry")
         # Get the thread object in kernel space from the
         ethread = ctx.object("ntkrnlmp!_ETHREAD", kernel_layer, offset = flateproc.ThreadListHead.Flink - reloff)
         # Get the process from the thread object in kernel space

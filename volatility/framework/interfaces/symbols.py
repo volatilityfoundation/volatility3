@@ -11,84 +11,87 @@ from volatility.framework.interfaces import configuration
 class SymbolTableInterface(validity.ValidityRoutines):
     """Handles a table of symbols"""
 
-    def __init__(self, name, native_structures = None):
-        self._check_type(native_structures, NativeTableInterface)
+    def __init__(self, name, native_types = None):
+        self._check_type(native_types, NativeTableInterface)
         if name:
             self._check_type(name, str)
         self.name = name or None
-        self._native_structures = native_structures
+        self._native_types = native_types
 
-    # ## Required Constant symbol functions
+    # ## Required Symbol functions
 
-    def get_constant(self, name):
-        """Resolves a symbol name into a constant
+    def get_symbol(self, name):
+        """Resolves a symbol name into a symbol object
 
            If the symbol isn't found, it raises a SymbolError exception
         """
-        raise NotImplementedError("Abstract property get_constant not implemented by subclass.")
+        raise NotImplementedError("Abstract property get_symbol not implemented by subclass.")
+
+    def get_symbol_type(self, name):
+        """Resolves a symbol name into a symbol and then resolves the symbol's type"""
+        return self.get_type(self.get_symbol(name).type_name)
 
     @property
-    def constants(self):
-        """Returns an iterator of the constant symbols"""
-        raise NotImplementedError("Abstract property constants not implemented by subclass.")
+    def symbols(self):
+        """Returns an iterator of the Symbols"""
+        raise NotImplementedError("Abstract property symbols not implemented by subclass.")
 
-    # ## Required Structure symbol functions
+    # ## Required Symbol type functions
 
-    def get_structure(self, name):
+    def get_type(self, name):
         """Resolves a symbol name into an object template
 
            If the symbol isn't found it raises a SymbolError exception
         """
-        raise NotImplementedError("Abstract method get_structure not implemented by subclass.")
+        raise NotImplementedError("Abstract method get_type not implemented by subclass.")
 
     @property
-    def structures(self):
-        """Returns an iterator of the structure symbols"""
-        raise NotImplementedError("Abstract property structures not implemented by subclass.")
+    def types(self):
+        """Returns an iterator of the Symbol types"""
+        raise NotImplementedError("Abstract property types not implemented by subclass.")
 
     # ## Native Type Handler
 
     @property
     def natives(self):
-        """Returns None or a symbol_space for handling space specific native types"""
-        return self._native_structures
+        """Returns None or a NativeTable for handling space specific native types"""
+        return self._native_types
 
     @natives.setter
     def natives(self, value):
         """Checks the natives value and then applies it internally
 
-           WARNING: This allows changing the underlying size of all the other structures referenced in the symbolspace
+           WARNING: This allows changing the underlying size of all the other types referenced in the SymbolTable
         """
         self._check_type(value, NativeTableInterface)
-        self._native_structures = value
+        self._native_types = value
 
     # ## Functions for overriding classes
 
-    def set_structure_class(self, name, clazz):
-        """Overrides the object class for a specific structure symbol
+    def set_type_class(self, name, clazz):
+        """Overrides the object class for a specific Symbol type
 
-           Name *must* be present in self.structures
+           Name *must* be present in self.types
         """
-        raise NotImplementedError("Abstract method set_structure_class not implemented yet.")
+        raise NotImplementedError("Abstract method set_type_class not implemented yet.")
 
-    def get_structure_class(self, name):
-        """Returns the class associated with a structure symbol"""
-        raise NotImplementedError("Abstract method get_structure_class not implemented yet.")
+    def get_type_class(self, name):
+        """Returns the class associated with a Symbol type"""
+        raise NotImplementedError("Abstract method get_type_class not implemented yet.")
 
-    def del_structure_class(self, name):
-        """Removes the associated class override for a specific structure symbol"""
-        raise NotImplementedError("Abstract method del_structure_class not implemented yet.")
+    def del_type_class(self, name):
+        """Removes the associated class override for a specific Symbol type"""
+        raise NotImplementedError("Abstract method del_type_class not implemented yet.")
 
 
 class NativeTableInterface(SymbolTableInterface):
     """Class to distinguish NativeSymbolLists from other symbol lists"""
 
-    @staticmethod
-    def constant():
-        raise exceptions.SymbolError("NativeTables never hold constants")
+    def get_symbol(self, name):
+        raise exceptions.SymbolError("NativeTables never hold symbols")
 
     @property
-    def constants(self):
+    def symbols(self):
         return []
 
 
