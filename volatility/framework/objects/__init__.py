@@ -370,3 +370,12 @@ class Struct(interfaces.objects.ObjectInterface):
 
     def write(self, value):
         raise TypeError("Structs cannot be written to directly, individual members must be written instead")
+
+
+# Nice way of duplicating the class, but *could* causes problems with isintance
+class Union(Struct):
+    pass
+
+# Really nasty way of duplicating the class
+# WILL cause problems with any mutable class/static variables
+# Union = type('Union', Struct.__bases__, dict(Struct.__dict__))
