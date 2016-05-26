@@ -21,8 +21,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     def __init__(self, context, config_path, name, page_map_offset, memory_layer, swap_layer = None):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, config_path, name)
-        self._base_layer = memory_layer
-        self._page_map_offset = page_map_offset
+        self._base_layer = self._check_type(memory_layer, str)
+        self._page_map_offset = self._check_type(page_map_offset, int)
         # All Intel address spaces work on 4096 byte pages
         self._page_size_in_bits = 12
 
@@ -124,7 +124,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     @property
     def dependencies(self):
-        """Returns a list of the lower layers that this layer is dependent upon"""
+        """Returns a list of the lower layer names that this layer is dependent upon"""
         # TODO: Add in the whole buffalo
         return [self._base_layer]
 
