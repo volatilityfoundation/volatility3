@@ -33,13 +33,27 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
         self._base_layer = base_layer
 
         # list of tuples (logical start, base start, size)
-        segments = []
+        # loaded by _load_segments() on first access
+        self._segments = []
+        self._minaddr = 0
+        self._maxaddr = 0
 
-        # logical end of physical memory
+    @property
+    def minimum_address(self):
+        return self._minaddr
+
+    @property
+    def maximum_address(self):
+        return self._maxaddr
+
+    def _load_segments(self):
+        base_layer = self._context.memory[self._base_layer]
         base_maxaddr = base_layer.maximum_address
         maxaddr = 0
         offset = 0
         header_size = self._header_struct.size
+        segments = []
+
         while offset < base_maxaddr:
             header_data = base_layer.read(offset, header_size)
 
@@ -54,26 +68,26 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
                 raise LimeFormatException("bad start/end 0x%x/0x%x at file offset 0x%x" % (start, end, offset))
 
             segment_length = end - start + 1
-            segments.append((start, offset, segment_length))
+            segments.append((start, offset + header_size, segment_length))
             maxaddr = end
             offset = offset + header_size + segment_length
 
+        if len(segments) == 0:
+            raise LimeFormatException("No LiME segments defined in " + self._base_layer)
+
         self._segments = segments
+        self._minaddr = segments[0][0]
         self._maxaddr = maxaddr
 
-    @property
-    def minimum_address(self):
-        return self._segments[0][0]
-
-    @property
-    def maximum_address(self):
-        return self._maxaddr
 
     def _find_segment(self, offset):
         """Finds the segment containing a given offset
 
            Returns the segment tuple
         """
+
+        if self._segments == []:
+            self._load_segments()
 
         for logical_start, base_start, size in self._segments:
             if offset >= logical_start and offset < (logical_start + size):
@@ -100,7 +114,7 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
         while length > 0:
             logical_start, base_start, size = self._find_segment(offset)
             chunk_offset = offset - logical_start + base_start
-            chunk_size = size - (offset - logical_start)
+            chunk_size = min(size - (offset - logical_start), length)
             result.append((offset, chunk_offset, chunk_size, self._base_layer))
             length -= chunk_size
             offset += chunk_size
