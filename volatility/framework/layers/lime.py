@@ -86,7 +86,7 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
            Returns the segment tuple
         """
 
-        if self._segments == []:
+        if not self._segments:
             self._load_segments()
 
         for logical_start, base_start, size in self._segments:
