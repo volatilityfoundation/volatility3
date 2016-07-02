@@ -3,11 +3,47 @@ Created on 4 May 2013
 
 @author: mike
 """
+import collections
 
 from volatility.framework import exceptions, validity
 # We can't just import interfaces because we'd have a cycle going
-from volatility.framework.interfaces import configuration
+from volatility.framework.interfaces import configuration, context
 from abc import ABCMeta, abstractmethod, abstractproperty
+
+
+class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+    def __init__(self):
+        self.chunk_size = 0x1000000  # Default to 16Mb chunks
+        self.overlap = 0x1000  # A page of overlap by default
+        self._context = None
+        self._layer_name = None
+
+    @property
+    def context(self):
+        return self._context
+
+    @context.setter
+    def context(self, ctx):
+        """Stores the context locally in case the scanner needs to access the layer"""
+        self._context = self._check_type(ctx, context.ContextInterface)
+
+    @property
+    def layer_name(self):
+        return self._layer_name
+
+    @layer_name.setter
+    def layer_name(self, layer_name):
+        """Stores the layer_name being scanned locally in case the scanner needs to access the layer"""
+        self._layer_name = self._check_type(layer_name, str)
+
+    @abstractmethod
+    def __call__(self, data, data_offset):
+        """Searches through a chunk of data for a particular value/pattern/etc
+           Returns the ABSOLUTE offset (ie, offset_within_data + data_offset)
+
+           data is the chunk of data to search through
+           data_offset is the offset within the layer that the data being searched starts at
+        """
 
 
 class DataLayerInterface(configuration.ProviderInterface, validity.ValidityRoutines, metaclass = ABCMeta):
@@ -88,6 +124,38 @@ class DataLayerInterface(configuration.ProviderInterface, validity.ValidityRouti
         context.add_layer(layer)
         context.config[config_path] = layer_name
 
+    def _pre_scan(self, context, min_address, max_address, progress_callback, scanner):
+        """Prepares the scanner based on standard procedures shared between TranslationLayers and DataLayers"""
+        if progress_callback is not None:
+            self._check_type(progress_callback, collections.Callable)
+
+        scanner = self._check_type(scanner, ScannerInterface)
+        scanner.context = context
+        scanner.layer_name = self.name
+
+        if min_address is None:
+            min_address = self.minimum_address
+        if max_address is None:
+            max_address = self.maximum_address
+
+        min_address = min(self.minimum_address, min_address)
+        max_address = max(self.maximum_address, max_address)
+        total_size = (max_address - min_address)
+        return min_address, max_address, scanner, total_size
+
+    def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
+        """Scans the layer using scanner, between min_address and max_address calling progress_callback at internvals to report percentage progress"""
+        min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,
+                                                                       progress_callback, scanner)
+
+        for offset in range(min_address, max_address, scanner.chunk_size):
+            length = min(scanner.chunk_size + scanner.overlap, max_address - offset)
+            chunk = self.read(offset, length)
+            if progress_callback:
+                progress_callback((offset * 100) / total_size)
+            for x in scanner(chunk, offset):
+                yield x
+
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     # Unfortunately class attributes can't easily be inheritted from parent classes
@@ -142,3 +210,22 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 raise exceptions.LayerException("Mapping returned an overlapping element")
             self._context.memory.write(layer, mapped_offset, length)
             current_offset += length
+
+    def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
+        """Scans a Translation layer by chunk
+
+           Note: this will skip missing/unmappable chunks of memory
+        """
+        min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,
+                                                                       progress_callback, scanner)
+
+        progress = 0
+        for block in range(min_address, total_size, scanner.chunk_size):
+            for map in self.mapping(block, scanner.chunk_size + scanner.overlap, ignore_errors = True):
+                offset, mapped_offset, length, layer = map
+                chunk = self._context.memory.read(layer, mapped_offset, length)
+                if progress_callback:
+                    progress += length
+                    progress_callback(progress / total_size)
+                for x in scanner(chunk, offset):
+                    yield x
