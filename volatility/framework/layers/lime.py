@@ -93,8 +93,7 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
             if offset >= logical_start and offset < (logical_start + size):
                 return (logical_start, base_start, size)
 
-        raise exceptions.InvalidAddressException("Lime fault at address " + hex(offset))
-
+        raise exceptions.InvalidAddressException(self.name, offset, "Lime fault at address " + hex(offset))
 
     def is_valid(self, offset, length = 1):
         """Returns whether the address offset can be translated to a valid address"""

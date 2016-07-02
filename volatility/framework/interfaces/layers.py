@@ -115,7 +115,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         output = []
         for (offset, mapped_offset, length, layer) in self.mapping(offset, length):
             if not pad and offset > current_offset:
-                raise exceptions.InvalidAddressException("Layer " + self.name + " cannot map offset " +
+                raise exceptions.InvalidAddressException(self.name, current_offset,
+                                                         "Layer " + self.name + " cannot map offset " +
                                                          str(current_offset))
             elif offset > current_offset:
                 output += [b"\x00" * (current_offset - offset)]

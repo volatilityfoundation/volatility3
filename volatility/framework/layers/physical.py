@@ -38,7 +38,11 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
     def read(self, address, length, pad = False):
         """Reads the data from the buffer"""
         if not self.is_valid(address, length):
-            raise exceptions.InvalidAddressException("Offset outside of the buffer boundaries")
+            invalid_address = address
+            if self.minimum_address < address and address <= self.maximum_address:
+                invalid_address = self.maximum_address + 1
+            raise exceptions.InvalidAddressException(self.name, invalid_address,
+                                                     "Offset outside of the buffer boundaries")
         return self._buffer[address:address + length]
 
     def write(self, address, data):
@@ -88,14 +92,19 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def read(self, offset, length, pad = False):
         """Reads from the file at offset for length"""
         if not self.is_valid(offset, length):
-            raise exceptions.InvalidAddressException("Offset outside of the " + self.name + " file boundaries")
+            invalid_address = offset
+            if self.minimum_address < offset and offset <= self.maximum_address:
+                invalid_address = self.maximum_address + 1
+            raise exceptions.InvalidAddressException(self.name, invalid_address,
+                                                     "Offset outside of the buffer boundaries")
         self._file.seek(offset)
         data = self._file.read(length)
         if len(data) < length:
             if pad:
                 data += (b"\x00" * (length - len(data)))
             else:
-                raise exceptions.InvalidAddressException("Could not read sufficient bytes from the " +
+                raise exceptions.InvalidAddressException(self.name, offset + len(data),
+                                                         "Could not read sufficient bytes from the " +
                                                          self.name + " file")
         return data
 
@@ -105,7 +114,11 @@ class FileLayer(interfaces.layers.DataLayerInterface):
            This will technically allow writes beyond the extent of the file
         """
         if not self.is_valid(offset, len(data)):
-            raise exceptions.InvalidAddressException("Data segment outside of the " + self.name + " file boundaries")
+            invalid_address = offset
+            if self.minimum_address < offset and offset <= self.maximum_address:
+                invalid_address = self.maximum_address + 1
+            raise exceptions.InvalidAddressException(self.name, invalid_address,
+                                                     "Data segment outside of the " + self.name + " file boundaries")
         self._file.seek(offset)
         self._file.write(data)
 
