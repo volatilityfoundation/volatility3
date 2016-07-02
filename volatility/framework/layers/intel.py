@@ -102,21 +102,30 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def is_valid(self, offset, length = 1):
         """Returns whether the address offset can be translated to a valid address"""
         try:
+            # TODO: Consider reimplementing this, since calls mapping can call is_valid
             return all([self._context.memory[self._base_layer].is_valid(mapped_offset) for _, mapped_offset, _, _ in
                         self.mapping(offset, length)])
         except exceptions.InvalidAddressException:
             return False
 
-    def mapping(self, offset, length):
+    def mapping(self, offset, length, ignore_errors = False):
         """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
 
            This allows translation layers to provide maps of contiguous regions in one layer
         """
+        result = []
         if length == 0:
+            if ignore_errors and not self.is_valid(offset):
+                return result
             mapped_offset, _ = self._translate(offset)
             return [(offset, mapped_offset, length, self._base_layer)]
-        result = []
         while length > 0:
+            if ignore_errors:
+                while not self.is_valid(offset) and length > 0:
+                    length -= 1 << self._page_size_in_bits
+                    offset += 1 << self._page_size_in_bits
+                if length <= 0:
+                    return result
             chunk_offset, page_size = self._translate(offset)
             chunk_size = min(page_size - (chunk_offset % page_size), length)
             result.append((offset, chunk_offset, chunk_size, self._base_layer))

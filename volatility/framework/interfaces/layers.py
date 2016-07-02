@@ -94,9 +94,10 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     provides = {"type": "interface"}
 
     @abstractmethod
-    def mapping(self, offset, length):
+    def mapping(self, offset, length, ignore_errors = False):
         """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
 
+           ignore_errors will provide all available maps with gaps, but their total length may not add up to the requested length
            This allows translation layers to provide maps of contiguous regions in one layer
         """
         return []
@@ -113,7 +114,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
         current_offset = offset
         output = []
-        for (offset, mapped_offset, length, layer) in self.mapping(offset, length):
+        for (offset, mapped_offset, length, layer) in self.mapping(offset, length, ignore_errors = pad):
             if not pad and offset > current_offset:
                 raise exceptions.InvalidAddressException(self.name, current_offset,
                                                          "Layer " + self.name + " cannot map offset " +

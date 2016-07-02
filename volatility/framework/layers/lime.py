@@ -104,13 +104,26 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
         except exceptions.InvalidAddressException:
             return False
 
-    def mapping(self, offset, length):
+    def mapping(self, offset, length, ignore_errors = False):
         """Returns a sorted list of (offset, mapped_offset, length, layer) mappings"""
+        result = []
+        if ignore_errors:
+            for (seg_offset, mapped_seg_offset, seg_length) in self._segments:
+                if (offset + length < seg_offset) or (offset > seg_offset + seg_length):
+                    continue
+                if seg_offset <= offset < seg_offset + seg_length:
+                    diff = offset - seg_offset
+                    seg_length -= diff
+                    mapped_seg_offset += diff
+                    seg_offset += diff
+                if offset + length < seg_offset + seg_length:
+                    seg_length = offset + length - seg_offset
+                result.append((seg_offset, mapped_seg_offset, seg_length, self._base_layer))
+            return result
         if length == 0:
             logical_start, base_start, size = self._find_segment(offset)
             mapped_offset = offset - logical_start + base_start
             return [(offset, mapped_offset, 0, self._base_layer)]
-        result = []
         while length > 0:
             logical_start, base_start, size = self._find_segment(offset)
             chunk_offset = offset - logical_start + base_start
