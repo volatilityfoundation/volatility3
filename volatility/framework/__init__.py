@@ -15,7 +15,7 @@ import inspect
 # 4. If changes or removals of the interface have been made, set age to 0
 import sys
 
-CURRENT = 3  # Number of releases of the library with any change
+CURRENT = 4  # Number of releases of the library with any change
 REVISION = 0  # Number of changes that don't affect the interface
 AGE = 0  # Number of consecutive versions of the interface the current version supports
 
