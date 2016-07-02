@@ -109,29 +109,29 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             return False
 
     def mapping(self, offset, length, ignore_errors = False):
-        """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
+        """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
 
            This allows translation layers to provide maps of contiguous regions in one layer
         """
         result = []
         if length == 0:
             if ignore_errors and not self.is_valid(offset):
-                return result
+                raise StopIteration
             mapped_offset, _ = self._translate(offset)
-            return [(offset, mapped_offset, length, self._base_layer)]
+            yield (offset, mapped_offset, length, self._base_layer)
+            raise StopIteration
         while length > 0:
             if ignore_errors:
                 while not self.is_valid(offset) and length > 0:
                     length -= 1 << self._page_size_in_bits
                     offset += 1 << self._page_size_in_bits
                 if length <= 0:
-                    return result
+                    raise StopIteration
             chunk_offset, page_size = self._translate(offset)
             chunk_size = min(page_size - (chunk_offset % page_size), length)
-            result.append((offset, chunk_offset, chunk_size, self._base_layer))
+            yield (offset, chunk_offset, chunk_size, self._base_layer)
             length -= chunk_size
             offset += chunk_size
-        return result
 
     @property
     def dependencies(self):

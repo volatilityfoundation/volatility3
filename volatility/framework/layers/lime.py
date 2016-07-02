@@ -105,7 +105,7 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
             return False
 
     def mapping(self, offset, length, ignore_errors = False):
-        """Returns a sorted list of (offset, mapped_offset, length, layer) mappings"""
+        """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings"""
         result = []
         if ignore_errors:
             for (seg_offset, mapped_seg_offset, seg_length) in self._segments:
@@ -118,20 +118,20 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
                     seg_offset += diff
                 if offset + length < seg_offset + seg_length:
                     seg_length = offset + length - seg_offset
-                result.append((seg_offset, mapped_seg_offset, seg_length, self._base_layer))
-            return result
+                yield (seg_offset, mapped_seg_offset, seg_length, self._base_layer)
+            raise StopIteration
         if length == 0:
             logical_start, base_start, size = self._find_segment(offset)
             mapped_offset = offset - logical_start + base_start
-            return [(offset, mapped_offset, 0, self._base_layer)]
+            yield (offset, mapped_offset, 0, self._base_layer)
+            raise StopIteration
         while length > 0:
             logical_start, base_start, size = self._find_segment(offset)
             chunk_offset = offset - logical_start + base_start
             chunk_size = min(size - (offset - logical_start), length)
-            result.append((offset, chunk_offset, chunk_size, self._base_layer))
+            yield (offset, chunk_offset, chunk_size, self._base_layer)
             length -= chunk_size
             offset += chunk_size
-        return result
 
     @property
     def dependencies(self):

@@ -95,7 +95,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     @abstractmethod
     def mapping(self, offset, length, ignore_errors = False):
-        """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
+        """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
 
            ignore_errors will provide all available maps with gaps, but their total length may not add up to the requested length
            This allows translation layers to provide maps of contiguous regions in one layer
