@@ -9,8 +9,10 @@ import struct
 from volatility.framework import interfaces, exceptions
 from volatility.framework.configuration import requirements
 
+
 class LimeFormatException(exceptions.LayerException):
     """Thrown when an error occurs with the underlying Lime file format"""
+
 
 class LimeLayer(interfaces.layers.TranslationLayerInterface):
     """A Lime format TranslationLayer. Lime is generally used to store
@@ -78,7 +80,6 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
         self._segments = segments
         self._minaddr = segments[0][0]
         self._maxaddr = maxaddr
-
 
     def _find_segment(self, offset):
         """Finds the segment containing a given offset
