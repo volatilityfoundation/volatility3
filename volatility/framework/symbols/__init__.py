@@ -8,14 +8,14 @@ import collections
 import collections.abc
 import warnings
 
-from volatility.framework import objects, interfaces, exceptions
+from volatility.framework import objects, interfaces, exceptions, constants
 from volatility.framework.symbols import native, vtypes, windows
 
 
 class SymbolType(object):
     # Suitably random values until we make this an Enum and require python >= 3.4
-    STRUCTURE = 143534545
-    CONSTANT = 28293045
+    TYPE = 143534545
+    SYMBOL = 28293045
 
 
 class SymbolSpace(collections.abc.Mapping):
@@ -25,25 +25,43 @@ class SymbolSpace(collections.abc.Mapping):
        proceed down through the ranks if a namespace isn't specified.
     """
 
-    def __init__(self, native_structures = None):
-        if not isinstance(native_structures, interfaces.symbols.NativeTableInterface):
-            raise TypeError("SymbolSpace native_structures must be NativeSymbolInterface")
+    def __init__(self, native_types = None):
+        if not isinstance(native_types, interfaces.symbols.NativeTableInterface):
+            raise TypeError("SymbolSpace native_types must be NativeSymbolInterface")
         self._dict = collections.OrderedDict()
-        self._native_structures = native_structures
+        self._native_types = native_types
         # Permanently cache all resolved symbols
         self._resolved = {}
+
+    def get_symbols_by_type(self, type_name):
+        """Returns all symbols based """
+        for table in self._dict.keys():
+            for symbol_name in self._dict[table].get_symbols_by_type(type_name):
+                yield table + constants.BANG + symbol_name
+
+    def get_symbols_by_location(self, offset, table_name = None):
+        """Returns all symbols that exist at a specific relative offset"""
+        table_list = self._dict.values()
+        if table_name is not None:
+            if table_name in self._dict:
+                table_list = [self._dict[table_name]]
+            else:
+                table_list = []
+        for table in table_list:
+            for symbol_name in self._dict[table].get_symbols_by_location(offset = offset):
+                yield table + constants.BANG + symbol_name
 
     @property
     def natives(self):
         """Returns the native_types for this symbol space"""
-        return self._native_structures
+        return self._native_types
 
     @natives.setter
-    def natives(self, native_structures):
-        if native_structures is not None:
+    def natives(self, native_types):
+        if native_types is not None:
             warnings.warn(
                 "Resetting the native type can cause have drastic effects on memory analysis using this space")
-        self._native_structures = native_structures
+        self._native_types = native_types
 
     def __len__(self):
         """Returns the number of tables within the space"""
@@ -73,32 +91,32 @@ class SymbolSpace(collections.abc.Mapping):
 
     def _weak_resolve(self, resolve_type, name):
         """Takes a symbol name and resolves it with ReferentialTemplates"""
-        if resolve_type == SymbolType.STRUCTURE:
-            get_function = 'get_structure'
-        elif resolve_type == SymbolType.CONSTANT:
-            get_function = 'get_constant'
+        if resolve_type == SymbolType.TYPE:
+            get_function = 'get_type'
+        elif resolve_type == SymbolType.SYMBOL:
+            get_function = 'get_symbol'
         else:
             raise ValueError("Weak_resolve called without a proper SymbolType.")
 
-        name_array = name.split("!")
+        name_array = name.split(constants.BANG)
         if len(name_array) == 2:
             table_name = name_array[0]
             component_name = name_array[1]
             return getattr(self._dict[table_name], get_function)(component_name)
-        elif name in self.natives.structures:
+        elif name in self.natives.types:
             return getattr(self.natives, get_function)(name)
         raise exceptions.SymbolError("Malformed symbol name")
 
-    def get_structure(self, structure_name):
+    def get_type(self, type_name):
         """Takes a symbol name and resolves it
 
            This method ensures that all referenced templates (including self-referential templates)
            are satisfied as ObjectTemplates
         """
         # Traverse down any resolutions
-        if structure_name not in self._resolved:
-            self._resolved[structure_name] = self._weak_resolve(SymbolType.STRUCTURE, structure_name)
-            traverse_list = [structure_name]
+        if type_name not in self._resolved:
+            self._resolved[type_name] = self._weak_resolve(SymbolType.TYPE, type_name)
+            traverse_list = [type_name]
             replacements = set()
             # Whole Symbols that still need traversing
             while traverse_list:
@@ -110,18 +128,18 @@ class SymbolSpace(collections.abc.Mapping):
                         if isinstance(child, objects.templates.ReferenceTemplate):
                             # If we haven't seen it before, subresolve it and also add it
                             # to the "symbols that still need traversing" list
-                            if child.vol.structure_name not in self._resolved:
-                                traverse_list.append(child.vol.structure_name)
-                                self._resolved[child.vol.structure_name] = self._weak_resolve(SymbolType.STRUCTURE,
-                                                                                              child.vol.structure_name)
+                            if child.vol.type_name not in self._resolved:
+                                traverse_list.append(child.vol.type_name)
+                                self._resolved[child.vol.type_name] = self._weak_resolve(SymbolType.TYPE,
+                                                                                         child.vol.type_name)
                             # Stash the replacement
                             replacements.add((traverser, child))
                         elif child.children:
                             template_traverse_list.append(child)
             for (parent, child) in replacements:
-                parent.replace_child(child, self._resolved[child.vol.structure_name])
-        return self._resolved[structure_name]
+                parent.replace_child(child, self._resolved[child.vol.type_name])
+        return self._resolved[type_name]
 
-    def get_constant(self, constant_name):
-        """Look-up a constant name across all the contained symbol spaces"""
-        return self._weak_resolve(SymbolType.CONSTANT, constant_name)
+    def get_symbol(self, symbol_name):
+        """Look-up a symbol name across all the contained symbol spaces"""
+        return self._weak_resolve(SymbolType.SYMBOL, symbol_name)

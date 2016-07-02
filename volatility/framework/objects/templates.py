@@ -12,14 +12,14 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
        This is effectively a method of currying, but adds more structure to avoid abuse.
        It also allows inspection of information that should already be known:
-       * Structure size
+       * Type size
        * Members, etc
        etc.
     """
 
-    def __init__(self, object_class = None, structure_name = None, **arguments):
+    def __init__(self, object_class = None, type_name = None, **arguments):
         interfaces.objects.Template.__init__(self,
-                                             structure_name = structure_name,
+                                             type_name = type_name,
                                              **arguments)
         self._check_class(object_class, interfaces.objects.ObjectInterface)
         self.update_vol(object_class = object_class)
@@ -71,5 +71,5 @@ class ReferenceTemplate(interfaces.objects.Template):
     """
 
     def __call__(self, context, object_info):
-        template = context.symbol_space.get_structure(self.vol.structure_name)
+        template = context.symbol_space.get_type(self.vol.type_name)
         return template(context = context, object_info = object_info)

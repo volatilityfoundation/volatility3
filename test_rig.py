@@ -26,8 +26,8 @@ def utils_load_as():
 
     virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
     ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
-    ntkrnlmp.set_structure_class('_ETHREAD', volatility.framework.symbols.windows.extensions._ETHREAD)
-    ntkrnlmp.set_structure_class('_LIST_ENTRY', volatility.framework.symbols.windows.extensions._LIST_ENTRY)
+    ntkrnlmp.set_type_class('_ETHREAD', volatility.framework.symbols.windows.extensions._ETHREAD)
+    ntkrnlmp.set_type_class('_LIST_ENTRY', volatility.framework.symbols.windows.extensions._LIST_ENTRY)
     ctx.symbol_space.append(ntkrnlmp)
     # contexts.windows.WindowsContextModifier(ctx.config).modify_context(ctx)
 
@@ -36,7 +36,7 @@ def utils_load_as():
 
 def test_symbols():
     ctx = utils_load_as()
-    print("Symbols,", ctx.symbol_space.natives.structures)
+    print("Symbols,", ctx.symbol_space.natives.types)
 
     virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
     virtual_types['TEST_POINTER'] = [0x4, {'point1': [0x0, ['pointer', ['TEST_SYMBOL']]]}]
@@ -45,11 +45,11 @@ def test_symbols():
 
     ctx.symbol_space.append(ntkrnlmp)
 
-    for i in list(ctx.symbol_space['ntkrnlmp'].structures):
-        symbol = ctx.symbol_space.get_structure('ntkrnlmp!' + i)
-        print(symbol.vol.structure_name, symbol, symbol.vol.size)
+    for i in list(ctx.symbol_space['ntkrnlmp'].types):
+        symbol = ctx.symbol_space.get_type('ntkrnlmp!' + i)
+        print(symbol.vol.type_name, symbol, symbol.vol.size)
         _ = symbol(ctx, objects.ObjectInformation(layer_name = '', offset = 0))
-    symbol = ctx.symbol_space.get_structure('ntkrnlmp!_EPROCESS')
+    symbol = ctx.symbol_space.get_type('ntkrnlmp!_EPROCESS')
     return symbol
 
 
@@ -128,7 +128,7 @@ def test_translation():
         a, b = intel._translate(val)
         print(hex(val), hex(a), hex(b))
         # print(bin(0x39000), bin(0xffab8020))
-        # print(hex(intel.translate(0xffab8020)))
+        # print(hex(intel.mapping(0xffab8020, 0)))
 
 
 def test_plugin():

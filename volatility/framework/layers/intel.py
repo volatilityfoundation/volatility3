@@ -21,8 +21,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     def __init__(self, context, config_path, name, page_map_offset, memory_layer, swap_layer = None):
         interfaces.layers.TranslationLayerInterface.__init__(self, context, config_path, name)
-        self._base_layer = memory_layer
-        self._page_map_offset = page_map_offset
+        self._base_layer = self._check_type(memory_layer, str)
+        self._page_map_offset = self._check_type(page_map_offset, int)
         # All Intel address spaces work on 4096 byte pages
         self._page_size_in_bits = 12
 
@@ -91,7 +91,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             entry, = struct.unpack(self._entry_format, self._context.memory.read(self._base_layer, table_offset,
                                                                                  struct.calcsize(self._entry_format)))
 
-        # Now we're do
+        # Now we're done
         if not self._page_is_valid(entry):
             raise exceptions.InvalidAddressException("Page Fault at entry " + hex(entry) + " in page entry")
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
@@ -105,16 +105,14 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         except exceptions.InvalidAddressException:
             return False
 
-    def translate(self, offset):
-        """Translates a specific offset based on the paging tables"""
-        result, _ = self._translate(offset)
-        return result
-
     def mapping(self, offset, length):
         """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
 
            This allows translation layers to provide maps of contiguous regions in one layer
         """
+        if length == 0:
+            mapped_offset, _ = self._translate(offset)
+            return [(offset, mapped_offset, length, self._base_layer)]
         result = []
         while length > 0:
             chunk_offset, page_size = self._translate(offset)
@@ -126,19 +124,22 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     @property
     def dependencies(self):
-        """Returns a list of the lower layers that this layer is dependent upon"""
+        """Returns a list of the lower layer names that this layer is dependent upon"""
         # TODO: Add in the whole buffalo
         return [self._base_layer]
 
     @classmethod
     def get_schema(cls):
         return [volatility.framework.configuration.requirements.TranslationLayerRequirement(name = 'memory_layer',
-                                                                                            constraints = {"type": "physical"},
+                                                                                            constraints = {
+                                                                                                "type": "physical"},
                                                                                             optional = False),
                 volatility.framework.configuration.requirements.TranslationLayerRequirement(name = 'swap_layer',
-                                                                                            constraints = {"type": "physical"},
+                                                                                            constraints = {
+                                                                                                "type": "physical"},
                                                                                             optional = True),
-                volatility.framework.configuration.requirements.IntRequirement(name = 'page_map_offset', optional = False)]
+                volatility.framework.configuration.requirements.IntRequirement(name = 'page_map_offset',
+                                                                               optional = False)]
 
 
 class IntelPAE(Intel):

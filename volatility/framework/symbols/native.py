@@ -19,19 +19,19 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             native_class, _native_struct = self._native_dictionary[native_type]
             self._overrides[native_type] = native_class
         # Create this once early, because it may get used a lot
-        self._structures = set(self._native_dictionary).union(
+        self._types = set(self._native_dictionary).union(
             {'Enumeration', 'array', 'BitField', 'void', 'pointer', 'String', 'Bytes'})
 
-    def get_structure_class(self, name):
+    def get_type_class(self, name):
         ntype, fmt = native_types.get(name, (objects.Integer, ''))
         return ntype
 
     @property
-    def structures(self):
-        """Returns an iterator of the structure symbol names"""
-        return self._structures
+    def types(self):
+        """Returns an iterator of the symbol type names"""
+        return self._types
 
-    def get_structure(self, structure_name):
+    def get_type(self, type_name):
         """Resolves a symbol name into an object template
 
            symbol_space is used to resolve any target symbols if they don't exist in this list
@@ -39,31 +39,31 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         # NOTE: These need updating whenever the object init signatures change
         additional = {}
         obj = None
-        if structure_name == 'void':
+        if type_name == 'void':
             obj = objects.Void
-        elif structure_name == 'array':
+        elif type_name == 'array':
             obj = objects.Array
-            additional = {"count": 0, "target": self.get_structure('void')}
-        elif structure_name == 'Enumeration':
+            additional = {"count": 0, "target": self.get_type('void')}
+        elif type_name == 'Enumeration':
             obj = objects.Enumeration
-            additional = {"target": self.get_structure('void'), "choices": {}}
-        elif structure_name == 'BitField':
+            additional = {"target": self.get_type('void'), "choices": {}}
+        elif type_name == 'BitField':
             obj = objects.BitField
             additional = {"start_bit": 0, "end_bit": 0}
-        elif structure_name == 'String':
+        elif type_name == 'String':
             obj = objects.String
             additional = {"max_length": 0}
-        elif structure_name == 'Bytes':
+        elif type_name == 'Bytes':
             obj = objects.Bytes
             additional = {"length": 0}
         if obj is not None:
-            return objects.templates.ObjectTemplate(obj, structure_name = structure_name, **additional)
+            return objects.templates.ObjectTemplate(obj, type_name = type_name, **additional)
 
-        _native_type, native_format = self._native_dictionary[structure_name]
-        if structure_name == 'pointer':
-            additional = {'target': self.get_structure('void')}
-        return objects.templates.ObjectTemplate(self.get_structure_class(structure_name),  # pylint: disable=W0142
-                                                structure_name = structure_name,
+        _native_type, native_format = self._native_dictionary[type_name]
+        if type_name == 'pointer':
+            additional = {'target': self.get_type('void')}
+        return objects.templates.ObjectTemplate(self.get_type_class(type_name),  # pylint: disable=W0142
+                                                type_name = type_name,
                                                 struct_format = native_format,
                                                 **additional)
 

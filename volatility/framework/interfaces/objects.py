@@ -53,7 +53,7 @@ class ObjectInformation(ReadOnlyMapping):
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """ A base object required to be the ancestor of every object used in volatility """
 
-    def __init__(self, context, structure_name, object_info, **kwargs):
+    def __init__(self, context, type_name, object_info, **kwargs):
         # Since objects are likely to be instantiated often,
         # we're only checking that context, offset and parent
         # Everything else may be wrong, but that will get caught later on
@@ -64,9 +64,9 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         #
         # NOTE:
         # This allows objects to MASSIVELY MESS with their own internal representation!!!
-        # Changes to offset, structure_name, etc should NEVER be done
+        # Changes to offset, type_name, etc should NEVER be done
         #
-        self._vol = collections.ChainMap({}, object_info, {'structure_name': structure_name}, kwargs)
+        self._vol = collections.ChainMap({}, object_info, {'type_name': type_name}, kwargs)
         self._context = context
 
     @property
@@ -79,10 +79,10 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def write(self, value):
         """Writes the new value into the format at the offset the object currently resides at"""
 
-    def cast(self, new_structure_name, **additional):
+    def cast(self, new_type_name, **additional):
         """Returns a new object at the offset and from the layer that the current object inhabits"""
         # TODO: Carefully consider the implications of casting and how it should work
-        object_template = self._context.symbol_space.get_structure(new_structure_name)
+        object_template = self._context.symbol_space.get_type(new_type_name)
         object_template.update_vol(**additional)
         object_info = ObjectInformation(layer_name = self.vol.layer_name,
                                         offset = self.vol.offset,
@@ -112,7 +112,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         @classmethod
         def relative_child_offset(cls, template, child):
             """Returns the relative offset from the head of the parent data to the child member"""
-            raise KeyError(repr(template.vol.structure_name) + " does not contain any children.")
+            raise KeyError(repr(template.vol.type_name) + " does not contain any children.")
 
 
 class Template(validity.ValidityRoutines):
@@ -121,10 +121,10 @@ class Template(validity.ValidityRoutines):
        This is effectively a class for currying object calls
     """
 
-    def __init__(self, structure_name, **arguments):
+    def __init__(self, type_name, **arguments):
         """Stores the keyword arguments for later use"""
         # Allow the updating of template arguments whilst still in template form
-        self._vol = collections.ChainMap(arguments, {'structure_name': structure_name})
+        self._vol = collections.ChainMap(arguments, {'type_name': type_name})
 
     @property
     def vol(self):

@@ -62,7 +62,9 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def __init__(self, context, config_path, name, filename):
         interfaces.layers.DataLayerInterface.__init__(self, context, config_path, name)
 
-        self._file = open(filename, "r+b")
+        # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
+        mode = "rb"
+        self._file = open(filename, mode)
         self._size = os.path.getsize(filename)
 
     @property
@@ -78,6 +80,8 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     def is_valid(self, offset, length = 1):
         """Returns whether the offset is valid or not"""
+        if length <= 0:
+            raise TypeError("Length must be positive")
         return (self.minimum_address <= offset <= self.maximum_address and
                 self.minimum_address <= offset + length - 1 <= self.maximum_address)
 
@@ -85,8 +89,6 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Reads from the file at offset for length"""
         if not self.is_valid(offset, length):
             raise exceptions.InvalidAddressException("Offset outside of the " + self.name + " file boundaries")
-        if length < 0:
-            raise TypeError("Length must be positive")
         self._file.seek(offset)
         data = self._file.read(length)
         if len(data) < length:

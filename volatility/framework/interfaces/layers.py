@@ -94,10 +94,6 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     provides = {"type": "interface"}
 
     @abstractmethod
-    def translate(self, offset):
-        """Returns a tuple of (offset, layer) indicating the translation of input domain to the output range"""
-
-    @abstractmethod
     def mapping(self, offset, length):
         """Returns a sorted list of (offset, mapped_offset, length, layer) mappings
 

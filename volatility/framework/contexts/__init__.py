@@ -73,7 +73,7 @@ class Context(interfaces.context.ContextInterface):
         :return: A fully constructed object
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
-        object_template = self._symbol_space.get_structure(symbol)
+        object_template = self._symbol_space.get_type(symbol)
         object_template.update_vol(**arguments)
         return object_template(context = self,
                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,

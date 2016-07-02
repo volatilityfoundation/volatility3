@@ -26,19 +26,23 @@ class Void(interfaces.objects.ObjectInterface):
         raise TypeError("Cannot write data to a void, recast as another object")
 
 
+class Function(interfaces.objects.ObjectInterface):
+    """"""
+
+
 class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
     _struct_type = int
 
-    def __init__(self, context, structure_name, object_info, struct_format):
+    def __init__(self, context, type_name, object_info, struct_format):
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
-                                                    structure_name = structure_name,
+                                                    type_name = type_name,
                                                     object_info = object_info,
                                                     struct_format = struct_format)
         self._struct_format = struct_format
 
-    def __new__(cls, context, structure_name, object_info, struct_format, **kwargs):
+    def __new__(cls, context, type_name, object_info, struct_format, **kwargs):
         """Creates the appropriate class and returns it so that the native type is inherritted
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -84,15 +88,15 @@ class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes"""
     _struct_type = bytes
 
-    def __init__(self, context, structure_name, object_info, length = 1):
+    def __init__(self, context, type_name, object_info, length = 1):
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
-                                                    structure_name = structure_name,
+                                                    type_name = type_name,
                                                     object_info = object_info,
                                                     struct_format = str(length) + "s")
         self._vol['length'] = length
 
-    def __new__(cls, context, structure_name, object_info, length = 1, **kwargs):
+    def __new__(cls, context, type_name, object_info, length = 1, **kwargs):
         """Creates the appropriate class and returns it so that the native type is inherritted
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -112,17 +116,17 @@ class String(PrimitiveObject, str):
     """
     _struct_type = str
 
-    def __init__(self, context, structure_name, object_info, max_length = 1, encoding = "utf-8", errors = None):
+    def __init__(self, context, type_name, object_info, max_length = 1, encoding = "utf-8", errors = None):
         PrimitiveObject.__init__(self,
                                  context = context,
-                                 structure_name = structure_name,
+                                 type_name = type_name,
                                  object_info = object_info,
                                  struct_format = str(max_length) + 's')
         self._vol["max_length"] = max_length
         self._vol['encoding'] = encoding
         self._vol['errors'] = errors
 
-    def __new__(cls, context, structure_name, object_info, max_length = 1, encoding = "utf-8", errors = None, **kwargs):
+    def __new__(cls, context, type_name, object_info, max_length = 1, encoding = "utf-8", errors = None, **kwargs):
         """Creates the appropriate class and returns it so that the native type is inherited
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -145,12 +149,12 @@ class String(PrimitiveObject, str):
 class Pointer(Integer):
     """Pointer which points to another object"""
 
-    def __init__(self, context, structure_name, object_info, struct_format, target = None):
+    def __init__(self, context, type_name, object_info, struct_format, target = None):
         self._check_type(target, templates.ObjectTemplate)
         Integer.__init__(self,
                          context = context,
                          object_info = object_info,
-                         structure_name = structure_name,
+                         type_name = type_name,
                          struct_format = struct_format)
         self._vol['target'] = target
 
@@ -195,16 +199,16 @@ class Pointer(Integer):
 class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
 
-    def __new__(cls, context, structure_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
+    def __new__(cls, context, type_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
         cls._check_type(target, Integer)
         value = target(context = context,
-                       structure_name = structure_name,
+                       type_name = type_name,
                        object_info = object_info,
                        struct_format = struct_format)
         return cls._struct_type.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))
 
-    def __init__(self, context, structure_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
-        PrimitiveObject.__init__(self, context, structure_name, object_info, struct_format)
+    def __init__(self, context, type_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
+        PrimitiveObject.__init__(self, context, type_name, object_info, struct_format)
         self._vol['target'] = target
         self._vol['start_bit'] = start_bit
         self._vol['end_bit'] = end_bit
@@ -232,11 +236,11 @@ class Enumeration(interfaces.objects.ObjectInterface):
 class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
 
-    def __init__(self, context, structure_name, object_info, count = 0, target = None):
+    def __init__(self, context, type_name, object_info, count = 0, target = None):
         self._check_type(target, templates.ObjectTemplate)
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
-                                                    structure_name = structure_name,
+                                                    type_name = type_name,
                                                     object_info = object_info)
         self._vol['count'] = self._check_type(count, int)
         self._vol['target'] = target
@@ -293,10 +297,10 @@ class Struct(interfaces.objects.ObjectInterface):
        Keep the number of methods in this class low or very specific, since each one could overload a valid member.
     """
 
-    def __init__(self, context, structure_name, object_info, size, members):
+    def __init__(self, context, type_name, object_info, size, members):
         interfaces.objects.ObjectInterface.__init__(self,
                                                     context = context,
-                                                    structure_name = structure_name,
+                                                    type_name = type_name,
                                                     object_info = object_info,
                                                     size = size,
                                                     members = members)
@@ -306,7 +310,7 @@ class Struct(interfaces.objects.ObjectInterface):
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
         @classmethod
         def size(cls, template):
-            """Method to return the size of this structure"""
+            """Method to return the size of this type"""
             if template.vol.get('size', None) is None:
                 raise TypeError("Struct ObjectTemplate not provided with a size")
             return template.vol.size
@@ -339,7 +343,7 @@ class Struct(interfaces.objects.ObjectInterface):
     @classmethod
     def _check_members(cls, members):
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
-        # An object template is a callable that when called with a context, offset, layer_name and structure_name
+        # An object template is a callable that when called with a context, offset, layer_name and type_name
         if not isinstance(members, collections.Mapping):
             raise TypeError("Struct members parameter must be a mapping not " + type(members))
         if not all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()]):
@@ -350,7 +354,7 @@ class Struct(interfaces.objects.ObjectInterface):
         return self.__getattr__(attr)
 
     def __getattr__(self, attr):
-        """Method for accessing members of the structure"""
+        """Method for accessing members of the type"""
         if attr in self._concrete_members:
             return self._concrete_members[attr]
         elif attr in self.vol.members:
@@ -362,7 +366,16 @@ class Struct(interfaces.objects.ObjectInterface):
                                                                                parent = self))
             self._concrete_members[attr] = member
             return member
-        raise AttributeError("'" + self.vol.structure_name + "' Struct has no attribute '" + attr + "'")
+        raise AttributeError("'" + self.vol.type_name + "' Struct has no attribute '" + attr + "'")
 
     def write(self, value):
         raise TypeError("Structs cannot be written to directly, individual members must be written instead")
+
+
+# Nice way of duplicating the class, but *could* causes problems with isintance
+class Union(Struct):
+    pass
+
+# Really nasty way of duplicating the class
+# WILL cause problems with any mutable class/static variables
+# Union = type('Union', Struct.__bases__, dict(Struct.__dict__))
