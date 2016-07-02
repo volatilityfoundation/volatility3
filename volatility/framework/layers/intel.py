@@ -102,7 +102,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def is_valid(self, offset, length = 1):
         """Returns whether the address offset can be translated to a valid address"""
         try:
-            # TODO: Consider reimplementing this, since calls mapping can call is_valid
+            # TODO: Consider reimplementing this, since calls to mapping can call is_valid
             return all([self._context.memory[self._base_layer].is_valid(mapped_offset) for _, mapped_offset, _, _ in
                         self.mapping(offset, length)])
         except exceptions.InvalidAddressException:
