@@ -4,20 +4,25 @@ Created on 7 May 2013
 @author: mike
 """
 import collections
+import json
 
 from volatility.framework.interfaces.configuration import CONFIG_SEPARATOR
 
 
 class HierarchicalDict(collections.Mapping):
-    def __init__(self, separator = CONFIG_SEPARATOR, initial_dict = None):
+    def __init__(self, initial_dict = None, separator = CONFIG_SEPARATOR):
         if not (isinstance(separator, str) and len(separator) == 1):
             raise TypeError("Separator must be a one character string")
         self._separator = separator
         self._data = {}
         self._subdict = {}
+        if isinstance(initial_dict, str):
+            initial_dict = json.loads(initial_dict)
         if isinstance(initial_dict, dict):
             for k, v in initial_dict.items():
                 self[k] = v
+        elif initial_dict is not None:
+            raise TypeError("Initial_dict must be a dictionary or JSON string containing a dictionary")
 
     @property
     def separator(self):
@@ -70,7 +75,7 @@ class HierarchicalDict(collections.Mapping):
     def __setitem__(self, key, value):
         """Sets an item or creates a subdict and sets the item within that"""
         if self.separator in key:
-            subdict = self._subdict.get(self._key_head(key), HierarchicalDict(self.separator))
+            subdict = self._subdict.get(self._key_head(key), HierarchicalDict(separator = self.separator))
             subdict[self._key_tail(key)] = value
             self._subdict[self._key_head(key)] = subdict
         else:
@@ -108,3 +113,7 @@ class HierarchicalDict(collections.Mapping):
             return self._subdict[self._key_head(key)].branch(self._key_tail(key))
         else:
             return self._subdict[key]
+
+    def __str__(self):
+        """Turns the Hierarchical dict into a string representation"""
+        return json.dumps(dict([(key, self[key]) for key in self.generator()]), indent = 2)
