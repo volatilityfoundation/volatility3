@@ -125,7 +125,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 raise exceptions.LayerException("Mapping returned an overlapping element")
             output += [self._context.memory.read(layer, mapped_offset, length, pad)]
             current_offset += length
-        return b"".join(output)
+        recovered_data = b"".join(output)
+        return recovered_data + b"\x00" * (length - len(recovered_data))
 
     def write(self, offset, value):
         """Writes a value at offset, distributing the writing across any underlying mapping"""
