@@ -12,6 +12,23 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+    """Class for layer scanners that return locations of particular values from within the data
+
+    These are designed to be given a chunk of data and return a generator which yields
+    any found offsets.  They should perform complex/time-consuming tasks, these should
+    be carried out by the consumer of the generator, so only offsets are returned.
+
+    They will be provided all *available* data (therefore not necessarily contiguous)
+    in ascending offset order, in chunks no larger than chunk_size + overlap where
+    overlap is the amount of data read twice once at the end of an earlier chunk and
+    once at the start of the next chunk.
+
+    It should be noted that the scanner can maintain state if necessary.
+    Scanners should balance the size of chunk based on the amount of time
+    scanning the chunk will take (ie, do not set an excessively large chunksize
+    and try not to take a significant amount of time in the __call__ method).
+    """
+
     def __init__(self):
         self.chunk_size = 0x1000000  # Default to 16Mb chunks
         self.overlap = 0x1000  # A page of overlap by default
