@@ -8,11 +8,11 @@ import logging
 import pdb
 
 import volatility.framework.symbols.windows.extensions
+import volatility.plugins
 from volatility import framework
-from volatility.framework import contexts
-from volatility.framework import layers, plugins
+from volatility.framework import contexts, layers
 from volatility.framework.interfaces import objects
-from volatility.framework.symbols import vtypes, native
+from volatility.framework.symbols import native, vtypes
 from volatility.framework.symbols.windows import xp_sp2_x86_vtypes
 
 
@@ -162,7 +162,7 @@ def test_plugin():
 if __name__ == '__main__':
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    plugins.import_plugins()
+    framework.import_files(volatility.plugins)
     # import timeit
     # print(timeit.Timer(main).timeit(10))
     try:

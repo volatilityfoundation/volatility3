@@ -5,10 +5,7 @@ import sys
 import volatility.framework
 import volatility.plugins
 from volatility.cli import argparse_adapter
-from volatility.framework import plugins, contexts
-from volatility.framework.automagic import windows as windows_automagic
-from volatility.framework.configuration import depresolver
-from volatility.framework.configuration.depresolver import DependencyError
+from volatility.framework import configuration, contexts
 from volatility.framework.renderers.text import TextRenderer
 
 __author__ = 'mike'
@@ -25,10 +22,10 @@ class CommandLine(object):
         ver = volatility.framework.version()
         sys.stdout.write("Volatility Framework 3 (version " + "{0}.{1}.{2}".format(ver[0], ver[1], ver[2]) + ")\n")
 
-        volatility.framework.require_version(3, 0, 0)
+        volatility.framework.require_version(4, 0, 0)
 
         # TODO: Get CLI config options
-        plugins.import_plugins()
+        volatility.framework.import_files(volatility.plugins)
 
         # TODO: Choose a plugin
         plugin = volatility.plugins.windows.pslist.PsList
