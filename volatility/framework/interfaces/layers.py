@@ -55,7 +55,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     @abstractmethod
     def __call__(self, data, data_offset):
         """Searches through a chunk of data for a particular value/pattern/etc
-           Returns the ABSOLUTE offset (ie, offset_within_data + data_offset)
+           Always returns an iterator of the same type of object (need not be a volatility object)
 
            data is the chunk of data to search through
            data_offset is the offset within the layer that the data being searched starts at
