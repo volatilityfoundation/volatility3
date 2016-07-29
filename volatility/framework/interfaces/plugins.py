@@ -46,11 +46,9 @@ class PluginInterface(configuration_interface.ConfigurableInterface, validity.Va
 
     @classmethod
     def validate(self, context, config_path):
-        print(config_path)
-        result_set = [requirement.validate(context, config_path) for requirement in self.get_requirements() if
-                      not requirement.optional]
-        print(result_set)
-        return all(result_set)
+        result_set = [(config_path + "." + requirement.name, requirement.validate(context, config_path)) for requirement
+                      in self.get_requirements() if not requirement.optional]
+        return all([r for _, r in result_set])
 
     @abstractmethod
     def run(self):
