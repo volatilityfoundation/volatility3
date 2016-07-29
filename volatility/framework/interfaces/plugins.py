@@ -37,8 +37,8 @@ class PluginInterface(configuration_interface.ConfigurableInterface, validity.Va
         return self._context
 
     @classmethod
-    def get_schema(cls):
-        """Returns a list of configuration schema items"""
+    def get_requirements(cls):
+        """Returns a list of Requirement objects for this plugin"""
         return []
 
     def validate_inputs(self):

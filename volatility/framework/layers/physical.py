@@ -51,7 +51,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
         self._buffer = self._buffer[:address] + data + self._buffer[address + len(data):]
 
     @classmethod
-    def get_schema(cls):
+    def get_requirements(cls):
         # No real requirements (only the buffer).  Need to figure out if there's a better way of representing this
         return [requirements.BytesRequirement(name = 'buffer', description = "The direct bytes to interact with",
                                               optional = False)]
@@ -127,5 +127,5 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._file.close()
 
     @classmethod
-    def get_schema(cls):
+    def get_requirements(cls):
         return [requirements.StringRequirement(name = 'filename', optional = False)]

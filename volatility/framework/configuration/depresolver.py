@@ -78,7 +78,7 @@ class DependencyResolver(validity.ValidityRoutines):
 
         deptree = []
 
-        for subreq in configurable.get_schema():
+        for subreq in configurable.get_requirements():
             # Find all the different ways to fulfill it (recursively)
             # TODO: Ensure no cycles or loops
             if not isinstance(subreq, interfaces.configuration.ConstraintInterface):

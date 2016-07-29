@@ -59,7 +59,7 @@ class XPSP2WindowsKernelSymbolProvider(WindowsKernelSymbolProvider):
     space_name = 'ntkrnlmp'
 
     @classmethod
-    def get_schema(cls):
+    def get_requirements(cls):
         return [requirements.NativeSymbolRequirement("natives", description = "Native Symbols for x86",
                                                      constraints = {"type": "natives",
                                                                     "architecture": "ia32"})]

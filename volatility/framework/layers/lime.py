@@ -139,7 +139,7 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
         return [self._base_layer]
 
     @classmethod
-    def get_schema(cls):
+    def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'base_layer',
                                                          constraints = {"type": "physical"},
                                                          optional = False)]

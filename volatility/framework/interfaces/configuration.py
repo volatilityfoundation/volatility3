@@ -72,7 +72,7 @@ class ConfigurableInterface(validity.ValidityRoutines):
         return self._config_path
 
     @classmethod
-    def get_schema(cls):
+    def get_requirements(cls):
         """Returns a list of configuration schema nodes for this object"""
         return []
 

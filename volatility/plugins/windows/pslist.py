@@ -5,7 +5,7 @@ from volatility.framework.renderers import TreeGrid
 
 class PsList(plugins.PluginInterface):
     @classmethod
-    def get_schema(cls):
+    def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          constraints = {"type": "memory",

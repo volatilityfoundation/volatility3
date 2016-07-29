@@ -116,8 +116,8 @@ class DataLayerInterface(configuration.ProviderInterface, validity.ValidityRouti
         pass
 
     @classmethod
-    def get_schema(cls):
-        """Returns a list of requirements for this type of layer"""
+    def get_requirements(cls):
+        """Returns a list of Requirement objects for this type of layer"""
         return []
 
     @classmethod
@@ -132,7 +132,7 @@ class DataLayerInterface(configuration.ProviderInterface, validity.ValidityRouti
 
         # Construct the layer
         requirement_dict = {}
-        for req in cls.get_schema():
+        for req in cls.get_requirements():
             if req.name in node_config.data:
                 requirement_dict[req.name] = node_config.data[req.name]
         # Fulfillment must happen, exceptions happening here mean the requirements aren't correct
