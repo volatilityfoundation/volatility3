@@ -1,3 +1,6 @@
+import logging
+import sys
+
 from volatility.framework.interfaces import configuration as config_interface
 
 
@@ -6,7 +9,9 @@ class InstanceRequirement(config_interface.RequirementInterface):
 
     def validate(self, value, _context):
         if not isinstance(value, self.instance_type):
-            raise TypeError(self.name + " input only accepts " + self.instance_type.__name__ + " type")
+            vollog.debug("TypeError - " + self.name + " input only accepts " + self.instance_type.__name__ + " type")
+            return False
+        return True
 
 
 class IntRequirement(InstanceRequirement):

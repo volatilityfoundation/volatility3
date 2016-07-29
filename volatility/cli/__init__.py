@@ -10,8 +10,17 @@ from volatility.framework.renderers.text import TextRenderer
 
 __author__ = 'mike'
 
-logging.basicConfig(filename = 'example.log', level = logging.DEBUG)
-logger = logging.getLogger("volatility")
+logging.basicConfig(filename = 'example.log',
+                    format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt = '%m-%d %H:%M',
+                    level = logging.DEBUG)
+vollog = logging.getLogger("volatility")
+console = logging.StreamHandler()
+console.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
+console.setFormatter(formatter)
+
+logging.getLogger("").addHandler(console)
 
 
 class CommandLine(object):

@@ -5,8 +5,12 @@ Created on 7 May 2013
 """
 import collections
 import json
+import logging
 
+from volatility.framework.configuration.requirements import MultiRequirement
 from volatility.framework.interfaces.configuration import CONFIG_SEPARATOR
+
+vollog = logging.getLogger(__name__)
 
 
 class HierarchicalDict(collections.Mapping):
