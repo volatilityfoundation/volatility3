@@ -56,9 +56,8 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     # Child operations
     @property
     def requirements(self):
-        """Returns an iterator of all the child requirements"""
-        for child in self._requirements:
-            yield self._requirements[child]
+        """Returns a dictionary of all the child requirements, indexed by name"""
+        return self._requirements.copy()
 
     def add_requirement(self, requirement):
         """Adds a child to the list of requirements"""
@@ -73,7 +72,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def validate_children(self, context, config_path):
         """Method that will validate all child requirements"""
         return all([requirement.validate(context, path_join(config_path, self._name)) for requirement in
-                    self.requirements if not requirement.optional])
+                    self.requirements.values() if not requirement.optional])
 
     # Validation routines
     @abstractmethod

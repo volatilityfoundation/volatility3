@@ -113,7 +113,7 @@ class TranslationLayerRequirement(config_interface.RequirementInterface):
 
         # See if our class is valid and if so populate the other requirements
         # (but no need to validate, since we're invalid already)
-        class_req = self._requirements['class']
+        class_req = self.requirements['class']
         subreq_config_path = config_interface.path_join(config_path, self.name)
         if class_req.validate(context, subreq_config_path):
             # We have a class, and since it's validated we can construct our requirements from it
@@ -132,10 +132,11 @@ class TranslationLayerRequirement(config_interface.RequirementInterface):
     def construct(self, context, config_path):
         """Constructs the appropriate layer and adds it based on the class parameter"""
         config_path = config_interface.path_join(config_path, self.name)
-        if not all([subreq.validate(context, config_path) for subreq in self.requirements if not subreq.optional]):
+        if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if
+                    not subreq.optional]):
             return False
 
-        cls = self._requirements["class"].cls
+        cls = self.requirements["class"].cls
         node_config = context.config.branch(config_path)
 
         # Determine the layer name

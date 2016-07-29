@@ -12,7 +12,7 @@ class ConstructLayers(automagic_interface.AutomagicInterface):
             # but also ensures that TranslationLayerRequirements have got the correct subrequirements if their class is populated
 
             success = True
-            for subreq in requirement.requirements:
+            for subreq in requirement.requirements.values():
                 subreq_config_path = config_interface.path_join(config_path, requirement.name)
                 self(context, subreq, subreq_config_path)
                 valid = subreq.validate(context, subreq_config_path)
