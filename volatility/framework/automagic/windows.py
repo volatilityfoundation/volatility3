@@ -1,3 +1,5 @@
+from volatility.framework.configuration import requirements
+
 if __name__ == "__main__":
     import os
     import sys
@@ -6,8 +8,8 @@ if __name__ == "__main__":
 
 import struct
 
-from volatility.framework import interfaces, layers, validity, configuration
-from volatility.framework.configuration import depresolver
+from volatility.framework import interfaces, layers, validity
+from volatility.framework.interfaces import automagic as automagic_interface
 
 PAGE_SIZE = 0x1000
 
@@ -127,9 +129,10 @@ class SelfReferentialTest(object):
         return response
 
 
-class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
-    def __init__(self, context):
-        self.ctx = self._check_type(context, interfaces.context.ContextInterface)
+class PageMapOffsetHelper(automagic_interface.AutomagicInterface):
+    priority = 20
+
+    def __init__(self):
         self.tests = dict([(test.layer_type, test) for test in [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]])
 
     def branch_leave(self, node, config_path):
@@ -137,28 +140,23 @@ class PageMapOffsetHelper(interfaces.configuration.HierachicalVisitor):
         self(node, config_path)
         return True
 
-    def __call__(self, node, config_path):
-        if isinstance(node, depresolver.RequirementTreeChoice):
-            useful = []
-            for candidate in node.candidates:
-                if candidate in self.tests:
-                    useful.append(self.tests[candidate])
-            if useful:
-                depresolver.DependencyResolver().validate_dependencies(node.candidates[useful[0].layer_type], self.ctx,
-                                                                       config_path)
-                prefix = config_path + configuration.CONFIG_SEPARATOR
-                memory_layer = self.ctx.config.get(prefix + "memory_layer", None)
-                page_table_offset = self.ctx.config.get(prefix + "page_map_offset", None)
-                if page_table_offset is None and memory_layer is not None:
-                    hits = scan(self.ctx, memory_layer, useful)
-                    for test in useful:
-                        if hits.get(test.layer_type, []):
-                            self.ctx.config[prefix + "page_map_offset"] = hits[test.layer_type][0]
-                        else:
-                            # Delete the node rather than fixing the constraints,
-                            # since the requirements haven't changed, but some of the candidates are no longer valid
-                            # If the constraints were global across the tree, then tagging the constraints may be more useful
-                            del node.candidates[test.layer_type]
+    def __call__(self, context, requirement, config_path):
+        if isinstance(requirement, requirements.TranslationLayerRequirement):
+            # Determine if a class has been chosen
+            # If a class hasn't been chosen, look through the underlying config for appropriate parameters
+            # If possible run scan and choose an appropriate class
+            # Once an appropriate class has been chosen, attempt to determine the page_map_offset value
+            pass
+
+            # hits = scan(self.context, memory_layer, useful)
+            # for test in useful:
+            #     if hits.get(test.layer_type, []):
+            #         self.context.config[prefix + "page_map_offset"] = hits[test.layer_type][0]
+            #     else:
+            #         # Delete the node rather than fixing the constraints,
+            #         # since the requirements haven't changed, but some of the candidates are no longer valid
+            #         # If the constraints were global across the tree, then tagging the constraints may be more useful
+            #         del node.candidates[test.layer_type]
         return True
 
 

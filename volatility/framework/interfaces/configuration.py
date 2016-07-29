@@ -1,12 +1,15 @@
 from abc import ABCMeta, abstractmethod
 
-# We must import interfaces.context this way, since we can't import our parent without cause a loop
-from volatility.framework.interfaces import context as interfaces_context
 from volatility.framework import validity
 
 __author__ = 'mike'
 
 CONFIG_SEPARATOR = "."
+
+
+def path_join(*args):
+    """Joins the config paths together"""
+    return CONFIG_SEPARATOR.join(args)
 
 
 class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
@@ -21,6 +24,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._description = description or ""
         self._default = default
         self._optional = optional
+        self._requirements = {}
 
     def __repr__(self):
         return "<" + self.__class__.__name__ + ": " + self.name + ">"
@@ -45,71 +49,58 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """Whether the option is required for or not"""
         return self._optional
 
+    def config_value(self, context, config_path, default = None):
+        """Returns the value for this element from its config path"""
+        return context.config.get(path_join(config_path, self.name), default)
+
+    # Child operations
+    @property
+    def requirements(self):
+        """Returns an iterator of all the child requirements"""
+        for child in self._requirements:
+            yield self._requirements[child]
+
+    def add_requirement(self, requirement):
+        """Adds a child to the list of requirements"""
+        self._check_type(requirement, RequirementInterface)
+        self._requirements[requirement.name] = requirement
+
+    def remove_requirement(self, requirement):
+        """Removes a child from the list of requirements"""
+        self._check_type(requirement, RequirementInterface)
+        del self._requirements[requirement.name]
+
+    def validate_children(self, context, config_path):
+        """Method that will validate all child requirements"""
+        return all([requirement.validate(context, path_join(config_path, self._name)) for requirement in
+                    self.requirements if not requirement.optional])
+
     # Validation routines
-
     @abstractmethod
-    def validate(self, value, context):
-        """Method to validate the value stored at config_location for the configuration object against a context
+    def validate(self, context, config_path):
+        """Method to validate the value stored at config_path for the configuration object against a context
 
-           Raises a ValueError based on whether the item is valid or not
+           Returns False when an item is invalid
         """
 
 
 class ConfigurableInterface(validity.ValidityRoutines):
     """Class to allow objects to have requirements and read configuration data from the context config tree"""
 
-    def __init__(self, context, config_path):
+    def __init__(self, config_path):
+        """Basic initializer that allows configurables to access their own config settings"""
         validity.ValidityRoutines.__init__(self)
-        self._context = self._check_type(context, interfaces_context.ContextInterface)
         self._config_path = self._check_type(config_path, str)
-
-    @property
-    def context(self):
-        return self._context
-
-    @property
-    def config_path(self):
-        return self._config_path
 
     @classmethod
     def get_requirements(cls):
-        """Returns a list of configuration schema nodes for this object"""
+        """Returns a list of RequirementInterface objects  required by this object"""
         return []
 
-    @property
-    def config(self):
-        return self._context.config.branch(self._config_path)
-
-
-class ConstraintInterface(RequirementInterface):
-    """Class that specifies capabilities that must be provided to succeed"""
-
-    def __init__(self, name, description = None, default = None, optional = False, constraints = None):
-        if constraints is None:
-            constraints = {}
-        RequirementInterface.__init__(self, name, description = description, default = default, optional = optional)
-        if not self._check_type(constraints, dict):
-            raise TypeError("Constraints must be a dictionary")
-        self._constraints = constraints
-
-    @property
-    def constraints(self):
-        """Returns a dictionary of requirements that must be met by a provider"""
-        return self._constraints.copy()
-
-
-class ProviderInterface(ConfigurableInterface):
-    """Class that allows providers to meet constraints on requirements
-
-       All providers are configurable, but having the interfaces as separate classes
-       would allow us to disentangle them in the future if necessary.
-    """
-    provides = {}
-    priority = 10
-
     @classmethod
-    def fulfill(cls, context, requirement, config_path):
-        """Fulfills a context's requirement, altering the context appropriately"""
+    def validate(cls, context, config_path):
+        return all([requirement.validate(context, config_path) for requirement in cls.get_requirements() if
+                    not requirement.optional])
 
 
 class RequirementTreeNode(validity.ValidityRoutines):

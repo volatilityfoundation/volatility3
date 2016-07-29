@@ -3,11 +3,10 @@ Created on 6 May 2013
 
 @author: mike
 """
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
-from volatility.framework.interfaces import configuration as configuration_interface
-from volatility.framework.interfaces import context as context_interface
+from volatility.framework.interfaces import configuration as configuration_interface, context as context_interface
 
 
 #
@@ -28,23 +27,30 @@ class PluginInterface(configuration_interface.ConfigurableInterface, validity.Va
 
     def __init__(self, context, config_path):
         validity.ValidityRoutines.__init__(self)
-        configuration_interface.ConfigurableInterface.__init__(self, context, config_path)
-        self._check_type(context, context_interface.ContextInterface)
-        # self.validate_inputs()
+        configuration_interface.ConfigurableInterface.__init__(self, config_path)
+        self._context = self._check_type(context, context_interface.ContextInterface)
+        # self.validate()
 
     @property
     def context(self):
         return self._context
+
+    @property
+    def config(self):
+        return self._context.config.branch(self._config_path)
 
     @classmethod
     def get_requirements(cls):
         """Returns a list of Requirement objects for this plugin"""
         return []
 
-    def validate_inputs(self):
-        for option in self.get_schema():
-            if not option.optional:
-                option.validate(self.config.get_value(option.name), self.context)
+    @classmethod
+    def validate(self, context, config_path):
+        print(config_path)
+        result_set = [requirement.validate(context, config_path) for requirement in self.get_requirements() if
+                      not requirement.optional]
+        print(result_set)
+        return all(result_set)
 
     @abstractmethod
     def run(self):

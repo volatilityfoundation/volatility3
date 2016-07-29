@@ -4,11 +4,10 @@ Created on 4 May 2013
 @author: mike
 """
 import collections
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 from volatility.framework import exceptions, validity
-# We can't just import interfaces because we'd have a cycle going
 from volatility.framework.interfaces import configuration, context
-from abc import ABCMeta, abstractmethod, abstractproperty
 
 
 class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
@@ -63,14 +62,15 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """
 
 
-class DataLayerInterface(configuration.ProviderInterface, validity.ValidityRoutines, metaclass = ABCMeta):
+class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it"""
 
     provides = {"type": "interface"}
 
     def __init__(self, context, config_path, name):
-        configuration.ProviderInterface.__init__(self, context, config_path)
+        configuration.ConfigurableInterface.__init__(self, config_path)
         validity.ValidityRoutines.__init__(self)
+        self._context = context
         self._check_type(name, str)
         self._name = name
 

@@ -144,5 +144,5 @@ class NativeTableInterface(SymbolTableInterface):
         return []
 
 
-class SymbolTableProviderInterface(configuration.ProviderInterface):
+class SymbolTableProviderInterface(configuration.ConfigurableInterface):
     pass

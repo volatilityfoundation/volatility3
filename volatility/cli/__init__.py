@@ -3,9 +3,10 @@ import logging
 import sys
 
 import volatility.framework
+import volatility.framework.automagic
 import volatility.plugins
-from volatility.cli import argparse_adapter
-from volatility.framework import configuration, contexts
+from volatility.framework import contexts
+from volatility.framework.interfaces import configuration as config_interface
 from volatility.framework.renderers.text import TextRenderer
 
 __author__ = 'mike'
@@ -44,38 +45,41 @@ class CommandLine(object):
 
         # Run the argparser
         parser.parse_args()
+        config_path = config_interface.path_join("plugins", plugin.__name__.lower())
 
-        # Determine the selected plugin
-        # Resolve the dependencies on that plugin
-        dldr = depresolver.DependencyResolver()
-        deptree = dldr.build_tree(plugin)
+        ###
+        # PASS TO UI
+        ###
+        # Hand the plugin requirements over to the CLI (us) and let it construct the config tree
 
         # UI fills in the config:
         ctx = contexts.Context()
-        ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
-        ctx.config["pslist.offset"] = 0x823c87c0
+        ctx.config["plugins.pslist.primary.class"] = "volatility.framework.layers.intel.Intel"
+        ctx.config[
+            "plugins.pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
+        ctx.config["plugins.pslist.offset"] = 0x823c87c0
 
-        ctx.config["pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/private/jon-fres.dmp"
-        ctx.config["pslist.offset"] = 0x81bcc830
+        ctx.config["plugins.pslist.primary.memory_layer.class"] = "volatility.framework.layers.physical.FileLayer"
+        ctx.config["plugins.pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/private/jon-fres.dmp"
+        ctx.config["plugins.pslist.offset"] = 0x81bcc830
 
-        # ctx.config["pslist.primary.page_map_offset"] = 0x39000
+        ctx.config["plugins.pslist.primary.page_map_offset"] = 0x39000
 
-        config_path = plugin.__name__.lower()
+        ###
+        # BACK TO THE FRAMEWORK
+        ###
+        # Clever magic figures out how to fulfill each requirement that might not be fulfilled
+        volatility.framework.automagic.automagic(ctx, plugin, "plugins")
 
-        windows = True
-        if windows:
-            # Traverse the dependency tree and tag the config with the appropriate page_map_offset values where not already applied
-            deptree.traverse(windows_automagic.PageMapOffsetHelper(context = ctx),
-                             config_path = config_path,
-                             short_circuit = False)
+        import pdb
+        pdb.set_trace()
 
-        # Walk down the tree attempting to fulfil each requirement (recursive) and backtrack when necessary
-        # Translate the parsed args to a context configuration
-        if dldr.validate_dependencies(deptree, context = ctx, path = config_path):
-            # Construct and run the plugin
-            TextRenderer().render(plugin(ctx, config_path).run())
-        else:
-            raise DependencyError("Unable to validate all the dependencies, please check configuration parameters")
+        # Check all the requirements and/or go back to the automagic step
+        if not plugin.validate(ctx, config_path):
+            raise RuntimeError("Unable to validate the plugin configuration")
+
+        # Construct and run the plugin
+        TextRenderer().render(plugin(ctx, config_path).run())
 
 
 def main():
