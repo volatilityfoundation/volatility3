@@ -3,9 +3,8 @@ import logging
 import sys
 
 import volatility.framework
-import volatility.framework.automagic
 import volatility.plugins
-from volatility.framework import contexts
+from volatility.framework import automagic, contexts
 from volatility.framework.interfaces import configuration as config_interface
 from volatility.framework.renderers.text import TextRenderer
 
@@ -63,13 +62,18 @@ class CommandLine(object):
         ctx.config["plugins.pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/private/jon-fres.dmp"
         ctx.config["plugins.pslist.offset"] = 0x81bcc830
 
-        ctx.config["plugins.pslist.primary.page_map_offset"] = 0x39000
+        ctx.config["plugins.pslist.ntkrnlmp.class"] = "volatility.framework.symbols.windows.WindowsKernelVTypeSymbols"
+        ctx.config["plugins.pslist.ntkrnlmp.vtype_pymodule"] = "volatility.framework.symbols.windows.xp_sp2_x86_vtypes"
+        ctx.config["plugins.pslist.ntkrnlmp.vtype_variable"] = "ntkrnlmp_types"
+
+        # ctx.config["plugins.pslist.primary.page_map_offset"] = 0x39000
 
         ###
         # BACK TO THE FRAMEWORK
         ###
         # Clever magic figures out how to fulfill each requirement that might not be fulfilled
-        volatility.framework.automagic.automagic(ctx, plugin, "plugins")
+        automagics = automagic.available()
+        automagic.run(automagics, ctx, plugin, "plugins")
 
         import pdb
         pdb.set_trace()
