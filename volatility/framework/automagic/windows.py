@@ -40,7 +40,7 @@ class DtbTest(validity.ValidityRoutines):
             return self.second_pass(dtb, data, data_offset)
 
     def second_pass(self, dtb, data, data_offset):
-        page = data[dtb - data_offset:data - data_offset + PAGE_SIZE]
+        page = data[dtb - data_offset:dtb - data_offset + PAGE_SIZE]
         usr_count, sup_count = 0, 0
         for i in range(0, PAGE_SIZE, self.ptr_size):
             val = self.unpack(data[i:i + self.ptr_size])
