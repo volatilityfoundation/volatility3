@@ -4,6 +4,7 @@ from volatility.framework.interfaces import automagic as automagic_interface, co
 
 class ConstructLayers(automagic_interface.AutomagicInterface):
     """Runs through the requirement tree and from the bottom up attempts to construct all TranslationLayerRequirements"""
+    priority = 10
 
     def __call__(self, context, requirement, config_path):
         print("Processing", config_path, requirement.name)
