@@ -142,12 +142,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'memory_layer',
-                                                         constraints = {
-                                                             "type": "physical"},
                                                          optional = False),
                 requirements.TranslationLayerRequirement(name = 'swap_layer',
-                                                         constraints = {
-                                                             "type": "physical"},
                                                          optional = True),
                 requirements.IntRequirement(name = 'page_map_offset',
                                             optional = False)]

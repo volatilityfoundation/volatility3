@@ -141,5 +141,4 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'base_layer',
-                                                         constraints = {"type": "physical"},
                                                          optional = False)]

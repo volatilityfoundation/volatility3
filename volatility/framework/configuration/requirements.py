@@ -46,39 +46,10 @@ class BytesRequirement(InstanceRequirement):
     instance_type = bytes
 
 
-class ClassRequirement(config_interface.RequirementInterface):
-    """Requires a specific class"""
-
-    def __init__(self, *args, **kwargs):
-        config_interface.RequirementInterface.__init__(self, *args, **kwargs)
-        self._cls = None
-
-    @property
-    def cls(self):
-        return self._cls
-
-    def validate(self, context, config_path):
-        """Checks to see if a class can be recovered"""
-        value = self.config_value(context, config_path, None)
-        self._cls = None
-        if value is not None:
-            if "." in value:
-                # TODO: consider importing the prefix
-                module = sys.modules.get(value[:value.rindex(".")], None)
-                class_name = value[value.rindex(".") + 1:]
-                if hasattr(module, class_name):
-                    self._cls = getattr(module, class_name)
-            else:
-                if value in globals():
-                    self._cls = globals()[value]
-        return self._cls is not None
-
-
-class TranslationLayerRequirement(config_interface.RequirementInterface):
+class TranslationLayerRequirement(config_interface.ConstructableRequirementInterface):
     """Class maintaining the limitations on what sort of address spaces are acceptable"""
 
-    def __init__(self, name, description = None, default = None,
-                 optional = False, constraints = None):
+    def __init__(self, name, description = None, default = None, optional = False):
         """Constructs a Translation Layer Requirement
 
         The configuration option's value will be the name of the layer once it exists in the store

@@ -1,20 +1,17 @@
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
+from volatility.framework.symbols import vtypes
+from volatility.framework.symbols.windows import xp_sp2_x86_vtypes
 
 
 class PsList(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         constraints = {"type": "memory",
-                                                                        "architecture": ["ia32", "pae"]}),
+                                                         description = 'Kernel Address Space'),
                 requirements.SymbolRequirement(name = "ntkrnlmp",
-                                               description = "Windows OS",
-                                               constraints = {"type": "symbols",
-                                                              "os": "windows",
-                                                              "architecture": ["ia32", "pae"]}),
+                                               description = "Windows OS"),
                 requirements.IntRequirement(name = 'pid',
                                             description = "Process ID",
                                             optional = True),
