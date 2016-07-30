@@ -13,26 +13,6 @@ from volatility.framework.interfaces import automagic as automagic_interface, co
 PAGE_SIZE = 0x1000
 
 
-def scan(ctx, layer_name, tests):
-    """Scans through layer_name at context and returns the best-guess layer type and a single best-guess DTB
-
-       It should be noted that this is automagical and therefore not the guaranteed correct response
-       The UI should always provide the user an opportunity to specify the appropriate types and DTB values themselves
-    """
-    hits = {}
-    for offset in range(ctx.memory[layer_name].minimum_address,
-                        ctx.memory[layer_name].maximum_address - PAGE_SIZE,
-                        PAGE_SIZE):
-        for test in tests:
-            val = test.run(offset, ctx, layer_name)
-            if val:
-                hits[test.layer_type] = sorted(hits.get(test.layer_type, []) + [val])
-    # Don't reduce the tuple until after all the sorting's complete
-    for test in tests:
-        hits[test.layer_type] = [x for _, x in hits.get(test.layer_type, [])]
-    return hits
-
-
 class DtbTest(validity.ValidityRoutines):
     super_bit = 2
 
@@ -110,24 +90,6 @@ class DtbTestPae(DtbTest):
             val = self.unpack(pointers)
             if (val & self.mask == dtb + 0x4000) and (val & 0xFFF == 0x001):
                 return dtb
-
-
-class SelfReferentialTest(object):
-    def __init__(self):
-        self.ptr_struct = "Q"
-        self.ptr_size = 8
-        self.layer_type = layers.intel.Intel32e
-        self.mask = 0x3FFFFFFFFFF000
-
-    def run(self, page_offset, ctx, layer_name):
-        data = ctx.memory.read(layer_name, page_offset, PAGE_SIZE)
-        response = None
-        for i in range(0, PAGE_SIZE, self.ptr_size):
-            value = struct.unpack("<" + self.ptr_struct, data[i:i + self.ptr_size])[0] & self.mask
-            if value == page_offset and value != 0:
-                response = (i // self.ptr_size, page_offset)
-                print(hex(response[1]), hex(response[0]))
-        return response
 
 
 class PageMapScanner(interfaces.layers.ScannerInterface):
@@ -210,7 +172,6 @@ if __name__ == '__main__':
     parser.add_argument("--32bit", action = "store_false", dest = "bit32", help = "Disable 32-bit run")
     parser.add_argument("--64bit", action = "store_false", dest = "bit64", help = "Disable 64-bit run")
     parser.add_argument("--pae", action = "store_false", help = "Disable pae run")
-    parser.add_argument("--generic", action = "store_true", help = "Enable generic scan")
 
     args = parser.parse_args()
 
@@ -230,8 +191,6 @@ if __name__ == '__main__':
         tests.append(DtbTest64bit())
     if args.pae:
         tests.append(DtbTestPae())
-    if args.generic:
-        tests.append(SelfReferentialTest())
 
     if tests:
         for i in range(len(args.filenames)):
