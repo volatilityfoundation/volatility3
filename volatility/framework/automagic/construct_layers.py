@@ -21,7 +21,7 @@ class ConstructionMagic(automagic_interface.AutomagicInterface):
                 valid = subreq.validate(context, subreq_config_path)
                 # We want to traverse optional paths, so don't check until we've tried to validate
                 if not valid and not subreq.optional:
-                    vollog.debug("Failed on requirement " + subreq.name)
+                    vollog.debug("Failed on requirement " + config_path + ":" + subreq.name)
                     success = False
             if not success:
                 return False

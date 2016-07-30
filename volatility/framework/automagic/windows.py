@@ -167,8 +167,6 @@ class PageMapOffsetHelper(automagic_interface.AutomagicInterface):
                         class_req.config_value(context, sub_config_path)):
                     useful.append(test)
 
-            print(repr(requirement.requirements))
-
             # Determine if a class has been chosen
             # Once an appropriate class has been chosen, attempt to determine the page_map_offset value
             if ("memory_layer" in requirement.requirements and
