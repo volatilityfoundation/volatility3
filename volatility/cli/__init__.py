@@ -53,14 +53,15 @@ class CommandLine(object):
 
         # UI fills in the config:
         ctx = contexts.Context()
-        ctx.config["plugins.pslist.primary.class"] = "volatility.framework.layers.intel.Intel"
+        ctx.config["plugins.pslist.primary.class"] = "volatility.framework.layers.intel.IntelPAE"
+        ctx.config["plugins.pslist.primary.memory_layer.class"] = "volatility.framework.layers.physical.FileLayer"
+
         ctx.config[
             "plugins.pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
-        ctx.config["plugins.pslist.offset"] = 0x823c87c0
+        ctx.config["plugins.pslist.offset"] = 0x023c87c0
 
-        ctx.config["plugins.pslist.primary.memory_layer.class"] = "volatility.framework.layers.physical.FileLayer"
         ctx.config["plugins.pslist.primary.memory_layer.filename"] = "/run/media/mike/disk/memory/private/jon-fres.dmp"
-        ctx.config["plugins.pslist.offset"] = 0x81bcc830
+        ctx.config["plugins.pslist.offset"] = 0x01bcc830
 
         ctx.config["plugins.pslist.ntkrnlmp.class"] = "volatility.framework.symbols.windows.WindowsKernelVTypeSymbols"
         ctx.config["plugins.pslist.ntkrnlmp.vtype_pymodule"] = "volatility.framework.symbols.windows.xp_sp2_x86_vtypes"
@@ -74,9 +75,6 @@ class CommandLine(object):
         # Clever magic figures out how to fulfill each requirement that might not be fulfilled
         automagics = automagic.available()
         automagic.run(automagics, ctx, plugin, "plugins")
-
-        import pdb
-        pdb.set_trace()
 
         # Check all the requirements and/or go back to the automagic step
         if not plugin.validate(ctx, config_path):

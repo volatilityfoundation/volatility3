@@ -1,8 +1,6 @@
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
-from volatility.framework.symbols import vtypes
-from volatility.framework.symbols.windows import xp_sp2_x86_vtypes
 
 
 class PsList(plugins.PluginInterface):
@@ -37,10 +35,9 @@ class PsList(plugins.PluginInterface):
                                                errors = 'replace')))
 
     def run(self):
-
         # Use the primary twice until we figure out how to specify base layers of a particular translation layer
         eproc = self.kernel_process_from_physical_process(self.context,
-                                                          self.config['primary'],
+                                                          self.config['primary.memory_layer'],
                                                           self.config['primary'],
                                                           self.config['offset'])
 

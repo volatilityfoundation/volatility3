@@ -130,7 +130,9 @@ class SymbolRequirement(config_interface.ConstructableRequirementInterface):
         if name in context.symbol_space:
             raise ValueError("Symbol space already contains a SymbolTable by the same name")
 
-        args = {"name": name}
+        args = {"context": context,
+                "config_path": config_path,
+                "name": name}
 
         config_path = config_interface.path_join(config_path, self.name)
         if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if

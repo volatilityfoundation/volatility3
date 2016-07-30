@@ -1,4 +1,6 @@
+from volatility.framework import automagic
 from volatility.framework.configuration import requirements
+from volatility.framework.interfaces import configuration as config_interface
 
 if __name__ == "__main__":
     import os
@@ -129,11 +131,16 @@ class SelfReferentialTest(object):
         return response
 
 
+class PageMapScanner(interfaces.layers.ScannerInterface):
+    def __call__(self, data, data_offset):
+        pass
+
+
 class PageMapOffsetHelper(automagic_interface.AutomagicInterface):
     priority = 20
 
     def __init__(self):
-        self.tests = dict([(test.layer_type, test) for test in [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]])
+        self.tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
 
     def branch_leave(self, node, config_path):
         """Ensure we're called on internal nodes as well as external"""
@@ -141,23 +148,44 @@ class PageMapOffsetHelper(automagic_interface.AutomagicInterface):
         return True
 
     def __call__(self, context, requirement, config_path):
+        useful = []
+        sub_config_path = config_interface.path_join(config_path, requirement.name)
         if isinstance(requirement, requirements.TranslationLayerRequirement):
-            # Determine if a class has been chosen
-            # If a class hasn't been chosen, look through the underlying config for appropriate parameters
-            # If possible run scan and choose an appropriate class
-            # Once an appropriate class has been chosen, attempt to determine the page_map_offset value
-            pass
+            class_req = requirement.requirements["class"]
+            if not class_req.validate(context, sub_config_path):
+                # All the intel spaces require the same kind of parameters, so pick one for the requirements
+                context.config.branch(config_path)
+                automagic.run(context, layers.intel.Intel,
+                              config_interface.path_join(config_path, requirement.name))
 
-            # hits = scan(self.context, memory_layer, useful)
-            # for test in useful:
-            #     if hits.get(test.layer_type, []):
-            #         self.context.config[prefix + "page_map_offset"] = hits[test.layer_type][0]
-            #     else:
-            #         # Delete the node rather than fixing the constraints,
-            #         # since the requirements haven't changed, but some of the candidates are no longer valid
-            #         # If the constraints were global across the tree, then tagging the constraints may be more useful
-            #         del node.candidates[test.layer_type]
-        return True
+                # If a class hasn't been chosen, look through the underlying config for appropriate parameters
+                # If possible run scan and choose an appropriate class
+                pass
+
+            for test in self.tests:
+                if (test.layer_type.__module__ + "." + test.layer_type.__name__ ==
+                        class_req.config_value(context, sub_config_path)):
+                    useful.append(test)
+
+            print(repr(requirement.requirements))
+
+            # Determine if a class has been chosen
+            # Once an appropriate class has been chosen, attempt to determine the page_map_offset value
+            if ("memory_layer" in requirement.requirements and
+                    requirement.requirements["memory_layer"].validate(context, sub_config_path)):
+                physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
+                # TODO: Convert to scanner framework
+                # context.memory[physical_layer].scan(context, scanner)
+                hits = scan(context, physical_layer, useful)
+                # TODO: At this point, we know the class, so ditch the other tests
+                for test in useful:
+                    if hits.get(test.layer_type, []):
+                        context.config[config_interface.path_join(sub_config_path, "page_map_offset")] = \
+                            hits[test.layer_type][0]
+                        requirement.construct(context, config_path)
+        else:
+            for subreq in requirement.requirements.values():
+                self(context, subreq, sub_config_path)
 
 
 if __name__ == '__main__':
