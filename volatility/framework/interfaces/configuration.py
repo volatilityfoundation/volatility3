@@ -1,3 +1,4 @@
+import sys
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity

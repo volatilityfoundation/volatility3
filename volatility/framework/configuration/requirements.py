@@ -1,5 +1,4 @@
 import logging
-import sys
 
 from volatility.framework.interfaces import configuration as config_interface
 
@@ -58,9 +57,7 @@ class TranslationLayerRequirement(config_interface.ConstructableRequirementInter
         :param layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
         :return:
         """
-        config_interface.RequirementInterface.__init__(self, name, description, default, optional)
-        self.add_requirement(ClassRequirement("class", "Class of the translation layer"))
-        self._current_class_requirements = set()
+        config_interface.ConstructableRequirementInterface.__init__(self, name, description, default, optional)
 
     # TODO: Add requirements: acceptable OSes from the address_space information
     # TODO: Add requirements: acceptable arches from the available layers
@@ -82,59 +79,37 @@ class TranslationLayerRequirement(config_interface.ConstructableRequirementInter
 
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
-        # See if our class is valid and if so populate the other requirements
-        # (but no need to validate, since we're invalid already)
-        class_req = self.requirements['class']
-        subreq_config_path = config_interface.path_join(config_path, self.name)
-        if class_req.validate(context, subreq_config_path):
-            # We have a class, and since it's validated we can construct our requirements from it
-            if issubclass(class_req.cls, config_interface.ConfigurableInterface):
-                # In case the class has changed, clear out the old requirements
-                for old_req in self._current_class_requirements.copy():
-                    del self._requirements[old_req]
-                    self._current_class_requirements.remove(old_req)
-                # And add the new ones
-                for requirement in class_req.cls.get_requirements():
-                    self._current_class_requirements.add(requirement.name)
-                    self.add_requirement(requirement)
+        self._check_class(context, config_path)
         vollog.debug("IndexError - No configuration provided for layer")
         return False
 
     def construct(self, context, config_path):
         """Constructs the appropriate layer and adds it based on the class parameter"""
+        # Determine the layer name
+        name = self.name
+        counter = 2
+        while name in context.memory:
+            name = self.name + str(counter)
+            counter += 1
+
+        args = {"context": context,
+                "config_path": config_path,
+                "name": name}
+
         config_path = config_interface.path_join(config_path, self.name)
         if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if
                     not subreq.optional]):
             return False
 
-        cls = self.requirements["class"].cls
-        node_config = context.config.branch(config_path)
-
-        # Determine the layer name
-        layer_name = self.name
-        counter = 2
-        while layer_name in context.memory:
-            layer_name = self.name + str(counter)
-            counter += 1
-
-        # Construct the layer
-        requirement_dict = {}
-        for req in cls.get_requirements():
-            if req.name in node_config.data and req.name != "class":
-                requirement_dict[req.name] = node_config.data[req.name]
-        # Fulfillment must happen, exceptions happening here mean the requirements aren't correct
-        # and these need to be raised and fixed, rather than caught and ignored
-        layer = cls(context, config_path, layer_name, **requirement_dict)
-        context.add_layer(layer)
-        context.config[config_path] = layer_name
+        obj = self._construct_class(context, config_path, args)
+        if obj is None:
+            return False
+        context.add_layer(obj)
         return True
 
 
-class SymbolRequirement(config_interface.RequirementInterface):
+class SymbolRequirement(config_interface.ConstructableRequirementInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
-
-    def __init__(self, name, description = None, default = None, optional = False, constraints = None):
-        config_interface.RequirementInterface.__init__(self, name, description, default, optional)
 
     def validate(self, context, config_path):
         """Validate that the value is a valid within the symbol space of the provided context"""
@@ -148,13 +123,24 @@ class SymbolRequirement(config_interface.RequirementInterface):
             return False
         return True
 
+    def construct(self, context, config_path):
+        """Constructs the symbol space within the context based on the subrequirements"""
+        # Determine the space name
+        name = self.name
+        if name in context.symbol_space:
+            raise ValueError("Symbol space already contains a SymbolTable by the same name")
 
-class NativeSymbolRequirement(SymbolRequirement):
-    def validate(self, context, config_path):
-        value = self.config_value(context, config_path)
-        if not isinstance(value, str):
-            vollog.debug("TypeError - SymbolRequirement only accepts string labels")
+        args = {"name": name}
+
+        config_path = config_interface.path_join(config_path, self.name)
+        if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if
+                    not subreq.optional]):
             return False
+
+        obj = self._construct_class(context, config_path, args)
+        if obj is None:
+            return False
+        context.symbol_space.append(obj)
         return True
 
 

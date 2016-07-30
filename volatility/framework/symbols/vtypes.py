@@ -5,8 +5,9 @@ Created on 10 Apr 2013
 """
 
 import copy
+import importlib
 
-from volatility.framework import exceptions, objects, interfaces, constants
+from volatility.framework import constants, exceptions, interfaces, objects
 
 
 # ## TODO
@@ -38,7 +39,13 @@ from volatility.framework import exceptions, objects, interfaces, constants
 class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
     """Symbol Table that handles vtype datatypes"""
 
-    def __init__(self, name, vtype_dictionary, native_types = None):
+    def __init__(self, name, vtype_pymodule, vtype_variable, native_types = None):
+        try:
+            module = importlib.import_module(vtype_pymodule)
+        except ImportError:
+            raise TypeError("VType Provider interface cannot be used to fulfill a requirement")
+        vtype_dictionary = getattr(module, vtype_variable)
+
         interfaces.symbols.SymbolTableInterface.__init__(self, name, native_types)
         self._vtypedict = vtype_dictionary
         self._overrides = {}

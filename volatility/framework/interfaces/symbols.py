@@ -5,8 +5,7 @@ Created on 4 May 2013
 """
 import bisect
 
-from volatility.framework import validity, exceptions, constants
-from volatility.framework.interfaces import configuration
+from volatility.framework import constants, exceptions, validity
 
 
 class Symbol(validity.ValidityRoutines):
@@ -142,7 +141,3 @@ class NativeTableInterface(SymbolTableInterface):
     @property
     def symbols(self):
         return []
-
-
-class SymbolTableProviderInterface(configuration.ConfigurableInterface):
-    pass

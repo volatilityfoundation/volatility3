@@ -6,7 +6,7 @@ Created on 6 Apr 2016
 
 import struct
 
-from volatility.framework import interfaces, exceptions
+from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
 
 
