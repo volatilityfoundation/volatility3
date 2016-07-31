@@ -49,6 +49,7 @@ class DtbTest(validity.ValidityRoutines):
                 usr_count += 1 if (val & 0x4) else 0
         # print(hex(dtb), usr_count, sup_count, usr_count + sup_count)
         # We sometimes find bogus DTBs at 0x16000 with a very low sup_count and 0 usr_count
+        # I have a winxpsp2-x64 image with identical usr/sup counts at 0x16000 and 0x24c00 as well as the actual 0x3c3000
         if usr_count or sup_count > 5:
             return dtb
 
