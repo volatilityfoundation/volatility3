@@ -68,8 +68,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     provides = {"type": "interface"}
 
     def __init__(self, context, config_path, name):
-        configuration.ConfigurableInterface.__init__(self, config_path)
-        validity.ValidityRoutines.__init__(self)
+        super().__init__(config_path)
         self._context = context
         self._check_type(name, str)
         self._name = name

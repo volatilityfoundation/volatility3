@@ -20,7 +20,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 }
 
     def __init__(self, context, config_path, name, page_map_offset, memory_layer, swap_layer = None):
-        interfaces.layers.TranslationLayerInterface.__init__(self, context, config_path, name)
+        super().__init__(context, config_path, name)
         self._base_layer = self._check_type(memory_layer, str)
         self._page_map_offset = self._check_type(page_map_offset, int)
         # All Intel address spaces work on 4096 byte pages
@@ -155,7 +155,7 @@ class IntelPAE(Intel):
     priority = 35
 
     def __init__(self, *args, **kwargs):
-        Intel.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # These can vary depending on the type of space
         self._entry_format = "<Q"
@@ -175,7 +175,7 @@ class Intel32e(Intel):
                 }
 
     def __init__(self, *args, **kwargs):
-        Intel.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # These can vary depending on the type of space
         self._entry_format = "<Q"

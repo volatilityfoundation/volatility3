@@ -10,7 +10,7 @@ class WindowsKernelVTypeSymbols(vtypes.VTypeSymbolTable):
 
     def __init__(self, context, config_path, name, vtype_pymodule, vtype_variable):
         # FIXME: Make natives another requirement, or in some way hand it in when building the vtype_table
-        vtypes.VTypeSymbolTable.__init__(self, name, vtype_pymodule, vtype_variable, context.symbol_space.natives)
+        super().__init__(name, vtype_pymodule, vtype_variable, context.symbol_space.natives)
 
         # Set-up windows specific types
         self.set_type_class('_ETHREAD', extensions._ETHREAD)

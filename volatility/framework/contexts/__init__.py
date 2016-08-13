@@ -1,4 +1,4 @@
-from volatility.framework import interfaces, symbols, layers
+from volatility.framework import interfaces, layers, symbols
 from volatility.framework.configuration import HierarchicalDict
 
 __author__ = 'mike'
@@ -21,7 +21,7 @@ class Context(interfaces.context.ContextInterface):
         :param natives: Defines the native types such as integers, floats, arrays and addresses.
         :type natives: interfaces.symbols.NativeTableInterface
         """
-        interfaces.context.ContextInterface.__init__(self)
+        super().__init__()
         self._symbol_space = symbols.SymbolSpace(natives)
         self._memory = layers.Memory()
         self._config = HierarchicalDict()

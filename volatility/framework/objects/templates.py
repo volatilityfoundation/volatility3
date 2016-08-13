@@ -18,9 +18,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
     """
 
     def __init__(self, object_class = None, type_name = None, **arguments):
-        interfaces.objects.Template.__init__(self,
-                                             type_name = type_name,
-                                             **arguments)
+        super().__init__(type_name = type_name, **arguments)
         self._check_class(object_class, interfaces.objects.ObjectInterface)
         self.update_vol(object_class = object_class)
 

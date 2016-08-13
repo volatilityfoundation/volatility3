@@ -46,7 +46,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             raise TypeError("VType Provider interface cannot be used to fulfill a requirement")
         vtype_dictionary = getattr(module, vtype_variable)
 
-        interfaces.symbols.SymbolTableInterface.__init__(self, name, native_types)
+        super().__init__(name, native_types)
         self._vtypedict = vtype_dictionary
         self._overrides = {}
 

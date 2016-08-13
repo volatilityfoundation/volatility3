@@ -17,7 +17,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to distinguish configuration elements from everything else"""
 
     def __init__(self, name, description = None, default = None, optional = False):
-        validity.ValidityRoutines.__init__(self)
+        super().__init__()
         self._check_type(name, str)
         if CONFIG_SEPARATOR in name:
             raise ValueError("Name cannot contain the config-hierarchy divider (" + CONFIG_SEPARATOR + ")")
@@ -88,7 +88,7 @@ class ClassRequirement(RequirementInterface):
     """Requires a specific class"""
 
     def __init__(self, *args, **kwargs):
-        RequirementInterface.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._cls = None
 
     @property
@@ -114,7 +114,7 @@ class ClassRequirement(RequirementInterface):
 
 class ConstructableRequirementInterface(RequirementInterface):
     def __init__(self, *args, **kwargs):
-        RequirementInterface.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.add_requirement(ClassRequirement("class", "Class of the translation layer"))
         self._current_class_requirements = set()
 
@@ -171,7 +171,7 @@ class ConfigurableInterface(validity.ValidityRoutines):
 
     def __init__(self, config_path):
         """Basic initializer that allows configurables to access their own config settings"""
-        validity.ValidityRoutines.__init__(self)
+        super().__init__()
         self._config_path = self._check_type(config_path, str)
 
     @classmethod

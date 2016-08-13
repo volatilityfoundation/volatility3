@@ -8,6 +8,9 @@ class AutomagicInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     priority = 10
 
+    def __init__(self):
+        super().__init__()
+
     @abstractmethod
     def __call__(self, context, config_path, configurable):
         """Runs the automagic over the configurable"""

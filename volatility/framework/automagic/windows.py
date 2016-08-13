@@ -56,8 +56,7 @@ class DtbTest(validity.ValidityRoutines):
 
 class DtbTest32bit(DtbTest):
     def __init__(self):
-        DtbTest.__init__(self,
-                         layer_type = layers.intel.Intel,
+        super().__init__(layer_type = layers.intel.Intel,
                          ptr_size = 4,
                          ptr_struct = "I",
                          ptr_reference = 0x300,
@@ -66,8 +65,7 @@ class DtbTest32bit(DtbTest):
 
 class DtbTest64bit(DtbTest):
     def __init__(self):
-        DtbTest.__init__(self,
-                         layer_type = layers.intel.Intel32e,
+        super().__init__(layer_type = layers.intel.Intel32e,
                          ptr_size = 8,
                          ptr_struct = "Q",
                          ptr_reference = 0x1ED,
@@ -76,8 +74,7 @@ class DtbTest64bit(DtbTest):
 
 class DtbTestPae(DtbTest):
     def __init__(self):
-        DtbTest.__init__(self,
-                         layer_type = layers.intel.IntelPAE,
+        super().__init__(layer_type = layers.intel.IntelPAE,
                          ptr_size = 8,
                          ptr_struct = "Q",
                          ptr_reference = 0x3,
@@ -98,7 +95,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
     tests = [DtbTest32bit, DtbTest64bit, DtbTestPae]
 
     def __init__(self, tests):
-        interfaces.layers.ScannerInterface.__init__(self)
+        super().__init__()
         for value in tests:
             self._check_type(value, DtbTest)
         self.tests = tests
@@ -119,6 +116,7 @@ class PageMapOffsetHelper(automagic_interface.AutomagicInterface):
     priority = 20
 
     def __init__(self):
+        super().__init__()
         self.tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
 
     def branch_leave(self, node, config_path):

@@ -5,14 +5,14 @@ Created on 10 Apr 2013
 """
 import copy
 
-from volatility.framework import objects, interfaces
+from volatility.framework import interfaces, objects
 
 
 class NativeTable(interfaces.symbols.NativeTableInterface):
     """Symbol List that handles Native types"""
 
     def __init__(self, name, native_dictionary):
-        interfaces.symbols.NativeTableInterface.__init__(self, name, self)
+        super().__init__(name, self)
         self._native_dictionary = copy.deepcopy(native_dictionary)
         self._overrides = {}
         for native_type in self._native_dictionary:

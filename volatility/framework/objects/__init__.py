@@ -35,11 +35,10 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     _struct_type = int
 
     def __init__(self, context, type_name, object_info, struct_format):
-        interfaces.objects.ObjectInterface.__init__(self,
-                                                    context = context,
-                                                    type_name = type_name,
-                                                    object_info = object_info,
-                                                    struct_format = struct_format)
+        super().__init__(context = context,
+                         type_name = type_name,
+                         object_info = object_info,
+                         struct_format = struct_format)
         self._struct_format = struct_format
 
     def __new__(cls, context, type_name, object_info, struct_format, **kwargs):
@@ -89,11 +88,10 @@ class Bytes(PrimitiveObject, bytes):
     _struct_type = bytes
 
     def __init__(self, context, type_name, object_info, length = 1):
-        interfaces.objects.ObjectInterface.__init__(self,
-                                                    context = context,
-                                                    type_name = type_name,
-                                                    object_info = object_info,
-                                                    struct_format = str(length) + "s")
+        super().__init__(context = context,
+                         type_name = type_name,
+                         object_info = object_info,
+                         struct_format = str(length) + "s")
         self._vol['length'] = length
 
     def __new__(cls, context, type_name, object_info, length = 1, **kwargs):
@@ -117,11 +115,10 @@ class String(PrimitiveObject, str):
     _struct_type = str
 
     def __init__(self, context, type_name, object_info, max_length = 1, encoding = "utf-8", errors = None):
-        PrimitiveObject.__init__(self,
-                                 context = context,
-                                 type_name = type_name,
-                                 object_info = object_info,
-                                 struct_format = str(max_length) + 's')
+        super().__init__(context = context,
+                         type_name = type_name,
+                         object_info = object_info,
+                         struct_format = str(max_length) + 's')
         self._vol["max_length"] = max_length
         self._vol['encoding'] = encoding
         self._vol['errors'] = errors
@@ -151,8 +148,7 @@ class Pointer(Integer):
 
     def __init__(self, context, type_name, object_info, struct_format, target = None):
         self._check_type(target, templates.ObjectTemplate)
-        Integer.__init__(self,
-                         context = context,
+        super().__init__(context = context,
                          object_info = object_info,
                          type_name = type_name,
                          struct_format = struct_format)
@@ -208,7 +204,7 @@ class BitField(PrimitiveObject, int):
         return cls._struct_type.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))
 
     def __init__(self, context, type_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
-        PrimitiveObject.__init__(self, context, type_name, object_info, struct_format)
+        super().__init__(context, type_name, object_info, struct_format)
         self._vol['target'] = target
         self._vol['start_bit'] = start_bit
         self._vol['end_bit'] = end_bit
@@ -238,10 +234,9 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
 
     def __init__(self, context, type_name, object_info, count = 0, target = None):
         self._check_type(target, templates.ObjectTemplate)
-        interfaces.objects.ObjectInterface.__init__(self,
-                                                    context = context,
-                                                    type_name = type_name,
-                                                    object_info = object_info)
+        super().__init__(context = context,
+                         type_name = type_name,
+                         object_info = object_info)
         self._vol['count'] = self._check_type(count, int)
         self._vol['target'] = target
 
@@ -298,12 +293,11 @@ class Struct(interfaces.objects.ObjectInterface):
     """
 
     def __init__(self, context, type_name, object_info, size, members):
-        interfaces.objects.ObjectInterface.__init__(self,
-                                                    context = context,
-                                                    type_name = type_name,
-                                                    object_info = object_info,
-                                                    size = size,
-                                                    members = members)
+        super().__init__(context = context,
+                         type_name = type_name,
+                         object_info = object_info,
+                         size = size,
+                         members = members)
         self._check_members(members)
         self._concrete_members = {}
 

@@ -17,7 +17,7 @@ class InvalidAddressException(VolatilityException):
     """Thrown when an address is not valid in the space it was requested"""
 
     def __init__(self, layer_name, invalid_address, *args, **kwargs):
-        VolatilityException.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.invalid_address = invalid_address
         self.layer_name = layer_name
 

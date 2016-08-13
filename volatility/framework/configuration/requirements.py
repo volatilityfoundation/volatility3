@@ -57,7 +57,7 @@ class TranslationLayerRequirement(config_interface.ConstructableRequirementInter
         :param layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
         :return:
         """
-        config_interface.ConstructableRequirementInterface.__init__(self, name, description, default, optional)
+        super().__init__(name, description, default, optional)
 
     # TODO: Add requirements: acceptable OSes from the address_space information
     # TODO: Add requirements: acceptable arches from the available layers
@@ -150,7 +150,7 @@ class ChoiceRequirement(config_interface.RequirementInterface):
     """Allows one from a choice of strings"""
 
     def __init__(self, choices, *args, **kwargs):
-        config_interface.RequirementInterface.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         if not isinstance(choices, list) or any([not isinstance(choice, str) for choice in choices]):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self._choices = choices
@@ -166,7 +166,7 @@ class ChoiceRequirement(config_interface.RequirementInterface):
 
 class ListRequirement(config_interface.RequirementInterface):
     def __init__(self, element_type, max_elements, min_elements, *args, **kwargs):
-        config_interface.RequirementInterface.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         if isinstance(element_type, ListRequirement):
             raise TypeError("ListRequirements cannot contain ListRequirements")
         self.element_type = self._check_type(element_type, config_interface.RequirementInterface)

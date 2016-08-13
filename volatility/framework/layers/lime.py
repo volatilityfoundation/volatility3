@@ -30,7 +30,7 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
     _header_struct = struct.Struct('<IIQQQ')
 
     def __init__(self, context, config_path, name, base_layer):
-        interfaces.layers.TranslationLayerInterface.__init__(self, context, config_path, name)
+        super().__init__(context, config_path, name)
 
         self._base_layer = base_layer
 

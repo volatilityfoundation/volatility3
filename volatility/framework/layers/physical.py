@@ -6,7 +6,7 @@ Created on 6 May 2013
 
 import os.path
 
-from volatility.framework import interfaces, exceptions
+from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
 
 
@@ -17,7 +17,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
     priority = 10
 
     def __init__(self, context, config_path, name, buffer):
-        interfaces.layers.DataLayerInterface.__init__(self, context, config_path, name)
+        super().__init__(context, config_path, name)
         self._buffer = self._check_type(buffer, bytes)
 
     @property
@@ -64,7 +64,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     priority = 20
 
     def __init__(self, context, config_path, name, filename):
-        interfaces.layers.DataLayerInterface.__init__(self, context, config_path, name)
+        super().__init__(context, config_path, name)
 
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
         mode = "rb"

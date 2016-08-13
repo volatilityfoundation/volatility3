@@ -44,10 +44,10 @@ class ObjectInformation(ReadOnlyMapping):
         self._check_type(offset, int)
         if parent:
             self._check_type(parent, ObjectInterface)
-        ReadOnlyMapping.__init__(self, {'layer_name': layer_name,
-                                        'offset': offset,
-                                        'member_name': member_name,
-                                        'parent': parent})
+        super().__init__({'layer_name': layer_name,
+                          'offset': offset,
+                          'member_name': member_name,
+                          'parent': parent})
 
 
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
@@ -124,6 +124,7 @@ class Template(validity.ValidityRoutines):
     def __init__(self, type_name, **arguments):
         """Stores the keyword arguments for later use"""
         # Allow the updating of template arguments whilst still in template form
+        super().__init__()
         self._vol = collections.ChainMap(arguments, {'type_name': type_name})
 
     @property

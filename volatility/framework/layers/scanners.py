@@ -3,7 +3,7 @@ from volatility.framework.interfaces import layers
 
 class BytesScanner(layers.ScannerInterface):
     def __init__(self, needle):
-        layers.ScannerInterface.__init__(self)
+        super().__init__()
         self.needle = self._check_type(needle, bytes)
 
     def __call__(self, data, data_offset):
