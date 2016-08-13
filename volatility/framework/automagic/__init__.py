@@ -18,6 +18,10 @@ def run(automagics, context, configurable, config_path = ""):
 
        This is where any automagic is allowed to run, and alter the context in order to satisfy/improve all requirements
     """
+    for automagic in automagics:
+        if not isinstance(automagic, automagic_interface.AutomagicInterface):
+            raise TypeError("Automagics must only contain AutomagicInterface subclasses")
+
     if not isinstance(configurable, ConfigurableInterface) and not issubclass(configurable, ConfigurableInterface):
         raise TypeError("Automagic operates on configurables only")
 
