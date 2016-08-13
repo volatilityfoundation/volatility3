@@ -4,6 +4,7 @@ Created on 7 May 2013
 @author: mike
 """
 import collections
+import copy
 import json
 import logging
 
@@ -78,12 +79,21 @@ class HierarchicalDict(collections.Mapping):
 
     def __setitem__(self, key, value):
         """Sets an item or creates a subdict and sets the item within that"""
+        self._setitem(key, value)
+
+    def _setitem(self, key, value, is_data = True):
+        """Set an item or appends a whole subtree at a key location"""
         if self.separator in key:
             subdict = self._subdict.get(self._key_head(key), HierarchicalDict(separator = self.separator))
             subdict[self._key_tail(key)] = value
             self._subdict[self._key_head(key)] = subdict
         else:
-            self._data[key] = value
+            if is_data:
+                self._data[key] = value
+            else:
+                if not isinstance(value, HierarchicalDict) and value is not None:
+                    raise TypeError("HierarchicalDicts can only store HierarchicalDicts within their structure")
+                self._subdict[key] = value
 
     def __delitem__(self, key):
         """Deletes an item from the hierarchical dict"""
@@ -117,6 +127,17 @@ class HierarchicalDict(collections.Mapping):
             return self._subdict[self._key_head(key)].branch(self._key_tail(key))
         else:
             return self._subdict[key]
+
+    def splice(self, key, subdict):
+        """Overwrites a branch in an existing tree with a new tree
+
+           This can also be used to bulk delete a branch of a tree by passing in None
+        """
+        self._setitem(key, subdict, is_data = False)
+
+    def clone(self):
+        """Duplicate the configuration, allowing changes without affecting the original"""
+        return copy.deepcopy(self)
 
     def __str__(self):
         """Turns the Hierarchical dict into a string representation"""

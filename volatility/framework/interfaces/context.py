@@ -3,6 +3,7 @@ Created on 6 May 2013
 
 @author: mike
 """
+import copy
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 
@@ -47,3 +48,10 @@ class ContextInterface(object, metaclass = ABCMeta):
 
            Returns a fully constructed object
         """
+
+    def clone(self):
+        """Produce a clone of the context (and configuration), allowing modifications to be made without affecting
+           any mutable objects in the original.
+
+           Memory constraints may become an issue for this function depending on how much is actually stored in the context"""
+        return copy.deepcopy(self)
