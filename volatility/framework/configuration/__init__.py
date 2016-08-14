@@ -131,6 +131,8 @@ class HierarchicalDict(collections.Mapping):
     def splice(self, key, subdict):
         """Overwrites a branch in an existing tree with a new tree
 
+           WARNING: This will *NOT* make alterations to objects that have already been given a config_path
+                    meaning those objects will fail their configuration lookup.
            This can also be used to bulk delete a branch of a tree by passing in None
         """
         self._setitem(key, subdict, is_data = False)
