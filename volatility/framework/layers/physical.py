@@ -66,10 +66,18 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def __init__(self, context, config_path, name, filename):
         super().__init__(context, config_path, name)
 
+        self._filename = filename
+        self._file_ = None
+        self._size = os.path.getsize(filename)
+
+    @property
+    def _file(self):
+        """Property to prevent the intializer storing an unserializable open file (for context cloning)"""
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
         mode = "rb"
-        self._file = open(filename, mode)
-        self._size = os.path.getsize(filename)
+        if not self._file_:
+            self._file_ = open(self._filename, mode)
+        return self._file_
 
     @property
     def maximum_address(self):
