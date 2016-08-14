@@ -119,27 +119,6 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         """Returns a list of Requirement objects for this type of layer"""
         return []
 
-    @classmethod
-    def fulfill(cls, context, requirement, config_path):
-        # Generate a layer name
-        node_config = context.config.branch(config_path)
-        layer_name = requirement.name
-        counter = 2
-        while layer_name in context.memory:
-            layer_name = requirement.name + str(counter)
-            counter += 1
-
-        # Construct the layer
-        requirement_dict = {}
-        for req in cls.get_requirements():
-            if req.name in node_config.data:
-                requirement_dict[req.name] = node_config.data[req.name]
-        # Fulfillment must happen, exceptions happening here mean the requirements aren't correct
-        # and these need to be raised and fixed, rather than caught and ignored
-        layer = cls(context, config_path, layer_name, **requirement_dict)
-        context.add_layer(layer)
-        context.config[config_path] = layer_name
-
     def _pre_scan(self, context, min_address, max_address, progress_callback, scanner):
         """Prepares the scanner based on standard procedures shared between TranslationLayers and DataLayers"""
         if progress_callback is not None:
