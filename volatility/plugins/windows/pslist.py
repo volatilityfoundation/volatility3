@@ -16,6 +16,9 @@ class PsList(plugins.PluginInterface):
                 requirements.IntRequirement(name = 'offset',
                                             description = 'Virtual address of any process')]
 
+    def update_configuration(self):
+        """No operation since all values provided by config/requirements initially"""
+
     @staticmethod
     def kernel_process_from_physical_process(ctx, physical_layer, kernel_layer, offset):
         """Return a kernel process object from physical process data."""

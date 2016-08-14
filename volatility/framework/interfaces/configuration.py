@@ -2,6 +2,7 @@ import sys
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
+from volatility.framework.interfaces.context import ContextInterface
 
 __author__ = 'mike'
 
@@ -166,17 +167,30 @@ class ConstructableRequirementInterface(RequirementInterface):
         return obj
 
 
-class ConfigurableInterface(validity.ValidityRoutines):
+class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to allow objects to have requirements and read configuration data from the context config tree"""
 
-    def __init__(self, config_path):
+    def __init__(self, context, config_path):
         """Basic initializer that allows configurables to access their own config settings"""
         super().__init__()
+        self._context = self._check_type(context, ContextInterface)
         self._config_path = self._check_type(config_path, str)
+
+    @property
+    def context(self):
+        return self._context
+
+    @property
+    def config(self):
+        return self._context.config.branch(self._config_path)
+
+    @abstractmethod
+    def update_configuration(self):
+        """Ensures that if the class has been created, its configuration is correct"""
 
     @classmethod
     def get_requirements(cls):
-        """Returns a list of RequirementInterface objects  required by this object"""
+        """Returns a list of RequirementInterface objects required by this object"""
         return []
 
     @classmethod
