@@ -7,7 +7,7 @@ Created on 4 May 2013
 import collections.abc
 
 from volatility.framework import validity, interfaces, exceptions
-from volatility.framework.layers import physical, intel
+from volatility.framework.layers import physical, intel, lime
 
 
 class Memory(validity.ValidityRoutines, collections.abc.Mapping):
