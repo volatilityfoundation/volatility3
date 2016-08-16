@@ -1,11 +1,11 @@
 import logging
 
-from volatility.framework.interfaces import automagic as automagic_interface, configuration as config_interface
+from volatility.framework import interfaces
 
 vollog = logging.getLogger(__name__)
 
 
-class ConstructionMagic(automagic_interface.AutomagicInterface):
+class ConstructionMagic(interfaces.automagic.AutomagicInterface):
     """Runs through the requirement tree and from the bottom up attempts to construct all TranslationLayerRequirements"""
     priority = 10
 
@@ -15,7 +15,7 @@ class ConstructionMagic(automagic_interface.AutomagicInterface):
             # but also ensures that TranslationLayerRequirements have got the correct subrequirements if their class is populated
 
             success = True
-            subreq_config_path = config_interface.path_join(config_path, requirement.name)
+            subreq_config_path = interfaces.configuration.path_join(config_path, requirement.name)
             for subreq in requirement.requirements.values():
                 self(context, subreq, subreq_config_path)
                 valid = subreq.validate(context, subreq_config_path)
@@ -25,7 +25,7 @@ class ConstructionMagic(automagic_interface.AutomagicInterface):
                     success = False
             if not success:
                 return False
-            elif isinstance(requirement, config_interface.ConstructableRequirementInterface):
+            elif isinstance(requirement, interfaces.configuration.ConstructableRequirementInterface):
                 # We know all the subrequirements are filled, so let's populate
                 requirement.construct(context, config_path)
         return True

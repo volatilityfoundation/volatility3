@@ -4,8 +4,7 @@ import sys
 
 import volatility.framework
 import volatility.plugins
-from volatility.framework import automagic, contexts
-from volatility.framework.interfaces import configuration as config_interface
+from volatility.framework import automagic, contexts, interfaces
 from volatility.framework.renderers.text import TextRenderer
 
 __author__ = 'mike'
@@ -44,7 +43,7 @@ class CommandLine(object):
 
         # Run the argparser
         parser.parse_args()
-        config_path = config_interface.path_join("plugins", plugin.__name__.lower())
+        config_path = interfaces.configuration.path_join("plugins", plugin.__name__.lower())
 
         ###
         # PASS TO UI

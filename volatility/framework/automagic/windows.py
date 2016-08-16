@@ -8,7 +8,6 @@ import struct
 
 from volatility.framework import automagic, interfaces, layers, validity
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import automagic as automagic_interface, configuration as config_interface
 
 PAGE_SIZE = 0x1000
 
@@ -112,7 +111,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
                     yield (test, result)
 
 
-class PageMapOffsetHelper(automagic_interface.AutomagicInterface):
+class PageMapOffsetHelper(interfaces.automagic.AutomagicInterface):
     priority = 20
 
     def __init__(self):
@@ -126,14 +125,14 @@ class PageMapOffsetHelper(automagic_interface.AutomagicInterface):
 
     def __call__(self, context, requirement, config_path):
         useful = []
-        sub_config_path = config_interface.path_join(config_path, requirement.name)
+        sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if isinstance(requirement, requirements.TranslationLayerRequirement):
             class_req = requirement.requirements["class"]
             if not class_req.validate(context, sub_config_path):
                 # All the intel spaces require the same kind of parameters, so pick one for the requirements
                 context.config.branch(config_path)
                 automagic.run(context, layers.intel.Intel,
-                              config_interface.path_join(config_path, requirement.name))
+                              interfaces.configuration.path_join(config_path, requirement.name))
 
                 # If a class hasn't been chosen, look through the underlying config for appropriate parameters
                 # If possible run scan and choose an appropriate class
@@ -152,7 +151,7 @@ class PageMapOffsetHelper(automagic_interface.AutomagicInterface):
                 # TODO: Convert to scanner framework
                 hits = context.memory[physical_layer].scan(context, PageMapScanner(useful))
                 for test, dtb in hits:
-                    context.config[config_interface.path_join(sub_config_path, "page_map_offset")] = dtb
+                    context.config[interfaces.configuration.path_join(sub_config_path, "page_map_offset")] = dtb
                     requirement.construct(context, config_path)
                     break
         else:

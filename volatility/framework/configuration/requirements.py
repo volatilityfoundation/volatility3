@@ -1,11 +1,11 @@
 import logging
 
-from volatility.framework.interfaces import configuration as config_interface
+from volatility.framework import interfaces
 
 vollog = logging.getLogger(__name__)
 
 
-class MultiRequirement(config_interface.RequirementInterface):
+class MultiRequirement(interfaces.configuration.RequirementInterface):
     """Class to hold multiple requirements
 
        Technically the Interface could handle this, but it's an interface, so this is a concrete implementation
@@ -15,7 +15,7 @@ class MultiRequirement(config_interface.RequirementInterface):
         return self.validate_children(context, config_path)
 
 
-class InstanceRequirement(config_interface.RequirementInterface):
+class InstanceRequirement(interfaces.configuration.RequirementInterface):
     instance_type = bool
 
     def add_requirement(self, requirement):
@@ -45,7 +45,7 @@ class BytesRequirement(InstanceRequirement):
     instance_type = bytes
 
 
-class TranslationLayerRequirement(config_interface.ConstructableRequirementInterface):
+class TranslationLayerRequirement(interfaces.configuration.ConstructableRequirementInterface):
     """Class maintaining the limitations on what sort of address spaces are acceptable"""
 
     def __init__(self, name, description = None, default = None, optional = False):
@@ -96,7 +96,7 @@ class TranslationLayerRequirement(config_interface.ConstructableRequirementInter
                 "config_path": config_path,
                 "name": name}
 
-        config_path = config_interface.path_join(config_path, self.name)
+        config_path = interfaces.configuration.path_join(config_path, self.name)
         if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if
                     not subreq.optional]):
             return False
@@ -108,7 +108,7 @@ class TranslationLayerRequirement(config_interface.ConstructableRequirementInter
         return True
 
 
-class SymbolRequirement(config_interface.ConstructableRequirementInterface):
+class SymbolRequirement(interfaces.configuration.ConstructableRequirementInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
 
     def validate(self, context, config_path):
@@ -134,7 +134,7 @@ class SymbolRequirement(config_interface.ConstructableRequirementInterface):
                 "config_path": config_path,
                 "name": name}
 
-        config_path = config_interface.path_join(config_path, self.name)
+        config_path = interfaces.configuration.path_join(config_path, self.name)
         if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if
                     not subreq.optional]):
             return False
@@ -146,7 +146,7 @@ class SymbolRequirement(config_interface.ConstructableRequirementInterface):
         return True
 
 
-class ChoiceRequirement(config_interface.RequirementInterface):
+class ChoiceRequirement(interfaces.configuration.RequirementInterface):
     """Allows one from a choice of strings"""
 
     def __init__(self, choices, *args, **kwargs):
@@ -164,12 +164,12 @@ class ChoiceRequirement(config_interface.RequirementInterface):
         return True
 
 
-class ListRequirement(config_interface.RequirementInterface):
+class ListRequirement(interfaces.configuration.RequirementInterface):
     def __init__(self, element_type, max_elements, min_elements, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if isinstance(element_type, ListRequirement):
             raise TypeError("ListRequirements cannot contain ListRequirements")
-        self.element_type = self._check_type(element_type, config_interface.RequirementInterface)
+        self.element_type = self._check_type(element_type, interfaces.configuration.RequirementInterface)
         self.min_elements = min_elements
         self.max_elements = max_elements
 

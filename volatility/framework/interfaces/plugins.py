@@ -3,10 +3,12 @@ Created on 6 May 2013
 
 @author: mike
 """
+
+# Configuration interfaces must be imported separately, since we're part of interfaces and can't import ourselves
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
-from volatility.framework.interfaces import configuration as configuration_interface, context as context_interface
+from volatility.framework.interfaces import configuration as interfaces_configuration
 
 
 #
@@ -22,7 +24,7 @@ from volatility.framework.interfaces import configuration as configuration_inter
 #  The plugin accepts the context and modifies as necessary
 #  The plugin runs and produces a TreeGrid output
 
-class PluginInterface(configuration_interface.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
+class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
     """Class that defines the interface all Plugins must maintain"""
 
     def __init__(self, context, config_path):
