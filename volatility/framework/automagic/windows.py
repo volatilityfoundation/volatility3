@@ -123,7 +123,7 @@ class PageMapOffsetHelper(interfaces.automagic.AutomagicInterface):
         self(node, config_path)
         return True
 
-    def __call__(self, context, requirement, config_path):
+    def __call__(self, context, config_path, requirement):
         useful = []
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if isinstance(requirement, requirements.TranslationLayerRequirement):
@@ -156,7 +156,7 @@ class PageMapOffsetHelper(interfaces.automagic.AutomagicInterface):
                     break
         else:
             for subreq in requirement.requirements.values():
-                self(context, subreq, sub_config_path)
+                self(context, sub_config_path, subreq)
 
 
 if __name__ == '__main__':

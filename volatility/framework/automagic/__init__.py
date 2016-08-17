@@ -34,4 +34,4 @@ def run(automagics, context, configurable, config_path = ""):
         requirement.add_requirement(req)
 
     for automagic in automagics:
-        automagic(context, requirement, config_path)
+        automagic(context, config_path, requirement)
