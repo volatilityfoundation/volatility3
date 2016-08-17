@@ -14,8 +14,8 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class for layer scanners that return locations of particular values from within the data
 
     These are designed to be given a chunk of data and return a generator which yields
-    any found offsets.  They should perform complex/time-consuming tasks, these should
-    be carried out by the consumer of the generator, so only offsets are returned.
+    any found items.  They should NOT perform complex/time-consuming tasks, these should
+    be carried out by the consumer of the generator on the items returned.
 
     They will be provided all *available* data (therefore not necessarily contiguous)
     in ascending offset order, in chunks no larger than chunk_size + overlap where
