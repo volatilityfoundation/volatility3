@@ -17,7 +17,7 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
             success = True
             subreq_config_path = interfaces.configuration.path_join(config_path, requirement.name)
             for subreq in requirement.requirements.values():
-                self(context, subreq, subreq_config_path)
+                self(context, subreq_config_path, subreq)
                 valid = subreq.validate(context, subreq_config_path)
                 # We want to traverse optional paths, so don't check until we've tried to validate
                 if not valid and not subreq.optional:
