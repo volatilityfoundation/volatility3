@@ -1,17 +1,24 @@
-.. Volatility documentation master file, created by
-sphinx-quickstart on Wed Apr  2 01:48:22 2014.
-You can adapt this file completely to your liking, but it should at least
-contain the root `toctree` directive.
+Volatility 3
+============
 
-Welcome to Volatility's documentation!
-======================================
+This is the documentation for Volatility 3, the most advanced memory forensics
+framework in the world. Like previous versions of the Volatility framework,
+Volatility 3 is Open Source.
 
-Contents:
+Python Packages
+===============
 
 .. toctree::
-:maxdepth: 2
+    :hidden:
 
-       modules.rst
+    volatility
+
+.. toctree::
+    :maxdepth: 1
+
+    volatility.cli
+    volatility.framework
+    volatility.plugins
 
 Indices and tables
 ==================
