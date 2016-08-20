@@ -42,7 +42,7 @@ class DtbTest(validity.ValidityRoutines):
         page = data[dtb - data_offset:dtb - data_offset + PAGE_SIZE]
         usr_count, sup_count = 0, 0
         for i in range(0, PAGE_SIZE, self.ptr_size):
-            val = self.unpack(data[i:i + self.ptr_size])
+            val = self.unpack(page[i:i + self.ptr_size])
             if val & 0x1:
                 sup_count += 0 if (val & 0x4) else 1
                 usr_count += 1 if (val & 0x4) else 0
