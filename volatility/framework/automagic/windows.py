@@ -15,10 +15,10 @@ PAGE_SIZE = 0x1000
 class DtbTest(validity.ValidityRoutines):
     super_bit = 2
 
-    def __init__(self, layer_type = None, ptr_size = None, ptr_struct = None, ptr_reference = None, mask = None):
+    def __init__(self, layer_type = None, ptr_struct = None, ptr_reference = None, mask = None):
         self.layer_type = self._check_class(layer_type, interfaces.layers.TranslationLayerInterface)
-        self.ptr_size = self._check_type(ptr_size, int)
         self.ptr_struct = self._check_type(ptr_struct, str)
+        self.ptr_size = struct.calcsize(ptr_struct)
         self.ptr_reference = self._check_type(ptr_reference, int)
         self.mask = self._check_type(mask, int)
 
@@ -56,7 +56,6 @@ class DtbTest(validity.ValidityRoutines):
 class DtbTest32bit(DtbTest):
     def __init__(self):
         super().__init__(layer_type = layers.intel.Intel,
-                         ptr_size = 4,
                          ptr_struct = "I",
                          ptr_reference = 0x300,
                          mask = 0xFFFFF000)
@@ -65,7 +64,6 @@ class DtbTest32bit(DtbTest):
 class DtbTest64bit(DtbTest):
     def __init__(self):
         super().__init__(layer_type = layers.intel.Intel32e,
-                         ptr_size = 8,
                          ptr_struct = "Q",
                          ptr_reference = 0x1ED,
                          mask = 0x3FFFFFFFFFF000)
@@ -74,7 +72,6 @@ class DtbTest64bit(DtbTest):
 class DtbTestPae(DtbTest):
     def __init__(self):
         super().__init__(layer_type = layers.intel.IntelPAE,
-                         ptr_size = 8,
                          ptr_struct = "Q",
                          ptr_reference = 0x3,
                          mask = 0x3FFFFFFFFFF000)
