@@ -198,9 +198,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
-    parser.add_argument("--32bit", action = "store_false", dest = "bit32", help = "Disable 32-bit run")
-    parser.add_argument("--64bit", action = "store_false", dest = "bit64", help = "Disable 64-bit run")
-    parser.add_argument("--pae", action = "store_false", help = "Disable pae run")
+    parser.add_argument("--32bit", action = "store_false", dest = "bit32", help = "Disable 32-bit scanning")
+    parser.add_argument("--64bit", action = "store_false", dest = "bit64", help = "Disable 64-bit scanning")
+    parser.add_argument("--pae", action = "store_false", dest = "pae", help = "Disable pae scanning")
+    parser.add_argument("-s", "--selfref", action = "store_true", dest = "selfref",
+                        help = "Run more generic self-referential tests scanner")
+    parser.add_argument("-v", "--verbose", action = "count", default = 0,
+                        help = "Increase the verbosity of the information returned")
 
     args = parser.parse_args()
 
@@ -214,25 +218,69 @@ if __name__ == '__main__':
         ctx.memory.add_layer(data)
 
     tests = []
-    if args.bit32:
-        tests.append(DtbTest32bit())
-    if args.bit64:
-        tests.append(DtbTest64bit())
-    if args.pae:
-        tests.append(DtbTestPae())
+    if args.selfref:
+        if args.bit32:
+            tests.append(DtbSelfRef32bit())
+        if args.bit64:
+            tests.append(DtbSelfRef64bit())
+    else:
+        if args.bit32:
+            tests.append(DtbTest32bit())
+        if args.bit64:
+            tests.append(DtbTest64bit())
+        if args.pae:
+            tests.append(DtbTestPae())
 
     if tests:
         for i in range(len(args.filenames)):
             print("[*] Scanning " + args.filenames[i] + "...")
+            scan_results = ctx.memory["data" + str(i)].scan(ctx, PageMapScanner(tests))
+
+            # Self-referential tests need post-processing to gather the most likely offset
+            if args.selfref:
+                selfref_results = dict([(test, dict()) for test in tests])
+                for test, result in scan_results:
+                    dtb, refs = result
+                    test_dict = selfref_results[test]
+                    for ref in refs:
+                        # Initialize the value if necessary
+                        tmp = test_dict.get(ref, set())
+                        tmp.add(dtb)
+                        test_dict[ref] = tmp
+                    selfref_results[test] = test_dict
+                scan_results = []
+                print("   Self-referential data")
+                for test in selfref_results:
+                    best_found = None
+                    print("     " + test.layer_type.__name__ + ": ")
+
+                    test_dict = selfref_results[test]
+                    for ref in sorted(test_dict, key = lambda x: -len(test_dict[x])):
+                        if args.verbose > 1 or not best_found:
+                            print("       " + hex(ref) + ": " + ", ".join([hex(x) for x in sorted(test_dict[ref])]))
+                        if best_found is None:
+                            for dtb in test_dict[ref]:
+                                scan_results.append((test, dtb))
+                            best_found = ref
+                        else:
+                            # Remove results that had multiple matches, a real DTB probably won't reference itself twice
+                            for dtb in test_dict[ref]:
+                                if (test, dtb) in scan_results:
+                                    scan_results.remove((test, dtb))
+                print("   Results")
+
+            # Populate the guesses based on the scan_results
             guesses = dict([(test.layer_type.__name__, set()) for test in tests])
-            hits = ctx.memory["data" + str(i)].scan(ctx, PageMapScanner(tests))
-            for test, dtb in sorted(hits):
+            for test, dtb in scan_results:
                 guesses[test.layer_type.__name__].add(dtb)
+
+            # Guesses should be a dictionary mapping tests to sets of most likely dtbs, the lowest of which is then chosen
             arch = None
-            for guess in sorted(guesses, key = lambda x: -len(guesses[x])):
-                if not arch and len(guesses[guess]) > 0:
-                    arch = guess
-                print("    " + guess + ": " + ", ".join([hex(x) for x in sorted(guesses[guess])]))
+            for guess_arch in sorted(guesses, key = lambda x: -len(guesses[x])):
+                if not arch and len(guesses[guess_arch]) > 0:
+                    arch = guess_arch
+                if args.verbose:
+                    print("    " + guess_arch + ": " + ", ".join([hex(x) for x in sorted(guesses[guess_arch])]))
             if arch:
                 print("[!] OS Guess:", arch, "with DTB", hex(list(guesses[arch])[0]))
             else:
