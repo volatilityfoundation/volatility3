@@ -86,6 +86,40 @@ class DtbTestPae(DtbTest):
                 return dtb
 
 
+class DtbSelfReferential(DtbTest):
+    def __init__(self, layer_type, ptr_struct, ptr_reference, mask):
+        super().__init__(layer_type = layer_type,
+                         ptr_struct = ptr_struct,
+                         ptr_reference = ptr_reference,
+                         mask = mask)
+
+    def __call__(self, data, data_offset, page_offset):
+        page = data[page_offset:page_offset + PAGE_SIZE]
+        if not page:
+            return
+        ref_pages = set()
+        for ref in range(0, PAGE_SIZE, self.ptr_size):
+            ptr_data = page[ref:ref + self.ptr_size]
+            if len(ptr_data) == self.ptr_size:
+                ptr, = struct.unpack(self.ptr_struct, ptr_data)
+                if ((ptr & self.mask) == (data_offset + page_offset)) and (data_offset + page_offset > 0):
+                    ref_pages.add(ref)
+        if ref_pages:
+            return (data_offset + page_offset), ref_pages
+
+
+class DtbSelfRef32bit(DtbSelfReferential):
+    def __init__(self):
+        super().__init__(layer_type = layers.intel.Intel, ptr_struct = "I", ptr_reference = 0x300,
+                         mask = 0xFFFFF000)
+
+
+class DtbSelfRef64bit(DtbSelfReferential):
+    def __init__(self):
+        super().__init__(layer_type = layers.intel.Intel32e, ptr_struct = "Q", ptr_reference = 0x1ED,
+                         mask = 0x3FFFFFFFFFF000)
+
+
 class PageMapScanner(interfaces.layers.ScannerInterface):
     overlap = 0x4000
     tests = [DtbTest32bit, DtbTest64bit, DtbTestPae]
