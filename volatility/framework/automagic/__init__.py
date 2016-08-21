@@ -1,6 +1,7 @@
 import sys
 
 from volatility.framework import class_subclasses, import_files, interfaces
+from volatility.framework.automagic import construct_layers, stacker, windows
 from volatility.framework.configuration import MultiRequirement
 
 

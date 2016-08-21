@@ -6,7 +6,7 @@ if __name__ == "__main__":
 
 import struct
 
-from volatility.framework import automagic, interfaces, layers, validity
+from volatility.framework import interfaces, layers, validity
 from volatility.framework.configuration import requirements
 
 PAGE_SIZE = 0x1000
@@ -142,12 +142,10 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
                     yield (test, result)
 
 
-class PageMapOffsetHelper(interfaces.automagic.AutomagicInterface):
+class IntelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic.StackerLayerInterface):
     priority = 20
-
-    def __init__(self):
-        super().__init__()
-        self.tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
+    stack_order = 90
+    tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
 
     def branch_leave(self, node, config_path):
         """Ensure we're called on internal nodes as well as external"""
@@ -157,17 +155,9 @@ class PageMapOffsetHelper(interfaces.automagic.AutomagicInterface):
     def __call__(self, context, config_path, requirement):
         useful = []
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        if isinstance(requirement, requirements.TranslationLayerRequirement):
+        if (isinstance(requirement, requirements.TranslationLayerRequirement) and
+                requirement.requirements.get("class", None)):
             class_req = requirement.requirements["class"]
-            if not class_req.validate(context, sub_config_path):
-                # All the intel spaces require the same kind of parameters, so pick one for the requirements
-                context.config.branch(config_path)
-                automagic.run(context, layers.intel.Intel,
-                              interfaces.configuration.path_join(config_path, requirement.name))
-
-                # If a class hasn't been chosen, look through the underlying config for appropriate parameters
-                # If possible run scan and choose an appropriate class
-                pass
 
             for test in self.tests:
                 if (test.layer_type.__module__ + "." + test.layer_type.__name__ ==
@@ -188,6 +178,20 @@ class PageMapOffsetHelper(interfaces.automagic.AutomagicInterface):
         else:
             for subreq in requirement.requirements.values():
                 self(context, sub_config_path, subreq)
+
+    @classmethod
+    def stack(cls, context, layer_name):
+        """Attempts to determine and stack an intel layer on a physical layer where possible"""
+        hits = context.memory[layer_name].scan(context, PageMapScanner(cls.tests))
+        new_layer = None
+        for test, dtb in hits:
+            new_layer = context.memory.free_layer_name("IntelLayer")
+            layer = test.layer_type(context,
+                                    config_path = interfaces.configuration.path_join("IntelHelper", new_layer),
+                                    name = new_layer,
+                                    page_map_offset = dtb)
+            break
+        return new_layer
 
 
 if __name__ == '__main__':

@@ -8,9 +8,29 @@ class AutomagicInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     priority = 10
 
-    def __init__(self):
-        super().__init__()
-
     @abstractmethod
     def __call__(self, context, config_path, configurable):
         """Runs the automagic over the configurable"""
+
+
+class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+    """Class that takes a lower layer and attempts to build on it
+
+       stack_order determines the order (from low to high) that stacking layers
+       should be attempted lower levels should have lower stack_orders
+    """
+
+    stack_order = 0
+
+    @classmethod
+    @abstractmethod
+    def stack(self, context, layer_name):
+        """Method to determine whether this builder can operate on the named layer,
+           If so, modify the context appropriately.
+
+           Returns the name of any new_layer stacked on top of this layer or None
+           The stacking is therefore strictly linear rather than tree driven.
+
+           Configuration options provided by the context are ignored, and defaults
+           are to be used by this method to build a space where possible
+        """
