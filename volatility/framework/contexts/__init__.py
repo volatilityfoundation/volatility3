@@ -1,4 +1,4 @@
-from volatility.framework import interfaces, layers, symbols
+from volatility.framework import interfaces, symbols
 from volatility.framework.configuration import HierarchicalDict
 
 __author__ = 'mike'
@@ -23,7 +23,7 @@ class Context(interfaces.context.ContextInterface):
         """
         super().__init__()
         self._symbol_space = symbols.SymbolSpace(natives)
-        self._memory = layers.Memory()
+        self._memory = interfaces.layers.Memory()
         self._config = HierarchicalDict()
 
     # ## Symbol Space Functions
