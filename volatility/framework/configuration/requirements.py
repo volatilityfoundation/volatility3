@@ -92,11 +92,12 @@ class TranslationLayerRequirement(interfaces.configuration.ConstructableRequirem
             name = self.name + str(counter)
             counter += 1
 
+        config_path = interfaces.configuration.path_join(config_path, self.name)
+
         args = {"context": context,
                 "config_path": config_path,
                 "name": name}
 
-        config_path = interfaces.configuration.path_join(config_path, self.name)
         if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if
                     not subreq.optional]):
             return False
@@ -130,11 +131,11 @@ class SymbolRequirement(interfaces.configuration.ConstructableRequirementInterfa
         if name in context.symbol_space:
             raise ValueError("Symbol space already contains a SymbolTable by the same name")
 
+        config_path = interfaces.configuration.path_join(config_path, self.name)
         args = {"context": context,
                 "config_path": config_path,
                 "name": name}
 
-        config_path = interfaces.configuration.path_join(config_path, self.name)
         if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if
                     not subreq.optional]):
             return False

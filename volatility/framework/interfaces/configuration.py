@@ -183,6 +183,10 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return self._context
 
     @property
+    def config_path(self):
+        return self._config_path
+
+    @property
     def config(self):
         return self._context.config.branch(self._config_path)
 
