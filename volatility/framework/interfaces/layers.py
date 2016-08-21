@@ -69,8 +69,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
     def __init__(self, context, config_path, name):
         super().__init__(context, config_path)
-        self._check_type(name, str)
-        self._name = name
+        self._name = self._check_type(name, str)
 
     @property
     def name(self):
