@@ -11,6 +11,8 @@ CONFIG_SEPARATOR = "."
 
 def path_join(*args):
     """Joins the config paths together"""
+    # If a path element (particularly the first) is empty, then remove it from the list
+    args = [arg for arg in args if arg]
     return CONFIG_SEPARATOR.join(args)
 
 
