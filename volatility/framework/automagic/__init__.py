@@ -2,7 +2,7 @@ import sys
 
 from volatility.framework import class_subclasses, import_files, interfaces
 from volatility.framework.automagic import construct_layers, stacker, windows
-from volatility.framework.configuration import MultiRequirement
+from volatility.framework.configuration import requirements
 
 
 def available():
@@ -30,7 +30,7 @@ def run(automagics, context, configurable, config_path = ""):
     configurable_class = configurable
     if isinstance(configurable, interfaces.configuration.ConfigurableInterface):
         configurable_class = configurable.__class__
-    requirement = MultiRequirement(name = configurable_class.__name__.lower())
+    requirement = requirements.MultiRequirement(name = configurable_class.__name__.lower())
     for req in configurable.get_requirements():
         requirement.add_requirement(req)
 
