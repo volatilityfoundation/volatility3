@@ -118,6 +118,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         """Returns a list of Requirement objects for this type of layer"""
         return []
 
+    # ## General scanning methods
+
     def _pre_scan(self, context, min_address, max_address, progress_callback, scanner):
         """Prepares the scanner based on standard procedures shared between TranslationLayers and DataLayers"""
         if progress_callback is not None:
@@ -204,6 +206,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 raise exceptions.LayerException("Mapping returned an overlapping element")
             self._context.memory.write(layer, mapped_offset, length)
             current_offset += length
+
+    # ## Scan implementation with knowledge of pages
 
     def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
         """Scans a Translation layer by chunk
