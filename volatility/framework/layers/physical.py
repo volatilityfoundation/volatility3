@@ -56,9 +56,6 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
         return [requirements.BytesRequirement(name = 'buffer', description = "The direct bytes to interact with",
                                               optional = False)]
 
-    def update_configuration(self):
-        self.config["buffer"] = self._buffer
-
 
 class FileLayer(interfaces.layers.DataLayerInterface):
     """a DataLayer backed by a file on the filesystem"""
@@ -140,6 +137,3 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     @classmethod
     def get_requirements(cls):
         return [requirements.StringRequirement(name = 'filename', optional = False)]
-
-    def update_configuration(self):
-        self.config['filename'] = self._filename

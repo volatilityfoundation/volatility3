@@ -196,9 +196,18 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def config(self):
         return self._context.config.branch(self._config_path)
 
-    @abstractmethod
-    def update_configuration(self):
-        """Ensures that if the class has been created, its configuration is correct"""
+    def build_configuration(self):
+        """Constructs a HierarchicalDictionary of all the options required to build this component in the current context.
+
+           Ensures that if the class has been created, it can be recreated using the configuration built
+           Inheriting classes must override this to ensure any dependent classes update their configurations too
+        """
+        result = HierarchicalDict()
+        for req in self.get_requirements():
+            value = getattr(self, "_" + req.name, req.default)
+            if value is not None:
+                result[req.name] = value
+        return result
 
     @classmethod
     def get_requirements(cls):

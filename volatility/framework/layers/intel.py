@@ -148,11 +148,6 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 requirements.IntRequirement(name = 'page_map_offset',
                                             optional = False)]
 
-    def update_configuration(self):
-        self.config["class"] = self.__class__.__name__
-        self.config["memory_layer"] = self._base_layer
-        self.config["page_map_offset"] = self._page_map_offset
-
 
 class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel architectures"""

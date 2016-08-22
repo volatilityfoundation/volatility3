@@ -228,6 +228,18 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 for x in scanner(chunk, offset):
                     yield x
 
+    def build_configuration(self):
+        config = super().build_configuration()
+
+        # Translation Layers are constructable, and therefore require a class configuration variable
+        config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
+        for req in self.get_requirements():
+            if isinstance(req, configuration.TranslationLayerRequirement):
+                layer = self.config.get(req.name, None)
+                if layer is not None:
+                    config.splice(req.name, self.context.memory[layer].build_configuration())
+        return config
+
 
 class Memory(validity.ValidityRoutines, collections.abc.Mapping):
     """Container for multiple layers of data"""
