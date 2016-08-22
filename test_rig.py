@@ -22,10 +22,9 @@ def utils_load_as():
     ctx = framework.contexts.Context(native_list)
     ctx.symbol_space.append(native_list)
 
-    from volatility.framework.symbols.windows import xp_sp2_x86_vtypes
-
-    virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
-    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
+    ntkrnlmp = vtypes.VTypeSymbolTable(name = 'ntkrnlmp',
+                                       vtype_pymodule = "volatility.framework.symbols.windows.xp_sp2_x86_vtypes",
+                                       vtype_variable = "ntkrnlmp_types", native_types = ctx.symbol_space.natives)
     ntkrnlmp.set_type_class('_ETHREAD', volatility.framework.symbols.windows.extensions._ETHREAD)
     ntkrnlmp.set_type_class('_LIST_ENTRY', volatility.framework.symbols.windows.extensions._LIST_ENTRY)
     ctx.symbol_space.append(ntkrnlmp)
@@ -41,7 +40,11 @@ def test_symbols():
     virtual_types = xp_sp2_x86_vtypes.ntkrnlmp_types
     virtual_types['TEST_POINTER'] = [0x4, {'point1': [0x0, ['pointer', ['TEST_SYMBOL']]]}]
     virtual_types['TEST_SYMBOL'] = [0x6, {'test1': [0x0, ['unsigned int']], 'test2': [0x4, ['unsigned short']]}]
-    ntkrnlmp = vtypes.VTypeSymbolTable('ntkrnlmp', virtual_types, ctx.symbol_space.natives)
+    ntkrnlmp = vtypes.VTypeSymbolTable(name = 'ntkrnlmp',
+                                       vtype_pymodule = "volatility.framework.symbols.windows.xp_sp2_x86_vtypes",
+                                       vtype_variable = "ntkrnlmp_types",
+                                       native_types = ctx.symbol_space.natives)
+    # TODO: Find a way to alter the virtual types if this test is required
 
     ctx.symbol_space.append(ntkrnlmp)
 
@@ -55,8 +58,8 @@ def test_symbols():
 
 def test_memory():
     ctx = utils_load_as()
-
-    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical', filename = 'trig_data.bin')
+    ctx.config["memtest.filename"] = 'trig_data.bin'
+    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical')
     ctx.memory.add_layer(base)
     val = ctx.object('ntkrnlmp!TEST_POINTER', 'physical', 0)
     print(hex(val.point1.test1), val.point1.test2)
@@ -64,19 +67,22 @@ def test_memory():
 
 def test_kdbgfind():
     ctx = utils_load_as()
-    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical',
-                                     filename = '/run/media/mike/disk/memory/xp-laptop-2005-06-25.img')
+    ctx.config["memtest.filename"] = '/run/media/mike/disk/memory/xp-laptop-2005-06-25.img'
+    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical')
     ctx.memory.add_layer(base)
-    intel = layers.intel.Intel(ctx, 'kernel', 'physical', page_map_offset = 0x39000)
+    ctx.config["memtest.memory_layer"] = 'physical'
+    ctx.config["memtest.page_map_offset"] = 0x39000
+    intel = layers.intel.Intel(ctx, config_path = "memtest", name = 'kernel')
     ctx.memory.add_layer(intel)
 
 
 def intel32(ctx):
-    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical',
-                                     filename = '/run/media/mike/disk/memory/xp-laptop-2005-06-25.img')
+    ctx.config["memtest.filename"] = '/run/media/mike/disk/memory/xp-laptop-2005-06-25.img'
+    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical')
     ctx.memory.add_layer(base)
-    intel = layers.intel.Intel(ctx, config_path = "memtest", name = 'kernel', memory_layer = 'physical',
-                               page_map_offset = 0x39000)
+    ctx.config["memtest.memory_layer"] = 'physical'
+    ctx.config["memtest.page_map_offset"] = 0x39000
+    intel = layers.intel.Intel(ctx, config_path = "memtest", name = 'kernel')
     x = [0x823c87c0, 0x81fdf020, 0x81f5a3b8, 0x81f8eb10, 0x820e0da0, 0x82199668, 0x81fa5aa0, 0x81fa8650, 0x81faba78,
          0x81fa8240, 0x81f8dda0, 0x81f6e7e8, 0x81f9a670, 0x81f5f020, 0x8202bda0, 0x82113c48, 0x81f67500, 0x81f6ca90,
          0x820dd588, 0x82025608, 0x81faf280, 0x821125d0, 0x82076558, 0x81f68518, 0x82059da0, 0x81f6db28, 0x82021a78,
@@ -87,11 +93,12 @@ def intel32(ctx):
 
 
 def intelpae(ctx):
-    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical',
-                                     filename = '/run/media/mike/disk/memory/private/jon-fres.dmp')
+    ctx.config["memtest.filename"] = '/run/media/mike/disk/memory/private/jon-fres.dmp'
+    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical')
     ctx.memory.add_layer(base)
-    intel = layers.intel.IntelPAE(ctx, config_path = "memtest", name = 'intel', memory_layer = 'physical',
-                                  page_map_offset = 0x319000)
+    ctx.config["memtest.memory_layer"] = 'physical'
+    ctx.config["memtest.page_map_offset"] = 0x319000
+    intel = layers.intel.IntelPAE(ctx, config_path = "memtest", name = 'intel')
     x = [0x81bcc830, 0x81989940, 0x81915020, 0x8192ad18, 0x818fa7b8, 0x818f6da0, 0x818d1020, 0x818b2878, 0x8189f180,
          0x8188db58, 0x81884a40, 0x818766b0, 0x8185a948, 0x8183ad70, 0x81826020, 0x818a64c8, 0x81818020, 0x81800020,
          0x817ff460, 0x817eb020, 0x817e9020, 0x817a62a8, 0x817a4b28, 0x81865020, 0x817972c0]
@@ -99,11 +106,12 @@ def intelpae(ctx):
 
 
 def intel32e(ctx):
-    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'data',
-                                     filename = '/run/media/mike/disk/memory/private/ikelos-winxpsp2-x64.dmp')
+    ctx.config["memtest.filename"] = '/run/media/mike/disk/memory/private/ikelos-winxpsp2-x64.dmp'
+    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'data')
     ctx.memory.add_layer(base)
-    intel = layers.intel.Intel32e(ctx, config_path = "memtest", name = 'kernel', memory_layer = 'data',
-                                  page_map_offset = 0x3c3000)
+    ctx.config["memtest.memory_layer"] = 'data'
+    ctx.config["memtest.page_map_offset"] = 0x3c3000
+    intel = layers.intel.Intel32e(ctx, config_path = "memtest", name = 'kernel')
     x = [0xfffffadffa517c20, 0xfffffadffa2c9510, 0xfffffadffb16a660, 0xfffffadff9d77c20, 0xfffffadffb0fe040,
          0xfffffadffb0f2040, 0xfffffadffb0c2040, 0xfffffadffb0b7c20, 0xfffffadffb087c20, 0xfffffadffb06a760,
          0xfffffadffb039c20, 0xfffffadffb02c040, 0xfffffadffafe9c20, 0xfffffadffafa7040, 0xfffffadffaf2e040,
@@ -133,11 +141,12 @@ def test_translation():
 
 def test_plugin():
     ctx = utils_load_as()
-    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical',
-                                     filename = '/run/media/mike/disk/memory/xp-laptop-2005-06-25.img')
+    ctx.config["memtest.filename"] = '/run/media/mike/disk/memory/xp-laptop-2005-06-25.img'
+    base = layers.physical.FileLayer(ctx, config_path = "memtest", name = 'physical')
     ctx.memory.add_layer(base)
-    intel = layers.intel.Intel(ctx, config_path = "memtest", name = 'kernel', memory_layer = 'physical',
-                               page_map_offset = 0x39000)
+    ctx.config["memtest.memory_layer"] = 'physical'
+    ctx.config["memtest.page_map_offset"] = 0x39000
+    intel = layers.intel.Intel(ctx, config_path = "memtest", name = 'kernel')
     ctx.memory.add_layer(intel)
 
     import volatility.plugins.windows.pslist as pslist
