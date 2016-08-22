@@ -183,6 +183,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         # This also allows constructed objects to populate a configuration without too much trouble
         for requirement in self.get_requirements():
             # Create the (private) properties using the config as backend storage
+            # TODO: Based on the requirement, do proper type checking
             setattr(self, "_" + requirement.name, self.config.get(requirement.name, requirement.default))
 
     @property
