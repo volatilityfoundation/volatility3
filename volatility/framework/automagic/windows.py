@@ -142,7 +142,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
                     yield (test, result)
 
 
-class IntelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic.StackerLayerInterface):
+class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic.StackerLayerInterface):
     priority = 20
     stack_order = 90
     tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
