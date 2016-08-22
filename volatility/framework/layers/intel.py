@@ -19,10 +19,10 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 "architecture": "ia32"
                 }
 
-    def __init__(self, context, config_path, name, page_map_offset, memory_layer, swap_layer = None):
+    def __init__(self, context, config_path, name):
         super().__init__(context, config_path, name)
-        self._base_layer = self._check_type(memory_layer, str)
-        self._page_map_offset = self._check_type(page_map_offset, int)
+        self._base_layer = self._check_type(self.config["memory_layer"], str)
+        self._page_map_offset = self._check_type(self.config["page_map_offset"], int)
         # All Intel address spaces work on 4096 byte pages
         self._page_size_in_bits = 12
 

@@ -163,11 +163,6 @@ class ConstructableRequirementInterface(RequirementInterface):
         if requirement_dict is None:
             requirement_dict = {}
 
-        node_config = context.config.branch(config_path)
-        # Construct the class
-        for req in cls.get_requirements():
-            if req.name in node_config.data and req.name != "class":
-                requirement_dict[req.name] = node_config.data[req.name]
         # Fulfillment must happen, exceptions happening here mean the requirements aren't correct
         # and these need to be raised and fixed, rather than caught and ignored
         obj = cls(**requirement_dict)
@@ -184,6 +179,12 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._context = self._check_type(context, ContextInterface)
         self._config_path = self._check_type(config_path, str)
 
+        # Store these programmatically, so we don't keep repreating the requirements
+        # This also allows constructed objects to populate a configuration without too much trouble
+        for requirement in self.get_requirements():
+            # Create the (private) properties using the config as backend storage
+            setattr(self, "_" + requirement.name, self.config.get(requirement.name, requirement.default))
+
     @property
     def context(self):
         return self._context
@@ -191,6 +192,10 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     @property
     def config_path(self):
         return self._config_path
+
+    @config_path.setter
+    def config_path(self, value):
+        self._config_path = self._check_type(value, str)
 
     @property
     def config(self):

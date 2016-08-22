@@ -63,16 +63,16 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     provides = {"type": "physical"}
     priority = 20
 
-    def __init__(self, context, config_path, name, filename):
+    def __init__(self, context, config_path, name):
         super().__init__(context, config_path, name)
 
-        self._filename = filename
+        self._filename = self.config["filename"]
         self._file_ = None
-        self._size = os.path.getsize(filename)
+        self._size = os.path.getsize(self._filename)
 
     @property
     def _file(self):
-        """Property to prevent the intializer storing an unserializable open file (for context cloning)"""
+        """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
         mode = "rb"
         if not self._file_:

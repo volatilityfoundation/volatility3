@@ -183,15 +183,17 @@ class IntelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic.
     def stack(cls, context, layer_name):
         """Attempts to determine and stack an intel layer on a physical layer where possible"""
         hits = context.memory[layer_name].scan(context, PageMapScanner(cls.tests))
-        new_layer = None
+        layer = None
         for test, dtb in hits:
-            new_layer = context.memory.free_layer_name("IntelLayer")
+            new_layer_name = context.memory.free_layer_name("IntelLayer")
+            config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
+            context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
+            context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = dtb
             layer = test.layer_type(context,
-                                    config_path = interfaces.configuration.path_join("IntelHelper", new_layer),
-                                    name = new_layer,
-                                    page_map_offset = dtb)
+                                    config_path = config_path,
+                                    name = new_layer_name)
             break
-        return new_layer
+        return layer
 
 
 if __name__ == '__main__':
@@ -215,10 +217,11 @@ if __name__ == '__main__':
     nativelst = native.x86NativeTable
     ctx = contexts.Context(nativelst)
     for filename in args.filenames:
+        ctx.config[
+            interfaces.configuration.path_join('config' + str(args.filenames.index(filename)), "filename")] = filename
         data = layers.physical.FileLayer(ctx,
                                          'config' + str(args.filenames.index(filename)),
-                                         'data' + str(args.filenames.index(filename)),
-                                         filename = filename)
+                                         'data' + str(args.filenames.index(filename)))
         ctx.memory.add_layer(data)
 
     tests = []

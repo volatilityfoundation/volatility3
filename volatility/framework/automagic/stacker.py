@@ -24,11 +24,11 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             self.local_store = self.location.path
 
         new_context = context.clone()
-        current_layer = context.memory.free_layer_name()
-        # This must be specific to get us started
-        new_context.add_layer(
-            physical.FileLayer(new_context, interfaces.configuration.path_join("automagic_general", current_layer),
-                               current_layer, self.local_store))
+        current_layer_name = context.memory.free_layer_name()
+        current_config_path = interfaces.configuration.path_join("automagic_general", current_layer_name)
+        # This must be specific to get us started, setup the config and run
+        new_context.config[interfaces.configuration.path_join(current_config_path, "filename")] = self.local_store
+        new_context.add_layer(physical.FileLayer(new_context, current_config_path, current_layer_name))
 
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
@@ -42,15 +42,16 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             for stacker_cls in stack_set:
                 stacker = stacker_cls()
                 try:
-                    new_layer = stacker.stack(new_context, current_layer)
+                    new_layer = stacker.stack(new_context, current_layer_name)
+                    new_context.memory.add_layer(new_layer)
                     break
                 except Exception as excp:
                     pass
             else:
                 stacked = False
             if new_layer and stacker_cls:
-                stacked_layers = [new_layer] + stacked_layers
-                current_layer = new_layer
+                stacked_layers = [new_layer.name] + stacked_layers
+                current_layer_name = new_layer.name
                 stacked = True
                 stack_set.remove(stacker_cls)
 
