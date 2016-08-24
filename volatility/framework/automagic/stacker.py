@@ -7,15 +7,17 @@ from volatility.framework.layers import physical
 
 class LayerStacker(interfaces.automagic.AutomagicInterface):
     """Class that attempts to build up """
-    priority = 10
+    # Most important automagic, must happen first!
+    priority = 0
 
-    def __call__(self, context, config_path, _):
+    def __call__(self, context, config_path, requirement):
         """Runs the automagic over the configurable"""
         # Bow out quickly if the UI hasn't provided a single_location
         if "ui.single_location" not in context.config:
             return
         location = context.config["ui.single_location"]
         self._check_type(location, str)
+        self._check_type(requirement, interfaces.configuration.RequirementInterface)
         self.location = parse.urlparse(location)
 
         # Setup the local copy of the resource
