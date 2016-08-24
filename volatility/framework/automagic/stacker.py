@@ -26,7 +26,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             self.local_store = self.location.path
 
         new_context = context.clone()
-        current_layer_name = context.memory.free_layer_name()
+        current_layer_name = context.memory.free_layer_name("FileLayer")
         current_config_path = interfaces.configuration.path_join("automagic_general", current_layer_name)
         # This must be specific to get us started, setup the config and run
         new_context.config[interfaces.configuration.path_join(current_config_path, "filename")] = self.local_store
@@ -34,7 +34,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
-        stacked_layers = []
+        stacked_layers = [current_layer_name]
         stack_set = sorted(volatility.framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
                            key = lambda x: x.stack_order)
         while stacked == True:
