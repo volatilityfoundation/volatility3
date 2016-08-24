@@ -211,7 +211,8 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         result = HierarchicalDict()
         for req in self.get_requirements():
             value = getattr(self, "_" + req.name, req.default)
-            if value is not None:
+            # Do not include the name of constructed classes
+            if value is not None and not isinstance(req, ConstructableRequirementInterface):
                 result[req.name] = value
         return result
 
