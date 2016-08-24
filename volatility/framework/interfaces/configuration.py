@@ -214,6 +214,14 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             # Do not include the name of constructed classes
             if value is not None and not isinstance(req, ConstructableRequirementInterface):
                 result[req.name] = value
+            if isinstance(req, TranslationLayerRequirement):
+                layer = self.config.get(req.name, None)
+                if layer is not None:
+                    result.splice(req.name, self.context.memory[layer].build_configuration())
+            elif isinstance(req, SymbolRequirement):
+                # SymbolRequirements have a class subrequirement, but the SymbolTables themselves are not configurable
+                symbol_class = self.config.get(path_join(req.name, "class"), None)
+                result[path_join(req.name, "class")] = symbol_class
         return result
 
     @classmethod

@@ -157,12 +157,6 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
         # Translation Layers are constructable, and therefore require a class configuration variable
         config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
-        for req in self.get_requirements():
-            if isinstance(req, configuration.TranslationLayerRequirement):
-                layer = self.config.get(req.name, None)
-                if layer is not None:
-                    config.splice(req.name, self.context.memory[layer].build_configuration())
-                    # Delete the layer name, because is not part of the fixed config
         return config
 
 
