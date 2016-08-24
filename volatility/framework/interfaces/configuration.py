@@ -353,7 +353,7 @@ class HierarchicalDict(collections.Mapping):
 
     def __str__(self):
         """Turns the Hierarchical dict into a string representation"""
-        return json.dumps(dict([(key, self[key]) for key in self.generator()]), indent = 2)
+        return json.dumps(dict([(key, self[key]) for key in sorted(self.generator())]), indent = 2)
 
 
 class TranslationLayerRequirement(ConstructableRequirementInterface):
