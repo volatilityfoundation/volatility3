@@ -298,7 +298,7 @@ class HierarchicalDict(collections.Mapping):
         """Set an item or appends a whole subtree at a key location"""
         if self.separator in key:
             subdict = self._subdict.get(self._key_head(key), HierarchicalDict(separator = self.separator))
-            subdict[self._key_tail(key)] = value
+            subdict._setitem(self._key_tail(key), value, is_data)
             self._subdict[self._key_head(key)] = subdict
         else:
             if is_data:
