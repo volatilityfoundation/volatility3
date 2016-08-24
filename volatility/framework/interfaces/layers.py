@@ -152,6 +152,19 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
             for x in scanner(chunk, offset):
                 yield x
 
+    def build_configuration(self):
+        config = super().build_configuration()
+
+        # Translation Layers are constructable, and therefore require a class configuration variable
+        config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
+        for req in self.get_requirements():
+            if isinstance(req, configuration.TranslationLayerRequirement):
+                layer = self.config.get(req.name, None)
+                if layer is not None:
+                    config.splice(req.name, self.context.memory[layer].build_configuration())
+                    # Delete the layer name, because is not part of the fixed config
+        return config
+
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     # Unfortunately class attributes can't easily be inheritted from parent classes
@@ -227,18 +240,6 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                     progress_callback(progress / total_size)
                 for x in scanner(chunk, offset):
                     yield x
-
-    def build_configuration(self):
-        config = super().build_configuration()
-
-        # Translation Layers are constructable, and therefore require a class configuration variable
-        config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
-        for req in self.get_requirements():
-            if isinstance(req, configuration.TranslationLayerRequirement):
-                layer = self.config.get(req.name, None)
-                if layer is not None:
-                    config.splice(req.name, self.context.memory[layer].build_configuration())
-        return config
 
 
 class Memory(validity.ValidityRoutines, collections.abc.Mapping):
