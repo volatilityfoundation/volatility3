@@ -169,7 +169,6 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
             if ("memory_layer" in requirement.requirements and
                     requirement.requirements["memory_layer"].validate(context, sub_config_path)):
                 physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
-                # TODO: Convert to scanner framework
                 hits = context.memory[physical_layer].scan(context, PageMapScanner(useful))
                 for test, dtb in hits:
                     context.config[interfaces.configuration.path_join(sub_config_path, "page_map_offset")] = dtb
