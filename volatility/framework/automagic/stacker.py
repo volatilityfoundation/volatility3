@@ -58,6 +58,29 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 stack_set.remove(stacker_cls)
 
         if stacked_layers:
-            # Run through the layers we stacked and see if any of them will fit any of the requirements in the original context requirement Tree.
-            # If they do take the highest one (furthest developed) and use that
-            pass
+
+            result = self.find_suitable_requirements(stacked_layers, requirement, new_context, config_path)
+            if result:
+                path, layer = result
+                # splice in the new configuration into the original context
+                context.config.splice(path, new_context.memory[layer].build_configuration())
+
+    def find_suitable_requirements(self, stacked_layers, requirement, context, config_path):
+        child_config_path = interfaces.configuration.path_join(config_path, requirement.name)
+        if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
+            if not requirement.validate(context, config_path):
+                original_setting = context.config.get(child_config_path, None)
+                for layer in stacked_layers:
+                    context.config[child_config_path] = layer
+                    if requirement.validate(context, config_path):
+                        return child_config_path, layer
+                else:
+                    # Clean-up to restore the config
+                    if original_setting:
+                        context.config[child_config_path] = original_setting
+                    else:
+                        del context.config[child_config_path]
+        for req_name, req in requirement.requirements.items():
+            result = self.find_suitable_requirements(stacked_layers, req, context, child_config_path)
+            if result:
+                return result
