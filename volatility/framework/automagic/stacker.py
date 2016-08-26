@@ -45,8 +45,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 stacker = stacker_cls()
                 try:
                     new_layer = stacker.stack(new_context, current_layer_name)
-                    new_context.memory.add_layer(new_layer)
-                    break
+                    if new_layer:
+                        new_context.memory.add_layer(new_layer)
+                        break
                 except Exception as excp:
                     pass
             else:
