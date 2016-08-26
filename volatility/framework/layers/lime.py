@@ -40,6 +40,9 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
         self._minaddr = 0
         self._maxaddr = 0
 
+        # We must run this on creation in order to get the right min/maxaddr in case scanning is our first action
+        self._load_segments()
+
     @property
     def minimum_address(self):
         return self._minaddr
@@ -145,3 +148,17 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'base_layer',
                                                          optional = False)]
+
+
+class LimeStacker(interfaces.automagic.StackerLayerInterface):
+    stack_order = 10
+
+    @classmethod
+    def stack(cls, context, layer_name):
+        try:
+            LimeLayer._check_header(context.memory[layer_name])
+        except LimeFormatException:
+            return
+        new_name = context.memory.free_layer_name("LimeLayer")
+        context.config[interfaces.configuration.path_join(new_name, "base_layer")] = layer_name
+        return LimeLayer(context, new_name, new_name)
