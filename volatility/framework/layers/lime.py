@@ -29,10 +29,10 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
     # XXX move this to a custom SymbolSpace?
     _header_struct = struct.Struct('<IIQQQ')
 
-    def __init__(self, context, config_path, name, base_layer):
+    def __init__(self, context, config_path, name):
         super().__init__(context, config_path, name)
 
-        self._base_layer = base_layer
+        self._base_layer = self.config["base_layer"]
 
         # list of tuples (logical start, base start, size)
         # loaded by _load_segments() on first access
@@ -57,14 +57,7 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
         segments = []
 
         while offset < base_maxaddr:
-            header_data = base_layer.read(offset, header_size)
-
-            (magic, version, start, end, reserved) = self._header_struct.unpack(header_data)
-            if magic != self.MAGIC:
-                raise LimeFormatException("bad magic 0x%x at file offset 0x%x" % (magic, offset))
-
-            if version != self.VERSION:
-                raise LimeFormatException("unexpected version %d at file offset 0x%x" % (version, offset))
+            start, end = self._check_header(base_layer, offset)
 
             if start < maxaddr or end < start:
                 raise LimeFormatException("bad start/end 0x%x/0x%x at file offset 0x%x" % (start, end, offset))
@@ -80,6 +73,16 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
         self._segments = segments
         self._minaddr = segments[0][0]
         self._maxaddr = maxaddr
+
+    @classmethod
+    def _check_header(cls, base_layer, offset = 0):
+        header_data = base_layer.read(offset, cls._header_struct.size)
+        (magic, version, start, end, reserved) = cls._header_struct.unpack(header_data)
+        if magic != cls.MAGIC:
+            raise LimeFormatException("bad magic 0x%x at file offset 0x%x" % (magic, offset))
+        if version != cls.VERSION:
+            raise LimeFormatException("unexpected version %d at file offset 0x%x" % (version, offset))
+        return start, end
 
     def _find_segment(self, offset):
         """Finds the segment containing a given offset
