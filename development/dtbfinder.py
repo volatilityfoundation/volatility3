@@ -80,7 +80,8 @@ if __name__ == '__main__':
                     selfref_results[test] = test_dict
                 scan_results = []
                 print("   Self-referential data")
-                for test in selfref_results:
+                # Sort by largest pointer size, since the self-ref finder will find larger sizes when searching for smaller)
+                for test in sorted(selfref_results, lambda x: -x.ptr_size):
                     best_found = None
                     print("     " + test.layer_type.__name__ + ": ")
 
