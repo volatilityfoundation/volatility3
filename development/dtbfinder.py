@@ -1,3 +1,4 @@
+import statistics
 import sys
 
 # TODO: Rather nasty hack, when volatility's actually installed this would be unnecessary
@@ -85,18 +86,19 @@ if __name__ == '__main__':
 
                     test_dict = selfref_results[test]
                     for ref in sorted(test_dict, key = lambda x: -len(test_dict[x])):
-                        if args.verbose > 1 or not best_found:
-                            print("       " + hex(ref) + ": " + ", ".join([hex(x) for x in sorted(test_dict[ref])]))
+                        # Most self-referential DTBs should turn up multiple times because multiple processes should have their own DTB
+                        if len(test_dict[ref]) < 2:
+                            continue
                         if best_found is None:
-                            for dtb in test_dict[ref]:
-                                scan_results.append((test, dtb))
-                            best_found = ref
-                        else:
-                            # Remove results that had multiple matches, a real DTB probably won't reference itself twice
-                            for dtb in test_dict[ref]:
-                                if (test, dtb) in scan_results:
-                                    scan_results.remove((test, dtb))
-                print("   Results")
+                            # Most processes are spread out across significantly different pages
+                            # Therefore the standard deviation should be significant
+                            if statistics.stdev(test_dict[ref]) > 0x100000:
+                                for dtb in test_dict[ref]:
+                                    scan_results.append((test, dtb))
+                                best_found = ref
+                        if args.verbose > 1 or best_found == ref:
+                            print("       " + hex(ref) + ": " + ", ".join([hex(x) for x in sorted(test_dict[ref])]))
+            print("   Results")
 
             # Populate the guesses based on the scan_results
             guesses = dict([(test.layer_type.__name__, set()) for test in tests])

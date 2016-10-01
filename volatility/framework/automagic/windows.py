@@ -104,7 +104,8 @@ class DtbSelfReferential(DtbTest):
                 ptr, = struct.unpack(self.ptr_struct, ptr_data)
                 if ((ptr & self.mask) == (data_offset + page_offset)) and (data_offset + page_offset > 0):
                     ref_pages.add(ref)
-        if ref_pages:
+        # The DTB is extremely unlikely to refer back to itself. so the number of reference should always be exactly 1
+        if len(ref_pages) == 1:
             return (data_offset + page_offset), ref_pages
 
 
