@@ -67,7 +67,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
         if not dictionary:
             raise exceptions.SymbolSpaceError("Invalid vtype dictionary: " + repr(dictionary))
 
-        type_name = dictionary[0]
+        type_name = self._translate_vtype_to_intermed(dictionary[0])
 
         if type_name in self.natives.types:
             # The symbol is a native type
@@ -94,6 +94,14 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             raise exceptions.SymbolSpaceError("Unknown vtype format: " + repr(dictionary))
 
         return objects.templates.ReferenceTemplate(type_name = self.name + constants.BANG + type_name)
+
+    def _translate_vtype_to_intermed(self, name):
+        """Allows backwards compatibility by converting vtype identifiers to intermediate format identifiers"""
+        if name == 'Enumeration':
+            return 'enum'
+        elif name in ['BitField', 'String', 'Bytes']:
+            return name.lower()
+        return name
 
     @property
     def types(self):
