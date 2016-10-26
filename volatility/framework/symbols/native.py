@@ -34,7 +34,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
     def get_type(self, type_name):
         """Resolves a symbol name into an object template
 
-           symbol_space is used to resolve any target symbols if they don't exist in this list
+           symbol_space is used to resolve any subtype symbols if they don't exist in this list
         """
         # NOTE: These need updating whenever the object init signatures change
         additional = {}
@@ -43,10 +43,10 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             obj = objects.Void
         elif type_name == 'array':
             obj = objects.Array
-            additional = {"count": 0, "target": self.get_type('void')}
+            additional = {"count": 0, "subtype": self.get_type('void')}
         elif type_name == 'enum':
             obj = objects.Enumeration
-            additional = {"target": self.get_type('void'), "choices": {}}
+            additional = {"subtype": self.get_type('void'), "choices": {}}
         elif type_name == 'bitfield':
             obj = objects.BitField
             additional = {"start_bit": 0, "end_bit": 0}
@@ -61,7 +61,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
 
         _native_type, native_format = self._native_dictionary[type_name]
         if type_name == 'pointer':
-            additional = {'target': self.get_type('void')}
+            additional = {'subtype': self.get_type('void')}
         return objects.templates.ObjectTemplate(self.get_type_class(type_name),  # pylint: disable=W0142
                                                 type_name = type_name,
                                                 struct_format = native_format,

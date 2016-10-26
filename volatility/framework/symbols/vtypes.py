@@ -14,7 +14,7 @@ from volatility.framework import constants, exceptions, interfaces, objects
 #
 # All symbol lists should take a label to an object template
 #
-# Templates for targets etc should be looked up recursively just like anything else
+# Templates for subtypes etc should be looked up recursively just like anything else
 # We therefore need a way to unroll rolled-up types
 # Generate mangled names on the fly (prohibits external calling)
 #
@@ -77,15 +77,15 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
             update = {}
             if type_name == 'array':
                 update['count'] = dictionary[1]
-                update['target'] = self._vtypedict_to_template(dictionary[2])
+                update['subtype'] = self._vtypedict_to_template(dictionary[2])
             elif type_name == 'pointer':
-                update["target"] = self._vtypedict_to_template(dictionary[1])
+                update['subtype'] = self._vtypedict_to_template(dictionary[1])
             elif type_name == 'Enumeration':
                 update = copy.deepcopy(dictionary[1])
-                update["target"] = self._vtypedict_to_template(update['target'])
+                update['subtype'] = self._vtypedict_to_template(update['target'])
             elif type_name == 'BitField':
                 update = dictionary[1]
-                update['target'] = self._vtypedict_to_template(update['native_type'])
+                update['subtype'] = self._vtypedict_to_template(update['native_type'])
             native_template.update_vol(**update)  # pylint: disable=W0142
             return native_template
 

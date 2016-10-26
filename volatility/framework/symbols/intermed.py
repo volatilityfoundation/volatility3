@@ -63,14 +63,14 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             update = {}
             if type_name == 'array':
                 update['count'] = dictionary['count']
-                update['target'] = self._interdict_to_template(dictionary['subtype'])
+                update['subtype'] = self._interdict_to_template(dictionary['subtype'])
             elif type_name == 'pointer':
-                update["target"] = self._interdict_to_template(dictionary['subtype'])
+                update['subtype'] = self._interdict_to_template(dictionary['subtype'])
             elif type_name == 'enum':
                 update = self._lookup_enum(dictionary['name'])
             elif type_name == 'bitfield':
                 update = {'start_bit': dictionary['bit_position'], 'end_bit': dictionary['bit_length']}
-                update['target'] = self._interdict_to_template(dictionary['type'])
+                update['subtype'] = self._interdict_to_template(dictionary['type'])
             native_template.update_vol(**update)  # pylint: disable=W0142
             return native_template
 
@@ -86,7 +86,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         if not lookup:
             raise exceptions.SymbolSpaceError("Unknown enumeration found: " + repr(name))
         result = {"choices": copy.deepcopy(lookup['constants']),
-                  "target": self.natives.get_type(lookup['base'])}
+                  "subtype": self.natives.get_type(lookup['base'])}
         return result
 
     def get_type(self, type_name):

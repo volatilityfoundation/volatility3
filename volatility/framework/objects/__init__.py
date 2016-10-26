@@ -146,13 +146,13 @@ class String(PrimitiveObject, str):
 class Pointer(Integer):
     """Pointer which points to another object"""
 
-    def __init__(self, context, type_name, object_info, struct_format, target = None):
-        self._check_type(target, templates.ObjectTemplate)
+    def __init__(self, context, type_name, object_info, struct_format, subtype = None):
+        self._check_type(subtype, templates.ObjectTemplate)
         super().__init__(context = context,
                          object_info = object_info,
                          type_name = type_name,
                          struct_format = struct_format)
-        self._vol['target'] = target
+        self._vol['subtype'] = subtype
 
     def dereference(self, layer_name = None):
         """Dereferences the pointer
@@ -162,14 +162,14 @@ class Pointer(Integer):
         """
         if layer_name is None:
             layer_name = self.vol.layer_name
-        return self.vol.target(context = self._context,
-                               object_info = interfaces.objects.ObjectInformation(
-                                   layer_name = layer_name,
-                                   offset = self,
-                                   parent = self))
+        return self.vol.subtype(context = self._context,
+                                object_info = interfaces.objects.ObjectInformation(
+                                    layer_name = layer_name,
+                                    offset = self,
+                                    parent = self))
 
     def __getattr__(self, attr):
-        """Convenience function to access unknown attributes by getting them from the target object"""
+        """Convenience function to access unknown attributes by getting them from the subtype object"""
         return getattr(self.dereference(), attr)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
@@ -180,40 +180,40 @@ class Pointer(Integer):
         @classmethod
         def children(cls, template):
             """Returns the children of the template"""
-            if 'target' in template.vol:
-                return [template.vol.target]
+            if 'subtype' in template.vol:
+                return [template.vol.subtype]
             return []
 
         @classmethod
         def replace_child(cls, template, old_child, new_child):
             """Substitutes the old_child for the new_child"""
-            if 'target' in template.vol:
-                if template.vol.target == old_child:
-                    template.update_vol(target = new_child)
+            if 'subtype' in template.vol:
+                if template.vol.subtype == old_child:
+                    template.update_vol(subtype = new_child)
 
 
 class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
 
-    def __new__(cls, context, type_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
-        cls._check_type(target, Integer)
-        value = target(context = context,
-                       type_name = type_name,
-                       object_info = object_info,
-                       struct_format = struct_format)
+    def __new__(cls, context, type_name, object_info, struct_format, subtype = None, start_bit = 0, end_bit = 0):
+        cls._check_type(subtype, Integer)
+        value = subtype(context = context,
+                        type_name = type_name,
+                        object_info = object_info,
+                        struct_format = struct_format)
         return cls._struct_type.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))
 
-    def __init__(self, context, type_name, object_info, struct_format, target = None, start_bit = 0, end_bit = 0):
+    def __init__(self, context, type_name, object_info, struct_format, subtype = None, start_bit = 0, end_bit = 0):
         super().__init__(context, type_name, object_info, struct_format)
-        self._vol['target'] = target
+        self._vol['subtype'] = subtype
         self._vol['start_bit'] = start_bit
         self._vol['end_bit'] = end_bit
 
     @classmethod
     def _template_children(cls, template):
-        """Returns the target type"""
-        if 'target' in template.vol:
-            return [template.vol.target]
+        """Returns the subtype"""
+        if 'subtype' in template.vol:
+            return [template.vol.subtype]
         return []
 
     def write(self, value):
@@ -232,40 +232,40 @@ class Enumeration(interfaces.objects.ObjectInterface):
 class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
 
-    def __init__(self, context, type_name, object_info, count = 0, target = None):
-        self._check_type(target, templates.ObjectTemplate)
+    def __init__(self, context, type_name, object_info, count = 0, subtype = None):
+        self._check_type(subtype, templates.ObjectTemplate)
         super().__init__(context = context,
                          type_name = type_name,
                          object_info = object_info)
         self._vol['count'] = self._check_type(count, int)
-        self._vol['target'] = target
+        self._vol['subtype'] = subtype
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
         @classmethod
         def size(cls, template):
-            """Returns the size of the array, based on the count and the target"""
-            if 'target' not in template.vol and 'count' not in template.vol:
-                raise TypeError("Array ObjectTemplate must be provided a count and target")
-            return template.vol.get('target', None).size * template.vol.get('count', 0)
+            """Returns the size of the array, based on the count and the subtype"""
+            if 'subtype' not in template.vol and 'count' not in template.vol:
+                raise TypeError("Array ObjectTemplate must be provided a count and subtype")
+            return template.vol.get('subtype', None).size * template.vol.get('count', 0)
 
         @classmethod
         def children(cls, template):
             """Returns the children of the template"""
-            if 'target' in template.vol:
-                return [template.vol.target]
+            if 'subtype' in template.vol:
+                return [template.vol.subtype]
             return []
 
         @classmethod
         def replace_child(cls, template, old_child, new_child):
             """Substitutes the old_child for the new_child"""
-            if 'target' in template.vol:
-                if template.vol['target'] == old_child:
-                    template.update_vol(target = new_child)
+            if 'subtype' in template.vol:
+                if template.vol['subtype'] == old_child:
+                    template.update_vol(subtype = new_child)
 
         @classmethod
         def relative_child_offset(cls, template, child):
             """Returns the relative offset from the head of the parent data to the child member"""
-            if 'target' in template and child == 'target':
+            if 'subtype' in template and child == 'subtype':
                 return 0
             raise IndexError("Member " + child + " not present in array template")
 
@@ -274,9 +274,9 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
         if i >= self.vol.count or 0 > i:
             raise IndexError
         object_info = ObjectInformation(layer_name = self.vol.layer_name,
-                                        offset = self.vol.offset + (self.vol.target.size * i),
+                                        offset = self.vol.offset + (self.vol.subtype.size * i),
                                         parent = self)
-        return self.vol.target(context = self._context, object_info = object_info)
+        return self.vol.subtype(context = self._context, object_info = object_info)
 
     def __len__(self):
         """Returns the length of the array"""
