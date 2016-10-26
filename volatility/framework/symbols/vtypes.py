@@ -82,10 +82,10 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
                 update["target"] = self._vtypedict_to_template(dictionary[1])
             elif type_name == 'Enumeration':
                 update = copy.deepcopy(dictionary[1])
-                update["target"] = self._vtypedict_to_template([update['target']])
+                update["target"] = self._vtypedict_to_template(update['target'])
             elif type_name == 'BitField':
                 update = dictionary[1]
-                update['target'] = self._vtypedict_to_template([update['native_type']])
+                update['target'] = self._vtypedict_to_template(update['native_type'])
             native_template.update_vol(**update)  # pylint: disable=W0142
             return native_template
 
