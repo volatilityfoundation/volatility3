@@ -39,8 +39,8 @@ class SymbolSpace(collections.abc.Mapping):
             for symbol_name in self._dict[table].get_symbols_by_type(type_name):
                 yield table + constants.BANG + symbol_name
 
-    def get_symbols_by_location(self, offset, table_name = None):
-        """Returns all symbols that exist at a specific relative offset"""
+    def get_symbols_by_location(self, address, table_name = None):
+        """Returns all symbols that exist at a specific relative address"""
         table_list = self._dict.values()
         if table_name is not None:
             if table_name in self._dict:
@@ -48,7 +48,7 @@ class SymbolSpace(collections.abc.Mapping):
             else:
                 table_list = []
         for table in table_list:
-            for symbol_name in self._dict[table].get_symbols_by_location(offset = offset):
+            for symbol_name in self._dict[table].get_symbols_by_location(address = address):
                 yield table + constants.BANG + symbol_name
 
     @property

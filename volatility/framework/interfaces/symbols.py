@@ -9,12 +9,12 @@ from volatility.framework import constants, exceptions, validity
 
 
 class Symbol(validity.ValidityRoutines):
-    def __init__(self, name, offset, type_name = None):
+    def __init__(self, name, address, type_name = None):
         self._name = self._check_type(name, str)
         if constants.BANG in self._name:
             raise ValueError("Symbol names cannot contain the symbol differentiator (" + constants.BANG + ")")
         self._location = None
-        self._offset = self._check_type(offset, int)
+        self._address = self._check_type(address, int)
         if type_name is None:
             type_name = name
         self._type_name = self._check_type(type_name, str)
@@ -31,9 +31,9 @@ class Symbol(validity.ValidityRoutines):
         return self._type_name
 
     @property
-    def offset(self):
-        """Returns the relative offset of the symbol within the compilation unit"""
-        return self._offset
+    def address(self):
+        """Returns the relative address of the symbol within the compilation unit"""
+        return self._address
 
 
 class SymbolTableInterface(validity.ValidityRoutines):
