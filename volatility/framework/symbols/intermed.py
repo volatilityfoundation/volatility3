@@ -20,6 +20,9 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             self._json = json.load(fp)
         self._validate_json()
         self._overrides = {}
+        self._symbol_cache = None
+
+    # TODO: Check the format and make use of the other metadata
 
     def _validate_json(self):
         if (not 'user_types' in self._json or
@@ -28,6 +31,22 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                 not 'symbols' in self._json or
                 not 'enums' in self._json):
             raise exceptions.SymbolSpaceError("Malformed JSON file provided")
+
+    def get_symbol(self, name):
+        """Returns the location offset given by the symbol name"""
+        symbol = self._json['symbols'].get(name, None)
+        if not symbol:
+            raise KeyError("Unknown symbol: {0}".format(name))
+        return interfaces.symbols.Symbol(name = name, address = symbol['address'])
+
+    @property
+    def symbols(self):
+        if not self._symbol_cache:
+            self._symbol_cache = [interfaces.symbols.Symbol(name = x, address = self._json['symbols'][x]['address']) for
+                                  x in self._json['symbols']]
+        return self._symbol_cache
+
+    # TODO: Add the ability to add/remove/change symbols after creation, note that this should invalidate the cache
 
     def get_type_class(self, name):
         return self._overrides.get(name, objects.Struct)
