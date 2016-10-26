@@ -20,7 +20,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             self._overrides[native_type] = native_class
         # Create this once early, because it may get used a lot
         self._types = set(self._native_dictionary).union(
-            {'Enumeration', 'array', 'BitField', 'void', 'pointer', 'String', 'Bytes'})
+            {'enum', 'array', 'bitfield', 'void', 'pointer', 'string', 'bytes', 'function'})
 
     def get_type_class(self, name):
         ntype, fmt = native_types.get(name, (objects.Integer, ''))
@@ -39,21 +39,21 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         # NOTE: These need updating whenever the object init signatures change
         additional = {}
         obj = None
-        if type_name == 'void':
+        if type_name == 'void' or type_name == 'function':
             obj = objects.Void
         elif type_name == 'array':
             obj = objects.Array
             additional = {"count": 0, "target": self.get_type('void')}
-        elif type_name == 'Enumeration':
+        elif type_name == 'enum':
             obj = objects.Enumeration
             additional = {"target": self.get_type('void'), "choices": {}}
-        elif type_name == 'BitField':
+        elif type_name == 'bitfield':
             obj = objects.BitField
             additional = {"start_bit": 0, "end_bit": 0}
-        elif type_name == 'String':
+        elif type_name == 'string':
             obj = objects.String
             additional = {"max_length": 0}
-        elif type_name == 'Bytes':
+        elif type_name == 'bytes':
             obj = objects.Bytes
             additional = {"length": 0}
         if obj is not None:

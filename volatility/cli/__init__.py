@@ -59,9 +59,10 @@ class CommandLine(object):
         ctx.config["ui.single_location"] = "file:///run/media/mike/disk/memory/private/jon-fres.dmp"
         ctx.config["plugins.pslist.offset"] = 0x01bcc830
 
-        ctx.config["plugins.pslist.ntkrnlmp.class"] = "volatility.framework.symbols.windows.WindowsKernelVTypeSymbols"
-        ctx.config["plugins.pslist.ntkrnlmp.vtype_pymodule"] = "volatility.framework.symbols.windows.xp_sp2_x86_vtypes"
-        ctx.config["plugins.pslist.ntkrnlmp.vtype_variable"] = "ntkrnlmp_types"
+        ctx.config[
+            "plugins.pslist.ntkrnlmp.class"] = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
+        ctx.config[
+            "plugins.pslist.ntkrnlmp.idd_filepath"] = "file:///home/mike/workspace/volatility3/aux/ntoskrnl.pdb.json"
 
         ###
         # BACK TO THE FRAMEWORK

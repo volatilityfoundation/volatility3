@@ -1,5 +1,5 @@
 from volatility.framework.configuration import requirements
-from volatility.framework.symbols import vtypes
+from volatility.framework.symbols import vtypes, intermed
 from volatility.framework.symbols.windows import extensions
 
 __author__ = 'mike'
@@ -21,3 +21,18 @@ class WindowsKernelVTypeSymbols(vtypes.VTypeSymbolTable):
         return [requirements.StringRequirement("vtype_pymodule", description = "Python module containing the vtypes"),
                 requirements.StringRequirement("vtype_variable",
                                                description = "Python vtypes variable within the module")]
+
+
+class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
+    provides = {"type": "interface"}
+
+    def __init__(self, context, config_path, name, idd_filepath):
+        super().__init__(name = name, idd_filepath = idd_filepath, native_types = context.symbol_space.natives)
+
+        # Set-up windows specific types
+        self.set_type_class('_ETHREAD', extensions._ETHREAD)
+        self.set_type_class('_LIST_ENTRY', extensions._LIST_ENTRY)
+
+    @classmethod
+    def get_requirements(cls):
+        return [requirements.StringRequirement("idd_filepath", description = "JSON file containnig the symbols")]

@@ -105,7 +105,7 @@ class SymbolSpace(collections.abc.Mapping):
             return getattr(self._dict[table_name], get_function)(component_name)
         elif name in self.natives.types:
             return getattr(self.natives, get_function)(name)
-        raise exceptions.SymbolError("Malformed symbol name")
+        raise exceptions.SymbolError("Malformed symbol name: " + repr(name))
 
     def get_type(self, type_name):
         """Takes a symbol name and resolves it
