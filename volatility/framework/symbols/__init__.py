@@ -6,10 +6,13 @@ Created on 7 Feb 2013
 
 import collections
 import collections.abc
+import logging
 import warnings
 
-from volatility.framework import objects, interfaces, exceptions, constants
+from volatility.framework import constants, exceptions, interfaces, objects
 from volatility.framework.symbols import native, vtypes, windows
+
+vollog = logging.getLogger(__name__)
 
 
 class SymbolType(object):
@@ -33,6 +36,8 @@ class SymbolSpace(collections.abc.Mapping):
         # Permanently cache all resolved symbols
         self._resolved = {}
 
+    ### Symbol functions
+
     def get_symbols_by_type(self, type_name):
         """Returns all symbols based """
         for table in self._dict.keys():
@@ -51,6 +56,8 @@ class SymbolSpace(collections.abc.Mapping):
             for symbol_name in self._dict[table].get_symbols_by_location(address = address):
                 yield table + constants.BANG + symbol_name
 
+    ### Native functions
+
     @property
     def natives(self):
         """Returns the native_types for this symbol space"""
@@ -62,6 +69,8 @@ class SymbolSpace(collections.abc.Mapping):
             warnings.warn(
                 "Resetting the native type can cause have drastic effects on memory analysis using this space")
         self._native_types = native_types
+
+    ### Space functions
 
     def __len__(self):
         """Returns the number of tables within the space"""
@@ -89,6 +98,23 @@ class SymbolSpace(collections.abc.Mapping):
         self._resolved = {}
         del self._dict[key]
 
+    ### Resolution functions
+
+    class _UnresolvedTemplate(objects.templates.ReferenceTemplate):
+        """Class to highlight when missing symbols are present
+
+           This class is identical to a reference template, but differentiable by its classname.
+           It will output a debug log to indicate when it has been instantiated and with what name.
+
+           This class is designed to be output ONLY as part of the SymbolSpace resolution system.
+           Individual SymbolTables that cannot resolve a symbol should still return a SymbolError to
+           indicate this failure in resolution.
+        """
+
+        def __init__(self, type_name = None, **kwargs):
+            vollog.debug("Unresolved symbol referenced: {0}".format(type_name))
+            super().__init__(type_name = type_name, **kwargs)
+
     def _weak_resolve(self, resolve_type, name):
         """Takes a symbol name and resolves it with ReferentialTemplates"""
         if resolve_type == SymbolType.TYPE:
@@ -102,7 +128,10 @@ class SymbolSpace(collections.abc.Mapping):
         if len(name_array) == 2:
             table_name = name_array[0]
             component_name = name_array[1]
-            return getattr(self._dict[table_name], get_function)(component_name)
+            try:
+                return getattr(self._dict[table_name], get_function)(component_name)
+            except (exceptions.SymbolError, KeyError):
+                return self._UnresolvedTemplate(name)
         elif name in self.natives.types:
             return getattr(self.natives, get_function)(name)
         raise exceptions.SymbolError("Malformed symbol name: " + repr(name))

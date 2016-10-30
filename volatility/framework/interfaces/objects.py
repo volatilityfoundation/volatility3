@@ -132,6 +132,30 @@ class Template(validity.ValidityRoutines):
         """Returns a volatility information object, much like the ObjectInterface provides"""
         return ReadOnlyMapping(self._vol)
 
+    @property
+    def children(self):
+        """A function that returns a list of child templates of a template
+
+           This is used to traverse the template tree
+        """
+        return []
+
+    @property
+    @abstractmethod
+    def size(self):
+        """Returns the size of the template"""
+
+    @abstractmethod
+    def relative_child_offset(self, child):
+        """A function that returns the relative offset of a child from its parent offset
+
+           This may throw exceptions including ChildNotFoundException and NotImplementedError
+        """
+
+    @abstractmethod
+    def replace_child(self, old_child, new_child):
+        """A function for replacing one child with another"""
+
     def update_vol(self, **new_arguments):
         """Updates the keyword arguments"""
         self._vol.update(new_arguments)

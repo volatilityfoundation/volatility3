@@ -3,8 +3,12 @@ Created on 1 Mar 2013
 
 @author: mike
 """
+import logging
 
 from volatility.framework import interfaces, validity
+from volatility.framework.exceptions import SymbolError
+
+vollog = logging.getLogger(__name__)
 
 
 class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
@@ -44,8 +48,6 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
     def replace_child(self, old_child, new_child):
         """A function for replacing one child with another
-
-           We pass in the kwargs directly so they can be changed
         """
         return self.vol.object_class.VolTemplateProxy.replace_child(self, old_child, new_child)
 
@@ -67,6 +69,20 @@ class ReferenceTemplate(interfaces.objects.Template):
 
        It should not return any attributes
     """
+
+    @property
+    def children(self):
+        return []
+
+    @property
+    def _unresolved(self, *args, **kwargs):
+        """Referenced symbols must be appropriately resolved before they can provide information such as size
+           This is because the size request has no context within which to determine the actual symbol structure.
+        """
+        raise SymbolError("Template {0} contains no information about its structure".format(self.vol.type_name))
+
+    size = property(_unresolved)
+    replace_child = relative_child_offset = _unresolved
 
     def __call__(self, context, object_info):
         template = context.symbol_space.get_type(self.vol.type_name)
