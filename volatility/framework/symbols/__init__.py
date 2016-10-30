@@ -112,7 +112,7 @@ class SymbolSpace(collections.abc.Mapping):
         """
 
         def __init__(self, type_name = None, **kwargs):
-            vollog.debug("Unresolved symbol referenced: {0}".format(type_name))
+            vollog.debug("Unresolved symbol referenced: {}".format(type_name))
             super().__init__(type_name = type_name, **kwargs)
 
     def _weak_resolve(self, resolve_type, name):
@@ -134,7 +134,7 @@ class SymbolSpace(collections.abc.Mapping):
                 return self._UnresolvedTemplate(name)
         elif name in self.natives.types:
             return getattr(self.natives, get_function)(name)
-        raise exceptions.SymbolError("Malformed symbol name: " + repr(name))
+        raise exceptions.SymbolError("Malformed symbol name: {}".format(name))
 
     def get_type(self, type_name):
         """Takes a symbol name and resolves it

@@ -12,7 +12,7 @@ class Symbol(validity.ValidityRoutines):
     def __init__(self, name, address, type_name = None):
         self._name = self._check_type(name, str)
         if constants.BANG in self._name:
-            raise ValueError("Symbol names cannot contain the symbol differentiator (" + constants.BANG + ")")
+            raise ValueError("Symbol names cannot contain the symbol differentiator ({})".format(constants.BANG))
         self._location = None
         self._address = self._check_type(address, int)
         if type_name is None:

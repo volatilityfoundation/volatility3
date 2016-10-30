@@ -63,7 +63,8 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
             start, end = self._check_header(base_layer, offset)
 
             if start < maxaddr or end < start:
-                raise LimeFormatException("bad start/end 0x%x/0x%x at file offset 0x%x" % (start, end, offset))
+                raise LimeFormatException(
+                    "bad start/end 0x{:x}/0x{:x} at file offset 0x{:x}".format(start, end, offset))
 
             segment_length = end - start + 1
             segments.append((start, offset + header_size, segment_length))
@@ -71,7 +72,7 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
             offset = offset + header_size + segment_length
 
         if len(segments) == 0:
-            raise LimeFormatException("No LiME segments defined in " + self._base_layer)
+            raise LimeFormatException("No LiME segments defined in {}".format(self._base_layer))
 
         self._segments = segments
         self._minaddr = segments[0][0]
@@ -82,9 +83,9 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
         header_data = base_layer.read(offset, cls._header_struct.size)
         (magic, version, start, end, reserved) = cls._header_struct.unpack(header_data)
         if magic != cls.MAGIC:
-            raise LimeFormatException("bad magic 0x%x at file offset 0x%x" % (magic, offset))
+            raise LimeFormatException("bad magic 0x{:x} at file offset 0x{:x}".format(magic, offset))
         if version != cls.VERSION:
-            raise LimeFormatException("unexpected version %d at file offset 0x%x" % (version, offset))
+            raise LimeFormatException("unexpected version {:d} at file offset 0x{:x}".format(version, offset))
         return start, end
 
     def _find_segment(self, offset):
@@ -100,7 +101,7 @@ class LimeLayer(interfaces.layers.TranslationLayerInterface):
             if offset >= logical_start and offset < (logical_start + size):
                 return (logical_start, base_start, size)
 
-        raise exceptions.InvalidAddressException(self.name, offset, "Lime fault at address " + hex(offset))
+        raise exceptions.InvalidAddressException(self.name, offset, "Lime fault at address {:0x}".format(offset))
 
     def is_valid(self, offset, length = 1):
         """Returns whether the address offset can be translated to a valid address"""

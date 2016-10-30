@@ -22,7 +22,7 @@ class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
         """Returns the item as an attribute"""
         if attr in self._dict:
             return self._dict[attr]
-        raise AttributeError("'" + self.__class__.__name__ + "' object has no attribute '" + attr + '"')
+        raise AttributeError("Object has no attribute: {}.{}".format(self.__class__.__name__, attr))
 
     def __getitem__(self, name):
         """Returns the item requested"""
@@ -112,7 +112,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         @classmethod
         def relative_child_offset(cls, template, child):
             """Returns the relative offset from the head of the parent data to the child member"""
-            raise KeyError(repr(template.vol.type_name) + " does not contain any children.")
+            raise KeyError("Template does not contain any children: {}".format(template.vol.type_name))
 
 
 class Template(validity.ValidityRoutines):

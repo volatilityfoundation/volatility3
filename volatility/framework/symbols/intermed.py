@@ -15,7 +15,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         super().__init__(name, native_types)
         url = urllib.parse.urlparse(idd_filepath)
         if url.scheme != 'file':
-            raise NotImplementedError("The {0} scheme is not yet implement for the Intermediate Symbol Format.")
+            raise NotImplementedError(
+                "This scheme is not yet implement for the Intermediate Symbol Format: {}".format(url.scheme))
         with open(url.path, "r") as fp:
             self._json = json.load(fp)
         self._validate_json()
@@ -36,7 +37,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         """Returns the location offset given by the symbol name"""
         symbol = self._json['symbols'].get(name, None)
         if not symbol:
-            raise KeyError("Unknown symbol: {0}".format(name))
+            raise KeyError("Unknown symbol: {}".format(name))
         return interfaces.symbols.Symbol(name = name, address = symbol['address'])
 
     @property
@@ -53,7 +54,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
     def set_type_class(self, name, clazz):
         if name not in self.types:
-            raise ValueError("Symbol type " + name + " not in " + self.name + " SymbolTable")
+            raise ValueError("Symbol type not in {} SymbolTable: {}".format(self.name, name))
         self._overrides[name] = clazz
 
     def del_type_class(self, name):
@@ -68,7 +69,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     def _interdict_to_template(self, dictionary):
         """Converts an intermediate format dict into an object template"""
         if not dictionary:
-            raise exceptions.SymbolSpaceError("Invalid intermediate dictionary: " + repr(dictionary))
+            raise exceptions.SymbolSpaceError("Invalid intermediate dictionary: {}".format(dictionary))
 
         type_name = dictionary['kind']
         if type_name == 'base':
@@ -95,7 +96,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Otherwise
         if dictionary['kind'] not in ['struct', 'union']:
-            raise exceptions.SymbolSpaceError("Unknown Intermediate format: " + repr(dictionary))
+            raise exceptions.SymbolSpaceError("Unknown Intermediate format: {}".format(dictionary))
 
         return objects.templates.ReferenceTemplate(type_name = self.name + constants.BANG + dictionary['name'])
 
@@ -103,7 +104,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         """Looks up an enumeration and returns a dictionary of __init__ parameters for an Enum"""
         lookup = self._json['enums'].get(name, None)
         if not lookup:
-            raise exceptions.SymbolSpaceError("Unknown enumeration found: " + repr(name))
+            raise exceptions.SymbolSpaceError("Unknown enumeration found: {}".format(name))
         result = {"choices": copy.deepcopy(lookup['constants']),
                   "subtype": self.natives.get_type(lookup['base'])}
         return result
@@ -111,7 +112,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     def get_type(self, type_name):
         """Resolves an individual symbol"""
         if type_name not in self._json['user_types']:
-            raise exceptions.SymbolError("Unknown symbol:" + repr(type_name))
+            raise exceptions.SymbolError("Unknown symbol: {}".format(type_name))
         curdict = self._json['user_types'][type_name]
         members = {}
         for member_name in curdict['fields']:

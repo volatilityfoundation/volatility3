@@ -22,7 +22,7 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
                 # We want to traverse optional paths, so don't check until we've tried to validate
                 # We also don't want to emit a debug message when a parent is optional, hence the optional parameter
                 if not valid and not (optional or subreq.optional):
-                    vollog.debug("Failed on requirement: {0}".format(subreq_config_path))
+                    vollog.debug("Failed on requirement: {}".format(subreq_config_path))
                     success = False
             if not success:
                 return False

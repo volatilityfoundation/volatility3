@@ -188,8 +188,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         for (offset, mapped_offset, length, layer) in self.mapping(offset, length, ignore_errors = pad):
             if not pad and offset > current_offset:
                 raise exceptions.InvalidAddressException(self.name, current_offset,
-                                                         "Layer " + self.name + " cannot map offset " +
-                                                         str(current_offset))
+                                                         "Layer {} cannot map offset: {}".format(self.name,
+                                                                                                 current_offset))
             elif offset > current_offset:
                 output += [b"\x00" * (current_offset - offset)]
                 current_offset = offset
@@ -207,8 +207,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         for (offset, mapped_offset, length, layer) in self.mapping(offset, length):
             if offset > current_offset:
                 raise exceptions.InvalidAddressException(self.name, current_offset,
-                                                         "Layer " + self.name + " cannot map offset " +
-                                                         str(current_offset))
+                                                         "Layer {} cannot map offset: {}".format(self.name,
+                                                                                                 current_offset))
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
             self._context.memory.write(layer, mapped_offset, length)
@@ -261,11 +261,11 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
         self._check_type(layer, DataLayerInterface)
         if isinstance(layer, TranslationLayerInterface):
             if layer.name in self._layers:
-                raise exceptions.LayerException("Layer " + layer.name + " already exists.")
+                raise exceptions.LayerException("Layer already exists: {}".format(layer.name))
             missing_list = [sublayer for sublayer in layer.dependencies if sublayer not in self._layers]
             if missing_list:
-                raise exceptions.LayerException("Layer " + layer.name +
-                                                " has unmet dependencies of " + ", ".join(missing_list) + ".")
+                raise exceptions.LayerException(
+                    "Layer {} has unmet dependencies: {}".format(layer.name, ", ".join(missing_list)))
         self._layers[layer.name] = layer
 
     def del_layer(self, name):
@@ -276,8 +276,8 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
         for layer in self._layers:
             depend_list = [superlayer for superlayer in self._layers if name in superlayer.dependencies]
             if depend_list:
-                raise exceptions.LayerException("Layer " + layer.name +
-                                                " is depended upon by " + ", ".join(depend_list))
+                raise exceptions.LayerException(
+                    "Layer {} is depended upon: {}".format(layer.name, ", ".join(depend_list)))
         self._layers[name].destroy()
         del self._layers[name]
 

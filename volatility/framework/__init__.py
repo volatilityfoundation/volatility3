@@ -33,19 +33,19 @@ def require_version(*args):
     """Checks the required version of a plugin"""
     if len(args):
         if args[0] != version()[0]:
-            raise RuntimeError("Framework version " + str(version()[0]) +
-                               " is incompatible with required version " + str(args[0]))
+            raise RuntimeError(
+                "Framework version {} is incompatible with required version {}".format(version()[0], args[0]))
         if len(args) > 1:
             if args[1] > version()[1]:
-                raise RuntimeError("Framework version " + ".".join([str(x) for x in version()[0:1]]) +
-                                   " is an older revision than the required version " +
-                                   ".".join([str(x) for x in args[0:2]]))
+                raise RuntimeError("Framework version {} is an older revision than the required version {}".format(
+                    ".".join([str(x) for x in version()[0:1]]),
+                    ".".join([str(x) for x in args[0:2]])))
 
 
 def class_subclasses(cls):
     """Returns all the (recursive) subclasses of a given class"""
     if not inspect.isclass(cls):
-        raise TypeError(repr(cls) + " is not a class.")
+        raise TypeError("class_subclasses parameter not a valid class: {}".format(cls))
     for clazz in cls.__subclasses__():
         yield clazz
         for return_value in class_subclasses(clazz):
@@ -67,17 +67,18 @@ def import_files(base_module):
                     module = modpath.replace(os.path.sep, ".")
                     if module not in sys.modules:
                         try:
-                            vollog.debug("Importing " + base_module.__name__ + "." + module)
+                            vollog.debug("Importing module: {}.{}".format(base_module.__name__, module))
                             __import__(base_module.__name__ + "." + module)
                         except ImportError:
-                            vollog.warning("Failed to import module " + module + " based on file " + modpath)
+                            vollog.warning("Failed to import module {} based on file: {}".format(module, modpath))
                             raise
                     else:
-                        vollog.info("Skipping existing module " + module)
+                        vollog.info("Skipping existing module: {}".format(module))
 
 
 # Check the python version to ensure it's suitable
-if sys.version_info.major != 3 or sys.version_info.minor < 4:
-    raise RuntimeError("Volatility framework requires python version 3.4 or greater")
+required_python_version = (3, 4)
+if sys.version_info.major != required_python_version[0] or sys.version_info.minor < required_python_version[1]:
+    raise RuntimeError("Volatility framework requires python version {}.{} or greater".format(required_python_version))
 
 from volatility.framework import interfaces, symbols, layers, contexts, configuration

@@ -19,7 +19,7 @@ class Void(interfaces.objects.ObjectInterface):
         @classmethod
         def size(cls, template):
             """Dummy size for Void objects"""
-            raise TypeError("Void types are incomplete, cannot contain data and do not have a size.")
+            raise TypeError("Void types are incomplete, cannot contain data and do not have a size")
 
     def write(self, value):
         """Dummy method that does nothing for Void objects"""
@@ -70,8 +70,9 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         if isinstance(value, self._struct_type):
             data = struct.pack(self.vol.struct_format, value)
             return self._context.memory.write(self.vol.layer_name, self.vol.offset, data)
-        raise TypeError(
-            repr(self.__class__.__name__) + " objects require a " + repr(type(self._struct_type)) + " to be written")
+        raise TypeError("Object {} requires a valid {} to be written: {}".format(self.__class__.__name__,
+                                                                                 type(self._struct_type),
+                                                                                 type(value)))
 
 
 class Integer(PrimitiveObject, int):
@@ -267,7 +268,7 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
             """Returns the relative offset from the head of the parent data to the child member"""
             if 'subtype' in template and child == 'subtype':
                 return 0
-            raise IndexError("Member " + child + " not present in array template")
+            raise IndexError("Member not present in array template: {}".format(child))
 
     def __getitem__(self, i):
         """Returns the i-th item from the array"""
@@ -331,7 +332,7 @@ class Struct(interfaces.objects.ObjectInterface):
             """Returns the relative offset of a child to its parent"""
             retlist = template.vol.members.get(child, None)
             if retlist is None:
-                raise IndexError("Member " + child + " not present in template")
+                raise IndexError("Member not present in template: {}".format(child))
             return retlist[0]
 
     @classmethod
@@ -339,7 +340,7 @@ class Struct(interfaces.objects.ObjectInterface):
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
         # An object template is a callable that when called with a context, offset, layer_name and type_name
         if not isinstance(members, collections.Mapping):
-            raise TypeError("Struct members parameter must be a mapping not " + type(members))
+            raise TypeError("Struct members parameter must be a mapping: {}".format(type(members)))
         if not all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()]):
             raise TypeError("Struct members must be a tuple of relative_offsets and templates")
 
@@ -360,7 +361,7 @@ class Struct(interfaces.objects.ObjectInterface):
                                                                                parent = self))
             self._concrete_members[attr] = member
             return member
-        raise AttributeError("'" + self.vol.type_name + "' Struct has no attribute '" + attr + "'")
+        raise AttributeError("Struct has no attribute: {}.{}".format(self.vol.type_name, attr))
 
     def write(self, value):
         raise TypeError("Structs cannot be written to directly, individual members must be written instead")

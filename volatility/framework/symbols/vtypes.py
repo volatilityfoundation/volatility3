@@ -55,7 +55,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
 
     def set_type_class(self, name, clazz):
         if name not in self.types:
-            raise ValueError("Symbol type " + name + " not in " + self.name + " SymbolTable")
+            raise ValueError("Unknown Symbol type: {}.{}".format(self.name, name))
         self._overrides[name] = clazz
 
     def del_type_class(self, name):
@@ -65,7 +65,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
     def _vtypedict_to_template(self, dictionary):
         """Converts a vtypedict into an object template"""
         if not dictionary:
-            raise exceptions.SymbolSpaceError("Invalid vtype dictionary: " + repr(dictionary))
+            raise exceptions.SymbolSpaceError("Invalid vtype dictionary: {}".format(dictionary))
 
         type_name = self._translate_vtype_to_intermed(dictionary[0])
 
@@ -91,7 +91,7 @@ class VTypeSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Otherwise
         if len(dictionary) > 1:
-            raise exceptions.SymbolSpaceError("Unknown vtype format: " + repr(dictionary))
+            raise exceptions.SymbolSpaceError("Unknown vtype format: {}".format(dictionary))
 
         return objects.templates.ReferenceTemplate(type_name = self.name + constants.BANG + type_name)
 

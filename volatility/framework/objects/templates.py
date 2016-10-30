@@ -79,7 +79,7 @@ class ReferenceTemplate(interfaces.objects.Template):
         """Referenced symbols must be appropriately resolved before they can provide information such as size
            This is because the size request has no context within which to determine the actual symbol structure.
         """
-        raise SymbolError("Template {0} contains no information about its structure".format(self.vol.type_name))
+        raise SymbolError("Template contains no information about its structure: {}".format(self.vol.type_name))
 
     size = property(_unresolved)
     replace_child = relative_child_offset = _unresolved

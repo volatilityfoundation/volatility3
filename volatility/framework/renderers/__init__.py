@@ -20,7 +20,7 @@ class TreeNode(interfaces.renderers.TreeNode):
         self._values = treegrid.RowStructure(*values)
 
     def __repr__(self):
-        return "<TreeNode [" + self._path + "] - " + repr(self._values) + ">"
+        return "<TreeNode [{}] - {}>".format(self.path, self._values)
 
     def __getitem__(self, item):
         return self._treegrid.children(self).__getitem__(item)
@@ -37,9 +37,11 @@ class TreeNode(interfaces.renderers.TreeNode):
             column = self._treegrid.columns[index]
             if not isinstance(values[index], column.type):
                 raise TypeError(
-                    "Values item with index " + repr(index) + " is the wrong type for column " +
-                    repr(column.name) + " (got " + str(type(values[index])) + " but expected " +
-                    str(column.type) + ")")
+                    "Values item with index {} is the wrong type for column {} (got {} but expected {})".format(
+                        index,
+                        column.name,
+                        type(values[index]),
+                        column.type))
 
     @property
     def values(self):
@@ -113,8 +115,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
             for stype in self.simple_types:
                 is_simple_type = is_simple_type or issubclass(column_type, stype)
             if not is_simple_type:
-                raise TypeError("Column " + name + "'s type " + column_type.__class__.__name__ +
-                                " is not a simple type")
+                raise TypeError(
+                    "Column {}'s type is not a simple type: {}".format(name, column_type.__class__.__name__))
             converted_columns.append(interfaces.renderers.Column(len(converted_columns), name, column_type))
         self.RowStructure = collections.namedtuple("RowStructure",
                                                    [self._sanitize(column.name) for column in converted_columns])
@@ -263,7 +265,7 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
             if i.name.lower() == column_name.lower():
                 self._index = i.index
         if self._index is None:
-            raise ValueError("Column " + column_name + " not found in TreeGrid columns")
+            raise ValueError("Column not found in TreeGrid columns: {}".format(column_name))
 
     def key(self, values):
         """The key function passed as the sort key"""

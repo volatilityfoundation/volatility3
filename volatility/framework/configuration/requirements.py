@@ -32,7 +32,9 @@ class InstanceRequirement(interfaces.configuration.RequirementInterface):
     def validate(self, context, config_path):
         value = self.config_value(context, config_path, None)
         if not isinstance(value, self.instance_type):
-            vollog.debug("TypeError - " + self.name + " input only accepts " + self.instance_type.__name__ + " type")
+            vollog.debug(
+                "TypeError - {} requirements only accept {} type: {}".format(self.name, self.instance_type.__name__,
+                                                                             value))
             return False
         return True
 
