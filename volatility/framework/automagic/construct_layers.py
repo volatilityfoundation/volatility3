@@ -9,7 +9,7 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
     """Runs through the requirement tree and from the bottom up attempts to construct all TranslationLayerRequirements"""
     priority = 10
 
-    def __call__(self, context, config_path, requirement):
+    def __call__(self, context, config_path, requirement, optional = False):
         if not requirement.validate(context, config_path):
             # Having called validate at the top level tells us both that we need to dig deeper
             # but also ensures that TranslationLayerRequirements have got the correct subrequirements if their class is populated
@@ -17,11 +17,12 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
             success = True
             subreq_config_path = interfaces.configuration.path_join(config_path, requirement.name)
             for subreq in requirement.requirements.values():
-                self(context, subreq_config_path, subreq)
+                self(context, subreq_config_path, subreq, optional or subreq.optional)
                 valid = subreq.validate(context, subreq_config_path)
                 # We want to traverse optional paths, so don't check until we've tried to validate
-                if not valid and not subreq.optional:
-                    vollog.debug("Failed on requirement " + config_path + ":" + subreq.name)
+                # We also don't want to emit a debug message when a parent is optional, hence the optional parameter
+                if not valid and not (optional or subreq.optional):
+                    vollog.debug("Failed on requirement: {0}".format(subreq_config_path))
                     success = False
             if not success:
                 return False

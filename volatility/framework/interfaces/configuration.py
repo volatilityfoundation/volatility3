@@ -238,7 +238,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 class HierarchicalDict(collections.Mapping):
     def __init__(self, initial_dict = None, separator = CONFIG_SEPARATOR):
         if not (isinstance(separator, str) and len(separator) == 1):
-            raise TypeError("Separator must be a one character string")
+            raise TypeError("Separator must be a one character string: {0}".format(separator))
         self._separator = separator
         self._data = {}
         self._subdict = {}
@@ -248,7 +248,8 @@ class HierarchicalDict(collections.Mapping):
             for k, v in initial_dict.items():
                 self[k] = v
         elif initial_dict is not None:
-            raise TypeError("Initial_dict must be a dictionary or JSON string containing a dictionary")
+            raise TypeError("Initial_dict must be a dictionary or JSON string containing a dictionary: {0}".format(
+                repr(initial_dict)))
 
     @property
     def separator(self):
@@ -313,7 +314,9 @@ class HierarchicalDict(collections.Mapping):
                 self._data[key] = value
             else:
                 if not isinstance(value, HierarchicalDict) and value is not None:
-                    raise TypeError("HierarchicalDicts can only store HierarchicalDicts within their structure")
+                    raise TypeError(
+                        "HierarchicalDicts can only store HierarchicalDicts within their structure: {0}".format(
+                            type(value)))
                 self._subdict[key] = value
 
     def __delitem__(self, key):
@@ -386,12 +389,12 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
         value = self.config_value(context, config_path, None)
         if isinstance(value, str):
             if value not in context.memory:
-                vollog.debug("IndexError - Layer " + value + " not found in memory space")
+                vollog.debug("IndexError - Layer not found in memory space: {0}".format(value))
                 return False
             return True
 
         if value is not None:
-            vollog.debug("TypeError - TranslationLayerRequirements only accepts string labels")
+            vollog.debug("TypeError - Translation Layer Requirement only accepts string labels: {0}".format(value))
             return False
 
         # TODO: check that the space in the context lives up to the requirements for arch/os etc
@@ -399,7 +402,7 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
         self._check_class(context, config_path)
-        vollog.debug("IndexError - No configuration provided for layer")
+        vollog.debug("IndexError - No configuration provided: {0}".format(config_path + CONFIG_SEPARATOR + self.name))
         return False
 
     def construct(self, context, config_path):
@@ -435,11 +438,11 @@ class SymbolRequirement(ConstructableRequirementInterface):
         """Validate that the value is a valid within the symbol space of the provided context"""
         value = self.config_value(context, config_path, None)
         if not isinstance(value, str):
-            vollog.debug("TypeError - SymbolRequirement only accepts string labels")
+            vollog.debug("TypeError - SymbolRequirement only accepts string labels: {0}".format(value))
             return False
         if value not in context.symbol_space:
             # This is an expected situation, so return False rather than raise
-            vollog.debug("IndexError - " + (value or "") + " is not present in the symbol space")
+            vollog.debug("IndexError - Value not present in the symbol space: {0}".format(value or ""))
             return False
         return True
 
