@@ -17,7 +17,9 @@ import logging
 import os
 import sys
 
-CURRENT = 4  # Number of releases of the library with any change
+# We use the libtool library versioning
+
+CURRENT = 0  # Number of releases of the library with any change
 REVISION = 0  # Number of changes that don't affect the interface
 AGE = 0  # Number of consecutive versions of the interface the current version supports
 

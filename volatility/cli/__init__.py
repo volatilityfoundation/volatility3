@@ -30,7 +30,7 @@ class CommandLine(object):
         ver = volatility.framework.version()
         sys.stdout.write("Volatility Framework 3 (version " + "{0}.{1}.{2}".format(ver[0], ver[1], ver[2]) + ")\n")
 
-        volatility.framework.require_version(4, 0, 0)
+        volatility.framework.require_version(0, 0, 0)
 
         # TODO: Get CLI config options
         volatility.framework.import_files(volatility.plugins)
