@@ -16,14 +16,11 @@ PAGE_SIZE = 0x1000
 class PdbSigantureScanner(interfaces.layers.ScannerInterface):
     overlap = 0x4000
 
-    _kernel_pdbs = [
-        b"ntkrnlmp.pdb",
-        b"ntkrnlpa.pdb",
-        b"ntkrpamp.pdb",
-        b"ntoskrnl.pdb",
-    ]
-
     _RSDS_format = struct.Struct("<16BI")
+
+    def __init__(self, pdb_names):
+        super().__init__()
+        self._pdb_names = pdb_names
 
     def __call__(self, data, data_offset):
         sig = data.find(b"RSDS")
@@ -34,7 +31,7 @@ class PdbSigantureScanner(interfaces.layers.ScannerInterface):
                 if (null - sig - self._RSDS_format.size) <= 100:
                     name_offset = sig + 4 + self._RSDS_format.size
                     pdb_name = data[name_offset:null]
-                    if pdb_name in self._kernel_pdbs:
+                    if pdb_name in self._pdb_names:
 
                         ## thie ordering is intentional due to mixed endianness in the GUID
                         (g3, g2, g1, g0, g5, g4, g7, g6, g8, g9, ga, gb, gc, gd, ge, gf, a) = \
@@ -57,7 +54,14 @@ def scan(ctx, layer_name):
     """
     results = []
     min_pfn = 0
-    for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(ctx, PdbSigantureScanner()):
+    pdb_names = [
+        b"ntkrnlmp.pdb",
+        b"ntkrnlpa.pdb",
+        b"ntkrpamp.pdb",
+        b"ntoskrnl.pdb",
+    ]
+
+    for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(ctx, PdbSigantureScanner(pdb_names)):
         mz_offset = None
         sig_pfn = signature_offset // PAGE_SIZE
 
