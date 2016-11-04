@@ -64,9 +64,9 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface):
 
 class Version1Format(ISFormatTable):
     """Class for storing intermediate debugging data as objects and classes"""
-    current = 0
+    current = 1
     revision = 0
-    age = 0
+    age = 1
     version = (current - age, age, revision)
 
     def __init__(self, name, json_object, native_types = None):
