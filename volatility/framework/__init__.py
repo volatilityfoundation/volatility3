@@ -26,22 +26,24 @@ AGE = 0  # Number of consecutive versions of the interface the current version s
 vollog = logging.getLogger("volatility")
 
 
-def version():
+def interface_version():
     """Provides the so version number of the library"""
     return CURRENT - AGE, AGE, REVISION
 
 
-def require_version(*args):
+def require_interface_version(*args):
     """Checks the required version of a plugin"""
     if len(args):
-        if args[0] != version()[0]:
+        if args[0] != interface_version()[0]:
             raise RuntimeError(
-                "Framework version {} is incompatible with required version {}".format(version()[0], args[0]))
+                "Framework interface version {} is incompatible with required version {}".format(interface_version()[0],
+                                                                                                 args[0]))
         if len(args) > 1:
-            if args[1] > version()[1]:
-                raise RuntimeError("Framework version {} is an older revision than the required version {}".format(
-                    ".".join([str(x) for x in version()[0:1]]),
-                    ".".join([str(x) for x in args[0:2]])))
+            if args[1] > interface_version()[1]:
+                raise RuntimeError(
+                    "Framework interface version {} is an older revision than the required version {}".format(
+                        ".".join([str(x) for x in interface_version()[0:1]]),
+                        ".".join([str(x) for x in args[0:2]])))
 
 
 def class_subclasses(cls):

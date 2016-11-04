@@ -4,7 +4,7 @@ import sys
 
 import volatility.framework
 import volatility.plugins
-from volatility.framework import automagic, contexts, interfaces
+from volatility.framework import automagic, constants, contexts, interfaces
 from volatility.framework.renderers.text import TextRenderer
 
 __author__ = 'mike'
@@ -27,10 +27,9 @@ class CommandLine(object):
         pass
 
     def run(self):
-        ver = volatility.framework.version()
-        sys.stdout.write("Volatility Framework 3 (version " + "{0}.{1}.{2}".format(ver[0], ver[1], ver[2]) + ")\n")
+        sys.stdout.write("Volatility Framework {}\n".format(constants.PACKAGE_VERSION))
 
-        volatility.framework.require_version(0, 0, 0)
+        volatility.framework.require_interface_version(0, 0, 0)
 
         # TODO: Get CLI config options
         volatility.framework.import_files(volatility.plugins)

@@ -3,7 +3,7 @@ import json
 import logging
 import urllib.parse
 
-from volatility.framework import constants, exceptions, interfaces, objects, class_subclasses
+from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
 
 vollog = logging.getLogger(__name__)
 
@@ -34,7 +34,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         supported, age, revision = [int(x) for x in version.split(".")]
         supported_versions = [x for x in versions.keys() if x[0] == supported and x[1] >= age]
         if not supported_versions:
-            raise ValueError("No Intermediate Format versions support file version: {}".format(version))
+            raise ValueError(
+                "No Intermediate Format interface versions support file interface version: {}".format(version))
         return versions[max(supported_versions)]
 
     def _construct_delegate_function(name, is_property = False):
