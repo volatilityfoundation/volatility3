@@ -3,6 +3,7 @@ import json
 import logging
 import urllib.parse
 
+from volatility import schemas
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
 
 vollog = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def _construct_delegate_function(name, is_property = False):
 
 
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
-    def __init__(self, name, idd_filepath, native_types = None):
+    def __init__(self, name, idd_filepath, native_types = None, validate = False):
         # Check there are no obvious errors
         url = urllib.parse.urlparse(idd_filepath)
         if url.scheme != 'file':
@@ -33,6 +34,12 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
         with open(url.path, "r") as fp:
             json_object = json.load(fp)
+
+        # Validation is expensive, we should either explicitly demand it, or build a caching mechanism
+        # to store the hashes of successfully validated files
+        if validate:
+            schemas.validate(json_object)
+
         metadata = json_object.get('metadata', None)
 
         # Determine the delegate or throw an exception

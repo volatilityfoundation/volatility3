@@ -1,0 +1,250 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "id": "http://volatilityfoundation.org/intermediate-format/schema",
+  "title": "Symbol Container",
+  "type": "object",
+  "definitions": {
+    "element_metadata": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string",
+          "pattern": "^[0-9]+.[0-9]+.[0-9]+$"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          }
+        },
+        "producer": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "datetime": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "element_enum": {
+      "properties": {
+        "length": {
+          "type": "integer"
+        },
+        "base": {
+          "type": "string"
+        },
+        "constants": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "element_symbol": {
+      "properties": {
+        "address": {
+          "type": "number"
+        },
+        "linkage_name": {
+          "type": "string"
+        }
+      },
+      "requiredProperties": [
+        "address"
+      ],
+      "additionalProperties": false
+    },
+    "element_base_type": {
+    },
+    "element_user_type": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^(struct|union|class)$"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/field"
+          }
+        }
+      },
+      "requiredProperties": [
+        "kind",
+        "length",
+        "fields"
+      ],
+      "additionalProperties": false
+    },
+    "field": {
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/type_descriptor"
+        }
+      }
+    },
+    "type_descriptor": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/type_pointer"
+        },
+        {
+          "$ref": "#/definitions/type_base"
+        },
+        {
+          "$ref": "#/definitions/type_array"
+        },
+        {
+          "$ref": "#/definitions/type_struct"
+        },
+        {
+          "$ref": "#/definitions/type_enum"
+        },
+        {
+          "$ref": "#/definitions/type_function"
+        },
+        {
+          "$ref": "#/definitions/type_bitfield"
+        }
+      ]
+    },
+    "type_pointer": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^pointer$"
+        }
+      }
+    },
+    "type_base": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^base$"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "type_array": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^array$"
+        },
+        "subtype": {
+          "$ref": "#/definitions/type_descriptor"
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "type_struct": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^(struct|class|union)$"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "type_enum": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^enum$"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "type_function": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^function$"
+        }
+      }
+    },
+    "type_bitfield": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^bitfield$"
+        },
+        "bit_position": {
+          "type": "integer"
+        },
+        "bit_length": {
+          "type": "integer"
+        },
+        "type": {
+          "$ref": "#/definitions/type_descriptor"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "metadata": {
+      "$ref": "#/definitions/element_metadata"
+    },
+    "base_types": {
+      "additionalProperties": {
+        "$ref": "#/definitions/element_base_type"
+      }
+    },
+    "user_types": {
+      "additionalProperties": {
+        "$ref": "#/definitions/element_user_type"
+      }
+    },
+    "enums": {
+      "additionalProperties": {
+        "$ref": "#/definitions/element_enum"
+      }
+    },
+    "symbols": {
+      "additionalProperties": {
+        "$ref": "#/definitions/element_symbol"
+      }
+    }
+  },
+  "required": [
+    "metadata",
+    "base_types",
+    "user_types",
+    "enums",
+    "symbols"
+  ],
+  "additionalProperties": false
+}
