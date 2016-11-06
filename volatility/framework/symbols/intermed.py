@@ -8,6 +8,17 @@ from volatility.framework import class_subclasses, constants, exceptions, interf
 vollog = logging.getLogger(__name__)
 
 
+def _construct_delegate_function(name, is_property = False):
+    def _delegate_function(self, *args, **kwargs):
+        if is_property:
+            return getattr(self._delegate, name)
+        return getattr(self._delegate, name)(*args, **kwargs)
+
+    if is_property:
+        return property(_delegate_function)
+    return _delegate_function
+
+
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     def __init__(self, name, idd_filepath, native_types = None):
         # Check there are no obvious errors
@@ -25,8 +36,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         metadata = json_object.get('metadata', None)
 
         # Determine the delegate or throw an exception
-        self._delegate = self._closest_version(metadata.get('version', "0.0.0"), self._versions)(name, json_object,
-                                                                                                 native_types)
+        self._delegate = self._closest_version(metadata.get('format', "0.0.0"), self._versions)(name, json_object,
+                                                                                                native_types)
 
     def _closest_version(self, version, versions):
         """Determines the highest suitable handler for specified version format"""
@@ -37,16 +48,6 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             raise ValueError(
                 "No Intermediate Format interface versions support file interface version: {}".format(version))
         return versions[max(supported_versions)]
-
-    def _construct_delegate_function(name, is_property = False):
-        def _delegate_function(self, *args, **kwargs):
-            if is_property:
-                return getattr(self._delegate, name)
-            return getattr(self._delegate, name)(*args, **kwargs)
-
-        if is_property:
-            return property(_delegate_function)
-        return _delegate_function
 
     symbols = _construct_delegate_function('symbols', True)
     types = _construct_delegate_function('types', True)
