@@ -28,7 +28,7 @@ def record_cached_validations(validations):
 cached_validations = load_cached_validations()
 
 
-def validate(input):
+def validate(input, use_cache = True):
     """Validates an input JSON file based upon """
     format = input.get('metadata', {}).get('format', None)
     if not format:
@@ -41,13 +41,13 @@ def validate(input):
         return False
     with open(schema_path, 'r') as s:
         schema = json.load(s)
-    return valid(input, schema)
+    return valid(input, schema, use_cache)
 
 
-def valid(input, schema):
+def valid(input, schema, use_cache = True):
     """Validates a json schema"""
-    input_hash = hashlib.sha1(bytes(json.dumps(input, sort_keys = True), 'utf-8')).hexdigest()
-    if input_hash in cached_validations:
+    input_hash = hashlib.sha1(bytes(json.dumps((input, schema), sort_keys = True), 'utf-8')).hexdigest()
+    if input_hash in cached_validations and use_cache:
         return True
     try:
         import jsonschema
@@ -57,6 +57,7 @@ def valid(input, schema):
         vollog.debug("All validations will return true")
         return True
     except:
+        vollog.debug("Schema validation error", exc_info = True)
         return False
     cached_validations.add(input_hash)
     record_cached_validations(cached_validations)

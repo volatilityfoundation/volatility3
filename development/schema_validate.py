@@ -22,9 +22,9 @@ if __name__ == '__main__':
                 test = json.load(t)
 
             if args.schema:
-                result = schemas.valid(test, schema)
+                result = schemas.valid(test, schema, False)
             else:
-                result = schemas.validate(test)
+                result = schemas.validate(test, False)
 
             if result:
                 print("[+] Validation successful: {}".format(filename))
