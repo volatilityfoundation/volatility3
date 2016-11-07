@@ -5,6 +5,7 @@ import urllib.parse
 
 from volatility import schemas
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
+from volatility.framework.exceptions import SymbolSpaceError
 
 vollog = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ def _construct_delegate_function(name, is_property = False):
 
 
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
-    def __init__(self, name, idd_filepath, native_types = None, validate = False):
+    def __init__(self, name, idd_filepath, native_types = None):
         # Check there are no obvious errors
         url = urllib.parse.urlparse(idd_filepath)
         if url.scheme != 'file':
@@ -35,10 +36,9 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         with open(url.path, "r") as fp:
             json_object = json.load(fp)
 
-        # Validation is expensive, we should either explicitly demand it, or build a caching mechanism
-        # to store the hashes of successfully validated files
-        if validate:
-            schemas.validate(json_object)
+        # Validation is expensive, but we cache to store the hashes of successfully validated json objects
+        if not schemas.validate(json_object):
+            raise SymbolSpaceError("File does not pass version validation: {}".format(url.geturl()))
 
         metadata = json_object.get('metadata', None)
 
