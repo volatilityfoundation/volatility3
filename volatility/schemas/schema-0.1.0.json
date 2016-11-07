@@ -72,6 +72,12 @@
       "additionalProperties": false
     },
     "element_base_type": {
+      "properties": {
+        "length": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
     },
     "element_user_type": {
       "properties": {
@@ -100,8 +106,12 @@
       "properties": {
         "type": {
           "$ref": "#/definitions/type_descriptor"
+        },
+        "offset": {
+          "type": "integer"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "type_descriptor": {
       "oneOf": [
@@ -133,8 +143,12 @@
         "kind": {
           "type": "string",
           "pattern": "^pointer$"
+        },
+        "subtype": {
+          "$ref": "#/definitions/type_descriptor"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "type_base": {
       "properties": {
@@ -193,7 +207,8 @@
           "type": "string",
           "pattern": "^function$"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "type_bitfield": {
       "properties": {
