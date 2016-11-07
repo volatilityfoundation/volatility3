@@ -7,7 +7,6 @@ Created on 7 Feb 2013
 import collections
 import collections.abc
 import logging
-import warnings
 
 from volatility.framework import constants, exceptions, interfaces, objects
 from volatility.framework.symbols import native, vtypes, windows
@@ -66,7 +65,7 @@ class SymbolSpace(collections.abc.Mapping):
     @natives.setter
     def natives(self, native_types):
         if native_types is not None:
-            warnings.warn(
+            vollog.warning(
                 "Resetting the native type can cause have drastic effects on memory analysis using this space")
         self._native_types = native_types
 
