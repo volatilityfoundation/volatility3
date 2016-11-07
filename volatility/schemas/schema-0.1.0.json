@@ -223,7 +223,7 @@
           "type": "integer"
         },
         "type": {
-          "$ref": "#/definitions/type_descriptor"
+          "$ref": "#/definitions/type_base"
         }
       },
       "additionalProperties": false
