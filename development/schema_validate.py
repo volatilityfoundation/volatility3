@@ -1,6 +1,21 @@
 import argparse
 import json
 import os
+import sys
+
+# TODO: Rather nasty hack, when volatility's actually installed this would be unnecessary
+sys.path += ".."
+
+import logging
+
+console = logging.StreamHandler()
+console.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
+console.setFormatter(formatter)
+
+logger = logging.getLogger("")
+logger.addHandler(console)
+logger.setLevel(logging.DEBUG)
 
 from volatility import schemas
 
