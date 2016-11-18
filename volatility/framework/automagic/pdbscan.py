@@ -88,22 +88,15 @@ def progress_callback(progress):
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     """Looks for all Intel address spaces and attempts to identify the PDB guid required for the space"""
     priority = 30
-    thing = None
 
     def __call__(self, context, config_path, requirement):
-        if not self.thing:
-            self.thing = True
-            print(context.config)
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        print("SUBCONFIGPATH", sub_config_path)
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             # Check for symbols in this layer
             layer_name = context.config.get(
                 interfaces.configuration.path_join(config_path, requirement.name), None)
-            print("FOUND ONE", layer_name)
             if layer_name:
                 results = scan(context, layer_name)
-                print("RESULTS", results)
         else:
             for subreq in requirement.requirements.values():
                 self(context, sub_config_path, subreq)
