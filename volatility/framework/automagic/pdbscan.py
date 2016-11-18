@@ -70,7 +70,7 @@ def scan(ctx, layer_name):
             if not ctx.memory[layer_name].is_valid(i * PAGE_SIZE, 2):
                 break
 
-            data = ctx.memory.read(layer_name, i * PAGE_SIZE, 2)
+            data = ctx.memory[layer_name].read(i * PAGE_SIZE, 2)
             if data == b'MZ':
                 mz_offset = i * PAGE_SIZE
                 break
