@@ -72,8 +72,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         for (name, size, large_page) in self._structure:
             # Check we're valid
             if not self._page_is_valid(entry):
-                raise exceptions.InvalidAddressException(self.name, offset,
-                                                         "Page Fault at entry " + hex(entry) + " in table " + name)
+                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1,
+                                                              "Page Fault at entry " + hex(entry) + " in table " + name)
             # Check if we're a large page
             if large_page and (entry & (1 << 7)):
                 # We're a large page, the rest is finished below
@@ -94,8 +94,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
         # Now we're done
         if not self._page_is_valid(entry):
-            raise exceptions.InvalidAddressException(self.name, offset,
-                                                     "Page Fault at entry " + hex(entry) + " in page entry")
+            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1,
+                                                          "Page Fault at entry {} in page entry".format(hex(entry)))
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
         return page, 1 << (position + 1)
 

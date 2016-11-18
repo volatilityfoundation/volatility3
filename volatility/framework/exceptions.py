@@ -22,6 +22,17 @@ class InvalidAddressException(VolatilityException):
         self.layer_name = layer_name
 
 
+class PagedInvalidAddressException(InvalidAddressException):
+    """Thrown when an address is not valid in the paged space in which it was request
+
+    Includes the invalid address and the number of bits of the address that are invalid
+    """
+
+    def __init__(self, layer_name, invalid_address, invalid_bits, *args, **kwargs):
+        super().__init__(layer_name, invalid_address, *args, **kwargs)
+        self.invalid_bits = invalid_bits
+
+
 class SymbolSpaceError(VolatilityException):
     """Thrown when an error occurs dealing with Symbols and Symbolspaces"""
 
