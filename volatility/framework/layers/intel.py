@@ -23,6 +23,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         super().__init__(context, config_path, name)
         self._base_layer = self._check_type(self.config["memory_layer"], str)
         self._page_map_offset = self._check_type(self.config["page_map_offset"], int)
+        self._optimize_scan = False
         # All Intel address spaces work on 4096 byte pages
         self._page_size_in_bits = 12
 
@@ -151,17 +152,22 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
         min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,
                                                                        progress_callback, scanner)
+        scanned = set()
+        previous = None
         range_start = current = min_address
         while current <= max_address:
-            progress_callback((current - min_address) / total_size)
+            progress_callback(round((current - min_address) * 100 / total_size, 3))
             try:
                 address, page_size = self._translate(current)
-                if not context.memory[self._base_layer].is_valid(address):
+                if (previous, address) in scanned or not context.memory[self._base_layer].is_valid(address):
                     if current - range_start > 0:
                         chunk = self.read(range_start, current - range_start)
                         for result in scanner(chunk, range_start):
                             yield result
                     range_start = current + page_size
+                elif self._optimize_scan:
+                    scanned.add((previous, address))
+                previous = address
                 current += page_size
             except exceptions.PagedInvalidAddressException as e:
                 if current - range_start > 0:
@@ -170,6 +176,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                         yield result
                 current += (1 << e.invalid_bits)
                 range_start = current
+                previous = None
 
 
 class IntelPAE(Intel):
