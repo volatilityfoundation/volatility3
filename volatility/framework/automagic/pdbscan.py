@@ -94,6 +94,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             # Check for symbols in this layer
+            # FIXME: optionally allow a full (slow) scan
+            # FIXME: Determine the physical layer no matter the virtual layer
             layer_name = context.config.get(
                 interfaces.configuration.path_join(config_path, requirement.name, "memory_layer"), None)
             if layer_name:
