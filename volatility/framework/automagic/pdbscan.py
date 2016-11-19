@@ -78,11 +78,12 @@ def scan(ctx, layer_name):
 
         results.append((GUID, age, pdb_name, signature_offset, mz_offset))
 
+    print(results)
     return results
 
 
 def progress_callback(progress):
-    print("Progress: ", progress)
+    print("\rProgress: ", progress, "     ", end = '')
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
@@ -94,7 +95,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             # Check for symbols in this layer
             layer_name = context.config.get(
-                interfaces.configuration.path_join(config_path, requirement.name), None)
+                interfaces.configuration.path_join(config_path, requirement.name, "memory_layer"), None)
             if layer_name:
                 results = scan(context, layer_name)
         else:
