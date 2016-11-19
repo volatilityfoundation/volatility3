@@ -151,28 +151,25 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
         min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,
                                                                        progress_callback, scanner)
-        current = min_address
-        range_start = None
+        range_start = current = min_address
         while current <= max_address:
             progress_callback((current - min_address) / total_size)
             try:
-                if range_start is None:
-                    range_start = current
                 address, page_size = self._translate(current)
                 if not context.memory[self._base_layer].is_valid(address):
                     if current - range_start > 0:
                         chunk = self.read(range_start, current - range_start)
                         for result in scanner(chunk, range_start):
                             yield result
-                    range_start = None
+                    range_start = current + page_size
                 current += page_size
             except exceptions.PagedInvalidAddressException as e:
                 if current - range_start > 0:
                     chunk = self.read(range_start, current - range_start)
                     for result in scanner(chunk, range_start):
                         yield result
-                range_start = None
                 current += (1 << e.invalid_bits)
+                range_start = current
 
 
 class IntelPAE(Intel):
