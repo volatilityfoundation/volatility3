@@ -1,15 +1,18 @@
 # pdbscan.py -- Scan Volatility Layers for Windows kernel PDB signatures
 #
+
+import logging
+import os
+import struct
+
 if __name__ == "__main__":
-    import os
     import sys
 
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 
-import struct
-
 from volatility.framework import interfaces
 
+vollog = logging.getLogger(__name__)
 PAGE_SIZE = 0x1000
 
 
@@ -76,9 +79,12 @@ def scan(ctx, layer_name):
                 break
         min_pfn = sig_pfn
 
-        results.append((GUID, age, pdb_name, signature_offset, mz_offset))
+        results.append({'GUID': GUID,
+                        'age': age,
+                        'pdb_name': str(pdb_name, "utf-8"),
+                        'signature_offset': signature_offset,
+                        'mz_offset': mz_offset})
 
-    print(results)
     return results
 
 
@@ -90,8 +96,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     """Looks for all Intel address spaces and attempts to identify the PDB guid required for the space"""
     priority = 30
 
-    def __call__(self, context, config_path, requirement):
+    def __init__(self):
+        super().__init__()
+        self.potential_kernels = []
+
+    def recurse_pdb_finder(self, context, config_path, requirement):
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
+        results = []
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
@@ -102,4 +113,38 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 results = scan(context, layer_name)
         else:
             for subreq in requirement.requirements.values():
-                self(context, sub_config_path, subreq)
+                results += self.recurse_pdb_finder(context, sub_config_path, subreq)
+        return results
+
+    def recurse_symbol_fulfiller(self, context, config_path, requirement):
+        sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
+        if isinstance(requirement, interfaces.configuration.SymbolRequirement):
+            # TODO: Check that the symbols for this kernel will fulfill the requirement
+            # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
+            # TODO: Consider whether a single found kernel can fulfill multiple requirements
+            if self.potential_kernels:
+                kernel = self.potential_kernels[0]
+                suffix = kernel['pdb_name'] + "-" + kernel['GUID'] + "-" + str(kernel['age']) + ".json"
+                # Check user symbol directory first, then fallback to the framework's library to allow for overloading
+                prefixes = [os.path.join(os.path.dirname(__file__), "..", "..", "symbols", "windows"),
+                            os.path.join(os.path.dirname(__file__), "..", "symbols", "windows")]
+                idd_path = None
+                for prefix in prefixes:
+                    if os.path.exists(os.path.join(prefix, suffix)):
+                        idd_path = "file://" + os.path.abspath(os.path.join(prefix, suffix))
+                if idd_path:
+                    clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
+                    # Set the discovered options
+                    context.config[interfaces.configuration.path_join(sub_config_path, "class")] = clazz
+                    context.config[interfaces.configuration.path_join(sub_config_path, "idd_filepath")] = idd_path
+                    # Construct the appropriate symbol table
+                    requirement.construct(context, config_path)
+                else:
+                    vollog.debug("Symbol library path not found: {}".format(suffix))
+        else:
+            for subreq in requirement.requirements.values():
+                self.recurse_symbol_fulfiller(context, sub_config_path, subreq)
+
+    def __call__(self, context, config_path, requirement):
+        self.potential_kernels = list(self.recurse_pdb_finder(context, config_path, requirement))
+        self.recurse_symbol_fulfiller(context, config_path, requirement)

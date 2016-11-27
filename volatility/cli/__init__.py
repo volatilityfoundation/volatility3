@@ -58,10 +58,13 @@ class CommandLine(object):
         ctx.config["ui.single_location"] = "file:///run/media/mike/disk/memory/private/jon-fres.dmp"
         ctx.config["plugins.pslist.offset"] = 0x01bcc830
 
-        ctx.config[
-            "plugins.pslist.ntkrnlmp.class"] = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
-        ctx.config[
-            "plugins.pslist.ntkrnlmp.idd_filepath"] = "file:///home/mike/workspace/volatility3/aux/ntoskrnl.pdb.json"
+        # ctx.config[
+        #    "plugins.pslist.ntkrnlmp.class"] = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
+        # ctx.config[
+        #    "plugins.pslist.ntkrnlmp.idd_filepath"] = "file:///home/mike/workspace/volatility3/aux/ntoskrnl.pdb.json"
+
+        # ctx.config["ui.single_location"] = "file:///run/media/mike/disk/memory/private/win10-x64-2016-05-28.lime"
+        # ctx.config["plugins.pslist.offset"] = 0xfe001608573c0
 
         ###
         # BACK TO THE FRAMEWORK
