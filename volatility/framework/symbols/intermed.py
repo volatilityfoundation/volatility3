@@ -1,6 +1,7 @@
 import copy
 import json
 import logging
+import lzma
 import urllib.parse
 
 from volatility import schemas
@@ -33,8 +34,12 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        with open(url.path, "r") as fp:
-            json_object = json.load(fp)
+        if url.path.endswith('.xz'):
+            fp = lzma.open(url.path, 'rt')
+        else:
+            fp = open(url.path, "r")
+        json_object = json.load(fp)
+        fp.close()
 
         # Validation is expensive, but we cache to store the hashes of successfully validated json objects
         if not schemas.validate(json_object):

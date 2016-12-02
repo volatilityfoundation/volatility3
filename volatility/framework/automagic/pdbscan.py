@@ -124,14 +124,16 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             # TODO: Consider whether a single found kernel can fulfill multiple requirements
             if self.potential_kernels:
                 kernel = self.potential_kernels[0]
-                suffix = kernel['pdb_name'] + "-" + kernel['GUID'] + "-" + str(kernel['age']) + ".json"
                 # Check user symbol directory first, then fallback to the framework's library to allow for overloading
                 prefixes = [os.path.join(os.path.dirname(__file__), "..", "..", "symbols", "windows"),
                             os.path.join(os.path.dirname(__file__), "..", "symbols", "windows")]
+                midfix = kernel['pdb_name'] + "-" + kernel['GUID'] + "-" + str(kernel['age'])
+                suffixes = ['.json', '.json.xz']
                 idd_path = None
                 for prefix in prefixes:
-                    if os.path.exists(os.path.join(prefix, suffix)):
-                        idd_path = "file://" + os.path.abspath(os.path.join(prefix, suffix))
+                    for suffix in suffixes:
+                        if os.path.exists(os.path.join(prefix, midfix + suffix)):
+                            idd_path = "file://" + os.path.abspath(os.path.join(prefix, midfix + suffix))
                 if idd_path:
                     clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
                     # Set the discovered options
@@ -140,7 +142,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     # Construct the appropriate symbol table
                     requirement.construct(context, config_path)
                 else:
-                    vollog.debug("Symbol library path not found: {}".format(suffix))
+                    vollog.debug("Symbol library path not found: {}".format(midfix + suffix))
         else:
             for subreq in requirement.requirements.values():
                 self.recurse_symbol_fulfiller(context, sub_config_path, subreq)
