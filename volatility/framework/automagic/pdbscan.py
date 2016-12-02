@@ -96,6 +96,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     """Looks for all Intel address spaces and attempts to identify the PDB guid required for the space"""
     priority = 30
 
+    prefixes = [os.path.join(os.path.dirname(__file__), "..", "..", "symbols", "windows"),
+                os.path.join(os.path.dirname(__file__), "..", "symbols", "windows")]
+    suffixes = ['.json', '.json.xz']
+
     def __init__(self):
         super().__init__()
         self.potential_kernels = []
@@ -125,13 +129,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             if self.potential_kernels:
                 kernel = self.potential_kernels[0]
                 # Check user symbol directory first, then fallback to the framework's library to allow for overloading
-                prefixes = [os.path.join(os.path.dirname(__file__), "..", "..", "symbols", "windows"),
-                            os.path.join(os.path.dirname(__file__), "..", "symbols", "windows")]
                 midfix = kernel['pdb_name'] + "-" + kernel['GUID'] + "-" + str(kernel['age'])
-                suffixes = ['.json', '.json.xz']
                 idd_path = None
-                for prefix in prefixes:
-                    for suffix in suffixes:
+                for prefix in self.prefixes:
+                    for suffix in self.suffixes:
                         if os.path.exists(os.path.join(prefix, midfix + suffix)):
                             idd_path = "file://" + os.path.abspath(os.path.join(prefix, midfix + suffix))
                 if idd_path:
