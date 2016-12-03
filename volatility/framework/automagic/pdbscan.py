@@ -41,7 +41,7 @@ class PdbSigantureScanner(interfaces.layers.ScannerInterface):
                             self._RSDS_format.unpack(data[sig + 4:name_offset])
 
                         GUID = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
-                        yield (GUID, a, pdb_name, data_offset + name_offset + sig)
+                        yield (GUID, a, pdb_name, data_offset + sig)
             sig = data.find(b"RSDS", sig + 1)
 
 
@@ -136,6 +136,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         if os.path.exists(os.path.join(prefix, midfix + suffix)):
                             idd_path = "file://" + os.path.abspath(os.path.join(prefix, midfix + suffix))
                 if idd_path:
+                    vollog.debug("Using symbol library: {}".format(midfix))
                     clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
                     # Set the discovered options
                     context.config[interfaces.configuration.path_join(sub_config_path, "class")] = clazz
