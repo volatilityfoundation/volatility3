@@ -272,12 +272,26 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
 
     def __getitem__(self, i):
         """Returns the i-th item from the array"""
-        if i >= self.vol.count or 0 > i:
-            raise IndexError
-        object_info = ObjectInformation(layer_name = self.vol.layer_name,
-                                        offset = self.vol.offset + (self.vol.subtype.size * i),
-                                        parent = self)
-        return self.vol.subtype(context = self._context, object_info = object_info)
+        result = []
+        if isinstance(i, slice):
+            if i.step:
+                series = range(i.start, i.stop, i.step)
+            elif i.start:
+                series = range(i.start, i.stop)
+            else:
+                series = range(i.stop)
+            for index in series:
+                object_info = ObjectInformation(layer_name = self.vol.layer_name,
+                                                offset = self.vol.offset + (self.vol.subtype.size * index),
+                                                parent = self)
+                result += [self.vol.subtype(context = self._context, object_info = object_info)]
+        else:
+            index = i
+            object_info = ObjectInformation(layer_name = self.vol.layer_name,
+                                            offset = self.vol.offset + (self.vol.subtype.size * index),
+                                            parent = self)
+            result = self.vol.subtype(context = self._context, object_info = object_info)
+        return result
 
     def __len__(self):
         """Returns the length of the array"""
