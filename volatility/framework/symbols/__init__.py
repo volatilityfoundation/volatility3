@@ -38,7 +38,7 @@ class SymbolSpace(collections.abc.Mapping):
     ### Symbol functions
 
     def get_symbols_by_type(self, type_name):
-        """Returns all symbols based """
+        """Returns all symbols based on the type of the symbol"""
         for table in self._dict.keys():
             for symbol_name in self._dict[table].get_symbols_by_type(type_name):
                 yield table + constants.BANG + symbol_name
