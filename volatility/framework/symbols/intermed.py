@@ -7,6 +7,7 @@ import urllib.parse
 from volatility import schemas
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
 from volatility.framework.exceptions import SymbolSpaceError
+from volatility.framework.symbols import native
 
 vollog = logging.getLogger(__name__)
 
@@ -29,8 +30,6 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         if url.scheme != 'file':
             raise NotImplementedError(
                 "This scheme is not yet implement for the Intermediate Symbol Format: {}".format(url.scheme))
-        # Inherit
-        super().__init__(name, native_types)
 
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
@@ -51,9 +50,11 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         self._delegate = self._closest_version(metadata.get('format', "0.0.0"), self._versions)(name, json_object,
                                                                                                 native_types)
 
+        # Inherit
+        super().__init__(name, native_types or self._delegate.natives)
+
     def _closest_version(self, version, versions):
         """Determines the highest suitable handler for specified version format"""
-        """Finds the highest suitable format version to read the data"""
         supported, age, revision = [int(x) for x in version.split(".")]
         supported_versions = [x for x in versions.keys() if x[0] == supported and x[1] >= age]
         if not supported_versions:
@@ -83,11 +84,25 @@ class Version1Format(ISFormatTable):
     version = (current - age, age, revision)
 
     def __init__(self, name, json_object, native_types = None):
-        super().__init__(name, native_types)
         self._json_object = json_object
         self._validate_json()
+        nt = native_types or self._get_natives()
+        super().__init__(name, nt)
         self._overrides = {}
         self._symbol_cache = None
+
+    def _get_natives(self):
+        """Determines the appropriate native_types to use from the JSON data"""
+        for native_class in [native.x64NativeTable, native.x86NativeTable]:
+            for base_type in self._json_object['base_types']:
+                try:
+                    if self._json_object['base_types'][base_type]['length'] != native_class.get_type(base_type).size:
+                        break
+                except TypeError:
+                    # TODO: determine whether we should give voids a size - We don't give voids a length, whereas microsoft seemingly do
+                    pass
+            else:
+                return native_class.natives
 
     # TODO: Check the format and make use of the other metadata
 

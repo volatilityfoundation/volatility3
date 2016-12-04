@@ -27,7 +27,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
     provides = {"type": "interface"}
 
     def __init__(self, context, config_path, name, idd_filepath):
-        super().__init__(name = name, idd_filepath = idd_filepath, native_types = context.symbol_space.natives)
+        super().__init__(name = name, idd_filepath = idd_filepath)
 
         # Set-up windows specific types
         self.set_type_class('_ETHREAD', extensions._ETHREAD)
