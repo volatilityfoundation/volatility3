@@ -2,11 +2,13 @@
 #
 
 import logging
+import math
 import os
 import struct
 
 from volatility.framework import configuration
 from volatility.framework import exceptions
+from volatility.framework import layers
 
 if __name__ == "__main__":
     import sys
@@ -167,14 +169,19 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         if isinstance(requirement, configuration.requirements.TranslationLayerRequirement):
             # TODO: Check that this is the right potential kernel to be using
             kernel = self.potential_kernels[0]
-            # Often (in 32-bit/pae versions of windows at least) the kernel is loaded precisely
-            # at the offset into kernel memory as it is in physical memory
+            # Often the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet
             virtual_layer_name = context.config.get(sub_config_path, None)
-            if virtual_layer_name:
+            if virtual_layer_name and isinstance(context.memory[virtual_layer_name], layers.intel.Intel):
                 physical_layer_name = context.config.get(
                     interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
                 if physical_layer_name:
-                    kvo = kernel['mz_offset'] + 0x80000000
+                    if context.memory[virtual_layer_name].bits_per_register == 32:
+                        # The kernel starts exactly halfway through the address space, so shift the maximum_address down by 1
+                        kvo = kernel['mz_offset'] + ((context.memory[virtual_layer_name].maximum_address + 1) >> 1)
+                    elif context.memory[virtual_layer_name].bits_per_register == 64:
+                        # The kernel starts in a chunk towards the end of the space
+                        kvo = kernel['mz_offset'] + (
+                            31 << int(math.log(context.memory[virtual_layer_name].maximum_address + 1, 2)) - 5)
                     try:
                         kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
                         if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in kvp])):
@@ -182,8 +189,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             context.config[kvo_path] = kvo
                             vollog.debug(
                                 "Setting kernel_virtual_offset to {}".format(hex(kvo)))
+                        else:
+                            vollog.debug(
+                                "Potential kernel_virtual_offset did not map to expected location: {}".format(hex(kvo)))
                     except exceptions.PagedInvalidAddressException:
-                        pass
+                        vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
         else:
             for subreq in requirement.requirements.values():
                 self.recurse_set_kernel_virtual_offset(context, sub_config_path, subreq)
