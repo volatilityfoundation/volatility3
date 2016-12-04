@@ -6,6 +6,7 @@ import os
 import struct
 
 from volatility.framework import configuration
+from volatility.framework import exceptions
 
 if __name__ == "__main__":
     import sys
@@ -163,14 +164,26 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     def recurse_set_kernel_virtual_offset(self, context, config_path, requirement):
         """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting"""
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        if isinstance(requirement,
-                      configuration.requirements.IntRequirement) and requirement.name == 'kernel_virtual_offset':
+        if isinstance(requirement, configuration.requirements.TranslationLayerRequirement):
             # TODO: Check that this is the right potential kernel to be using
             kernel = self.potential_kernels[0]
             # Often (in 32-bit/pae versions of windows at least) the kernel is loaded precisely
             # at the offset into kernel memory as it is in physical memory
-            context.config[sub_config_path] = kernel['mz_offset'] + 0x80000000
-            vollog.debug("Setting kernel_virtual_offset to {}".format(hex(context.config[sub_config_path])))
+            virtual_layer_name = context.config.get(sub_config_path, None)
+            if virtual_layer_name:
+                physical_layer_name = context.config.get(
+                    interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
+                if physical_layer_name:
+                    kvo = kernel['mz_offset'] + 0x80000000
+                    try:
+                        kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
+                        if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in kvp])):
+                            kvo_path = interfaces.configuration.path_join(config_path, 'kernel_virtual_offset')
+                            context.config[kvo_path] = kvo
+                            vollog.debug(
+                                "Setting kernel_virtual_offset to {}".format(hex(kvo)))
+                    except exceptions.PagedInvalidAddressException:
+                        pass
         else:
             for subreq in requirement.requirements.values():
                 self.recurse_set_kernel_virtual_offset(context, sub_config_path, subreq)
