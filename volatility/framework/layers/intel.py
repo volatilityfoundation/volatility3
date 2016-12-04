@@ -37,6 +37,10 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                            ('page table', 10, True)]
 
     @property
+    def bits_per_register(self):
+        return self._bits_per_register
+
+    @property
     def minimum_address(self):
         return 0
 
@@ -66,8 +70,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         # Setup the entry and how far we are through the offset
         # Position maintains the number of bits left to process
         # We or with 0x1 to ensure our page_map_offset is always valid
-        entry = self._mask(self._page_map_offset, self._bits_per_register - 1, 0) | 0x1
         position = min(self._maxvirtaddr, self._bits_per_register) - 1
+        entry = self._mask(self._page_map_offset, position, 0) | 0x1
 
         # Run through the offset in various chunks
         for (name, size, large_page) in self._structure:
