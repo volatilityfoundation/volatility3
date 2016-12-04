@@ -5,6 +5,8 @@ import logging
 import os
 import struct
 
+from volatility.framework import configuration
+
 if __name__ == "__main__":
     import sys
 
@@ -105,14 +107,18 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         self.potential_kernels = []
 
     def recurse_pdb_finder(self, context, config_path, requirement):
+        """Traverses the requirement tree looking for virtual layers that might contain a windows PDB
+
+           Returns a list of possible kernel locations in the physical memory
+        """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         results = []
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
             # FIXME: Determine the physical layer no matter the virtual layer
-            layer_name = context.config.get(
-                interfaces.configuration.path_join(config_path, requirement.name, "memory_layer"), None)
+            virtual_layer_name = context.config.get(sub_config_path, None)
+            layer_name = context.config.get(interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
             if layer_name:
                 results = scan(context, layer_name)
         else:
@@ -121,12 +127,17 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         return results
 
     def recurse_symbol_fulfiller(self, context, config_path, requirement):
+        """Traverses the requirement tree looking to populate Symbol requirements based on the result of the pdb_finder
+
+           This pass will construct any requirements that may need it
+        """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if isinstance(requirement, interfaces.configuration.SymbolRequirement):
-            # TODO: Check that the symbols for this kernel will fulfill the requirement
             # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
             # TODO: Consider whether a single found kernel can fulfill multiple requirements
+            suffix = ".json"
             if self.potential_kernels:
+                # TODO: Check that the symbols for this kernel will fulfill the requirement
                 kernel = self.potential_kernels[0]
                 # Check user symbol directory first, then fallback to the framework's library to allow for overloading
                 midfix = kernel['pdb_name'] + "-" + kernel['GUID'] + "-" + str(kernel['age'])
@@ -149,6 +160,23 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             for subreq in requirement.requirements.values():
                 self.recurse_symbol_fulfiller(context, sub_config_path, subreq)
 
+    def recurse_set_kernel_virtual_offset(self, context, config_path, requirement):
+        """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting"""
+        sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
+        if isinstance(requirement,
+                      configuration.requirements.IntRequirement) and requirement.name == 'kernel_virtual_offset':
+            # TODO: Check that this is the right potential kernel to be using
+            kernel = self.potential_kernels[0]
+            # Often (in 32-bit/pae versions of windows at least) the kernel is loaded precisely
+            # at the offset into kernel memory as it is in physical memory
+            context.config[sub_config_path] = kernel['mz_offset'] + 0x80000000
+            vollog.debug("Setting kernel_virtual_offset to {}".format(hex(context.config[sub_config_path])))
+        else:
+            for subreq in requirement.requirements.values():
+                self.recurse_set_kernel_virtual_offset(context, sub_config_path, subreq)
+
     def __call__(self, context, config_path, requirement):
         self.potential_kernels = list(self.recurse_pdb_finder(context, config_path, requirement))
-        self.recurse_symbol_fulfiller(context, config_path, requirement)
+        if self.potential_kernels:
+            self.recurse_symbol_fulfiller(context, config_path, requirement)
+            self.recurse_set_kernel_virtual_offset(context, config_path, requirement)
