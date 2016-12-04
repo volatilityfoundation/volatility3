@@ -22,6 +22,14 @@ def path_join(*args):
     return CONFIG_SEPARATOR.join(args)
 
 
+def path_depth(path, depth = 1):
+    """Returns the path up to a certain depth
+
+       Note that depth can be negative (such as -x) and will return all elements except for the last x
+    """
+    return path_join(path.split(CONFIG_SEPARATOR)[:depth])
+
+
 class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to distinguish configuration elements from everything else"""
 
