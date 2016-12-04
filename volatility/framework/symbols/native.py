@@ -83,7 +83,8 @@ native_types = {'int': (objects.Integer, '<i'),
                 'long long': (objects.Integer, '<q'),
                 'unsigned long long': (objects.Integer, '<Q'),
                 'float': (objects.Float, "<d"),
-                'double': (objects.Float, "<d")}
+                'double': (objects.Float, "<d"),
+                'wchar': (objects.Integer, '<H')}
 x86NativeTable = NativeTable("native", native_types)
 native_types['pointer'] = (objects.Pointer, '<Q')
 x64NativeTable = NativeTable("native", native_types)
