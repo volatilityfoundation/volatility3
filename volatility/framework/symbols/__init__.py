@@ -121,7 +121,7 @@ class SymbolSpace(collections.abc.Mapping):
         elif resolve_type == SymbolType.SYMBOL:
             get_function = 'get_symbol'
         else:
-            raise ValueError("Weak_resolve called without a proper SymbolType.")
+            raise ValueError("Weak_resolve called without a proper SymbolType")
 
         name_array = name.split(constants.BANG)
         if len(name_array) == 2:
@@ -166,6 +166,8 @@ class SymbolSpace(collections.abc.Mapping):
                             template_traverse_list.append(child)
             for (parent, child) in replacements:
                 parent.replace_child(child, self._resolved[child.vol.type_name])
+        if isinstance(self._resolved[type_name], objects.templates.ReferenceTemplate):
+            raise exceptions.SymbolError("Unresolvable symbol requested: {}".format(type_name))
         return self._resolved[type_name]
 
     def get_symbol(self, symbol_name):
