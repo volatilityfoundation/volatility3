@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import sys
 
 import volatility.framework
@@ -38,10 +39,11 @@ class CommandLine(object):
         plugin = volatility.plugins.windows.pslist.PsList
         parser = argparse.ArgumentParser(prog = 'volatility',
                                          description = "An open-source memory forensics framework")
+        parser.add_argument("file", help = "Temporary method for changing the file", default = None)
         # argparse_adapter.adapt_config(context.config, parser)
 
         # Run the argparser
-        parser.parse_args()
+        args = parser.parse_args()
         config_path = interfaces.configuration.path_join("plugins", plugin.__name__.lower())
 
         ###
@@ -52,11 +54,11 @@ class CommandLine(object):
         # UI fills in the config:
         ctx = contexts.Context()
 
-        ctx.config["ui.single_location"] = "file:///run/media/mike/disk/memory/xp-laptop-2005-07-04-1430.img"
-        ctx.config["plugins.pslist.offset"] = 0x023c87c0
-
-        ctx.config["ui.single_location"] = "file:///run/media/mike/disk/memory/private/jon-fres.dmp"
-        ctx.config["plugins.pslist.offset"] = 0x01bcc830
+        if not args.file:
+            ctx.config["ui.single_location"] = "file:///home/memory/xp-laptop-2005-07-04-1430.img"
+            ctx.config["ui.single_location"] = "file:///home/memory/private/jon-fres.dmp"
+        else:
+            ctx.config["ui.single_location"] = "file://" + os.path.abspath(args.file)
 
         # ctx.config[
         #    "plugins.pslist.ntkrnlmp.class"] = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
