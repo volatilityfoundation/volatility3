@@ -13,23 +13,11 @@ class PsList(plugins.PluginInterface):
                 requirements.IntRequirement(name = 'pid',
                                             description = "Process ID",
                                             optional = True),
-                requirements.IntRequirement(name = 'offset',
-                                            description = 'Virtual address of any process')]
+                requirements.IntRequirement(name = 'kernel_virtual_offset',
+                                            description = 'Virtual address of the kernel MZ header')]
 
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
-
-    @staticmethod
-    def kernel_process_from_physical_process(ctx, physical_layer, kernel_layer, offset):
-        """Return a kernel process object from physical process data."""
-        # Get the process in the physical space
-        flateproc = ctx.object("ntkrnlmp!_EPROCESS", physical_layer, offset = offset)
-        # Determine the relative offset from the Thread head to the ThreadListEntry
-        reloff = ctx.symbol_space.get_type("ntkrnlmp!_ETHREAD").relative_child_offset("ThreadListEntry")
-        # Get the thread object in kernel space from the
-        ethread = ctx.object("ntkrnlmp!_ETHREAD", kernel_layer, offset = flateproc.ThreadListHead.Flink - reloff)
-        # Get the process from the thread object in kernel space
-        return ethread.owning_process()
 
     def _generator(self, eproc):
         for proc in eproc.ActiveProcessLinks:
@@ -38,11 +26,13 @@ class PsList(plugins.PluginInterface):
                                                errors = 'replace')))
 
     def run(self):
-        # Use the primary twice until we figure out how to specify base layers of a particular translation layer
-        eproc = self.kernel_process_from_physical_process(self.context,
-                                                          self.config['primary.memory_layer'],
-                                                          self.config['primary'],
-                                                          self.config['offset'])
+        virtual = self.config['primary']
+
+        kvo = self.config['kernel_virtual_offset']
+        ps_aph_offset = kvo + self.context.symbol_space.get_symbol("ntkrnlmp!PsActiveProcessHead").address
+        list_entry = self.context.object("ntkrnlmp!_LIST_ENTRY", layer_name = virtual, offset = ps_aph_offset)
+        reloff = self.context.symbol_space.get_type("ntkrnlmp!_EPROCESS").relative_child_offset("ActiveProcessLinks")
+        eproc = self.context.object("ntkrnlmp!_EPROCESS", layer_name = virtual, offset = list_entry.vol.offset - reloff)
 
         return TreeGrid([("PID", int),
                          ("PPID", int),
