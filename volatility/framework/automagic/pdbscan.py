@@ -6,9 +6,7 @@ import math
 import os
 import struct
 
-from volatility.framework import configuration
-from volatility.framework import exceptions
-from volatility.framework import layers
+from volatility.framework import configuration, exceptions, layers
 
 if __name__ == "__main__":
     import sys
@@ -143,7 +141,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 # TODO: Check that the symbols for this kernel will fulfill the requirement
                 kernel = self.potential_kernels[0]
                 # Check user symbol directory first, then fallback to the framework's library to allow for overloading
-                midfix = kernel['pdb_name'] + "-" + kernel['GUID'] + "-" + str(kernel['age'])
+                midfix = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
                 idd_path = None
                 for prefix in self.prefixes:
                     for suffix in self.suffixes:
@@ -175,13 +173,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 physical_layer_name = context.config.get(
                     interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
                 if physical_layer_name:
-                    if context.memory[virtual_layer_name].bits_per_register == 32:
-                        # The kernel starts exactly halfway through the address space, so shift the maximum_address down by 1
-                        kvo = kernel['mz_offset'] + (1 << (context.memory[virtual_layer_name].bits_per_register - 1))
-                    elif context.memory[virtual_layer_name].bits_per_register == 64:
+                    if context.memory[virtual_layer_name].bits_per_register == 64:
                         # The kernel starts in a chunk towards the end of the space
                         kvo = kernel['mz_offset'] + (
                             31 << int(math.log(context.memory[virtual_layer_name].maximum_address + 1, 2)) - 5)
+                    else:
+                        # The kernel starts exactly halfway through the address space, so shift the maximum_address down by 1
+                        kvo = kernel['mz_offset'] + (1 << (context.memory[virtual_layer_name].bits_per_register - 1))
                     try:
                         kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
                         if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in kvp])):

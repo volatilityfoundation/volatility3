@@ -93,7 +93,9 @@ class Version1Format(ISFormatTable):
 
     def _get_natives(self):
         """Determines the appropriate native_types to use from the JSON data"""
-        for native_class in [native.x64NativeTable, native.x86NativeTable]:
+        classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
+        for nc in classes:
+            native_class = classes[nc]
             for base_type in self._json_object['base_types']:
                 try:
                     if self._json_object['base_types'][base_type]['length'] != native_class.get_type(base_type).size:
@@ -102,6 +104,7 @@ class Version1Format(ISFormatTable):
                     # TODO: determine whether we should give voids a size - We don't give voids a length, whereas microsoft seemingly do
                     pass
             else:
+                vollog.debug("Choosing appropriate natives for symbol library: {}".format(nc))
                 return native_class.natives
 
     # TODO: Check the format and make use of the other metadata
