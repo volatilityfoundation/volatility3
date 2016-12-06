@@ -177,7 +177,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     if context.memory[virtual_layer_name].bits_per_register == 64:
                         # The kernel starts in a chunk towards the end of the space
                         kvo = kernel['mz_offset'] + (
-                            31 << int(math.log(context.memory[virtual_layer_name].maximum_address + 1, 2)) - 5)
+                            31 << int(round(math.log(context.memory[virtual_layer_name].maximum_address + 1, 2)) - 5))
                     else:
                         # The kernel starts exactly halfway through the address space, so shift the maximum_address down by 1
                         kvo = kernel['mz_offset'] + (1 << (context.memory[virtual_layer_name].bits_per_register - 1))
