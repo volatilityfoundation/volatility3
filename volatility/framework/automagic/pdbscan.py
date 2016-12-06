@@ -99,6 +99,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     """Looks for all Intel address spaces and attempts to identify the PDB guid required for the space"""
     priority = 30
 
+    # Make sure uncompressed/outside-framework takes precedence, so users can overload.
     prefixes = [os.path.join(os.path.dirname(__file__), "..", "..", "symbols", "windows"),
                 os.path.join(os.path.dirname(__file__), "..", "symbols", "windows")]
     suffixes = ['.json', '.json.xz']
