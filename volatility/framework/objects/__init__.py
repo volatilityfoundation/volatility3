@@ -176,7 +176,7 @@ class Pointer(Integer):
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
         @classmethod
         def size(cls, template):
-            return Integer.VolTemplateProxy.size(cls, template)
+            return Integer.VolTemplateProxy.size(template)
 
         @classmethod
         def children(cls, template):
