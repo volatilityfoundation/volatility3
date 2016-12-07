@@ -6,6 +6,7 @@ Created on 6 May 2013
 
 import collections
 import collections.abc
+import math
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
@@ -66,7 +67,13 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         # This allows objects to MASSIVELY MESS with their own internal representation!!!
         # Changes to offset, type_name, etc should NEVER be done
         #
-        self._vol = collections.ChainMap({}, object_info, {'type_name': type_name}, kwargs)
+
+        # Normalize offsets
+        mask = (1 << int(math.ceil(math.log2(context.memory[object_info.layer_name].maximum_address)))) - 1
+        normalized_offset = object_info.offset & mask
+
+        self._vol = collections.ChainMap({}, object_info, {'type_name': type_name}, {'offset': normalized_offset},
+                                         kwargs)
         self._context = context
 
     @property
