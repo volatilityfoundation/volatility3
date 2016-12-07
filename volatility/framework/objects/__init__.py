@@ -155,6 +155,19 @@ class Pointer(Integer):
                          struct_format = struct_format)
         self._vol['subtype'] = subtype
 
+    @classmethod
+    def _struct_value(cls, context, struct_format, layer_name, offset):
+        """Ensure that pointer values always fall within the address space of the layer they're constructed on
+
+           If there's a need for all the data within the address, the pointer should be recast.  The "pointer"
+           must always live within the space (even if the data provided is invalid).
+        """
+        length = struct.calcsize(struct_format)
+        mask = context.memory[layer_name].address_mask
+        data = context.memory.read(layer_name, offset, length)
+        (value,) = struct.unpack(struct_format, data)
+        return value & mask
+
     def dereference(self, layer_name = None):
         """Dereferences the pointer
 
