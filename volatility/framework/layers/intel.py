@@ -32,7 +32,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         self._bits_per_register = 32
         self._maxphyaddr = 32
         self._maxvirtaddr = self._maxphyaddr
-        self._index_shift = int(round(math.log(struct.calcsize(self._entry_format), 2)))
+        self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
         self._structure = [('page directory', 10, False),
                            ('page table', 10, True)]
 
@@ -196,7 +196,7 @@ class IntelPAE(Intel):
         self._bits_per_register = 32
         self._maxphyaddr = 40
         self._maxvirtaddr = self._maxphyaddr
-        self._index_shift = int(round(math.log(struct.calcsize(self._entry_format), 2)))
+        self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
         self._structure = [('page directory pointer', 2, False),
                            ('page directory', 9, True),
                            ('page table', 9, True)]
@@ -216,7 +216,7 @@ class Intel32e(Intel):
         self._bits_per_register = 64
         self._maxphyaddr = 52
         self._maxvirtaddr = 48
-        self._index_shift = int(round(math.log(struct.calcsize(self._entry_format), 2)))
+        self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
         self._structure = [('page map layer 4', 9, False),
                            ('page directory pointer', 9, True),
                            ('page directory', 9, True),
