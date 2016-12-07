@@ -5,6 +5,7 @@ Created on 4 May 2013
 """
 import collections
 import collections.abc
+import math
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from volatility.framework import exceptions, validity
@@ -84,6 +85,11 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     @abstractproperty
     def minimum_address(self):
         """Returns the minimum valid address of the space"""
+
+    @property
+    def address_mask(self):
+        """Returns a mask which encapsulates all the actives bit of an address for this layer"""
+        return (1 << int(math.ceil(math.log2(self.maximum_address)))) - 1
 
     @abstractmethod
     def is_valid(self, offset, length = 1):

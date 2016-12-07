@@ -5,7 +5,6 @@ Created on 17 Feb 2013
 """
 
 import collections
-import math
 import struct
 
 from volatility.framework import interfaces
@@ -164,7 +163,7 @@ class Pointer(Integer):
         """
         if layer_name is None:
             layer_name = self.vol.layer_name
-        mask = (1 << int(math.ceil(math.log2(self._context.memory[layer_name].maximum_address)))) - 1
+        mask = self._context.memory[layer_name].address_mask
         offset = self & mask
         return self.vol.subtype(context = self._context,
                                 object_info = interfaces.objects.ObjectInformation(
@@ -276,7 +275,7 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     def __getitem__(self, i):
         """Returns the i-th item from the array"""
         result = []
-        mask = (1 << int(math.ceil(math.log2(self._context.memory[self.vol.layer_name].maximum_address)))) - 1
+        mask = self._context.memory[self.vol.layer_name].address_mask
         if isinstance(i, slice):
             if i.step:
                 series = range(i.start, i.stop, i.step)
@@ -371,7 +370,7 @@ class Struct(interfaces.objects.ObjectInterface):
         if attr in self._concrete_members:
             return self._concrete_members[attr]
         elif attr in self.vol.members:
-            mask = (1 << int(math.ceil(math.log2(self._context.memory[self.vol.layer_name].maximum_address)))) - 1
+            mask = self._context.memory[self.vol.layer_name].address_mask
             relative_offset, member = self.vol.members[attr]
             member = member(context = self._context,
                             object_info = interfaces.objects.ObjectInformation(layer_name = self.vol.layer_name,
