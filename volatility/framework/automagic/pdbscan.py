@@ -114,7 +114,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
            Returns a list of possible kernel locations in the physical memory
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        results = []
+        results = {}
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
@@ -122,10 +122,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             virtual_layer_name = context.config.get(sub_config_path, None)
             layer_name = context.config.get(interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
             if layer_name:
-                results = scan(context, layer_name)
+                results = {virtual_layer_name: scan(context, layer_name)}
         else:
             for subreq in requirement.requirements.values():
-                results += self.recurse_pdb_finder(context, sub_config_path, subreq)
+                results.update(self.recurse_pdb_finder(context, sub_config_path, subreq))
         return results
 
     def recurse_symbol_fulfiller(self, context, config_path, requirement):
@@ -140,24 +140,32 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             suffix = ".json"
             if self.potential_kernels:
                 # TODO: Check that the symbols for this kernel will fulfill the requirement
-                kernel = self.potential_kernels[0]
-                # Check user symbol directory first, then fallback to the framework's library to allow for overloading
-                midfix = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
-                idd_path = None
-                for prefix in self.prefixes:
-                    for suffix in self.suffixes:
-                        if os.path.exists(os.path.join(prefix, midfix + suffix)):
-                            idd_path = "file://" + os.path.abspath(os.path.join(prefix, midfix + suffix))
-                if idd_path:
-                    vollog.debug("Using symbol library: {}".format(midfix))
-                    clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
-                    # Set the discovered options
-                    context.config[interfaces.configuration.path_join(sub_config_path, "class")] = clazz
-                    context.config[interfaces.configuration.path_join(sub_config_path, "idd_filepath")] = idd_path
-                    # Construct the appropriate symbol table
-                    requirement.construct(context, config_path)
+                kernel = None
+                for pk in self.potential_kernels:
+                    kernel = self.potential_kernels[pk]
+                    if kernel:
+                        kernel = kernel[0]
+                        break
+                if kernel:
+                    # Check user symbol directory first, then fallback to the framework's library to allow for overloading
+                    midfix = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
+                    idd_path = None
+                    for prefix in self.prefixes:
+                        for suffix in self.suffixes:
+                            if os.path.exists(os.path.join(prefix, midfix + suffix)):
+                                idd_path = "file://" + os.path.abspath(os.path.join(prefix, midfix + suffix))
+                    if idd_path:
+                        vollog.debug("Using symbol library: {}".format(midfix))
+                        clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
+                        # Set the discovered options
+                        context.config[interfaces.configuration.path_join(sub_config_path, "class")] = clazz
+                        context.config[interfaces.configuration.path_join(sub_config_path, "idd_filepath")] = idd_path
+                        # Construct the appropriate symbol table
+                        requirement.construct(context, config_path)
+                    else:
+                        vollog.debug("Symbol library path not found: {}".format(midfix + suffix))
                 else:
-                    vollog.debug("Symbol library path not found: {}".format(midfix + suffix))
+                    vollog.debug("No suitable kernel pdb signature found")
         else:
             for subreq in requirement.requirements.values():
                 self.recurse_symbol_fulfiller(context, sub_config_path, subreq)
@@ -167,38 +175,43 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if isinstance(requirement, configuration.requirements.TranslationLayerRequirement):
             # TODO: Check that this is the right potential kernel to be using
-            kernel = self.potential_kernels[0]
-            # Often the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet
             virtual_layer_name = context.config.get(sub_config_path, None)
             if virtual_layer_name and isinstance(context.memory[virtual_layer_name], layers.intel.Intel):
                 physical_layer_name = context.config.get(
                     interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
                 if physical_layer_name:
-                    if context.memory[virtual_layer_name].bits_per_register == 64:
-                        # The kernel starts in a chunk towards the end of the space
-                        kvo = kernel['mz_offset'] + (
-                            31 << int(math.ceil(math.log2(context.memory[virtual_layer_name].maximum_address + 1)) - 5))
-                    else:
-                        # The kernel starts exactly halfway through the address space, so shift the maximum_address down by 1
-                        kvo = kernel['mz_offset'] + (1 << (context.memory[virtual_layer_name].bits_per_register - 1))
-                    try:
-                        kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
-                        if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in kvp])):
-                            kvo_path = interfaces.configuration.path_join(config_path, 'kernel_virtual_offset')
-                            context.config[kvo_path] = kvo
-                            vollog.debug(
-                                "Setting kernel_virtual_offset to {}".format(hex(kvo)))
+                    kernel = self.potential_kernels.get(virtual_layer_name, [None, ])[0]
+                    if kernel:
+                        # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
+                        if context.memory[virtual_layer_name].bits_per_register == 64:
+                            # The kernel starts in a chunk towards the end of the space
+                            kvo = kernel['mz_offset'] + (
+                                31 << int(
+                                    math.ceil(math.log2(context.memory[virtual_layer_name].maximum_address + 1)) - 5))
                         else:
-                            vollog.debug(
-                                "Potential kernel_virtual_offset did not map to expected location: {}".format(hex(kvo)))
-                    except exceptions.PagedInvalidAddressException:
-                        vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
+                            # The kernel starts exactly halfway through the address space, so shift the maximum_address down by 1
+                            kvo = kernel['mz_offset'] + (
+                                1 << (context.memory[virtual_layer_name].bits_per_register - 1))
+                        try:
+                            kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
+                            if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in kvp])):
+                                # Sit the virtual offset under the TranslationLayer it applies to
+                                kvo_path = interfaces.configuration.path_join(sub_config_path, 'kernel_virtual_offset')
+                                context.config[kvo_path] = kvo
+                                vollog.debug(
+                                    "Setting kernel_virtual_offset to {}".format(hex(kvo)))
+                            else:
+                                vollog.debug(
+                                    "Potential kernel_virtual_offset did not map to expected location: {}".format(
+                                        hex(kvo)))
+                        except exceptions.PagedInvalidAddressException:
+                            vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
         else:
             for subreq in requirement.requirements.values():
                 self.recurse_set_kernel_virtual_offset(context, sub_config_path, subreq)
 
     def __call__(self, context, config_path, requirement):
-        self.potential_kernels = list(self.recurse_pdb_finder(context, config_path, requirement))
+        self.potential_kernels = self.recurse_pdb_finder(context, config_path, requirement)
         if self.potential_kernels:
             self.recurse_symbol_fulfiller(context, config_path, requirement)
             self.recurse_set_kernel_virtual_offset(context, config_path, requirement)

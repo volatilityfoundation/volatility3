@@ -73,7 +73,8 @@ def import_files(base_module):
                         try:
                             vollog.debug("Importing module: {}.{}".format(base_module.__name__, module))
                             __import__(base_module.__name__ + "." + module)
-                        except ImportError:
+                        except ImportError as e:
+                            vollog.debug(str(e))
                             vollog.warning("Failed to import module {} based on file: {}".format(module, modpath))
                             raise
                     else:

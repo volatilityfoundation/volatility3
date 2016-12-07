@@ -151,7 +151,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 requirements.TranslationLayerRequirement(name = 'swap_layer',
                                                          optional = True),
                 requirements.IntRequirement(name = 'page_map_offset',
-                                            optional = False)]
+                                            optional = False),
+                requirements.IntRequirement(name = 'kernel_virtual_offset',
+                                            optional = True)]
 
     def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
         min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,

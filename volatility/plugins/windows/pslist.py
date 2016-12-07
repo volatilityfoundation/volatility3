@@ -12,9 +12,7 @@ class PsList(plugins.PluginInterface):
                                                description = "Windows OS"),
                 requirements.IntRequirement(name = 'pid',
                                             description = "Process ID",
-                                            optional = True),
-                requirements.IntRequirement(name = 'kernel_virtual_offset',
-                                            description = 'Virtual address of the kernel MZ header')]
+                                            optional = True)]
 
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
@@ -28,7 +26,7 @@ class PsList(plugins.PluginInterface):
     def run(self):
         virtual = self.config['primary']
 
-        kvo = self.config['kernel_virtual_offset']
+        kvo = self.config['primary.kernel_virtual_offset']
         ps_aph_offset = kvo + self.context.symbol_space.get_symbol("ntkrnlmp!PsActiveProcessHead").address
         list_entry = self.context.object("ntkrnlmp!_LIST_ENTRY", layer_name = virtual, offset = ps_aph_offset)
         reloff = self.context.symbol_space.get_type("ntkrnlmp!_EPROCESS").relative_child_offset("ActiveProcessLinks")
