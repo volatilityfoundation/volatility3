@@ -7,6 +7,7 @@ import os
 import struct
 
 from volatility.framework import exceptions, layers
+from volatility.framework.layers import scanners
 
 if __name__ == "__main__":
     import sys
@@ -188,35 +189,47 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 physical_layer_name = context.config.get(
                     interfaces.configuration.path_join(vlayer.config_path, 'memory_layer'), None)
                 found = False
+                kvo_path = interfaces.configuration.path_join(virtual_config_path, 'kernel_virtual_offset')
                 for kernel in kernels:
                     # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
-                    kvo_64_old = (31 << int(math.ceil(math.log2(vlayer.maximum_address + 1)) - 5))
-                    kvo_32_old = (1 << (vlayer.bits_per_register - 1))
-                    for relative_offset in [kvo_64_old, kvo_32_old]:
-                        kvo = kernel['mz_offset'] + relative_offset
-                        try:
-                            kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
-                            if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in
-                                     kvp])):
-                                valid_kernels[virtual_layer_name] = (kvo, kernel)
-                                # Sit the virtual offset under the TranslationLayer it applies to
-                                kvo_path = interfaces.configuration.path_join(virtual_config_path,
-                                                                              'kernel_virtual_offset')
-                                context.config[kvo_path] = kvo
-                                vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
-                                found = True
-                            else:
-                                vollog.debug(
-                                    "Potential kernel_virtual_offset did not map to expected location: {}".format(
-                                        hex(kvo)))
-                        except exceptions.PagedInvalidAddressException:
-                            vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
-                        if found:
+                    if vlayer.bits_per_register == 64:
+                        kvo = kernel['mz_offset'] + (31 << int(math.ceil(math.log2(vlayer.maximum_address + 1)) - 5))
+                    else:
+                        kvo = kernel['mz_offset'] + (1 << (vlayer.bits_per_register - 1))
+                    try:
+                        kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
+                        if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in
+                                 kvp])):
+                            valid_kernels[virtual_layer_name] = (kvo, kernel)
+                            # Sit the virtual offset under the TranslationLayer it applies to
+                            context.config[kvo_path] = kvo
+                            vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
                             break
-                    if found:
-                        break
+                        else:
+                            vollog.debug(
+                                "Potential kernel_virtual_offset did not map to expected location: {}".format(
+                                    hex(kvo)))
+                    except exceptions.PagedInvalidAddressException:
+                        vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
                 else:
-                    vollog.warning("No suitable kernel found for layer: {}".format(virtual_layer_name))
+                    # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
+                    if kernels:
+                        physical_layer = context.memory[physical_layer_name]
+                        results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
+                                                      min_address = kernels[0]['mz_offset'])
+                        for result in results:
+                            # TODO: Identify the specific structure we're finding and document this a bit better
+                            address = context.object("unsigned long long", offset = result - 6 - 8,
+                                                     layer_name = physical_layer_name)
+                            try:
+                                if kernels[0]['mz_offset'] in [mapping[1] for mapping in vlayer.mapping(address, 0)]:
+                                    valid_kernels[virtual_layer_name] = (address, kernels[0])
+                                    break
+                            except exceptions.PagedInvalidAddressException:
+                                # We don't care if we're mapping an address to 0, it's not what we're looking for
+                                pass
+        if not valid_kernels:
+            vollog.warning("No suitable kernel found for layer: {}".format(virtual_layer_name))
         return valid_kernels
 
     def __call__(self, context, config_path, requirement):
