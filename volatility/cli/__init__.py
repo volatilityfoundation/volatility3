@@ -36,14 +36,25 @@ class CommandLine(object):
         volatility.framework.import_files(volatility.plugins)
 
         # TODO: Choose a plugin
-        plugin = volatility.plugins.windows.pslist.PsList
         parser = argparse.ArgumentParser(prog = 'volatility',
                                          description = "An open-source memory forensics framework")
+        parser.add_argument("-p", "--plugin", help = "Run the following plugin", default = "windows.pslist.PsList")
         parser.add_argument("file", help = "Temporary method for changing the file", default = None)
         # argparse_adapter.adapt_config(context.config, parser)
 
         # Run the argparser
         args = parser.parse_args()
+        print("PLUGIN", args.plugin)
+        plug_class = args.plugin.split(".")[-1]
+        plug_mod = ".".join(args.plugin.split(".")[:-1])
+        plug_name = "volatility.plugins." + plug_mod
+        plugin = None
+        for module in sys.modules:
+            if plug_name == module:
+                plugin = getattr(sys.modules[module], plug_class)
+                break
+        else:
+            raise RuntimeError("Invalid plugin requested: {}".format(plug_name))
         config_path = interfaces.configuration.path_join("plugins", plugin.__name__.lower())
 
         ###
