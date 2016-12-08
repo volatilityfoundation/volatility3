@@ -79,6 +79,8 @@ class CommandLine(object):
         if not plugin.validate(ctx, config_path):
             raise RuntimeError("Unable to validate the plugin configuration")
 
+        print("\n\n")
+
         # Construct and run the plugin
         TextRenderer().render(plugin(ctx, config_path).run())
 

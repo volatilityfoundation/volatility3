@@ -167,7 +167,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             for subreq in requirement.requirements.values():
                 self.recurse_symbol_fulfiller(context, sub_config_path, subreq)
 
-    def set_kernel_virtual_offset(self, context, config_path, requirement):
+    def set_kernel_virtual_offset(self, context):
         """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting"""
         for virtual_layer in self.valid_kernels:
             # Sit the virtual offset under the TranslationLayer it applies to
@@ -177,7 +177,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             context.config[kvo_path] = kvo
             vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
 
-    def determine_valid_kernels(self, context, config_path, requirement, potential_kernels):
+    def determine_valid_kernels(self, context, potential_kernels):
         """Runs through the identified potential kernels and verifies their suitability"""
         valid_kernels = {}
         for virtual_layer_name in potential_kernels:
@@ -234,7 +234,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def __call__(self, context, config_path, requirement):
         potential_kernels = self.recurse_pdb_finder(context, config_path, requirement)
-        self.valid_kernels = self.determine_valid_kernels(context, config_path, requirement, potential_kernels)
+        self.valid_kernels = self.determine_valid_kernels(context, potential_kernels)
         if self.valid_kernels:
             self.recurse_symbol_fulfiller(context, config_path, requirement)
-            self.set_kernel_virtual_offset(context, config_path, requirement)
+            self.set_kernel_virtual_offset(context)
