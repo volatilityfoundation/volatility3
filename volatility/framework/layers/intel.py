@@ -162,7 +162,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         previous = None
         range_start = current = min_address
         while current <= max_address:
-            progress_callback(round((current - min_address) * 100 / total_size, 3))
+            if progress_callback:
+                progress_callback(round((current - min_address) * 100 / total_size, 3))
             try:
                 address, page_size = self._translate(current)
                 if (previous, address) in scanned or not context.memory[self._base_layer].is_valid(address):
