@@ -6,7 +6,7 @@ import math
 import os
 import struct
 
-from volatility.framework import configuration, exceptions, layers
+from volatility.framework import exceptions, layers
 
 if __name__ == "__main__":
     import sys
@@ -106,7 +106,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def __init__(self):
         super().__init__()
-        self.potential_kernels = []
+        self.valid_kernels = []
 
     def recurse_pdb_finder(self, context, config_path, requirement):
         """Traverses the requirement tree looking for virtual layers that might contain a windows PDB
@@ -138,15 +138,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
             # TODO: Consider whether a single found kernel can fulfill multiple requirements
             suffix = ".json"
-            if self.potential_kernels:
+            if self.valid_kernels:
                 # TODO: Check that the symbols for this kernel will fulfill the requirement
                 kernel = None
-                for pk in self.potential_kernels:
-                    kernel = self.potential_kernels[pk]
-                    if kernel:
-                        kernel = kernel[0]
-                        break
-                if kernel:
+                for virtual_layer in self.valid_kernels:
+                    _kvo, kernel = self.valid_kernels[virtual_layer]
                     # Check user symbol directory first, then fallback to the framework's library to allow for overloading
                     midfix = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
                     idd_path = None
@@ -170,18 +166,29 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             for subreq in requirement.requirements.values():
                 self.recurse_symbol_fulfiller(context, sub_config_path, subreq)
 
-    def recurse_set_kernel_virtual_offset(self, context, config_path, requirement):
+    def set_kernel_virtual_offset(self, context, config_path, requirement):
         """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting"""
-        sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        if isinstance(requirement, configuration.requirements.TranslationLayerRequirement):
-            # TODO: Check that this is the right potential kernel to be using
-            virtual_layer_name = context.config.get(sub_config_path, None)
+        for virtual_layer in self.valid_kernels:
+            # Sit the virtual offset under the TranslationLayer it applies to
+            kvo_path = interfaces.configuration.path_join(context.memory[virtual_layer].config_path,
+                                                          'kernel_virtual_offset')
+            kvo, kernel = self.valid_kernels[virtual_layer]
+            context.config[kvo_path] = kvo
+            vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
+
+    def determine_valid_kernels(self, context, config_path, requirement, potential_kernels):
+        """Runs through the identified potential kernels and verifies their suitability"""
+        valid_kernels = {}
+        for virtual_layer_name in potential_kernels:
+            kernels = potential_kernels[virtual_layer_name]
+            virtual_config_path = context.memory[virtual_layer_name].config_path
             if virtual_layer_name and isinstance(context.memory[virtual_layer_name], layers.intel.Intel):
+                # TODO: Verify this is a windows image
                 physical_layer_name = context.config.get(
-                    interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
+                    interfaces.configuration.path_join(virtual_config_path, "memory_layer"),
+                    None)
                 if physical_layer_name:
-                    kernel = self.potential_kernels.get(virtual_layer_name, [None, ])[0]
-                    if kernel:
+                    for kernel in kernels:
                         # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
                         if context.memory[virtual_layer_name].bits_per_register == 64:
                             # The kernel starts in a chunk towards the end of the space
@@ -195,23 +202,27 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         try:
                             kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
                             if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in kvp])):
+                                valid_kernels[virtual_layer_name] = (kvo, kernel)
                                 # Sit the virtual offset under the TranslationLayer it applies to
-                                kvo_path = interfaces.configuration.path_join(sub_config_path, 'kernel_virtual_offset')
+                                kvo_path = interfaces.configuration.path_join(virtual_config_path,
+                                                                              'kernel_virtual_offset')
                                 context.config[kvo_path] = kvo
                                 vollog.debug(
                                     "Setting kernel_virtual_offset to {}".format(hex(kvo)))
+                                break
                             else:
                                 vollog.debug(
                                     "Potential kernel_virtual_offset did not map to expected location: {}".format(
                                         hex(kvo)))
                         except exceptions.PagedInvalidAddressException:
                             vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
-        else:
-            for subreq in requirement.requirements.values():
-                self.recurse_set_kernel_virtual_offset(context, sub_config_path, subreq)
+                    else:
+                        vollog.warning("No suitable kernel found for layer: {}".format(virtual_layer_name))
+        return valid_kernels
 
     def __call__(self, context, config_path, requirement):
-        self.potential_kernels = self.recurse_pdb_finder(context, config_path, requirement)
-        if self.potential_kernels:
+        potential_kernels = self.recurse_pdb_finder(context, config_path, requirement)
+        self.valid_kernels = self.determine_valid_kernels(context, config_path, requirement, potential_kernels)
+        if self.valid_kernels:
             self.recurse_symbol_fulfiller(context, config_path, requirement)
-            self.recurse_set_kernel_virtual_offset(context, config_path, requirement)
+            self.set_kernel_virtual_offset(context, config_path, requirement)
