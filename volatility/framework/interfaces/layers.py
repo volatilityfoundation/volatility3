@@ -237,7 +237,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 chunk = self._context.memory.read(layer, mapped_offset, length)
                 if progress_callback:
                     progress += length
-                    progress_callback(progress / total_size)
+                    progress_callback((progress * 100) / total_size)
                 for x in scanner(chunk, offset):
                     yield x
 
