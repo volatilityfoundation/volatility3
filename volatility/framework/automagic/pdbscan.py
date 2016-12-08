@@ -159,6 +159,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         context.config[interfaces.configuration.path_join(sub_config_path, "idd_filepath")] = idd_path
                         # Construct the appropriate symbol table
                         requirement.construct(context, config_path)
+                        break
                     else:
                         vollog.debug("Symbol library path not found: {}".format(midfix + suffix))
                 else:
@@ -212,6 +213,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     except exceptions.PagedInvalidAddressException:
                         vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
                 else:
+                    vollog.debug("Kernel base randomized, searching for base address offset")
                     # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
                     if kernels:
                         physical_layer = context.memory[physical_layer_name]
