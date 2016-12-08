@@ -184,40 +184,39 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             virtual_config_path = context.memory[virtual_layer_name].config_path
             if virtual_layer_name and isinstance(context.memory[virtual_layer_name], layers.intel.Intel):
                 # TODO: Verify this is a windows image
+                vlayer = context.memory[virtual_layer_name]
                 physical_layer_name = context.config.get(
-                    interfaces.configuration.path_join(virtual_config_path, "memory_layer"),
-                    None)
-                if physical_layer_name:
-                    for kernel in kernels:
-                        # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
-                        if context.memory[virtual_layer_name].bits_per_register == 64:
-                            # The kernel starts in a chunk towards the end of the space
-                            kvo = kernel['mz_offset'] + (
-                                31 << int(
-                                    math.ceil(math.log2(context.memory[virtual_layer_name].maximum_address + 1)) - 5))
-                        else:
-                            # The kernel starts exactly halfway through the address space, so shift the maximum_address down by 1
-                            kvo = kernel['mz_offset'] + (
-                                1 << (context.memory[virtual_layer_name].bits_per_register - 1))
+                    interfaces.configuration.path_join(vlayer.config_path, 'memory_layer'), None)
+                found = False
+                for kernel in kernels:
+                    # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
+                    kvo_64_old = (31 << int(math.ceil(math.log2(vlayer.maximum_address + 1)) - 5))
+                    kvo_32_old = (1 << (vlayer.bits_per_register - 1))
+                    for relative_offset in [kvo_64_old, kvo_32_old]:
+                        kvo = kernel['mz_offset'] + relative_offset
                         try:
                             kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
-                            if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in kvp])):
+                            if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in
+                                     kvp])):
                                 valid_kernels[virtual_layer_name] = (kvo, kernel)
                                 # Sit the virtual offset under the TranslationLayer it applies to
                                 kvo_path = interfaces.configuration.path_join(virtual_config_path,
                                                                               'kernel_virtual_offset')
                                 context.config[kvo_path] = kvo
-                                vollog.debug(
-                                    "Setting kernel_virtual_offset to {}".format(hex(kvo)))
-                                break
+                                vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
+                                found = True
                             else:
                                 vollog.debug(
                                     "Potential kernel_virtual_offset did not map to expected location: {}".format(
                                         hex(kvo)))
                         except exceptions.PagedInvalidAddressException:
                             vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
-                    else:
-                        vollog.warning("No suitable kernel found for layer: {}".format(virtual_layer_name))
+                        if found:
+                            break
+                    if found:
+                        break
+                else:
+                    vollog.warning("No suitable kernel found for layer: {}".format(virtual_layer_name))
         return valid_kernels
 
     def __call__(self, context, config_path, requirement):
