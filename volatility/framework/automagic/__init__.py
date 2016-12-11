@@ -1,8 +1,11 @@
+import logging
 import sys
 
 from volatility.framework import class_subclasses, import_files, interfaces
 from volatility.framework.automagic import construct_layers, stacker, windows, pdbscan
 from volatility.framework.configuration import requirements
+
+vollog = logging.getLogger(__name__)
 
 
 def available():
@@ -35,4 +38,5 @@ def run(automagics, context, configurable, config_path = ""):
         requirement.add_requirement(req)
 
     for automagic in automagics:
+        vollog.info("Running automagic: {}".format(automagic.__class__.__name__))
         automagic(context, config_path, requirement)
