@@ -65,19 +65,11 @@ class CommandLine(object):
         # UI fills in the config:
         ctx = contexts.Context()
 
-        if not args.file:
-            ctx.config["ui.single_location"] = "file:///home/memory/xp-laptop-2005-07-04-1430.img"
-            ctx.config["ui.single_location"] = "file:///home/memory/private/jon-fres.dmp"
+        if not args.file or not os.path.exists(args.file):
+            raise RuntimeError("Please provide a valid filename")
         else:
-            ctx.config["ui.single_location"] = "file://" + os.path.abspath(args.file)
-
-        # ctx.config[
-        #    "plugins.pslist.ntkrnlmp.class"] = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
-        # ctx.config[
-        #    "plugins.pslist.ntkrnlmp.idd_filepath"] = "file:///home/mike/workspace/volatility3/aux/ntoskrnl.pdb.json"
-
-        # ctx.config["ui.single_location"] = "file:///run/media/mike/disk/memory/private/win10-x64-2016-05-28.lime"
-        # ctx.config["plugins.pslist.offset"] = 0xfe001608573c0
+            ctx.config["automagic.general.single_location"] = "file://" + os.path.abspath(args.file)
+        ctx.config["automagic.general.single_page_map_offset"] = 0x1ab000
 
         ###
         # BACK TO THE FRAMEWORK

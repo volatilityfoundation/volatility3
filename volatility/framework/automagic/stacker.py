@@ -9,13 +9,15 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     """Class that attempts to build up """
     # Most important automagic, must happen first!
     priority = 0
+    page_map_offset = None
+    location = None
 
     def __call__(self, context, config_path, requirement):
         """Runs the automagic over the configurable"""
         # Bow out quickly if the UI hasn't provided a single_location
-        if "ui.single_location" not in context.config:
+        if "automagic.general.single_location" not in context.config:
             return
-        location = context.config["ui.single_location"]
+        location = context.config["automagic.general.single_location"]
         self._check_type(location, str)
         self._check_type(requirement, interfaces.configuration.RequirementInterface)
         self.location = parse.urlparse(location)
@@ -27,7 +29,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
         new_context = context.clone()
         current_layer_name = context.memory.free_layer_name("FileLayer")
-        current_config_path = interfaces.configuration.path_join("automagic_general", current_layer_name)
+        current_config_path = interfaces.configuration.path_join("automagic", "layer_stacker", "stack",
+                                                                 current_layer_name)
         # This must be specific to get us started, setup the config and run
         new_context.config[interfaces.configuration.path_join(current_config_path, "filename")] = self.local_store
         new_context.add_layer(physical.FileLayer(new_context, current_config_path, current_layer_name))

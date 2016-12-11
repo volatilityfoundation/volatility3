@@ -230,8 +230,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             except exceptions.PagedInvalidAddressException:
                                 # We don't care if we're mapping an address to 0, it's not what we're looking for
                                 pass
+            if not valid_kernels:
+                vollog.warning("No suitable kernel found for layer: {}".format(virtual_layer_name))
         if not valid_kernels:
-            vollog.warning("No suitable kernel found for layer: {}".format(virtual_layer_name))
+            vollog.warning("No suitable kernels found during pdbscan")
         return valid_kernels
 
     def __call__(self, context, config_path, requirement):
