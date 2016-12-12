@@ -129,13 +129,25 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 results.update(self.recurse_pdb_finder(context, sub_config_path, subreq))
         return results
 
-    def recurse_symbol_fulfiller(self, context, config_path, requirement):
+    def recurse_symbol_requirements(self, context, config_path, requirement):
+        """Determines if there is actually an unfulfilled symbol requirement waiting"""
+        sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
+        results = []
+        if isinstance(requirement, interfaces.configuration.SymbolRequirement):
+            # TODO: check if this is a windows symbol requirement, otherwise ignore it
+            if not requirement.validate(context, config_path):
+                results.append((config_path, sub_config_path, requirement))
+        else:
+            for subreq in requirement.requirements.values():
+                results += self.recurse_symbol_requirements(context, sub_config_path, subreq)
+        return results
+
+    def recurse_symbol_fulfiller(self, context):
         """Traverses the requirement tree looking to populate Symbol requirements based on the result of the pdb_finder
 
            This pass will construct any requirements that may need it
         """
-        sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        if isinstance(requirement, interfaces.configuration.SymbolRequirement):
+        for config_path, sub_config_path, requirement in self._symbol_requirements:
             # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
             # TODO: Consider whether a single found kernel can fulfill multiple requirements
             suffix = ".json"
@@ -164,9 +176,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         vollog.debug("Symbol library path not found: {}".format(midfix + suffix))
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
-        else:
-            for subreq in requirement.requirements.values():
-                self.recurse_symbol_fulfiller(context, sub_config_path, subreq)
 
     def set_kernel_virtual_offset(self, context):
         """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting"""
@@ -237,8 +246,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         return valid_kernels
 
     def __call__(self, context, config_path, requirement):
-        potential_kernels = self.recurse_pdb_finder(context, config_path, requirement)
-        self.valid_kernels = self.determine_valid_kernels(context, potential_kernels)
-        if self.valid_kernels:
-            self.recurse_symbol_fulfiller(context, config_path, requirement)
-            self.set_kernel_virtual_offset(context)
+        # TODO: Check if we really need to search for pdbs
+        self._symbol_requirements = self.recurse_symbol_requirements(context, config_path, requirement)
+        if self._symbol_requirements:
+            potential_kernels = self.recurse_pdb_finder(context, config_path, requirement)
+            self.valid_kernels = self.determine_valid_kernels(context, potential_kernels)
+            if self.valid_kernels:
+                self.recurse_symbol_fulfiller(context)
+                self.set_kernel_virtual_offset(context)
