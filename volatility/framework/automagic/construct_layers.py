@@ -6,8 +6,11 @@ vollog = logging.getLogger(__name__)
 
 
 class ConstructionMagic(interfaces.automagic.AutomagicInterface):
-    """Runs through the requirement tree and from the bottom up attempts to construct all TranslationLayerRequirements"""
-    priority = 10
+    """Runs through the requirement tree and from the bottom up attempts to construct all TranslationLayerRequirements
+
+       This should run first to prevent existing configurations getting re-configured
+    """
+    priority = 0
 
     def __call__(self, context, config_path, requirement, optional = False):
         if not requirement.validate(context, config_path):

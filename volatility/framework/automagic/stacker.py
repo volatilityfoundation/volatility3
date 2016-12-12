@@ -2,18 +2,24 @@ from urllib import parse
 
 import volatility
 from volatility.framework import interfaces
+from volatility.framework.automagic import construct_layers
 from volatility.framework.layers import physical
 
 
 class LayerStacker(interfaces.automagic.AutomagicInterface):
     """Class that attempts to build up """
     # Most important automagic, must happen first!
-    priority = 0
+    priority = 10
     page_map_offset = None
     location = None
 
     def __call__(self, context, config_path, requirement):
         """Runs the automagic over the configurable"""
+
+        # Quick exit if we're not needed
+        if requirement.validate(context, config_path):
+            return
+
         # Bow out quickly if the UI hasn't provided a single_location
         if "automagic.general.single_location" not in context.config:
             return
@@ -68,6 +74,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 path, layer = result
                 # splice in the new configuration into the original context
                 context.config.splice(path, new_context.memory[layer].build_configuration())
+            # Call the construction magic now we may have new things to construct
+            constructor = construct_layers.ConstructionMagic()
+            constructor(context, config_path, requirement)
 
     def find_suitable_requirements(self, stacked_layers, requirement, context, config_path):
         child_config_path = interfaces.configuration.path_join(config_path, requirement.name)
