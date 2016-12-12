@@ -6,6 +6,7 @@ Created on 4 May 2013
 import bisect
 
 from volatility.framework import constants, exceptions, validity
+from volatility.framework.interfaces import configuration
 
 
 class Symbol(validity.ValidityRoutines):
@@ -36,9 +37,7 @@ class Symbol(validity.ValidityRoutines):
         return self._address
 
 
-class SymbolTableInterface(validity.ValidityRoutines):
-    """Handles a table of symbols"""
-
+class BaseSymbolTableInterface(validity.ValidityRoutines):
     def __init__(self, name, native_types = None):
         self._check_type(native_types, NativeTableInterface)
         if name:
@@ -132,7 +131,22 @@ class SymbolTableInterface(validity.ValidityRoutines):
             yield closest_symbol.name
 
 
-class NativeTableInterface(SymbolTableInterface):
+class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface):
+    """Handles a table of symbols"""
+
+    def __init__(self, context, config_path, name, native_types = None):
+        configuration.ConfigurableInterface.__init__(self, context, config_path)
+        BaseSymbolTableInterface.__init__(self, name, native_types)
+
+    def build_configuration(self):
+        config = super().build_configuration()
+
+        # Translation Layers are constructable, and therefore require a class configuration variable
+        config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
+        return config
+
+
+class NativeTableInterface(BaseSymbolTableInterface):
     """Class to distinguish NativeSymbolLists from other symbol lists"""
 
     def get_symbol(self, name):

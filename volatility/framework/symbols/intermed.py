@@ -24,7 +24,7 @@ def _construct_delegate_function(name, is_property = False):
 
 
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
-    def __init__(self, name, idd_filepath, native_types = None):
+    def __init__(self, context, config_path, name, idd_filepath, native_types = None):
         # Check there are no obvious errors
         url = urllib.parse.urlparse(idd_filepath)
         if url.scheme != 'file':
@@ -47,11 +47,14 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         metadata = json_object.get('metadata', None)
 
         # Determine the delegate or throw an exception
-        self._delegate = self._closest_version(metadata.get('format', "0.0.0"), self._versions)(name, json_object,
+        self._delegate = self._closest_version(metadata.get('format', "0.0.0"), self._versions)(context,
+                                                                                                config_path,
+                                                                                                name,
+                                                                                                json_object,
                                                                                                 native_types)
 
         # Inherit
-        super().__init__(name, native_types or self._delegate.natives)
+        super().__init__(context, config_path, name, native_types or self._delegate.natives)
 
     def _closest_version(self, version, versions):
         """Determines the highest suitable handler for specified version format"""
@@ -83,11 +86,11 @@ class Version1Format(ISFormatTable):
     age = 1
     version = (current - age, age, revision)
 
-    def __init__(self, name, json_object, native_types = None):
+    def __init__(self, context, config_path, name, json_object, native_types = None):
         self._json_object = json_object
         self._validate_json()
         nt = native_types or self._get_natives()
-        super().__init__(name, nt)
+        super().__init__(context, config_path, name, nt)
         self._overrides = {}
         self._symbol_cache = None
 
