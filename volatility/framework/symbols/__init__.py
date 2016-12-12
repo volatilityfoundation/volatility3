@@ -9,7 +9,7 @@ import collections.abc
 import logging
 
 from volatility.framework import constants, exceptions, interfaces, objects
-from volatility.framework.symbols import native, vtypes, windows
+from volatility.framework.symbols import native, windows
 
 vollog = logging.getLogger(__name__)
 
