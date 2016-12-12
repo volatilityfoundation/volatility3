@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import os
 import sys
@@ -6,6 +7,7 @@ import sys
 import volatility.framework
 import volatility.plugins
 from volatility.framework import automagic, constants, contexts, interfaces
+from volatility.framework.interfaces.configuration import HierarchicalDict
 from volatility.framework.renderers.text import TextRenderer
 
 __author__ = 'mike'
@@ -40,6 +42,8 @@ class CommandLine(object):
                                          description = "An open-source memory forensics framework")
         parser.add_argument("-p", "--plugin", help = "Run the following plugin", default = "windows.pslist.PsList")
         parser.add_argument("file", help = "Temporary method for changing the file", default = None)
+        parser.add_argument("-c", "--config", help = "Load the configuration from a json file", default = None,
+                            type = str)
         # argparse_adapter.adapt_config(context.config, parser)
 
         # Run the argparser
@@ -65,11 +69,17 @@ class CommandLine(object):
         # UI fills in the config:
         ctx = contexts.Context()
 
+        if args.config:
+            with open(args.config, "r") as f:
+                json_val = json.load(f)
+                ctx.config.splice("plugins.pslist", HierarchicalDict(json_val))
+
         if not args.file or not os.path.exists(args.file):
             raise RuntimeError("Please provide a valid filename")
         else:
             ctx.config["automagic.general.single_location"] = "file://" + os.path.abspath(args.file)
-        ctx.config["automagic.general.single_page_map_offset"] = 0x1ab000
+            pass
+        # ctx.config["automagic.general.single_page_map_offset"] = 0x1ab000
 
         ###
         # BACK TO THE FRAMEWORK
@@ -84,8 +94,13 @@ class CommandLine(object):
 
         print("\n\n")
 
+        constructed = plugin(ctx, config_path)
+
+        with open("config.json", "w") as f:
+            json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
+
         # Construct and run the plugin
-        TextRenderer().render(plugin(ctx, config_path).run())
+        TextRenderer().render(constructed.run())
 
 
 def main():
