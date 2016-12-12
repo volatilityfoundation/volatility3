@@ -218,18 +218,16 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """
         result = HierarchicalDict()
         for req in self.get_requirements():
-            value = getattr(self, "_" + req.name, req.default)
+            value = self.config.get(req.name, None)
             # Do not include the name of constructed classes
             if value is not None and not isinstance(req, ConstructableRequirementInterface):
                 result[req.name] = value
             if isinstance(req, TranslationLayerRequirement):
-                layer = self.config.get(req.name, None)
-                if layer is not None:
-                    result.splice(req.name, self.context.memory[layer].build_configuration())
+                if value is not None:
+                    result.splice(req.name, self.context.memory[value].build_configuration())
             elif isinstance(req, SymbolRequirement):
-                # SymbolRequirements have a class subrequirement, but the SymbolTables themselves are not configurable
-                symbol_class = self.config.get(path_join(req.name, "class"), None)
-                result[path_join(req.name, "class")] = symbol_class
+                if value is not None:
+                    result.splice(req.name, self.context.symbol_space[value].build_configuration())
         return result
 
     @classmethod
