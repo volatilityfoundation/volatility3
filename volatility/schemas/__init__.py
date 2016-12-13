@@ -54,7 +54,7 @@ def valid(input, schema, use_cache = True):
         jsonschema.validate(input, schema)
     except ImportError:
         vollog.info("Dependency for validation unavailable: jsonschema")
-        vollog.debug("All validations will return true")
+        vollog.debug("All validations will report success, even with malformed input")
         return True
     except:
         vollog.debug("Schema validation error", exc_info = True)
