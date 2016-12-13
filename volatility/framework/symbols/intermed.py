@@ -12,6 +12,30 @@ from volatility.framework.symbols import native
 vollog = logging.getLogger(__name__)
 
 
+# ## TODO
+#
+# All symbol tables should take a label to an object template
+#
+# Templates for subtypes etc should be looked up recursively just like anything else
+# We therefore need a way to unroll rolled-up types
+# Generate mangled names on the fly (prohibits external calling)
+#
+# Symbol list could be a dict with knowledge of its parent?
+# Class split is arbitrary, it's an extension for developers
+# Object template should contain both class and initial parameters
+#
+#
+# *** Resolution should not happen in the resolve function
+# It should only happen on access of contained types ***
+#
+# Recursive objects can be fixed by having caching the objects
+# (however, they have to be built first!)
+#
+# Single hop resolution is probably the solution
+# Could probably deal with it by having a property that caches
+# for container types
+#
+
 def _construct_delegate_function(name, is_property = False):
     def _delegate_function(self, *args, **kwargs):
         if is_property:
