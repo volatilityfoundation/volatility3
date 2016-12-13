@@ -186,7 +186,11 @@ class Version1Format(ISFormatTable):
         if dictionary['kind'] not in ['struct', 'union']:
             raise exceptions.SymbolSpaceError("Unknown Intermediate format: {}".format(dictionary))
 
-        return objects.templates.ReferenceTemplate(type_name = self.name + constants.BANG + dictionary['name'])
+        reference_name = dictionary['name']
+        if constants.BANG not in reference_name:
+            reference_name = self.name + constants.BANG + reference_name
+
+        return objects.templates.ReferenceTemplate(type_name = reference_name)
 
     def _lookup_enum(self, name):
         """Looks up an enumeration and returns a dictionary of __init__ parameters for an Enum"""
@@ -199,6 +203,8 @@ class Version1Format(ISFormatTable):
 
     def get_type(self, type_name):
         """Resolves an individual symbol"""
+        if constants.BANG in type_name:
+            raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
         if type_name not in self._json_object['user_types']:
             raise exceptions.SymbolError("Unknown symbol: {}".format(type_name))
         curdict = self._json_object['user_types'][type_name]
