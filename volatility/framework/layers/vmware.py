@@ -6,6 +6,8 @@ from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical, segmented
 
+PAGE_SIZE = 0x1000
+
 
 class VmwareLayer(segmented.SegmentedLayer):
     provides = {"type": "physical"}
@@ -35,6 +37,7 @@ class VmwareLayer(segmented.SegmentedLayer):
         if magic not in [b"\xD2\xBE\xD2\xBE"]:
             raise ValueError("Wrong magic bytes for Vmware layer: {}".format(repr(magic)))
 
+        # TODO: Change certain structure sizes based on the version
         version = magic[1] & 0xf
 
         group_size = struct.calcsize(self.group_structure)
@@ -51,6 +54,7 @@ class VmwareLayer(segmented.SegmentedLayer):
         tags_read = False
         offset = memory
         tags = {}
+        index_len = self._context.symbol_space.get_type("unsigned int").size
         while not tags_read:
             flags = ord(meta_layer.read(offset, 1))
             name_len = ord(meta_layer.read(offset + 1, 1))
@@ -59,21 +63,22 @@ class VmwareLayer(segmented.SegmentedLayer):
                 name = self._context.object("string", layer_name = self._meta_layer, offset = offset + 2,
                                             max_length = name_len)
                 indicies_len = (flags >> 6) & 3
-                indicies = self._context.object("array",
-                                                count = indicies_len,
-                                                subtype = self.context.symbol_space.get_type("unsigned int"),
-                                                offset = 2 + name_len,
-                                                layer_name = self._meta_layer)
-                offset += 2 + name_len + (indicies_len * struct.calcsize("I"))
-                data = self._context.object("unsigned int", layer_name = self._meta_layer, offset = offset)
-                offset += self._context.symbol_space.get_type("unsigned int").size
+                indicies = []
+                for index in range(indicies_len):
+                    indicies.append(
+                        self._context.object("unsigned int",
+                                             offset = offset + name_len + 2 + (index * index_len),
+                                             layer_name = self._meta_layer))
+                data = self._context.object("unsigned int", layer_name = self._meta_layer,
+                                            offset = offset + 2 + name_len + (indicies_len * index_len))
+                tags[(name, tuple(indicies))] = (flags, data)
+                offset += 2 + name_len + (indicies_len * index_len) + self._context.symbol_space.get_type(
+                    "unsigned int").size
 
-                tags[name] = (flags, indicies, data)
-
-        for region in range(tags["regionsCount"][2]):
-            offset = tags["regionPPN"][1][region]
-            mapped_offset = tags["regionPageNum"][1][region]
-            length = tags["regionSize"][1][region]
+        for region in range(tags[("regionsCount", ())][1]):
+            offset = tags[("regionPPN", (region,))][1] * PAGE_SIZE
+            mapped_offset = tags[("regionPageNum", (region,))][1] * PAGE_SIZE
+            length = tags[("regionSize", (region,))][1] * PAGE_SIZE
             self._segments.append((offset, mapped_offset, length))
 
     @property
