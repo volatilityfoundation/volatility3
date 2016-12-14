@@ -202,6 +202,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 kvo_path = interfaces.configuration.path_join(virtual_config_path, 'kernel_virtual_offset')
                 for kernel in kernels:
                     # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
+                    if kernel['mz_offset'] is None:
+                        # Rule out kernels that couldn't find a suitable MZ header
+                        continue
                     if vlayer.bits_per_register == 64:
                         kvo = kernel['mz_offset'] + (31 << int(math.ceil(math.log2(vlayer.maximum_address + 1)) - 5))
                     else:
