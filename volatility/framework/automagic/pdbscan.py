@@ -236,9 +236,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             address = context.object("unsigned long long", offset = result - 6 - 8,
                                                      layer_name = physical_layer_name)
                             try:
-                                if kernels[0]['mz_offset'] in [mapping[1] for mapping in vlayer.mapping(address, 0)]:
-                                    valid_kernels[virtual_layer_name] = (address, kernels[0])
-                                    break
+                                for kernel in kernels:
+                                    for mapping in vlayer.mapping(address, 0):
+                                        if kernel['mz_offset'] == mapping[1]:
+                                            valid_kernels[virtual_layer_name] = (address, kernel)
+                                            break
                             except exceptions.PagedInvalidAddressException:
                                 # We don't care if we're mapping an address to 0, it's not what we're looking for
                                 pass
