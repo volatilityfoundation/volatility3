@@ -290,24 +290,19 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
         """Returns the i-th item from the array"""
         result = []
         mask = self._context.memory[self.vol.layer_name].address_mask
-        if isinstance(i, slice):
-            if i.step:
-                series = range(i.start, i.stop, i.step)
-            elif i.start:
-                series = range(i.start, i.stop)
-            else:
-                series = range(i.stop)
-            for index in series:
-                object_info = ObjectInformation(layer_name = self.vol.layer_name,
-                                                offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
-                                                parent = self)
-                result += [self.vol.subtype(context = self._context, object_info = object_info)]
-        else:
-            index = i
+        # We use the range function to deal with slices for us
+        series = range(self.vol.count)[i]
+        return_list = True
+        if isinstance(series, int):
+            return_list = False
+            series = [series]
+        for index in series:
             object_info = ObjectInformation(layer_name = self.vol.layer_name,
                                             offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
                                             parent = self)
-            result = self.vol.subtype(context = self._context, object_info = object_info)
+            result += [self.vol.subtype(context = self._context, object_info = object_info)]
+        if return_list:
+            return result[0]
         return result
 
     def __len__(self):
