@@ -71,7 +71,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         mask = context.memory[object_info.layer_name].address_mask
         normalized_offset = object_info.offset & mask
 
-        self._vol = collections.ChainMap({}, object_info, {'type_name': type_name}, {'offset': normalized_offset},
+        self._vol = collections.ChainMap({}, object_info, {'type_name': type_name, 'offset': normalized_offset},
                                          kwargs)
         self._context = context
 
