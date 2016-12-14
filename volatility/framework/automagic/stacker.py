@@ -1,9 +1,13 @@
 from urllib import parse
 
+import logging
+
 import volatility
 from volatility.framework import interfaces
 from volatility.framework.automagic import construct_layers
 from volatility.framework.layers import physical
+
+vollog = logging.getLogger(__name__)
 
 
 class LayerStacker(interfaces.automagic.AutomagicInterface):
@@ -66,6 +70,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 current_layer_name = new_layer.name
                 stacked = True
                 stack_set.remove(stacker_cls)
+
+        vollog.debug("Stacked layers: {}".format(stacked_layers))
 
         if stacked_layers:
 
