@@ -35,16 +35,46 @@ class VmwareLayer(segmented.SegmentedLayer):
         if magic not in [b"\xD2\xBE\xD2\xBE"]:
             raise ValueError("Wrong magic bytes for Vmware layer: {}".format(repr(magic)))
 
+        version = magic[1] & 0xf
+
         group_size = struct.calcsize(self.group_structure)
 
-        tags = {}
+        groups = {}
         for group in range(groupCount):
             name, tag_location, _unknown = struct.unpack(self.group_structure,
                                                          meta_layer.read(header_size + (group * group_size),
                                                                          group_size))
             name = name.rstrip(b"\x00")
-            tags[name] = tag_location
-        print(tags)
+            groups[name] = tag_location
+        memory = groups[b"memory"]
+
+        tags_read = False
+        offset = memory
+        tags = {}
+        while not tags_read:
+            flags = ord(meta_layer.read(offset, 1))
+            name_len = ord(meta_layer.read(offset + 1, 1))
+            tags_read = (flags == 0) and (name_len == 0)
+            if not tags_read:
+                name = self._context.object("string", layer_name = self._meta_layer, offset = offset + 2,
+                                            max_length = name_len)
+                indicies_len = (flags >> 6) & 3
+                indicies = self._context.object("array",
+                                                count = indicies_len,
+                                                subtype = self.context.symbol_space.get_type("unsigned int"),
+                                                offset = 2 + name_len,
+                                                layer_name = self._meta_layer)
+                offset += 2 + name_len + (indicies_len * struct.calcsize("I"))
+                data = self._context.object("unsigned int", layer_name = self._meta_layer, offset = offset)
+                offset += self._context.symbol_space.get_type("unsigned int").size
+
+                tags[name] = (flags, indicies, data)
+
+        for region in range(tags["regionsCount"][2]):
+            offset = tags["regionPPN"][1][region]
+            mapped_offset = tags["regionPageNum"][1][region]
+            length = tags["regionSize"][1][region]
+            self._segments.append((offset, mapped_offset, length))
 
     @property
     def dependencies(self):
