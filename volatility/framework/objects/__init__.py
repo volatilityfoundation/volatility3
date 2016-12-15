@@ -260,17 +260,18 @@ class Enumeration(PrimitiveObject, int):
 
     @property
     def description(self):
-        """Returns the chosen entry for the value this object contains"""
+        """Returns the chosen name for the value this object contains"""
         return self.lookup(self)
 
     def lookup(self, value):
-        """Looks up an individual value and returns the associated entry"""
+        """Looks up an individual value and returns the associated name"""
         for k, num in self.vol.constants.items():
             if value == num:
                 return k
         raise ValueError("The value of the enumeration is outside the possible choices")
 
     def __getattr__(self, attr):
+        """Returns the value for a specific name"""
         if attr in self._vol['choices']:
             return self._vol['choices'][attr]
         raise AttributeError("Unknown attribute {} for Enumeration {}".format(attr, self._vol['type_name']))
