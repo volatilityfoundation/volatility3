@@ -335,7 +335,7 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
                                             offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
                                             parent = self)
             result += [self.vol.subtype(context = self._context, object_info = object_info)]
-        if return_list:
+        if not return_list:
             return result[0]
         return result
 
