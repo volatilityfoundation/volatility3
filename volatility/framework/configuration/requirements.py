@@ -1,5 +1,6 @@
 import logging
 
+from volatility.framework import constants
 from volatility.framework import interfaces
 
 vollog = logging.getLogger(__name__)
@@ -32,9 +33,10 @@ class InstanceRequirement(interfaces.configuration.RequirementInterface):
     def validate(self, context, config_path):
         value = self.config_value(context, config_path, None)
         if not isinstance(value, self.instance_type):
-            vollog.debug(
-                "TypeError - {} requirements only accept {} type: {}".format(self.name, self.instance_type.__name__,
-                                                                             value))
+            vollog.log(constants.LOGLEVEL_V,
+                       "TypeError - {} requirements only accept {} type: {}".format(self.name,
+                                                                                    self.instance_type.__name__,
+                                                                                    value))
             return False
         return True
 
@@ -65,7 +67,7 @@ class ChoiceRequirement(interfaces.configuration.RequirementInterface):
         """Validates the provided value to ensure it is one of the available choices"""
         value = self.config_value(context, config_path)
         if value not in self._choices:
-            vollog.debug("ValueError - Value is not within the set of available choices")
+            vollog.log(constants.LOGLEVEL_V, "ValueError - Value is not within the set of available choices")
             return False
         return True
 
@@ -84,9 +86,9 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
         value = self.config_value(context, config_path)
         self._check_type(value, list)
         if not all([self._check_type(element, self.element_type) for element in value]):
-            vollog.debug("TypeError - At least one element in the list is not of the correct type.")
+            vollog.log(constants.LOGLEVEL_V, "TypeError - At least one element in the list is not of the correct type.")
             return False
         if not (self.min_elements <= len(value) <= self.max_elements):
-            vollog.debug("TypeError - List option provided more or less elements than allowed.")
+            vollog.log(constants.LOGLEVEL_V, "TypeError - List option provided more or less elements than allowed.")
             return False
         return all([self.element_type.validate(context, element) for element in value])

@@ -5,6 +5,7 @@ import logging
 import sys
 from abc import ABCMeta, abstractmethod
 
+from volatility.framework import constants
 from volatility.framework import validity
 from volatility.framework.interfaces.context import ContextInterface
 
@@ -395,12 +396,13 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
         value = self.config_value(context, config_path, None)
         if isinstance(value, str):
             if value not in context.memory:
-                vollog.debug("IndexError - Layer not found in memory space: {}".format(value))
+                vollog.log(9, "IndexError - Layer not found in memory space: {}".format(value))
                 return False
             return True
 
         if value is not None:
-            vollog.debug("TypeError - Translation Layer Requirement only accepts string labels: {}".format(value))
+            vollog.log(constants.LOGLEVEL_V,
+                       "TypeError - Translation Layer Requirement only accepts string labels: {}".format(value))
             return False
 
         # TODO: check that the space in the context lives up to the requirements for arch/os etc
@@ -408,7 +410,8 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
         self._check_class(context, config_path)
-        vollog.debug("IndexError - No configuration provided: {}".format(config_path + CONFIG_SEPARATOR + self.name))
+        vollog.log(constants.LOGLEVEL_V,
+                   "IndexError - No configuration provided: {}".format(config_path + CONFIG_SEPARATOR + self.name))
         return False
 
     def construct(self, context, config_path):
@@ -444,11 +447,13 @@ class SymbolRequirement(ConstructableRequirementInterface):
         """Validate that the value is a valid within the symbol space of the provided context"""
         value = self.config_value(context, config_path, None)
         if not isinstance(value, str):
-            vollog.debug("TypeError - SymbolRequirement only accepts string labels: {}".format(value))
+            vollog.log(constants.LOGLEVEL_V,
+                       "TypeError - SymbolRequirement only accepts string labels: {}".format(value))
             return False
         if value not in context.symbol_space:
             # This is an expected situation, so return False rather than raise
-            vollog.debug("IndexError - Value not present in the symbol space: {}".format(value or ""))
+            vollog.log(constants.LOGLEVEL_V,
+                       "IndexError - Value not present in the symbol space: {}".format(value or ""))
             return False
         return True
 

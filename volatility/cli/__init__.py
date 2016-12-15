@@ -12,12 +12,14 @@ from volatility.framework.renderers.text import TextRenderer
 
 __author__ = 'mike'
 
+# Make sure we log everything
 logging.basicConfig(filename = 'example.log',
                     format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt = '%m-%d %H:%M',
-                    level = logging.DEBUG)
+                    level = 0)
 vollog = logging.getLogger("volatility")
 console = logging.StreamHandler()
+# Trim the console down by default
 console.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
 console.setFormatter(formatter)
@@ -44,10 +46,13 @@ class CommandLine(object):
         parser.add_argument("file", help = "Temporary method for changing the file", default = None)
         parser.add_argument("-c", "--config", help = "Load the configuration from a json file", default = None,
                             type = str)
+        parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
         # argparse_adapter.adapt_config(context.config, parser)
 
         # Run the argparser
         args = parser.parse_args()
+        console.setLevel(10 - min(3, args.verbosity))
+
         print("PLUGIN", args.plugin)
         plug_class = args.plugin.split(".")[-1]
         plug_mod = ".".join(args.plugin.split(".")[:-1])
