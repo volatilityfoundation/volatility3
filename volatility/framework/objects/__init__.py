@@ -237,38 +237,40 @@ class BitField(PrimitiveObject, int):
         raise NotImplementedError("Writing to BitFields is not yet implemented")
 
 
-class Enumeration(PrimitiveObject, int):
+class Enumeration(interfaces.objects.ObjectInterface, int):
     """Returns an object made up of choices"""
 
-    def __new__(cls, context, type_name, object_info, struct_format, subtype = None, choices = None):
-        cls._check_class(subtype, Integer)
+    def __new__(cls, context, type_name, object_info, subtype = None, choices = None):
+        cls._check_type(subtype, templates.ObjectTemplate)
         value = subtype(context = context,
-                        type_name = type_name,
-                        object_info = object_info,
-                        struct_format = struct_format)
-        return cls._struct_type.__new__(cls, value)
+                        object_info = object_info)
+        return int.__new__(cls, value)
 
-    def __init__(self, context, type_name, object_info, struct_format, subtype = None, choices = None):
-        super().__init__(context, type_name, object_info, struct_format)
+    def __init__(self, context, type_name, object_info, subtype = None, choices = None):
+        super().__init__(context, type_name, object_info)
 
-        for k, v in self._check_type(choices, dict):
+        for k, v in self._check_type(choices, dict).items():
             self._check_type(k, str)
             self._check_type(v, int)
         self._vol['choices'] = choices
 
         self._vol['subtype'] = subtype
 
+    def lookup(self, value):
+        """Looks up an individual value and returns the associated name"""
+        for k, num in self.vol.choices.items():
+            if value == num:
+                return k
+        raise ValueError("The value of the enumeration is outside the possible choices")
+
     @property
     def description(self):
         """Returns the chosen name for the value this object contains"""
         return self.lookup(self)
 
-    def lookup(self, value):
-        """Looks up an individual value and returns the associated name"""
-        for k, num in self.vol.constants.items():
-            if value == num:
-                return k
-        raise ValueError("The value of the enumeration is outside the possible choices")
+    @property
+    def choices(self):
+        return self._vol['choices']
 
     def __getattr__(self, attr):
         """Returns the value for a specific name"""
