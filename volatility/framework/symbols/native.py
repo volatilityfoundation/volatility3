@@ -46,7 +46,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             additional = {"count": 0, "subtype": self.get_type('void')}
         elif type_name == 'enum':
             obj = objects.Enumeration
-            additional = {"subtype": self.get_type('void'), "choices": {}}
+            additional = {"subtype": self.get_type('int'), "choices": {}}
         elif type_name == 'bitfield':
             obj = objects.BitField
             additional = {"start_bit": 0, "end_bit": 0}
