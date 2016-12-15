@@ -249,7 +249,7 @@ class Enumeration(PrimitiveObject, int):
         return cls._struct_type.__new__(cls, value)
 
     def __init__(self, context, type_name, object_info, struct_format, subtype = None, choices = None):
-        super().__init__(context, type_name, object_info)
+        super().__init__(context, type_name, object_info, struct_format)
 
         for k, v in self._check_type(choices, dict):
             self._check_type(k, str)
