@@ -176,7 +176,7 @@ class Version1Format(ISFormatTable):
     @property
     def types(self):
         """Returns an iterator of the symbol names"""
-        return self._json_object.get('user_types', {})
+        return list(self._json_object.get('user_types', {}).keys()) + list(self.natives.types)
 
     def _interdict_to_template(self, dictionary):
         """Converts an intermediate format dict into an object template"""
@@ -230,7 +230,8 @@ class Version1Format(ISFormatTable):
         if constants.BANG in type_name:
             raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
         if type_name not in self._json_object['user_types']:
-            raise exceptions.SymbolError("Unknown symbol: {}".format(type_name))
+            # Fall back to the natives table
+            return self.natives.get_type(type_name)
         curdict = self._json_object['user_types'][type_name]
         members = {}
         for member_name in curdict['fields']:
