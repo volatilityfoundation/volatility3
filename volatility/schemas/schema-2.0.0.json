@@ -9,7 +9,7 @@
       "properties": {
         "format": {
           "type": "string",
-          "pattern": "^0.[0-9]+.[0-9]+$"
+          "pattern": "^2.[0-9]+.[0-9]+$"
         },
         "source": {
           "type": "object",
@@ -42,7 +42,7 @@
     },
     "element_enum": {
       "properties": {
-        "length": {
+        "size": {
           "type": "integer"
         },
         "base": {
@@ -73,7 +73,7 @@
     },
     "element_base_type": {
       "properties": {
-        "length": {
+        "size": {
           "type": "integer"
         }
       },
@@ -85,7 +85,7 @@
           "type": "string",
           "pattern": "^(struct|union|class)$"
         },
-        "length": {
+        "size": {
           "type": "integer"
         },
         "fields": {
@@ -97,7 +97,7 @@
       },
       "requiredProperties": [
         "kind",
-        "length",
+        "size",
         "fields"
       ],
       "additionalProperties": false

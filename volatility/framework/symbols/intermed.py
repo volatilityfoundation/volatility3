@@ -243,3 +243,46 @@ class Version1Format(ISFormatTable):
                                                 object_class = object_class,
                                                 size = curdict['length'],
                                                 members = members)
+
+
+class Version2Format(Version1Format):
+    """Class for storing intermediate debugging data as objects and classes"""
+    current = 2
+    revision = 0
+    age = 0
+    version = (current - age, age, revision)
+
+    def _get_natives(self):
+        """Determines the appropriate native_types to use from the JSON data"""
+        classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
+        for nc in classes:
+            native_class = classes[nc]
+            for base_type in self._json_object['base_types']:
+                try:
+                    if self._json_object['base_types'][base_type]['size'] != native_class.get_type(base_type).size:
+                        break
+                except TypeError:
+                    # TODO: determine whether we should give voids a size - We don't give voids a length, whereas microsoft seemingly do
+                    pass
+            else:
+                vollog.debug("Choosing appropriate natives for symbol library: {}".format(nc))
+                return native_class.natives
+
+    def get_type(self, type_name):
+        """Resolves an individual symbol"""
+        if constants.BANG in type_name:
+            raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
+        if type_name not in self._json_object['user_types']:
+            # Fall back to the natives table
+            return self.natives.get_type(type_name)
+        curdict = self._json_object['user_types'][type_name]
+        members = {}
+        for member_name in curdict['fields']:
+            interdict = curdict['fields'][member_name]
+            member = (interdict['offset'], self._interdict_to_template(interdict['type']))
+            members[member_name] = member
+        object_class = self.get_type_class(type_name)
+        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
+                                                object_class = object_class,
+                                                size = curdict['size'],
+                                                members = members)
