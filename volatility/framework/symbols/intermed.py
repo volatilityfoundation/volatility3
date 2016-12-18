@@ -222,7 +222,7 @@ class Version1Format(ISFormatTable):
         if not lookup:
             raise exceptions.SymbolSpaceError("Unknown enumeration found: {}".format(name))
         result = {"choices": copy.deepcopy(lookup['constants']),
-                  "subtype": self.natives.get_type(lookup['base'])}
+                  "base_type": self.natives.get_type(lookup['base'])}
         return result
 
     def get_type(self, type_name):

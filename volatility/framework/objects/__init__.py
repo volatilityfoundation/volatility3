@@ -240,13 +240,14 @@ class BitField(PrimitiveObject, int):
 class Enumeration(interfaces.objects.ObjectInterface, int):
     """Returns an object made up of choices"""
 
-    def __new__(cls, context, type_name, object_info, subtype = None, choices = None):
-        cls._check_type(subtype, templates.ObjectTemplate)
-        value = subtype(context = context,
-                        object_info = object_info)
+    def __new__(cls, context, type_name, object_info, base_type = None, choices = None):
+        # FIXME: Ideally this check will ensure only primitives can be used
+        cls._check_type(base_type, templates.ObjectTemplate)
+        value = base_type(context = context,
+                          object_info = object_info)
         return int.__new__(cls, value)
 
-    def __init__(self, context, type_name, object_info, subtype = None, choices = None):
+    def __init__(self, context, type_name, object_info, base_type = None, choices = None):
         super().__init__(context, type_name, object_info)
 
         for k, v in self._check_type(choices, dict).items():
@@ -254,7 +255,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
             self._check_type(v, int)
         self._vol['choices'] = choices
 
-        self._vol['subtype'] = subtype
+        self._vol['base_type'] = base_type
 
     def lookup(self, value):
         """Looks up an individual value and returns the associated name"""
@@ -280,6 +281,11 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
 
     def write(self, value):
         raise NotImplementedError("Writing to Enumerations is not yet implemented")
+
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+        @classmethod
+        def size(cls, template):
+            return template._vol['base_type'].size
 
 
 class Array(interfaces.objects.ObjectInterface, collections.Sequence):
