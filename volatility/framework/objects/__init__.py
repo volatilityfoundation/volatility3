@@ -213,7 +213,8 @@ class Pointer(Integer):
 class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
 
-    def __new__(cls, context, type_name, object_info, struct_format, subtype = None, start_bit = 0, end_bit = 0):
+    def __new__(cls, context, type_name, object_info, struct_format, subtype = None, start_bit = 0, end_bit = 0,
+                **kwargs):
         cls._check_type(subtype, Integer)
         value = subtype(context = context,
                         type_name = type_name,
@@ -241,7 +242,7 @@ class BitField(PrimitiveObject, int):
 class Enumeration(interfaces.objects.ObjectInterface, int):
     """Returns an object made up of choices"""
 
-    def __new__(cls, context, type_name, object_info, base_type = None, choices = None):
+    def __new__(cls, context, type_name, object_info, base_type = None, choices = None, **kwargs):
         # FIXME: Ideally this check will ensure only primitives can be used
         cls._check_type(base_type, templates.ObjectTemplate)
         value = base_type(context = context,
