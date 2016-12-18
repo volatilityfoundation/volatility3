@@ -401,6 +401,9 @@ class Struct(interfaces.objects.ObjectInterface):
                     # but in case that ever changes, do the update correctly
                     tmp_list = template.vol.members
                     tmp_list[member] = (relative_offset, new_child)
+                    # If there's trouble with mutability, consider making update_vol return a clone with the changes
+                    # (there will be a few other places that will be necessary) and/or making these part of the
+                    # permanent dictionaries rather than the non-clonable ones
                     template.update_vol(members = tmp_list)
 
         @classmethod
