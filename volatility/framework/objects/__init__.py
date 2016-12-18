@@ -111,7 +111,8 @@ class Bytes(PrimitiveObject, bytes):
 class String(PrimitiveObject, str):
     """Primitive Object that handles string values
 
-       length: specifies the maximum possible length that the string could hold in memory
+       length: specifies the maximum possible length that the string could hold within memory
+       (note: for multibyte characters, this will not be the maximum length of the string)
     """
     _struct_type = str
 
@@ -142,7 +143,7 @@ class String(PrimitiveObject, str):
                                          **params)
         if value.find('\x00') >= 0:
             value = value[:value.find('\x00')]
-        return value
+        return str(value, encoding = encoding, errors = errors)
 
 
 class Pointer(Integer):
