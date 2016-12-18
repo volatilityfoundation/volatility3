@@ -250,18 +250,24 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
     def __init__(self, context, type_name, object_info, base_type = None, choices = None):
         super().__init__(context, type_name, object_info)
 
+        self._inverse_choices = {}
         for k, v in self._check_type(choices, dict).items():
             self._check_type(k, str)
             self._check_type(v, int)
+            if v in self._inverse_choices:
+                # Technically this shouldn't be a problem, but since we inverse cache
+                # and can't map one value to two possibilities we throw an exception during build
+                # We can remove/wrok around this if it proves a common issue
+                raise ValueError("Enumeration value {} duplicated as {} and {}".format(v, k, self._inverse_choices[v]))
+            self._inverse_choices[v] = k
         self._vol['choices'] = choices
 
         self._vol['base_type'] = base_type
 
     def lookup(self, value):
         """Looks up an individual value and returns the associated name"""
-        for k, num in self.vol.choices.items():
-            if value == num:
-                return k
+        if value in self._inverse_choices:
+            return self._inverse_choices[value]
         raise ValueError("The value of the enumeration is outside the possible choices")
 
     @property
