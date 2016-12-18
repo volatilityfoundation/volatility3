@@ -296,6 +296,30 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
             return template._vol['base_type'].size
 
 
+class Flags(Integer):
+    """Object that converts an integer into a set of flags based on their masks"""
+
+    def __init__(self, context, type_name, object_info, struct_format, choices = None):
+        super().__init__(context, type_name, object_info, struct_format)
+        self._check_type(choices, collections.Mapping)
+        for k, v in choices.items():
+            self._check_type(k, str)
+            self._check_type(v, int)
+        self._vol['choices'] = choices
+
+    @property
+    def choices(self):
+        return self._vol['choices']
+
+    @property
+    def flags(self):
+        result = []
+        for k, v in self.choices.items():
+            if self & v:
+                result.append(k)
+        return result
+
+
 class Array(interfaces.objects.ObjectInterface, collections.Sequence):
     """Object which can contain a fixed number of an object type"""
 
