@@ -116,7 +116,7 @@ class String(PrimitiveObject, str):
     """
     _struct_type = str
 
-    def __init__(self, context, type_name, object_info, max_length = 1, encoding = "utf-8", errors = None):
+    def __init__(self, context, type_name, object_info, max_length = 1, encoding = "utf-8", errors = "strict"):
         super().__init__(context = context,
                          type_name = type_name,
                          object_info = object_info,
@@ -125,7 +125,7 @@ class String(PrimitiveObject, str):
         self._vol['encoding'] = encoding
         self._vol['errors'] = errors
 
-    def __new__(cls, context, type_name, object_info, max_length = 1, encoding = "utf-8", errors = None, **kwargs):
+    def __new__(cls, context, type_name, object_info, max_length = 1, encoding = "utf-8", errors = "strict", **kwargs):
         """Creates the appropriate class and returns it so that the native type is inherited
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -135,6 +135,7 @@ class String(PrimitiveObject, str):
             params['encoding'] = encoding
         if errors:
             params['errors'] = errors
+        # Pass the encoding and error parameters to the string constructor to appropriately encode the string
         value = cls._struct_type.__new__(cls,
                                          cls._struct_value(context,
                                                            struct_format = str(max_length) + "s",
@@ -143,7 +144,7 @@ class String(PrimitiveObject, str):
                                          **params)
         if value.find('\x00') >= 0:
             value = value[:value.find('\x00')]
-        return str(value, encoding = encoding, errors = errors)
+        return value
 
 
 class Pointer(Integer):
