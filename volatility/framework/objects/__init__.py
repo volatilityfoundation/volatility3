@@ -213,25 +213,25 @@ class Pointer(Integer):
 class BitField(PrimitiveObject, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
 
-    def __new__(cls, context, type_name, object_info, struct_format, subtype = None, start_bit = 0, end_bit = 0,
+    def __new__(cls, context, type_name, object_info, struct_format, base_type = None, start_bit = 0, end_bit = 0,
                 **kwargs):
-        cls._check_type(subtype, Integer)
-        value = subtype(context = context,
-                        type_name = type_name,
-                        object_info = object_info,
-                        struct_format = struct_format)
+        cls._check_type(base_type, Integer)
+        value = base_type(context = context,
+                          type_name = type_name,
+                          object_info = object_info,
+                          struct_format = struct_format)
         return cls._struct_type.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))
 
-    def __init__(self, context, type_name, object_info, struct_format, subtype = None, start_bit = 0, end_bit = 0):
+    def __init__(self, context, type_name, object_info, struct_format, base_type = None, start_bit = 0, end_bit = 0):
         super().__init__(context, type_name, object_info, struct_format)
-        self._vol['subtype'] = subtype
+        self._vol['subtype'] = base_type
         self._vol['start_bit'] = start_bit
         self._vol['end_bit'] = end_bit
 
     @classmethod
     def _template_children(cls, template):
         """Returns the subtype"""
-        if 'subtype' in template.vol:
+        if 'base_type' in template.vol:
             return [template.vol.subtype]
         return []
 

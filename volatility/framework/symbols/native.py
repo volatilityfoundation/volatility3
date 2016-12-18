@@ -46,10 +46,10 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             additional = {"count": 0, "subtype": self.get_type('void')}
         elif type_name == 'enum':
             obj = objects.Enumeration
-            additional = {"subtype": self.get_type('int'), "choices": {}}
+            additional = {"base_type": self.get_type('int'), "choices": {}}
         elif type_name == 'bitfield':
             obj = objects.BitField
-            additional = {"start_bit": 0, "end_bit": 0}
+            additional = {"start_bit": 0, "end_bit": 0, "base_type": self.get_type('int')}
         elif type_name == 'string':
             obj = objects.String
             additional = {"max_length": 0}

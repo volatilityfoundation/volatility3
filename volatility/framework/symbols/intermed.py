@@ -203,7 +203,7 @@ class Version1Format(ISFormatTable):
                 update = self._lookup_enum(dictionary['name'])
             elif type_name == 'bitfield':
                 update = {'start_bit': dictionary['bit_position'], 'end_bit': dictionary['bit_length']}
-                update['subtype'] = self._interdict_to_template(dictionary['type'])
+                update['base_type'] = self._interdict_to_template(dictionary['type'])
             native_template.update_vol(**update)  # pylint: disable=W0142
             return native_template
 
