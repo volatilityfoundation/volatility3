@@ -221,7 +221,7 @@ class Version1Format(ISFormatTable):
         """Looks up an enumeration and returns a dictionary of __init__ parameters for an Enum"""
         lookup = self._json_object['enums'].get(name, None)
         if not lookup:
-            raise exceptions.SymbolSpaceError("Unknown enumeration found: {}".format(name))
+            raise exceptions.SymbolSpaceError("Unknown enumeration: {}".format(name))
         result = {"choices": copy.deepcopy(lookup['constants']),
                   "base_type": self.natives.get_type(lookup['base'])}
         return result
