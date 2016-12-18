@@ -96,6 +96,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     get_type_class = _construct_delegate_function('get_type_class')
     set_type_class = _construct_delegate_function('set_type_class')
     del_type_class = _construct_delegate_function('del_type_class')
+    get_enumeration_choices = _construct_delegate_function('get_enumeration_choices')
 
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface):
@@ -224,6 +225,10 @@ class Version1Format(ISFormatTable):
         result = {"choices": copy.deepcopy(lookup['constants']),
                   "base_type": self.natives.get_type(lookup['base'])}
         return result
+
+    def get_enumeration_choices(self, name):
+        """Returns the dictionary of choices for the enumeration"""
+        return self._lookup_enum(name)['choices']
 
     def get_type(self, type_name):
         """Resolves an individual symbol"""

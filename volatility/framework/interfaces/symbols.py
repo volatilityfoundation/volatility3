@@ -130,6 +130,10 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         if closest_symbol.offset == offset:
             yield closest_symbol.name
 
+    def get_enumeration_choices(self, name):
+        """Returns a dictionary of enumeration choices based on a particular Enumeration name"""
+        raise NotImplementedError("Abstract method get_enumeration_choices not implemented yet")
+
 
 class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface):
     """Handles a table of symbols"""
@@ -155,3 +159,6 @@ class NativeTableInterface(BaseSymbolTableInterface):
     @property
     def symbols(self):
         return []
+
+    def get_enumeration_choices(self, name):
+        raise exceptions.SymbolError("NativeTables never hold enumerations")

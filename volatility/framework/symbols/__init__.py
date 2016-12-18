@@ -173,3 +173,13 @@ class SymbolSpace(collections.abc.Mapping):
     def get_symbol(self, symbol_name):
         """Look-up a symbol name across all the contained symbol spaces"""
         return self._weak_resolve(SymbolType.SYMBOL, symbol_name)
+
+    def get_enumeration_choices(self, name):
+        """Look-up a set of enumeration choices from a specific symbol table"""
+        namearr = name.split(constants.BANG)
+        if len(namearr) != 2:
+            raise exceptions.SymbolError("Malformed enumeration name: {}".format(name))
+        table, enum = namearr
+        if table not in self._dict:
+            raise exceptions.SymbolError("Unresolvable enumeration requested: {}".format(name))
+        return self._dict[table].get_enumeration_choices(enum)
