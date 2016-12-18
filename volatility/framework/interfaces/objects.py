@@ -89,6 +89,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """Returns a new object at the offset and from the layer that the current object inhabits"""
         # TODO: Carefully consider the implications of casting and how it should work
         object_template = self._context.symbol_space.get_type(new_type_name)
+        object_template = object_template.clone()
         object_template.update_vol(**additional)
         object_info = ObjectInformation(layer_name = self.vol.layer_name,
                                         offset = self.vol.offset,
@@ -132,7 +133,8 @@ class Template(validity.ValidityRoutines):
         """Stores the keyword arguments for later use"""
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
-        self._vol = collections.ChainMap(arguments, {'type_name': type_name})
+        self._arguments = arguments
+        self._vol = collections.ChainMap({}, self._arguments, {'type_name': type_name})
 
     @property
     def vol(self):
@@ -162,6 +164,11 @@ class Template(validity.ValidityRoutines):
     @abstractmethod
     def replace_child(self, old_child, new_child):
         """A function for replacing one child with another"""
+
+    def clone(self):
+        """Returns a copy of the original Template as constructed (without update_vol having been called)"""
+        clone = self.__class__(**self._vol.parents.new_child())
+        return clone
 
     def update_vol(self, **new_arguments):
         """Updates the keyword arguments"""

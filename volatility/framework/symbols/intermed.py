@@ -204,7 +204,7 @@ class Version1Format(ISFormatTable):
             elif type_name == 'bitfield':
                 update = {'start_bit': dictionary['bit_position'], 'end_bit': dictionary['bit_length']}
                 update['base_type'] = self._interdict_to_template(dictionary['type'])
-            native_template.update_vol(**update)  # pylint: disable=W0142
+            native_template.update_vol(**update)
             return native_template
 
         # Otherwise

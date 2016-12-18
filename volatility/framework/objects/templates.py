@@ -24,7 +24,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
     def __init__(self, object_class = None, type_name = None, **arguments):
         super().__init__(type_name = type_name, **arguments)
         self._check_class(object_class, interfaces.objects.ObjectInterface)
-        self.update_vol(object_class = object_class)
+        self._arguments['object_class'] = object_class
 
     @property
     def size(self):

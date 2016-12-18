@@ -74,6 +74,7 @@ class Context(interfaces.context.ContextInterface):
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
         object_template = self._symbol_space.get_type(symbol)
+        object_template = object_template.clone()
         object_template.update_vol(**arguments)
         return object_template(context = self,
                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
