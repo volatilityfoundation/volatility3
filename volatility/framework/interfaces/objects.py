@@ -114,6 +114,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         @classmethod
         def replace_child(cls, template, old_child, new_child):
             """Substitutes the old_child for the new_child"""
+            raise KeyError("Template does not contain any children to replace: {}".format(template.vol.type_name))
 
         @classmethod
         def relative_child_offset(cls, template, child):
