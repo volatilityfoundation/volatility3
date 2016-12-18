@@ -5,7 +5,7 @@ from volatility.framework import interfaces
 
 class TextRenderer(interfaces.renderers.Renderer):
     def __init__(self, options = None):
-        pass
+        super().__init__(options)
 
     def get_render_options(self):
         pass
@@ -16,12 +16,12 @@ class TextRenderer(interfaces.renderers.Renderer):
         outfd = sys.stdout
 
         for column in grid.columns:
-            outfd.write("\t" + str(column.name))
+            outfd.write("\t{}".format(column.name))
         outfd.write("\n")
 
         def visitor(node, accumulator):
             for column in grid.columns:
-                accumulator.write("\t" + str(node.values[column.index]))
+                accumulator.write("\t{}".format(node.values[column.index]))
             accumulator.write("\n")
             return accumulator
 
