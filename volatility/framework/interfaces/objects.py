@@ -171,7 +171,7 @@ class Template(validity.ValidityRoutines):
         return clone
 
     def update_vol(self, **new_arguments):
-        """Updates the keyword arguments"""
+        """Updates the keyword arguments with values that will not be carried across to clones"""
         self._vol.update(new_arguments)
 
     def __getattr__(self, attr):
