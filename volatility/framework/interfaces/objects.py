@@ -167,6 +167,12 @@ class Template(validity.ValidityRoutines):
         """Updates the keyword arguments"""
         self._vol.update(new_arguments)
 
+    def __getattr__(self, attr):
+        """Exposes any other values stored in ._vol as attributes (for example, enumeration choices)"""
+        if attr in self._vol:
+            return self._vol[attr]
+        raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, attr))
+
     def __call__(self, context, object_info):
         """Constructs the object
 
