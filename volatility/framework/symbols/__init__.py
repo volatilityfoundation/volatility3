@@ -18,6 +18,7 @@ class SymbolType(object):
     # Suitably random values until we make this an Enum and require python >= 3.4
     TYPE = 143534545
     SYMBOL = 28293045
+    ENUM = 395940348
 
 
 class SymbolSpace(collections.abc.Mapping):
@@ -111,7 +112,7 @@ class SymbolSpace(collections.abc.Mapping):
         """
 
         def __init__(self, type_name = None, **kwargs):
-            vollog.debug("Unresolved symbol referenced: {}".format(type_name))
+            vollog.debug("Unresolved reference: {}".format(type_name))
             super().__init__(type_name = type_name, **kwargs)
 
     def _weak_resolve(self, resolve_type, name):
@@ -120,6 +121,8 @@ class SymbolSpace(collections.abc.Mapping):
             get_function = 'get_type'
         elif resolve_type == SymbolType.SYMBOL:
             get_function = 'get_symbol'
+        elif resolve_type == SymbolType.ENUM:
+            get_function = 'get_enumeration_choices'
         else:
             raise ValueError("Weak_resolve called without a proper SymbolType")
 
@@ -133,7 +136,7 @@ class SymbolSpace(collections.abc.Mapping):
                 return self._UnresolvedTemplate(name)
         elif name in self.natives.types:
             return getattr(self.natives, get_function)(name)
-        raise exceptions.SymbolError("Malformed symbol name: {}".format(name))
+        raise exceptions.SymbolError("Malformed name: {}".format(name))
 
     def get_type(self, type_name):
         """Takes a symbol name and resolves it
@@ -174,12 +177,6 @@ class SymbolSpace(collections.abc.Mapping):
         """Look-up a symbol name across all the contained symbol spaces"""
         return self._weak_resolve(SymbolType.SYMBOL, symbol_name)
 
-    def get_enumeration_choices(self, name):
+    def get_enumeration_choices(self, enum_name):
         """Look-up a set of enumeration choices from a specific symbol table"""
-        namearr = name.split(constants.BANG)
-        if len(namearr) != 2:
-            raise exceptions.SymbolError("Malformed enumeration name: {}".format(name))
-        table, enum = namearr
-        if table not in self._dict:
-            raise exceptions.SymbolError("Unresolvable enumeration requested: {}".format(name))
-        return self._dict[table].get_enumeration_choices(enum)
+        return self._weak_resolve(SymbolType.ENUM, enum_name)
