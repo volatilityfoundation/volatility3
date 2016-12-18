@@ -107,7 +107,6 @@ class Bytes(PrimitiveObject, bytes):
                                                           offset = object_info.offset))
 
 
-# TODO: Fix up strings unpacking to include an encoding
 class String(PrimitiveObject, str):
     """Primitive Object that handles string values
 
