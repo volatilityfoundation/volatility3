@@ -55,6 +55,11 @@
           }
         }
       },
+      "required": [
+        "length",
+        "base",
+        "constants"
+      ],
       "additionalProperties": false
     },
     "element_symbol": {
@@ -66,7 +71,7 @@
           "type": "string"
         }
       },
-      "requiredProperties": [
+      "required": [
         "address"
       ],
       "additionalProperties": false
@@ -77,6 +82,9 @@
           "type": "integer"
         }
       },
+      "required": [
+        "length"
+      ],
       "additionalProperties": false
     },
     "element_user_type": {
@@ -95,7 +103,7 @@
           }
         }
       },
-      "requiredProperties": [
+      "required": [
         "kind",
         "length",
         "fields"
@@ -111,6 +119,10 @@
           "type": "integer"
         }
       },
+      "required": [
+        "type",
+        "offset"
+      ],
       "additionalProperties": false
     },
     "type_descriptor": {
