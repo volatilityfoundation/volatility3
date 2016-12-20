@@ -49,7 +49,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
         @:param
 
         :return: a TreeGrid object that can then be passed to a Renderer.
-        :rtype: TreeGrid
+        :rtype: interfaces.renderers.TreeGrid
         """
 
 # TODO: Needs to say what it can/can't handle (validate context)
