@@ -210,20 +210,18 @@ class Pointer(Integer):
                     template.update_vol(subtype = new_child)
 
 
-class BitField(PrimitiveObject, int):
+class BitField(interfaces.objects.ObjectInterface, int):
     """Object containing a field which is made up of bits rather than whole bytes"""
 
-    def __new__(cls, context, type_name, object_info, struct_format, base_type = None, start_bit = 0, end_bit = 0,
+    def __new__(cls, context, type_name, object_info, base_type = None, start_bit = 0, end_bit = 0,
                 **kwargs):
-        cls._check_type(base_type, Integer)
+        cls._check_class(base_type.vol.object_class, Integer)
         value = base_type(context = context,
-                          type_name = type_name,
-                          object_info = object_info,
-                          struct_format = struct_format)
-        return cls._struct_type.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))
+                          object_info = object_info)
+        return int.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))
 
-    def __init__(self, context, type_name, object_info, struct_format, base_type = None, start_bit = 0, end_bit = 0):
-        super().__init__(context, type_name, object_info, struct_format)
+    def __init__(self, context, type_name, object_info, base_type = None, start_bit = 0, end_bit = 0):
+        super().__init__(context, type_name, object_info)
         self._vol['subtype'] = base_type
         self._vol['start_bit'] = start_bit
         self._vol['end_bit'] = end_bit
@@ -243,8 +241,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
     """Returns an object made up of choices"""
 
     def __new__(cls, context, type_name, object_info, base_type = None, choices = None, **kwargs):
-        # FIXME: Ideally this check will ensure only primitives can be used
-        cls._check_type(base_type, templates.ObjectTemplate)
+        cls._check_class(base_type.vol.object_class, Integer)
         value = base_type(context = context,
                           object_info = object_info)
         return int.__new__(cls, value)
