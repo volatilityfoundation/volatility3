@@ -160,6 +160,10 @@
           "$ref": "#/definitions/type_descriptor"
         }
       },
+      "required": [
+        "kind",
+        "subtype"
+      ],
       "additionalProperties": false
     },
     "type_base": {
@@ -172,6 +176,10 @@
           "type": "string"
         }
       },
+      "required": [
+        "kind",
+        "name"
+      ],
       "additionalProperties": false
     },
     "type_array": {
@@ -187,6 +195,11 @@
           "type": "integer"
         }
       },
+      "required": [
+        "kind",
+        "subtype",
+        "count"
+      ],
       "additionalProperties": false
     },
     "type_struct": {
@@ -199,6 +212,10 @@
           "type": "string"
         }
       },
+      "required": [
+        "kind",
+        "name"
+      ],
       "additionalProperties": false
     },
     "type_enum": {
@@ -211,6 +228,10 @@
           "type": "string"
         }
       },
+      "required": [
+        "kind",
+        "name"
+      ],
       "additionalProperties": false
     },
     "type_function": {
@@ -220,6 +241,9 @@
           "pattern": "^function$"
         }
       },
+      "required": [
+        "kind"
+      ],
       "additionalProperties": false
     },
     "type_bitfield": {
@@ -238,6 +262,12 @@
           "$ref": "#/definitions/type_base"
         }
       },
+      "required": [
+        "kind",
+        "bit_position",
+        "bit_length",
+        "type"
+      ],
       "additionalProperties": false
     }
   },
