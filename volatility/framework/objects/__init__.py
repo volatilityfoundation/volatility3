@@ -222,7 +222,7 @@ class BitField(interfaces.objects.ObjectInterface, int):
 
     def __init__(self, context, type_name, object_info, base_type = None, start_bit = 0, end_bit = 0):
         super().__init__(context, type_name, object_info)
-        self._vol['subtype'] = base_type
+        self._vol['base_type'] = base_type
         self._vol['start_bit'] = start_bit
         self._vol['end_bit'] = end_bit
 
@@ -237,16 +237,16 @@ class BitField(interfaces.objects.ObjectInterface, int):
         @classmethod
         def children(cls, template):
             """Returns the children of the template"""
-            if 'subtype' in template.vol:
-                return [template.vol.subtype]
+            if 'base_type' in template.vol:
+                return [template.vol.base_type]
             return []
 
         @classmethod
         def replace_child(cls, template, old_child, new_child):
             """Substitutes the old_child for the new_child"""
-            if 'subtype' in template.vol:
-                if template.vol.subtype == old_child:
-                    template.update_vol(subtype = new_child)
+            if 'base_type' in template.vol:
+                if template.vol.base_type == old_child:
+                    template.update_vol(base_type = new_child)
 
 
 class Enumeration(interfaces.objects.ObjectInterface, int):
