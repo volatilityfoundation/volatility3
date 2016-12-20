@@ -226,15 +226,27 @@ class BitField(interfaces.objects.ObjectInterface, int):
         self._vol['start_bit'] = start_bit
         self._vol['end_bit'] = end_bit
 
-    @classmethod
-    def _template_children(cls, template):
-        """Returns the subtype"""
-        if 'base_type' in template.vol:
-            return [template.vol.subtype]
-        return []
-
     def write(self, value):
         raise NotImplementedError("Writing to BitFields is not yet implemented")
+
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+        @classmethod
+        def size(cls, template):
+            return Integer.VolTemplateProxy.size(template)
+
+        @classmethod
+        def children(cls, template):
+            """Returns the children of the template"""
+            if 'subtype' in template.vol:
+                return [template.vol.subtype]
+            return []
+
+        @classmethod
+        def replace_child(cls, template, old_child, new_child):
+            """Substitutes the old_child for the new_child"""
+            if 'subtype' in template.vol:
+                if template.vol.subtype == old_child:
+                    template.update_vol(subtype = new_child)
 
 
 class Enumeration(interfaces.objects.ObjectInterface, int):
@@ -291,6 +303,20 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         @classmethod
         def size(cls, template):
             return template._vol['base_type'].size
+
+        @classmethod
+        def children(cls, template):
+            """Returns the children of the template"""
+            if 'base_type' in template.vol:
+                return [template.vol.base_type]
+            return []
+
+        @classmethod
+        def replace_child(cls, template, old_child, new_child):
+            """Substitutes the old_child for the new_child"""
+            if 'base_type' in template.vol:
+                if template.vol.base_type == old_child:
+                    template.update_vol(base_type = new_child)
 
 
 class Array(interfaces.objects.ObjectInterface, collections.Sequence):
