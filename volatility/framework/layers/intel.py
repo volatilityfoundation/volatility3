@@ -65,7 +65,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def _translate(self, offset):
         """Translates a specific offset based on paging tables
 
-           Returns the offset and the pagesize
+           Returns the translated offset, the contiguous pagesize that the translated address lives in and the layer_name that the address lives in
         """
         # Setup the entry and how far we are through the offset
         # Position maintains the number of bits left to process
@@ -102,13 +102,13 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1,
                                                           "Page Fault at entry {} in page entry".format(hex(entry)))
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
-        return page, 1 << (position + 1)
+        return page, 1 << (position + 1), self._base_layer
 
     def is_valid(self, offset, length = 1):
         """Returns whether the address offset can be translated to a valid address"""
         try:
             # TODO: Consider reimplementing this, since calls to mapping can call is_valid
-            return all([self._context.memory[self._base_layer].is_valid(mapped_offset) for _, mapped_offset, _, _ in
+            return all([self._context.memory[layer].is_valid(mapped_offset) for _, mapped_offset, _, layer in
                         self.mapping(offset, length)])
         except exceptions.InvalidAddressException:
             return False
@@ -122,8 +122,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         if length == 0:
             if ignore_errors and not self.is_valid(offset):
                 raise StopIteration
-            mapped_offset, _ = self._translate(offset)
-            yield (offset, mapped_offset, length, self._base_layer)
+            mapped_offset, _, layer_name = self._translate(offset)
+            yield (offset, mapped_offset, length, layer_name)
             raise StopIteration
         while length > 0:
             if ignore_errors:
@@ -132,9 +132,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                     offset += 1 << self._page_size_in_bits
                 if length <= 0:
                     raise StopIteration
-            chunk_offset, page_size = self._translate(offset)
+            chunk_offset, page_size, layer_name = self._translate(offset)
             chunk_size = min(page_size - (chunk_offset % page_size), length)
-            yield (offset, chunk_offset, chunk_size, self._base_layer)
+            yield (offset, chunk_offset, chunk_size, layer_name)
             length -= chunk_size
             offset += chunk_size
 
@@ -158,32 +158,30 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
         min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,
                                                                        progress_callback, scanner)
-        scanned = set()
+        scanned_pairs = set()
         previous = None
-        range_start = current = min_address
-        while current <= max_address:
+        data_to_scan = b''
+        chunk_end = min_address
+        while chunk_end <= max_address:
             if progress_callback:
-                progress_callback(round((current - min_address) * 100 / total_size, 3))
+                progress_callback(round((chunk_end - min_address) * 100 / total_size, 3))
+            address_failed = False
             try:
-                address, page_size = self._translate(current)
-                if (previous, address) in scanned or not context.memory[self._base_layer].is_valid(address):
-                    if current - range_start > 0:
-                        chunk = self.read(range_start, current - range_start)
-                        for result in scanner(chunk, range_start):
-                            yield result
-                    range_start = current + page_size
-                elif self._optimize_scan:
-                    scanned.add((previous, address))
-                previous = address
-                current += page_size
+                address, page_size, layer_name = self._translate(chunk_end)
+                chunk_size = page_size - (address & (page_size - 1))
             except exceptions.PagedInvalidAddressException as e:
-                if current - range_start > 0:
-                    chunk = self.read(range_start, current - range_start)
-                    for result in scanner(chunk, range_start):
-                        yield result
-                current += (1 << e.invalid_bits)
-                range_start = current
-                previous = None
+                address, chunk_size, layer_name = None, 1 << self._page_size_in_bits, ''
+            # We've come to a break, so scan what we've seen so far
+            if address is None or (previous, address) in scanned_pairs:
+                # Scan data_to_scan
+                for result in scanner(data_to_scan, chunk_end - len(data_to_scan)):
+                    yield result
+                data_to_scan = b''
+            else:
+                # TODO: We've already done the translation, so don't bother doing it again
+                data_to_scan += self.context.memory[layer_name].read(address, chunk_size)
+            previous = address
+            chunk_end += chunk_size
 
 
 class IntelPAE(Intel):
