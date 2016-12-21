@@ -226,26 +226,32 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     except exceptions.PagedInvalidAddressException:
                         vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
                 else:
-                    vollog.debug("Kernel base randomized, searching for base address offset")
+                    vollog.debug("Kernel base randomized, searching layer for base address offset")
                     # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
-                    if kernels:
-                        physical_layer = context.memory[physical_layer_name]
-                        results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
-                                                      min_address = kernels[0]['mz_offset'])
-                        for result in results:
-                            # TODO: Identify the specific structure we're finding and document this a bit better
-                            address = context.object("unsigned long long", offset = result - 6 - 8,
-                                                     layer_name = physical_layer_name)
-                            try:
-                                for kernel in kernels:
-                                    if kernel['mz_offset'] is not None:
-                                        for mapping in vlayer.mapping(address, 0):
-                                            if kernel['mz_offset'] == mapping[1]:
-                                                valid_kernels[virtual_layer_name] = (address, kernel)
-                                                break
-                            except exceptions.PagedInvalidAddressException:
-                                # We don't care if we're mapping an address to 0, it's not what we're looking for
-                                pass
+                    physical_layer = context.memory[physical_layer_name]
+                    results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"))
+                    seen = set()
+                    for result in results:
+                        # TODO: Identify the specific structure we're finding and document this a bit better
+                        pointer = context.object("unsigned long long", offset = (result - 16 - 8),
+                                                 layer_name = physical_layer_name)
+                        address = pointer & vlayer.address_mask
+                        if address in seen:
+                            continue
+                        seen.add(address)
+                        try:
+                            potential_mz = vlayer.read(offset = address, length = 2)
+                            if potential_mz == b"MZ":
+                                data = vlayer.read(offset = address, length = (1 << 26), pad = True)
+                                with open("temp1.dat", "wb") as f:
+                                    f.write(data)
+                                subscan = scan(context, virtual_layer_name, start = address, end = address + (1 << 26))
+                                for result in subscan:
+                                    valid_kernels[virtual_layer_name] = (address, result)
+                                    break
+                        except exceptions.PagedInvalidAddressException:
+                            # We don't care if we're mapping an address to 0, it's not what we're looking for
+                            pass
             if not valid_kernels:
                 vollog.warning("No suitable kernel found for layer: {}".format(virtual_layer_name))
         if not valid_kernels:
