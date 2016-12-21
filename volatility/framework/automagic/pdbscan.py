@@ -31,7 +31,6 @@ class PdbSigantureScanner(interfaces.layers.ScannerInterface):
 
     def __call__(self, data, data_offset):
         sig = data.find(b"RSDS")
-        pdb_hits = []
         while sig >= 0:
             null = data.find(b'\0', sig + 4 + self._RSDS_format.size)
             if null > -1:
@@ -49,7 +48,7 @@ class PdbSigantureScanner(interfaces.layers.ScannerInterface):
             sig = data.find(b"RSDS", sig + 1)
 
 
-def scan(ctx, layer_name):
+def scan(ctx, layer_name, start = None, end = None):
     """Scans through layer_name at context and returns the tuple
        (GUID, age, pdb_name, signature_offset, mz_offset)
 
@@ -69,7 +68,9 @@ def scan(ctx, layer_name):
     ]
 
     for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(ctx, PdbSigantureScanner(pdb_names),
-                                                                               progress_callback = progress_callback):
+                                                                               progress_callback = progress_callback,
+                                                                               min_address = start,
+                                                                               max_address = end):
         mz_offset = None
         sig_pfn = signature_offset // PAGE_SIZE
 
