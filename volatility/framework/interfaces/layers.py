@@ -127,7 +127,10 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     # ## General scanning methods
 
     def _pre_scan(self, context, min_address, max_address, progress_callback, scanner):
-        """Prepares the scanner based on standard procedures shared between TranslationLayers and DataLayers"""
+        """Prepares the scanner based on standard procedures shared between TranslationLayers and DataLayers
+
+           Note: that addresses for large spaces (such as 64-bit) may be larger than the maximum_address for the space
+        """
         if progress_callback is not None:
             self._check_type(progress_callback, collections.Callable)
 
@@ -137,8 +140,12 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
         if min_address is None:
             min_address = self.minimum_address
+        if min_address > self.maximum_address:
+            raise ValueError("Minimum address cannot be larger than the maximum address of the space")
         if max_address is None:
             max_address = self.maximum_address
+        if max_address < self.minimum_address:
+            raise ValueError("Maximum address cannot be smaller than the minimum address of the space")
 
         min_address = max(self.minimum_address, min_address)
         max_address = min(self.maximum_address, max_address)
