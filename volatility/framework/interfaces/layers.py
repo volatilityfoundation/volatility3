@@ -140,8 +140,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         if max_address is None:
             max_address = self.maximum_address
 
-        min_address = min(self.minimum_address, min_address)
-        max_address = max(self.maximum_address, max_address)
+        min_address = max(self.minimum_address, min_address)
+        max_address = min(self.maximum_address, max_address)
         total_size = (max_address - min_address)
         return min_address, max_address, scanner, total_size
 
