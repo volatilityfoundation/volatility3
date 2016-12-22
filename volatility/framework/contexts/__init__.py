@@ -58,7 +58,7 @@ class Context(interfaces.context.ContextInterface):
         :param layer: The layer to be added to the memory
         :type layer: volatility.framework.interfaces.layers.DataLayerInterface
         :raises volatility.framework.exceptions.LayerException: if the layer is already present, or has
-        unmet dependencies
+          unmet dependencies
         """
         self._memory.add_layer(layer)
 
