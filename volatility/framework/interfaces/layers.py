@@ -238,8 +238,9 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                                                                        progress_callback, scanner)
 
         progress = 0
-        for block in range(min_address, total_size, scanner.chunk_size):
-            for map in self.mapping(block, scanner.chunk_size + scanner.overlap, ignore_errors = True):
+        for block in range(min_address, max_address, scanner.chunk_size):
+            size_to_scan = min(total_size, scanner.chunk_size + scanner.overlap)
+            for map in self.mapping(block, size_to_scan, ignore_errors = True):
                 offset, mapped_offset, length, layer = map
                 chunk = self._context.memory.read(layer, mapped_offset, length)
                 if progress_callback:
