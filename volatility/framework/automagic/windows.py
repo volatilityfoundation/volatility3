@@ -197,6 +197,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
                                     name = new_layer_name)
             break
         if layer is None:
+            vollog.debug("Self-referential pointer not in well-known location, moving to recent windows heuristic")
             # There is a very high chance that the DTB will live in this narrow segment, assuming we couldn't find it previously
             hits = context.memory[layer_name].scan(context, PageMapScanner([DtbSelfRef64bit()]), min_address = 0x1a0000,
                                                    max_address = 0x1f0000)
