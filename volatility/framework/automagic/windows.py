@@ -4,10 +4,13 @@ if __name__ == "__main__":
 
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
+import logging
 import struct
 
 from volatility.framework import interfaces, layers, validity
 from volatility.framework.configuration import requirements
+
+vollog = logging.getLogger(__name__)
 
 PAGE_SIZE = 0x1000
 
@@ -193,6 +196,22 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
                                     config_path = config_path,
                                     name = new_layer_name)
             break
+        if layer is None:
+            # There is a very high chance that the DTB will live in this narrow segment, assuming we couldn't find it previously
+            hits = context.memory[layer_name].scan(context, PageMapScanner([DtbSelfRef64bit()]), min_address = 0x1a0000,
+                                                   max_address = 0x1f0000)
+            # Flatten the generator
+            hits = list(hits)
+            if hits:
+                # TODO: Decide which to use if there are multiple options
+                page_map_offset = hits[0][1][0]
+                new_layer_name = context.memory.free_layer_name("IntelLayer")
+                config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
+                context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
+                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
+                # TODO: Need to determine the layer type (chances are high it's x64, hence this default)
+                layer = layers.intel.Intel32e(context, config_path = config_path, name = new_layer_name)
+        if layer is not None:
+            vollog.debug("DTB was found at: 0x{:0x}".format(
+                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")]))
         return layer
-
-

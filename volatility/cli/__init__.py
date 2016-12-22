@@ -84,7 +84,6 @@ class CommandLine(object):
         else:
             ctx.config["automagic.general.single_location"] = "file://" + os.path.abspath(args.file)
             pass
-        # ctx.config["automagic.general.single_page_map_offset"] = 0x1ab000
 
         ###
         # BACK TO THE FRAMEWORK
