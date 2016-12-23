@@ -52,9 +52,14 @@ if __name__ == '__main__':
         print("[*] Scanning " + filename + "...")
         hits = scan(ctx, layername)
         if hits:
-            for (GUID, age, pdb_name, signature_offset, mz_offset) in hits:
+            for hit in hits:
+                GUID = hit["GUID"]
+                age = hit["age"]
+                pdb_name = hit["pdb_name"]
+                signature_offset = hit["signature_offset"]
+                mz_offset = hit["mz_offset"]
                 print("[!] PDB Guess: %s/%s%d MZ=0x%x" %
-                      (pdb_name.decode("utf-8"), GUID, age, mz_offset))
+                      (pdb_name, GUID, age, mz_offset))
         else:
             print("[X] No kernel PDBs found")
         print()
