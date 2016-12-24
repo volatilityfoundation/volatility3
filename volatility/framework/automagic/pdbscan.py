@@ -242,9 +242,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         try:
                             potential_mz = vlayer.read(offset = address, length = 2)
                             if potential_mz == b"MZ":
-                                data = vlayer.read(offset = address, length = (1 << 26), pad = True)
-                                with open("temp1.dat", "wb") as f:
-                                    f.write(data)
                                 subscan = scan(context, virtual_layer_name, start = address, end = address + (1 << 26))
                                 for result in subscan:
                                     valid_kernels[virtual_layer_name] = (address, result)
