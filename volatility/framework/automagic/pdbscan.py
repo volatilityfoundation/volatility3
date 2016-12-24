@@ -229,6 +229,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     vollog.debug("Kernel base randomized, searching layer for base address offset")
                     # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
                     physical_layer = context.memory[physical_layer_name]
+                    # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
                     results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"))
                     seen = set()
                     for result in results:
