@@ -28,11 +28,8 @@ class SymbolSpace(collections.abc.Mapping):
        proceed down through the ranks if a namespace isn't specified.
     """
 
-    def __init__(self, native_types = None):
-        if not isinstance(native_types, interfaces.symbols.NativeTableInterface):
-            raise TypeError("SymbolSpace native_types must be NativeSymbolInterface")
+    def __init__(self):
         self._dict = collections.OrderedDict()
-        self._native_types = native_types
         # Permanently cache all resolved symbols
         self._resolved = {}
 
@@ -55,20 +52,6 @@ class SymbolSpace(collections.abc.Mapping):
         for table in table_list:
             for symbol_name in self._dict[table].get_symbols_by_location(address = address):
                 yield table + constants.BANG + symbol_name
-
-    ### Native functions
-
-    @property
-    def natives(self):
-        """Returns the native_types for this symbol space"""
-        return self._native_types
-
-    @natives.setter
-    def natives(self, native_types):
-        if native_types is not None:
-            vollog.warning(
-                "Resetting the native type can cause have drastic effects on memory analysis using this space")
-        self._native_types = native_types
 
     ### Space functions
 
@@ -134,8 +117,6 @@ class SymbolSpace(collections.abc.Mapping):
                 return getattr(self._dict[table_name], get_function)(component_name)
             except (exceptions.SymbolError, KeyError):
                 return self._UnresolvedTemplate(name)
-        elif name in self.natives.types:
-            return getattr(self.natives, get_function)(name)
         raise exceptions.SymbolError("Malformed name: {}".format(name))
 
     def get_type(self, type_name):

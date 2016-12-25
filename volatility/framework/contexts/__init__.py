@@ -13,7 +13,7 @@ class Context(interfaces.context.ContextInterface):
     for creating new objects.
     """
 
-    def __init__(self, natives = symbols.native.x86NativeTable):
+    def __init__(self):
         """Initializes the context.
 
         This initializes the context and provides a default set of native types for the empty symbol space.
@@ -22,7 +22,7 @@ class Context(interfaces.context.ContextInterface):
         :type natives: interfaces.symbols.NativeTableInterface
         """
         super().__init__()
-        self._symbol_space = symbols.SymbolSpace(natives)
+        self._symbol_space = symbols.SymbolSpace()
         self._memory = interfaces.layers.Memory()
         self._config = HierarchicalDict()
 
