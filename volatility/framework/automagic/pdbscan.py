@@ -22,6 +22,7 @@ PAGE_SIZE = 0x1000
 
 class PdbSigantureScanner(interfaces.layers.ScannerInterface):
     overlap = 0x4000
+    thread_safe = True
 
     _RSDS_format = struct.Struct("<16BI")
 

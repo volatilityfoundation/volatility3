@@ -126,6 +126,7 @@ class DtbSelfRef64bit(DtbSelfReferential):
 
 class PageMapScanner(interfaces.layers.ScannerInterface):
     overlap = 0x4000
+    thread_safe = True
     tests = [DtbTest32bit, DtbTest64bit, DtbTestPae]
 
     def __init__(self, tests):

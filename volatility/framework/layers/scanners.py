@@ -2,6 +2,8 @@ from volatility.framework.interfaces import layers
 
 
 class BytesScanner(layers.ScannerInterface):
+    thread_safe = True
+
     def __init__(self, needle):
         super().__init__()
         self.needle = self._check_type(needle, bytes)

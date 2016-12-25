@@ -5,7 +5,10 @@ Created on 4 May 2013
 """
 import collections
 import collections.abc
+import ctypes
+import functools
 import math
+import multiprocessing
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from volatility.framework import exceptions, validity
@@ -28,7 +31,12 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     Scanners should balance the size of chunk based on the amount of time
     scanning the chunk will take (ie, do not set an excessively large chunksize
     and try not to take a significant amount of time in the __call__ method).
+
+    Scanners can mark themselves as thread_safe, if they do not require state
+    in either their own class or the context.  This will allow the scanner to be run
+    in parallel against multiple blocks.
     """
+    thread_safe = False
 
     def __init__(self):
         self.chunk_size = 0x1000000  # Default to 16Mb chunks
@@ -236,18 +244,35 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """
         min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,
                                                                        progress_callback, scanner)
-
-        progress = 0
-        for block in range(min_address, max_address, scanner.chunk_size):
-            size_to_scan = min(total_size, scanner.chunk_size + scanner.overlap)
-            for map in self.mapping(block, size_to_scan, ignore_errors = True):
-                offset, mapped_offset, length, layer = map
-                chunk = self._context.memory.read(layer, mapped_offset, length)
+        progress = multiprocessing.Manager().Value(ctypes.c_longlong, 0)
+        scan_chunk_func = functools.partial(self._scan_chunk, progress, scanner, total_size)
+        if scanner.thread_safe:
+            with multiprocessing.Pool() as pool:
+                result = pool.map_async(scan_chunk_func, range(min_address, max_address, scanner.chunk_size))
+                while not result.ready():
+                    if progress_callback:
+                        # Run the progress_callback
+                        progress_callback((progress.value * 100) / total_size)
+                    # Ensures we don't burn CPU cycles going round in a ready waiting loop
+                    # without delaying the user too long between progress updates/results
+                    result.wait(0.1)
+                for result in result.get():
+                    yield from result
+        else:
+            for block in range(min_address, max_address, scanner.chunk_size):
                 if progress_callback:
-                    progress += length
-                    progress_callback((progress * 100) / total_size)
-                for x in scanner(chunk, offset):
-                    yield x
+                    progress_callback((progress.value * 100) / total_size)
+                yield from scan_chunk_func(block)
+
+    def _scan_chunk(self, progress, scanner, total_size, block):
+        size_to_scan = min(total_size, scanner.chunk_size + scanner.overlap)
+        result = []
+        for map in self.mapping(block, size_to_scan, ignore_errors = True):
+            offset, mapped_offset, length, layer = map
+            progress.value += length
+            chunk = self._context.memory.read(layer, mapped_offset, length)
+            result += [x for x in scanner(chunk, offset)]
+        return result
 
 
 class Memory(validity.ValidityRoutines, collections.abc.Mapping):
