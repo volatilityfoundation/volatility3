@@ -176,8 +176,9 @@ class Template(validity.ValidityRoutines):
 
     def __getattr__(self, attr):
         """Exposes any other values stored in ._vol as attributes (for example, enumeration choices)"""
-        if attr in self._vol:
-            return self._vol[attr]
+        if attr != '_vol':
+            if attr in self._vol:
+                return self._vol[attr]
         raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, attr))
 
     def __call__(self, context, object_info):
