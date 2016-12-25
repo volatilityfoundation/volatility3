@@ -5,7 +5,7 @@ Created on 10 Apr 2013
 """
 import copy
 
-from volatility.framework import interfaces, objects
+from volatility.framework import constants, interfaces, objects
 
 
 class NativeTable(interfaces.symbols.NativeTableInterface):
@@ -37,6 +37,14 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
            symbol_space is used to resolve any subtype symbols if they don't exist in this list
         """
         # NOTE: These need updating whenever the object init signatures change
+        prefix = ""
+        if constants.BANG in type_name:
+            name_split = type_name.split(constants.BANG)
+            if len(name_split) > 2:
+                raise ValueError("SymbolName cannot contain multiple {} separators".format(constants.BANG))
+            table_name, type_name = name_split
+            prefix = table_name + constants.BANG
+
         additional = {}
         obj = None
         if type_name == 'void' or type_name == 'function':
@@ -57,13 +65,13 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             obj = objects.Bytes
             additional = {"length": 0}
         if obj is not None:
-            return objects.templates.ObjectTemplate(obj, type_name = type_name, **additional)
+            return objects.templates.ObjectTemplate(obj, type_name = prefix + type_name, **additional)
 
         _native_type, native_format = self._native_dictionary[type_name]
         if type_name == 'pointer':
             additional = {'subtype': self.get_type('void')}
         return objects.templates.ObjectTemplate(self.get_type_class(type_name),  # pylint: disable=W0142
-                                                type_name = type_name,
+                                                type_name = prefix + type_name,
                                                 struct_format = native_format,
                                                 **additional)
 
