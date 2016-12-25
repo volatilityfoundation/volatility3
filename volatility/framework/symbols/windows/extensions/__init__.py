@@ -1,5 +1,6 @@
 import collections.abc
 
+from volatility.framework import interfaces
 from volatility.framework import objects
 
 
@@ -9,6 +10,36 @@ class _ETHREAD(objects.Struct):
     def owning_process(self, kernel_layer = None):
         """Return the EPROCESS that owns this thread"""
         return self.ThreadsProcess.dereference(kernel_layer)
+
+
+class _EPROCESS(objects.Struct):
+    def add_process_layer(self, context, config_prefix, preferred_name = None):
+        """Constructs a new layer """
+
+        # Figure out a suitable name we can use for the new layer
+        if preferred_name is None:
+            preferred_name = context.memory.free_layer_name(
+                prefix = self.vol.layer_name + "_PID" + str(self.UniqueProcessId) + "_")
+        else:
+            if preferred_name in context.memory:
+                preferred_name = context.memory.free_layer_name(prefix = preferred_name)
+
+        # Copy the parent's config and then make suitable changes
+        parent_layer = context.memory[self.vol.layer_name]
+        parent_config = parent_layer.build_configuration()
+        parent_config['memory_layer'] = self.vol.layer_name
+        # Presumably for 64-bit systems, the DTB is defined as an array, rather than an unsigned long long
+        if isinstance(self.Pcb.DirectoryTableBase, objects.Array):
+            parent_config['page_map_offset'] = self.Pcb.DirectoryTableBase.cast("unsigned long long")
+
+        # Set the new configuration and construct the layer
+        config_path = interfaces.configuration.path_join(config_prefix, preferred_name)
+        context.config.splice(config_path, parent_config)
+        new_layer = parent_layer.__class__(context, config_path = config_path, name = preferred_name)
+
+        # Add the constructed layer and return the name
+        context.memory.add_layer(new_layer)
+        return preferred_name
 
 
 class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
