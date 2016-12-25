@@ -155,17 +155,12 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 requirements.IntRequirement(name = 'kernel_virtual_offset',
                                             optional = True)]
 
-    def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
-        min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,
-                                                                       progress_callback, scanner)
-        scanned_pairs = set()
+    def _scan_iterator(self, scanner, min_address, max_address):
         previous = None
-        data_to_scan = b''
+        data_to_scan = []
+        scanned_pairs = set()
         chunk_end = min_address
         while chunk_end <= max_address:
-            if progress_callback:
-                progress_callback(round((chunk_end - min_address) * 100 / total_size, 3))
-            address_failed = False
             try:
                 address, page_size, layer_name = self._translate(chunk_end)
                 chunk_size = page_size - (address & (page_size - 1))
@@ -173,15 +168,24 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 address, chunk_size, layer_name = None, 1 << self._page_size_in_bits, ''
             # We've come to a break, so scan what we've seen so far
             if address is None or (previous, address) in scanned_pairs:
-                # Scan data_to_scan
-                for result in scanner(data_to_scan, chunk_end - len(data_to_scan)):
-                    yield result
-                data_to_scan = b''
+                yield data_to_scan, chunk_end
+                data_to_scan = []
             else:
                 # TODO: We've already done the translation, so don't bother doing it again
-                data_to_scan += self.context.memory[layer_name].read(address, chunk_size)
+                data_to_scan += [(layer_name, address, chunk_size)]
             previous = address
             chunk_end += chunk_size
+
+    def _scan_chunk(self, scanner, min_address, max_address, progress, iterator_value):
+        data_to_scan, chunk_end = iterator_value
+        data = b''
+        for layer_name, address, chunk_size in data_to_scan:
+            data += self.context.memory[layer_name].read(address, chunk_size)
+        progress.value = chunk_end
+        return list(scanner(data, chunk_end - len(data_to_scan)))
+
+    def _scan_metric(self, _scanner, min_address, max_address, value):
+        return ((value - min_address) * 100) / (max_address - min_address)
 
 
 class IntelPAE(Intel):

@@ -134,10 +134,10 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
     # ## General scanning methods
 
-    def _pre_scan(self, context, min_address, max_address, progress_callback, scanner):
-        """Prepares the scanner based on standard procedures shared between TranslationLayers and DataLayers
+    def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
+        """Scans a Translation layer by chunk
 
-           Note: that addresses for large spaces (such as 64-bit) may be larger than the maximum_address for the space
+           Note: this will skip missing/unmappable chunks of memory
         """
         if progress_callback is not None:
             self._check_type(progress_callback, collections.Callable)
@@ -157,21 +157,41 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
         min_address = max(self.minimum_address, min_address)
         max_address = min(self.maximum_address, max_address)
-        total_size = (max_address - min_address)
-        return min_address, max_address, scanner, total_size
 
-    def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
-        """Scans the layer using scanner, between min_address and max_address calling progress_callback at internvals to report percentage progress"""
-        min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,
-                                                                       progress_callback, scanner)
+        progress = multiprocessing.Manager().Value(ctypes.c_longlong, 0)
+        scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
+        scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
+        scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
+        if scanner.thread_safe:
+            with multiprocessing.Pool() as pool:
+                result = pool.map_async(scan_chunk, scan_iterator())
+                while not result.ready():
+                    if progress_callback:
+                        # Run the progress_callback
+                        progress_callback(scan_metric(progress.value))
+                    # Ensures we don't burn CPU cycles going round in a ready waiting loop
+                    # without delaying the user too long between progress updates/results
+                    result.wait(0.1)
+                for result in result.get():
+                    yield from result
+        else:
+            for block in range(min_address, max_address, scanner.chunk_size):
+                if progress_callback:
+                    progress_callback(scan_metric(progress.value))
+                yield from scan_chunk(block)
 
-        for offset in range(min_address, max_address, scanner.chunk_size):
-            length = min(scanner.chunk_size + scanner.overlap, max_address - offset)
-            chunk = self.read(offset, length)
-            if progress_callback:
-                progress_callback((offset * 100) / total_size)
-            for x in scanner(chunk, offset):
-                yield x
+    def _scan_iterator(self, scanner, min_address, max_address):
+        return range(min_address, max_address, scanner.chunk_size)
+
+    def _scan_chunk(self, scanner, min_address, max_address, progress, iterator_value):
+        length = min(scanner.chunk_size + scanner.overlap, max_address - iterator_value)
+        chunk = self.read(iterator_value, length)
+        progress.value += iterator_value
+        for x in scanner(chunk, iterator_value):
+            yield x
+
+    def _scan_metric(self, _scanner, min_address, max_address, value):
+        return (value * 100) / (max_address - min_address)
 
     def build_configuration(self):
         config = super().build_configuration()
@@ -237,37 +257,10 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     # ## Scan implementation with knowledge of pages
 
-    def scan(self, context, scanner, progress_callback = None, min_address = None, max_address = None):
-        """Scans a Translation layer by chunk
-
-           Note: this will skip missing/unmappable chunks of memory
-        """
-        min_address, max_address, scanner, total_size = self._pre_scan(context, min_address, max_address,
-                                                                       progress_callback, scanner)
-        progress = multiprocessing.Manager().Value(ctypes.c_longlong, 0)
-        scan_chunk_func = functools.partial(self._scan_chunk, progress, scanner, total_size)
-        if scanner.thread_safe:
-            with multiprocessing.Pool() as pool:
-                result = pool.map_async(scan_chunk_func, range(min_address, max_address, scanner.chunk_size))
-                while not result.ready():
-                    if progress_callback:
-                        # Run the progress_callback
-                        progress_callback((progress.value * 100) / total_size)
-                    # Ensures we don't burn CPU cycles going round in a ready waiting loop
-                    # without delaying the user too long between progress updates/results
-                    result.wait(0.1)
-                for result in result.get():
-                    yield from result
-        else:
-            for block in range(min_address, max_address, scanner.chunk_size):
-                if progress_callback:
-                    progress_callback((progress.value * 100) / total_size)
-                yield from scan_chunk_func(block)
-
-    def _scan_chunk(self, progress, scanner, total_size, block):
-        size_to_scan = min(total_size, scanner.chunk_size + scanner.overlap)
+    def _scan_chunk(self, scanner, min_address, max_address, progress, iterator_value):
+        size_to_scan = min(max_address - min_address, scanner.chunk_size + scanner.overlap)
         result = []
-        for map in self.mapping(block, size_to_scan, ignore_errors = True):
+        for map in self.mapping(iterator_value, size_to_scan, ignore_errors = True):
             offset, mapped_offset, length, layer = map
             progress.value += length
             chunk = self._context.memory.read(layer, mapped_offset, length)
