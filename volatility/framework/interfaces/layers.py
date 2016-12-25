@@ -186,9 +186,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     def _scan_chunk(self, scanner, min_address, max_address, progress, iterator_value):
         length = min(scanner.chunk_size + scanner.overlap, max_address - iterator_value)
         chunk = self.read(iterator_value, length)
-        progress.value += iterator_value
-        for x in scanner(chunk, iterator_value):
-            yield x
+        progress.value = iterator_value
+        return list(scanner(chunk, iterator_value))
 
     def _scan_metric(self, _scanner, min_address, max_address, value):
         return (value * 100) / (max_address - min_address)
