@@ -1,4 +1,4 @@
-from volatility.framework import interfaces, symbols
+from volatility.framework import constants, interfaces, symbols
 from volatility.framework.interfaces.configuration import HierarchicalDict
 
 __author__ = 'mike'
@@ -79,3 +79,14 @@ class Context(interfaces.context.ContextInterface):
         return object_template(context = self,
                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
                                                                                   offset = offset))
+
+    def object_factory(self, symbol_table):
+        """Allow a specific symbol_table to be used repeatedly for constructing objects"""
+
+        def callable(symbol, layer_name, offset, **arguments):
+            """Function to apply a specific symbol_table name to any unadored"""
+            if constants.BANG not in symbol:
+                symbol = symbol_table + constants.BANG + symbol
+            return self.object(symbol, layer_name, offset, **arguments)
+
+        return callable
