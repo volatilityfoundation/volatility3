@@ -52,7 +52,7 @@ class Context(interfaces.context.ContextInterface):
 
     # ## Address Space Functions
 
-    def add_translation_layer(self, layer):
+    def add_layer(self, layer):
         """Adds a named translation layer to the context
 
         :param layer: The layer to be added to the memory
