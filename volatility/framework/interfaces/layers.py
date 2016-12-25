@@ -175,10 +175,10 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                 for result in result.get():
                     yield from result
         else:
-            for block in range(min_address, max_address, scanner.chunk_size):
+            for value in scan_iterator():
                 if progress_callback:
                     progress_callback(scan_metric(progress.value))
-                yield from scan_chunk(block)
+                yield from scan_chunk(value)
 
     def _scan_iterator(self, scanner, min_address, max_address):
         return range(min_address, max_address, scanner.chunk_size)
