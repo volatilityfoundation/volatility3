@@ -8,7 +8,7 @@ import collections
 import collections.abc
 from abc import ABCMeta, abstractmethod
 
-from volatility.framework import validity
+from volatility.framework import constants, validity
 from volatility.framework.interfaces import context as context_module
 
 
@@ -88,6 +88,9 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def cast(self, new_type_name, **additional):
         """Returns a new object at the offset and from the layer that the current object inhabits"""
         # TODO: Carefully consider the implications of casting and how it should work
+        if constants.BANG not in new_type_name:
+            symbol_table = self.vol['type_name'].split(constants.BANG)[0]
+            new_type_name = symbol_table + constants.BANG + new_type_name
         object_template = self._context.symbol_space.get_type(new_type_name)
         object_template = object_template.clone()
         object_template.update_vol(**additional)
