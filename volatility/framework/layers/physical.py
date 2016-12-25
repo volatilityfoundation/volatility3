@@ -130,6 +130,14 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._file.seek(offset)
         self._file.write(data)
 
+    def __getstate__(self):
+        """Do not store the open _file_ attribute, our property will ensure the file is open when needed
+
+           This is necessary for multi-processing
+        """
+        self._file_ = None
+        return self.__dict__
+
     def destroy(self):
         """Closes the file handle"""
         self._file.close()
