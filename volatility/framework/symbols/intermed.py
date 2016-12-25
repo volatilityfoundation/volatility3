@@ -190,7 +190,7 @@ class Version1Format(ISFormatTable):
 
         if type_name in self.natives.types:
             # The symbol is a native type
-            native_template = self.natives.get_type(type_name)
+            native_template = self.natives.get_type(self.name + constants.BANG + type_name)
 
             # Add specific additional parameters, etc
             update = {}
@@ -237,7 +237,7 @@ class Version1Format(ISFormatTable):
             raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
         if type_name not in self._json_object['user_types']:
             # Fall back to the natives table
-            return self.natives.get_type(type_name)
+            return self.natives.get_type(self.name + constants.BANG + type_name)
         curdict = self._json_object['user_types'][type_name]
         members = {}
         for member_name in curdict['fields']:
@@ -280,7 +280,7 @@ class Version2Format(Version1Format):
             raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
         if type_name not in self._json_object['user_types']:
             # Fall back to the natives table
-            return self.natives.get_type(type_name)
+            return self.natives.get_type(self.name + constants.BANG + type_name)
         curdict = self._json_object['user_types'][type_name]
         members = {}
         for member_name in curdict['fields']:
