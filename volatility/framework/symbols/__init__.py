@@ -6,6 +6,7 @@ Created on 7 Feb 2013
 
 import collections
 import collections.abc
+import enum
 import logging
 
 from volatility.framework import constants, exceptions, interfaces, objects
@@ -14,11 +15,10 @@ from volatility.framework.symbols import native, windows
 vollog = logging.getLogger(__name__)
 
 
-class SymbolType(object):
-    # Suitably random values until we make this an Enum and require python >= 3.4
-    TYPE = 143534545
-    SYMBOL = 28293045
-    ENUM = 395940348
+class SymbolType(enum.Enum):
+    TYPE = 1
+    SYMBOL = 2
+    ENUM = 3
 
 
 class SymbolSpace(collections.abc.Mapping):
