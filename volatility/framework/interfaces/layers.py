@@ -158,27 +158,30 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         min_address = max(self.minimum_address, min_address)
         max_address = min(self.maximum_address, max_address)
 
-        progress = multiprocessing.Manager().Value(ctypes.c_longlong, 0)
-        scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
-        scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
-        scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
-        if scanner.thread_safe:
-            with multiprocessing.Pool() as pool:
-                result = pool.map_async(scan_chunk, scan_iterator())
-                while not result.ready():
+        try:
+            progress = multiprocessing.Manager().Value(ctypes.c_longlong, 0)
+            scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
+            scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
+            scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
+            if scanner.thread_safe:
+                with multiprocessing.Pool() as pool:
+                    result = pool.map_async(scan_chunk, scan_iterator())
+                    while not result.ready():
+                        if progress_callback:
+                            # Run the progress_callback
+                            progress_callback(scan_metric(progress.value))
+                        # Ensures we don't burn CPU cycles going round in a ready waiting loop
+                        # without delaying the user too long between progress updates/results
+                        result.wait(0.1)
+                    for result in result.get():
+                        yield from result
+            else:
+                for value in scan_iterator():
                     if progress_callback:
-                        # Run the progress_callback
                         progress_callback(scan_metric(progress.value))
-                    # Ensures we don't burn CPU cycles going round in a ready waiting loop
-                    # without delaying the user too long between progress updates/results
-                    result.wait(0.1)
-                for result in result.get():
-                    yield from result
-        else:
-            for value in scan_iterator():
-                if progress_callback:
-                    progress_callback(scan_metric(progress.value))
-                yield from scan_chunk(value)
+                    yield from scan_chunk(value)
+        except Exception as e:
+            vollog.debug("Exception: {}".format(str(e)))
 
     def _scan_iterator(self, scanner, min_address, max_address):
         return range(min_address, max_address, scanner.chunk_size)
