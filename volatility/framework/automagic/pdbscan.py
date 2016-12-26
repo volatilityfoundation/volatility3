@@ -162,6 +162,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     midfix = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
                     idd_path = None
                     for prefix in self.prefixes:
+                        if not os.path.isabs(prefix):
+                            prefix = os.path.abspath(os.path.join(__file__, prefix))
                         for suffix in self.suffixes:
                             if os.path.exists(os.path.join(prefix, midfix + suffix)):
                                 idd_path = "file://" + os.path.abspath(os.path.join(prefix, midfix + suffix))
