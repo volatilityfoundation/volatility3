@@ -100,8 +100,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     priority = 30
 
     # Make sure uncompressed/outside-framework takes precedence, so users can overload.
-    prefixes = [os.path.join(os.path.dirname(__file__), "..", "..", "symbols", "windows"),
-                os.path.join(os.path.dirname(__file__), "..", "symbols", "windows")]
+    prefixes = [os.path.join("..", "..", "..", "symbols", "windows"),
+                os.path.join("..", "..", "symbols", "windows")]
+    """Provides a list of prefixes that are searched when locating Intermediate Format data files"""
     suffixes = ['.json', '.json.xz']
 
     def __init__(self):
