@@ -7,12 +7,15 @@ import collections
 import collections.abc
 import ctypes
 import functools
+import logging
 import math
 import multiprocessing
 from abc import ABCMeta, abstractmethod, abstractproperty
 
 from volatility.framework import exceptions, validity
 from volatility.framework.interfaces import configuration, context
+
+vollog = logging.getLogger(__name__)
 
 
 class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
