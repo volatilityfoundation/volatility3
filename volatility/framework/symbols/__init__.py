@@ -69,7 +69,7 @@ class SymbolSpace(collections.abc.Mapping):
 
     def append(self, value):
         """Adds a symbol_list to the end of the space"""
-        if not isinstance(value, interfaces.symbols.SymbolTableInterface):
+        if not isinstance(value, interfaces.symbols.BaseSymbolTableInterface):
             raise TypeError(value)
         if value.name in self._dict:
             self.remove(value.name)
