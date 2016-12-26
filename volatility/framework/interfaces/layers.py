@@ -172,7 +172,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                     while not result.ready():
                         if progress_callback:
                             # Run the progress_callback
-                            progress_callback(scan_metric(progress.value))
+                            progress_callback(scan_metric(progress.value), "Scanning {}".format(self.name))
                         # Ensures we don't burn CPU cycles going round in a ready waiting loop
                         # without delaying the user too long between progress updates/results
                         result.wait(0.1)
@@ -196,7 +196,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         return list(scanner(chunk, iterator_value))
 
     def _scan_metric(self, _scanner, min_address, max_address, value):
-        return (value * 100) / (max_address - min_address)
+        return max(0, (value * 100) / (max_address - min_address))
 
     def build_configuration(self):
         config = super().build_configuration()

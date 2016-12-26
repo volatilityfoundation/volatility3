@@ -9,7 +9,7 @@ class AutomagicInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     priority = 10
 
     @abstractmethod
-    def __call__(self, context, config_path, configurable):
+    def __call__(self, context, config_path, configurable, progress_callback = None):
         """Runs the automagic over the configurable"""
 
 
@@ -24,7 +24,7 @@ class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     @classmethod
     @abstractmethod
-    def stack(self, context, layer_name):
+    def stack(self, context, layer_name, progress_callback = None):
         """Method to determine whether this builder can operate on the named layer,
            If so, modify the context appropriately.
 

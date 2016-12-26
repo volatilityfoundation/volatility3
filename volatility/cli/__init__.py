@@ -90,7 +90,7 @@ class CommandLine(object):
         ###
         # Clever magic figures out how to fulfill each requirement that might not be fulfilled
         automagics = automagic.available()
-        automagic.run(automagics, ctx, plugin, "plugins")
+        automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
 
         # Check all the requirements and/or go back to the automagic step
         if not plugin.validate(ctx, config_path):
@@ -105,6 +105,17 @@ class CommandLine(object):
 
         # Construct and run the plugin
         TextRenderer().render(constructed.run())
+
+
+def progress_callback(progress, description = None):
+    """ A sinmple function for providing text-based feedback
+
+    .. warning:: Only for development use.
+
+    :param progress: Percentage of progress of the current procedure
+    :type progress: int or float
+    """
+    print("\rProgress: ", round(progress, 2), "\t\t", description or '', end = '\n')
 
 
 def main():

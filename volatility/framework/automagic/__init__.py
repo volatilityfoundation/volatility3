@@ -15,8 +15,16 @@ def available():
                   key = lambda x: x.priority)
 
 
-def run(automagics, context, configurable, config_path = ""):
-    """Runs through the list of automagics in order, allowing them to make changes to the context
+def run(automagics, context, configurable, config_path = "", progress_callback = None):
+    """Runs through the list of `automagics` in order, allowing them to make changes to the context
+
+    :param automagics: A list of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` objects
+    :param context: The context (that inherits from :class:`~volatility.framework.interfaces.context.ContextInterface`) for modification
+    :param configurable: An object that inherits from :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`
+    :param config_path: The path within the `context.config` for options required by the `configurable`
+    :param progress_callback: A function that takes a percentage (and an optional description) that will be called periodically
+
+    This is where any automagic is allowed to run, and alter the context in order to satisfy/improve all requirements
 
        This is where any automagic is allowed to run, and alter the context in order to satisfy/improve all requirements
     """
@@ -39,4 +47,4 @@ def run(automagics, context, configurable, config_path = ""):
 
     for automagic in automagics:
         vollog.info("Running automagic: {}".format(automagic.__class__.__name__))
-        automagic(context, config_path, requirement)
+        automagic(context, config_path, requirement, progress_callback)

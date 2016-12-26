@@ -50,8 +50,8 @@ class PdbSigantureScanner(interfaces.layers.ScannerInterface):
             sig = data.find(b"RSDS", sig + 1)
 
 
-def scan(ctx, layer_name, start = None, end = None):
-    """Scans through layer_name at context and returns the tuple
+def scan(ctx, layer_name, progress_callback = None, start = None, end = None):
+    """Scans through `layer_name` at `ctx` and returns the tuple
        (GUID, age, pdb_name, signature_offset, mz_offset)
 
        Note that this is automagical and therefore not guaranteed to provide
@@ -95,10 +95,6 @@ def scan(ctx, layer_name, start = None, end = None):
     return results
 
 
-def progress_callback(progress):
-    print("\rProgress: ", progress, "     ", end = '')
-
-
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     """Looks for all Intel address spaces and attempts to identify the PDB guid required for the space"""
     priority = 30
@@ -112,8 +108,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         super().__init__()
         self.valid_kernels = []
 
-    def recurse_pdb_finder(self, context, config_path, requirement):
-        """Traverses the requirement tree looking for virtual layers that might contain a windows PDB
+    def recurse_pdb_finder(self, context, config_path, requirement, progress_callback = None):
+        """Traverses the requirement tree, rooted at `requirement` looking for virtual layers that might contain a windows PDB.
+
+        Returns a list of possible kernel locations in the physical memory
 
            Returns a list of possible kernel locations in the physical memory
         """
@@ -126,7 +124,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             virtual_layer_name = context.config.get(sub_config_path, None)
             layer_name = context.config.get(interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
             if layer_name:
-                results = {virtual_layer_name: scan(context, layer_name)}
+                results = {virtual_layer_name: scan(context, layer_name, progress_callback = progress_callback)}
         else:
             for subreq in requirement.requirements.values():
                 results.update(self.recurse_pdb_finder(context, sub_config_path, subreq))
@@ -192,7 +190,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             context.config[kvo_path] = kvo
             vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
 
-    def determine_valid_kernels(self, context, potential_kernels):
+    def determine_valid_kernels(self, context, potential_kernels, progress_callback = None):
         """Runs through the identified potential kernels and verifies their suitability"""
         valid_kernels = {}
         for virtual_layer_name in potential_kernels:
@@ -234,7 +232,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
                     physical_layer = context.memory[physical_layer_name]
                     # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
-                    results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"))
+                    results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
+                                                  progress_callback = progress_callback)
                     seen = set()
                     for result in results:
                         # TODO: Identify the specific structure we're finding and document this a bit better
@@ -247,7 +246,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         try:
                             potential_mz = vlayer.read(offset = address, length = 2)
                             if potential_mz == b"MZ":
-                                subscan = scan(context, virtual_layer_name, start = address, end = address + (1 << 26))
+                                subscan = scan(context, virtual_layer_name, start = address, end = address + (1 << 26),
+                                               progress_callback = progress_callback)
                                 for result in subscan:
                                     valid_kernels[virtual_layer_name] = (address, result)
                                     break
@@ -260,14 +260,14 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             vollog.warning("No suitable kernels found during pdbscan")
         return valid_kernels
 
-    def __call__(self, context, config_path, requirement):
+    def __call__(self, context, config_path, requirement, progress_callback = None):
         # TODO: Check if we really need to search for pdbs
         if "pdbscan" not in context.symbol_space:
             context.symbol_space.append(native.NativeTable("pdbscan", native.std_ctypes))
         self._symbol_requirements = self.recurse_symbol_requirements(context, config_path, requirement)
         if self._symbol_requirements:
-            potential_kernels = self.recurse_pdb_finder(context, config_path, requirement)
-            self.valid_kernels = self.determine_valid_kernels(context, potential_kernels)
+            potential_kernels = self.recurse_pdb_finder(context, config_path, requirement, progress_callback)
+            self.valid_kernels = self.determine_valid_kernels(context, potential_kernels, progress_callback)
             if self.valid_kernels:
                 self.recurse_symbol_fulfiller(context)
                 self.set_kernel_virtual_offset(context)

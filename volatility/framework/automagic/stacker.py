@@ -17,7 +17,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     page_map_offset = None
     location = None
 
-    def __call__(self, context, config_path, requirement):
+    def __call__(self, context, config_path, requirement, progress_callback = None):
         """Runs the automagic over the configurable"""
 
         # Quick exit if we're not needed
@@ -57,7 +57,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             for stacker_cls in stack_set:
                 stacker = stacker_cls()
                 try:
-                    new_layer = stacker.stack(new_context, current_layer_name)
+                    new_layer = stacker.stack(new_context, current_layer_name, progress_callback)
                     if new_layer:
                         new_context.memory.add_layer(new_layer)
                         break

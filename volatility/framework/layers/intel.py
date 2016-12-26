@@ -185,7 +185,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         return list(scanner(data, chunk_end - len(data_to_scan)))
 
     def _scan_metric(self, _scanner, min_address, max_address, value):
-        return ((value - min_address) * 100) / (max_address - min_address)
+        return max(0, ((value - min_address) * 100) / (max_address - min_address))
 
 
 class IntelPAE(Intel):

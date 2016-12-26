@@ -13,7 +13,7 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
     """
     priority = 0
 
-    def __call__(self, context, config_path, requirement, optional = False):
+    def __call__(self, context, config_path, requirement, progress_callback = None, optional = False):
         if not requirement.validate(context, config_path):
             # Having called validate at the top level tells us both that we need to dig deeper
             # but also ensures that TranslationLayerRequirements have got the correct subrequirements if their class is populated

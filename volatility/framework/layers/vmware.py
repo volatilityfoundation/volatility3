@@ -103,7 +103,7 @@ class VmwareLayer(segmented.SegmentedLayer):
 
 class VmwareStacker(interfaces.automagic.StackerLayerInterface):
     @classmethod
-    def stack(cls, context, layer_name):
+    def stack(cls, context, layer_name, progress_callback = None):
         """Attempt to stack this based on the starting information"""
         if not isinstance(context.memory[layer_name], physical.FileLayer):
             return

@@ -157,7 +157,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
         self(node, config_path)
         return True
 
-    def __call__(self, context, config_path, requirement):
+    def __call__(self, context, config_path, requirement, progress_callback = None):
         useful = []
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if (isinstance(requirement, requirements.TranslationLayerRequirement) and
@@ -174,7 +174,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
             if ("memory_layer" in requirement.requirements and
                     requirement.requirements["memory_layer"].validate(context, sub_config_path)):
                 physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
-                hits = context.memory[physical_layer].scan(context, PageMapScanner(useful))
+                hits = context.memory[physical_layer].scan(context, PageMapScanner(useful), progress_callback)
                 for test, dtb in hits:
                     context.config[interfaces.configuration.path_join(sub_config_path, "page_map_offset")] = dtb
                     requirement.construct(context, config_path)
@@ -184,7 +184,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
                 self(context, sub_config_path, subreq)
 
     @classmethod
-    def stack(cls, context, layer_name):
+    def stack(cls, context, layer_name, progress_callback = None):
         """Attempts to determine and stack an intel layer on a physical layer where possible"""
         hits = context.memory[layer_name].scan(context, PageMapScanner(cls.tests))
         layer = None
@@ -202,7 +202,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
             # There is a very high chance that the DTB will live in this narrow segment, assuming we couldn't find it previously
             # TODO: This scan takes time, it might be worth adding a progress callback to it
             hits = context.memory[layer_name].scan(context, PageMapScanner([DtbSelfRef64bit()]), min_address = 0x1a0000,
-                                                   max_address = 0x1f0000)
+                                                   max_address = 0x1f0000, progress_callback = progress_callback)
             # Flatten the generator
             hits = list(hits)
             if hits:

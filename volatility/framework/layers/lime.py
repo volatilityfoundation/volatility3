@@ -75,7 +75,7 @@ class LimeStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 10
 
     @classmethod
-    def stack(cls, context, layer_name):
+    def stack(cls, context, layer_name, progress_callback = None):
         try:
             LimeLayer._check_header(context.memory[layer_name])
         except LimeFormatException:
