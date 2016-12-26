@@ -75,6 +75,8 @@ class VmwareLayer(segmented.SegmentedLayer):
                 offset += 2 + name_len + (indicies_len * index_len) + self._context.symbol_space.get_type(
                     "unsigned int").size
 
+        if tags[("regionsCount", ())][1] == 0:
+            raise ValueError("VMware VMEM is not split into regions")
         for region in range(tags[("regionsCount", ())][1]):
             offset = tags[("regionPPN", (region,))][1] * PAGE_SIZE
             mapped_offset = tags[("regionPageNum", (region,))][1] * PAGE_SIZE
