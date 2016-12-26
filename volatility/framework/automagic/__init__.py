@@ -1,3 +1,12 @@
+"""Automagic modules allow the framework to populate configuration elements that a user has not provided.
+
+Automagic objects accept a `context` and a `configurable`, and will make appropriate changes to the `context` in an
+attempt to fulfill the requirements of the `configurable` object (or objects upon which that configurable may rely).
+
+Several pre-existing modules include one to stack layers on top of each other (allowing automatic detection and
+loading of file format types) as well as a module to reconstruct layers based on their provided requirements.
+"""
+
 import logging
 import sys
 
@@ -9,7 +18,11 @@ vollog = logging.getLogger(__name__)
 
 
 def available():
-    """Determine all the available automagic classes"""
+    """Returns an ordered list of all subclasses of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface`.
+
+    The order is based on the priority attributes of the subclasses, in order to ensure the automagics are listed in
+    an appropriate order.
+    """
     import_files(sys.modules[__name__])
     return sorted([clazz() for clazz in class_subclasses(interfaces.automagic.AutomagicInterface)],
                   key = lambda x: x.priority)
@@ -26,7 +39,8 @@ def run(automagics, context, configurable, config_path = "", progress_callback =
 
     This is where any automagic is allowed to run, and alter the context in order to satisfy/improve all requirements
 
-       This is where any automagic is allowed to run, and alter the context in order to satisfy/improve all requirements
+    .. note:: The order of the `automagics` list is important.  An `automagic` that populates configurations may be necessary
+        for an `automagic` that populates the context based on the configuration information.
     """
     for automagic in automagics:
         if not isinstance(automagic, interfaces.automagic.AutomagicInterface):

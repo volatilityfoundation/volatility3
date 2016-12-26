@@ -1,5 +1,8 @@
-# pdbscan.py -- Scan Volatility Layers for Windows kernel PDB signatures
-#
+"""A module for scanning translation layers looking for Windows PDB records from loaded PE files.
+
+    This module contains a standalone scanner, and also a :class:`~volatility.framework.interfaces.layers.ScannerInterface`
+    based scanner for use within the framework by calling :func:`~volatility.framework.interfaces.layers.DataLayerInterface.scan`.
+"""
 
 import logging
 import math
@@ -22,8 +25,17 @@ PAGE_SIZE = 0x1000
 
 
 class PdbSigantureScanner(interfaces.layers.ScannerInterface):
+    """A :class:`~volatility.framework.interfaces.layers.ScannerInterface` based scanner use to identify Windows PDB records
+
+    :param pdb_names: A list of bytestrings, used to match pdb signatures against the pdb names within the records.
+    :type pdb_names: A list of :class:`bytestring` objects
+
+    .. note:: The pdb_names must be a list of byte strings, unicode strs will not match against the data scanned
+    """
     overlap = 0x4000
+    """The size of overlap needed for the signature to ensure data cannot hide between two scanned chunks"""
     thread_safe = True
+    """Determines whether the scanner accesses global variables in a thread safe manner (for use with :mod:`multiprocessing`)"""
 
     _RSDS_format = struct.Struct("<16BI")
 
@@ -54,8 +66,7 @@ def scan(ctx, layer_name, progress_callback = None, start = None, end = None):
     """Scans through `layer_name` at `ctx` and returns the tuple
        (GUID, age, pdb_name, signature_offset, mz_offset)
 
-       Note that this is automagical and therefore not guaranteed to provide
-       correct results.
+       .. note:: This is automagical and therefore not guaranteed to provide correct results.
 
        The UI should always provide the user an opportunity to specify the
        appropriate types and PDB values themselves
@@ -96,7 +107,10 @@ def scan(ctx, layer_name, progress_callback = None, start = None, end = None):
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
-    """Looks for all Intel address spaces and attempts to identify the PDB guid required for the space"""
+    """An Automagic object that looks for all Intel translation layers and scans each of them for a pdb signature.
+    When found, a search for a corresponding Intermediate Format data file is carried out and if found an appropriate
+    symbol space is automatically loaded.
+    """
     priority = 30
 
     # Make sure uncompressed/outside-framework takes precedence, so users can overload.
@@ -104,6 +118,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 os.path.join("..", "..", "symbols", "windows")]
     """Provides a list of prefixes that are searched when locating Intermediate Format data files"""
     suffixes = ['.json', '.json.xz']
+    """Provides a list of supported suffixes for Intermediate Format data files"""
 
     def __init__(self):
         super().__init__()
@@ -114,7 +129,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
         Returns a list of possible kernel locations in the physical memory
 
-           Returns a list of possible kernel locations in the physical memory
+        :param context: The context in which the `requirement` lives
+        :type context: ~volatility.framework.interfaces.context.ContextInterface
+        :param config_path: The path within the `context` for the `requirement`'s configuration variables
+        :type config_path: str
+        :param requirement: The root of the requirement tree to search for :class:~`volatility.framework.interfaces.layers.TranslationLayerRequirement` objects to scan
+        :type requirement: ~volatility.framework.interfaces.configuration.RequirementInterface
+        :return: A list of (layer_name, scan_results)
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         results = {}

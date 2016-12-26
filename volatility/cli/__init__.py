@@ -1,3 +1,13 @@
+"""A CommandLine User Interface for the volatility framework
+
+   User interfaces make use of the framework to:
+    * determine available plugins
+    * request necessary information for those plugins from the user
+    * determine what "automagic" modules will be used to populate information the user does not provide
+    * run the plugin
+    * display the results
+"""
+
 import argparse
 import json
 import logging
@@ -28,10 +38,13 @@ logging.getLogger("").addHandler(console)
 
 
 class CommandLine(object):
+    """Constructs a command-line interface object for users to run plugins"""
+
     def __init__(self):
         pass
 
     def run(self):
+        """Executes the command line module, taking the system arguments, determining the plugin to run and then running it"""
         sys.stdout.write("Volatility Framework {}\n".format(constants.PACKAGE_VERSION))
 
         volatility.framework.require_interface_version(0, 0, 0)
@@ -119,4 +132,5 @@ def progress_callback(progress, description = None):
 
 
 def main():
+    """A convenience function for constructing and running the :class:`CommandLine`'s run method"""
     CommandLine().run()

@@ -1,3 +1,6 @@
+"""An automagic module to use configuration data to configure and then construct classes that fulfill the descendants
+of a :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`."""
+
 import logging
 
 from volatility.framework import constants
@@ -7,9 +10,11 @@ vollog = logging.getLogger(__name__)
 
 
 class ConstructionMagic(interfaces.automagic.AutomagicInterface):
-    """Runs through the requirement tree and from the bottom up attempts to construct all TranslationLayerRequirements
+    """Class to run through the requirement tree of the :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`
+    and from the bottom of the tree upwards, attempt to construct all
+    :class:`~volatility.framework.interfaces.configuration.ConstructableRequirementInterface` based classes.
 
-       This should run first to prevent existing configurations getting re-configured
+    :warning: This `automagic` should run first to prevent existing configurations getting re-configured.
     """
     priority = 0
 
