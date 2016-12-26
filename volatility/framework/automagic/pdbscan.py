@@ -8,6 +8,7 @@ import struct
 
 from volatility.framework import exceptions, layers
 from volatility.framework.layers import scanners
+from volatility.framework.symbols import native
 
 if __name__ == "__main__":
     import sys
@@ -235,7 +236,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     seen = set()
                     for result in results:
                         # TODO: Identify the specific structure we're finding and document this a bit better
-                        pointer = context.object("unsigned long long", offset = (result - 16 - 8),
+                        pointer = context.object("pdbscan!unsigned long long", offset = (result - 16 - 8),
                                                  layer_name = physical_layer_name)
                         address = pointer & vlayer.address_mask
                         if address in seen:
@@ -259,6 +260,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def __call__(self, context, config_path, requirement):
         # TODO: Check if we really need to search for pdbs
+        if "pdbscan" not in context.symbol_space:
+            context.symbol_space.append(native.NativeTable("pdbscan", native.std_ctypes))
         self._symbol_requirements = self.recurse_symbol_requirements(context, config_path, requirement)
         if self._symbol_requirements:
             potential_kernels = self.recurse_pdb_finder(context, config_path, requirement)

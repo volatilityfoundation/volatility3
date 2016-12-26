@@ -5,6 +5,7 @@ from urllib import parse
 from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical, segmented
+from volatility.framework.symbols import native
 
 PAGE_SIZE = 0x1000
 
@@ -30,6 +31,9 @@ class VmwareLayer(segmented.SegmentedLayer):
 
     def _read_header(self):
         """Checks the vmware header to make sure it's valid"""
+        if "vmware" not in self._context.symbol_space:
+            self._context.symbol_space.append(native.NativeTable("vmware", native.std_ctypes))
+
         meta_layer = self.context.memory.get(self._meta_layer, None)
         header_size = struct.calcsize(self.header_structure)
         data = meta_layer.read(0, header_size)
@@ -54,26 +58,26 @@ class VmwareLayer(segmented.SegmentedLayer):
         tags_read = False
         offset = memory
         tags = {}
-        index_len = self._context.symbol_space.get_type("unsigned int").size
+        index_len = self._context.symbol_space.get_type("vmware!unsigned int").size
         while not tags_read:
             flags = ord(meta_layer.read(offset, 1))
             name_len = ord(meta_layer.read(offset + 1, 1))
             tags_read = (flags == 0) and (name_len == 0)
             if not tags_read:
-                name = self._context.object("string", layer_name = self._meta_layer, offset = offset + 2,
+                name = self._context.object("vmware!string", layer_name = self._meta_layer, offset = offset + 2,
                                             max_length = name_len)
                 indicies_len = (flags >> 6) & 3
                 indicies = []
                 for index in range(indicies_len):
                     indicies.append(
-                        self._context.object("unsigned int",
+                        self._context.object("vmware!unsigned int",
                                              offset = offset + name_len + 2 + (index * index_len),
                                              layer_name = self._meta_layer))
-                data = self._context.object("unsigned int", layer_name = self._meta_layer,
+                data = self._context.object("vmware!unsigned int", layer_name = self._meta_layer,
                                             offset = offset + 2 + name_len + (indicies_len * index_len))
                 tags[(name, tuple(indicies))] = (flags, data)
                 offset += 2 + name_len + (indicies_len * index_len) + self._context.symbol_space.get_type(
-                    "unsigned int").size
+                    "vmware!unsigned int").size
 
         if tags[("regionsCount", ())][1] == 0:
             raise ValueError("VMware VMEM is not split into regions")

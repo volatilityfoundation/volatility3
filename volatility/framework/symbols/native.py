@@ -76,23 +76,24 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
                                                 **additional)
 
 
-native_types = {'int': (objects.Integer, '<i'),
-                'long': (objects.Integer, '<i'),
-                'unsigned long': (objects.Integer, '<I'),
-                'unsigned int': (objects.Integer, '<I'),
-                'pointer': (objects.Pointer, '<I'),
-                'char': (objects.Integer, '<b'),
-                'byte': (objects.Bytes, '<c'),
-                'unsigned char': (objects.Integer, '<B'),
-                'unsigned short int': (objects.Integer, '<H'),
-                'unsigned short': (objects.Integer, '<H'),
-                'unsigned be short': (objects.Integer, '>H'),
-                'short': (objects.Integer, '<h'),
-                'long long': (objects.Integer, '<q'),
-                'unsigned long long': (objects.Integer, '<Q'),
-                'float': (objects.Float, "<d"),
-                'double': (objects.Float, "<d"),
-                'wchar': (objects.Integer, '<H')}
+std_ctypes = {'int': (objects.Integer, '<i'),
+              'long': (objects.Integer, '<i'),
+              'unsigned long': (objects.Integer, '<I'),
+              'unsigned int': (objects.Integer, '<I'),
+              'char': (objects.Integer, '<b'),
+              'byte': (objects.Bytes, '<c'),
+              'unsigned char': (objects.Integer, '<B'),
+              'unsigned short int': (objects.Integer, '<H'),
+              'unsigned short': (objects.Integer, '<H'),
+              'unsigned be short': (objects.Integer, '>H'),
+              'short': (objects.Integer, '<h'),
+              'long long': (objects.Integer, '<q'),
+              'unsigned long long': (objects.Integer, '<Q'),
+              'float': (objects.Float, "<d"),
+              'double': (objects.Float, "<d"),
+              'wchar': (objects.Integer, '<H')}
+native_types = std_ctypes.copy()
+native_types['pointer'] = (objects.Pointer, "<I")
 x86NativeTable = NativeTable("native", native_types)
 native_types['pointer'] = (objects.Pointer, '<Q')
 x64NativeTable = NativeTable("native", native_types)
