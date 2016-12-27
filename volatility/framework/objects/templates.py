@@ -74,7 +74,6 @@ class ReferenceTemplate(interfaces.objects.Template):
     def children(self):
         return []
 
-    @property
     def _unresolved(self, *args, **kwargs):
         """Referenced symbols must be appropriately resolved before they can provide information such as size
            This is because the size request has no context within which to determine the actual symbol structure.
