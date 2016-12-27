@@ -5,7 +5,6 @@ Created on 4 May 2013
 """
 import collections
 import collections.abc
-import ctypes
 import functools
 import logging
 import math
@@ -162,7 +161,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         max_address = min(self.maximum_address, max_address)
 
         try:
-            progress = multiprocessing.Manager().Value(ctypes.c_longlong, 0)
+            progress = multiprocessing.Manager().Value("Q", 0)
             scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
             scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
             scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
