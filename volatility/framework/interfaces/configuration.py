@@ -50,12 +50,12 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     @property
     def name(self):
-        """The name of the Option."""
+        """The name of the Requirement.  Names cannot contain "." since this is used within the configuration hierarchy."""
         return self._name
 
     @property
     def description(self):
-        """A short description of what the Option is designed to affect or achieve."""
+        """A short description of what the Requirement is designed to affect or achieve."""
         return self._description
 
     @property
@@ -65,11 +65,11 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     @property
     def optional(self):
-        """Whether the option is required for or not"""
+        """Whether the Requirement is optional or not"""
         return self._optional
 
     def config_value(self, context, config_path, default = None):
-        """Returns the value for this element from its config path"""
+        """Returns the value for this Requirement from its config path"""
         return context.config.get(path_join(config_path, self.name), default)
 
     # Child operations

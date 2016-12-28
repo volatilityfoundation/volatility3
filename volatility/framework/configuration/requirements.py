@@ -1,3 +1,10 @@
+"""Contains standard Requirement types that all adhere to the :class:`~volatility.framework.interfaces.configuration.RequirementInterface`.
+
+These requirement types allow plugins to request simple information types (such as strings, integers,
+etc) as well as indicating what they expect to be in the context (such as particular layers or symboltables).
+
+"""
+
 import logging
 
 from volatility.framework import constants
@@ -12,9 +19,9 @@ SymbolRequirement = interfaces.configuration.SymbolRequirement
 
 
 class MultiRequirement(interfaces.configuration.RequirementInterface):
-    """Class to hold multiple requirements
+    """Class to hold multiple requirements.
 
-       Technically the Interface could handle this, but it's an interface, so this is a concrete implementation
+       Technically the Interface could handle this, but it's an interface, so this is a concrete implementation.
     """
 
     def validate(self, context, config_path):
@@ -22,15 +29,19 @@ class MultiRequirement(interfaces.configuration.RequirementInterface):
 
 
 class InstanceRequirement(interfaces.configuration.RequirementInterface):
+    """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
     instance_type = bool
 
     def add_requirement(self, requirement):
+        """Always raises a TypeError as instance requirements cannot have children"""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
     def remove_requirement(self, requirement):
+        """Always raises a TypeError as instance requirements cannot have children"""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
     def validate(self, context, config_path):
+        """Validates the instance requirement based upon its `instance_type`."""
         value = self.config_value(context, config_path, None)
         if not isinstance(value, self.instance_type):
             vollog.log(constants.LOGLEVEL_V,
@@ -42,15 +53,18 @@ class InstanceRequirement(interfaces.configuration.RequirementInterface):
 
 
 class IntRequirement(InstanceRequirement):
+    """A requirement type that contains a single integer"""
     instance_type = int
 
 
 class StringRequirement(InstanceRequirement):
+    """A requirement type that contains a single unicode string"""
     # TODO: Maybe add string length limits?
     instance_type = str
 
 
 class BytesRequirement(InstanceRequirement):
+    """A requirement type that contains a byte string"""
     instance_type = bytes
 
 
@@ -58,6 +72,11 @@ class ChoiceRequirement(interfaces.configuration.RequirementInterface):
     """Allows one from a choice of strings"""
 
     def __init__(self, choices, *args, **kwargs):
+        """Constructs the object
+
+        :param choices: A list of possible string options that can be chosen from
+        :type choices: list of str
+        """
         super().__init__(*args, **kwargs)
         if not isinstance(choices, list) or any([not isinstance(choice, str) for choice in choices]):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
@@ -73,22 +92,40 @@ class ChoiceRequirement(interfaces.configuration.RequirementInterface):
 
 
 class ListRequirement(interfaces.configuration.RequirementInterface):
+    """Allows for a list of a specific type of requirement (all of which must be met for this requirement to be met) to be specified
+
+    This roughly correlates to allowing a number of arguments to follow a command line parameter,
+    such as a list of integers or a list of strings.
+
+    It is distinct from a multi-requirement which stores the subrequirements in a dictionary, not a list,
+    and does not allow for a dynamic number of values.
+    """
+
     def __init__(self, element_type, max_elements, min_elements, *args, **kwargs):
+        """Constructs the object
+
+        :param element_type: The (requirement) type of each element within the list
+        :type element_type: InstanceRequirement
+        :param max_elements; The maximum number of acceptable elements this list can contain
+        :type max_elements: int
+        :param min_elements: The minimum number of acceptable elements this list can contain
+        :type min_elements:  int
+        """
         super().__init__(*args, **kwargs)
-        if isinstance(element_type, ListRequirement):
+        if not isinstance(element_type, InstanceRequirement):
             raise TypeError("ListRequirements cannot contain ListRequirements")
         self.element_type = self._check_type(element_type, interfaces.configuration.RequirementInterface)
         self.min_elements = min_elements
         self.max_elements = max_elements
 
     def validate(self, context, config_path):
-        """Check the types on each of the returned values and then call the element type's check for each one"""
+        """Check the types on each of the returned values and their number and then call the element type's check for each one"""
         value = self.config_value(context, config_path)
         self._check_type(value, list)
-        if not all([self._check_type(element, self.element_type) for element in value]):
-            vollog.log(constants.LOGLEVEL_V, "TypeError - At least one element in the list is not of the correct type.")
-            return False
         if not (self.min_elements <= len(value) <= self.max_elements):
             vollog.log(constants.LOGLEVEL_V, "TypeError - List option provided more or less elements than allowed.")
+            return False
+        if not all([self._check_type(element, self.element_type) for element in value]):
+            vollog.log(constants.LOGLEVEL_V, "TypeError - At least one element in the list is not of the correct type.")
             return False
         return all([self.element_type.validate(context, element) for element in value])

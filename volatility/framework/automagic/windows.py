@@ -60,7 +60,6 @@ class DtbTest(validity.ValidityRoutines):
         :param page_offset: Where, within the data, the page to be scanned starts
         :type page_offset: int
         :return: A valid DTB within this page
-        :rtype: int or None
         """
         value = data[page_offset + (self.ptr_reference * self.ptr_size):page_offset + (
             (self.ptr_reference + 1) * self.ptr_size)]
@@ -83,6 +82,7 @@ class DtbTest(validity.ValidityRoutines):
         :type data: bytes
         :param data_offset: Where, within the layer, the chunk of data lives
         :type data_offset: int
+        :return: A valid DTB within this page
         """
         page = data[dtb - data_offset:dtb - data_offset + PAGE_SIZE]
         usr_count, sup_count = 0, 0
