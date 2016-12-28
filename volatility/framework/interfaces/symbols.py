@@ -4,6 +4,8 @@ Created on 4 May 2013
 @author: mike
 """
 import bisect
+import collections.abc
+from abc import abstractmethod
 
 from volatility.framework import constants, exceptions, validity
 from volatility.framework.interfaces import configuration
@@ -35,6 +37,17 @@ class Symbol(validity.ValidityRoutines):
     def address(self):
         """Returns the relative address of the symbol within the compilation unit"""
         return self._address
+
+
+class SymbolSpaceInterface(collections.abc.Mapping):
+    """"""
+    @abstractmethod
+    def get_symbols_by_type(self, type_name):
+        """Returns all symbols based on the type of the symbol"""
+
+    @abstractmethod
+    def get_symbols_by_location(self, address, table_name = None):
+        """Returns all symbols that exist at a specific relative address"""
 
 
 class BaseSymbolTableInterface(validity.ValidityRoutines):

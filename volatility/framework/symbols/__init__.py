@@ -21,7 +21,7 @@ class SymbolType(enum.Enum):
     ENUM = 3
 
 
-class SymbolSpace(collections.abc.Mapping):
+class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
     """Handles an ordered collection of SymbolTables
 
        This collection is ordered so that resolution of symbols can
