@@ -63,8 +63,8 @@ class PdbSigantureScanner(interfaces.layers.ScannerInterface):
 
 
 def scan(ctx, layer_name, progress_callback = None, start = None, end = None):
-    """Scans through `layer_name` at `ctx` and returns the tuple
-       (GUID, age, pdb_name, signature_offset, mz_offset)
+    """Scans through `layer_name` at `ctx` looking for RSDS headers that indicate one of four common pdb kernel names
+       (as listed in `self.pdb_names`) and returns the tuple (GUID, age, pdb_name, signature_offset, mz_offset)
 
        .. note:: This is automagical and therefore not guaranteed to provide correct results.
 
@@ -110,6 +110,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     """An Automagic object that looks for all Intel translation layers and scans each of them for a pdb signature.
     When found, a search for a corresponding Intermediate Format data file is carried out and if found an appropriate
     symbol space is automatically loaded.
+
+    Once a specific kernel PDB signature has been found, a virtual address for the loaded kernel is determined
+    by one of two methods.  The first method assumes a specific mapping from the kernel's physical address to its
+    virtual address (typically the kernel is loaded at its physical location plus a specific offset).  The second method
+    searches for a particular structure that lists the kernel module's virtual address, its size (not checked) and the
+    module's name.  This value is then used if one was not found using the previous method.
     """
     priority = 30
 
@@ -153,7 +159,18 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         return results
 
     def recurse_symbol_requirements(self, context, config_path, requirement):
-        """Determines if there is actually an unfulfilled symbol requirement waiting"""
+        """Determines if there is actually an unfulfilled symbol requirement waiting
+
+        This ensures we do not carry out an expensive search when there is no requirement for a particular symbol table.
+
+        :param context: Context on which to operate
+        :type context: ~volatility.framework.interfaces.context.ContextInterface
+        :param config_path: Configuration path of the top-level requirement
+        :type config_path: str
+        :param requirement: Top-level requirement whose subrequirements will all be searched
+        :type requirement: ~volatility.framework.interfaces.configuration.RequirementInterface
+        :return: A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
+        """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         results = []
         if isinstance(requirement, interfaces.configuration.SymbolRequirement):
@@ -166,9 +183,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         return results
 
     def recurse_symbol_fulfiller(self, context):
-        """Traverses the requirement tree looking to populate Symbol requirements based on the result of the pdb_finder
+        """Fulfills the SymbolRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
 
-           This pass will construct any requirements that may need it
+        This pass will construct any requirements that may need it in the context it was passed
+
+        :param context: Context on which to operate
+        :type context: ~volatility.framework.interfaces.context.ContextInterface
         """
         for config_path, sub_config_path, requirement in self._symbol_requirements:
             # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
@@ -203,7 +223,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     vollog.debug("No suitable kernel pdb signature found")
 
     def set_kernel_virtual_offset(self, context):
-        """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting"""
+        """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting and sets
+        it based on the previously identified `valid_kernels`.
+
+        :param context: Context on which to operate and provide the kernel virtual offset
+        :type context: ~volatility.framework.interfaces.context.ContextInterface
+        """
         for virtual_layer in self.valid_kernels:
             # Sit the virtual offset under the TranslationLayer it applies to
             kvo_path = interfaces.configuration.path_join(context.memory[virtual_layer].config_path,
@@ -213,7 +238,21 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
 
     def determine_valid_kernels(self, context, potential_kernels, progress_callback = None):
-        """Runs through the identified potential kernels and verifies their suitability"""
+        """Runs through the identified potential kernels and verifies their suitability
+
+        This carries out a scan using the pdb_signature scanner on a physical layer.  It uses the
+        results of the scan to determine the virtual offset of the kernel.  On early windows implementations
+        there is a fixed mapping between the physical and virtual addresses of the kernel.  On more recent versions
+        a search is conducted for a structure that will identify the kernel's virtual offset.
+
+        :param context: Context on which to operate
+        :type context: ~volatility.framework.interfaces.context.ContextInterface
+        :param potential_kernels: Dictionary containing `GUID`, `age`, `pdb_name` and `mz_offset` keys
+        :type potential_kernels: dict
+        :param progress_callback: Function taking a percentage and optional description to be called during expensive computations to indicate progress
+        :type progress_callback: function
+        :return: A dictionary of valid kernels
+        """
         valid_kernels = {}
         for virtual_layer_name in potential_kernels:
             kernels = potential_kernels[virtual_layer_name]

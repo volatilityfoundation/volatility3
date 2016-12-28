@@ -1,9 +1,27 @@
-if __name__ == "__main__":
-    import os
-    import sys
+"""Module to identify the Directory Table Base and architecture of windows memory images
 
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+This module contains a PageMapScanner that scans a physical layer to identify self-referential pointers.
+All windows versions include a self-referential pointer in their Directory Table Base's top table, in order to
+have a single offset that will allow manipulation of the page tables themselves.
 
+In older windows version the self-referential pointer was at a specific fixed index within the table,
+which was different for each architecture.  In very recent Windows versions, the self-referential pointer
+index has been randomized, so a different heuristic must be used.  In these versions of windows it was found
+that the physical offset for the DTB was always within the range of 0x1a0000 to 0x1b0000.  As such, a search
+for any self-referential pointer within these pages gives a high probability of being an accurate DTB.
+
+The self-referential indices for older versions of windows are listed below:
+
+    +--------------+-------+
+    | Architecture | Index |
+    +==============+=======+
+    | x86          | 0x300 |
+    +--------------+-------+
+    | PAE          | 0x3   |
+    +--------------+-------+
+    | x64          | 0x1ED |
+    +--------------+-------+
+"""
 import logging
 import struct
 
@@ -16,7 +34,11 @@ PAGE_SIZE = 0x1000
 
 
 class DtbTest(validity.ValidityRoutines):
-    super_bit = 2
+    """This class generically contains the tests for a page based on a set of class parameters
+
+    When constructed it contains all the information necessary to extract a specific index from a page
+    and determine whether it points back to that page's offset.
+    """
 
     def __init__(self, layer_type = None, ptr_struct = None, ptr_reference = None, mask = None):
         self.layer_type = self._check_class(layer_type, interfaces.layers.TranslationLayerInterface)
@@ -25,13 +47,24 @@ class DtbTest(validity.ValidityRoutines):
         self.ptr_reference = self._check_type(ptr_reference, int)
         self.mask = self._check_type(mask, int)
 
-    def unpack(self, value):
+    def _unpack(self, value):
         return struct.unpack("<" + self.ptr_struct, value)[0]
 
     def __call__(self, data, data_offset, page_offset):
+        """Tests a specific page in a chunk of data to see if it contains a self-referential pointer.
+
+        :param data: The chunk of data that contains the page to be scanned
+        :type data: bytes
+        :param data_offset: Where, within the layer, the chunk of data lives
+        :type data_offset: int
+        :param page_offset: Where, within the data, the page to be scanned starts
+        :type page_offset: int
+        :return: A valid DTB within this page
+        :rtype: int or None
+        """
         value = data[page_offset + (self.ptr_reference * self.ptr_size):page_offset + (
             (self.ptr_reference + 1) * self.ptr_size)]
-        ptr = self.unpack(value)
+        ptr = self._unpack(value)
         # The value *must* be present (bit 0) since it's a mapped page
         # It's almost always writable (bit 1)
         # It's occasionally Super, but not reliably so, haven't checked when/why not
@@ -42,10 +75,19 @@ class DtbTest(validity.ValidityRoutines):
             return self.second_pass(dtb, data, data_offset)
 
     def second_pass(self, dtb, data, data_offset):
+        """Re-reads over the whole page to validate other records based on the number of pages marked user vs super
+
+        :param dtb: The identified dtb that needs validating
+        :type dtb: int
+        :param data: The chunk of data that contains the dtb to be validated
+        :type data: bytes
+        :param data_offset: Where, within the layer, the chunk of data lives
+        :type data_offset: int
+        """
         page = data[dtb - data_offset:dtb - data_offset + PAGE_SIZE]
         usr_count, sup_count = 0, 0
         for i in range(0, PAGE_SIZE, self.ptr_size):
-            val = self.unpack(page[i:i + self.ptr_size])
+            val = self._unpack(page[i:i + self.ptr_size])
             if val & 0x1:
                 sup_count += 0 if (val & 0x4) else 1
                 usr_count += 1 if (val & 0x4) else 0
@@ -80,16 +122,33 @@ class DtbTestPae(DtbTest):
                          mask = 0x3FFFFFFFFFF000)
 
     def second_pass(self, dtb, data, data_offset):
+        """PAE top level directory tables contains four entries and the self-referential pointer occurs in the second
+        level of tables (so as not to use up a full quarter of the space).  This is very high in the space, and occurs
+        in the fourht (last quarter) second-level table.  The second-level tables appear always to come sequentially
+        directly after the real dtb.  The value for the real DTB is therefore four page earlier (and the fourth entry
+        should point back to the `dtb` parameter this function was originally passed.
+
+        :param dtb: The identified self-referential pointer that needs validating
+        :type dtb: int
+        :param data: The chunk of data that contains the dtb to be validated
+        :type data: bytes
+        :param data_offset: Where, within the layer, the chunk of data lives
+        :type data_offset: int
+        :return: Returns the actual DTB of the PAE space
+        :rtype: int
+        """
         dtb -= 0x4000
         # If we're not in something that the overlap would pick up
         if dtb - data_offset >= 0:
             pointers = data[dtb - data_offset + (3 * self.ptr_size): dtb - data_offset + (4 * self.ptr_size)]
-            val = self.unpack(pointers)
+            val = self._unpack(pointers)
             if (val & self.mask == dtb + 0x4000) and (val & 0xFFF == 0x001):
                 return dtb
 
 
 class DtbSelfReferential(DtbTest):
+    """A generic DTB test which looks for a self-referential pointer at *any* index within the page."""
+
     def __init__(self, layer_type, ptr_struct, ptr_reference, mask):
         super().__init__(layer_type = layer_type,
                          ptr_struct = ptr_struct,
@@ -125,9 +184,11 @@ class DtbSelfRef64bit(DtbSelfReferential):
 
 
 class PageMapScanner(interfaces.layers.ScannerInterface):
+    """Scans through all pages using DTB tests to determine a dtb offset and architecture"""
     overlap = 0x4000
     thread_safe = True
     tests = [DtbTest32bit, DtbTest64bit, DtbTestPae]
+    """The default tests to run when searching for DTBs"""
 
     def __init__(self, tests):
         super().__init__()
@@ -148,14 +209,15 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
 
 
 class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic.StackerLayerInterface):
+    """This class if both an :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` and a
+    :class:`~volatility.framework.interfaces.automagic.StackerLayerInterface` class.
+
+    It will both scan for existing TranslationLayers that do not have a DTB and scan for them using
+    the :class:`PageMapScanner`, and also act as a stacker when a
+    :class:`~volatility.framework.interfaces.configuration.TranslationLayerRequirement` has not been fulfilled"""
     priority = 20
     stack_order = 90
     tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
-
-    def branch_leave(self, node, config_path):
-        """Ensure we're called on internal nodes as well as external"""
-        self(node, config_path)
-        return True
 
     def __call__(self, context, config_path, requirement, progress_callback = None):
         useful = []
@@ -185,7 +247,14 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
 
     @classmethod
     def stack(cls, context, layer_name, progress_callback = None):
-        """Attempts to determine and stack an intel layer on a physical layer where possible"""
+        """Attempts to determine and stack an intel layer on a physical layer where possible
+
+        Where the DTB scan fails, it attempts a heuristic of checking for the DTB within a specific range.
+        New versions of windows, with randomized self-referential pointers, appear to always load their dtb within
+        a small specific range (`0x1a0000` and `0x1b0000`), so instead we scan for all self-referential pointers in
+        that range, and ignore any that contain multiple self-references (since the DTB is very unlikely to point to
+        itself more than once).
+        """
         hits = context.memory[layer_name].scan(context, PageMapScanner(cls.tests))
         layer = None
         for test, dtb in hits:

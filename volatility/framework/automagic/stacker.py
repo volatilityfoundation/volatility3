@@ -1,6 +1,14 @@
-from urllib import parse
+"""This module attempts to automatically stack layers.
+
+This automagic module fulfills :class:`~volatility.framework.interfaces.configuration.TranslationLayerRequirement` that are not already fulfilled, by attempting to
+stack as many layers on top of each other as possible.  The base/lowest layer is derived from the
+"automagic.general.single_location" configuration path.  Layers are then attempting in likely height order, and
+once a layer successfully stacks on top of the existing layers, it is removed from the possible choices list
+(so no layer type can exist twice in the layer stack).
+"""
 
 import logging
+from urllib import parse
 
 import volatility
 from volatility.framework import interfaces
@@ -11,7 +19,16 @@ vollog = logging.getLogger(__name__)
 
 
 class LayerStacker(interfaces.automagic.AutomagicInterface):
-    """Class that attempts to build up """
+    """Class that attempts to build up layers in a single stack
+
+    This class mimics the volatility 2 style of stacking address spaces.  It builds up various layers based on
+    separate :class:`~volatility.framework.interfaces.automagic.StackerLayerInterface` classes.  These classes are
+    built up based on a `stack_order` class variable each has.
+
+    This has a high priority to provide other automagic modules as complete a context/configuration tree as possible.
+    Upon completion it will re-call the :class:`~volatility.framework.automagic.construct_layers.ConstructionMagic`,
+    so that any stacked layers are actually constructed and added to the context.
+    """
     # Most important automagic, must happen first!
     priority = 10
     page_map_offset = None
@@ -85,14 +102,19 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             constructor(context, config_path, requirement)
 
     def find_suitable_requirements(self, stacked_layers, requirement, context, config_path):
+        """Looks for translation layer requirements and attempts to apply the stacked layers to it.  If it succeeds
+        it returns the configuration path and layer name where the stacked nodes were spliced into the tree.
+
+        :return: A tuple of a configuration path and layer name for the top of the stacked layers
+        :rtype: (str, str)"""
         child_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             if not requirement.validate(context, config_path):
                 original_setting = context.config.get(child_config_path, None)
-                for layer in stacked_layers:
-                    context.config[child_config_path] = layer
+                for layer_name in stacked_layers:
+                    context.config[child_config_path] = layer_name
                     if requirement.validate(context, config_path):
-                        return child_config_path, layer
+                        return child_config_path, layer_name
                 else:
                     # Clean-up to restore the config
                     if original_setting:
