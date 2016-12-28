@@ -270,3 +270,8 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None}
+
+# -- Autodoc options -------------------------------------------------------
+
+autodoc_member_order = 'groupwise'
+autodoc_default_flags = ['members', 'inherited-members']
