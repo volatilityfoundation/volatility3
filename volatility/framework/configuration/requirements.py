@@ -113,8 +113,8 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
         """
         super().__init__(*args, **kwargs)
         if not isinstance(element_type, InstanceRequirement):
-            raise TypeError("ListRequirements cannot contain ListRequirements")
-        self.element_type = self._check_type(element_type, interfaces.configuration.RequirementInterface)
+            raise TypeError("ListRequirements can only contain simple InstanceRequirements")
+        self.element_type = element_type
         self.min_elements = min_elements
         self.max_elements = max_elements
 
