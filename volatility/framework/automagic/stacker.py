@@ -11,8 +11,10 @@ import logging
 from urllib import parse
 
 import volatility
+from volatility.framework import configuration
 from volatility.framework import interfaces
 from volatility.framework.automagic import construct_layers
+from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical
 
 vollog = logging.getLogger(__name__)
@@ -42,9 +44,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             return
 
         # Bow out quickly if the UI hasn't provided a single_location
-        if "automagic.general.single_location" not in context.config:
+        if not self.validate(self.context, self.config_path):
             return
-        location = context.config["automagic.general.single_location"]
+        location = self.config["single_location"]
         self._check_type(location, str)
         self._check_type(requirement, interfaces.configuration.RequirementInterface)
         self.location = parse.urlparse(location)
@@ -98,7 +100,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 # splice in the new configuration into the original context
                 context.config.splice(path, new_context.memory[layer].build_configuration())
             # Call the construction magic now we may have new things to construct
-            constructor = construct_layers.ConstructionMagic()
+            constructor = construct_layers.ConstructionMagic(context,
+                                                             interfaces.configuration.path_join(self.config_path,
+                                                                                                "ConstructionMagic"))
             constructor(context, config_path, requirement)
 
     def find_suitable_requirements(self, stacked_layers, requirement, context, config_path):
@@ -125,3 +129,11 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             result = self.find_suitable_requirements(stacked_layers, req, context, child_config_path)
             if result:
                 return result
+
+    @classmethod
+    def get_requirements(cls):
+        # This is not optional for the stacker to run, so optional must be marked as False
+        return [requirements.StringRequirement("single_location",
+                                               description = "Specifies a base location on which to stack",
+                                               default = "",
+                                               optional = False)]

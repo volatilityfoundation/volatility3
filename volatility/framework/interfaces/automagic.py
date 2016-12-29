@@ -3,12 +3,23 @@
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
+from volatility.framework.configuration import requirements
+from volatility.framework.interfaces import configuration as interfaces_configuration
 
 
-class AutomagicInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metaclass = ABCMeta):
     """Class that defines an automagic component that can help fulfill a Requirement"""
 
     priority = 10
+
+    def __init__(self, context, config_path, *args, **kwargs):
+        super().__init__(context, config_path)
+        for requirement in self.get_requirements():
+            if not isinstance(requirement, (requirements.InstanceRequirement,
+                                            requirements.ChoiceRequirement,
+                                            requirements.ListRequirement)):
+                raise ValueError(
+                    "Automagic requirements must be an InstanceRequirement, ChoiceRequirement or ListRequirement")
 
     @abstractmethod
     def __call__(self, context, config_path, configurable, progress_callback = None):

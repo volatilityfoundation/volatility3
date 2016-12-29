@@ -8,17 +8,17 @@ etc) as well as indicating what they expect to be in the context (such as partic
 import logging
 
 from volatility.framework import constants
-from volatility.framework import interfaces
+from volatility.framework.interfaces import configuration as interfaces_configuration
 
 vollog = logging.getLogger(__name__)
 
 # Allow these two to be imported directly from requirements
 # This helps prevent import loops since other interfaces need to be able to check instances of this
-TranslationLayerRequirement = interfaces.configuration.TranslationLayerRequirement
-SymbolRequirement = interfaces.configuration.SymbolRequirement
+TranslationLayerRequirement = interfaces_configuration.TranslationLayerRequirement
+SymbolRequirement = interfaces_configuration.SymbolRequirement
 
 
-class MultiRequirement(interfaces.configuration.RequirementInterface):
+class MultiRequirement(interfaces_configuration.RequirementInterface):
     """Class to hold multiple requirements.
 
        Technically the Interface could handle this, but it's an interface, so this is a concrete implementation.
@@ -28,7 +28,7 @@ class MultiRequirement(interfaces.configuration.RequirementInterface):
         return self.validate_children(context, config_path)
 
 
-class InstanceRequirement(interfaces.configuration.RequirementInterface):
+class InstanceRequirement(interfaces_configuration.RequirementInterface):
     """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
     instance_type = bool
 
@@ -68,7 +68,7 @@ class BytesRequirement(InstanceRequirement):
     instance_type = bytes
 
 
-class ChoiceRequirement(interfaces.configuration.RequirementInterface):
+class ChoiceRequirement(interfaces_configuration.RequirementInterface):
     """Allows one from a choice of strings"""
 
     def __init__(self, choices, *args, **kwargs):
@@ -91,7 +91,7 @@ class ChoiceRequirement(interfaces.configuration.RequirementInterface):
         return True
 
 
-class ListRequirement(interfaces.configuration.RequirementInterface):
+class ListRequirement(interfaces_configuration.RequirementInterface):
     """Allows for a list of a specific type of requirement (all of which must be met for this requirement to be met) to be specified
 
     This roughly correlates to allowing a number of arguments to follow a command line parameter,

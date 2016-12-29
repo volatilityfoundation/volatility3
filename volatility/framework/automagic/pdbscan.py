@@ -126,8 +126,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     suffixes = ['.json', '.json.xz']
     """Provides a list of supported suffixes for Intermediate Format data files"""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, context, config_path):
+        super().__init__(context, config_path)
         self.valid_kernels = []
 
     def recurse_pdb_finder(self, context, config_path, requirement, progress_callback = None):

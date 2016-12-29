@@ -95,14 +95,14 @@ class CommandLine(object):
         if not args.file or not os.path.exists(args.file):
             raise RuntimeError("Please provide a valid filename")
         else:
-            ctx.config["automagic.general.single_location"] = "file://" + os.path.abspath(args.file)
+            ctx.config["automagic.LayerStacker.single_location"] = "file://" + os.path.abspath(args.file)
             pass
 
         ###
         # BACK TO THE FRAMEWORK
         ###
         # Clever magic figures out how to fulfill each requirement that might not be fulfilled
-        automagics = automagic.available()
+        automagics = automagic.available(ctx)
         automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
 
         # Check all the requirements and/or go back to the automagic step

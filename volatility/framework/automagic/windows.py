@@ -208,7 +208,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
                     yield (test, result)
 
 
-class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic.StackerLayerInterface):
+class WintelHelper(interfaces.automagic.AutomagicInterface):
     """This class if both an :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` and a
     :class:`~volatility.framework.interfaces.automagic.StackerLayerInterface` class.
 
@@ -245,6 +245,8 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
             for subreq in requirement.requirements.values():
                 self(context, sub_config_path, subreq)
 
+
+class WintelStacker(interfaces.automagic.StackerLayerInterface):
     @classmethod
     def stack(cls, context, layer_name, progress_callback = None):
         """Attempts to determine and stack an intel layer on a physical layer where possible
@@ -255,7 +257,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface, interfaces.automagic
         that range, and ignore any that contain multiple self-references (since the DTB is very unlikely to point to
         itself more than once).
         """
-        hits = context.memory[layer_name].scan(context, PageMapScanner(cls.tests))
+        hits = context.memory[layer_name].scan(context, PageMapScanner(WintelHelper.tests))
         layer = None
         for test, dtb in hits:
             new_layer_name = context.memory.free_layer_name("IntelLayer")

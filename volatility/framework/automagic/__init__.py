@@ -17,14 +17,15 @@ from volatility.framework.configuration import requirements
 vollog = logging.getLogger(__name__)
 
 
-def available():
+def available(context, config_path = 'automagic'):
     """Returns an ordered list of all subclasses of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface`.
 
     The order is based on the priority attributes of the subclasses, in order to ensure the automagics are listed in
     an appropriate order.
     """
     import_files(sys.modules[__name__])
-    return sorted([clazz() for clazz in class_subclasses(interfaces.automagic.AutomagicInterface)],
+    return sorted([clazz(context, interfaces.configuration.path_join(config_path, clazz.__name__)) for clazz in
+                   class_subclasses(interfaces.automagic.AutomagicInterface)],
                   key = lambda x: x.priority)
 
 
