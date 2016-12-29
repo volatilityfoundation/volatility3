@@ -24,7 +24,10 @@ class ContextInterface(object, metaclass = ABCMeta):
 
     @abstractproperty
     def symbol_space(self):
-        """Returns the symbol_space for the context"""
+        """Returns the symbol_space for the context
+
+        This object must support the :class:`~volatility.framework.interfaces.symbols.SymbolSpaceInterface`
+        """
 
     # ## Memory Functions
 
@@ -34,7 +37,11 @@ class ContextInterface(object, metaclass = ABCMeta):
         raise NotImplementedError("Memory has not been implemented.")
 
     def add_layer(self, layer):
-        """Adds a named translation layer to the context memory"""
+        """Adds a named translation layer to the context memory
+
+        :param layer: Layer object to be added to the context memory
+        :type layer: ~volatility.framework.interfaces.layers.DataLayerInterface
+        """
         self.memory.add_layer(layer)
 
     # ## Object Factory Functions

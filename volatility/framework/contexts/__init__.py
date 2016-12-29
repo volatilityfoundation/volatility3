@@ -1,3 +1,9 @@
+"""A `Context` maintains the accumulated state required for various plugins and framework functions.
+
+This has been made an object to allow quick swapping and changing of contexts, to allow a plugin
+to act on multiple different contexts without them interfering eith each other.
+"""
+
 from volatility.framework import constants, interfaces, symbols
 from volatility.framework.interfaces.configuration import HierarchicalDict
 
@@ -11,6 +17,10 @@ class Context(interfaces.context.ContextInterface):
     investigating memory.  It contains a symbol_space of all the symbols that can be accessed by plugins using the
     context.  It also contains the memory made up of data and translation layers, and it contains a factory method
     for creating new objects.
+
+    Other context objects can be constructed as long as they support the
+    :class:`~volatility.framework.interfaces.context.ContextInterface`.  This is the primary context object to be used
+    in the volatility framework.  It maintains the
     """
 
     def __init__(self):
