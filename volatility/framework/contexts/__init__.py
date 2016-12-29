@@ -80,6 +80,12 @@ class Context(interfaces.context.ContextInterface):
         Looks up the layername in the context, finds the object template based on the symbol,
         and constructs an object using the object template on the layer at the offset.
 
+        :param symbol: The name of the symbol type on which to construct the object.  This should contain an explicit table name.
+        :type symbol: str
+        :param layer_name: The name of the layer on which to construct the object
+        :type layer_name: str
+        :param offset: The offset within the layer at which the data used to create the object lives
+        :type offset: int
         :return: A fully constructed object
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
@@ -91,7 +97,12 @@ class Context(interfaces.context.ContextInterface):
                                                                                   offset = offset))
 
     def object_factory(self, symbol_table):
-        """Allow a specific symbol_table to be used repeatedly for constructing objects"""
+        """Allow a specific symbol_table to be used repeatedly for constructing objects
+
+        :param symbol_table: The name of the symbol table that the object factory will construct objects on
+        :type sybmol_table: str
+        :return: A function that takes the same arguments as :func:`object`
+        """
 
         def callable(symbol, layer_name, offset, **arguments):
             """Function to apply a specific symbol_table name to any unadored"""

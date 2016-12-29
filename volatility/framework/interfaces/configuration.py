@@ -1,3 +1,13 @@
+"""The configuration module contains classes and functions for interacting with the
+configuration and requirement trees.
+
+Volatility plugins can specify a list of requirements (which may have subrequirements, thus forming a requirement tree).
+These requirement trees can contain values, which are contained in a complementary configuration tree.  These two trees
+act as a protocol between the plugins and users.  The plugins provide requirements that must be fulfilled, and the users
+provide configurations values that fulfill those requirements.  Where the user does not provide sufficient configuration
+values, automagic modules may extend the configuration tree themselves.
+"""
+
 import collections
 import copy
 import json
@@ -17,7 +27,7 @@ vollog = logging.getLogger(__name__)
 
 
 def path_join(*args):
-    """Joins the config paths together"""
+    """Joins configuration paths together"""
     # If a path element (particularly the first) is empty, then remove it from the list
     args = [arg for arg in args if arg]
     return CONFIG_SEPARATOR.join(args)
@@ -103,7 +113,8 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
 
 class ClassRequirement(RequirementInterface):
-    """Requires a specific class"""
+    """Requires a specific class.  This is used as means to serialize specific classes for :class:`TranslationLayerRequirement`
+    and :class:`SymbolRequirement` classes."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
