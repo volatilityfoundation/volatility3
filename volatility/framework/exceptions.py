@@ -1,7 +1,8 @@
-"""
-Created on 1 Dec 2012
+"""A list of potential exceptions that volatility can throw.
 
-@author: mike
+These include exceptions that can be thrown on errors by the symbol space or symbol tables, and by layers when
+an address is invalid.  The :class:`PagedInvalidAddressException` contains information about the size of the invalid
+page.
 """
 
 
@@ -39,7 +40,3 @@ class SymbolSpaceError(VolatilityException):
 
 class LayerException(VolatilityException):
     """Thrown when an error occurs dealing with memory and layers"""
-
-
-class TreePopulationError(Exception):
-    """Exception class for accessing functions on an partially populated tree."""
