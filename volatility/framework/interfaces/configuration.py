@@ -8,7 +8,7 @@ provide configurations values that fulfill those requirements.  Where the user d
 values, automagic modules may extend the configuration tree themselves.
 """
 
-import collections
+import collections.abc
 import copy
 import json
 import logging
@@ -253,7 +253,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                     not requirement.optional])
 
 
-class HierarchicalDict(collections.Mapping):
+class HierarchicalDict(collections.abc.Mapping):
     def __init__(self, initial_dict = None, separator = CONFIG_SEPARATOR):
         if not (isinstance(separator, str) and len(separator) == 1):
             raise TypeError("Separator must be a one character string: {}".format(separator))
@@ -365,10 +365,13 @@ class HierarchicalDict(collections.Mapping):
 
     def branch(self, key):
         """Returns the HierarchicalDict housed under the key"""
-        if self.separator in key:
-            return self._subdict[self._key_head(key)].branch(self._key_tail(key))
-        else:
-            return self._subdict[key]
+        try:
+            if self.separator in key:
+                return self._subdict[self._key_head(key)].branch(self._key_tail(key))
+            else:
+                return self._subdict[key]
+        except KeyError:
+            self._setitem(key = key, value = HierarchicalDict(separator = self.separator), is_data = True)
 
     def splice(self, key, value):
         """Splices an existing HierarchicalDictionary under a key"""
