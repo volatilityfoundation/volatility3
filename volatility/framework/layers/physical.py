@@ -71,6 +71,11 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._size = os.path.getsize(self._filename)
 
     @property
+    def filename(self):
+        """Returns the filename on which this Layer abstracts"""
+        return self._filename
+
+    @property
     def _file(self):
         """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled

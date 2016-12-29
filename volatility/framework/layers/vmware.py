@@ -1,6 +1,5 @@
 import os
 import struct
-from urllib import parse
 
 from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
@@ -107,12 +106,10 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
         """Attempt to stack this based on the starting information"""
         if not isinstance(context.memory[layer_name], physical.FileLayer):
             return
-        if not context.config.get("automagic.general.single_location", None):
-            return
-        location = parse.urlparse(context.config["automagic.general.single_location"])
-        if location.path.endswith(".vmem"):
-            vmss = location.path[:-5] + ".vmss"
-            vmsn = location.path[:-5] + ".vmsn"
+        location = context.memory[layer_name].filename
+        if location.endswith(".vmem"):
+            vmss = location[:-5] + ".vmss"
+            vmsn = location[:-5] + ".vmsn"
             current_layer_name = context.memory.free_layer_name("VmwareMetaLayer")
             current_config_path = interfaces.configuration.path_join("automagic", "layer_stacker", "stack",
                                                                      current_layer_name)
