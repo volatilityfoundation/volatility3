@@ -14,7 +14,8 @@ Python Packages
     volatility
 
 .. toctree::
-    :maxdepth: 1
+    :titlesonly:
+    :maxdepth: 2
 
     volatility.cli
     volatility.framework

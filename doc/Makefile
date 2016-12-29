@@ -50,7 +50,7 @@ source/volatility.rst:
 	$(MAKE) genfiles
 
 genfiles:
-	sphinx-apidoc -e -T -f -o source ../volatility
+	sphinx-apidoc -e -M -T -f -o source ../volatility
 
 clean:
 	rm -rf $(BUILDDIR)/*
