@@ -1,7 +1,8 @@
-"""
-Created on 6 May 2013
+"""Defines an interface for contexts, which hold the core components that a plugin will operate upon when running.
 
-@author: mike
+These include a `memory` container which holds a series of forest of layers, and a `symbol_space` which contains tables
+of symbols that can be used to interpret data in a layer.  The context also provides some convenience functions, most
+notably the object constructor function, `object`, which will construct a symbol on a layer at a particular offset.
 """
 import copy
 from abc import ABCMeta, abstractmethod, abstractproperty
