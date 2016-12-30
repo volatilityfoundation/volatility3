@@ -1,8 +1,5 @@
-"""
-Created on 4 May 2013
-
-@author: mike
-"""
+"""Defines layers for containing data.  One layer may combine other layers, map data based on the data itself,
+ or map a procedure (such as decryption) across another layer of data."""
 import collections
 import collections.abc
 import functools
@@ -75,7 +72,8 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
 
 class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
-    """A Layer that directly holds data (and does not translate it"""
+    """A Layer that directly holds data (and does not translate it).  This is effectively a leaf node in a layer tree.
+    It directly accesses a data source and exposes it within volatility."""
 
     provides = {"type": "interface"}
 
@@ -206,6 +204,9 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
+    """Provides a layer that translates or transforms another layer or layers.  Translation layers always depend on
+    another layer (typically translating offsets in a virtual offset space into a smaller physical offset space).
+    """
     # Unfortunately class attributes can't easily be inheritted from parent classes
     provides = {"type": "interface"}
 
@@ -318,7 +319,7 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
         del self._layers[name]
 
     def free_layer_name(self, prefix = "layer"):
-        """Returns an unused layer name"""
+        """Returns an unused layer name to ensure no collision occurs when inserting a layer"""
         self._check_type(prefix, str)
 
         count = 1
