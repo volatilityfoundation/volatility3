@@ -52,6 +52,9 @@ class InstanceRequirement(interfaces_configuration.RequirementInterface):
         return True
 
 
+BooleanRequirement = InstanceRequirement
+
+
 class IntRequirement(InstanceRequirement):
     """A requirement type that contains a single integer"""
     instance_type = int

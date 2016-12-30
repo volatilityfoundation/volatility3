@@ -22,6 +22,7 @@ from volatility.framework.interfaces.context import ContextInterface
 __author__ = 'mike'
 
 CONFIG_SEPARATOR = "."
+"""Use to specify the separator between configuration hierarchies"""
 
 vollog = logging.getLogger(__name__)
 
@@ -34,15 +35,179 @@ def path_join(*args):
 
 
 def path_depth(path, depth = 1):
-    """Returns the path up to a certain depth
+    """Returns the `path` up to a certain depth
 
-       Note that depth can be negative (such as -x) and will return all elements except for the last x
+       Note that `depth` can be negative (such as `-x`) and will return all elements except for the last `x` components
     """
     return path_join(path.split(CONFIG_SEPARATOR)[:depth])
 
 
+class HierarchicalDict(collections.abc.Mapping):
+    """The core of configuration data, it is a mapping class that stores keys within itself, and also stores lower
+    hierarchies.
+
+    """
+
+    def __init__(self, initial_dict = None, separator = CONFIG_SEPARATOR):
+        if not (isinstance(separator, str) and len(separator) == 1):
+            raise TypeError("Separator must be a one character string: {}".format(separator))
+        self._separator = separator
+        self._data = {}
+        self._subdict = {}
+        if isinstance(initial_dict, str):
+            initial_dict = json.loads(initial_dict)
+        if isinstance(initial_dict, dict):
+            for k, v in initial_dict.items():
+                self[k] = v
+        elif initial_dict is not None:
+            raise TypeError("Initial_dict must be a dictionary or JSON string containing a dictionary: {}".format(
+                initial_dict))
+
+    @property
+    def separator(self):
+        """Specifies the hierarchy separator in use in this HierarchyDict"""
+        return self._separator
+
+    @property
+    def data(self):
+        """Returns just the data-containing mappings on this level of the Hierarchy"""
+        return self._data.copy()
+
+    def _key_head(self, key):
+        """Returns the first division of a key based on the dict separator,
+           or the full key if the separator is not present
+        """
+        if self.separator in key:
+            return key[:key.index(self.separator)]
+        else:
+            return key
+
+    def _key_tail(self, key):
+        """Returns all but the first division of a key based on the dict separator,
+           or None if the separator is not in the key
+        """
+        if self.separator in key:
+            return key[key.index(self.separator) + 1:]
+        return None
+
+    def __iter__(self):
+        """Returns an iterator object that supports the iterator protocol"""
+        return self.generator()
+
+    def generator(self):
+        """A generator for the data in this level and lower levels of this mapping"""
+        for key in self._data:
+            yield key
+        for subdict_key in self._subdict:
+            for key in self._subdict[subdict_key]:
+                yield subdict_key + self.separator + key
+
+    def __getitem__(self, key):
+        """Gets an item, traversing down the trees to get to the final value"""
+        try:
+            if self.separator in key:
+                subdict = self._subdict[self._key_head(key)]
+                return subdict[self._key_tail(key)]
+            else:
+                return self._data[key]
+        except KeyError:
+            raise KeyError(key)
+
+    def __setitem__(self, key, value):
+        """Sets an item or creates a subdict and sets the item within that"""
+        self._setitem(key, value)
+
+    def _setitem(self, key, value, is_data = True):
+        """Set an item or appends a whole subtree at a key location"""
+        if self.separator in key:
+            subdict = self._subdict.get(self._key_head(key), HierarchicalDict(separator = self.separator))
+            subdict._setitem(self._key_tail(key), value, is_data)
+            self._subdict[self._key_head(key)] = subdict
+        else:
+            if is_data:
+                self._data[key] = value
+            else:
+                if not isinstance(value, HierarchicalDict) and value is not None:
+                    raise TypeError(
+                        "HierarchicalDicts can only store HierarchicalDicts within their structure: {}".format(
+                            type(value)))
+                self._subdict[key] = value
+
+    def __delitem__(self, key):
+        """Deletes an item from the hierarchical dict"""
+        try:
+            if self.separator in key:
+                subdict = self._subdict[self._key_head(key)]
+                del subdict[self._key_tail(key)]
+                if not subdict:
+                    del self._subdict[self._key_head(key)]
+        except KeyError:
+            raise KeyError(key)
+
+    def __contains__(self, key):
+        """Determines whether the key is present in the hierarchy"""
+        if self.separator in key:
+            try:
+                subdict = self._subdict[self._key_head(key)]
+                return self._key_tail(key) in subdict
+            except KeyError:
+                return False
+        else:
+            return key in self._data
+
+    def __len__(self):
+        """Returns the length of all items"""
+        return len(self._data) + sum([len(subdict) for subdict in self._subdict])
+
+    def branch(self, key):
+        """Returns the HierarchicalDict housed under the key
+
+        This differs from the data property, in that it is directed by the `key`, and all layers under that key are
+        returned, not just those in that level.
+
+        Higher layers are not prefixed with the location of earlier layers, so branching a hierarchy containing `a.b.c.d`
+        on `a.b` would return a hierarchy containing `c.d`, not `a.b.c.d`.
+
+        @param key: The location within the hierarchy to return higher layers.
+        """
+        try:
+            if self.separator in key:
+                return self._subdict[self._key_head(key)].branch(self._key_tail(key))
+            else:
+                return self._subdict[key]
+        except KeyError:
+            self._setitem(key = key, value = HierarchicalDict(separator = self.separator), is_data = True)
+
+    def splice(self, key, value):
+        """Splices an existing HierarchicalDictionary under a specific key
+
+        This can be thought of as an inverse of :func:`branch`, although `branch` does not remove the requested
+        hierarchy, it simply returns it.
+        """
+        if not isinstance(key, str) or not isinstance(value, HierarchicalDict):
+            raise TypeError("Splice requires a string key and HierarchicalDict value")
+        self._setitem(key, value, False)
+
+    def clone(self):
+        """Duplicates the configuration, allowing changes without affecting the original"""
+        return copy.deepcopy(self)
+
+    def __str__(self):
+        """Turns the Hierarchical dict into a string representation"""
+        return json.dumps(dict([(key, self[key]) for key in sorted(self.generator())]), indent = 2)
+
+
 class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
-    """Class to distinguish configuration elements from everything else"""
+    """Class that defines a requirement
+
+    A requirement is a means for plugins and other framework components to request specific configuration data.
+    Requirements can either be simple types (such as
+    :class:`~volatility.framework.configuration.requirements.InstanceRequirement`,
+    :class:`~volatility.framework.configuration.requirements.IntRequirement`,
+    :class:`~volatility.framework.configuration.requirements.BytesRequirement` and
+    :class:`~volatility.framework.configuration.requirements.StringRequirement`) or complex types (such
+    as :class:`TranslationLayerRequirement`, :class:`SymbolRequirement` and :class:`ClassRequirement`
+    """
 
     def __init__(self, name, description = None, default = None, optional = False):
         super().__init__()
@@ -142,9 +307,18 @@ class ClassRequirement(RequirementInterface):
 
 
 class ConstructableRequirementInterface(RequirementInterface):
+    """Defines a Requirement that can be constructed based on their own requirements.
+
+    This effectively offers a means for serializing specific python types, to be reconstructed based on simple
+    configuration data.  Each constructable records a `class` requirement, which indicates the object that will be
+    constructed.  That class may have its own requirements (which is why validation of a ConstructableRequirement
+    must happen after the class configuration value has been provided).  These values are then provided to the object's
+    constructor by name as arguments (as well as the standard `context` and `config_path` arguments.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_requirement(ClassRequirement("class", "Class of the translation layer"))
+        self.add_requirement(ClassRequirement("class", "Class of the constructable requirement"))
         self._current_class_requirements = set()
 
     @abstractmethod
@@ -253,143 +427,8 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                     not requirement.optional])
 
 
-class HierarchicalDict(collections.abc.Mapping):
-    def __init__(self, initial_dict = None, separator = CONFIG_SEPARATOR):
-        if not (isinstance(separator, str) and len(separator) == 1):
-            raise TypeError("Separator must be a one character string: {}".format(separator))
-        self._separator = separator
-        self._data = {}
-        self._subdict = {}
-        if isinstance(initial_dict, str):
-            initial_dict = json.loads(initial_dict)
-        if isinstance(initial_dict, dict):
-            for k, v in initial_dict.items():
-                self[k] = v
-        elif initial_dict is not None:
-            raise TypeError("Initial_dict must be a dictionary or JSON string containing a dictionary: {}".format(
-                initial_dict))
-
-    @property
-    def separator(self):
-        return self._separator
-
-    @property
-    def data(self):
-        return self._data.copy()
-
-    def _key_head(self, key):
-        """Returns the first division of a key based on the dict separator,
-           or the full key if the separator is not present
-        """
-        if self.separator in key:
-            return key[:key.index(self.separator)]
-        else:
-            return key
-
-    def _key_tail(self, key):
-        """Returns all but the first division of a key based on the dict separator,
-           or None if the separator is not in the key
-        """
-        if self.separator in key:
-            return key[key.index(self.separator) + 1:]
-        return None
-
-    def __iter__(self):
-        """Returns an iterator object that supports the iterator protocol"""
-        return self.generator()
-
-    def generator(self):
-        """Yields the next element in the iterator"""
-        for key in self._data:
-            yield key
-        for subdict_key in self._subdict:
-            for key in self._subdict[subdict_key]:
-                yield subdict_key + self.separator + key
-
-    def __getitem__(self, key):
-        """Gets an item, traversing down the trees to get to the final value"""
-        try:
-            if self.separator in key:
-                subdict = self._subdict[self._key_head(key)]
-                return subdict[self._key_tail(key)]
-            else:
-                return self._data[key]
-        except KeyError:
-            raise KeyError(key)
-
-    def __setitem__(self, key, value):
-        """Sets an item or creates a subdict and sets the item within that"""
-        self._setitem(key, value)
-
-    def _setitem(self, key, value, is_data = True):
-        """Set an item or appends a whole subtree at a key location"""
-        if self.separator in key:
-            subdict = self._subdict.get(self._key_head(key), HierarchicalDict(separator = self.separator))
-            subdict._setitem(self._key_tail(key), value, is_data)
-            self._subdict[self._key_head(key)] = subdict
-        else:
-            if is_data:
-                self._data[key] = value
-            else:
-                if not isinstance(value, HierarchicalDict) and value is not None:
-                    raise TypeError(
-                        "HierarchicalDicts can only store HierarchicalDicts within their structure: {}".format(
-                            type(value)))
-                self._subdict[key] = value
-
-    def __delitem__(self, key):
-        """Deletes an item from the hierarchical dict"""
-        try:
-            if self.separator in key:
-                subdict = self._subdict[self._key_head(key)]
-                del subdict[self._key_tail(key)]
-                if not subdict:
-                    del self._subdict[self._key_head(key)]
-        except KeyError:
-            raise KeyError(key)
-
-    def __contains__(self, key):
-        """Determines whether the key is present in the hierarchy"""
-        if self.separator in key:
-            try:
-                subdict = self._subdict[self._key_head(key)]
-                return self._key_tail(key) in subdict
-            except KeyError:
-                return False
-        else:
-            return key in self._data
-
-    def __len__(self):
-        """Returns the length of all items"""
-        return len(self._data) + sum([len(subdict) for subdict in self._subdict])
-
-    def branch(self, key):
-        """Returns the HierarchicalDict housed under the key"""
-        try:
-            if self.separator in key:
-                return self._subdict[self._key_head(key)].branch(self._key_tail(key))
-            else:
-                return self._subdict[key]
-        except KeyError:
-            self._setitem(key = key, value = HierarchicalDict(separator = self.separator), is_data = True)
-
-    def splice(self, key, value):
-        """Splices an existing HierarchicalDictionary under a key"""
-        if not isinstance(key, str) or not isinstance(value, HierarchicalDict):
-            raise TypeError("Splice requires a string key and HierarchicalDict value")
-        self._setitem(key, value, False)
-
-    def clone(self):
-        """Duplicate the configuration, allowing changes without affecting the original"""
-        return copy.deepcopy(self)
-
-    def __str__(self):
-        """Turns the Hierarchical dict into a string representation"""
-        return json.dumps(dict([(key, self[key]) for key in sorted(self.generator())]), indent = 2)
-
-
 class TranslationLayerRequirement(ConstructableRequirementInterface):
-    """Class maintaining the limitations on what sort of address spaces are acceptable"""
+    """Class maintaining the limitations on what sort of translation layers are acceptable"""
 
     def __init__(self, name, description = None, default = None, optional = False):
         """Constructs a Translation Layer Requirement
