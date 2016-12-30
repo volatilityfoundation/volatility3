@@ -1,7 +1,6 @@
-"""
-Created on 6 May 2013
+"""Plugins are the `functions` of the volatility framework.
 
-@author: mike
+They are called and carry out some algorithms on data stored in layers using objects constructed from symbols.
 """
 
 # Configuration interfaces must be imported separately, since we're part of interfaces and can't import ourselves
@@ -25,7 +24,11 @@ from volatility.framework.interfaces import configuration as interfaces_configur
 #  The plugin runs and produces a TreeGrid output
 
 class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
-    """Class that defines the interface all Plugins must maintain"""
+    """Class that defines the basic interface that all Plugins must maintain.
+    The constructor must only take a `context` and `config_path`, so that plugins can be launched automatically.  As
+    such all configuration information must be provided through the requirements and configuration information in the
+    context it is passed.
+    """
 
     def __init__(self, context, config_path):
         super().__init__(context, config_path)
@@ -38,6 +41,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
 
     @classmethod
     def validate(self, context, config_path):
+        """Ensures that the plugin's requirements have been met appropriately"""
         result_set = [(config_path + "." + requirement.name, requirement.validate(context, config_path)) for requirement
                       in self.get_requirements() if not requirement.optional]
         return all([r for _, r in result_set])
@@ -45,8 +49,6 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
     @abstractmethod
     def run(self):
         """Executes the functionality of the code
-
-        @:param
 
         :return: a TreeGrid object that can then be passed to a Renderer.
         :rtype: interfaces.renderers.TreeGrid

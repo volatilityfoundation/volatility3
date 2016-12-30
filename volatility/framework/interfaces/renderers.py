@@ -1,14 +1,18 @@
+"""All plugins output a TreeGrid object which must then be rendered (eithe by a GUI, or as text output, html output
+or in some other form.  This module defines both the output format (:class:`TreeGrid`) and the renderer interface
+which can interact with a TreeGrid to produce suitable output."""
+
 import collections
 from abc import abstractmethod, ABCMeta
 
 from volatility.framework import validity
 
-__author__ = 'mike'
-
 Column = collections.namedtuple('Column', ['index', 'name', 'type'])
 
 
 class Renderer(validity.ValidityRoutines, metaclass = ABCMeta):
+    """Class that defines the interface that all output renderers must support"""
+
     def __init__(self, options):
         """Accepts an options object to configure the renderers"""
         # FIXME: Once the config option objects are in place, put the _type_check in place
