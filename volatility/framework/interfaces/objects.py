@@ -1,7 +1,4 @@
-"""
-Created on 6 May 2013
-
-@author: mike
+"""Objects are the core of volatility, and provide pythonic access to interpreted values of data from a layer.
 """
 
 import collections
@@ -13,7 +10,10 @@ from volatility.framework.interfaces import context as context_module
 
 
 class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
-    """A read-only mapping of various values that offer attribute access as well"""
+    """A read-only mapping of various values that offer attribute access as well
+
+    This ensures that the data stored in the mapping should not be modified, making an immutable mapping.
+    """
 
     def __init__(self, dictionary):
         self._dict = dictionary
@@ -38,7 +38,14 @@ class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
 
 
 class ObjectInformation(ReadOnlyMapping):
-    """Contains information useful/pertinent only to an individual object (like an instance)"""
+    """Contains common information useful/pertinent only to an individual object (like an instance)
+
+    This typically contains information such as the layer the object belongs to, the offset where it was constructed,
+    and if it is a subordinate object, its parent.
+
+    This is primarily used to reduce the number of parameters passed to object constructors and keep them all together
+    in a single place.  These values are based on the :class:`ReadOnlyMapping` class, to prevent their modification.
+    """
 
     def __init__(self, layer_name, offset, member_name = None, parent = None):
         self._check_type(offset, int)
@@ -51,7 +58,7 @@ class ObjectInformation(ReadOnlyMapping):
 
 
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
-    """ A base object required to be the ancestor of every object used in volatility """
+    """A base object required to be the ancestor of every object used in volatility"""
 
     def __init__(self, context, type_name, object_info, **kwargs):
         # Since objects are likely to be instantiated often,
