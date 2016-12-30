@@ -1,4 +1,7 @@
-"""Defines the automagic interfaces for populating the context before a plugin runs"""
+"""Defines the automagic interfaces for populating the context before a plugin runs
+
+Automagic objects attempt to automatically fill configuration values that a user has not filled.
+"""
 
 from abc import ABCMeta, abstractmethod
 
@@ -8,9 +11,28 @@ from volatility.framework.interfaces import configuration as interfaces_configur
 
 
 class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metaclass = ABCMeta):
-    """Class that defines an automagic component that can help fulfill a Requirement"""
+    """Class that defines an automagic component that can help fulfill a Requirement
+
+    These classes are callable with the following parameters:
+
+    :param context: The context in which to store configuration data that the automagic might populate
+    :type context: ~volatility.framework.interfaces.context.ContextInterface
+    :param config_path: Configuration path where the configurable's data under the context's config lives
+    :type config_path: str
+    :param configurable: The top level configurable whose requirements may need statisfying
+    :type configurable: ~volatility.framework.interfaces.configuration.ConfigurableInterface
+    :param progress_callback: An optional function accepting a percentage and optional description to indicate
+        progress during long calculations
+
+    .. note::
+
+        The `context` provided here may be different to that provided during initialization.  The `context` provided at
+        initialization should be used for local configuration of the automagic itself, the `context` provided during
+        the call is to be populated by the automagic.
+    """
 
     priority = 10
+    """An ordering to indicate how soon this automagic should be run"""
 
     def __init__(self, context, config_path, *args, **kwargs):
         super().__init__(context, config_path)

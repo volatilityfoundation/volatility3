@@ -14,7 +14,7 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
     and from the bottom of the tree upwards, attempt to construct all
     :class:`~volatility.framework.interfaces.configuration.ConstructableRequirementInterface` based classes.
 
-    :warning: This `automagic` should run first to prevent existing configurations getting re-configured.
+    :warning: This `automagic` should run first to allow existing configurations to have been constructed for use by later automagic
     """
     priority = 0
 
