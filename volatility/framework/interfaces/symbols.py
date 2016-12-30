@@ -1,7 +1,4 @@
-"""
-Created on 4 May 2013
-
-@author: mike
+"""Symbols provide structural information about a set of bytes.
 """
 import bisect
 import collections.abc
@@ -12,6 +9,8 @@ from volatility.framework.interfaces import configuration
 
 
 class Symbol(validity.ValidityRoutines):
+    """Contains information about a named location in a program's memory"""
+
     def __init__(self, name, address, type_name = None):
         self._name = self._check_type(name, str)
         if constants.BANG in self._name:
@@ -40,7 +39,8 @@ class Symbol(validity.ValidityRoutines):
 
 
 class SymbolSpaceInterface(collections.abc.Mapping):
-    """"""
+    """An interface for the container that holds all the symbol-containing tables for use within a context"""
+
     @abstractmethod
     def get_symbols_by_type(self, type_name):
         """Returns all symbols based on the type of the symbol"""
@@ -51,6 +51,8 @@ class SymbolSpaceInterface(collections.abc.Mapping):
 
 
 class BaseSymbolTableInterface(validity.ValidityRoutines):
+    """The base interface, inherited by both NativeTables and SymbolTables"""
+
     def __init__(self, name, native_types = None):
         self._check_type(native_types, NativeTableInterface)
         if name:
