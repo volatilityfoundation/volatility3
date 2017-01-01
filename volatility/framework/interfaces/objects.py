@@ -109,9 +109,13 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                                object_info = object_info)
 
     class VolTemplateProxy(object):
-        """A container for proxied methods that the ObjectTemplate of this object will call.
+        """A container for proxied methods that the ObjectTemplate of this object will call.  This primarily to keep
+        methods together for easy organization/management, there is no significant need for it to be a separate class.
 
-        They are class methods rather than static methods, to allow for code reuse."""
+        The methods of this class *must* be class methods rather than standard methods, to allow for code reuse.
+        Each method also takes a template since the templates may contain the necessary data about the
+        yet-to-be-constructed object.  It allows objects to control how their templates respond without needing to write
+        new templates for each and every potental object type."""
 
         @classmethod
         def size(cls, template):
@@ -136,7 +140,24 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 class Template(validity.ValidityRoutines):
     """Class for all Factories that take offsets, and data layers and produce objects
 
-       This is effectively a class for currying object calls
+    This is effectively a class for currying object calls.  It creates a callable that can be called with the following
+    parameters:
+
+    :type context: ~volatility.framework.interfaces.context.ContextInterface
+    :type object_info: ObjectInformation
+    :param context: The context containing the memory layers and symbols required to construct the object
+    :param object_info: Basic information about the object, see the ObjectInformation class for more information
+
+    :return: The constructed object
+    :rtype: ObjectInterface
+
+    The keyword arguments handed to the constructor, along with the type_name are stored for later retrieval.
+    These will be access as `object.vol.<keyword>` or `template.vol.<keyword>` for each object and should contain
+    as least the basic information that each object will require before it is instantiated (so `offset` and `parent`
+    are explicitly not recorded here).  This dictionary can be updated after construction, but any changes made
+    after that point will *not* be cloned.  This is so that templates such as those for string objects may
+    contain different length limits, without affecting all other strings using the same template from a SymbolTable,
+    constructed at resolution time and then cached.
     """
 
     def __init__(self, type_name, **arguments):
@@ -148,14 +169,13 @@ class Template(validity.ValidityRoutines):
 
     @property
     def vol(self):
-        """Returns a volatility information object, much like the ObjectInterface provides"""
+        """Returns a volatility information object, much like the :class:`ObjectInterface` provides"""
         return ReadOnlyMapping(self._vol)
 
     @property
     def children(self):
-        """A function that returns a list of child templates of a template
-
-           This is used to traverse the template tree
+        """The children of this template (such as member types, subtypes and base_types where they are relevant).
+        Used to traverse the template tree.
         """
         return []
 
@@ -166,14 +186,11 @@ class Template(validity.ValidityRoutines):
 
     @abstractmethod
     def relative_child_offset(self, child):
-        """A function that returns the relative offset of a child from its parent offset
-
-           This may throw exceptions including ChildNotFoundException and NotImplementedError
-        """
+        """Returns the relative offset of the `child` member from its parent offset"""
 
     @abstractmethod
     def replace_child(self, old_child, new_child):
-        """A function for replacing one child with another"""
+        """Replaces `old_child` with `new_child` in the list of children"""
 
     def clone(self):
         """Returns a copy of the original Template as constructed (without update_vol having been called)"""
@@ -192,12 +209,4 @@ class Template(validity.ValidityRoutines):
         raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, attr))
 
     def __call__(self, context, object_info):
-        """Constructs the object
-
-        :type context: framework.interfaces.context.ContextInterface
-        :type object_info: ObjectInformation
-        :param context:
-        :param object_info:
-
-        :return O   Returns: an object adhering to the Object interface
-        """
+        """Constructs the object"""

@@ -28,26 +28,22 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
     @property
     def size(self):
-        """Returns the size of the template"""
+        """Returns the children of the templated object (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)"""
         return self.vol.object_class.VolTemplateProxy.size(self)
 
     @property
     def children(self):
-        """A function that returns a list of child templates of a template
-
-           This is used to traverse the template tree
+        """Returns the children of the templated object (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)
         """
         return self.vol.object_class.VolTemplateProxy.children(self)
 
     def relative_child_offset(self, child):
-        """A function that returns the relative offset of a child from its parent offset
-
-           This may throw exceptions including ChildNotFoundException and NotImplementedError
+        """Returns the relative offset of a child of the templated object (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)
         """
         return self.vol.object_class.VolTemplateProxy.relative_child_offset(self, child)
 
     def replace_child(self, old_child, new_child):
-        """A function for replacing one child with another
+        """Replaces `old_child` for `new_child` in the templated object's child list (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)
         """
         return self.vol.object_class.VolTemplateProxy.replace_child(self, old_child, new_child)
 
@@ -67,7 +63,8 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 class ReferenceTemplate(interfaces.objects.Template):
     """Factory class that produces objects based on a delayed reference type
 
-       It should not return any attributes
+    Attempts to access any standard attributes of a resolved template will result in a
+    :class:`~volatility.framework.exceptions.SymbolError`.
     """
 
     @property

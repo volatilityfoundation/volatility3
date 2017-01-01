@@ -1,12 +1,16 @@
-"""
-Created on 4 May 2013
-
-@author: mike
+"""A set of classes providing consistent type checking and error handling for type/class validity
 """
 
 
 class ValidityRoutines(object):
-    """Class to hold all validation routines, such as type checking"""
+    """Class to hold all validation routines, such as type checking
+
+    Contains only private class methods, including `_check_type(cls, value, valid_type)` and
+    `_check_class(cls, klass, valid_class)`.  These may eventually be made obsolete by PEP 484
+    and appropriate static type verification by software such as mypy.
+
+    These are currently implemented by assertions that will be optimized out of production code.
+    """
 
     @classmethod
     def _check_type(cls, value, valid_type):
