@@ -34,7 +34,6 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     # Most important automagic, must happen first!
     priority = 10
     page_map_offset = None
-    location = None
 
     def __call__(self, context, config_path, requirement, progress_callback = None):
         """Runs the automagic over the configurable"""
@@ -49,12 +48,12 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         location = self.config["single_location"]
         self._check_type(location, str)
         self._check_type(requirement, interfaces.configuration.RequirementInterface)
-        self.location = parse.urlparse(location)
+        location = parse.urlparse(location)
 
         # Setup the local copy of the resource
         self.local_store = None
-        if self.location.scheme == "file":
-            self.local_store = self.location.path
+        if location.scheme == "file":
+            self.local_store = location.path
 
         new_context = context.clone()
         current_layer_name = context.memory.free_layer_name("FileLayer")
