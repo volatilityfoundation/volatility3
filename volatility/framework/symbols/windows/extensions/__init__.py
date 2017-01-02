@@ -31,6 +31,10 @@ class _EPROCESS(objects.Struct):
         # Presumably for 64-bit systems, the DTB is defined as an array, rather than an unsigned long long
         if isinstance(self.Pcb.DirectoryTableBase, objects.Array):
             parent_config['page_map_offset'] = self.Pcb.DirectoryTableBase.cast("unsigned long long")
+        else:
+            parent_config['page_map_offset'] = self.Pcb.DirectoryTableBase
+        parent_config['page_map_offset'] = parent_config['page_map_offset'] & (
+            (1 << parent_layer.bits_per_register) - 1)
 
         # Set the new configuration and construct the layer
         config_path = interfaces.configuration.path_join(config_prefix, preferred_name)
