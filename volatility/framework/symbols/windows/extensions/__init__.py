@@ -27,7 +27,7 @@ class _EPROCESS(objects.Struct):
         # Copy the parent's config and then make suitable changes
         parent_layer = context.memory[self.vol.layer_name]
         parent_config = parent_layer.build_configuration()
-        parent_config['memory_layer'] = self.vol.layer_name
+        parent_config['memory_layer'] = parent_layer.config['memory_layer']
         # Presumably for 64-bit systems, the DTB is defined as an array, rather than an unsigned long long
         if isinstance(self.Pcb.DirectoryTableBase, objects.Array):
             parent_config['page_map_offset'] = self.Pcb.DirectoryTableBase.cast("unsigned long long")
