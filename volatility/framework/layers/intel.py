@@ -30,6 +30,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         # These can vary depending on the type of space
         self._entry_format = "<I"
         self._bits_per_register = 32
+        # NOTE: _maxphyaddr is MAXPHYADDR as defined in the Intel specs *NOT* the maximum physical address
+        # Use bits_per_register to determine the range of an IntelTranslationLayer
         self._maxphyaddr = 32
         self._maxvirtaddr = self._maxphyaddr
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
