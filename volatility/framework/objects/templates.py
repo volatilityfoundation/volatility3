@@ -16,9 +16,10 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
        This is effectively a method of currying, but adds more structure to avoid abuse.
        It also allows inspection of information that should already be known:
-       * Type size
-       * Members, etc
-       etc.
+
+         * Type size
+         * Members
+         * etc
     """
 
     def __init__(self, object_class = None, type_name = None, **arguments):
@@ -50,7 +51,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
     def __call__(self, context, object_info):
         """Constructs the object
 
-           Returns: an object adhereing to the Object interface
+           Returns: an object adhereing to the :class:`~volatility.framework.interfaces.objects.ObjectInterface`
         """
         arguments = {}
         arguments.update(self.vol)

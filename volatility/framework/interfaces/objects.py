@@ -169,12 +169,12 @@ class Template(validity.ValidityRoutines):
 
     @property
     def vol(self):
-        """Returns a volatility information object, much like the :class:`ObjectInterface` provides"""
+        """Returns a volatility information object, much like the :class:`~volatility.framework.interfaces.objects.ObjectInformation` provides"""
         return ReadOnlyMapping(self._vol)
 
     @property
     def children(self):
-        """The children of this template (such as member types, subtypes and base_types where they are relevant).
+        """The children of this template (such as member types, sub-types and base-types where they are relevant).
         Used to traverse the template tree.
         """
         return []
@@ -193,12 +193,12 @@ class Template(validity.ValidityRoutines):
         """Replaces `old_child` with `new_child` in the list of children"""
 
     def clone(self):
-        """Returns a copy of the original Template as constructed (without update_vol having been called)"""
+        """Returns a copy of the original Template as constructed (without `update_vol` additions having been made)"""
         clone = self.__class__(**self._vol.parents.new_child())
         return clone
 
     def update_vol(self, **new_arguments):
-        """Updates the keyword arguments with values that will not be carried across to clones"""
+        """Updates the keyword arguments with values that will **not** be carried across to clones"""
         self._vol.update(new_arguments)
 
     def __getattr__(self, attr):
