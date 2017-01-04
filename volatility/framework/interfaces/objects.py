@@ -93,7 +93,10 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """Writes the new value into the format at the offset the object currently resides at"""
 
     def cast(self, new_type_name, **additional):
-        """Returns a new object at the offset and from the layer that the current object inhabits"""
+        """Returns a new object at the offset and from the layer that the current object inhabits
+
+        .. note:: If new type name does not include a symbol table, the symbol table for the current object is used
+        """
         # TODO: Carefully consider the implications of casting and how it should work
         if constants.BANG not in new_type_name:
             symbol_table = self.vol['type_name'].split(constants.BANG)[0]
