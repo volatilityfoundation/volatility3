@@ -1,4 +1,6 @@
 import collections.abc
+import random
+import string
 
 from volatility.framework import interfaces
 from volatility.framework import objects
@@ -13,8 +15,14 @@ class _ETHREAD(objects.Struct):
 
 
 class _EPROCESS(objects.Struct):
-    def add_process_layer(self, context, config_prefix, preferred_name = None):
-        """Constructs a new layer """
+    def add_process_layer(self, context, config_prefix = None, preferred_name = None):
+        """Constructs a new layer based on the process's DirectoryTableBase"""
+
+        if config_prefix is None:
+            # TODO: Ensure collisions can't happen by verifying the config_prefix is empty
+            random_prefix = ''.join(
+                random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+            config_prefix = interfaces.configuration.path_join("temporary", "_" + random_prefix)
 
         # Figure out a suitable name we can use for the new layer
         if preferred_name is None:
