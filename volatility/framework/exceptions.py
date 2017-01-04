@@ -10,6 +10,10 @@ class VolatilityException(Exception):
     """Class to allow filtering of all VolatilityExceptions"""
 
 
+class PluginRequirementException(VolatilityException):
+    """Class to allow plugins to indicate that a requirement has not been fulfilled"""
+
+
 class SymbolError(VolatilityException):
     """Thrown when a symbol lookup has failed"""
 

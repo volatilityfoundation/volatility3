@@ -4,10 +4,14 @@ They are called and carry out some algorithms on data stored in layers using obj
 """
 
 # Configuration interfaces must be imported separately, since we're part of interfaces and can't import ourselves
+import logging
 from abc import ABCMeta, abstractmethod
 
+from volatility.framework import exceptions
 from volatility.framework import validity
 from volatility.framework.interfaces import configuration as interfaces_configuration
+
+vollog = logging.getLogger(__name__)
 
 
 #
@@ -32,7 +36,11 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
 
     def __init__(self, context, config_path):
         super().__init__(context, config_path)
-        # self.validate()
+        # Plugins self validate on construction, it makes it more difficult to work with them, but then
+        # the validation doesn't need to be repeated over and over again by externals
+        if not self.validate(context, config_path):
+            vollog.warning("Plugin failed validation")
+            raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
 
     @classmethod
     def get_requirements(cls):
@@ -40,20 +48,24 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
         return []
 
     @classmethod
-    def validate(self, context, config_path):
+    def validate(cls, context, config_path):
         """Ensures that the plugin's requirements have been met appropriately"""
         result_set = [(config_path + "." + requirement.name, requirement.validate(context, config_path)) for requirement
-                      in self.get_requirements() if not requirement.optional]
+                      in cls.get_requirements() if not requirement.optional]
         return all([r for _, r in result_set])
 
     @abstractmethod
     def run(self):
         """Executes the functionality of the code
 
+        .. note:: This method expects `self.validate` to have been called to ensure all necessary options have been provided
+
         :return: a TreeGrid object that can then be passed to a Renderer.
         :rtype: interfaces.renderers.TreeGrid
         """
 
-# TODO: Needs to say what it can/can't handle (validate context)
-# TODO: Needs to offer available options'
-# TODO: Figure out how to handle global config options
+    def __call__(self, **kwargs):
+        """Method to make a plugin callable.  It must still have been instantiated with a context and a config_path"""
+        for k, v in kwargs:
+            self.config[k] = v
+        return self.run()
