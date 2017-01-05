@@ -1,6 +1,7 @@
 import sys
 
 from volatility.framework import interfaces
+from volatility.framework.renderers import format_hints
 
 
 class TextRenderer(interfaces.renderers.Renderer):
@@ -21,7 +22,10 @@ class TextRenderer(interfaces.renderers.Renderer):
 
         def visitor(node, accumulator):
             for column in grid.columns:
-                accumulator.write("\t{}".format(node.values[column.index]))
+                text_format = "\t{}"
+                if column.type == format_hints.Hex:
+                    text_format = "\t{:x}"
+                accumulator.write(text_format.format(node.values[column.index]))
             accumulator.write("\n")
             return accumulator
 
