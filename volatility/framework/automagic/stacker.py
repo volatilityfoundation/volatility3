@@ -45,6 +45,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Bow out quickly if the UI hasn't provided a single_location
         unsatisfied = self.unsatisfied(self.context, self.config_path)
         if unsatisfied:
+            vollog.info("Unable to run LayerStacker, unsatisfied requirement: {}".format(unsatisfied))
             return unsatisfied
         location = self.config["single_location"]
         self._check_type(location, str)
@@ -134,5 +135,4 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # This is not optional for the stacker to run, so optional must be marked as False
         return [requirements.StringRequirement("single_location",
                                                description = "Specifies a base location on which to stack",
-                                               default = "",
                                                optional = False)]
