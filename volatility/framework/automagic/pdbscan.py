@@ -175,7 +175,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         results = []
         if isinstance(requirement, interfaces.configuration.SymbolRequirement):
             # TODO: check if this is a windows symbol requirement, otherwise ignore it
-            if not requirement.validate(context, config_path):
+            if requirement.unsatisfied(context, config_path):
                 results.append((config_path, sub_config_path, requirement))
         else:
             for subreq in requirement.requirements.values():

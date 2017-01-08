@@ -126,11 +126,10 @@ class CommandLine(object):
         # Clever magic figures out how to fulfill each requirement that might not be fulfilled
         automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
 
-        print("CONFIG", ctx.config)
-
         # Check all the requirements and/or go back to the automagic step
-        if not plugin.validate(ctx, plugin_config_path):
-            raise RuntimeError("Unable to validate the plugin configuration")
+        unsatisfied = plugin.unsatisfied(ctx, plugin_config_path)
+        if unsatisfied:
+            raise RuntimeError("Unable to validate the plugin configuration: {}".format(unsatisfied))
 
         print("\n\n")
 

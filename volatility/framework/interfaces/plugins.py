@@ -38,7 +38,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
         super().__init__(context, config_path)
         # Plugins self validate on construction, it makes it more difficult to work with them, but then
         # the validation doesn't need to be repeated over and over again by externals
-        if not self.validate(context, config_path):
+        if self.unsatisfied(context, config_path):
             vollog.warning("Plugin failed validation")
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
 
@@ -46,13 +46,6 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
     def get_requirements(cls):
         """Returns a list of Requirement objects for this plugin"""
         return []
-
-    @classmethod
-    def validate(cls, context, config_path):
-        """Ensures that the plugin's requirements have been met appropriately"""
-        result_set = [(config_path + "." + requirement.name, requirement.validate(context, config_path)) for requirement
-                      in cls.get_requirements() if not requirement.optional]
-        return all([r for _, r in result_set])
 
     @abstractmethod
     def run(self):

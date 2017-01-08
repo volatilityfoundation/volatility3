@@ -234,7 +234,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
             # Determine if a class has been chosen
             # Once an appropriate class has been chosen, attempt to determine the page_map_offset value
             if ("memory_layer" in requirement.requirements and
-                    requirement.requirements["memory_layer"].validate(context, sub_config_path)):
+                    not requirement.requirements["memory_layer"].unsatisfied(context, sub_config_path)):
                 physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
                 hits = context.memory[physical_layer].scan(context, PageMapScanner(useful), progress_callback)
                 for test, dtb in hits:

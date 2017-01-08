@@ -39,12 +39,13 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         """Runs the automagic over the configurable"""
 
         # Quick exit if we're not needed
-        if requirement.validate(context, config_path):
+        if not requirement.unsatisfied(context, config_path):
             return
 
         # Bow out quickly if the UI hasn't provided a single_location
-        if not self.validate(self.context, self.config_path):
-            return
+        unsatisfied = self.unsatisfied(self.context, self.config_path)
+        if unsatisfied:
+            return unsatisfied
         location = self.config["single_location"]
         self._check_type(location, str)
         self._check_type(requirement, interfaces.configuration.RequirementInterface)
@@ -111,11 +112,11 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         :rtype: (str, str)"""
         child_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
-            if not requirement.validate(context, config_path):
+            if requirement.unsatisfied(context, config_path):
                 original_setting = context.config.get(child_config_path, None)
                 for layer_name in stacked_layers:
                     context.config[child_config_path] = layer_name
-                    if requirement.validate(context, config_path):
+                    if not requirement.unsatisfied(context, config_path):
                         return child_config_path, layer_name
                 else:
                     # Clean-up to restore the config

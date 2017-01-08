@@ -263,17 +263,22 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._check_type(requirement, RequirementInterface)
         del self._requirements[requirement.name]
 
-    def validate_children(self, context, config_path):
+    def unsatisfied_children(self, context, config_path):
         """Method that will validate all child requirements"""
-        return all([requirement.validate(context, path_join(config_path, self._name)) for requirement in
-                    self.requirements.values() if not requirement.optional])
+        result = []
+        for requirement in self.requirements.values():
+            if not requirement.optional:
+                subresult = requirement.unsatisfied(context, path_join(config_path, self._name))
+                for value in subresult:
+                    result.append(path_join(config_path, value))
+        return result
 
     # Validation routines
     @abstractmethod
-    def validate(self, context, config_path):
+    def unsatisfied(self, context, config_path):
         """Method to validate the value stored at config_path for the configuration object against a context
 
-           Returns False when an item is invalid
+           Returns a list containing its own name (or multiple unsatisfied requirement names) when invalid
         """
 
 
@@ -289,7 +294,7 @@ class InstanceRequirement(RequirementInterface):
         """Always raises a TypeError as instance requirements cannot have children"""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
-    def validate(self, context, config_path):
+    def unsatisfied(self, context, config_path):
         """Validates the instance requirement based upon its `instance_type`."""
         value = self.config_value(context, config_path, None)
         if not isinstance(value, self.instance_type):
@@ -297,8 +302,8 @@ class InstanceRequirement(RequirementInterface):
                        "TypeError - {} requirements only accept {} type: {}".format(self.name,
                                                                                     self.instance_type.__name__,
                                                                                     value))
-            return False
-        return True
+            return [path_join(config_path, self.name)]
+        return []
 
 
 class ClassRequirement(RequirementInterface):
@@ -313,7 +318,7 @@ class ClassRequirement(RequirementInterface):
     def cls(self):
         return self._cls
 
-    def validate(self, context, config_path):
+    def unsatisfied(self, context, config_path):
         """Checks to see if a class can be recovered"""
         value = self.config_value(context, config_path, None)
         self._cls = None
@@ -327,7 +332,9 @@ class ClassRequirement(RequirementInterface):
             else:
                 if value in globals():
                     self._cls = globals()[value]
-        return self._cls is not None
+        if self._cls is None:
+            return [path_join(config_path, self.name)]
+        return []
 
 
 class ConstructableRequirementInterface(RequirementInterface):
@@ -349,13 +356,13 @@ class ConstructableRequirementInterface(RequirementInterface):
     def construct(self, context, config_path):
         """Method for constructing within the context any required elements from subrequirements"""
 
-    def _check_class(self, context, config_path):
+    def _validate_class(self, context, config_path):
         """Method to check if the class Requirement is valid and if so populate the other requirements
            (but no need to validate, since we're invalid already)
         """
         class_req = self.requirements['class']
         subreq_config_path = path_join(config_path, self.name)
-        if class_req.validate(context, subreq_config_path):
+        if not class_req.unsatisfied(context, subreq_config_path):
             # We have a class, and since it's validated we can construct our requirements from it
             if issubclass(class_req.cls, ConfigurableInterface):
                 # In case the class has changed, clear out the old requirements
@@ -446,9 +453,24 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return []
 
     @classmethod
-    def validate(cls, context, config_path):
-        return all([requirement.validate(context, config_path) for requirement in cls.get_requirements() if
-                    not requirement.optional])
+    def unsatisfied(cls, context, config_path):
+        """Returns a list of the names of all unsatisfied requirements
+
+        Since a satisfied set of requirements will return [], it can be used in tests as follows:
+
+        .. code-block:: python
+
+            unmet = configurable.unsatisfied(context, config_path)
+            if unmet:
+                raise RuntimeError("Unsatisfied requirements: {}".format(unmet)
+        """
+        result = []
+        for requirement in cls.get_requirements():
+            if not requirement.optional:
+                subresult = requirement.unsatisfied(context, config_path)
+                for value in subresult:
+                    result.append(path_join(config_path, value))
+        return result
 
 
 class TranslationLayerRequirement(ConstructableRequirementInterface):
@@ -468,28 +490,28 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
     # TODO: Add requirements: acceptable OSes from the address_space information
     # TODO: Add requirements: acceptable arches from the available layers
 
-    def validate(self, context, config_path):
+    def unsatisfied(self, context, config_path):
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
         value = self.config_value(context, config_path, None)
         if isinstance(value, str):
             if value not in context.memory:
                 vollog.log(9, "IndexError - Layer not found in memory space: {}".format(value))
-                return False
-            return True
+                return [path_join(config_path, self.name)]
+            return []
 
         if value is not None:
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - Translation Layer Requirement only accepts string labels: {}".format(value))
-            return False
+            return [path_join(config_path, self.name)]
 
         # TODO: check that the space in the context lives up to the requirements for arch/os etc
 
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
-        self._check_class(context, config_path)
+        self._validate_class(context, config_path)
         vollog.log(constants.LOGLEVEL_V,
                    "IndexError - No configuration provided: {}".format(config_path + CONFIG_SEPARATOR + self.name))
-        return False
+        return [path_join(config_path, self.name)]
 
     def construct(self, context, config_path):
         """Constructs the appropriate layer and adds it based on the class parameter"""
@@ -506,8 +528,8 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
                 "config_path": config_path,
                 "name": name}
 
-        if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if
-                    not subreq.optional]):
+        if any([subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                not subreq.optional]):
             return False
 
         obj = self._construct_class(context, config_path, args)
@@ -520,19 +542,19 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
 class SymbolRequirement(ConstructableRequirementInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
 
-    def validate(self, context, config_path):
+    def unsatisfied(self, context, config_path):
         """Validate that the value is a valid within the symbol space of the provided context"""
         value = self.config_value(context, config_path, None)
         if not isinstance(value, str):
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - SymbolRequirement only accepts string labels: {}".format(value))
-            return False
+            return [path_join(config_path, self.name)]
         if value not in context.symbol_space:
             # This is an expected situation, so return False rather than raise
             vollog.log(constants.LOGLEVEL_V,
                        "IndexError - Value not present in the symbol space: {}".format(value or ""))
-            return False
-        return True
+            return [path_join(config_path, self.name)]
+        return []
 
     def construct(self, context, config_path):
         """Constructs the symbol space within the context based on the subrequirements"""
@@ -546,8 +568,8 @@ class SymbolRequirement(ConstructableRequirementInterface):
                 "config_path": config_path,
                 "name": name}
 
-        if not all([subreq.validate(context, config_path) for subreq in self.requirements.values() if
-                    not subreq.optional]):
+        if any([subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                not subreq.optional]):
             return False
 
         # Fill out the parameter for class creation
