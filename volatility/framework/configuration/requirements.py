@@ -113,5 +113,5 @@ class ListRequirement(interfaces_configuration.RequirementInterface):
         for element in value:
             subresult = self.element_type.unsatisfied(context, element)
             for subvalue in subresult:
-                result.append(interfaces_configuration.path_join(config_path, subvalue))
+                result.append(subvalue)
         return result

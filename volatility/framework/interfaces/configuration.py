@@ -270,7 +270,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             if not requirement.optional:
                 subresult = requirement.unsatisfied(context, path_join(config_path, self._name))
                 for value in subresult:
-                    result.append(path_join(config_path, value))
+                    result.append(value)
         return result
 
     # Validation routines
@@ -469,7 +469,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             if not requirement.optional:
                 subresult = requirement.unsatisfied(context, config_path)
                 for value in subresult:
-                    result.append(path_join(config_path, value))
+                    result.append(value)
         return result
 
 
