@@ -277,6 +277,30 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """
 
 
+class InstanceRequirement(RequirementInterface):
+    """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
+    instance_type = bool
+
+    def add_requirement(self, requirement):
+        """Always raises a TypeError as instance requirements cannot have children"""
+        raise TypeError("Instance Requirements cannot have subrequirements")
+
+    def remove_requirement(self, requirement):
+        """Always raises a TypeError as instance requirements cannot have children"""
+        raise TypeError("Instance Requirements cannot have subrequirements")
+
+    def validate(self, context, config_path):
+        """Validates the instance requirement based upon its `instance_type`."""
+        value = self.config_value(context, config_path, None)
+        if not isinstance(value, self.instance_type):
+            vollog.log(constants.LOGLEVEL_V,
+                       "TypeError - {} requirements only accept {} type: {}".format(self.name,
+                                                                                    self.instance_type.__name__,
+                                                                                    value))
+            return False
+        return True
+
+
 class ClassRequirement(RequirementInterface):
     """Requires a specific class.  This is used as means to serialize specific classes for :class:`TranslationLayerRequirement`
     and :class:`SymbolRequirement` classes."""
@@ -378,7 +402,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         for requirement in self.get_requirements():
             # Create the (private) properties using the config as backend storage
             # TODO: Based on the requirement, do proper type checking
-            setattr(self, "_" + requirement.name, self.config.get(requirement.name, requirement.default))
+            setattr(self, "_" + requirement.name, self._context._config.get(requirement.name, requirement.default))
 
     @property
     def context(self):

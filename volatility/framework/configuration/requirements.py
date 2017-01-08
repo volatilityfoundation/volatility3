@@ -28,45 +28,23 @@ class MultiRequirement(interfaces_configuration.RequirementInterface):
         return self.validate_children(context, config_path)
 
 
-class InstanceRequirement(interfaces_configuration.RequirementInterface):
-    """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
-    instance_type = bool
-
-    def add_requirement(self, requirement):
-        """Always raises a TypeError as instance requirements cannot have children"""
-        raise TypeError("Instance Requirements cannot have subrequirements")
-
-    def remove_requirement(self, requirement):
-        """Always raises a TypeError as instance requirements cannot have children"""
-        raise TypeError("Instance Requirements cannot have subrequirements")
-
-    def validate(self, context, config_path):
-        """Validates the instance requirement based upon its `instance_type`."""
-        value = self.config_value(context, config_path, None)
-        if not isinstance(value, self.instance_type):
-            vollog.log(constants.LOGLEVEL_V,
-                       "TypeError - {} requirements only accept {} type: {}".format(self.name,
-                                                                                    self.instance_type.__name__,
-                                                                                    value))
-            return False
-        return True
+class BooleanRequirement(interfaces_configuration.InstanceRequirement):
+    """A requirement type that contains a boolean value"""
+    # Note, this must be a separate class in order to differentiate between Booleans and other instance requirements
 
 
-BooleanRequirement = InstanceRequirement
-
-
-class IntRequirement(InstanceRequirement):
+class IntRequirement(interfaces_configuration.InstanceRequirement):
     """A requirement type that contains a single integer"""
     instance_type = int
 
 
-class StringRequirement(InstanceRequirement):
+class StringRequirement(interfaces_configuration.InstanceRequirement):
     """A requirement type that contains a single unicode string"""
     # TODO: Maybe add string length limits?
     instance_type = str
 
 
-class BytesRequirement(InstanceRequirement):
+class BytesRequirement(interfaces_configuration.InstanceRequirement):
     """A requirement type that contains a byte string"""
     instance_type = bytes
 
@@ -115,7 +93,7 @@ class ListRequirement(interfaces_configuration.RequirementInterface):
         :type min_elements:  int
         """
         super().__init__(*args, **kwargs)
-        if not isinstance(element_type, InstanceRequirement):
+        if not isinstance(element_type, interfaces_configuration.InstanceRequirement):
             raise TypeError("ListRequirements can only contain simple InstanceRequirements")
         self.element_type = element_type
         self.min_elements = min_elements

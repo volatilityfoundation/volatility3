@@ -37,7 +37,7 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
     def __init__(self, context, config_path, *args, **kwargs):
         super().__init__(context, config_path)
         for requirement in self.get_requirements():
-            if not isinstance(requirement, (requirements.InstanceRequirement,
+            if not isinstance(requirement, (interfaces_configuration.InstanceRequirement,
                                             requirements.ChoiceRequirement,
                                             requirements.ListRequirement)):
                 raise ValueError(
