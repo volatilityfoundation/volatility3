@@ -60,7 +60,7 @@ def run(automagics, context, configurable, config_path, progress_callback = None
     configurable_class = configurable
     if isinstance(configurable, interfaces.configuration.ConfigurableInterface):
         configurable_class = configurable.__class__
-    requirement = requirements.MultiRequirement(name = configurable_class.__name__.lower())
+    requirement = requirements.MultiRequirement(name = configurable_class.__name__)
     for req in configurable.get_requirements():
         requirement.add_requirement(req)
 

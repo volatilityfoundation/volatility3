@@ -57,8 +57,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
         new_context = context.clone()
         current_layer_name = context.memory.free_layer_name("FileLayer")
-        current_config_path = interfaces.configuration.path_join("automagic", "layer_stacker", "stack",
-                                                                 current_layer_name)
+        current_config_path = interfaces.configuration.path_join(config_path, "stack", current_layer_name)
         # This must be specific to get us started, setup the config and run
         new_context.config[interfaces.configuration.path_join(current_config_path, "filename")] = self.local_store
         new_context.add_layer(physical.FileLayer(new_context, current_config_path, current_layer_name))
