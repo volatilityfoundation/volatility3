@@ -33,7 +33,7 @@ def available(context):
                   key = lambda x: x.priority)
 
 
-def run(automagics, context, configurable, config_path = "", progress_callback = None):
+def run(automagics, context, configurable, config_path, progress_callback = None):
     """Runs through the list of `automagics` in order, allowing them to make changes to the context
 
     :param automagics: A list of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` objects
