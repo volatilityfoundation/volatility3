@@ -61,12 +61,12 @@ class ChoiceRequirement(interfaces_configuration.RequirementInterface):
         super().__init__(*args, **kwargs)
         if not isinstance(choices, list) or any([not isinstance(choice, str) for choice in choices]):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
-        self._choices = choices
+        self.choices = choices
 
     def validate(self, context, config_path):
         """Validates the provided value to ensure it is one of the available choices"""
         value = self.config_value(context, config_path)
-        if value not in self._choices:
+        if value not in self.choices:
             vollog.log(constants.LOGLEVEL_V, "ValueError - Value is not within the set of available choices")
             return False
         return True
