@@ -17,24 +17,31 @@ class PsList(plugins.PluginInterface):
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
 
-    def _generator(self, eproc):
-        for proc in eproc.ActiveProcessLinks:
+    def _generator(self):
+        for proc in self.list_processes():
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
                                                errors = 'replace')))
 
-    def run(self):
-        virtual = self.config['primary']
+    def list_processes(self):
+        """Lists all the processes in the primary layer"""
 
+        layer_name = self.config['primary']
+
+        # We only use the object factory to demonstrate how to use one
         object_factory = self.context.object_factory("ntkrnlmp")
 
         kvo = self.config['primary.kernel_virtual_offset']
         ps_aph_offset = kvo + self.context.symbol_space.get_symbol("ntkrnlmp!PsActiveProcessHead").address
-        list_entry = object_factory("_LIST_ENTRY", layer_name = virtual, offset = ps_aph_offset)
+        list_entry = object_factory("_LIST_ENTRY", layer_name = layer_name, offset = ps_aph_offset)
         reloff = self.context.symbol_space.get_type("ntkrnlmp!_EPROCESS").relative_child_offset("ActiveProcessLinks")
-        eproc = object_factory("_EPROCESS", layer_name = virtual, offset = list_entry.vol.offset - reloff)
+        eproc = object_factory("_EPROCESS", layer_name = layer_name, offset = list_entry.vol.offset - reloff)
 
+        for proc in eproc.ActiveProcessLinks:
+            yield proc
+
+    def run(self):
         return TreeGrid([("PID", int),
                          ("PPID", int),
                          ("ImageFileName", str)],
-                        self._generator(eproc))
+                        self._generator())
