@@ -8,3 +8,7 @@ Text renderers should attempt to honour all hints provided in this module where 
 
 class Hex(int):
     """A class to indicate that the integer value should be represented as a hexidecimal value"""
+
+
+class HexBytes(int):
+    """A class to indicate that the bytes should be display in an extended format showing hexadecimal and ascii printable display"""
