@@ -20,7 +20,7 @@ from volatility.framework import automagic
 from volatility.framework import constants, contexts, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces.configuration import HierarchicalDict
-from volatility.framework.renderers.text import TextRenderer
+from volatility.framework.renderers.text import QuickTextRenderer
 
 __author__ = 'mike'
 
@@ -139,7 +139,7 @@ class CommandLine(object):
             json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
         # Construct and run the plugin
-        TextRenderer().render(constructed.run())
+        QuickTextRenderer().render(constructed.run())
 
     def populate_requirements_argparse(self, parser, configurable):
         """Adds the plugin's simple requirements to the provided parser
