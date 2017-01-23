@@ -8,7 +8,6 @@ from volatility.framework import contexts
 from volatility.framework import interfaces
 from volatility.framework import layers
 from volatility.framework.automagic import windows
-from volatility.framework.symbols import native
 
 if __name__ == '__main__':
     import argparse
@@ -26,8 +25,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    nativelst = native.x86NativeTable
-    ctx = contexts.Context(nativelst)
+    ctx = contexts.Context()
     for filename in args.filenames:
         ctx.config[
             interfaces.configuration.path_join('config' + str(args.filenames.index(filename)), "filename")] = filename

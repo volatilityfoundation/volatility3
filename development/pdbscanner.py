@@ -10,7 +10,6 @@ from volatility.framework.automagic.pdbscan import scan
 if __name__ == '__main__':
     import argparse
 
-    from volatility.framework.symbols import native
     from volatility.framework import contexts
 
     parser = argparse.ArgumentParser()
@@ -19,8 +18,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    nativelst = native.x86NativeTable
-    ctx = contexts.Context(nativelst)
+    ctx = contexts.Context()
     scan_layers = []
     for filename in args.filenames:
 
