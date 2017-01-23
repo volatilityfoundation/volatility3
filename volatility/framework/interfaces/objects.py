@@ -6,7 +6,7 @@ import collections.abc
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants, validity
-from volatility.framework.interfaces import context as context_module
+from volatility.framework.interfaces import context as interfaces_context
 
 
 class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
@@ -64,7 +64,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         # Since objects are likely to be instantiated often,
         # we're only checking that context, offset and parent
         # Everything else may be wrong, but that will get caught later on
-        self._check_type(context, context_module.ContextInterface)
+        self._check_type(context, interfaces_context.ContextInterface)
         self._check_type(object_info, ObjectInformation)
 
         # Add an empty dictionary at the start to allow objects to add their own data to the vol object
