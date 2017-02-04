@@ -270,7 +270,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
             if v in self._inverse_choices:
                 # Technically this shouldn't be a problem, but since we inverse cache
                 # and can't map one value to two possibilities we throw an exception during build
-                # We can remove/wrok around this if it proves a common issue
+                # We can remove/work around this if it proves a common issue
                 raise ValueError("Enumeration value {} duplicated as {} and {}".format(v, k, self._inverse_choices[v]))
             self._inverse_choices[v] = k
         self._vol['choices'] = choices

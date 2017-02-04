@@ -49,6 +49,30 @@ class SymbolSpaceInterface(collections.abc.Mapping):
     def get_symbols_by_location(self, address, table_name = None):
         """Returns all symbols that exist at a specific relative address"""
 
+    @abstractmethod
+    def get_type(self, type_name):
+        """Look-up a type name across all the contained symbol tables"""
+
+    @abstractmethod
+    def get_symbol(self, symbol_name):
+        """Look-up a symbol name across all the contained symbol tables"""
+
+    @abstractmethod
+    def get_enumeration(self, enum_name):
+        """Look-up an enumeration across all the contained symbol tables"""
+
+    @abstractmethod
+    def has_type(self, name):
+        """Determines whether a type exists in the contained symbol tables"""
+
+    @abstractmethod
+    def has_symbol(self, name):
+        """Determines whether a symbol exists in the contained symbol tables"""
+
+    @abstractmethod
+    def has_enumeration(self, name):
+        """Determines whether an enumeration choice exists in the contained symbol tables"""
+
 
 class BaseSymbolTableInterface(validity.ValidityRoutines):
     """The base interface, inherited by both NativeTables and SymbolTables"""
@@ -145,9 +169,10 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         if closest_symbol.offset == offset:
             yield closest_symbol.name
 
-    def get_enumeration_choices(self, name):
-        """Returns a dictionary of enumeration choices based on a particular Enumeration name"""
-        raise NotImplementedError("Abstract method get_enumeration_choices not implemented yet")
+    @property
+    def enumerations(self):
+        """Returns an iterator of the Enumeration names"""
+        raise NotImplementedError("Abstract property enumerations not implemented by subclass.")
 
 
 class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface):
@@ -175,5 +200,9 @@ class NativeTableInterface(BaseSymbolTableInterface):
     def symbols(self):
         return []
 
-    def get_enumeration_choices(self, name):
+    def get_enumeration(self, name):
         raise exceptions.SymbolError("NativeTables never hold enumerations")
+
+    @property
+    def enumerations(self):
+        return []

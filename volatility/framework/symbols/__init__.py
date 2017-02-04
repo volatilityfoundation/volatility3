@@ -105,7 +105,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         elif resolve_type == SymbolType.SYMBOL:
             get_function = 'get_symbol'
         elif resolve_type == SymbolType.ENUM:
-            get_function = 'get_enumeration_choices'
+            get_function = 'get_enumeration'
         else:
             raise ValueError("Weak_resolve called without a proper SymbolType")
 
@@ -158,6 +158,37 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         """Look-up a symbol name across all the contained symbol spaces"""
         return self._weak_resolve(SymbolType.SYMBOL, symbol_name)
 
-    def get_enumeration_choices(self, enum_name):
+    def get_enumeration(self, enum_name):
         """Look-up a set of enumeration choices from a specific symbol table"""
         return self._weak_resolve(SymbolType.ENUM, enum_name)
+
+    def _membership(self, member_type, name):
+        """Test for membership of a component within a table"""
+
+        table = []
+        name_array = name.split(constants.BANG)
+        if len(name_array) == 2:
+            table_name = name_array[0]
+            component_name = name_array[1]
+        else:
+            return False
+
+        if table_name in self:
+            table = self[table_name]
+
+        if member_type == SymbolType.TYPE:
+            return component_name in table.types
+        elif member_type == SymbolType.SYMBOL:
+            return component_name in table.symbols
+        elif member_type == SymbolType.ENUM:
+            return component_name in table.enumerations
+        return False
+
+    def has_type(self, name):
+        return self._membership(SymbolType.TYPE, name)
+
+    def has_symbol(self, name):
+        return self._membership(SymbolType.SYMBOL, name)
+
+    def has_enumeration(self, name):
+        return self._membership(SymbolType.ENUM, name)

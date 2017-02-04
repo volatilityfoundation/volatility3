@@ -91,12 +91,13 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
     symbols = _construct_delegate_function('symbols', True)
     types = _construct_delegate_function('types', True)
+    enumerations = _construct_delegate_function('enumerations', True)
     get_type = _construct_delegate_function('get_type')
     get_symbol = _construct_delegate_function('get_symbol')
+    get_enumeration = _construct_delegate_function('get_enumeration')
     get_type_class = _construct_delegate_function('get_type_class')
     set_type_class = _construct_delegate_function('set_type_class')
     del_type_class = _construct_delegate_function('del_type_class')
-    get_enumeration_choices = _construct_delegate_function('get_enumeration_choices')
 
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface):
@@ -161,6 +162,11 @@ class Version1Format(ISFormatTable):
         return self._symbol_cache
 
     # TODO: Add the ability to add/remove/change symbols after creation, note that this should invalidate the cache
+
+    @property
+    def enumerations(self):
+        """Returns an iterator of the available enumerations"""
+        return self._json_object.get('enums', {}).keys()
 
     def get_type_class(self, name):
         return self._overrides.get(name, objects.Struct)
@@ -227,9 +233,20 @@ class Version1Format(ISFormatTable):
                   "base_type": self.natives.get_type(lookup['base'])}
         return result
 
-    def get_enumeration_choices(self, name):
-        """Returns the dictionary of choices for the enumeration"""
-        return self._lookup_enum(name)['choices']
+    def get_enumeration(self, enum_name):
+        """Resolves an individual enumeration"""
+        if constants.BANG in enum_name:
+            raise exceptions.SymbolError("Enumeration for a different table requested: {}".format(enum_name))
+        if enum_name not in self._json_object['enums']:
+            # Fall back to the natives table
+            raise exceptions.SymbolError("Enumeration not found in {} table: {}".format(self.name, enum_name))
+        curdict = self._json_object['enums'][enum_name]
+        base_type = self.natives.get_type(curdict['base'])
+        return objects.templates.ObjectTemplate(type_name = 'Enumeration',
+                                                object_class = objects.Enumeration,
+                                                base_type = base_type,
+                                                size = curdict['size'],
+                                                choices = curdict['constants'])
 
     def get_type(self, type_name):
         """Resolves an individual symbol"""
