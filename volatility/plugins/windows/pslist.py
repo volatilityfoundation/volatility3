@@ -7,7 +7,8 @@ class PsList(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space'),
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "ntkrnlmp",
                                                description = "Windows OS"),
                 requirements.IntRequirement(name = 'pid',

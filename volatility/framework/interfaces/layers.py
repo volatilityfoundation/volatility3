@@ -75,11 +75,33 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     """A Layer that directly holds data (and does not translate it).  This is effectively a leaf node in a layer tree.
     It directly accesses a data source and exposes it within volatility."""
 
-    provides = {"type": "interface"}
-
-    def __init__(self, context, config_path, name):
+    def __init__(self, context, config_path, name, architecture = "Unknown", os = "Unknown"):
         super().__init__(context, config_path)
         self._name = self._check_type(name, str)
+        self._architecture = self.check_type(architecture, str)
+        self._os = self._check_type(os, str)
+
+    # Memory specific attributes
+
+    @property
+    def architecture(self):
+        """The architecutre of the TranslationLayer
+
+        This cannot be modified after construction outside of the class
+        """
+        return self._architecture
+
+    @property
+    def os(self):
+        """The operating system related to the TranslationLayer"""
+        return self._os
+
+    @os.setter
+    def os(self, value):
+        """Sets the operating system of the TranslationLayer"""
+        self._os = self._check_type(value, str)
+
+    # Standard attributes
 
     @property
     def name(self):

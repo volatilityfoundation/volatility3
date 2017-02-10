@@ -15,9 +15,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
 
     priority = 40
-    provides = {"type": "memory",
-                "architecture": "ia32"
-                }
+    _architecture = "Intel32"
 
     def __init__(self, context, config_path, name):
         super().__init__(context, config_path, name)
@@ -194,6 +192,7 @@ class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel architectures"""
 
     priority = 35
+    _architecture = "Intel32"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -211,9 +210,7 @@ class IntelPAE(Intel):
 
 class Intel32e(Intel):
     priority = 30
-    provides = {"type": "memory",
-                "architecture": "ia64"
-                }
+    architecture = "Intel64"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

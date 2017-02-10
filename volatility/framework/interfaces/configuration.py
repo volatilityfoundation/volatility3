@@ -476,7 +476,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 class TranslationLayerRequirement(ConstructableRequirementInterface):
     """Class maintaining the limitations on what sort of translation layers are acceptable"""
 
-    def __init__(self, name, description = None, default = None, optional = False):
+    def __init__(self, name, description = None, default = None, optional = False, oses = None, architectures = None):
         """Constructs a Translation Layer Requirement
 
         The configuration option's value will be the name of the layer once it exists in the store
@@ -485,10 +485,13 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
         :param layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
         :return:
         """
+        if oses is None:
+            oses = []
+        if architectures is None:
+            self.architectures = []
+        self.oses = oses
+        self.architectures = architectures
         super().__init__(name, description, default, optional)
-
-    # TODO: Add requirements: acceptable OSes from the address_space information
-    # TODO: Add requirements: acceptable arches from the available layers
 
     def unsatisfied(self, context, config_path):
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
@@ -496,6 +499,12 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
         if isinstance(value, str):
             if value not in context.memory:
                 vollog.log(9, "IndexError - Layer not found in memory space: {}".format(value))
+                return [path_join(config_path, self.name)]
+            if self.oses and context.memory[value].os not in self.oses:
+                vollog.log(9, "TypeError - Layer is not the required OS: {}".format(value))
+                return [path_join(config_path, self.name)]
+            if self.architectures and context.memory[value].architecture not in self.architectures:
+                vollog.log(9, "TypeError - Layer is not the required Architecture: {}".format(value))
                 return [path_join(config_path, self.name)]
             return []
 
