@@ -78,7 +78,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     def __init__(self, context, config_path, name, architecture = "Unknown", os = "Unknown"):
         super().__init__(context, config_path)
         self._name = self._check_type(name, str)
-        self._architecture = self.check_type(architecture, str)
+        self._architecture = self._check_type(architecture, str)
         self._os = self._check_type(os, str)
 
     # Memory specific attributes
