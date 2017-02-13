@@ -75,10 +75,11 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     """A Layer that directly holds data (and does not translate it).  This is effectively a leaf node in a layer tree.
     It directly accesses a data source and exposes it within volatility."""
 
-    def __init__(self, context, config_path, name, architecture = "Unknown", os = "Unknown"):
+    _architecture = "Unknown"
+
+    def __init__(self, context, config_path, name, os = "Unknown"):
         super().__init__(context, config_path)
         self._name = self._check_type(name, str)
-        self._architecture = self._check_type(architecture, str)
         self._os = self._check_type(os, str)
 
     # Memory specific attributes
