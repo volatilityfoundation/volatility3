@@ -5,22 +5,23 @@ import collections.abc
 from abc import abstractmethod
 
 from volatility.framework import constants, exceptions, validity
-from volatility.framework.interfaces import configuration
+from volatility.framework.interfaces import configuration, objects
 
 
 class Symbol(validity.ValidityRoutines):
     """Contains information about a named location in a program's memory"""
 
-    def __init__(self, name, address, type_name = None):
+    def __init__(self, name, address, type = None):
         self._name = self._check_type(name, str)
         if constants.BANG in self._name:
             raise ValueError("Symbol names cannot contain the symbol differentiator ({})".format(constants.BANG))
         self._location = None
         self._address = self._check_type(address, int)
-        if type_name is None:
-            type_name = name
-        self._type_name = self._check_type(type_name, str)
-        # Scope and location can be added at a later date
+        self._type = None
+        if type is not None:
+            self._type = self._check_type(type, objects.Template)
+
+            # Scope and location can be added at a later date
 
     @property
     def name(self):
@@ -28,9 +29,9 @@ class Symbol(validity.ValidityRoutines):
         return self._name
 
     @property
-    def type_name(self):
+    def type(self):
         """Returns the name of the type that the symbol represents"""
-        return self._type_name
+        return self._type
 
     @property
     def address(self):

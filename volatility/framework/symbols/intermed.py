@@ -309,3 +309,21 @@ class Version2Format(Version1Format):
                                                 object_class = object_class,
                                                 size = curdict['size'],
                                                 members = members)
+
+
+class Version2_1Format(Version2Format):
+    """Class for storing intermediate debugging data as objects and classes"""
+    current = 2
+    revision = 0
+    age = 1
+    version = (current - age, age, revision)
+
+    def get_symbol(self, name):
+        """Returns the location offset given by the symbol name"""
+        symbol = self._json_object['symbols'].get(name, None)
+        if not symbol:
+            raise KeyError("Unknown symbol: {}".format(name))
+        symbol_type = None
+        if type in symbol:
+            symbol_type = self._interdict_to_template(symbol['type'])
+        return interfaces.symbols.Symbol(name = name, address = symbol['address'], type = symbol_type)
