@@ -13,6 +13,12 @@ class _ETHREAD(objects.Struct):
         """Return the EPROCESS that owns this thread"""
         return self.ThreadsProcess.dereference(kernel_layer)
 
+class _UNICODE_STRING(objects.Struct):
+    @property
+    def String(self):
+        if not self._context.memory[self.vol.layer_name].is_valid(self.Buffer):
+            return ""
+        return self.Buffer.dereference().cast("string", max_length = self.Length, errors = "replace", encoding = "utf16")
 
 class _EPROCESS(objects.Struct):
     def add_process_layer(self, context, config_prefix = None, preferred_name = None):
@@ -53,6 +59,20 @@ class _EPROCESS(objects.Struct):
         context.memory.add_layer(new_layer)
         return preferred_name
 
+    def load_order_modules(self):
+
+        config_prefix = "dlllist"
+        proc_layer_name = self.add_process_layer(self._context, config_prefix)
+
+        proc_layer = self._context.memory[proc_layer_name]
+        if not proc_layer.is_valid(self.Peb):
+            raise StopIteration 
+
+        object_factory = self._context.object_factory("ntkrnlmp")
+        peb = object_factory("_PEB", layer_name = proc_layer_name, offset = self.Peb)
+
+        for entry in peb.Ldr.InLoadOrderModuleList.to_list("ntkrnlmp!_LDR_DATA_TABLE_ENTRY", "InLoadOrderLinks"):
+            yield entry
 
 class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
     def to_list(self, symbol_type, member, forward = True, sentinel = True, layer = None):
