@@ -1,8 +1,8 @@
 import volatility.framework.interfaces.plugins as plugins
 import volatility.plugins.windows.pslist as pslist
 from volatility.framework.configuration import requirements
-from volatility.framework.renderers import TreeGrid
-from volatility.framework.renderers.format_hints import Hex
+from volatility.framework import renderers
+from volatility.framework.renderers import format_hints
 
 class DllList(plugins.PluginInterface):
     @classmethod
@@ -24,17 +24,17 @@ class DllList(plugins.PluginInterface):
                 yield (0, (proc.UniqueProcessId, 
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
                                                errors = 'replace'),
-                       Hex(entry.DllBase), Hex(entry.SizeOfImage), 
+                       format_hints.Hex(entry.DllBase), format_hints.Hex(entry.SizeOfImage), 
                        entry.BaseDllName.String, entry.FullDllName.String))
 
     def run(self):
 
         plugin = pslist.PsList(self.context, "plugins.DllList")
 
-        return TreeGrid([("PID", int),
+        return renderers.TreeGrid([("PID", int),
                          ("Process", str),
-                         ("Base", Hex),
-                         ("Size", Hex),
+                         ("Base", format_hints.Hex),
+                         ("Size", format_hints.Hex),
                          ("Name", str), 
                          ("Path", str)],
                         self._generator(plugin.list_processes()))
