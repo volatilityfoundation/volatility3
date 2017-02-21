@@ -60,18 +60,18 @@ class _EPROCESS(objects.Struct):
         return preferred_name
 
     def load_order_modules(self):
+        """Generator for DLLs in the order that they were loaded"""
 
-        config_prefix = "dlllist"
-        proc_layer_name = self.add_process_layer(self._context, config_prefix)
+        proc_layer_name = self.add_process_layer(self._context)
 
         proc_layer = self._context.memory[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
             raise StopIteration 
 
-        object_factory = self._context.object_factory("ntkrnlmp")
-        peb = object_factory("_PEB", layer_name = proc_layer_name, offset = self.Peb)
+        sym_table = self.vol.type_name.split("!")[0]
+        peb = self._context.object("{}!_PEB".format(sym_table), layer_name = proc_layer_name, offset = self.Peb)
 
-        for entry in peb.Ldr.InLoadOrderModuleList.to_list("ntkrnlmp!_LDR_DATA_TABLE_ENTRY", "InLoadOrderLinks"):
+        for entry in peb.Ldr.InLoadOrderModuleList.to_list("{}!_LDR_DATA_TABLE_ENTRY".format(sym_table), "InLoadOrderLinks"):
             yield entry
 
 class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
