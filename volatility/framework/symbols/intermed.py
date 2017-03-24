@@ -102,7 +102,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             if isf_url:
                 break
         else:
-            raise ValueError("ISF file {} could not be found in standard search paths".format(relative_isf))
+            raise FileNotFoundError(
+                "ISF path fragment {} could not be found in standard search paths".format(relative_isf))
         return cls(context, config_path, name, isf_url, native_types)
 
     def _closest_version(self, version, versions):
