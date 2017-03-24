@@ -201,19 +201,19 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     _kvo, kernel = self.valid_kernels[virtual_layer]
                     # Check user symbol directory first, then fallback to the framework's library to allow for overloading
                     midfix = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
-                    idd_path = None
+                    isf_path = None
                     for prefix in self.prefixes:
                         if not os.path.isabs(prefix):
                             prefix = os.path.abspath(os.path.join(__file__, prefix))
                         for suffix in self.suffixes:
                             if os.path.exists(os.path.join(prefix, midfix + suffix)):
-                                idd_path = "file://" + os.path.abspath(os.path.join(prefix, midfix + suffix))
-                    if idd_path:
+                                isf_path = "file://" + os.path.abspath(os.path.join(prefix, midfix + suffix))
+                    if isf_path:
                         vollog.debug("Using symbol library: {}".format(midfix))
                         clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
                         # Set the discovered options
                         context.config[interfaces.configuration.path_join(sub_config_path, "class")] = clazz
-                        context.config[interfaces.configuration.path_join(sub_config_path, "idd_filepath")] = idd_path
+                        context.config[interfaces.configuration.path_join(sub_config_path, "isf_filepath")] = isf_path
                         # Construct the appropriate symbol table
                         requirement.construct(context, config_path)
                         break

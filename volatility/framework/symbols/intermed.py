@@ -48,9 +48,9 @@ def _construct_delegate_function(name, is_property = False):
 
 
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
-    def __init__(self, context, config_path, name, idd_filepath, native_types = None):
+    def __init__(self, context, config_path, name, isf_filepath, native_types = None):
         # Check there are no obvious errors
-        url = urllib.parse.urlparse(idd_filepath)
+        url = urllib.parse.urlparse(isf_filepath)
         if url.scheme != 'file':
             raise NotImplementedError(
                 "This scheme is not yet implement for the Intermediate Symbol Format: {}".format(url.scheme))
@@ -122,6 +122,7 @@ class Version1Format(ISFormatTable):
 
     def _get_natives(self):
         """Determines the appropriate native_types to use from the JSON data"""
+        # TODO: Consider how to generate the natives entirely from the ISF
         classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
         for nc in classes:
             native_class = classes[nc]
