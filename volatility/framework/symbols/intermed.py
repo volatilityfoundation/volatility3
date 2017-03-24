@@ -2,6 +2,8 @@ import copy
 import json
 import logging
 import lzma
+import os
+import pathlib
 import urllib.parse
 
 from volatility import schemas
@@ -79,6 +81,29 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Inherit
         super().__init__(context, config_path, name, native_types or self._delegate.natives)
+
+    @classmethod
+    def open(cls, context, config_path, name, relative_isf, native_types = None):
+        """Constructs an IntermediateSymbolTable based on a relative path rather than a full URL
+
+        This will attempt to load .json and .json.xz files
+        """
+        base_core = os.path.dirname(__file__)
+        base_user = os.path.join(os.path.dirname(os.path.dirname(base_core)), 'symbols')
+        search_paths = [base_user, base_core]
+        isf_url = None
+        for path in search_paths:
+            # Favour specific name, over uncompressed JSON (user-editable), over compressed JSON over uncompressed files
+            for extension in ['', '.json', '.json.xz']:
+                test = os.path.join(path, relative_isf + extension)
+                if os.path.exists(test):
+                    isf_url = pathlib.Path(test).as_uri()
+                    break
+            if isf_url:
+                break
+        else:
+            raise ValueError("ISF file {} could not be found in standard search paths".format(relative_isf))
+        return cls(context, config_path, name, isf_url, native_types)
 
     def _closest_version(self, version, versions):
         """Determines the highest suitable handler for specified version format"""
