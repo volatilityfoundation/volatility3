@@ -4,8 +4,9 @@ This has been made an object to allow quick swapping and changing of contexts, t
 to act on multiple different contexts without them interfering eith each other.
 """
 
-from volatility.framework import constants, interfaces, symbols
+from volatility.framework import interfaces, symbols
 from volatility.framework.interfaces.configuration import HierarchicalDict
+from volatility.framework.utility import adapters
 
 __author__ = 'mike'
 
@@ -97,17 +98,8 @@ class Context(interfaces.context.ContextInterface):
                                                                                   offset = offset))
 
     def object_factory(self, symbol_table):
-        """Allow a specific symbol_table to be used repeatedly for constructing objects
+        """This method is DEPRECATED and provided only as a convenience.
 
-        :param symbol_table: The name of the symbol table that the object factory will construct objects on
-        :type sybmol_table: str
-        :return: A function that takes the same arguments as :func:`object`
+        It will be removed in volatility 3.0.0 final release.
         """
-
-        def callable(symbol, layer_name, offset, **arguments):
-            """Function to apply a specific symbol_table name to any unadored"""
-            if constants.BANG not in symbol:
-                symbol = symbol_table + constants.BANG + symbol
-            return self.object(symbol, layer_name, offset, **arguments)
-
-        return callable
+        return adapters.object_factory(self, symbol_table)

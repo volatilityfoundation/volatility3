@@ -1,6 +1,7 @@
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
+from volatility.framework.utility import adapters
 
 
 class PsList(plugins.PluginInterface):
@@ -30,7 +31,7 @@ class PsList(plugins.PluginInterface):
         layer_name = self.config['primary']
 
         # We only use the object factory to demonstrate how to use one
-        object_factory = self.context.object_factory("ntkrnlmp")
+        object_factory = adapters.object_factory(self.context, "ntkrnlmp")
 
         kvo = self.config['primary.kernel_virtual_offset']
         ps_aph_offset = kvo + self.context.symbol_space.get_symbol("ntkrnlmp!PsActiveProcessHead").address
