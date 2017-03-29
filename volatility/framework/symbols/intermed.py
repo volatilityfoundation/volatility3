@@ -107,9 +107,14 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         return cls(context, config_path, name, isf_url, native_types)
 
     def _closest_version(self, version, versions):
-        """Determines the highest suitable handler for specified version format"""
+        """Determines the highest suitable handler for specified version format
+        
+        An interface version such as Current.Age.Revision means that (Current - Age) of the provider must be equal to that of the
+          consumer, and the provider (the JSON in this instance) must have a greater age (indicating that only additive
+          changes have been made) than the consumer (in this case, the file reader).
+        """
         supported, age, revision = [int(x) for x in version.split(".")]
-        supported_versions = [x for x in versions.keys() if x[0] == supported and x[1] >= age]
+        supported_versions = [x for x in versions.keys() if x[0] == (supported - age) and x[1] >= age]
         if not supported_versions:
             raise ValueError(
                 "No Intermediate Format interface versions support file interface version: {}".format(version))
