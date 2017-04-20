@@ -16,8 +16,7 @@ import sys
 
 import volatility.framework
 import volatility.plugins
-from volatility.framework import automagic
-from volatility.framework import constants, contexts, interfaces
+from volatility.framework import automagic, constants, contexts, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces.configuration import HierarchicalDict
 from volatility.framework.renderers.text import QuickTextRenderer
@@ -29,14 +28,14 @@ logging.basicConfig(filename = 'example.log',
                     format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt = '%m-%d %H:%M',
                     level = 0)
-vollog = logging.getLogger("volatility")
+vollog = logging.getLogger()
 console = logging.StreamHandler()
 # Trim the console down by default
-console.setLevel(logging.DEBUG)
+console.setLevel(logging.WARNING)
 formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
 console.setFormatter(formatter)
 
-logging.getLogger("").addHandler(console)
+vollog.addHandler(console)
 
 
 class CommandLine(object):
@@ -53,7 +52,7 @@ class CommandLine(object):
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
-        volatility.framework.import_files(volatility.plugins)
+        volatility.framework.import_files(volatility.plugins)  # Will not log as console's default level is WARNING
         automagics = automagic.available(ctx)
 
         plugin_list = {}
@@ -94,7 +93,7 @@ class CommandLine(object):
         args = parser.parse_args()
         if args.plugin is None:
             parser.error("Please select a plugin to run")
-        console.setLevel(10 - min(3, args.verbosity))
+        console.setLevel(30 - (args.verbosity * 10))
 
         plugin = plugin_list[args.plugin]
         plugin_config_path = interfaces.configuration.path_join('plugins', plugin.__name__)

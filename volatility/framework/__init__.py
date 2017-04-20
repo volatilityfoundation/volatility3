@@ -23,7 +23,7 @@ CURRENT = 0  # Number of releases of the library with any change
 REVISION = 0  # Number of changes that don't affect the interface
 AGE = 0  # Number of consecutive versions of the interface the current version supports
 
-vollog = logging.getLogger("volatility")
+vollog = logging.getLogger(__name__)
 
 
 def interface_version():
