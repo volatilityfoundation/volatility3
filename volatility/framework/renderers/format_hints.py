@@ -5,6 +5,9 @@ These hints allow a plugin to indicate how they'd like a particular column's dat
 Text renderers should attempt to honour all hints provided in this module where possible
 """
 
+class Bin(int):
+    """A class to indicate that the integer value should be represented as a binary value"""
+
 
 class Hex(int):
     """A class to indicate that the integer value should be represented as a hexidecimal value"""
