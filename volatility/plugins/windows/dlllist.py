@@ -1,12 +1,13 @@
 import volatility.framework.interfaces.plugins as plugins
 import volatility.plugins.windows.pslist as pslist
-from volatility.framework import exceptions
-from volatility.framework import renderers
+from volatility.framework import exceptions, renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 
 
 class DllList(plugins.PluginInterface):
+    """Lists the loaded modules in a particular memory image"""
+
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',

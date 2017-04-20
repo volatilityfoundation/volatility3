@@ -5,6 +5,8 @@ from volatility.framework.utility import adapters
 
 
 class PsList(plugins.PluginInterface):
+    """Lists the processes present in a particular memory image"""
+
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',

@@ -80,7 +80,7 @@ class CommandLine(object):
 
         subparser = parser.add_subparsers(title = "Plugins", dest = "plugin")
         for plugin in plugin_list:
-            plugin_parser = subparser.add_parser(plugin, help = plugin.__doc__)
+            plugin_parser = subparser.add_parser(plugin, help = plugin_list[plugin].__doc__)
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
             configurables_list[plugin] = plugin_list[plugin]
 
