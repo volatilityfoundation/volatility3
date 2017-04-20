@@ -210,7 +210,7 @@ class IntelPAE(Intel):
 
 class Intel32e(Intel):
     priority = 30
-    architecture = "Intel64"
+    _architecture = "Intel64"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
