@@ -98,6 +98,12 @@ class CommandLine(object):
         plugin = plugin_list[args.plugin]
         plugin_config_path = interfaces.configuration.path_join('plugins', plugin.__name__)
 
+        # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
+        if args.config:
+            with open(args.config, "r") as f:
+                json_val = json.load(f)
+                ctx.config.splice(plugin_config_path, HierarchicalDict(json_val))
+
         # Populate the context config based on the returned args
         # We have already determined these elements must be descended from ConfigurableInterface
         vargs = vars(args)
@@ -112,12 +118,6 @@ class CommandLine(object):
                         config_path = plugin_config_path
                     extended_path = interfaces.configuration.path_join(config_path, requirement.name)
                     ctx.config[extended_path] = value
-
-        # UI fills in the config:
-        if args.config:
-            with open(args.config, "r") as f:
-                json_val = json.load(f)
-                ctx.config.splice(plugin_config_path, HierarchicalDict(json_val))
 
         ###
         # BACK TO THE FRAMEWORK
@@ -134,8 +134,10 @@ class CommandLine(object):
 
         constructed = plugin(ctx, plugin_config_path)
 
-        with open("config.json", "w") as f:
-            json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
+        if args.verbosity >= 2:
+            vollog.debug("Writing out configuration data to config.json")
+            with open("config.json", "w") as f:
+                json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
         # Construct and run the plugin
         QuickTextRenderer().render(constructed.run())

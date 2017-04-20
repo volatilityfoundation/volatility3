@@ -11,8 +11,7 @@ import logging
 from urllib import parse
 
 import volatility
-from volatility.framework import configuration
-from volatility.framework import interfaces
+from volatility.framework import configuration, interfaces
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical
@@ -48,6 +47,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             vollog.info("Unable to run LayerStacker, unsatisfied requirement: {}".format(unsatisfied))
             return unsatisfied
         location = self.config["single_location"]
+        if not location:
+            vollog.info("Unable to run LayerStacker, single_location parameter not provided")
+            return []
         self._check_type(location, str)
         self._check_type(requirement, interfaces.configuration.RequirementInterface)
         location = parse.urlparse(location)
@@ -135,4 +137,4 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # This is not optional for the stacker to run, so optional must be marked as False
         return [requirements.StringRequirement("single_location",
                                                description = "Specifies a base location on which to stack",
-                                               optional = False)]
+                                               optional = True)]
