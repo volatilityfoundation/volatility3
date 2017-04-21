@@ -4,9 +4,8 @@ This has been made an object to allow quick swapping and changing of contexts, t
 to act on multiple different contexts without them interfering eith each other.
 """
 
-from volatility.framework import interfaces, symbols
+from volatility.framework import interfaces, symbols, constants
 from volatility.framework.interfaces.configuration import HierarchicalDict
-from volatility.framework.utility import adapters
 
 __author__ = 'mike'
 
@@ -97,9 +96,58 @@ class Context(interfaces.context.ContextInterface):
                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
                                                                                   offset = offset))
 
-    def object_factory(self, symbol_table):
-        """This method is DEPRECATED and provided only as a convenience.
+    def module(self, module_name, layer_name, offset):
+        """Create a module object """
 
-        It will be removed in volatility 3.0.0 final release.
+        return Module(self, module_name, layer_name, offset)
+
+
+class Module(interfaces.context.Module):
+    def object(self, symbol_name = None, type_name = None, offset = None, **kwargs):
+        """Returns an object created using the symbol_table and layer_name of the Module
+
+        @param symbol_name: Name of the symbol (within the module) to construct, type_name and offset must not be specified
+        @type symbol_name: str
+        @param type_name: Name of the type (within the module) to construct, offset must be specified and symbol_name must not
+        @type type_name: str
+        @param offset: The location (absolute within memory), type_name must be specified and symbol_name must not
+        @type offset: int
         """
-        return adapters.object_factory(self, symbol_table)
+        symbol_type = symbol_name and not (type_name or offset)
+        type_type = (type_name and offset) and not symbol_name
+        if symbol_type and type_type or not (symbol_type or type_type):
+            raise ValueError("One of symbol_name, or type_name & offset, must be specified to construct a module")
+        if symbol_type is not None:
+            self._check_type(symbol_name, str)
+            if constants.BANG in symbol_name:
+                raise ValueError("Symbol_name cannot reference another module")
+            symbol = self._context.symbol_space.get_symbol(self._module_name + constants.BANG + symbol_name)
+            if symbol.type is None:
+                raise ValueError("Symbol {} has no associated type information".format(symbol_name))
+            type_arg = symbol.type
+            offset = symbol.address + self._offset
+        else:
+            self._check_type(type_name, str)
+            self._check_type(offset, int)
+            if constants.BANG in type_name:
+                raise ValueError("Type_name cannot reference another module")
+            type_arg = self._module_name + constants.BANG + type_name
+        return self._context.object(type_arg, self._layer_name, offset, **kwargs)
+
+    def wrap(method):
+        """Returns a symbol using the symbol_table of the Module"""
+
+        def wrapper(self, name):
+            self._check_type(name, str)
+            if constants.BANG in name:
+                raise ValueError("Name cannot reference another module")
+            return getattr(self._context.symbol_space, method)(self._module_name + constants.BANG + name)
+
+        return wrapper
+
+    get_symbol = wrap('get_symbol')
+    get_type = wrap('get_type')
+    get_enum = wrap('get_enum')
+    has_symbol = wrap('has_symbol')
+    has_type = wrap('has_type')
+    has_enum = wrap('has_enum')

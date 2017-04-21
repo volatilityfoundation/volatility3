@@ -1,7 +1,6 @@
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
-from volatility.framework.utility import adapters
 
 
 class PsList(plugins.PluginInterface):
@@ -33,13 +32,13 @@ class PsList(plugins.PluginInterface):
         layer_name = self.config['primary']
 
         # We only use the object factory to demonstrate how to use one
-        object_factory = adapters.object_factory(self.context, "ntkrnlmp")
-
         kvo = self.config['primary.kernel_virtual_offset']
-        ps_aph_offset = kvo + self.context.symbol_space.get_symbol("ntkrnlmp!PsActiveProcessHead").address
-        list_entry = object_factory("_LIST_ENTRY", layer_name = layer_name, offset = ps_aph_offset)
+        ntkrnlmp = self.context.module("ntkrnlmp", layer_name = layer_name, offset = kvo)
+
+        ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
+        list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
         reloff = self.context.symbol_space.get_type("ntkrnlmp!_EPROCESS").relative_child_offset("ActiveProcessLinks")
-        eproc = object_factory("_EPROCESS", layer_name = layer_name, offset = list_entry.vol.offset - reloff)
+        eproc = ntkrnlmp.object(type_name = "_EPROCESS", offset = list_entry.vol.offset - reloff)
 
         for proc in eproc.ActiveProcessLinks:
             yield proc
