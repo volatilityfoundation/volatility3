@@ -155,7 +155,7 @@ class Version1Format(ISFormatTable):
         """Determines the appropriate native_types to use from the JSON data"""
         # TODO: Consider how to generate the natives entirely from the ISF
         classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
-        for nc in classes:
+        for nc in sorted(classes):
             native_class = classes[nc]
             for base_type in self._json_object['base_types']:
                 try:
@@ -310,7 +310,7 @@ class Version2Format(Version1Format):
     def _get_natives(self):
         """Determines the appropriate native_types to use from the JSON data"""
         classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
-        for nc in classes:
+        for nc in sorted(classes):
             native_class = classes[nc]
             for base_type in self._json_object['base_types']:
                 try:
