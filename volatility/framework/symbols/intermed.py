@@ -188,9 +188,7 @@ class Version1Format(ISFormatTable):
     @property
     def symbols(self):
         if not self._symbol_cache:
-            self._symbol_cache = [
-                interfaces.symbols.Symbol(name = x, address = self._json_object['symbols'][x]['address']) for
-                x in self._json_object['symbols']]
+            self._symbol_cache = [self.get_symbol(x) for x in self._json_object['symbols']]
         return self._symbol_cache
 
     # TODO: Add the ability to add/remove/change symbols after creation, note that this should invalidate the cache
@@ -356,6 +354,6 @@ class Version2_1Format(Version2Format):
         if not symbol:
             raise KeyError("Unknown symbol: {}".format(name))
         symbol_type = None
-        if type in symbol:
+        if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
         return interfaces.symbols.Symbol(name = name, address = symbol['address'], type = symbol_type)
