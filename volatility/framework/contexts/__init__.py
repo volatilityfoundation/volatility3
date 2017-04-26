@@ -4,7 +4,7 @@ This has been made an object to allow quick swapping and changing of contexts, t
 to act on multiple different contexts without them interfering eith each other.
 """
 
-from volatility.framework import interfaces, symbols, constants
+from volatility.framework import constants, interfaces, symbols
 from volatility.framework.interfaces.configuration import HierarchicalDict
 
 __author__ = 'mike'
@@ -89,7 +89,12 @@ class Context(interfaces.context.ContextInterface):
         :return: A fully constructed object
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
-        object_template = self._symbol_space.get_type(symbol)
+        if isinstance(symbol, interfaces.symbols.Symbol):
+            if not symbol.type:
+                raise ValueError("Symbol {} is emtpy, cannot construct corresponding object".format(symbol.name))
+            object_template = symbol.type
+        else:
+            object_template = self._symbol_space.get_type(symbol)
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
         return object_template(context = self,
@@ -123,8 +128,8 @@ class Module(interfaces.context.Module):
                 raise ValueError("Symbol_name cannot reference another module")
             symbol = self._context.symbol_space.get_symbol(self._module_name + constants.BANG + symbol_name)
             if symbol.type is None:
-                raise ValueError("Symbol {} has no associated type information".format(symbol_name))
-            type_arg = symbol.type
+                raise ValueError("Symbol {} has no associated type information".format(symbol.name))
+            type_arg = symbol
             offset = symbol.address + self._offset
         else:
             self._check_type(type_name, str)
@@ -134,6 +139,7 @@ class Module(interfaces.context.Module):
             type_arg = self._module_name + constants.BANG + type_name
         return self._context.object(type_arg, self._layer_name, offset, **kwargs)
 
+    @staticmethod
     def wrap(method):
         """Returns a symbol using the symbol_table of the Module"""
 

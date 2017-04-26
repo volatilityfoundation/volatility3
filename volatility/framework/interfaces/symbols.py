@@ -167,7 +167,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         if result == len(sort_symbols):
             raise StopIteration
         closest_symbol = sort_symbols[result][1]
-        if closest_symbol.offset == offset:
+        if closest_symbol.address == offset:
             yield closest_symbol.name
 
     @property
