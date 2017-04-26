@@ -392,4 +392,4 @@ class Version3_0Format(Version2_1Format):
                 format_str = format_str.lower() if current['signed'] or current['kind'] != 'int' else format_str.upper()
                 format_str = ('<' if current['endian'] == 'little' else '>') + format_str
                 native_dict[base_type] = (objects.Integer, format_str)
-        return native_dict
+        return native.NativeTable(name = self.name + "_natives", native_dictionary = native_dict)
