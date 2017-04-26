@@ -4,7 +4,7 @@ This has been made an object to allow quick swapping and changing of contexts, t
 to act on multiple different contexts without them interfering eith each other.
 """
 
-from volatility.framework import constants, interfaces, symbols
+from volatility.framework import constants, interfaces, objects, symbols
 from volatility.framework.interfaces.configuration import HierarchicalDict
 
 __author__ = 'mike'
@@ -80,7 +80,7 @@ class Context(interfaces.context.ContextInterface):
         Looks up the layername in the context, finds the object template based on the symbol,
         and constructs an object using the object template on the layer at the offset.
 
-        :param symbol: The name of the symbol type on which to construct the object.  This should contain an explicit table name.
+        :param symbol: The name (or template) of the symbol type on which to construct the object.  If this is a name, it should contain an explicit table name.
         :type symbol: str
         :param layer_name: The name of the layer on which to construct the object
         :type layer_name: str
@@ -89,11 +89,8 @@ class Context(interfaces.context.ContextInterface):
         :return: A fully constructed object
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
-        if isinstance(symbol, interfaces.symbols.Symbol):
-            if not symbol.type:
-                raise ValueError("Symbol {} is emtpy, cannot construct corresponding object".format(symbol.name))
-            object_template = symbol.type
-        else:
+        object_template = symbol
+        if not isinstance(symbol, objects.templates.ObjectTemplate):
             object_template = self._symbol_space.get_type(symbol)
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
@@ -129,7 +126,7 @@ class Module(interfaces.context.Module):
             symbol = self._context.symbol_space.get_symbol(self._module_name + constants.BANG + symbol_name)
             if symbol.type is None:
                 raise ValueError("Symbol {} has no associated type information".format(symbol.name))
-            type_arg = symbol
+            type_arg = symbol.type
             offset = symbol.address + self._offset
         else:
             self._check_type(type_name, str)
