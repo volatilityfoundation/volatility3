@@ -357,3 +357,37 @@ class Version2_1Format(Version2Format):
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
         return interfaces.symbols.Symbol(name = name, address = symbol['address'], type = symbol_type)
+
+
+class Version3_0Format(Version2_1Format):
+    """Class for stroing intermediate debugging data as objects and classes"""
+    current = 3
+    revision = 0
+    age = 0
+    version = (current - age, age, revision)
+
+    format_str_mapping = {'int': {1: 'b',
+                                  2: 'h',
+                                  4: 'i',
+                                  8: 'q'},
+                          'float': {2: 'e',
+                                    4: 'f',
+                                    8: 'd'},
+                          'void': {4: 'i'},
+                          'bool': {1: '?'},
+                          'char': {1: 'c'}}
+
+    def _get_natives(self):
+        """Determines the appropriate native_types to use from the JSON data"""
+        native_dict = {}
+        base_types = self._json_object['base_types']
+        for base_type in base_types:
+            current = base_types[base_type]
+            size_map = self.format_str_mapping.get(current['kind'], {})
+            format_str = size_map.get(current['size'], None)
+            if format_str is None:
+                raise ValueError("Unsupported kind/size combination in base_type {}".format(base_type))
+            format_str = format_str.lower() if current['signed'] or current['kind'] != 'int' else format_str.upper()
+            format_str = ('<' if current['endian'] == 'little' else '>') + format_str
+            native_dict[base_type] = (objects.Integer, format_str)
+        return native_dict
