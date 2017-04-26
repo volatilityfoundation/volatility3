@@ -4,7 +4,7 @@ This has been made an object to allow quick swapping and changing of contexts, t
 to act on multiple different contexts without them interfering eith each other.
 """
 
-from volatility.framework import constants, interfaces, objects, symbols
+from volatility.framework import constants, interfaces, symbols
 from volatility.framework.interfaces.configuration import HierarchicalDict
 
 __author__ = 'mike'
@@ -90,7 +90,7 @@ class Context(interfaces.context.ContextInterface):
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
         object_template = symbol
-        if not isinstance(symbol, objects.templates.Template):
+        if not isinstance(symbol, interfaces.objects.Template):
             object_template = self._symbol_space.get_type(symbol)
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
@@ -136,7 +136,6 @@ class Module(interfaces.context.Module):
             type_arg = self._module_name + constants.BANG + type_name
         return self._context.object(type_arg, self._layer_name, offset, **kwargs)
 
-    @staticmethod
     def wrap(method):
         """Returns a symbol using the symbol_table of the Module"""
 
