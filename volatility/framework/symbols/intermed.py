@@ -147,6 +147,7 @@ class Version1Format(ISFormatTable):
         self._json_object = json_object
         self._validate_json()
         nt = native_types or self._get_natives()
+        nt.name = name + "_natives"
         super().__init__(context, config_path, name, nt)
         self._overrides = {}
         self._symbol_cache = None
@@ -392,4 +393,4 @@ class Version3_0Format(Version2_1Format):
                 format_str = format_str.lower() if current['signed'] or current['kind'] != 'int' else format_str.upper()
                 format_str = ('<' if current['endian'] == 'little' else '>') + format_str
                 native_dict[base_type] = (objects.Integer, format_str)
-        return native.NativeTable(name = self.name + "_natives", native_dictionary = native_dict)
+        return native.NativeTable(name = "native", native_dictionary = native_dict)
