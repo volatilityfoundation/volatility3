@@ -90,7 +90,7 @@ class Context(interfaces.context.ContextInterface):
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
         object_template = symbol
-        if not isinstance(symbol, objects.templates.ObjectTemplate):
+        if not isinstance(symbol, objects.templates.Template):
             object_template = self._symbol_space.get_type(symbol)
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
