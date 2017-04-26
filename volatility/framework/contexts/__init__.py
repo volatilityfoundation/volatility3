@@ -104,6 +104,18 @@ class Context(interfaces.context.ContextInterface):
         return Module(self, module_name, layer_name, offset)
 
 
+def get_module_wrapper(method):
+    """Returns a symbol using the symbol_table of the Module"""
+
+    def wrapper(self, name):
+        self._check_type(name, str)
+        if constants.BANG in name:
+            raise ValueError("Name cannot reference another module")
+        return getattr(self._context.symbol_space, method)(self._module_name + constants.BANG + name)
+
+    return wrapper
+
+
 class Module(interfaces.context.Module):
     def object(self, symbol_name = None, type_name = None, offset = None, **kwargs):
         """Returns an object created using the symbol_table and layer_name of the Module
@@ -136,20 +148,9 @@ class Module(interfaces.context.Module):
             type_arg = self._module_name + constants.BANG + type_name
         return self._context.object(type_arg, self._layer_name, offset, **kwargs)
 
-    def wrap(method):
-        """Returns a symbol using the symbol_table of the Module"""
-
-        def wrapper(self, name):
-            self._check_type(name, str)
-            if constants.BANG in name:
-                raise ValueError("Name cannot reference another module")
-            return getattr(self._context.symbol_space, method)(self._module_name + constants.BANG + name)
-
-        return wrapper
-
-    get_symbol = wrap('get_symbol')
-    get_type = wrap('get_type')
-    get_enum = wrap('get_enum')
-    has_symbol = wrap('has_symbol')
-    has_type = wrap('has_type')
-    has_enum = wrap('has_enum')
+    get_symbol = get_module_wrapper('get_symbol')
+    get_type = get_module_wrapper('get_type')
+    get_enum = get_module_wrapper('get_enum')
+    has_symbol = get_module_wrapper('has_symbol')
+    has_type = get_module_wrapper('has_type')
+    has_enum = get_module_wrapper('has_enum')
