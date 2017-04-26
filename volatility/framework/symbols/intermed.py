@@ -382,12 +382,14 @@ class Version3_0Format(Version2_1Format):
         native_dict = {}
         base_types = self._json_object['base_types']
         for base_type in base_types:
-            current = base_types[base_type]
-            size_map = self.format_str_mapping.get(current['kind'], {})
-            format_str = size_map.get(current['size'], None)
-            if format_str is None:
-                raise ValueError("Unsupported kind/size combination in base_type {}".format(base_type))
-            format_str = format_str.lower() if current['signed'] or current['kind'] != 'int' else format_str.upper()
-            format_str = ('<' if current['endian'] == 'little' else '>') + format_str
-            native_dict[base_type] = (objects.Integer, format_str)
+            # Void are ignored because voids are not a volatility primitive, they are a specific Volatility object
+            if base_type != 'void':
+                current = base_types[base_type]
+                size_map = self.format_str_mapping.get(current['kind'], {})
+                format_str = size_map.get(current['size'], None)
+                if format_str is None:
+                    raise ValueError("Unsupported kind/size combination in base_type {}".format(base_type))
+                format_str = format_str.lower() if current['signed'] or current['kind'] != 'int' else format_str.upper()
+                format_str = ('<' if current['endian'] == 'little' else '>') + format_str
+                native_dict[base_type] = (objects.Integer, format_str)
         return native_dict
