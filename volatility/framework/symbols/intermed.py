@@ -342,9 +342,9 @@ class Version2Format(Version1Format):
                                                 members = members)
 
 
-class Version2_1Format(Version2Format):
+class Version3Format(Version2Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    current = 2
+    current = 3
     revision = 0
     age = 1
     version = (current - age, age, revision)
@@ -360,9 +360,9 @@ class Version2_1Format(Version2Format):
         return interfaces.symbols.Symbol(name = name, address = symbol['address'], type = symbol_type)
 
 
-class Version3_0Format(Version2_1Format):
-    """Class for stroing intermediate debugging data as objects and classes"""
-    current = 3
+class Version4Format(Version3Format):
+    """Class for storing intermediate debugging data as objects and classes"""
+    current = 4
     revision = 0
     age = 0
     version = (current - age, age, revision)
