@@ -115,7 +115,10 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             component_name = name_array[1]
             try:
                 return getattr(self._dict[table_name], get_function)(component_name)
-            except (exceptions.SymbolError, KeyError):
+            except KeyError as e:
+                vollog.debug('Type {} references missing Type/Symbol/Enum: {}'.format(name, e))
+                return self._UnresolvedTemplate(name)
+            except exceptions.SymbolError:
                 return self._UnresolvedTemplate(name)
         raise exceptions.SymbolError("Malformed name: {}".format(name))
 
