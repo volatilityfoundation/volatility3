@@ -3,7 +3,6 @@ Created on 7 May 2013
 
 @author: mike
 """
-
 import math
 import struct
 
@@ -11,42 +10,62 @@ from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
 
 
+class classproperty(object):
+    """Class property decorator"""
+
+    def __init__(self, func):
+        self._func = func
+
+    def __get__(self, owner_self, owner_cls):
+        return self._func(owner_cls)
+
+
 class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
 
     priority = 40
     _architecture = "Intel32"
+    _entry_format = "<I"
+    _page_size_in_bits = 12
+    _bits_per_register = 32
+    # NOTE: _maxphyaddr is MAXPHYADDR as defined in the Intel specs *NOT* the maximum physical address
+    _maxphyaddr = 32
+    _maxvirtaddr = 32
+    _structure = [('page directory', 10, False),
+                  ('page table', 10, True)]
 
     def __init__(self, context, config_path, name):
         super().__init__(context, config_path, name)
         self._base_layer = self._check_type(self.config["memory_layer"], str)
         self._page_map_offset = self._check_type(self.config["page_map_offset"], int)
         self._optimize_scan = False
-        # All Intel address spaces work on 4096 byte pages
-        self._page_size_in_bits = 12
 
         # These can vary depending on the type of space
-        self._entry_format = "<I"
-        self._bits_per_register = 32
-        # NOTE: _maxphyaddr is MAXPHYADDR as defined in the Intel specs *NOT* the maximum physical address
-        # Use bits_per_register to determine the range of an IntelTranslationLayer
-        self._maxphyaddr = 32
-        self._maxvirtaddr = self._maxphyaddr
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
-        self._structure = [('page directory', 10, False),
-                           ('page table', 10, True)]
 
-    @property
-    def bits_per_register(self):
-        return self._bits_per_register
+    @classproperty
+    def page_size(cls):
+        """Page size for the intel address space.
 
-    @property
-    def minimum_address(self):
+        All Intel address spaces work on 4096 byte pages"""
+        return 1 << cls._page_size_in_bits
+
+    @classproperty
+    def bits_per_register(cls):
+        """Returns the bits_per_register to determine the range of an IntelTranslationLayer"""
+        return cls._bits_per_register
+
+    @classproperty
+    def minimum_address(cls):
         return 0
 
-    @property
-    def maximum_address(self):
-        return (2 ** self._maxvirtaddr) - 1
+    @classproperty
+    def maximum_address(cls):
+        return (1 << cls._maxvirtaddr) - 1
+
+    @classproperty
+    def structure(cls):
+        return cls._structure
 
     @staticmethod
     def _mask(value, high_bit, low_bit):
@@ -193,38 +212,28 @@ class IntelPAE(Intel):
 
     priority = 35
     _architecture = "Intel32"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # These can vary depending on the type of space
-        self._entry_format = "<Q"
-        self._bits_per_register = 32
-        self._maxphyaddr = 40
-        self._maxvirtaddr = self._maxphyaddr
-        self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
-        self._structure = [('page directory pointer', 2, False),
-                           ('page directory', 9, True),
-                           ('page table', 9, True)]
+    _entry_format = "<Q"
+    _bits_per_register = 32
+    _maxphyaddr = 40
+    _maxvirtaddr = _maxphyaddr
+    _structure = [('page directory pointer', 2, False),
+                  ('page directory', 9, True),
+                  ('page table', 9, True)]
 
 
 class Intel32e(Intel):
+    """Class for handling 64-bit (32-bit extensions) for Intel architectures"""
+
     priority = 30
     _architecture = "Intel64"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # These can vary depending on the type of space
-        self._entry_format = "<Q"
-        self._bits_per_register = 64
-        self._maxphyaddr = 52
-        self._maxvirtaddr = 48
-        self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
-        self._structure = [('page map layer 4', 9, False),
-                           ('page directory pointer', 9, True),
-                           ('page directory', 9, True),
-                           ('page table', 9, True)]
+    _entry_format = "<Q"
+    _bits_per_register = 64
+    _maxphyaddr = 52
+    _maxvirtaddr = 48
+    _structure = [('page map layer 4', 9, False),
+                  ('page directory pointer', 9, True),
+                  ('page directory', 9, True),
+                  ('page table', 9, True)]
 
 
 class WindowsMixin(object):

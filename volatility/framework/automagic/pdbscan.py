@@ -21,7 +21,6 @@ if __name__ == "__main__":
 from volatility.framework import interfaces
 
 vollog = logging.getLogger(__name__)
-PAGE_SIZE = 0x1000
 
 
 class PdbSigantureScanner(interfaces.layers.ScannerInterface):
@@ -62,7 +61,7 @@ class PdbSigantureScanner(interfaces.layers.ScannerInterface):
             sig = data.find(b"RSDS", sig + 1)
 
 
-def scan(ctx, layer_name, progress_callback = None, start = None, end = None):
+def scan(ctx, layer_name, page_size, progress_callback = None, start = None, end = None):
     """Scans through `layer_name` at `ctx` looking for RSDS headers that indicate one of four common pdb kernel names
        (as listed in `self.pdb_names`) and returns the tuple (GUID, age, pdb_name, signature_offset, mz_offset)
 
@@ -85,15 +84,15 @@ def scan(ctx, layer_name, progress_callback = None, start = None, end = None):
                                                                                min_address = start,
                                                                                max_address = end):
         mz_offset = None
-        sig_pfn = signature_offset // PAGE_SIZE
+        sig_pfn = signature_offset // page_size
 
         for i in range(sig_pfn, min_pfn, -1):
-            if not ctx.memory[layer_name].is_valid(i * PAGE_SIZE, 2):
+            if not ctx.memory[layer_name].is_valid(i * page_size, 2):
                 break
 
-            data = ctx.memory[layer_name].read(i * PAGE_SIZE, 2)
+            data = ctx.memory[layer_name].read(i * page_size, 2)
             if data == b'MZ':
-                mz_offset = i * PAGE_SIZE
+                mz_offset = i * page_size
                 break
         min_pfn = sig_pfn
 
@@ -151,8 +150,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             # FIXME: Determine the physical layer no matter the virtual layer
             virtual_layer_name = context.config.get(sub_config_path, None)
             layer_name = context.config.get(interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
+            page_size = context.memory[virtual_layer_name].page_size
             if layer_name:
-                results = {virtual_layer_name: scan(context, layer_name, progress_callback = progress_callback)}
+                results = {virtual_layer_name: scan(context,
+                                                    layer_name,
+                                                    page_size,
+                                                    progress_callback = progress_callback)}
         else:
             for subreq in requirement.requirements.values():
                 results.update(self.recurse_pdb_finder(context, sub_config_path, subreq))
@@ -308,7 +311,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             potential_mz = vlayer.read(offset = address, length = 2)
                             if potential_mz == b"MZ":
                                 subscan = scan(context, virtual_layer_name, start = address, end = address + (1 << 26),
-                                               progress_callback = progress_callback)
+                                               page_size = vlayer.page_size, progress_callback = progress_callback)
                                 for result in subscan:
                                     valid_kernels[virtual_layer_name] = (address, result)
                                     break

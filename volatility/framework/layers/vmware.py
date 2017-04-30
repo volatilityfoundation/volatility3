@@ -6,8 +6,6 @@ from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical, segmented
 from volatility.framework.symbols import native
 
-PAGE_SIZE = 0x1000
-
 
 class VmwareLayer(segmented.SegmentedLayer):
     provides = {"type": "physical"}
@@ -20,6 +18,7 @@ class VmwareLayer(segmented.SegmentedLayer):
         # Construct these so we can use self.config
         self._context = context
         self._config_path = config_path
+        self._page_size = 0x1000
         self._base_layer, self._meta_layer = self.config["base_layer"], self.config["meta_layer"]
         # Then call the super, which will call load_segments (which needs the base_layer before it'll work)
         super().__init__(context, config_path = config_path, name = name)
@@ -81,9 +80,9 @@ class VmwareLayer(segmented.SegmentedLayer):
         if tags[("regionsCount", ())][1] == 0:
             raise ValueError("VMware VMEM is not split into regions")
         for region in range(tags[("regionsCount", ())][1]):
-            offset = tags[("regionPPN", (region,))][1] * PAGE_SIZE
-            mapped_offset = tags[("regionPageNum", (region,))][1] * PAGE_SIZE
-            length = tags[("regionSize", (region,))][1] * PAGE_SIZE
+            offset = tags[("regionPPN", (region,))][1] * self._page_size
+            mapped_offset = tags[("regionPageNum", (region,))][1] * self._page_size
+            length = tags[("regionSize", (region,))][1] * self._page_size
             self._segments.append((offset, mapped_offset, length))
 
     @property

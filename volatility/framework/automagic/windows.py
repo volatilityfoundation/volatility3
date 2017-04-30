@@ -30,8 +30,6 @@ from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
-PAGE_SIZE = 0x1000
-
 
 class DtbTest(validity.ValidityRoutines):
     """This class generically contains the tests for a page based on a set of class parameters
@@ -41,11 +39,12 @@ class DtbTest(validity.ValidityRoutines):
     """
 
     def __init__(self, layer_type = None, ptr_struct = None, ptr_reference = None, mask = None):
-        self.layer_type = self._check_class(layer_type, interfaces.layers.TranslationLayerInterface)
+        self.layer_type = self._check_class(layer_type, layers.intel.Intel)
         self.ptr_struct = self._check_type(ptr_struct, str)
         self.ptr_size = struct.calcsize(ptr_struct)
         self.ptr_reference = self._check_type(ptr_reference, int)
         self.mask = self._check_type(mask, int)
+        self.page_size = layer_type.page_size
 
     def _unpack(self, value):
         return struct.unpack("<" + self.ptr_struct, value)[0]
@@ -84,9 +83,9 @@ class DtbTest(validity.ValidityRoutines):
         :type data_offset: int
         :return: A valid DTB within this page
         """
-        page = data[dtb - data_offset:dtb - data_offset + PAGE_SIZE]
+        page = data[dtb - data_offset:dtb - data_offset + self.page_size]
         usr_count, sup_count = 0, 0
-        for i in range(0, PAGE_SIZE, self.ptr_size):
+        for i in range(0, self.page_size, self.ptr_size):
             val = self._unpack(page[i:i + self.ptr_size])
             if val & 0x1:
                 sup_count += 0 if (val & 0x4) else 1
@@ -156,11 +155,11 @@ class DtbSelfReferential(DtbTest):
                          mask = mask)
 
     def __call__(self, data, data_offset, page_offset):
-        page = data[page_offset:page_offset + PAGE_SIZE]
+        page = data[page_offset:page_offset + self.page_size]
         if not page:
             return
         ref_pages = set()
-        for ref in range(0, PAGE_SIZE, self.ptr_size):
+        for ref in range(0, self.page_size, self.ptr_size):
             ptr_data = page[ref:ref + self.ptr_size]
             if len(ptr_data) == self.ptr_size:
                 ptr, = struct.unpack(self.ptr_struct, ptr_data)
@@ -202,7 +201,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
             results[test] = set()
 
         for test in self.tests:
-            for page_offset in range(0, len(data), PAGE_SIZE):
+            for page_offset in range(0, len(data), 0x1000):
                 result = test(data, data_offset, page_offset)
                 if result is not None:
                     yield (test, result)
