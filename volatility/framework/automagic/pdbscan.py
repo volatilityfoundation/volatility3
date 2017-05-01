@@ -150,8 +150,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             # FIXME: Determine the physical layer no matter the virtual layer
             virtual_layer_name = context.config.get(sub_config_path, None)
             layer_name = context.config.get(interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
-            page_size = context.memory[virtual_layer_name].page_size
-            if layer_name:
+            if layer_name and virtual_layer_name:
+                page_size = context.memory[virtual_layer_name].page_size
                 results = {virtual_layer_name: scan(context,
                                                     layer_name,
                                                     page_size,
