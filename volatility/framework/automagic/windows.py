@@ -234,12 +234,16 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
             # Once an appropriate class has been chosen, attempt to determine the page_map_offset value
             if ("memory_layer" in requirement.requirements and
                     not requirement.requirements["memory_layer"].unsatisfied(context, sub_config_path)):
-                physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
-                hits = context.memory[physical_layer].scan(context, PageMapScanner(useful), progress_callback)
-                for test, dtb in hits:
-                    context.config[interfaces.configuration.path_join(sub_config_path, "page_map_offset")] = dtb
-                    requirement.construct(context, config_path)
-                    break
+                # Only bother getting the DTB if we don't already have one
+                if not context.config.get(interfaces.configuration.path_join(sub_config_path, "page_map_offset"), None):
+                    physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
+                    hits = context.memory[physical_layer].scan(context, PageMapScanner(useful), progress_callback)
+                    for test, dtb in hits:
+                        context.config[interfaces.configuration.path_join(sub_config_path, "page_map_offset")] = dtb
+                        break
+                    else:
+                        return
+                requirement.construct(context, config_path)
         else:
             for subreq in requirement.requirements.values():
                 self(context, sub_config_path, subreq)
