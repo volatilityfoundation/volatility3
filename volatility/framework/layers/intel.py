@@ -30,7 +30,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     _bits_per_register = 32
     # NOTE: _maxphyaddr is MAXPHYADDR as defined in the Intel specs *NOT* the maximum physical address
     _maxphyaddr = 32
-    _maxvirtaddr = 32
+    _maxvirtaddr = _maxphyaddr
     _structure = [('page directory', 10, False),
                   ('page table', 10, True)]
 
