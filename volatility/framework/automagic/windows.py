@@ -27,6 +27,7 @@ import struct
 
 from volatility.framework import interfaces, layers, validity
 from volatility.framework.configuration import requirements
+from volatility.framework.layers import intel
 
 vollog = logging.getLogger(__name__)
 
@@ -260,8 +261,11 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
         that range, and ignore any that contain multiple self-references (since the DTB is very unlikely to point to
         itself more than once).
         """
+        if isinstance(context.memory[layer_name], intel.Intel):
+            return None
         hits = context.memory[layer_name].scan(context, PageMapScanner(WintelHelper.tests))
         layer = None
+        config_path = None
         for test, dtb in hits:
             new_layer_name = context.memory.free_layer_name("IntelLayer")
             config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
@@ -288,7 +292,7 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
                 # TODO: Need to determine the layer type (chances are high it's x64, hence this default)
                 layer = layers.intel.Intel32e(context, config_path = config_path, name = new_layer_name)
-        if layer is not None:
+        if layer is not None and config_path:
             vollog.debug("DTB was found at: 0x{:0x}".format(
                 context.config[interfaces.configuration.path_join(config_path, "page_map_offset")]))
         return layer
