@@ -73,18 +73,15 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
         try:
             next_table = self._physical_layer.read(next_table_offset, self._layer_class.page_size)
         except exceptions.InvalidAddressException:
-            print("Failing, invalid address {}".format(hex(next_table_offset)))
             return False
 
         calcsize = struct.calcsize('<' + str(2 ** size) + format_str)
         if calcsize > self._layer_class.page_size:
-            print(size, format_str)
             raise ValueError("Size of number of entries cannot exceed a single page")
         new_entries = struct.unpack('<' + str(2 ** size) + format_str, next_table)
         for new_entry in new_entries:
             if self.test_entry(new_entry, level + 1):
                 return True
-        print("Dropped out with no success: {}".format(name))
         return False
 
     def __call__(self, data, data_offset):
@@ -173,7 +170,7 @@ class NlpDtbStacker(interfaces.automagic.StackerLayerInterface):
         layer, dtb = None, 0
         for layer_class in validity_tests:
             scanner = NlpDtbScanner(layer_class, context.memory[layer_name])
-            results = list(context.memory[layer_name].scan(context, scanner, progress_callback))
+            results = context.memory[layer_name].scan(context, scanner, progress_callback)
             for dtb, valid_entries in results:
                 if scanner.test_entries(valid_entries):
                     new_layer_name = context.memory.free_layer_name("IntelLayer")
