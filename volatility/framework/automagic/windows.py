@@ -209,12 +209,11 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
 
 
 class WintelHelper(interfaces.automagic.AutomagicInterface):
-    """This class if both an :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` and a
-    :class:`~volatility.framework.interfaces.automagic.StackerLayerInterface` class.
+    """This class adheres to the :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` interface
+    and both determines the directory table base of an intel layer if one hasn't been specified, and constructs
+    the intel layer if necessary (for example when reconstructing a pre-existing configuration).
 
-    It will both scan for existing TranslationLayers that do not have a DTB and scan for them using
-    the :class:`PageMapScanner`, and also act as a stacker when a
-    :class:`~volatility.framework.interfaces.configuration.TranslationLayerRequirement` has not been fulfilled"""
+    It will scan for existing TranslationLayers that do not have a DTB  using the :class:`PageMapScanner"""
     priority = 20
     stack_order = 90
     tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
