@@ -43,6 +43,11 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
                 return True
         return False
 
+    def _get_mask(self, value):
+        """Returns a value that correctly masks all numbers less than that of value"""
+        bits = int(math.ceil(math.log(value, 2)))
+        return (1 << (bits + 1)) - 1
+
     def test_entry(self, entry, level = 0):
         """Tests an individual entry at a particular level in the structure"""
         name, size, large_page = self._layer_class.structure[level]
@@ -68,7 +73,7 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
         # We're going to check all entries, so we don't need to figure out indexes
         # or cut up any addresses
         page_bits = math.ceil(math.log2(self._layer_class.page_size))
-        next_table_offset = (entry & self._layer_class.maximum_address) >> page_bits
+        next_table_offset = (entry & self._get_mask(self._layer_class.maximum_address)) >> page_bits
 
         try:
             next_table = self._physical_layer.read(next_table_offset, self._layer_class.page_size)
