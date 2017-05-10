@@ -67,8 +67,8 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
 
         # We're going to check all entries, so we don't need to figure out indexes
         # or cut up any addresses
-        maxvirtaddr_bits = math.ceil(math.log2(self._layer_class.maximum_address + 1))
-        next_table_offset = (entry & ((2 ** (maxvirtaddr_bits + 1)) - 1)) >> self._layer_class.page_size
+        page_bits = math.ceil(math.log2(self._layer_class.page_size))
+        next_table_offset = (entry & self._layer_class.maximum_address) >> page_bits
 
         try:
             next_table = self._physical_layer.read(next_table_offset, self._layer_class.page_size)
