@@ -19,8 +19,6 @@ from volatility.framework import constants
 from volatility.framework import validity
 from volatility.framework.interfaces.context import ContextInterface
 
-__author__ = 'mike'
-
 CONFIG_SEPARATOR = "."
 """Use to specify the separator between configuration hierarchies"""
 

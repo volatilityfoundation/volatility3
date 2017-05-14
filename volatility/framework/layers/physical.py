@@ -1,9 +1,3 @@
-"""
-Created on 6 May 2013
-
-@author: mike
-"""
-
 import os.path
 
 from volatility.framework import exceptions, interfaces

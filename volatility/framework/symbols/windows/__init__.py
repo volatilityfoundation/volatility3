@@ -2,8 +2,6 @@ from volatility.framework.configuration import requirements
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
 
-__author__ = 'mike'
-
 
 class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
     provides = {"type": "interface"}

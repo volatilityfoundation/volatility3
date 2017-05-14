@@ -1,8 +1,3 @@
-"""
-Created on 1 Mar 2013
-
-@author: mike
-"""
 import logging
 
 from volatility.framework import interfaces, validity

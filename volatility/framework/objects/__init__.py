@@ -1,9 +1,3 @@
-"""
-Created on 17 Feb 2013
-
-@author: mike
-"""
-
 import collections
 import struct
 

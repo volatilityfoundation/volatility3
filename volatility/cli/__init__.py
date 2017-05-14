@@ -21,8 +21,6 @@ from volatility.framework.configuration import requirements
 from volatility.framework.interfaces.configuration import HierarchicalDict
 from volatility.framework.renderers.text import QuickTextRenderer
 
-__author__ = 'mike'
-
 # Make sure we log everything
 logging.basicConfig(filename = 'example.log',
                     format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',

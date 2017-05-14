@@ -1,8 +1,3 @@
-"""
-Created on 10 Apr 2013
-
-@author: mike
-"""
 import copy
 
 from volatility.framework import constants, interfaces, objects

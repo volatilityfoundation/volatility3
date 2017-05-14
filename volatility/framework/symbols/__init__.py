@@ -1,9 +1,3 @@
-"""
-Created on 7 Feb 2013
-
-@author: mike
-"""
-
 import collections
 import collections.abc
 import enum

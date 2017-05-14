@@ -1,8 +1,3 @@
-"""
-Created on 7 May 2013
-
-@author: mike
-"""
 import math
 import struct
 

@@ -7,8 +7,6 @@ to act on multiple different contexts without them interfering eith each other.
 from volatility.framework import constants, interfaces, symbols
 from volatility.framework.interfaces.configuration import HierarchicalDict
 
-__author__ = 'mike'
-
 
 class Context(interfaces.context.ContextInterface):
     """Maintains the context within which to construct objects
