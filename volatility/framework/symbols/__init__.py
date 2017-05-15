@@ -4,7 +4,7 @@ import enum
 import logging
 
 from volatility.framework import constants, exceptions, interfaces, objects
-from volatility.framework.symbols import native, windows
+from volatility.framework.symbols import native, windows, linux
 
 vollog = logging.getLogger(__name__)
 
