@@ -5,4 +5,5 @@
 """
 from volatility.framework import constants
 
-__path__ = constants.PLUGINS_PATH
+if not __path__:
+    __path__ = constants.PLUGINS_PATH

@@ -48,6 +48,18 @@ class CommandLine(object):
 
         volatility.framework.require_interface_version(0, 0, 0)
 
+        parser = argparse.ArgumentParser(prog = 'volatility',
+                                         description = "An open-source memory forensics framework")
+        parser.add_argument("-c", "--config", help = "Load the configuration from a json file", default = None,
+                            type = str)
+        parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
+        parser.add_argument("-p", "--plugins", help = "Semi-colon separated list of paths to find plugins",
+                            default = "", type = str)
+
+        partial_args, _ = parser.parse_known_args()
+        if partial_args.plugins:
+            volatility.plugins.__path__ = partial_args.plugins.split(";") + constants.PLUGINS_PATH
+
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
         volatility.framework.import_files(volatility.plugins)  # Will not log as console's default level is WARNING
@@ -59,12 +71,6 @@ class CommandLine(object):
             if plugin_name.startswith("volatility.plugins."):
                 plugin_name = plugin_name[len("volatility.plugins."):]
             plugin_list[plugin_name] = plugin
-
-        parser = argparse.ArgumentParser(prog = 'volatility',
-                                         description = "An open-source memory forensics framework")
-        parser.add_argument("-c", "--config", help = "Load the configuration from a json file", default = None,
-                            type = str)
-        parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
 
         seen_automagics = set()
         configurables_list = {}
