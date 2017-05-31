@@ -23,7 +23,7 @@ from volatility.framework import interfaces
 vollog = logging.getLogger(__name__)
 
 
-class PdbSigantureScanner(interfaces.layers.ScannerInterface):
+class PdbSignatureScanner(interfaces.layers.ScannerInterface):
     """A :class:`~volatility.framework.interfaces.layers.ScannerInterface` based scanner use to identify Windows PDB records
 
     :param pdb_names: A list of bytestrings, used to match pdb signatures against the pdb names within the records.
@@ -79,7 +79,7 @@ def scan(ctx, layer_name, page_size, progress_callback = None, start = None, end
         b"ntoskrnl.pdb",
     ]
 
-    for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(ctx, PdbSigantureScanner(pdb_names),
+    for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(ctx, PdbSignatureScanner(pdb_names),
                                                                                progress_callback = progress_callback,
                                                                                min_address = start,
                                                                                max_address = end):
