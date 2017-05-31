@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     for (filename, layername) in scan_layers:
         print("[*] Scanning " + filename + "...")
-        hits = scan(ctx, layername)
+        hits = scan(ctx, layername, page_size = layers.intel.Intel.page_size)
         if hits:
             for hit in hits:
                 GUID = hit["GUID"]
