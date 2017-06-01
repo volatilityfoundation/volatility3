@@ -2,7 +2,7 @@ import logging
 import math
 import struct
 
-from volatility.framework import interfaces, exceptions
+from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel
 
@@ -134,7 +134,8 @@ class NlpDtbfinder(interfaces.automagic.AutomagicInterface):
     def __call__(self, context, config_path, requirement, progress_callback = None):
         results = {}
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        if (isinstance(requirement, requirements.TranslationLayerRequirement) and
+        if (not interfaces.configuration.path_join(sub_config_path, "page_map_offset") in context.config and
+                isinstance(requirement, requirements.TranslationLayerRequirement) and
                 requirement.requirements.get("class", None)):
             class_req = requirement.requirements["class"]
             for layer_class in validity_tests:
