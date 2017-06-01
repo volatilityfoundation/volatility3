@@ -52,9 +52,9 @@ class CommandLine(object):
                                          description = "An open-source memory forensics framework")
         parser.add_argument("-c", "--config", help = "Load the configuration from a json file", default = None,
                             type = str)
-        parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
         parser.add_argument("-p", "--plugins", help = "Semi-colon separated list of paths to find plugins",
                             default = "", type = str)
+        parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
 
         partial_args, _ = parser.parse_known_args()
         if partial_args.plugins:
