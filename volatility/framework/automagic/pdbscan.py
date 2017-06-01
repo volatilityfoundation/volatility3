@@ -301,7 +301,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     seen = set()
                     for result in results:
                         # TODO: Identify the specific structure we're finding and document this a bit better
-                        pointer = context.object("pdbscan!unsigned long long", offset = (result - 16 - 8),
+                        pointer = context.object("pdbscan!unsigned long long",
+                                                 offset = (result - 16 - int(vlayer.bits_per_register / 8)),
                                                  layer_name = physical_layer_name)
                         address = pointer & vlayer.address_mask
                         if address in seen:
