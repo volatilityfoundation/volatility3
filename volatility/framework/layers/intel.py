@@ -190,6 +190,17 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             else:
                 # TODO: We've already done the translation, so don't bother doing it again
                 data_to_scan += [(layer_name, address, chunk_size)]
+
+            # We can't actually use scanned_pairs because the user might want to find duplicate instances
+            # throughout the top layer, not just the one actual copy of the data in the bottom layer.
+            # We'd need to re-architect the scanner API to pass through multiple data_offsets to the scanners
+            # Then we'd also then need to batch all the data_offsets up until the end (so we know we're handing
+            # them a complete list) or we'd have to be able to add relevant offsets as they're found.
+            # All in all, massive complexity for little benefit in efficiency.
+            #
+            # At the moment, the following line is only good when you want *a* hit but don't care which one.
+            #    scanned_pairs.add((previous, address))
+
             previous = address
             chunk_end += chunk_size
 
