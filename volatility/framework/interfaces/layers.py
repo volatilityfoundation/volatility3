@@ -8,7 +8,7 @@ import math
 import multiprocessing
 from abc import ABCMeta, abstractmethod, abstractproperty
 
-from volatility.framework import exceptions, validity
+from volatility.framework import constants, exceptions, validity
 from volatility.framework.interfaces import configuration, context
 
 vollog = logging.getLogger(__name__)
@@ -186,7 +186,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
             scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
             scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
             scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
-            if scanner.thread_safe:
+            if scanner.thread_safe and constants.DISABLE_MULTITHREADED_SCANNING:
                 with multiprocessing.Pool() as pool:
                     result = pool.map_async(scan_chunk, scan_iterator())
                     while not result.ready():
