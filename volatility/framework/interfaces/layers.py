@@ -196,8 +196,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                         # Ensures we don't burn CPU cycles going round in a ready waiting loop
                         # without delaying the user too long between progress updates/results
                         result.wait(0.1)
-                    for result in result.get():
-                        yield from result
+                    for value in result.get():
+                        yield from value
             else:
                 for value in scan_iterator():
                     if progress_callback:
