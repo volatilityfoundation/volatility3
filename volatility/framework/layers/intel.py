@@ -1,8 +1,11 @@
+import logging
 import math
 import struct
 
 from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
+
+vollog = logging.getLogger(__name__)
 
 
 class classproperty(object):
@@ -178,7 +181,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             try:
                 address, page_size, layer_name = self._translate(chunk_end)
                 chunk_size = page_size - (address & (page_size - 1))
-            except exceptions.PagedInvalidAddressException as e:
+            except exceptions.InvalidAddressException:
                 address, chunk_size, layer_name = None, 1 << self._page_size_in_bits, ''
             # We've come to a break, so scan what we've seen so far
             if address is None or (previous, address) in scanned_pairs:
@@ -194,7 +197,12 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         data_to_scan, chunk_end = iterator_value
         data = b''
         for layer_name, address, chunk_size in data_to_scan:
-            data += self.context.memory[layer_name].read(address, chunk_size)
+            try:
+                data += self.context.memory[layer_name].read(address, chunk_size)
+            except exceptions.InvalidAddressException:
+                vollog.debug(
+                    "Invalid address in layer {} found scanning {} at address {:x}".format(layer_name, self.name,
+                                                                                           address))
         progress.value = chunk_end
         return list(scanner(data, chunk_end - len(data_to_scan)))
 
