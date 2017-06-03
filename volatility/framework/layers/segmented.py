@@ -1,8 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from bisect import bisect_right
 
-from volatility.framework import exceptions
-from volatility.framework import interfaces
+from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
 
 
@@ -46,7 +45,7 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
         if not self._segments:
             self._load_segments()
 
-        'Find rightmost value less than or equal to x'
+        # Find rightmost value less than or equal to x
         i = bisect_right(self._segments, (offset, self.context.memory[self._base_layer].maximum_address))
         if i:
             if not next:
