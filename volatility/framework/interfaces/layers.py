@@ -8,7 +8,7 @@ import math
 import multiprocessing
 from abc import ABCMeta, abstractmethod, abstractproperty
 
-from volatility.framework import exceptions, validity
+from volatility.framework import constants, exceptions, validity
 from volatility.framework.interfaces import configuration, context
 
 vollog = logging.getLogger(__name__)
@@ -186,7 +186,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
             scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
             scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
             scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
-            if scanner.thread_safe:
+            if scanner.thread_safe and not constants.DISABLE_MULTITHREADED_SCANNING:
                 with multiprocessing.Pool() as pool:
                     result = pool.map_async(scan_chunk, scan_iterator())
                     while not result.ready():
@@ -196,8 +196,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                         # Ensures we don't burn CPU cycles going round in a ready waiting loop
                         # without delaying the user too long between progress updates/results
                         result.wait(0.1)
-                    for result in result.get():
-                        yield from result
+                    for value in result.get():
+                        yield from value
             else:
                 for value in scan_iterator():
                     if progress_callback:

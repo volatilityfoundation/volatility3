@@ -265,7 +265,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 vlayer = context.memory[virtual_layer_name]
                 physical_layer_name = context.config.get(
                     interfaces.configuration.path_join(vlayer.config_path, 'memory_layer'), None)
-                found = False
                 kvo_path = interfaces.configuration.path_join(virtual_config_path, 'kernel_virtual_offset')
                 for kernel in kernels:
                     # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
