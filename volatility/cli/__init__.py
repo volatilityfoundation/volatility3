@@ -56,7 +56,10 @@ class CommandLine(object):
                             default = "", type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
 
-        partial_args, _ = parser.parse_known_args()
+        # We have to filter out help, otherwise parse_known_args will trigger the help message before having
+        # processed the plugin choice or had the plugin subparser added.
+        known_args = [arg for arg in sys.argv if arg != '--help' and arg != '-h']
+        partial_args, _ = parser.parse_known_args(known_args)
         if partial_args.plugins:
             volatility.plugins.__path__ = partial_args.plugins.split(";") + constants.PLUGINS_PATH
 
