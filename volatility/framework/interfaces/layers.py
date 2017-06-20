@@ -6,7 +6,7 @@ import functools
 import logging
 import math
 import multiprocessing
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants, exceptions, validity
 from volatility.framework.interfaces import configuration, context
@@ -109,11 +109,13 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         """Returns the layer name"""
         return self._name
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def maximum_address(self):
         """Returns the maximum valid address of the space"""
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def minimum_address(self):
         """Returns the minimum valid address of the space"""
 

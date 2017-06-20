@@ -5,7 +5,7 @@ of symbols that can be used to interpret data in a layer.  The context also prov
 notably the object constructor function, `object`, which will construct a symbol on a layer at a particular offset.
 """
 import copy
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
 
@@ -21,11 +21,13 @@ class ContextInterface(object, metaclass = ABCMeta):
 
     # ## Symbol Space Functions
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def config(self):
         """Returns the configuration object for this context"""
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def symbol_space(self):
         """Returns the symbol_space for the context
 
@@ -34,7 +36,8 @@ class ContextInterface(object, metaclass = ABCMeta):
 
     # ## Memory Functions
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def memory(self):
         """Returns the memory object for the context"""
         raise NotImplementedError("Memory has not been implemented.")
