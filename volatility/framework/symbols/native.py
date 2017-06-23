@@ -18,7 +18,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             {'enum', 'array', 'bitfield', 'void', 'pointer', 'string', 'bytes', 'function'})
 
     def get_type_class(self, name):
-        ntype, fmt = native_types.get(name, (objects.Integer, ''))
+        ntype, fmt = self._native_dictionary.get(name, (objects.Integer, ''))
         return ntype
 
     @property

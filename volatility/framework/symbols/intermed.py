@@ -367,16 +367,16 @@ class Version4Format(Version3Format):
     age = 0
     version = (current - age, age, revision)
 
-    format_str_mapping = {'int': {1: 'b',
-                                  2: 'h',
-                                  4: 'i',
-                                  8: 'q'},
-                          'float': {2: 'e',
-                                    4: 'f',
-                                    8: 'd'},
-                          'void': {4: 'i'},
-                          'bool': {1: '?'},
-                          'char': {1: 'c'}}
+    format_str_mapping = {'int': ({1: 'b',
+                                   2: 'h',
+                                   4: 'i',
+                                   8: 'q'}, objects.Integer),
+                          'float': ({2: 'e',
+                                     4: 'f',
+                                     8: 'd'}, objects.Float),
+                          'void': ({4: 'i'}, objects.Integer),
+                          'bool': ({1: '?'}, objects.Integer),
+                          'char': ({1: 'c'}, objects.Char)}
 
     def _get_natives(self):
         """Determines the appropriate native_types to use from the JSON data"""
@@ -386,11 +386,13 @@ class Version4Format(Version3Format):
             # Void are ignored because voids are not a volatility primitive, they are a specific Volatility object
             if base_type != 'void':
                 current = base_types[base_type]
-                size_map = self.format_str_mapping.get(current['kind'], {})
+                size_map, object_type = self.format_str_mapping.get(current['kind'], ({}, None))
                 format_str = size_map.get(current['size'], None)
-                if format_str is None:
+                if format_str is None or object_type is None:
                     raise ValueError("Unsupported kind/size combination in base_type {}".format(base_type))
                 format_str = format_str.lower() if current['signed'] or current['kind'] != 'int' else format_str.upper()
                 format_str = ('<' if current['endian'] == 'little' else '>') + format_str
-                native_dict[base_type] = (objects.Integer, format_str)
+                if base_type == 'pointer':
+                    object_type = objects.Pointer
+                native_dict[base_type] = (object_type, format_str)
         return native.NativeTable(name = "native", native_dictionary = native_dict)
