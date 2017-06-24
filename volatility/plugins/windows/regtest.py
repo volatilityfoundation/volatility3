@@ -33,3 +33,5 @@ class RegTest(plugins.PluginInterface):
         registry_config_path = configuration.path_join(self.config_path, 'registry')
         registry_layer = RegistryHive(self.context, registry_config_path, name = 'hive0', os = 'Windows')
         self.context.memory.add_layer(registry_layer)
+        root_node = registry_layer.get_cell(registry_layer.root_cell)
+        print("Signature:", root_node.u.KeyNode.Signature.cast("string", max_length = 2))

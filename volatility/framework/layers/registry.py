@@ -30,6 +30,19 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         self.mapping(self._base_block.RootCell, length = 2)
 
+    @property
+    def root_cell(self):
+        return self._base_block.RootCell
+
+    def get_cell(self, cell_offset):
+        offset = self._translate(cell_offset)
+        # This should be an _HCELL, but they don't exist in half the IFF files we've got.
+        # Instead we pull out the cell (but current ignore the size)
+        # TODO: Fix all of this, all of it, every last bit.
+        return self._context.object(symbol = self._table_name + constants.BANG + "_CELL_DATA",
+                                    offset = offset + 4,
+                                    layer_name = self._base_layer)
+
     @staticmethod
     def _mask(value, high_bit, low_bit):
         """Returns the bits of a value between highbit and lowbit inclusive"""
@@ -65,18 +78,32 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         if (length < 0):
             raise ValueError("Mapping length of RegistryHive must be positive or zero")
 
+        response = []
         while length > 0:
-            hbin_offset = self._translate(self._mask(offset, 32, 12))
-            hbin = self.context.object(self._table_name + constants.BANG + "_HBIN",
-                                       offset = hbin_offset,
-                                       layer_name = self._base_layer)
-            if hbin.Signature != 'hbin':
-                raise RegistryFormatException("HBIN header not found")
-            print(hex(hbin.Size))
-            suboffset = self._translate(offset)
-        print("MAPPED to", hex(suboffset))
+            # Try using the symbol first
+            hbin_offset = self._translate(self._mask(offset, 31, 12))
+            try:
+                hbin_size = self.context.object(self._table_name + constants.BANG + "_HBIN",
+                                                offset = hbin_offset,
+                                                layer_name = self._base_layer).Size
+            except exceptions.SymbolError:
+                # TODO: Find the correct symbol to get this directly
+                hbin_size = self.context.object(self._table_name + constants.BANG + "unsigned long",
+                                                offset = hbin_offset + 8,
+                                                layer_name = self._base_layer)
 
-        print(self.context.memory[self._base_layer].read(0xc6201000, 0x100))
+            # Now get the cell's offset and figure out if it goes outside the bin
+            # We could use some invariants such as whether cells always fit within a bin?
+            translated_offset = self._translate(offset)
+            if translated_offset + length > hbin_offset + hbin_size:
+                usable_size = (hbin_offset + hbin_size - translated_offset)
+                response.append((offset, translated_offset, usable_size, self._base_layer))
+                length -= usable_size
+                offset += usable_size
+            else:
+                response.append((offset, translated_offset, length, self._base_layer))
+                length -= length
+        return response
 
     @property
     def dependencies(self):
