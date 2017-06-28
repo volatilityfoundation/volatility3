@@ -55,6 +55,7 @@ class CommandLine(object):
         parser.add_argument("-p", "--plugins", help = "Semi-colon separated list of paths to find plugins",
                             default = "", type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
+        parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -130,7 +131,10 @@ class CommandLine(object):
         # BACK TO THE FRAMEWORK
         ###
         # Clever magic figures out how to fulfill each requirement that might not be fulfilled
-        automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
+        if not args.quiet:
+            automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
+        else:
+            automagic.run(automagics, ctx, plugin, "plugins")
 
         # Check all the requirements and/or go back to the automagic step
         unsatisfied = plugin.unsatisfied(ctx, plugin_config_path)
