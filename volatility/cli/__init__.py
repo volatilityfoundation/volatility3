@@ -22,17 +22,13 @@ from volatility.framework.interfaces.configuration import HierarchicalDict
 from volatility.framework.renderers.text import QuickTextRenderer
 
 # Make sure we log everything
-logging.basicConfig(filename = 'example.log',
-                    format = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt = '%m-%d %H:%M',
-                    level = 0)
 vollog = logging.getLogger()
-console = logging.StreamHandler()
+vollog.setLevel(0)
 # Trim the console down by default
+console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
 formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
 console.setFormatter(formatter)
-
 vollog.addHandler(console)
 
 
@@ -56,6 +52,8 @@ class CommandLine(object):
                             default = "", type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
+        parser.add_argument("-l", "--log", help = "Log output to a file as well as the console", default = None,
+                            type = str)
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -63,6 +61,15 @@ class CommandLine(object):
         partial_args, _ = parser.parse_known_args(known_args)
         if partial_args.plugins:
             volatility.plugins.__path__ = partial_args.plugins.split(";") + constants.PLUGINS_PATH
+
+        if partial_args.log:
+            file_logger = logging.FileHandler(partial_args.log)
+            file_logger.setLevel(0)
+            file_formatter = logging.Formatter(datefmt = '%y-%m-%d %H:%M:%S',
+                                               fmt = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+            file_logger.setFormatter(file_formatter)
+            vollog.addHandler(file_logger)
+            vollog.info("Logging started")
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
