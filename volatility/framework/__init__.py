@@ -1,5 +1,8 @@
 """Volatility 3 framework"""
 import inspect
+import logging
+import os
+import sys
 
 # ##
 #
@@ -13,9 +16,6 @@ import inspect
 # 2. If the interface has changed, increment current, set revision to 0
 # 3. If only additions to the interface have been made, increment age
 # 4. If changes or removals of the interface have been made, set age to 0
-import logging
-import os
-import sys
 
 # We use the libtool library versioning
 
@@ -23,12 +23,13 @@ CURRENT = 0  # Number of releases of the library with any change
 REVISION = 0  # Number of changes that don't affect the interface
 AGE = 0  # Number of consecutive versions of the interface the current version supports
 
-vollog = logging.getLogger(__name__)
-
 
 def interface_version():
     """Provides the so version number of the library"""
     return CURRENT - AGE, AGE, REVISION
+
+
+vollog = logging.getLogger(__name__)
 
 
 def require_interface_version(*args):
@@ -46,12 +47,31 @@ def require_interface_version(*args):
                         ".".join([str(x) for x in args[0:2]])))
 
 
+class noninheritable(object):
+    def __init__(self, f, cls):
+        self.f = f
+        self.cls = cls
+
+    def __get__(self, obj, type = None):
+        if type == self.cls:
+            if hasattr(self.f, '__get__'):
+                return self.f.__get__(obj, type)
+            return self.f
+        raise AttributeError
+
+
+def hide_from_subclasses(cls):
+    cls.hidden = noninheritable(True, cls)
+    return cls
+
+
 def class_subclasses(cls):
     """Returns all the (recursive) subclasses of a given class"""
     if not inspect.isclass(cls):
         raise TypeError("class_subclasses parameter not a valid class: {}".format(cls))
     for clazz in cls.__subclasses__():
-        yield clazz
+        if not hasattr(clazz, 'hidden') or not clazz.hidden:
+            yield clazz
         for return_value in class_subclasses(clazz):
             yield return_value
 
