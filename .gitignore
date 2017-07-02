@@ -1,6 +1,15 @@
+# Python generated files
 __pycache__
 *.pyc
+
+# Sphinx generated files
 doc/build
 doc/source/volatility.*
+
+# Pycharm/PyDev development files
 workspace.xml
 .idea
+
+# Manually generated files
+stubs
+volatility/symbols/windows/*.pdb
