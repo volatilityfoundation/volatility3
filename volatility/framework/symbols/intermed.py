@@ -109,12 +109,12 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     def _closest_version(self, version, versions):
         """Determines the highest suitable handler for specified version format
         
-        An interface version such as Current.Age.Revision means that (Current - Age) of the provider must be equal to that of the
+        An interface version such as (Current-Age).Age.Revision means that (Current - Age) of the provider must be equal to that of the
           consumer, and the provider (the JSON in this instance) must have a greater age (indicating that only additive
           changes have been made) than the consumer (in this case, the file reader).
         """
         supported, age, revision = [int(x) for x in version.split(".")]
-        supported_versions = [x for x in versions.keys() if x[0] == (supported - age) and x[1] >= age]
+        supported_versions = [x for x in versions.keys() if x[0] == supported and x[1] >= age]
         if not supported_versions:
             raise ValueError(
                 "No Intermediate Format interface versions support file interface version: {}".format(version))
@@ -396,3 +396,22 @@ class Version4Format(Version3Format):
                     object_type = objects.Pointer
                 native_dict[base_type] = (object_type, format_str)
         return native.NativeTable(name = "native", native_dictionary = native_dict)
+
+
+class Version5Format(Version4Format):
+    """Class for storing intermediate debugging data as objects and classes"""
+    current = 5
+    revision = 0
+    age = 1
+    version = (current - age, age, revision)
+
+    def get_symbol(self, name):
+        """Returns the location offset given by the symbol name"""
+        symbol = self._json_object['symbols'].get(name, None)
+        if not symbol:
+            raise KeyError("Unknown symbol: {}".format(name))
+        symbol_type = None
+        if 'type' in symbol:
+            symbol_type = self._interdict_to_template(symbol['type'])
+        return interfaces.symbols.Symbol(name = name, address = symbol['address'], type = symbol_type,
+                                         constant_data = symbol.get('constant_data', None))

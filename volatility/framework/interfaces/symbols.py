@@ -11,17 +11,22 @@ from volatility.framework.interfaces import configuration, objects
 class Symbol(validity.ValidityRoutines):
     """Contains information about a named location in a program's memory"""
 
-    def __init__(self, name, address, type = None):
+    def __init__(self, name, address, type = None, constant_data = None):
         self._name = self._check_type(name, str)
         if constants.BANG in self._name:
             raise ValueError("Symbol names cannot contain the symbol differentiator ({})".format(constants.BANG))
+
+        # Scope can be added at a later date
         self._location = None
         self._address = self._check_type(address, int)
+
         self._type = None
         if type is not None:
             self._type = self._check_type(type, objects.Template)
 
-            # Scope and location can be added at a later date
+        self._constant_data = None
+        if constant_data is not None:
+            self._constant_data = self._check_type(bytes, constant_data)
 
     @property
     def name(self):
@@ -37,6 +42,10 @@ class Symbol(validity.ValidityRoutines):
     def address(self):
         """Returns the relative address of the symbol within the compilation unit"""
         return self._address
+
+    @property
+    def constant_data(self):
+        return self._constant_data
 
 
 class SymbolSpaceInterface(collections.abc.Mapping):
