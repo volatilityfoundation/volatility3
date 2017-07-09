@@ -7,7 +7,7 @@ from volatility.framework import constants
 
 vollog = logging.getLogger(__name__)
 
-cached_validation_filepath = os.path.join(constants.CACHE_PATH, "valid_idf.cache")
+cached_validation_filepath = os.path.join(constants.CACHE_PATH, "valid_isf.cache")
 
 
 def load_cached_validations():
