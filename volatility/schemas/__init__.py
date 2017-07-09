@@ -44,9 +44,14 @@ def validate(input, use_cache = True):
     return valid(input, schema, use_cache)
 
 
+def create_json_hash(input, schema):
+    """Constructs the hash of the input and schema to create a unique indentifier for a particular JSON file"""
+    return hashlib.sha1(bytes(json.dumps((input, schema), sort_keys = True), 'utf-8')).hexdigest()
+
+
 def valid(input, schema, use_cache = True):
     """Validates a json schema"""
-    input_hash = hashlib.sha1(bytes(json.dumps((input, schema), sort_keys = True), 'utf-8')).hexdigest()
+    input_hash = create_json_hash(input, schema)
     if input_hash in cached_validations and use_cache:
         return True
     try:
