@@ -1,3 +1,4 @@
+import base64
 import copy
 import json
 import logging
@@ -411,5 +412,8 @@ class Version5Format(Version4Format):
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
+        symbol_constant_data = None
+        if 'constant_data' in symbol:
+            symbol_constant_data = base64.b64decode(symbol.get('constant_data'))
         return interfaces.symbols.Symbol(name = name, address = symbol['address'], type = symbol_type,
-                                         constant_data = symbol.get('constant_data', None))
+                                         constant_data = symbol_constant_data)
