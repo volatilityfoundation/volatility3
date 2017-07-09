@@ -26,7 +26,7 @@ class Symbol(validity.ValidityRoutines):
 
         self._constant_data = None
         if constant_data is not None:
-            self._constant_data = self._check_type(bytes, constant_data)
+            self._constant_data = self._check_type(constant_data, bytes)
 
     @property
     def name(self):
