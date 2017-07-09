@@ -8,6 +8,8 @@ import sys
 
 PLUGINS_PATH = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins")),
                 os.path.abspath(os.path.join(os.path.dirname(__file__), "plugins"))]
+SYMBOL_BASEPATHS = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "symbols")),
+                    os.path.abspath(os.path.join(os.path.dirname(__file__), "symbols"))]
 BANG = "!"
 PACKAGE_VERSION = "3.0.0_alpha1"
 DISABLE_MULTITHREADED_SCANNING = False

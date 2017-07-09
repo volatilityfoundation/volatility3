@@ -88,9 +88,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         This will attempt to load .json and .json.xz files
         """
-        base_core = os.path.dirname(__file__)
-        base_user = os.path.join(os.path.dirname(os.path.dirname(base_core)), 'symbols')
-        search_paths = [base_user, base_core]
+        search_paths = constants.SYMBOL_BASEPATHS
         isf_url = None
         for path in search_paths:
             # Favour specific name, over uncompressed JSON (user-editable), over compressed JSON over uncompressed files
