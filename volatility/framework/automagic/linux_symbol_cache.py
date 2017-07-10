@@ -1,9 +1,12 @@
+import logging
 import os
 import pathlib
 import pickle
 
 from volatility.framework import interfaces, constants
 from volatility.framework.symbols import intermed
+
+vollog = logging.getLogger(__name__)
 
 cached_linuxbanner_filepath = os.path.join(constants.CACHE_PATH, "linux_banners.cache")
 
@@ -36,6 +39,8 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
                     cacheables.remove(json_file)
 
         total = len(cacheables)
+        if total > 0:
+            vollog.info("Building linux caches...")
         for current in range(total):
             progress_callback(current / total)
             isf_url = cacheables[current]
