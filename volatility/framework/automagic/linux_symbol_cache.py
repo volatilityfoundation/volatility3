@@ -44,7 +44,9 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
                 # Loading the symbol table will be very slow until it's been validated
                 isf = intermed.IntermediateSymbolTable(context, config_path, "temp", isf_url)
 
-                # We should store the banner against the filename and the json/schema hash
+                # We should store the banner against the filename
+                # We don't bother with the hash (it'll likely take too long to validate)
+                # but we should check at least that the banner matches on load.
                 banner = isf.get_symbol("linux_banner").constant_data
                 bannerlist = linuxbanners.get(banner, [])
                 bannerlist.append(isf_url)
