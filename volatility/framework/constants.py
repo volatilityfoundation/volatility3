@@ -23,3 +23,5 @@ if sys.platform == 'windows':
 else:
     CACHE_PATH = os.path.join(os.path.expanduser("~"), ".cache", "volatility3")
 os.makedirs(CACHE_PATH, exist_ok = True)
+
+LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")

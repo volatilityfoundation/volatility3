@@ -8,8 +8,6 @@ from volatility.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
 
-cached_linuxbanner_filepath = os.path.join(constants.CACHE_PATH, "linux_banners.cache")
-
 
 class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
     """Class to run through all Linux symbols tables and cache their banners"""
@@ -19,8 +17,8 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
         # We only need to be called once, so no recursion necessary
 
         linuxbanners = {}
-        if os.path.exists(cached_linuxbanner_filepath):
-            with open(cached_linuxbanner_filepath, "rb") as f:
+        if os.path.exists(constants.LINUX_BANNERS_PATH):
+            with open(constants.LINUX_BANNERS_PATH, "rb") as f:
                 # We use pickle over JSON because we're dealing with bytes objects
                 linuxbanners.update(pickle.load(f))
 
@@ -59,5 +57,5 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
             except KeyError:
                 pass
 
-        with open(cached_linuxbanner_filepath, "wb") as f:
+        with open(constants.LINUX_BANNERS_PATH, "wb") as f:
             pickle.dump(linuxbanners, f)
