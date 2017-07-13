@@ -1,6 +1,8 @@
 import re
 
 from volatility.framework.interfaces import layers
+from volatility.framework.layers.scanners import pyahocorasick
+from volatility.framework.layers.scanners.suffix_tree import SuffixTree
 
 
 class BytesScanner(layers.ScannerInterface):
@@ -20,6 +22,7 @@ class BytesScanner(layers.ScannerInterface):
 
 
 class RegExScanner(layers.ScannerInterface):
+    # TODO: Document why this isn't thread safe?
     thread_safe = False
 
     def __init__(self, pattern, flags = 0):
