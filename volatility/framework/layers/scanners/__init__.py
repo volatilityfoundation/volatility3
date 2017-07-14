@@ -1,8 +1,6 @@
 import re
 
 from volatility.framework.interfaces import layers
-from volatility.framework.layers.scanners import pyahocorasick
-from volatility.framework.layers.scanners.suffix_tree import SuffixTree
 
 
 class BytesScanner(layers.ScannerInterface):
