@@ -163,6 +163,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         """Scans a Translation layer by chunk
 
            Note: this will skip missing/unmappable chunks of memory
+           It will also potentially return results out-of-order based on generators returning as quickly as possible
         """
         if progress_callback is not None:
             self._check_type(progress_callback, collections.Callable)
@@ -190,16 +191,11 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
             scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
             if scanner.thread_safe and not constants.DISABLE_MULTITHREADED_SCANNING:
                 with multiprocessing.Pool() as pool:
-                    result = pool.map_async(scan_chunk, scan_iterator())
-                    while not result.ready():
+                    for result in pool.imap_unordered(scan_chunk, scan_iterator()):
                         if progress_callback:
                             # Run the progress_callback
                             progress_callback(scan_metric(progress.value), "Scanning {}".format(self.name))
-                        # Ensures we don't burn CPU cycles going round in a ready waiting loop
-                        # without delaying the user too long between progress updates/results
-                        result.wait(0.1)
-                    for value in result.get():
-                        yield from value
+                        yield from result
             else:
                 for value in scan_iterator():
                     if progress_callback:
