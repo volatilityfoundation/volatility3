@@ -23,6 +23,9 @@ class WuManber(object):
     def preprocess(self):
         """Preprocesses the patterns by populating the three arrays"""
 
+        if not self._patterns:
+            raise ValueError("No Linux symbols/banner patterns available")
+
         # Set the minimun pattern length
         self.minimum_pattern_length = min([len(pattern) for pattern in self._patterns])
 
