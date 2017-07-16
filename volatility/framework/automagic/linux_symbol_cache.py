@@ -57,5 +57,6 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
             except KeyError:
                 pass
 
-        with open(constants.LINUX_BANNERS_PATH, "wb") as f:
-            pickle.dump(linuxbanners, f)
+            # Rewrite the cached linuxbanners each run, since writing is faster than the cache validation portion
+            with open(constants.LINUX_BANNERS_PATH, "wb") as f:
+                pickle.dump(linuxbanners, f)
