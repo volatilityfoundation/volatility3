@@ -2,7 +2,6 @@ import re
 
 from volatility.framework.interfaces import layers
 from volatility.framework.layers.scanners import wumanber
-from volatility.framework.layers.scanners.suffix_tree import SuffixTree
 
 
 class BytesScanner(layers.ScannerInterface):
@@ -46,20 +45,12 @@ class MultiStringScanner(layers.ScannerInterface):
         super().__init__()
         self._check_type(patterns, list)
         self._patterns = wumanber.WuManber()
-        try:
-            for pattern in patterns:
-                self._check_type(pattern, bytes)
-                self._patterns.add_pattern(pattern)
-            self._patterns.preprocess()
-        except Exception as e:
-            print(repr(e))
+        for pattern in patterns:
+            self._check_type(pattern, bytes)
+            self._patterns.add_pattern(pattern)
+        self._patterns.preprocess()
 
     def __call__(self, data, data_offset):
         """Runs through the data looking for the needles"""
-        try:
-            for pattern, offset in self._patterns.search(data):
-                yield offset + data_offset, pattern
-        except Exception as e:
-            import pdb
-            pdb.post_mortem()
-            print("EXCEPTION", repr(e))
+        for offset, pattern in self._patterns.search(data):
+            yield offset + data_offset, pattern
