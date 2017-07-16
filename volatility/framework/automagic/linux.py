@@ -90,4 +90,24 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                                  swapper_pg_dir_text.index(b"=") + 1:swapper_pg_dir_text.index(b"\n")], 16)
             swapper_pg_dirs.append(swapper_pg_dir)
 
-        best_swapper_pg_dir = list(reversed(sorted(set(swapper_pg_dirs), key = lambda x: swapper_pg_dirs.count(x))))[0]
+        if swapper_pg_dirs:
+            best_swapper_pg_dir = \
+                list(reversed(sorted(set(swapper_pg_dirs), key = lambda x: swapper_pg_dirs.count(x))))[0]
+
+            if best_swapper_pg_dir > 0xffffffff80000000:
+                shift = 0xffffffff80000000
+                layer_class = intel.Intel32e
+            else:
+                shift = 0xc0000000
+                layer_class = intel.Intel
+            dtb = best_swapper_pg_dir - shift
+
+            new_layer_name = context.memory.free_layer_name("IntelLayer")
+            config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
+            context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
+            context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = dtb
+
+            layer = layer_class(context, config_path = config_path, name = new_layer_name)
+        if layer:
+            vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
+        return layer
