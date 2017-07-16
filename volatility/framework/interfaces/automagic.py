@@ -47,6 +47,32 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
     def __call__(self, context, config_path, configurable, progress_callback = None):
         """Runs the automagic over the configurable"""
 
+    def find_requirements(self, context, config_path, requirement_root, requirement_type, shortcut = True):
+        """Determines if there is actually an unfulfilled symbol requirement waiting
+
+        This ensures we do not carry out an expensive search when there is no requirement for a particular symbol table.
+
+        :param context: Context on which to operate
+        :type context: ~volatility.framework.interfaces.context.ContextInterface
+        :param config_path: Configuration path of the top-level requirement
+        :type config_path: str
+        :param requirement: Top-level requirement whose subrequirements will all be searched
+        :type requirement: ~volatility.framework.interfaces.configuration.RequirementInterface
+        :return: A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
+        """
+        sub_config_path = interfaces_configuration.path_join(config_path, requirement_root.name)
+        results = []
+        recurse = not shortcut
+        if isinstance(requirement_root, requirement_type):
+            if not shortcut or requirement_root.unsatisfied(context, config_path):
+                results.append((config_path, sub_config_path, requirement_root))
+        else:
+            recurse = True
+        if recurse:
+            for subreq in requirement_root.requirements.values():
+                results += self.find_requirements(context, sub_config_path, subreq, requirement_type, shortcut)
+        return results
+
 
 class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class that takes a lower layer and attempts to build on it

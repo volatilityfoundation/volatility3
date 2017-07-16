@@ -161,30 +161,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 results.update(self.recurse_pdb_finder(context, sub_config_path, subreq))
         return results
 
-    def recurse_symbol_requirements(self, context, config_path, requirement):
-        """Determines if there is actually an unfulfilled symbol requirement waiting
-
-        This ensures we do not carry out an expensive search when there is no requirement for a particular symbol table.
-
-        :param context: Context on which to operate
-        :type context: ~volatility.framework.interfaces.context.ContextInterface
-        :param config_path: Configuration path of the top-level requirement
-        :type config_path: str
-        :param requirement: Top-level requirement whose subrequirements will all be searched
-        :type requirement: ~volatility.framework.interfaces.configuration.RequirementInterface
-        :return: A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
-        """
-        sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        results = []
-        if isinstance(requirement, interfaces.configuration.SymbolRequirement):
-            # TODO: check if this is a windows symbol requirement, otherwise ignore it
-            if requirement.unsatisfied(context, config_path):
-                results.append((config_path, sub_config_path, requirement))
-        else:
-            for subreq in requirement.requirements.values():
-                results += self.recurse_symbol_requirements(context, sub_config_path, subreq)
-        return results
-
     def recurse_symbol_fulfiller(self, context):
         """Fulfills the SymbolRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
 
@@ -326,12 +302,15 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def __call__(self, context, config_path, requirement, progress_callback = None):
         # TODO: Check if we really need to search for pdbs
-        if "pdbscan" not in context.symbol_space:
-            context.symbol_space.append(native.NativeTable("pdbscan", native.std_ctypes))
-        self._symbol_requirements = self.recurse_symbol_requirements(context, config_path, requirement)
-        if self._symbol_requirements:
-            potential_kernels = self.recurse_pdb_finder(context, config_path, requirement, progress_callback)
-            self.valid_kernels = self.determine_valid_kernels(context, potential_kernels, progress_callback)
-            if self.valid_kernels:
-                self.recurse_symbol_fulfiller(context)
-                self.set_kernel_virtual_offset(context)
+        if requirement.unsatisfied(context, config_path):
+            if "pdbscan" not in context.symbol_space:
+                context.symbol_space.append(native.NativeTable("pdbscan", native.std_ctypes))
+            # TODO: check if this is a windows symbol requirement, otherwise ignore it
+            self._symbol_requirements = self.find_requirements(context, config_path, requirement,
+                                                               interfaces.configuration.SymbolRequirement)
+            if self._symbol_requirements:
+                potential_kernels = self.recurse_pdb_finder(context, config_path, requirement, progress_callback)
+                self.valid_kernels = self.determine_valid_kernels(context, potential_kernels, progress_callback)
+                if self.valid_kernels:
+                    self.recurse_symbol_fulfiller(context)
+                    self.set_kernel_virtual_offset(context)
