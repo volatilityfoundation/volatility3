@@ -68,7 +68,7 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
 
 class LintelStacker(interfaces.automagic.StackerLayerInterface):
     linux_signature = b"SYMBOL\(swapper_pg_dir\)=.*"
-    stack_order = 9
+    stack_order = 12
 
     @classmethod
     def stack(cls, context, layer_name, progress_callback = None):
