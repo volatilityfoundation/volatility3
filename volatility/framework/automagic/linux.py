@@ -44,6 +44,11 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
     def _banner_scan(self, context, config_path, requirement, layer_name, progress_callback = None):
         """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
         and scans the layer for linux banners"""
+
+        # Bomb out early if there's no banners
+        if not self._linux_banners:
+            return
+
         mss = scanners.MultiStringScanner(list(self._linux_banners))
 
         layer = context.memory[layer_name]
