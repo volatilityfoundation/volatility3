@@ -2,6 +2,7 @@ import logging
 import os
 import pathlib
 import pickle
+from urllib import parse
 
 from volatility.framework import interfaces, constants
 from volatility.framework.symbols import intermed
@@ -12,15 +13,33 @@ vollog = logging.getLogger(__name__)
 class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
     """Class to run through all Linux symbols tables and cache their banners"""
 
-    def __call__(self, context, config_path, configurable, progress_callback = None):
-        """Runs the automagic over the configurable"""
-        # We only need to be called once, so no recursion necessary
-
+    @classmethod
+    def load_linux_banners(cls):
         linuxbanners = {}
         if os.path.exists(constants.LINUX_BANNERS_PATH):
             with open(constants.LINUX_BANNERS_PATH, "rb") as f:
                 # We use pickle over JSON because we're dealing with bytes objects
                 linuxbanners.update(pickle.load(f))
+
+        # Remove possibilities that can't exist locally.
+        for banner in linuxbanners:
+            for path in linuxbanners[banner]:
+                url = parse.urlparse(path)
+                if url.scheme == 'file' and not os.path.exists(url.path):
+                    vollog.log(constants.LOGLEVEL_V,
+                               "Removing cached path {} for banner {}: files does not exist".format(path, banner))
+                    linuxbanners[banner].remove(path)
+        return linuxbanners
+
+    @classmethod
+    def save_linux_banners(cls, linuxbanners):
+        with open(constants.LINUX_BANNERS_PATH, "wb") as f:
+            pickle.dump(linuxbanners, f)
+
+    def __call__(self, context, config_path, configurable, progress_callback = None):
+        """Runs the automagic over the configurable"""
+        # We only need to be called once, so no recursion necessary
+        linuxbanners = self.load_linux_banners()
 
         search_paths = constants.SYMBOL_BASEPATHS
         cacheables = []
@@ -58,5 +77,4 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
                 pass
 
             # Rewrite the cached linuxbanners each run, since writing is faster than the cache validation portion
-            with open(constants.LINUX_BANNERS_PATH, "wb") as f:
-                pickle.dump(linuxbanners, f)
+            self.save_linux_banners(linuxbanners)

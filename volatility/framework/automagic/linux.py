@@ -1,8 +1,7 @@
 import logging
-import os
-import pickle
 
-from volatility.framework import interfaces, constants
+from volatility.framework import interfaces
+from volatility.framework.automagic import linux_symbol_cache
 from volatility.framework.layers import intel, scanners
 
 vollog = logging.getLogger(__name__)
@@ -14,8 +13,7 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
     def __init__(self, context, config_path):
         super().__init__(context, config_path)
         self._requirements = None
-        self._linux_banners = {}
-        self._load_linux_banners()
+        self._linux_banners = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
 
     def __call__(self, context, config_path, requirement, progress_callback = None):
         """Searches for LinuxSymbolRequirements and attempt to populate them"""
@@ -34,12 +32,6 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                         physical_path = interfaces.configuration.path_join(tl_sub_path, "memory_layer")
                         self._banner_scan(context, path, requirement, context.config[physical_path],
                                           progress_callback)
-
-    def _load_linux_banners(self):
-        if os.path.exists(constants.LINUX_BANNERS_PATH):
-            with open(constants.LINUX_BANNERS_PATH, "rb") as f:
-                # We use pickle over JSON because we're dealing with bytes objects
-                self._linux_banners.update(pickle.load(f))
 
     def _banner_scan(self, context, config_path, requirement, layer_name, progress_callback = None):
         """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
