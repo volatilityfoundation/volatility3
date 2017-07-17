@@ -70,6 +70,7 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
                 # We don't bother with the hash (it'll likely take too long to validate)
                 # but we should check at least that the banner matches on load.
                 banner = isf.get_symbol("linux_banner").constant_data
+                vollog.log(constants.LOGLEVEL_V, "Caching banner {} for file {}".format(banner, isf_url))
                 bannerlist = linuxbanners.get(banner, [])
                 bannerlist.append(isf_url)
                 linuxbanners[banner] = bannerlist
