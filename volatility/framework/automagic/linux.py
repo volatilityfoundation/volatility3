@@ -41,7 +41,7 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
         if not self._linux_banners:
             return
 
-        mss = scanners.MultiStringScanner(list(self._linux_banners))
+        mss = scanners.MultiStringScanner([x for x in self._linux_banners if x is not None])
 
         layer = context.memory[layer_name]
 

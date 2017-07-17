@@ -29,8 +29,6 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
                     vollog.log(constants.LOGLEVEL_V,
                                "Removing cached path {} for banner {}: files does not exist".format(path, banner))
                     linuxbanners[banner].remove(path)
-        # Rewrite it in case we found any files that were no logner present
-        cls.save_linux_banners(linuxbanners)
         return linuxbanners
 
     @classmethod
