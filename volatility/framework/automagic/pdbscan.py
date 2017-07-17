@@ -7,6 +7,7 @@
 import logging
 import math
 import os
+import pathlib
 import struct
 
 from volatility.framework import exceptions, layers
@@ -186,7 +187,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             prefix = os.path.abspath(os.path.join(__file__, prefix))
                         for suffix in self.suffixes:
                             if os.path.exists(os.path.join(prefix, midfix + suffix)):
-                                isf_path = "file://" + os.path.abspath(os.path.join(prefix, midfix + suffix))
+                                isf_path = pathlib.Path(os.path.abspath(os.path.join(prefix, midfix + suffix))).as_uri()
                     if isf_path:
                         vollog.debug("Using symbol library: {}".format(midfix))
                         clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"

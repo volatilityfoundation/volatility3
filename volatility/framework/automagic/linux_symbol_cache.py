@@ -25,7 +25,7 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
         for banner in linuxbanners:
             for path in linuxbanners[banner]:
                 url = parse.urlparse(path)
-                if url.scheme == 'file' and not os.path.exists(url.path):
+                if url.scheme == 'file' and not os.path.exists(parse.unquote(url.path)):
                     vollog.log(constants.LOGLEVEL_V,
                                "Removing cached path {} for banner {}: files does not exist".format(path, banner))
                     linuxbanners[banner].remove(path)
