@@ -64,7 +64,7 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
 
             try:
                 # Loading the symbol table will be very slow until it's been validated
-                isf = intermed.IntermediateSymbolTable(context, config_path, "temp", isf_url)
+                isf = intermed.IntermediateSymbolTable(context, config_path, "temp", isf_url, validate = False)
 
                 # We should store the banner against the filename
                 # We don't bother with the hash (it'll likely take too long to validate)

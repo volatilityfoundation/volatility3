@@ -51,12 +51,29 @@ def _construct_delegate_function(name, is_property = False):
 
 
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
-    def __init__(self, context, config_path, name, isf_filepath, native_types = None):
+    def __init__(self, context, config_path, name, isf_filepath, native_types = None, validate = True):
+        """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
+        appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
+        done.
+
+        :param context:
+        :type context:
+        :param config_path:
+        :type config_path:
+        :param name:
+        :type name:
+        :param isf_filepath:
+        :type isf_filepath:
+        :param native_types:
+        :type native_types:
+        :param validate: Determines whether the ISF file will be validated against the appropriate schema
+        :type validate: bool
+        """
         # Check there are no obvious errors
         url = urllib.parse.urlparse(isf_filepath)
         if url.scheme != 'file':
             raise NotImplementedError(
-                "This scheme is not yet implement for the Intermediate Symbol Format: {}".format(url.scheme))
+                "This scheme is not yet implemented for the Intermediate Symbol Format: {}".format(url.scheme))
 
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
@@ -69,7 +86,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         fp.close()
 
         # Validation is expensive, but we cache to store the hashes of successfully validated json objects
-        if not schemas.validate(json_object):
+        if validate and not schemas.validate(json_object):
             raise SymbolSpaceError("File does not pass version validation: {}".format(url.geturl()))
 
         metadata = json_object.get('metadata', None)
