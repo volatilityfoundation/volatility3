@@ -60,10 +60,11 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        if url.path.endswith('.xz'):
-            fp = lzma.open(url.path, 'rt')
+        url_path = urllib.parse.unquote(url.path)
+        if url_path.endswith('.xz'):
+            fp = lzma.open(url_path, 'rt')
         else:
-            fp = open(url.path, "r")
+            fp = open(url_path, "r")
         json_object = json.load(fp)
         fp.close()
 
@@ -107,7 +108,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
     def _closest_version(self, version, versions):
         """Determines the highest suitable handler for specified version format
-        
+
         An interface version such as (Current-Age).Age.Revision means that (Current - Age) of the provider must be equal to that of the
           consumer, and the provider (the JSON in this instance) must have a greater age (indicating that only additive
           changes have been made) than the consumer (in this case, the file reader).
