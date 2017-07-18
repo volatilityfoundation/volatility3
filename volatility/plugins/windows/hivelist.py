@@ -5,7 +5,7 @@ from volatility.framework.renderers import format_hints
 from volatility.framework import exceptions
 
 class HiveList(plugins.PluginInterface):
-    """Lists the processes present in a particular memory image"""
+    """Lists the registry hives present in a particular memory image"""
 
     @classmethod
     def get_requirements(cls):
