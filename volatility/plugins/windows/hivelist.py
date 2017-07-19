@@ -21,13 +21,8 @@ class HiveList(plugins.PluginInterface):
     def _generator(self):
         for hive in self.list_hives():
         
-            try:
-                FileFullPath = hive.FileFullPath.String
-            except exceptions.InvalidAddressException:
-                FileFullPath = ""
-        
             yield (0, (format_hints.Hex(hive.vol.offset), 
-                    FileFullPath))
+                    hive.name() or ""))
 
     def list_hives(self):
         """Lists all the hives in the primary layer"""

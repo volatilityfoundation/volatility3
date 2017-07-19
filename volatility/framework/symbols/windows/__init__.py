@@ -14,6 +14,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_LIST_ENTRY', extensions._LIST_ENTRY)
         self.set_type_class('_EPROCESS', extensions._EPROCESS)
         self.set_type_class('_UNICODE_STRING', extensions._UNICODE_STRING)
+        self.set_type_class('_CMHIVE', extensions._CMHIVE)
 
     @classmethod
     def get_requirements(cls):
