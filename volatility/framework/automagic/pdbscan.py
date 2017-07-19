@@ -265,7 +265,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             vollog.debug(
                                 "Potential kernel_virtual_offset did not map to expected location: {}".format(
                                     hex(kvo)))
-                    except exceptions.PagedInvalidAddressException:
+                    except exceptions.InvalidAddressException:
                         vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
                 else:
                     vollog.debug("Kernel base randomized, searching layer for base address offset")
@@ -292,7 +292,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                                 for result in subscan:
                                     valid_kernels[virtual_layer_name] = (address, result)
                                     break
-                        except exceptions.PagedInvalidAddressException:
+                        except exceptions.InvalidAddressException:
                             # We don't care if we're mapping an address to 0, it's not what we're looking for
                             pass
             if not valid_kernels:
