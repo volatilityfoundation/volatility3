@@ -14,17 +14,17 @@ class _ETHREAD(objects.Struct):
         return self.ThreadsProcess.dereference(kernel_layer)
 
 class _CMHIVE(objects.Struct):
+    @property
     def name(self):
-        """Determine a name for the hive. Note that some attributes
-        are unpredictably blank while others are populated, so we
-        check all possibilities and take the first one that's not empty"""
+        """Determine a name for the hive. Note that some attributes are
+        unpredictably blank across different OS versions while others are populated,
+        so we check all possibilities and take the first one that's not empty"""
         
         for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
-            if hasattr(self, attr):
-                try:
-                    return getattr(self, attr).String
-                except exceptions.InvalidAddressException:
-                    pass
+            try:
+                return getattr(self, attr).String
+            except (AttributeError, exceptions.InvalidAddressException):
+                pass
 
         return None
 
