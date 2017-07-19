@@ -63,7 +63,8 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                 vollog.debug("Symbol library path not found: {}".format(symbol_files[0]))
                 # print("Kernel", banner, hex(banner_offset))
         else:
-            pass
+            vollog.debug("No existing linux banners found")
+            # TODO: Fallback to generic regex search?
 
 
 class LintelStacker(interfaces.automagic.StackerLayerInterface):
