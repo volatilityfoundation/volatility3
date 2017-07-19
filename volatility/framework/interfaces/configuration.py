@@ -186,6 +186,25 @@ class HierarchicalDict(collections.abc.Mapping):
             raise TypeError("Splice requires a string key and HierarchicalDict value")
         self._setitem(key, value, False)
 
+    def merge(self, key, value, overwrite = False):
+        """Acts similarly to splice, but maintains previous values
+
+        If overwrite is true, then entries in the new value are used over those that exist within key already
+
+        @param key: The location within the hierarchy at which to merge the `value`
+        @type key: str
+        @param value: HierarchicalDict to be merged under the key node
+        @type value: HierarchicalDict
+        """
+        if not isinstance(key, str) or not isinstance(value, HierarchicalDict):
+            raise TypeError("Splice requires a string key and HierarchicalDict value")
+        for item in dict(value):
+            if self.get(key + self._separator + item, None):
+                if overwrite:
+                    self[key + self._separator + item] = value[item]
+            else:
+                self[key + self._separator + item] = value[item]
+
     def clone(self):
         """Duplicates the configuration, allowing changes without affecting the original"""
         return copy.deepcopy(self)

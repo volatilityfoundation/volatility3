@@ -48,6 +48,9 @@ class CommandLine(object):
                                          description = "An open-source memory forensics framework")
         parser.add_argument("-c", "--config", help = "Load the configuration from a json file", default = None,
                             type = str)
+        parser.add_argument("-e", "--extend", help = "Extend the configuration with a new (or changed) setting",
+                            default = None,
+                            action = 'append')
         parser.add_argument("-p", "--plugins", help = "Semi-colon separated list of paths to find plugins",
                             default = "", type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
@@ -133,6 +136,14 @@ class CommandLine(object):
                         config_path = plugin_config_path
                     extended_path = interfaces.configuration.path_join(config_path, requirement.name)
                     ctx.config[extended_path] = value
+
+        if args.extend:
+            for extension in args.extend:
+                if '=' not in extension:
+                    raise ValueError(
+                        "Invalid extension (extensions must be of the format \"conf.path.value='value'\")")
+                address, value = extension[:extension.find('=')], json.loads(extension[extension.find('=') + 1:])
+                ctx.config[address] = value
 
         ###
         # BACK TO THE FRAMEWORK
