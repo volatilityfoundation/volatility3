@@ -4,7 +4,7 @@ import string
 
 from volatility.framework import interfaces
 from volatility.framework import objects
-
+from volatility.framework import exceptions
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
@@ -13,6 +13,20 @@ class _ETHREAD(objects.Struct):
         """Return the EPROCESS that owns this thread"""
         return self.ThreadsProcess.dereference(kernel_layer)
 
+class _CMHIVE(objects.Struct):
+    @property
+    def name(self):
+        """Determine a name for the hive. Note that some attributes are
+        unpredictably blank across different OS versions while others are populated,
+        so we check all possibilities and take the first one that's not empty"""
+        
+        for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
+            try:
+                return getattr(self, attr).String
+            except (AttributeError, exceptions.InvalidAddressException):
+                pass
+
+        return None
 
 class _UNICODE_STRING(objects.Struct):
     @property
