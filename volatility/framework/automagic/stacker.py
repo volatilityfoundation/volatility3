@@ -103,9 +103,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             if result:
                 path, layer = result
                 # splice in the new configuration into the original context
-                print("BEFORE", dict(context.config))
                 context.config.merge(path, new_context.memory[layer].build_configuration())
-                print("AFTER ", dict(context.config))
             # Call the construction magic now we may have new things to construct
             constructor = construct_layers.ConstructionMagic(context,
                                                              interfaces.configuration.path_join(self.config_path,
