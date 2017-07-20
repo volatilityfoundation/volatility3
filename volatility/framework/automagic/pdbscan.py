@@ -275,6 +275,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
                                                   progress_callback = progress_callback)
                     seen = set()
+                    # Because this will launch a scan of the virtual layer, we want to be careful
                     for result in results:
                         # TODO: Identify the specific structure we're finding and document this a bit better
                         pointer = context.object("pdbscan!unsigned long long",
@@ -289,8 +290,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             if potential_mz == b"MZ":
                                 subscan = scan(context, virtual_layer_name, start = address, end = address + (1 << 26),
                                                page_size = vlayer.page_size, progress_callback = progress_callback)
-                                for result in subscan:
-                                    valid_kernels[virtual_layer_name] = (address, result)
+                                for subresult in subscan:
+                                    valid_kernels[virtual_layer_name] = (address, subresult)
                                     break
                         except exceptions.InvalidAddressException:
                             # We don't care if we're mapping an address to 0, it's not what we're looking for
