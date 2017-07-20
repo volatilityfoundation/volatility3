@@ -71,7 +71,6 @@ def scan(ctx, layer_name, page_size, progress_callback = None, start = None, end
        The UI should always provide the user an opportunity to specify the
        appropriate types and PDB values themselves
     """
-    results = []
     min_pfn = 0
     pdb_names = [
         b"ntkrnlmp.pdb",
@@ -97,13 +96,11 @@ def scan(ctx, layer_name, page_size, progress_callback = None, start = None, end
                 break
         min_pfn = sig_pfn
 
-        results.append({'GUID': GUID,
-                        'age': age,
-                        'pdb_name': str(pdb_name, "utf-8"),
-                        'signature_offset': signature_offset,
-                        'mz_offset': mz_offset})
-
-    return results
+        yield {'GUID': GUID,
+               'age': age,
+               'pdb_name': str(pdb_name, "utf-8"),
+               'signature_offset': signature_offset,
+               'mz_offset': mz_offset}
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
