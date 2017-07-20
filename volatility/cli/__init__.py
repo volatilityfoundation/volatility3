@@ -221,7 +221,7 @@ def progress_callback(progress, description = None):
     :param progress: Percentage of progress of the current procedure
     :type progress: int or float
     """
-    print("\rProgress: ", round(progress, 2), "\t\t", description or '', end = '\n')
+    print("\rProgress: {0: 7.2f}\t\t{1:}".format(round(progress, 2), description or ''), end = '\n')
 
 
 def main():
