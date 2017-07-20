@@ -8,7 +8,7 @@ vollog = logging.getLogger(__name__)
 
 
 class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
-    priority = 20
+    priority = 40
 
     def __init__(self, context, config_path):
         super().__init__(context, config_path)
@@ -23,7 +23,8 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                                                     shortcut = False)
 
         for (path, sub_path, requirement) in self._requirements:
-            if isinstance(requirement, interfaces.configuration.SymbolRequirement):
+            if (isinstance(requirement, interfaces.configuration.SymbolRequirement) and
+                    requirement.unsatisfied(context, path)):
                 for (tl_path, tl_sub_path, tl_requirement) in self._requirements:
                     # Find the TranslationLayer sibling to the SymbolRequirement
                     if (isinstance(tl_requirement, interfaces.configuration.TranslationLayerRequirement) and
