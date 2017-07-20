@@ -194,7 +194,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                     while not result.ready():
                         if progress_callback:
                             # Run the progress_callback
-                            progress_callback(scan_metric(progress.value), "Scanning {}".format(self.name))
+                            progress_callback(scan_metric(progress.value),
+                                              "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
                         # Ensures we don't burn CPU cycles going round in a ready waiting loop
                         # without delaying the user too long between progress updates/results
                         result.wait(0.1)
