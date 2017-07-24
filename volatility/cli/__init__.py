@@ -111,7 +111,12 @@ class CommandLine(object):
         args = parser.parse_args()
         if args.plugin is None:
             parser.error("Please select a plugin to run")
-        console.setLevel(30 - (args.verbosity * 10))
+        if args.verbosity < 3:
+            console.setLevel(30 - (args.verbosity * 10))
+        else:
+            console.setLevel(10 - (args.verbosity - 2))
+
+        vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
 
         plugin = plugin_list[args.plugin]
         plugin_config_path = interfaces.configuration.path_join('plugins', plugin.__name__)
