@@ -11,8 +11,7 @@ class PsList(plugins.PluginInterface):
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "ntkrnlmp",
-                                               description = "Windows OS"),
+                requirements.SymbolRequirement(name = "nt", description = "Windows OS"),
                 requirements.IntRequirement(name = 'pid',
                                             description = "Process ID",
                                             optional = True)]
@@ -33,11 +32,23 @@ class PsList(plugins.PluginInterface):
 
         # We only use the object factory to demonstrate how to use one
         kvo = self.config['primary.kernel_virtual_offset']
-        ntkrnlmp = self.context.module("ntkrnlmp", layer_name = layer_name, offset = kvo)
+        ntkrnlmp = self.context.module(self.config['nt'], layer_name = layer_name, offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
         list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
-        reloff = self.context.symbol_space.get_type("ntkrnlmp!_EPROCESS").relative_child_offset("ActiveProcessLinks")
+
+        # This is example code to demonstrate how to use symbol_space directly, rather than through a module:
+        #
+        # ```
+        # reloff = self.context.symbol_space.get_type(
+        #          self.config['nt'] + constants.BANG + "_EPROCESS").relative_child_offset(
+        #          "ActiveProcessLinks")
+        # ```
+        #
+        # Note: "nt!_EPROCESS" could have been used, but would rely on the "nt" symbol table not already
+        # having been present.  Strictly, the value of the requirement should be joined with the BANG character
+        # defined in the constants file
+        reloff = ntkrnlmp.get_type("_EPROCESS").relative_child_offset("ActiveProcessLinks")
         eproc = ntkrnlmp.object(type_name = "_EPROCESS", offset = list_entry.vol.offset - reloff)
 
         for proc in eproc.ActiveProcessLinks:
