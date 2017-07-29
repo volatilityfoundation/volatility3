@@ -10,7 +10,9 @@ vollog = logging.getLogger(__name__)
 
 
 class ConstructionMagic(interfaces.automagic.AutomagicInterface):
-    """Class to run through the requirement tree of the :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`
+    """Constructs underlying layers
+
+    Class to run through the requirement tree of the :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`
     and from the bottom of the tree upwards, attempt to construct all
     :class:`~volatility.framework.interfaces.configuration.ConstructableRequirementInterface` based classes.
 

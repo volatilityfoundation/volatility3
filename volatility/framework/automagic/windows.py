@@ -209,13 +209,14 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
 
 
 class WintelHelper(interfaces.automagic.AutomagicInterface):
-    """This class adheres to the :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` interface
+    """Windows DTB finder based on self-referential pointers
+
+    This class adheres to the :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` interface
     and both determines the directory table base of an intel layer if one hasn't been specified, and constructs
     the intel layer if necessary (for example when reconstructing a pre-existing configuration).
 
     It will scan for existing TranslationLayers that do not have a DTB  using the :class:`PageMapScanner"""
     priority = 20
-    stack_order = 90
     tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
 
     def __call__(self, context, config_path, requirement, progress_callback = None):

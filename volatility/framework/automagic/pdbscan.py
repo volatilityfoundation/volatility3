@@ -104,7 +104,9 @@ def scan(ctx, layer_name, page_size, progress_callback = None, start = None, end
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
-    """An Automagic object that looks for all Intel translation layers and scans each of them for a pdb signature.
+    """Windows symbol loader based on PDB signatures
+
+    An Automagic object that looks for all Intel translation layers and scans each of them for a pdb signature.
     When found, a search for a corresponding Intermediate Format data file is carried out and if found an appropriate
     symbol space is automatically loaded.
 

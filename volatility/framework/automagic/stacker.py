@@ -20,7 +20,7 @@ vollog = logging.getLogger(__name__)
 
 
 class LayerStacker(interfaces.automagic.AutomagicInterface):
-    """Class that attempts to build up layers in a single stack
+    """Builds up layers in a single stack
 
     This class mimics the volatility 2 style of stacking address spaces.  It builds up various layers based on
     separate :class:`~volatility.framework.interfaces.automagic.StackerLayerInterface` classes.  These classes are

@@ -8,6 +8,7 @@ vollog = logging.getLogger(__name__)
 
 
 class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
+    """Linux symbol loader based on uname signature strings"""
     priority = 40
 
     def __init__(self, context, config_path):

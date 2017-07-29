@@ -11,7 +11,7 @@ vollog = logging.getLogger(__name__)
 
 
 class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
-    """Class to run through all Linux symbols tables and cache their banners"""
+    """Runs through all Linux symbols tables and caches their banners"""
 
     @classmethod
     def load_linux_banners(cls):
