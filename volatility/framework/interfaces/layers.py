@@ -184,11 +184,11 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         max_address = min(self.maximum_address, max_address)
 
         try:
-            progress = multiprocessing.Manager().Value("Q", 0)
             scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
-            scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
             scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
             if scanner.thread_safe and not constants.DISABLE_MULTITHREADED_SCANNING:
+                progress = multiprocessing.Manager().Value("Q", 0)
+                scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
                 with multiprocessing.Pool() as pool:
                     result = pool.map_async(scan_chunk, scan_iterator())
                     while not result.ready():
@@ -202,6 +202,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                     for value in result.get():
                         yield from value
             else:
+                progress = DummyProgress()
+                scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
                 for value in scan_iterator():
                     if progress_callback:
                         progress_callback(scan_metric(progress.value))
@@ -367,3 +369,8 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
     def check_cycles(self):
         """Runs through the available layers and identifies if there are cycles in the DAG"""
         # TODO: Is having a cycle check necessary?
+
+
+class DummyProgress(object):
+    def __init__(self):
+        self.value = 0
