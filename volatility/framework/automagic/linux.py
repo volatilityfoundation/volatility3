@@ -90,6 +90,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                                  swapper_pg_dir_text.index(b"=") + 1:swapper_pg_dir_text.index(b"\n")], 16)
             swapper_pg_dirs.append(swapper_pg_dir)
 
+        dtb = 0
         if swapper_pg_dirs:
             best_swapper_pg_dir = \
                 list(reversed(sorted(set(swapper_pg_dirs), key = lambda x: swapper_pg_dirs.count(x))))[0]
