@@ -153,6 +153,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 treenode = self._append(parent, item)
                 prev_nodes = prev_nodes[0: parent_index] + [treenode]
                 accumulator = func(treenode, accumulator)
+                yield (level, item)
         self._populated = True
 
     @property
