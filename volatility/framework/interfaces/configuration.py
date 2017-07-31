@@ -587,7 +587,10 @@ class SymbolRequirement(ConstructableRequirementInterface):
         # Determine the space name
         name = self.name
         if name in context.symbol_space:
-            raise ValueError("Symbol space already contains a SymbolTable by the same name")
+            index = 2
+            while name in context.symbol_space:
+                name = self.name + str(index)
+                index += 1
 
         config_path = path_join(config_path, self.name)
         args = {"context": context,
