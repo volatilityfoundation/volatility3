@@ -255,13 +255,16 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 accumulator = function(n, accumulator)
                 if sort_key is not None:
                     children = sorted(children, key = lambda x: sort_key(x[0].values))
+                    if not sort_key.ascending:
+                        children = reversed(children)
                 accumulator = self._visit(children, function, accumulator, sort_key)
         return accumulator
 
 
 class ColumnSortKey(interfaces.renderers.ColumnSortKey):
-    def __init__(self, treegrid, column_name):
+    def __init__(self, treegrid, column_name, ascending = True):
         self._index = None
+        self.ascending = ascending
         for i in treegrid.columns:
             if i.name.lower() == column_name.lower():
                 self._index = i.index
