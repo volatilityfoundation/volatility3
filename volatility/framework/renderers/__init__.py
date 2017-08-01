@@ -106,6 +106,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         :param generator: A generator that populates the tree/grid structure
         """
         self._populated = False
+        self._row_count = 0
         self._children = []
         converted_columns = []
         if len(columns) < 1:
@@ -153,6 +154,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 treenode = self._append(parent, item)
                 prev_nodes = prev_nodes[0: parent_index] + [treenode]
                 accumulator = func(treenode, accumulator)
+                self._row_count += 1
                 yield (level, item)
         self._populated = True
 
@@ -165,6 +167,11 @@ class TreeGrid(interfaces.renderers.TreeGrid):
     def columns(self):
         """Returns the available columns and their ordering and types"""
         return self._columns
+
+    @property
+    def row_count(self):
+        """Returns the number of rows populated"""
+        return self._row_count
 
     def children(self, node):
         """Returns the subnodes of a particular node in order"""
