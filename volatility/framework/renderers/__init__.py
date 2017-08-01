@@ -245,6 +245,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         if children is not None:
             if sort_key is not None:
                 children = sorted(children, key = lambda x: sort_key(x[0].values))
+                if not sort_key.ascending:
+                    children = reversed(children)
             accumulator = self._visit(children, function, accumulator, sort_key)
         return accumulator
 
@@ -271,6 +273,6 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
         if self._index is None:
             raise ValueError("Column not found in TreeGrid columns: {}".format(column_name))
 
-    def key(self, values):
+    def __call__(self, values):
         """The key function passed as the sort key"""
         return values[self._index]
