@@ -137,7 +137,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         return output
 
     def populate(self, func = None, initial_accumulator = None):
-        """Generator that returns the next available Node
+        """Populates the tree by consuming the TreeGrid's construction generator
+           Func is called on every node, so can be used to create output on demand
 
            This is equivalent to a one-time visit.
         """
@@ -155,7 +156,6 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 prev_nodes = prev_nodes[0: parent_index] + [treenode]
                 accumulator = func(treenode, accumulator)
                 self._row_count += 1
-                yield (level, item)
         self._populated = True
 
     @property
@@ -240,7 +240,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
            for every node we descend further down
         """
         if not self.populated:
-            list(self.populate())
+            self.populate()
 
         # Find_nodes is path dependent, whereas _visit is not
         # So in case the function modifies the node's path, find the nodes first
