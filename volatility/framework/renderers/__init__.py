@@ -240,7 +240,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
            for every node we descend further down
         """
         if not self.populated:
-            self.populate()
+            list(self.populate())
 
         # Find_nodes is path dependent, whereas _visit is not
         # So in case the function modifies the node's path, find the nodes first

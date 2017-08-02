@@ -53,4 +53,4 @@ class QuickTextRenderer(interfaces.renderers.Renderer):
             accumulator.write("\n")
             return accumulator
 
-        grid.populate(visitor, outfd)
+        list(grid.populate(visitor, outfd))
