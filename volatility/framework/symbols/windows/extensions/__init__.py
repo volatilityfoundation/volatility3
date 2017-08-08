@@ -1,7 +1,6 @@
 import collections.abc
 
-from volatility.framework import exceptions
-from volatility.framework import objects
+from volatility.framework import constants, exceptions, objects
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 from volatility.framework.symbols.generic import GenericIntelProcess
 
@@ -63,10 +62,11 @@ class _EPROCESS(GenericIntelProcess):
             raise StopIteration
 
         sym_table = self.vol.type_name.split("!")[0]
-        peb = self._context.object("{}!_PEB".format(sym_table), layer_name = proc_layer_name, offset = self.Peb)
+        peb = self._context.object("{}{}!_PEB".format(sym_table, constants.BANG), layer_name = proc_layer_name,
+                                   offset = self.Peb)
 
-        for entry in peb.Ldr.InLoadOrderModuleList.to_list("{}!_LDR_DATA_TABLE_ENTRY".format(sym_table),
-                                                           "InLoadOrderLinks"):
+        for entry in peb.Ldr.InLoadOrderModuleList.to_list(
+                "{}{}_LDR_DATA_TABLE_ENTRY".format(sym_table, constants.BANG), "InLoadOrderLinks"):
             yield entry
 
 
