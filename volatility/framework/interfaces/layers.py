@@ -9,7 +9,6 @@ import multiprocessing
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants, exceptions, validity
-from volatility.framework.exceptions import InvalidAddressException
 from volatility.framework.interfaces import configuration, context
 
 vollog = logging.getLogger(__name__)
@@ -265,7 +264,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
             if ignore_errors:
                 # We should only hit this if we ignored errors, but check anyway
                 return None, None
-            raise InvalidAddressException("Cannot translate {} in layer {}".format(offset, self.name))
+            raise exceptions.InvalidAddressException("Cannot translate {} in layer {}".format(offset, self.name))
         return mapped_offset, layer
 
     # ## Read/Write functions for mapped pages

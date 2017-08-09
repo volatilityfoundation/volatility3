@@ -5,7 +5,6 @@ to act on multiple different contexts without them interfering eith each other.
 """
 
 from volatility.framework import constants, interfaces, symbols
-from volatility.framework.interfaces.configuration import HierarchicalDict
 
 
 class Context(interfaces.context.ContextInterface):
@@ -32,7 +31,7 @@ class Context(interfaces.context.ContextInterface):
         super().__init__()
         self._symbol_space = symbols.SymbolSpace()
         self._memory = interfaces.layers.Memory()
-        self._config = HierarchicalDict()
+        self._config = interfaces.configuration.HierarchicalDict()
 
     # ## Symbol Space Functions
 
@@ -43,7 +42,7 @@ class Context(interfaces.context.ContextInterface):
 
     @config.setter
     def config(self, value):
-        if not isinstance(value, HierarchicalDict):
+        if not isinstance(value, interfaces.configuration.HierarchicalDict):
             raise TypeError("Config must be of type HierarchicalDict")
         self._config = value
 

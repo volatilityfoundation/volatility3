@@ -1,8 +1,10 @@
 import collections.abc
 
 from volatility.framework import constants, exceptions, objects
+from volatility.framework.symbols import generic
+
+
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
-from volatility.framework.symbols.generic import GenericIntelProcess
 
 
 class _ETHREAD(objects.Struct):
@@ -37,7 +39,7 @@ class _UNICODE_STRING(objects.Struct):
                                               encoding = "utf16")
 
 
-class _EPROCESS(GenericIntelProcess):
+class _EPROCESS(generic.GenericIntelProcess):
     def add_process_layer(self, context, config_prefix = None, preferred_name = None):
         """Constructs a new layer based on the process's DirectoryTableBase"""
 

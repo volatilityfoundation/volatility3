@@ -18,10 +18,10 @@ import volatility.framework
 import volatility.plugins
 from volatility.framework import automagic, constants, contexts, interfaces
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces.configuration import HierarchicalDict
-from volatility.framework.renderers.text import QuickTextRenderer
+from volatility.framework.renderers import text
 
 # Make sure we log everything
+
 vollog = logging.getLogger()
 vollog.setLevel(0)
 # Trim the console down by default
@@ -125,7 +125,7 @@ class CommandLine(object):
         if args.config:
             with open(args.config, "r") as f:
                 json_val = json.load(f)
-                ctx.config.splice(plugin_config_path, HierarchicalDict(json_val))
+                ctx.config.splice(plugin_config_path, interfaces.configuration.HierarchicalDict(json_val))
 
         # Populate the context config based on the returned args
         # We have already determined these elements must be descended from ConfigurableInterface
@@ -174,7 +174,7 @@ class CommandLine(object):
                 json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
         # Construct and run the plugin
-        QuickTextRenderer().render(constructed.run())
+        text.QuickTextRenderer().render(constructed.run())
 
     def populate_requirements_argparse(self, parser, configurable):
         """Adds the plugin's simple requirements to the provided parser

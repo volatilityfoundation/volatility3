@@ -9,7 +9,6 @@ import urllib.parse
 
 from volatility import schemas
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
-from volatility.framework.exceptions import SymbolSpaceError
 from volatility.framework.symbols import native
 
 vollog = logging.getLogger(__name__)
@@ -87,7 +86,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Validation is expensive, but we cache to store the hashes of successfully validated json objects
         if validate and not schemas.validate(json_object):
-            raise SymbolSpaceError("File does not pass version validation: {}".format(url.geturl()))
+            raise exceptions.SymbolSpaceError("File does not pass version validation: {}".format(url.geturl()))
 
         metadata = json_object.get('metadata', None)
 
