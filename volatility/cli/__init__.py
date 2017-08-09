@@ -198,7 +198,7 @@ class CommandLine(object):
                 additional["type"] = requirement.instance_type
                 if isinstance(requirement, requirements.BooleanRequirement):
                     additional["action"] = "store_true"
-            elif isinstance(requirement, requirements.ListRequirement):
+            elif isinstance(requirement, interfaces.configuration.ListRequirement):
                 if requirement.min_elements != requirement.max_elements:
                     if requirement.min_elements > 0:
                         additional["nargs"] = "+"
@@ -208,7 +208,7 @@ class CommandLine(object):
                 else:
                     additional["nargs"] = requirement.max_elements
                 additional["type"] = requirement.element_type.instance_type
-            elif isinstance(requirement, requirements.ChoiceRequirement):
+            elif isinstance(requirement, interfaces.configuration.ChoiceRequirement):
                 additional["type"] = str
                 additional["choices"] = requirement.choices
             else:
