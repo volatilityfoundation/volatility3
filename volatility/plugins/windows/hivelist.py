@@ -1,6 +1,6 @@
 import volatility.framework.interfaces.plugins as plugins
+from volatility.framework import renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.renderers import TreeGrid
 from volatility.framework.renderers import format_hints
 
 
@@ -41,6 +41,6 @@ class HiveList(plugins.PluginInterface):
             yield hive
 
     def run(self):
-        return TreeGrid([("Offset", format_hints.Hex),
-                         ("FileFullPath", str)],
-                        self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex),
+                                   ("FileFullPath", str)],
+                                  self._generator())

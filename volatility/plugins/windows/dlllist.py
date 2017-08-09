@@ -1,10 +1,10 @@
-import volatility.framework.interfaces.plugins as plugins
+import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
 from volatility.framework import exceptions, renderers
 from volatility.framework.renderers import format_hints
 
 
-class DllList(plugins.PluginInterface):
+class DllList(interfaces_plugins.PluginInterface):
     """Lists the loaded modules in a particular memory image"""
 
     @classmethod

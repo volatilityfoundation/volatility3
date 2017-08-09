@@ -1,6 +1,6 @@
 import volatility.framework.interfaces.plugins as plugins
+from volatility.framework import renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.renderers import TreeGrid
 
 
 class PsList(plugins.PluginInterface):
@@ -55,7 +55,7 @@ class PsList(plugins.PluginInterface):
             yield proc
 
     def run(self):
-        return TreeGrid([("PID", int),
-                         ("PPID", int),
-                         ("ImageFileName", str)],
-                        self._generator())
+        return renderers.TreeGrid([("PID", int),
+                                   ("PPID", int),
+                                   ("ImageFileName", str)],
+                                  self._generator())

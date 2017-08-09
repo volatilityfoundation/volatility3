@@ -1,7 +1,7 @@
 import volatility.framework.interfaces.plugins as plugins
+from volatility.framework import renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.renderers import TreeGrid
-from volatility.framework.objects.utility import array_to_string
+from volatility.framework.objects import utility
 
 
 class PsList(plugins.PluginInterface):
@@ -22,7 +22,7 @@ class PsList(plugins.PluginInterface):
             ppid = 0
             if task.parent:
                 ppid = task.parent.pid
-            name = array_to_string(task.comm)
+            name = utility.array_to_string(task.comm)
             yield (0, (pid, ppid, name))
 
     def list_tasks(self):
@@ -32,13 +32,13 @@ class PsList(plugins.PluginInterface):
 
         # TODO: Will need to compute a non-zero offset for ASLR kernels
         vmlinux = self.context.module("vmlinux", "primary", 0)
-        init_task = vmlinux.object(symbol_name="init_task")
+        init_task = vmlinux.object(symbol_name = "init_task")
 
         for task in init_task.tasks:
             yield task
 
     def run(self):
-        return TreeGrid([("PID", int),
-                         ("PPID", int),
-                         ("COMM", str)],
-                        self._generator())
+        return renderers.TreeGrid([("PID", int),
+                                   ("PPID", int),
+                                   ("COMM", str)],
+                                  self._generator())

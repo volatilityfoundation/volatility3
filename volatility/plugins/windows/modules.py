@@ -1,7 +1,7 @@
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import exceptions
+from volatility.framework import renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.renderers import TreeGrid
 from volatility.framework.renderers import format_hints
 
 
@@ -55,9 +55,9 @@ class Modules(plugins.PluginInterface):
             yield mod
 
     def run(self):
-        return TreeGrid([("Offset", format_hints.Hex),
-                         ("Base", format_hints.Hex),
-                         ("Size", format_hints.Hex),
-                         ("Name", str),
-                         ("Path", str)],
-                        self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex),
+                                   ("Base", format_hints.Hex),
+                                   ("Size", format_hints.Hex),
+                                   ("Name", str),
+                                   ("Path", str)],
+                                  self._generator())
