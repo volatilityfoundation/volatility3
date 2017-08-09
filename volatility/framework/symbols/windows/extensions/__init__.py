@@ -61,8 +61,8 @@ class _EPROCESS(GenericIntelProcess):
         if not proc_layer.is_valid(self.Peb):
             raise StopIteration
 
-        sym_table = self.vol.type_name.split("!")[0]
-        peb = self._context.object("{}{}!_PEB".format(sym_table, constants.BANG), layer_name = proc_layer_name,
+        sym_table = self.vol.type_name.split(constants.BANG)[0]
+        peb = self._context.object("{}{}_PEB".format(sym_table, constants.BANG), layer_name = proc_layer_name,
                                    offset = self.Peb)
 
         for entry in peb.Ldr.InLoadOrderModuleList.to_list(
