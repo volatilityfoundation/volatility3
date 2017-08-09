@@ -47,8 +47,12 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
             # Favour specific name, over uncompressed JSON (user-editable), over compressed JSON over uncompressed files
             for extension in ['.json', '.json.xz']:
                 # Hopefully these will not be large lists, otherwise this might be slow
-                cacheables += [x.as_uri() for x in
-                               pathlib.Path(path).joinpath('linux').resolve().rglob('*' + extension)]
+                try:
+                    cacheables += [x.as_uri() for x in
+                                   pathlib.Path(path).joinpath('linux').resolve().rglob('*' + extension)]
+                except FileNotFoundError:
+                    # If there's no linux symbols, don't cry about it
+                    pass
 
         for banner in linuxbanners:
             for json_file in linuxbanners[banner]:
