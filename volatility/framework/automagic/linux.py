@@ -50,8 +50,8 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
         for offset, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             vollog.debug("Identified banner: {}".format(repr(banner)))
             symbol_files = self._linux_banners[banner]
-            isf_path = symbol_files[0]
-            if isf_path:
+            if symbol_files:
+                isf_path = symbol_files[0]
                 vollog.debug("Using symbol library: {}".format(symbol_files[0]))
                 clazz = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
                 # Set the discovered options
