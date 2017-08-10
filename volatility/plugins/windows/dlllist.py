@@ -1,5 +1,5 @@
 import volatility.framework.interfaces.plugins as interfaces_plugins
-import volatility.plugins.windows.pslist as pslist
+from volatility.plugins.windows import pslist
 from volatility.framework import exceptions, renderers
 from volatility.framework.renderers import format_hints
 
