@@ -8,6 +8,111 @@ from volatility.framework import exceptions
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
+class _EX_FAST_REF(objects.Struct):
+    def dereference_as(self, target):
+    
+        # the mask value is different on 32 and 64 bits 
+        if self._context.symbol_space.get_type("ntkrnlmp!pointer").size == 4:
+            max_fast_ref = 7
+        else:
+            max_fast_ref = 15
+    
+        return self._context.object(target, layer_name = self.vol.layer_name, offset = self.Object & ~max_fast_ref)
+
+class ExecutiveObject(object):
+    def object_header(self):
+        body_offset = self._context.symbol_space.get_type("ntkrnlmp!_OBJECT_HEADER").relative_child_offset("Body") 
+        return self._context.object("ntkrnlmp!_OBJECT_HEADER", layer_name = self.vol.layer_name, offset = self.vol.offset - body_offset)
+
+class _CM_KEY_BODY(objects.Struct):
+    def full_key_name(self):
+        output = []
+        kcb = self.KeyControlBlock
+        while kcb.ParentKcb:
+            if kcb.NameBlock.Name == None:
+                break
+            output.append(kcb.NameBlock.Name.cast("string", 
+                          encoding = "utf8", 
+                          max_length = kcb.NameBlock.NameLength, 
+                          errors = "replace"))
+            kcb = kcb.ParentKcb
+        return "\\".join(reversed(output))
+
+class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
+    def device_name(self):
+        header = self.object_header()
+        return header.NameInfo.Name.String
+
+class _FILE_OBJECT(objects.Struct, ExecutiveObject):
+    def file_name_with_device(self):
+        name = ""
+        if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
+            name = "\\Device\\{}".format(self.DeviceObject.device_name())
+        name += self.FileName.String
+        return name
+
+class _OBJECT_HEADER(objects.Struct):
+    def dereference_as(self, target):
+        return self._context.object(target, layer_name = self.vol.layer_name, offset = self.Body.vol.offset)
+
+    @property
+    def NameInfo(self):
+        #header_offset = ord(self.NameInfoOffset)
+        header_offset = 0x10
+        if header_offset != 0:
+            header = self._context.object("ntkrnlmp!_OBJECT_HEADER_NAME_INFO", 
+                                          layer_name = self.vol.layer_name, 
+                                          offset = self.vol.offset - header_offset)
+            return header
+        return None
+
+    def object_type(self):
+        try:
+            # vista and earlier have a Type member 
+            return self.Type.Name.String
+        except AttributeError:
+            # windows 7 and later have a TypeIndex, but windows 10
+            # further encodes the index value with nt!ObHeaderCookie 
+            try:
+                offset = self._context.symbol_space.get_symbol("nt!ObHeaderCookie").address
+                cookie = self._context.object("nt!unsigned int", self.vol.layer_name, offset = offset)
+                type_index = ((self.vol.offset >> 8) ^ cookie ^ self.TypeIndex) & 0xFF    
+            except AttributeError:
+                type_index = self.TypeIndex
+            
+            # where do we get type_map from?
+            return type_map[self.TypeIndex]
+
+class _HANDLE_TABLE_ENTRY(objects.Struct):
+    def object_header(self):
+        
+        if self.context.symbol_space.get_type("ntkrnlmp!pointer").size == 4:
+            # xp/2003/vista use Object. windows 8 and above uses LowValue 
+            # both are placeholders for _EX_FAST_REF instances 
+            try:
+                ex_fast_ref = self.Object.cast("_EX_FAST_REF")
+            except AttributeError:
+                ex_fast_ref = self.LowValue.cast("_EX_FAST_REF")
+                
+            return ex_fast_ref.dereference_as("_OBJECT_HEADER")
+        else:
+            # xp/2003/vista use Object. windows 8 and above uses LowValue 
+            # however LowValue is encoded differently per version 
+            try:
+                ex_fast_ref = self.Object.cast("_EX_FAST_REF")
+                return ex_fast_ref.dereference_as("_OBJECT_HEADER")
+            except AttributeError:
+                # where do we get sar from?
+                header_ptr = self.decode_pointer(sar)
+                return self._context.object("nt!_OBJECT_HEADER", self.vol.layer_name, offset = header_ptr)
+                
+    def decode_pointer(self, sar):
+        value = self.LowValue & 0xFFFFFFFFFFFFFFF8 >> sar 
+        if value & 1 << 44:
+            return value | 0xFFFFF00000000000
+        else:
+            return value | 0xFFFF000000000000
+
 class _ETHREAD(objects.Struct):
     def owning_process(self, kernel_layer = None):
         """Return the EPROCESS that owns this thread"""

@@ -15,6 +15,12 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_EPROCESS', extensions._EPROCESS)
         self.set_type_class('_UNICODE_STRING', extensions._UNICODE_STRING)
         self.set_type_class('_CMHIVE', extensions._CMHIVE)
+        self.set_type_class('_EX_FAST_REF', extensions._EX_FAST_REF)
+        self.set_type_class('_HANDLE_TABLE_ENTRY', extensions._HANDLE_TABLE_ENTRY)
+        self.set_type_class('_OBJECT_HEADER', extensions._OBJECT_HEADER)
+        self.set_type_class('_FILE_OBJECT', extensions._FILE_OBJECT)
+        self.set_type_class('_DEVICE_OBJECT', extensions._DEVICE_OBJECT)
+        self.set_type_class('_CM_KEY_BODY', extensions._CM_KEY_BODY)
 
     @classmethod
     def get_requirements(cls):
