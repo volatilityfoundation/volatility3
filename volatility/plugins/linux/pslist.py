@@ -1,10 +1,10 @@
-import volatility.framework.interfaces.plugins as plugins
+import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 
 
-class PsList(plugins.PluginInterface):
+class PsList(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',
