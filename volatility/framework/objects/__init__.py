@@ -77,9 +77,10 @@ class Float(PrimitiveObject, float):
     """Primitive Object that handles double or floating point numbers"""
     _struct_type = float
 
-class Char(PrimitiveObject, str):
+
+class Char(PrimitiveObject, bytes):
     """Primitive Object that handles characters"""
-    _struct_type = str
+    _struct_type = bytes
 
 
 class Bytes(PrimitiveObject, bytes):
