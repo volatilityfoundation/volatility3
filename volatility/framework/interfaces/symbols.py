@@ -105,10 +105,15 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     @property
     def symbols(self):
-        """Returns an iterator of the Symbols"""
+        """Returns an iterator of the Symbol names"""
         raise NotImplementedError("Abstract property symbols not implemented by subclass.")
 
-    # ## Required Symbol type functions
+    # ## Required Type functions
+
+    @property
+    def types(self):
+        """Returns an iterator of the Symbol type names"""
+        raise NotImplementedError("Abstract property types not implemented by subclass.")
 
     def get_type(self, name):
         """Resolves a symbol name into an object template
@@ -117,10 +122,12 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         """
         raise NotImplementedError("Abstract method get_type not implemented by subclass.")
 
+    # ## Required Symbol enumeration functions
+
     @property
-    def types(self):
-        """Returns an iterator of the Symbol types"""
-        raise NotImplementedError("Abstract property types not implemented by subclass.")
+    def enumerations(self):
+        """Returns an iterator of the Enumeration names"""
+        raise NotImplementedError("Abstract property enumerations not implemented by subclass.")
 
     # ## Native Type Handler
 
@@ -180,11 +187,6 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         closest_symbol = sort_symbols[result][1]
         if closest_symbol.address == offset:
             yield closest_symbol.name
-
-    @property
-    def enumerations(self):
-        """Returns an iterator of the Enumeration names"""
-        raise NotImplementedError("Abstract property enumerations not implemented by subclass.")
 
 
 class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface):
