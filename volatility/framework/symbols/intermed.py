@@ -199,7 +199,7 @@ class Version1Format(ISFormatTable):
         """Returns the location offset given by the symbol name"""
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise KeyError("Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError("Unknown symbol: {}".format(name))
         return interfaces.symbols.Symbol(name = name, address = symbol['address'])
 
     @property
@@ -369,7 +369,7 @@ class Version3Format(Version2Format):
         """Returns the location offset given by the symbol name"""
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise KeyError("Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError("Unknown symbol: {}".format(name))
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
@@ -425,7 +425,7 @@ class Version5Format(Version4Format):
         """Returns the location offset given by the symbol name"""
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise KeyError("Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError("Unknown symbol: {}".format(name))
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])

@@ -4,7 +4,7 @@ import pathlib
 import pickle
 from urllib import parse
 
-from volatility.framework import interfaces, constants
+from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
                 bannerlist = linuxbanners.get(banner, [])
                 bannerlist.append(isf_url)
                 linuxbanners[banner] = bannerlist
-            except KeyError:
+            except exceptions.SymbolError:
                 pass
 
             # Rewrite the cached linuxbanners each run, since writing is faster than the cache validation portion
