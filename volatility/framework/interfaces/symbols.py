@@ -163,15 +163,17 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     def get_symbols_by_type(self, type_name):
         """Returns the name of all symbols in this table that have type matching type_name"""
-        for symbol in self.symbols:
+        for symbol_name in self.symbols:
             # This allows for searching with and without the table name (in case multiple tables contain
             # the same symbol name and we've not specifically been told which one)
+            symbol = self.get_symbol(symbol_name)
             if symbol.type_name == type_name or (symbol.type_name.endswith(constants.BANG + type_name)):
                 yield symbol.name
 
     def get_symbols_by_location(self, offset):
-        """Returns the name of all symbols in this table that have type matching type_name"""
-        sort_symbols = [(s.offset, s) for s in sorted(self.symbols, key = lambda x: x.offset)]
+        """Returns the name of all symbols in this table that live at a particular offset"""
+        sort_symbols = [(s.offset, s) for s in
+                        sorted([self.get_symbol(sn) for sn in self.symbols], key = lambda x: x.offset)]
         result = bisect.bisect_left(sort_symbols, offset)
         if result == len(sort_symbols):
             raise StopIteration
