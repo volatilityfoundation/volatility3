@@ -209,6 +209,7 @@ class Version1Format(ISFormatTable):
 
     @property
     def symbols(self):
+        """Returns an iterator of the symbol names"""
         return self._json_object.get('symbols', {}).keys()
 
     @property
@@ -218,7 +219,7 @@ class Version1Format(ISFormatTable):
 
     @property
     def types(self):
-        """Returns an iterator of the symbol names"""
+        """Returns an iterator of the symbol type names"""
         return list(self._json_object.get('user_types', {}).keys()) + list(self.natives.types)
 
     def get_type_class(self, name):
