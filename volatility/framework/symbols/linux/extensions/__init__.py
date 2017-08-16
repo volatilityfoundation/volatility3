@@ -1,6 +1,6 @@
 import collections.abc
 
-import volatility.framework.constants.linux as linux_constants
+import volatility.framework.constants.linux
 from volatility.framework import objects
 from volatility.framework import constants
 from volatility.framework.symbols import generic
@@ -85,7 +85,7 @@ class vm_area_struct(objects.Struct):
         if self.vm_file == 0:
             return 0
 
-        return self.vm_pgoff << linux_constants.PAGE_SHIFT
+        return self.vm_pgoff << constants.linux.PAGE_SHIFT
 
 class struct_file(objects.Struct):
     @property
