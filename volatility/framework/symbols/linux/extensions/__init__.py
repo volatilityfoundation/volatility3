@@ -1,6 +1,5 @@
 import collections.abc
 
-import volatility.framework.constants.linux
 from volatility.framework import objects
 from volatility.framework import constants
 from volatility.framework.symbols import generic
