@@ -6,6 +6,8 @@ import os.path
 
 import sys
 
+__all__ = ["linux", "windows"]
+
 PLUGINS_PATH = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),
                 os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))]
 SYMBOL_BASEPATHS = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "symbols")),
