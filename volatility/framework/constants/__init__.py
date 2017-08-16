@@ -3,10 +3,9 @@
 Stores all the constant values that are generally fixed throughout volatility
 This includes default scanning block sizes, etc."""
 import os.path
-
 import sys
 
-__all__ = ["linux", "windows"]
+import volatility.framework.constants.linux
 
 PLUGINS_PATH = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),
                 os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))]
