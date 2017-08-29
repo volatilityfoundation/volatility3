@@ -1,9 +1,8 @@
-import code
 import inspect
 
-from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
+from volatility.plugins import volshell
 
 
 class Volshell(plugins.PluginInterface):
@@ -11,13 +10,11 @@ class Volshell(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt", description = "Windows OS"),
-                requirements.IntRequirement(name = 'pid',
-                                            description = "Process ID",
-                                            optional = True)]
+        return (volshell.Volshell.get_requirements() +
+                [requirements.SymbolRequirement(name = "nt", description = "Windows OS"),
+                 requirements.IntRequirement(name = 'pid',
+                                             description = "Process ID",
+                                             optional = True)])
 
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
@@ -50,6 +47,8 @@ class Volshell(plugins.PluginInterface):
             yield proc
 
     def run(self):
+        # Determine locals
+        curframe = inspect.currentframe()
 
         # Provide some OS-agnostic convenience elements for ease
         context = self.context
@@ -59,32 +58,13 @@ class Volshell(plugins.PluginInterface):
         nt = context.module(config['nt'], layer_name = layer_name, offset = kvo)
 
         ps = lambda: list(self.list_processes())
-        members = lambda x: list(sorted(x.vol.members.keys()))
 
         pid = self.config.get('pid', None)
         eproc = None
         if pid:
-            eproc = [x for x in ps() if x.UniqueProcessId == pid]
+            for _x in ps():
+                if _x.UniqueProcessId == pid:
+                    eproc = _x
+                    break
 
-        # Determine locals
-        curframe = inspect.currentframe()
-        vars = curframe.f_globals.copy()
-        vars.update(curframe.f_locals)
-
-        # Try to enable tab completion
-        try:
-            import readline
-        except ImportError:
-            pass
-        else:
-            import rlcompleter
-            completer = rlcompleter.Completer(namespace = vars)
-            readline.set_completer(completer.complete)
-            readline.parse_and_bind("tab: complete")
-            print("Readline imported successfully")
-
-        # TODO: provide help, consider generic functions (pslist?) and/or providing windows/linux functions
-
-        code.interact(local = vars)
-
-        return renderers.TreeGrid([], lambda: [])
+        return volshell.Volshell(self.context, "plugins.Volshell").run(curframe.f_locals)
