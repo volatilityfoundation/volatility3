@@ -51,11 +51,9 @@ class Volshell(plugins.PluginInterface):
         curframe = inspect.currentframe()
 
         # Provide some OS-agnostic convenience elements for ease
-        context = self.context
-        config = self.config
         layer_name = self.config['primary']
-        kvo = config['primary.kernel_virtual_offset']
-        nt = context.module(config['nt'], layer_name = layer_name, offset = kvo)
+        kvo = self.config['primary.kernel_virtual_offset']
+        nt = self.context.module(self.config['nt'], layer_name = layer_name, offset = kvo)
 
         ps = lambda: list(self.list_processes())
 
