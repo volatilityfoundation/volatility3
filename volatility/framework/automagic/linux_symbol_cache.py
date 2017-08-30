@@ -63,7 +63,7 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
         if total > 0:
             vollog.info("Building linux caches...")
         for current in range(total):
-            progress_callback(current / total)
+            progress_callback(current * 100 / total, "Building linux caches")
             isf_url = cacheables[current]
 
             try:
