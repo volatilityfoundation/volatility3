@@ -206,7 +206,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                 scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
                 for value in scan_iterator():
                     if progress_callback:
-                        progress_callback(scan_metric(progress.value))
+                        progress_callback(scan_metric(progress.value),
+                                          "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
                     yield from scan_chunk(value)
         except Exception as e:
             vollog.debug("Exception: {}".format(str(e)))
