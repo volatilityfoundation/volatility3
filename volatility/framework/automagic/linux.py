@@ -32,8 +32,11 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                                 tl_path == path):
                         # TODO: Find the physical layer properly, not just for Intel
                         physical_path = interfaces.configuration.path_join(tl_sub_path, "memory_layer")
-                        self._banner_scan(context, path, requirement, context.config[physical_path],
-                                          progress_callback)
+                        # Ensure the stackers succeeded
+                        if context.config.get(physical_path, None):
+                            self._banner_scan(context, path, requirement, context.config[physical_path],
+                                              progress_callback)
+                            break
 
     def _banner_scan(self, context, config_path, requirement, layer_name, progress_callback = None):
         """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
