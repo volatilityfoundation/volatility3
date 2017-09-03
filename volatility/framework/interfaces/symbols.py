@@ -51,6 +51,9 @@ class Symbol(validity.ValidityRoutines):
 class SymbolSpaceInterface(collections.abc.Mapping):
     """An interface for the container that holds all the symbol-containing tables for use within a context"""
 
+    def free_table_name(self, prefix = "layer"):
+        """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
+
     @abstractmethod
     def get_symbols_by_type(self, type_name):
         """Returns all symbols based on the type of the symbol"""

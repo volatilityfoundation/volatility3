@@ -585,12 +585,7 @@ class SymbolRequirement(ConstructableRequirementInterface):
     def construct(self, context, config_path):
         """Constructs the symbol space within the context based on the subrequirements"""
         # Determine the space name
-        name = self.name
-        if name in context.symbol_space:
-            index = 2
-            while name in context.symbol_space:
-                name = self.name + str(index)
-                index += 1
+        name = context.symbol_space.free_table_name(self.name)
 
         config_path = path_join(config_path, self.name)
         args = {"context": context,
