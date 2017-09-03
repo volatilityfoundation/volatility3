@@ -31,8 +31,8 @@ class PsList(interfaces_plugins.PluginInterface):
 
         layer_name = self.config['primary.memory_layer']
 
-        _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, "vmlinux", layer_name)
-        vmlinux = self.context.module("vmlinux", self.config["primary"], aslr_shift)
+        _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config["vmlinux"], layer_name)
+        vmlinux = self.context.module(self.config["vmlinux"], self.config["primary"], aslr_shift)
         init_task = vmlinux.object(symbol_name = "init_task")
 
         for task in init_task.tasks:
