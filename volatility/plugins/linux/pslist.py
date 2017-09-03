@@ -1,5 +1,6 @@
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers
+from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 
@@ -28,10 +29,10 @@ class PsList(interfaces_plugins.PluginInterface):
     def list_tasks(self):
         """Lists all the tasks in the primary layer"""
 
-        layer_name = self.config['primary']
+        layer_name = self.config['primary.memory_layer']
 
-        # TODO: Will need to compute a non-zero offset for ASLR kernels
-        vmlinux = self.context.module("vmlinux", "primary", 0)
+        _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, "vmlinux", layer_name)
+        vmlinux = self.context.module("vmlinux", self.config["primary"], aslr_shift)
         init_task = vmlinux.object(symbol_name = "init_task")
 
         for task in init_task.tasks:

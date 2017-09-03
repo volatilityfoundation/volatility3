@@ -3,6 +3,7 @@ import logging
 from volatility.framework import interfaces, constants
 from volatility.framework.automagic import linux_symbol_cache
 from volatility.framework.layers import intel, scanners
+from volatility.framework.symbols import linux
 
 vollog = logging.getLogger(__name__)
 
@@ -73,7 +74,6 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
 
 
 class LintelStacker(interfaces.automagic.StackerLayerInterface):
-    linux_signature = b"SYMBOL\(swapper_pg_dir\)=.*"
     stack_order = 12
 
     @classmethod
@@ -86,42 +86,42 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        virtual_dtb = cls.determine_virtual_dtb(context, layer_name, progress_callback)
-        if virtual_dtb is not None:
-            new_layer_name = context.memory.free_layer_name("IntelLayer")
-            config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
-            context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
+        dtb = None
 
-            if virtual_dtb > 0xffffffff80000000:
-                layer_class = intel.Intel32e
-            else:
-                layer_class = intel.Intel
-            dtb = LinuxUtilities.virtual_to_physical_address(virtual_dtb)
-            context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = virtual_dtb
+        linux_banners = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
+        mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
+        for offset, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
+            vollog.debug("Identified banner: {}".format(repr(banner)))
+            symbol_files = linux_banners[banner]
+            if symbol_files:
+                isf_path = symbol_files[0]
+                table_name = context.symbol_space.free_table_name('LintelStacker')
+                table = linux.LinuxKernelIntermedSymbols(context, 'temporary.' + table_name, name = table_name,
+                                                         isf_filepath = isf_path)
+                context.symbol_space.append(table)
+                kaslr_shift, _ = LinuxUtilities.find_aslr(context, table_name, layer_name,
+                                                          progress_callback = progress_callback)
 
-            layer = layer_class(context, config_path = config_path, name = new_layer_name)
+                if ('init_level4_pgt' in table.symbols):
+                    layer_class = intel.Intel32e
+                    dtb_symbol_name = 'init_level4_pgt'
+                else:
+                    layer_class = intel.Intel
+                    dtb_symbol_name = 'swapper_pg_dir'
+
+                dtb = LinuxUtilities.virtual_to_physical_address(table.get_symbol(dtb_symbol_name).address +
+                                                                 kaslr_shift)
+
+                # Build the new layer
+                new_layer_name = context.memory.free_layer_name("IntelLayer")
+                config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
+                context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
+                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = dtb
+                layer = layer_class(context, config_path = config_path, name = new_layer_name)
+
         if layer:
-            vollog.debug("DTB was found at: 0x{:0x}".format(virtual_dtb))
+            vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
         return layer
-
-    @classmethod
-    def determine_virtual_dtb(cls, context, layer_name, progress_callback = None):
-        layer = context.memory[layer_name]
-
-        swapper_pg_dirs = []
-        for offset in layer.scan(scanner = scanners.RegExScanner(cls.linux_signature), context = context,
-                                 progress_callback = progress_callback):
-            swapper_pg_dir_text = context.memory[layer_name].read(offset, len(cls.linux_signature) + 20)
-            swapper_pg_dir = int(swapper_pg_dir_text[
-                                 swapper_pg_dir_text.index(b"=") + 1:swapper_pg_dir_text.index(b"\n")], 16)
-            swapper_pg_dirs.append(swapper_pg_dir)
-
-        dtb = 0
-        if swapper_pg_dirs:
-            dtb = list(reversed(sorted(set(swapper_pg_dirs), key = lambda x: swapper_pg_dirs.count(x))))[0]
-
-            return dtb
-        return None
 
 
 class LinuxUtilities(object):
@@ -129,21 +129,6 @@ class LinuxUtilities(object):
 
     @classmethod
     def find_aslr(cls, context, symbol_table, layer_name, progress_callback = None):
-        """Determines the virtual ASLR value"""
-        path_join = interfaces.configuration.path_join
-        # Find the symbol table's version of the DTB
-        swapper_pg_dir_name = symbol_table + constants.BANG + 'init_level4_pgt'
-        table_dtb = context.symbol_space.get_symbol(swapper_pg_dir_name).address
-
-        # Find the image's version of the DTB
-        image_dtb = LintelStacker.determine_virtual_dtb(context, layer_name, progress_callback)
-
-        # Subtract the actual from the supposed to get the shift
-        vaslr_shift = image_dtb - table_dtb
-        return vaslr_shift
-
-    @classmethod
-    def find_kaslr(cls, context, symbol_table, layer_name, progress_callback = None):
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'
         table_dtb = context.symbol_space.get_symbol(init_task_symbol).address
@@ -157,13 +142,20 @@ class LinuxUtilities(object):
             init_task = module.object(type_name = 'task_struct', offset = image_dtb)
             if init_task.pid != 0:
                 continue
-            if init_task.thread_info.cast('unsigned int') != 0:
+            if hasattr(init_task, 'thread_info') and init_task.thread_info.cast('unsigned int') != 0:
+                continue
+            elif (hasattr(init_task, 'state') and init_task.state.cast('unsigned int') != 0):
                 continue
             # This we get for free
             aslr_shift = init_task.files.cast('long long unsigned int') - module.get_symbol('init_files').address
             kaslr_shift = image_dtb - cls.virtual_to_physical_address(table_dtb)
-            return kaslr_shift
-        return None
+
+            if aslr_shift & 0xfff != 0 or kaslr_shift & 0xfff != 0:
+                continue
+            vollog.debug(
+                "Linux ASLR shift values determined: physical {:0x} virtual {:0x}".format(kaslr_shift, aslr_shift))
+            return kaslr_shift, aslr_shift
+        return None, None
 
     @classmethod
     def virtual_to_physical_address(cls, addr):
