@@ -143,6 +143,9 @@ class Module(interfaces.context.Module):
             if constants.BANG in type_name:
                 raise ValueError("Type_name cannot reference another module")
             type_arg = self._module_name + constants.BANG + type_name
+        # Ensure we don't use a layer_name other than the module's, why would anyone do that?
+        if 'layer_name' in kwargs:
+            del kwargs['layer_name']
         return self._context.object(type_arg, self._layer_name, offset, **kwargs)
 
     get_symbol = get_module_wrapper('get_symbol')
