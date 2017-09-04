@@ -138,7 +138,7 @@ class LinuxUtilities(object):
         for offset in context.memory[layer_name].scan(scanner = scanners.RegExScanner(swapper_signature),
                                                       context = context, progress_callback = progress_callback):
             task_symbol = module.get_type('task_struct')
-            image_dtb = offset - task_symbol.members['comm'][0]
+            image_dtb = offset - task_symbol.relative_child_offset('comm')
             init_task = module.object(type_name = 'task_struct', offset = image_dtb)
             if init_task.pid != 0:
                 continue
