@@ -172,7 +172,7 @@ class NlpDtbfinder(interfaces.automagic.AutomagicInterface):
 
 
 class NlpDtbStacker(interfaces.automagic.StackerLayerInterface):
-    stack_order = 10
+    stack_order = 13
 
     @classmethod
     def stack(cls, context, layer_name, progress_callback = None):
