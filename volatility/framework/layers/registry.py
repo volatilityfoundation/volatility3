@@ -1,7 +1,10 @@
-from volatility.framework import interfaces, exceptions, constants
+import os.path as os_path
+
+from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.configuration.requirements import IntRequirement
 from volatility.framework.interfaces.configuration import TranslationLayerRequirement
+from volatility.framework.symbols import intermed
 
 
 class RegistryFormatException(exceptions.LayerException):
@@ -19,8 +22,17 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._base_layer = self.config["base_layer"]
         self._hive_offset = self.config["hive_offset"]
         self._table_name = self.config["ntkrnlmp"]
+
+        self._reg_table_name = context.symbol_space.free_table_name("registry")
+
+        reg_path = "file://" + os_path.join(os_path.dirname(__file__), '..', 'symbols', 'windows', 'reg.json')
+        table = intermed.IntermediateSymbolTable(context = context, config_path = config_path,
+                                                 name = self._reg_table_name, isf_filepath = reg_path)
+        context.symbol_space.append(table)
+
         self._hive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
                                          self._hive_offset)
+
         # TODO: Check the checksum
 
         self._base_block = self._hive.Hive.BaseBlock.dereference()
@@ -28,7 +40,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._minaddr = 0
         self._maxaddr = self._base_block.Length
 
-        self.mapping(self._base_block.RootCell, length = 2)
+        # print("MAPPING", self.mapping(self._base_block.RootCell, length = 2))
 
     @property
     def root_cell(self):
@@ -36,12 +48,38 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
     def get_cell(self, cell_offset):
         offset = self._translate(cell_offset)
-        # This should be an _HCELL, but they don't exist in half the IFF files we've got.
-        # Instead we pull out the cell (but current ignore the size)
-        # TODO: Fix all of this, all of it, every last bit.
-        return self._context.object(symbol = self._table_name + constants.BANG + "_CELL_DATA",
-                                    offset = offset + 4,
-                                    layer_name = self._base_layer)
+        print(repr(self._context.memory[self._base_layer].read(offset, 0x100)))
+        cell = self._context.object(symbol = self._table_name + constants.BANG + "_CM_CACHED_VALUE_INDEX",
+                                    offset = offset, layer_name = self._base_layer).Data.CellData
+        signature = cell.u.KeyNode.Signature.cast("string", max_length = 2)
+        if signature == 'nk':
+            return cell.u.KeyNode
+        elif signature == 'sk':
+            return cell.u.KeySecurity
+        elif signature == 'vk':
+            return cell.u.KeyValue
+        elif signature == 'db':
+            return cell.u.ValueData
+        elif signature == 'lf':
+            return cell.u.KeyIndex
+
+        else:
+            print("Unknown Signature", signature)
+            if signature == '':
+                return cell.u.KeyList
+            if signature == '':
+                return cell.u.KeyString
+
+    def get_key(self, key_path):
+        key_path_array = key_path.split("/")
+
+    def subkeys(self, key):
+        if not key.vol.type_name.endswith(constants.BANG + '_CM_KEY_NODE'):
+            raise TypeError("Key for subkeys must be a _CM_KEY_NODE")
+        for index in range(2):
+            subkey_node = self.get_cell(key.SubKeyLists[index])
+            if subkey_node.vol.type_name.endswith(constants.BANG + '_CM_KEY_INDEX'):
+                pass
 
     @staticmethod
     def _mask(value, high_bit, low_bit):
@@ -59,7 +97,9 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
     def _translate(self, offset):
         """Translates a single cell index to a cell memory offset and the suboffset within it"""
-        if (offset > self._maxaddr):
+
+        # Ignore the volatile bit when determining maxaddr validity
+        if (offset & 0x7fffffff > self._maxaddr):
             raise RegistryInvalidIndex("Mapping request for value greater than maxaddr")
 
         volatile = self._mask(offset, 31, 31) >> 31
@@ -82,15 +122,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         while length > 0:
             # Try using the symbol first
             hbin_offset = self._translate(self._mask(offset, 31, 12))
-            try:
-                hbin_size = self.context.object(self._table_name + constants.BANG + "_HBIN",
-                                                offset = hbin_offset,
-                                                layer_name = self._base_layer).Size
-            except exceptions.SymbolError:
-                # TODO: Find the correct symbol to get this directly
-                hbin_size = self.context.object(self._table_name + constants.BANG + "unsigned long",
-                                                offset = hbin_offset + 8,
-                                                layer_name = self._base_layer)
+            hbin_size = self.context.object(self._reg_table_name + constants.BANG + "_HBIN",
+                                            offset = hbin_offset, layer_name = self._base_layer).Size
 
             # Now get the cell's offset and figure out if it goes outside the bin
             # We could use some invariants such as whether cells always fit within a bin?
