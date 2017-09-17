@@ -31,19 +31,29 @@ if __name__ == '__main__':
         basepath = os.path.abspath(os.path.dirname(__file__))
         with open(os.path.join(basepath, args.schema), 'r') as s:
             schema = json.load(s)
+
+    failures = []
     for filename in args.filenames:
-        if os.path.exists(filename):
-            with open(filename, 'r') as t:
-                test = json.load(t)
+        try:
+            if os.path.exists(filename):
+                print("[?] Validation successful: {}".format(filename))
+                with open(filename, 'r') as t:
+                    test = json.load(t)
 
-            if args.schema:
-                result = schemas.valid(test, schema, False)
-            else:
-                result = schemas.validate(test, False)
+                if args.schema:
+                    result = schemas.valid(test, schema, False)
+                else:
+                    result = schemas.validate(test, False)
 
-            if result:
-                print("[+] Validation successful: {}".format(filename))
+                if result:
+                    print("[+] Validation successful: {}".format(filename))
+                else:
+                    print("[-] Validation failed: {}".format(filename))
+                    failures.append(filename)
             else:
-                print("[-] Validation failed: {}".format(filename))
-        else:
-            print("[x] File not found: {}".format(filename))
+                print("[x] File not found: {}".format(filename))
+        except Exception as e:
+            failures.append(filename)
+            print("[x] Exception occured: {}".format(filename))
+
+    print("Failures", failures)
