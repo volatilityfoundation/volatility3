@@ -34,9 +34,4 @@ class RegTest(plugins.PluginInterface):
         registry_layer = RegistryHive(self.context, registry_config_path, name = 'hive0', os = 'Windows')
         self.context.memory.add_layer(registry_layer)
         root_node = registry_layer.get_cell(registry_layer.root_cell)
-        name = root_node.Name.cast("string", max_length = root_node.NameLength, errors = "replace",
-                                   encoding = "latin-1")
-        import pdb
-        pdb.set_trace()
-
-        print("Signature:", registry_layer.subkeys(root_node))
+        print([[y for y in x.values] for x in root_node.subkeys])
