@@ -1,6 +1,6 @@
 import collections.abc
 
-from volatility.framework import constants, exceptions, objects
+from volatility.framework import constants, objects
 from volatility.framework.symbols import generic
 
 
@@ -11,24 +11,6 @@ class _ETHREAD(objects.Struct):
     def owning_process(self, kernel_layer = None):
         """Return the EPROCESS that owns this thread"""
         return self.ThreadsProcess.dereference(kernel_layer)
-
-
-class _CMHIVE(objects.Struct):
-    @property
-    def helper_name(self):
-        """Determine a name for the hive. Note that some attributes are
-        unpredictably blank across different OS versions while others are populated,
-        so we check all possibilities and take the first one that's not empty"""
-
-        for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
-            try:
-                return getattr(self, attr).helper_string
-            except (AttributeError, exceptions.InvalidAddressException):
-                pass
-
-        return None
-
-    name = helper_name
 
 
 class _UNICODE_STRING(objects.Struct):
