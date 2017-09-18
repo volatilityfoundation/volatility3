@@ -43,6 +43,11 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         # print("MAPPING", self.mapping(self._base_block.RootCell, length = 2))
 
     @property
+    def address_mask(self):
+        """Return a mask that allows for the volatile bit to be set"""
+        return super().address_mask | 0x80000000
+
+    @property
     def root_cell(self):
         return self._base_block.RootCell
 
