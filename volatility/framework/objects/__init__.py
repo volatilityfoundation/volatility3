@@ -331,6 +331,16 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
         self._vol['count'] = self._check_type(count, int)
         self._vol['subtype'] = subtype
 
+    @property
+    def count(self):
+        """Returns the count dynamically"""
+        return self._vol['count']
+
+    @count.setter
+    def count(self, value):
+        """Sets the count to a specific value"""
+        self._vol['count'] = self._check_type(value, int)
+
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
         @classmethod
         def size(cls, template):
