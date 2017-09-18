@@ -52,11 +52,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         return self._base_block.RootCell
 
     def get_cell(self, cell_offset):
-        offset = self._translate(cell_offset)
-        print(repr(self._context.memory[self._base_layer].read(offset, 0x100)))
+        """Returns the appropriate Cell value for a cell offset"""
         cell = self._context.object(symbol = self._table_name + constants.BANG + "_CM_CACHED_VALUE_INDEX",
-                                    offset = offset, layer_name = self._base_layer).Data.CellData
-        signature = cell.u.KeyNode.Signature.cast("string", max_length = 2)
+                                    offset = cell_offset, layer_name = self.name).Data.CellData
+        signature = cell.u.KeyNode.Signature.cast("string", max_length = 2, encoding = "latin-1")
         if signature == 'nk':
             return cell.u.KeyNode
         elif signature == 'sk':
@@ -67,24 +66,11 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             return cell.u.ValueData
         elif signature == 'lf':
             return cell.u.KeyIndex
-
+        elif signature == '':
+            return cell.u.KeyString
         else:
-            print("Unknown Signature", signature)
-            if signature == '':
-                return cell.u.KeyList
-            if signature == '':
-                return cell.u.KeyString
-
-    def get_key(self, key_path):
-        key_path_array = key_path.split("/")
-
-    def subkeys(self, key):
-        if not key.vol.type_name.endswith(constants.BANG + '_CM_KEY_NODE'):
-            raise TypeError("Key for subkeys must be a _CM_KEY_NODE")
-        for index in range(2):
-            subkey_node = self.get_cell(key.SubKeyLists[index])
-            if subkey_node.vol.type_name.endswith(constants.BANG + '_CM_KEY_INDEX'):
-                pass
+            print("Unknown Signature", repr(signature))
+            return cell.u.KeyList
 
     @staticmethod
     def _mask(value, high_bit, low_bit):
