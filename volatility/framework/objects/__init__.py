@@ -1,5 +1,5 @@
-import collections
 import struct
+from collections import abc
 
 from volatility.framework import interfaces
 from volatility.framework.interfaces.objects import ObjectInformation
@@ -320,7 +320,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
                     template.update_vol(base_type = new_child)
 
 
-class Array(interfaces.objects.ObjectInterface, collections.Sequence):
+class Array(interfaces.objects.ObjectInterface, abc.Sequence):
     """Object which can contain a fixed number of an object type"""
 
     def __init__(self, context, type_name, object_info, count = 0, subtype = None):
@@ -442,7 +442,7 @@ class Struct(interfaces.objects.ObjectInterface):
     def _check_members(cls, members):
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
         # An object template is a callable that when called with a context, offset, layer_name and type_name
-        if not isinstance(members, collections.Mapping):
+        if not isinstance(members, abc.Mapping):
             raise TypeError("Struct members parameter must be a mapping: {}".format(type(members)))
         if not all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()]):
             raise TypeError("Struct members must be a tuple of relative_offsets and templates")
