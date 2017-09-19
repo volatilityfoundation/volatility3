@@ -339,7 +339,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
     @property
     def count(self):
         """Returns the count dynamically"""
-        return self._vol['count']
+        return self.vol.count
 
     @count.setter
     def count(self, value):
