@@ -331,6 +331,8 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
         self._vol['count'] = self._check_type(count, int)
         self._vol['subtype'] = subtype
 
+    # This overrides the little known Sequence.count(val) that returns the number of items in the list that match val
+    # Changing the name would be confusing (since we use count of an array everywhere else), so this is more important
     @property
     def count(self):
         """Returns the count dynamically"""
