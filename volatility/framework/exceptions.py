@@ -38,6 +38,10 @@ class PagedInvalidAddressException(InvalidAddressException):
         self.invalid_bits = invalid_bits
 
 
+class InvalidDataException(VolatilityException):
+    """Thrown when an object contains some data known to be invalid for that structure"""
+
+
 class SymbolSpaceError(VolatilityException):
     """Thrown when an error occurs dealing with Symbols and Symbolspaces"""
 
