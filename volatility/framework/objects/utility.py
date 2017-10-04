@@ -19,3 +19,9 @@ def pointer_to_string(pointer, count, errors = 'replace'):
         raise ValueError("pointer_to_string requires a positive count")
     char = pointer.dereference()
     return char.cast("string", max_length = count, errors = errors)
+
+
+def array_of_pointers(array, count, subtype = None):
+    """Takes an object, and recasts it as an array of pointers to subtype"""
+    subtype_pointer = objects.templates.ObjectTemplate(objects.Pointer, type_name = 'pointer', subtype = subtype)
+    return array.cast("array", count = count, subtype = subtype_pointer)
