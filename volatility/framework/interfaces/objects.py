@@ -92,6 +92,12 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def write(self, value):
         """Writes the new value into the format at the offset the object currently resides at"""
 
+    def validate(self):
+        """A method that can be overridden to validate this object.  It does not return and its return value should not be used.
+
+        Raises InvalidDataException on failure to validate the data correctly.
+        """
+
     def cast(self, new_type_name, **additional):
         """Returns a new object at the offset and from the layer that the current object inhabits
 

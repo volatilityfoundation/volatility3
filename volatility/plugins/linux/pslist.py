@@ -1,10 +1,11 @@
-import volatility.framework.interfaces.plugins as plugins
+import volatility.framework.interfaces.plugins as interfaces_plugins
+from volatility.framework import renderers
+from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
-from volatility.framework.renderers import TreeGrid
-from volatility.framework.objects.utility import array_to_string
+from volatility.framework.objects import utility
 
 
-class PsList(plugins.PluginInterface):
+class PsList(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',
@@ -22,23 +23,23 @@ class PsList(plugins.PluginInterface):
             ppid = 0
             if task.parent:
                 ppid = task.parent.pid
-            name = array_to_string(task.comm)
+            name = utility.array_to_string(task.comm)
             yield (0, (pid, ppid, name))
 
     def list_tasks(self):
         """Lists all the tasks in the primary layer"""
 
-        layer_name = self.config['primary']
+        layer_name = self.config['primary.memory_layer']
 
-        # TODO: Will need to compute a non-zero offset for ASLR kernels
-        vmlinux = self.context.module("vmlinux", "primary", 0)
-        init_task = vmlinux.object(symbol_name="init_task")
+        _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config["vmlinux"], layer_name)
+        vmlinux = self.context.module(self.config["vmlinux"], self.config["primary"], aslr_shift)
+        init_task = vmlinux.object(symbol_name = "init_task")
 
         for task in init_task.tasks:
             yield task
 
     def run(self):
-        return TreeGrid([("PID", int),
-                         ("PPID", int),
-                         ("COMM", str)],
-                        self._generator())
+        return renderers.TreeGrid([("PID", int),
+                                   ("PPID", int),
+                                   ("COMM", str)],
+                                  self._generator())

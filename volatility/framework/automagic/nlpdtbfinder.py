@@ -35,7 +35,7 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
 
     def test_entries(self, valid_entries):
         """Scans through valid_entries, descending to see whether one can be successfully mapped to completion
-        
+
         Returns the first valid DTB or None is no valid DTBs could be found
         """
         for _, entry in valid_entries:
@@ -131,6 +131,12 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
 
 
 class NlpDtbfinder(interfaces.automagic.AutomagicInterface):
+    """Operating-system agnostic DirectoryTableBase scanner
+
+    Checks a page for references off to other pages.
+    """
+    priority = 11
+
     def __call__(self, context, config_path, requirement, progress_callback = None):
         results = {}
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
@@ -166,7 +172,7 @@ class NlpDtbfinder(interfaces.automagic.AutomagicInterface):
 
 
 class NlpDtbStacker(interfaces.automagic.StackerLayerInterface):
-    stack_order = 10
+    stack_order = 13
 
     @classmethod
     def stack(cls, context, layer_name, progress_callback = None):

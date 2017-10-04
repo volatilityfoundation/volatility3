@@ -18,9 +18,18 @@ from volatility.framework.layers import physical
 
 vollog = logging.getLogger(__name__)
 
+IMPORTED_MAGIC = False
+try:
+    import magic
+
+    IMPORTED_MAGIC = True
+    vollog.debug("Imported python-magic, autodetecting compressed files based on content")
+except ImportError:
+    pass
+
 
 class LayerStacker(interfaces.automagic.AutomagicInterface):
-    """Class that attempts to build up layers in a single stack
+    """Builds up layers in a single stack
 
     This class mimics the volatility 2 style of stacking address spaces.  It builds up various layers based on
     separate :class:`~volatility.framework.interfaces.automagic.StackerLayerInterface` classes.  These classes are
@@ -67,7 +76,24 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         current_config_path = interfaces.configuration.path_join(config_path, "stack", current_layer_name)
         # This must be specific to get us started, setup the config and run
         new_context.config[interfaces.configuration.path_join(current_config_path, "filename")] = self.local_store
-        new_context.add_layer(physical.FileLayer(new_context, current_config_path, current_layer_name))
+
+        # Determine compression
+        detected = None
+        if IMPORTED_MAGIC:
+            try:
+                detected = magic.detect_from_filename(self.local_store)
+            except:
+                pass
+
+        if self.local_store.endswith('.xz') or (detected and detected.mime_type == 'application/x-xz'):
+            physical_layer = physical.XzFileLayer(new_context, current_config_path, current_layer_name)
+        elif self.local_store.endswith('.bz2') or (detected and detected.mime_type == 'application/x-bzip2'):
+            physical_layer = physical.Bz2FileLayer(new_context, current_config_path, current_layer_name)
+        elif self.local_store.endswith('.gz') or (detected and detected.mime_type == 'application/x-gzip'):
+            physical_layer = physical.GzFileLayer(new_context, current_config_path, current_layer_name)
+        else:
+            physical_layer = physical.FileLayer(new_context, current_config_path, current_layer_name)
+        new_context.add_layer(physical_layer)
 
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True

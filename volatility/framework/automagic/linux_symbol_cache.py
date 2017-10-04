@@ -4,14 +4,14 @@ import pathlib
 import pickle
 from urllib import parse
 
-from volatility.framework import interfaces, constants
+from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
 
 
 class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
-    """Class to run through all Linux symbols tables and cache their banners"""
+    """Runs through all Linux symbols tables and caches their banners"""
 
     @classmethod
     def load_linux_banners(cls):
@@ -47,8 +47,12 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
             # Favour specific name, over uncompressed JSON (user-editable), over compressed JSON over uncompressed files
             for extension in ['.json', '.json.xz']:
                 # Hopefully these will not be large lists, otherwise this might be slow
-                cacheables += [x.as_uri() for x in
-                               pathlib.Path(path).joinpath('linux').resolve().rglob('*' + extension)]
+                try:
+                    cacheables += [x.as_uri() for x in
+                                   pathlib.Path(path).joinpath('linux').resolve().rglob('*' + extension)]
+                except FileNotFoundError:
+                    # If there's no linux symbols, don't cry about it
+                    pass
 
         for banner in linuxbanners:
             for json_file in linuxbanners[banner]:
@@ -59,7 +63,7 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
         if total > 0:
             vollog.info("Building linux caches...")
         for current in range(total):
-            progress_callback(current / total)
+            progress_callback(current * 100 / total, "Building linux caches")
             isf_url = cacheables[current]
 
             try:
@@ -74,7 +78,7 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
                 bannerlist = linuxbanners.get(banner, [])
                 bannerlist.append(isf_url)
                 linuxbanners[banner] = bannerlist
-            except KeyError:
+            except exceptions.SymbolError:
                 pass
 
             # Rewrite the cached linuxbanners each run, since writing is faster than the cache validation portion

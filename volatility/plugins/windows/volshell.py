@@ -1,38 +1,30 @@
-import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import renderers
+import inspect
+
 from volatility.framework.configuration import requirements
+from volatility.framework.interfaces import plugins
+from volatility.plugins import volshell
 
 
-class PsList(plugins.PluginInterface):
+class Volshell(plugins.PluginInterface):
     """Lists the processes present in a particular memory image"""
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt", description = "Windows OS"),
-                requirements.IntRequirement(name = 'pid',
-                                            description = "Process ID",
-                                            optional = True)]
+        return (volshell.Volshell.get_requirements() +
+                [requirements.SymbolRequirement(name = "nt", description = "Windows OS"),
+                 requirements.IntRequirement(name = 'pid',
+                                             description = "Process ID",
+                                             optional = True)])
 
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
 
-    def _generator(self):
-        for proc in self.list_processes():
-            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
-                       proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
-                                               errors = 'replace')))
-
     def list_processes(self):
         """Lists all the processes in the primary layer"""
 
-        layer_name = self.config['primary']
-
         # We only use the object factory to demonstrate how to use one
         kvo = self.config['primary.kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config['nt'], layer_name = layer_name, offset = kvo)
+        ntkrnlmp = self.context.module(self.config['nt'], layer_name = self.config['primary'], offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
         list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
@@ -55,7 +47,22 @@ class PsList(plugins.PluginInterface):
             yield proc
 
     def run(self):
-        return renderers.TreeGrid([("PID", int),
-                                   ("PPID", int),
-                                   ("ImageFileName", str)],
-                                  self._generator())
+        # Determine locals
+        curframe = inspect.currentframe()
+
+        # Provide some OS-agnostic convenience elements for ease
+        layer_name = self.config['primary']
+        kvo = self.config['primary.kernel_virtual_offset']
+        nt = self.context.module(self.config['nt'], layer_name = layer_name, offset = kvo)
+
+        ps = lambda: list(self.list_processes())
+
+        pid = self.config.get('pid', None)
+        eproc = None
+        if pid:
+            for _x in ps():
+                if _x.UniqueProcessId == pid:
+                    eproc = _x
+                    break
+
+        return volshell.Volshell(self.context, "plugins.Volshell").run(curframe.f_locals)

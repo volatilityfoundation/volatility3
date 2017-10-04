@@ -27,8 +27,10 @@ class Renderer(validity.ValidityRoutines, metaclass = ABCMeta):
 
 
 class ColumnSortKey(metaclass = ABCMeta):
+    ascending = True
+
     @abstractmethod
-    def key(self, values):
+    def __call__(self, values):
         """The key function passed as a sort key to the TreeGrid's visit function"""
 
 

@@ -3,7 +3,7 @@ import collections.abc
 import enum
 import logging
 
-from volatility.framework import constants, exceptions, interfaces, objects
+from volatility.framework import constants, exceptions, interfaces, objects, validity
 from volatility.framework.symbols import native, windows, linux
 
 vollog = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ class SymbolType(enum.Enum):
     ENUM = 3
 
 
-class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
+class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRoutines):
     """Handles an ordered collection of SymbolTables
 
        This collection is ordered so that resolution of symbols can
@@ -23,9 +23,19 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
     """
 
     def __init__(self):
+        super().__init__()
         self._dict = collections.OrderedDict()
         # Permanently cache all resolved symbols
         self._resolved = {}
+
+    def free_table_name(self, prefix = "layer"):
+        """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
+        self._check_type(prefix, str)
+
+        count = 1
+        while prefix + str(count) in self:
+            count += 1
+        return prefix + str(count)
 
     ### Symbol functions
 

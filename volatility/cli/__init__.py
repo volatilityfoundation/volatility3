@@ -18,10 +18,10 @@ import volatility.framework
 import volatility.plugins
 from volatility.framework import automagic, constants, contexts, interfaces
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces.configuration import HierarchicalDict
-from volatility.framework.renderers.text import QuickTextRenderer
+from volatility.framework.renderers import text
 
 # Make sure we log everything
+
 vollog = logging.getLogger()
 vollog.setLevel(0)
 # Trim the console down by default
@@ -111,7 +111,12 @@ class CommandLine(object):
         args = parser.parse_args()
         if args.plugin is None:
             parser.error("Please select a plugin to run")
-        console.setLevel(30 - (args.verbosity * 10))
+        if args.verbosity < 3:
+            console.setLevel(30 - (args.verbosity * 10))
+        else:
+            console.setLevel(10 - (args.verbosity - 2))
+
+        vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
 
         plugin = plugin_list[args.plugin]
         plugin_config_path = interfaces.configuration.path_join('plugins', plugin.__name__)
@@ -120,7 +125,7 @@ class CommandLine(object):
         if args.config:
             with open(args.config, "r") as f:
                 json_val = json.load(f)
-                ctx.config.splice(plugin_config_path, HierarchicalDict(json_val))
+                ctx.config.splice(plugin_config_path, interfaces.configuration.HierarchicalDict(json_val))
 
         # Populate the context config based on the returned args
         # We have already determined these elements must be descended from ConfigurableInterface
@@ -169,7 +174,7 @@ class CommandLine(object):
                 json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
         # Construct and run the plugin
-        QuickTextRenderer().render(constructed.run())
+        text.QuickTextRenderer().render(constructed.run())
 
     def populate_requirements_argparse(self, parser, configurable):
         """Adds the plugin's simple requirements to the provided parser
@@ -193,7 +198,7 @@ class CommandLine(object):
                 additional["type"] = requirement.instance_type
                 if isinstance(requirement, requirements.BooleanRequirement):
                     additional["action"] = "store_true"
-            elif isinstance(requirement, requirements.ListRequirement):
+            elif isinstance(requirement, interfaces.configuration.ListRequirement):
                 if requirement.min_elements != requirement.max_elements:
                     if requirement.min_elements > 0:
                         additional["nargs"] = "+"
@@ -203,7 +208,7 @@ class CommandLine(object):
                 else:
                     additional["nargs"] = requirement.max_elements
                 additional["type"] = requirement.element_type.instance_type
-            elif isinstance(requirement, requirements.ChoiceRequirement):
+            elif isinstance(requirement, interfaces.configuration.ChoiceRequirement):
                 additional["type"] = str
                 additional["choices"] = requirement.choices
             else:

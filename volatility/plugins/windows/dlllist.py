@@ -1,22 +1,16 @@
-import volatility.framework.interfaces.plugins as plugins
-import volatility.plugins.windows.pslist as pslist
+import volatility.framework.interfaces.plugins as interfaces_plugins
+from volatility.plugins.windows import pslist
 from volatility.framework import exceptions, renderers
-from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 
 
-class DllList(plugins.PluginInterface):
+class DllList(interfaces_plugins.PluginInterface):
     """Lists the loaded modules in a particular memory image"""
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space'),
-                requirements.SymbolRequirement(name = "ntkrnlmp",
-                                               description = "Windows OS"),
-                requirements.IntRequirement(name = 'pid',
-                                            description = "Process ID",
-                                            optional = True)]
+        # Since we're calling the plugin, make sure we have the plugin's requirements
+        return pslist.PsList.get_requirements() + []
 
     def _generator(self, procs):
 

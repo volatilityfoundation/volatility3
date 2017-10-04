@@ -51,6 +51,9 @@ class Symbol(validity.ValidityRoutines):
 class SymbolSpaceInterface(collections.abc.Mapping):
     """An interface for the container that holds all the symbol-containing tables for use within a context"""
 
+    def free_table_name(self, prefix = "layer"):
+        """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
+
     @abstractmethod
     def get_symbols_by_type(self, type_name):
         """Returns all symbols based on the type of the symbol"""
@@ -105,10 +108,15 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     @property
     def symbols(self):
-        """Returns an iterator of the Symbols"""
+        """Returns an iterator of the Symbol names"""
         raise NotImplementedError("Abstract property symbols not implemented by subclass.")
 
-    # ## Required Symbol type functions
+    # ## Required Type functions
+
+    @property
+    def types(self):
+        """Returns an iterator of the Symbol type names"""
+        raise NotImplementedError("Abstract property types not implemented by subclass.")
 
     def get_type(self, name):
         """Resolves a symbol name into an object template
@@ -117,10 +125,12 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         """
         raise NotImplementedError("Abstract method get_type not implemented by subclass.")
 
+    # ## Required Symbol enumeration functions
+
     @property
-    def types(self):
-        """Returns an iterator of the Symbol types"""
-        raise NotImplementedError("Abstract property types not implemented by subclass.")
+    def enumerations(self):
+        """Returns an iterator of the Enumeration names"""
+        raise NotImplementedError("Abstract property enumerations not implemented by subclass.")
 
     # ## Native Type Handler
 
@@ -163,26 +173,23 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     def get_symbols_by_type(self, type_name):
         """Returns the name of all symbols in this table that have type matching type_name"""
-        for symbol in self.symbols:
+        for symbol_name in self.symbols:
             # This allows for searching with and without the table name (in case multiple tables contain
             # the same symbol name and we've not specifically been told which one)
+            symbol = self.get_symbol(symbol_name)
             if symbol.type_name == type_name or (symbol.type_name.endswith(constants.BANG + type_name)):
                 yield symbol.name
 
     def get_symbols_by_location(self, offset):
-        """Returns the name of all symbols in this table that have type matching type_name"""
-        sort_symbols = [(s.offset, s) for s in sorted(self.symbols, key = lambda x: x.offset)]
+        """Returns the name of all symbols in this table that live at a particular offset"""
+        sort_symbols = [(s.offset, s) for s in
+                        sorted([self.get_symbol(sn) for sn in self.symbols], key = lambda x: x.offset)]
         result = bisect.bisect_left(sort_symbols, offset)
         if result == len(sort_symbols):
             raise StopIteration
         closest_symbol = sort_symbols[result][1]
         if closest_symbol.address == offset:
             yield closest_symbol.name
-
-    @property
-    def enumerations(self):
-        """Returns an iterator of the Enumeration names"""
-        raise NotImplementedError("Abstract property enumerations not implemented by subclass.")
 
 
 class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface):

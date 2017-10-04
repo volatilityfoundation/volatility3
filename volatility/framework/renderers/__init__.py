@@ -106,6 +106,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         :param generator: A generator that populates the tree/grid structure
         """
         self._populated = False
+        self._row_count = 0
         self._children = []
         converted_columns = []
         if len(columns) < 1:
@@ -136,7 +137,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         return output
 
     def populate(self, func = None, initial_accumulator = None):
-        """Generator that returns the next available Node
+        """Populates the tree by consuming the TreeGrid's construction generator
+           Func is called on every node, so can be used to create output on demand
 
            This is equivalent to a one-time visit.
         """
@@ -153,6 +155,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 treenode = self._append(parent, item)
                 prev_nodes = prev_nodes[0: parent_index] + [treenode]
                 accumulator = func(treenode, accumulator)
+                self._row_count += 1
         self._populated = True
 
     @property
@@ -164,6 +167,11 @@ class TreeGrid(interfaces.renderers.TreeGrid):
     def columns(self):
         """Returns the available columns and their ordering and types"""
         return self._columns
+
+    @property
+    def row_count(self):
+        """Returns the number of rows populated"""
+        return self._row_count
 
     def children(self, node):
         """Returns the subnodes of a particular node in order"""
@@ -244,6 +252,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         if children is not None:
             if sort_key is not None:
                 children = sorted(children, key = lambda x: sort_key(x[0].values))
+                if not sort_key.ascending:
+                    children = reversed(children)
             accumulator = self._visit(children, function, accumulator, sort_key)
         return accumulator
 
@@ -254,19 +264,22 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 accumulator = function(n, accumulator)
                 if sort_key is not None:
                     children = sorted(children, key = lambda x: sort_key(x[0].values))
+                    if not sort_key.ascending:
+                        children = reversed(children)
                 accumulator = self._visit(children, function, accumulator, sort_key)
         return accumulator
 
 
 class ColumnSortKey(interfaces.renderers.ColumnSortKey):
-    def __init__(self, treegrid, column_name):
+    def __init__(self, treegrid, column_name, ascending = True):
         self._index = None
+        self.ascending = ascending
         for i in treegrid.columns:
             if i.name.lower() == column_name.lower():
                 self._index = i.index
         if self._index is None:
             raise ValueError("Column not found in TreeGrid columns: {}".format(column_name))
 
-    def key(self, values):
+    def __call__(self, values):
         """The key function passed as the sort key"""
         return values[self._index]

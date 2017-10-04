@@ -184,11 +184,11 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         max_address = min(self.maximum_address, max_address)
 
         try:
-            progress = multiprocessing.Manager().Value("Q", 0)
             scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
-            scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
             scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
             if scanner.thread_safe and not constants.DISABLE_MULTITHREADED_SCANNING:
+                progress = multiprocessing.Manager().Value("Q", 0)
+                scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
                 with multiprocessing.Pool() as pool:
                     result = pool.map_async(scan_chunk, scan_iterator())
                     while not result.ready():
@@ -202,9 +202,12 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                     for value in result.get():
                         yield from value
             else:
+                progress = DummyProgress()
+                scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
                 for value in scan_iterator():
                     if progress_callback:
-                        progress_callback(scan_metric(progress.value))
+                        progress_callback(scan_metric(progress.value),
+                                          "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
                     yield from scan_chunk(value)
         except Exception as e:
             vollog.debug("Exception: {}".format(str(e)))
@@ -251,6 +254,19 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     def dependencies(self):
         """Returns a list of layer names that this layer translates onto"""
         return []
+
+    ### Translation layer convenience function
+
+    def translate(self, offset, ignore_errors = False):
+        mapping = self.mapping(offset, 0, ignore_errors)
+        if mapping:
+            _, mapped_offset, _, layer = list(mapping)[0]
+        else:
+            if ignore_errors:
+                # We should only hit this if we ignored errors, but check anyway
+                return None, None
+            raise exceptions.InvalidAddressException("Cannot translate {} in layer {}".format(offset, self.name))
+        return mapped_offset, layer
 
     # ## Read/Write functions for mapped pages
 
@@ -367,3 +383,8 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
     def check_cycles(self):
         """Runs through the available layers and identifies if there are cycles in the DAG"""
         # TODO: Is having a cycle check necessary?
+
+
+class DummyProgress(object):
+    def __init__(self):
+        self.value = 0

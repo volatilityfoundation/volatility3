@@ -1,3 +1,6 @@
+import bz2
+import gzip
+import lzma
 import os.path
 
 from volatility.framework import exceptions, interfaces
@@ -144,3 +147,52 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     @classmethod
     def get_requirements(cls):
         return [requirements.StringRequirement(name = 'filename', optional = False)]
+
+
+class XzFileLayer(FileLayer):
+    def __init__(self, context, config_path, name):
+        super().__init__(context, config_path, name)
+        self._size = None
+
+    @property
+    def _file(self):
+        """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
+        # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
+        mode = "rb"
+        if not self._file_:
+            self._file_ = lzma.open(self._filename, mode)
+        return self._file_
+
+    @property
+    def maximum_address(self):
+        """Returns the largest available address in the space"""
+        # Calculate the size by seeking to the end and telling
+        if self._size:
+            return self._size
+        orig = self._file.tell()
+        self._file.seek(0, 2)
+        self._size = self._file.tell()
+        self._file.seek(orig)
+        return self._size
+
+
+class GzFileLayer(XzFileLayer):
+    @property
+    def _file(self):
+        """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
+        # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
+        mode = "rb"
+        if not self._file_:
+            self._file_ = gzip.open(self._filename, mode)
+        return self._file_
+
+
+class Bz2FileLayer(XzFileLayer):
+    @property
+    def _file(self):
+        """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
+        # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
+        mode = "rb"
+        if not self._file_:
+            self._file_ = bz2.open(self._filename, mode)
+        return self._file_

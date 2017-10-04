@@ -104,7 +104,9 @@ def scan(ctx, layer_name, page_size, progress_callback = None, start = None, end
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
-    """An Automagic object that looks for all Intel translation layers and scans each of them for a pdb signature.
+    """Windows symbol loader based on PDB signatures
+
+    An Automagic object that looks for all Intel translation layers and scans each of them for a pdb signature.
     When found, a search for a corresponding Intermediate Format data file is carried out and if found an appropriate
     symbol space is automatically loaded.
 
@@ -294,9 +296,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             # We don't care if we're mapping an address to 0, it's not what we're looking for
                             pass
             if not valid_kernels:
-                vollog.warning("No suitable kernel found for layer: {}".format(virtual_layer_name))
+                vollog.info("No suitable kernel found for layer: {}".format(virtual_layer_name))
         if not valid_kernels:
-            vollog.warning("No suitable kernels found during pdbscan")
+            vollog.info("No suitable kernels found during pdbscan")
         return valid_kernels
 
     def __call__(self, context, config_path, requirement, progress_callback = None):

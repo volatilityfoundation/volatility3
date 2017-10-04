@@ -9,7 +9,6 @@ import urllib.parse
 
 from volatility import schemas
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
-from volatility.framework.exceptions import SymbolSpaceError
 from volatility.framework.symbols import native
 
 vollog = logging.getLogger(__name__)
@@ -87,7 +86,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Validation is expensive, but we cache to store the hashes of successfully validated json objects
         if validate and not schemas.validate(json_object):
-            raise SymbolSpaceError("File does not pass version validation: {}".format(url.geturl()))
+            raise exceptions.SymbolSpaceError("File does not pass version validation: {}".format(url.geturl()))
 
         metadata = json_object.get('metadata', None)
 
@@ -167,7 +166,7 @@ class Version1Format(ISFormatTable):
         nt.name = name + "_natives"
         super().__init__(context, config_path, name, nt)
         self._overrides = {}
-        self._symbol_cache = None
+        self._symbol_cache = {}
 
     def _get_natives(self):
         """Determines the appropriate native_types to use from the JSON data"""
@@ -198,23 +197,30 @@ class Version1Format(ISFormatTable):
 
     def get_symbol(self, name):
         """Returns the location offset given by the symbol name"""
+        # TODO: Add the ability to add/remove/change symbols after creation
+        # note that this should invalidate/update the cache
+        if self._symbol_cache.get(name, None):
+            return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise KeyError("Unknown symbol: {}".format(name))
-        return interfaces.symbols.Symbol(name = name, address = symbol['address'])
+            raise exceptions.SymbolError("Unknown symbol: {}".format(name))
+        self._symbol_cache[name] = interfaces.symbols.Symbol(name = name, address = symbol['address'])
+        return self._symbol_cache[name]
 
     @property
     def symbols(self):
-        if not self._symbol_cache:
-            self._symbol_cache = [self.get_symbol(x) for x in self._json_object['symbols']]
-        return self._symbol_cache
-
-    # TODO: Add the ability to add/remove/change symbols after creation, note that this should invalidate the cache
+        """Returns an iterator of the symbol names"""
+        return self._json_object.get('symbols', {}).keys()
 
     @property
     def enumerations(self):
         """Returns an iterator of the available enumerations"""
         return self._json_object.get('enums', {}).keys()
+
+    @property
+    def types(self):
+        """Returns an iterator of the symbol type names"""
+        return list(self._json_object.get('user_types', {}).keys()) + list(self.natives.types)
 
     def get_type_class(self, name):
         return self._overrides.get(name, objects.Struct)
@@ -227,11 +233,6 @@ class Version1Format(ISFormatTable):
     def del_type_class(self, name):
         if name in self._overrides:
             del self._overrides[name]
-
-    @property
-    def types(self):
-        """Returns an iterator of the symbol names"""
-        return list(self._json_object.get('user_types', {}).keys()) + list(self.natives.types)
 
     def _interdict_to_template(self, dictionary):
         """Converts an intermediate format dict into an object template"""
@@ -367,14 +368,18 @@ class Version3Format(Version2Format):
     version = (current - age, age, revision)
 
     def get_symbol(self, name):
-        """Returns the location offset given by the symbol name"""
+        """Returns the symbol given by the symbol name"""
+        if self._symbol_cache.get(name, None):
+            return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise KeyError("Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError("Unknown symbol: {}".format(name))
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
-        return interfaces.symbols.Symbol(name = name, address = symbol['address'], type = symbol_type)
+        self._symbol_cache[name] = interfaces.symbols.Symbol(name = name, address = symbol['address'],
+                                                             type = symbol_type)
+        return self._symbol_cache[name]
 
 
 class Version4Format(Version3Format):
@@ -423,15 +428,19 @@ class Version5Format(Version4Format):
     version = (current - age, age, revision)
 
     def get_symbol(self, name):
-        """Returns the location offset given by the symbol name"""
+        """Returns the symbol given by the symbol name"""
+        if self._symbol_cache.get(name, None):
+            return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise KeyError("Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError("Unknown symbol: {}".format(name))
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
         symbol_constant_data = None
         if 'constant_data' in symbol:
             symbol_constant_data = base64.b64decode(symbol.get('constant_data'))
-        return interfaces.symbols.Symbol(name = name, address = symbol['address'], type = symbol_type,
-                                         constant_data = symbol_constant_data)
+        self._symbol_cache[name] = interfaces.symbols.Symbol(name = name, address = symbol['address'],
+                                                             type = symbol_type,
+                                                             constant_data = symbol_constant_data)
+        return self._symbol_cache[name]

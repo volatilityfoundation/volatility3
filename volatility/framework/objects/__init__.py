@@ -1,5 +1,5 @@
-import collections
 import struct
+from collections import abc
 
 from volatility.framework import interfaces
 from volatility.framework.interfaces.objects import ObjectInformation
@@ -77,9 +77,10 @@ class Float(PrimitiveObject, float):
     """Primitive Object that handles double or floating point numbers"""
     _struct_type = float
 
-class Char(PrimitiveObject, str):
+
+class Char(PrimitiveObject, bytes):
     """Primitive Object that handles characters"""
-    _struct_type = str
+    _struct_type = bytes
 
 
 class Bytes(PrimitiveObject, bytes):
@@ -319,7 +320,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
                     template.update_vol(base_type = new_child)
 
 
-class Array(interfaces.objects.ObjectInterface, collections.Sequence):
+class Array(interfaces.objects.ObjectInterface, abc.Sequence):
     """Object which can contain a fixed number of an object type"""
 
     def __init__(self, context, type_name, object_info, count = 0, subtype = None):
@@ -329,6 +330,18 @@ class Array(interfaces.objects.ObjectInterface, collections.Sequence):
                          object_info = object_info)
         self._vol['count'] = self._check_type(count, int)
         self._vol['subtype'] = subtype
+
+    # This overrides the little known Sequence.count(val) that returns the number of items in the list that match val
+    # Changing the name would be confusing (since we use count of an array everywhere else), so this is more important
+    @property
+    def count(self):
+        """Returns the count dynamically"""
+        return self._vol['count']
+
+    @count.setter
+    def count(self, value):
+        """Sets the count to a specific value"""
+        self._vol['count'] = self._check_type(value, int)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
         @classmethod
@@ -441,7 +454,7 @@ class Struct(interfaces.objects.ObjectInterface):
     def _check_members(cls, members):
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
         # An object template is a callable that when called with a context, offset, layer_name and type_name
-        if not isinstance(members, collections.Mapping):
+        if not isinstance(members, abc.Mapping):
             raise TypeError("Struct members parameter must be a mapping: {}".format(type(members)))
         if not all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()]):
             raise TypeError("Struct members must be a tuple of relative_offsets and templates")
