@@ -10,7 +10,7 @@ class _EX_FAST_REF(objects.Struct):
     def dereference_as(self, target):
     
         # the mask value is different on 32 and 64 bits 
-        if self._context.symbol_space.get_type("ntkrnlmp!pointer").size == 4:
+        if self._context.symbol_space.get_type("nt1!pointer").size == 4:
             max_fast_ref = 7
         else:
             max_fast_ref = 15
@@ -19,8 +19,8 @@ class _EX_FAST_REF(objects.Struct):
 
 class ExecutiveObject(object):
     def object_header(self):
-        body_offset = self._context.symbol_space.get_type("ntkrnlmp!_OBJECT_HEADER").relative_child_offset("Body") 
-        return self._context.object("ntkrnlmp!_OBJECT_HEADER", layer_name = self.vol.layer_name, offset = self.vol.offset - body_offset)
+        body_offset = self._context.symbol_space.get_type("nt1!_OBJECT_HEADER").relative_child_offset("Body") 
+        return self._context.object("nt1!_OBJECT_HEADER", layer_name = self.vol.layer_name, offset = self.vol.offset - body_offset)
 
 class _CM_KEY_BODY(objects.Struct):
     def full_key_name(self):
@@ -55,36 +55,38 @@ class _OBJECT_HEADER(objects.Struct):
 
     @property
     def NameInfo(self):
-        #header_offset = ord(self.NameInfoOffset)
-        header_offset = 0x10
-        if header_offset != 0:
-            header = self._context.object("ntkrnlmp!_OBJECT_HEADER_NAME_INFO", 
-                                          layer_name = self.vol.layer_name, 
-                                          offset = self.vol.offset - header_offset)
-            return header
-        return None
-
-    def object_type(self):
         try:
-            # vista and earlier have a Type member 
-            return self.Type.Name.String
+            header_offset = ord(self.NameInfoOffset)
         except AttributeError:
-            # windows 7 and later have a TypeIndex, but windows 10
-            # further encodes the index value with nt!ObHeaderCookie 
-            try:
-                offset = self._context.symbol_space.get_symbol("nt!ObHeaderCookie").address
-                cookie = self._context.object("nt!unsigned int", self.vol.layer_name, offset = offset)
-                type_index = ((self.vol.offset >> 8) ^ cookie ^ self.TypeIndex) & 0xFF    
-            except AttributeError:
-                type_index = self.TypeIndex
+            #http://codemachine.com/article_objectheader.html
+            name_info_bit = 0x2 
             
-            # where do we get type_map from?
-            return type_map[self.TypeIndex]
+            layer = self._context.memory[self.vol.layer_name]            
+            kvo = layer.config["kernel_virtual_offset"]
+                    
+            # is this the right thing to raise here?
+            if kvo == None:
+                raise AttributeError
+            
+            ntkrnlmp = self._context.module(layer.config["nt"], layer_name = self.vol.layer_name, offset = kvo)
+            address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
+            calculated_index = ord(self.InfoMask) & (name_info_bit | (name_info_bit - 1))
+                        
+            header_offset = self._context.object(layer.config["nt"] + constants.BANG + "unsigned char", 
+                                                layer_name = self.vol.layer_name, 
+                                                offset = kvo + address + calculated_index)
+                                                
+            header_offset = ord(header_offset)
+                                                                                                   
+        header = self._context.object(layer.config["nt"] + constants.BANG + "_OBJECT_HEADER_NAME_INFO", 
+                                      layer_name = self.vol.layer_name, 
+                                      offset = self.vol.offset - header_offset)
+        return header
 
 class _HANDLE_TABLE_ENTRY(objects.Struct):
     def object_header(self):
         
-        if self.context.symbol_space.get_type("ntkrnlmp!pointer").size == 4:
+        if self.context.symbol_space.get_type("nt1!pointer").size == 4:
             # xp/2003/vista use Object. windows 8 and above uses LowValue 
             # both are placeholders for _EX_FAST_REF instances 
             try:
@@ -102,7 +104,7 @@ class _HANDLE_TABLE_ENTRY(objects.Struct):
             except AttributeError:
                 # where do we get sar from?
                 header_ptr = self.decode_pointer(sar)
-                return self._context.object("nt!_OBJECT_HEADER", self.vol.layer_name, offset = header_ptr)
+                return self._context.object("nt1!_OBJECT_HEADER", self.vol.layer_name, offset = header_ptr)
                 
     def decode_pointer(self, sar):
         value = self.LowValue & 0xFFFFFFFFFFFFFFF8 >> sar 
