@@ -1,4 +1,5 @@
 from volatility.framework import objects
+from volatility.framework.objects import templates
 
 
 def array_to_string(array, count = None, errors = 'replace'):
@@ -21,7 +22,11 @@ def pointer_to_string(pointer, count, errors = 'replace'):
     return char.cast("string", max_length = count, errors = errors)
 
 
-def array_of_pointers(array, count, subtype = None):
+def array_of_pointers(array, count, subtype = None, context = None):
     """Takes an object, and recasts it as an array of pointers to subtype"""
+    if isinstance(subtype, str) and context is not None:
+        subtype = context.symbol_space.get_type(subtype)
+    if not isinstance(subtype, templates.ObjectTemplate) or subtype is None:
+        raise TypeError("Subtype must be a valid object template")
     subtype_pointer = objects.templates.ObjectTemplate(objects.Pointer, type_name = 'pointer', subtype = subtype)
     return array.cast("array", count = count, subtype = subtype_pointer)
