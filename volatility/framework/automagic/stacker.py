@@ -70,6 +70,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         self.local_store = None
         if location.scheme == "file":
             self.local_store = location.path
+        else:
+            vollog.warning("Only file scheme supported for single-location")
+            return []
 
         new_context = context.clone()
         current_layer_name = context.memory.free_layer_name("FileLayer")
