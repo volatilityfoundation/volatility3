@@ -5,6 +5,13 @@ from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework import constants
 from volatility.framework.objects import utility
+from functools import lru_cache
+
+try:
+    from capstone import Cs, CS_ARCH_X86, CS_MODE_64, CS_MODE_32
+    has_capsone = True
+except ImportError:
+    has_capstone = False
 
 class Handles(interfaces_plugins.PluginInterface):
     """Lists process open handles"""
@@ -38,7 +45,12 @@ class Handles(interfaces_plugins.PluginInterface):
             if handle_table_entry.LowValue == 0:
                 return None
                 
-            magic = 0x10 
+            magic = self.find_sar_value()
+            
+            # is this the right thing to raise here?
+            if magic == None:
+                raise AttributeError
+            
             offset = self.decode_pointer(handle_table_entry.LowValue, magic)
             object_header = self.context.object(self.config["nt"] + constants.BANG + "_OBJECT_HEADER", virtual, offset = offset)
             object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
@@ -46,6 +58,43 @@ class Handles(interfaces_plugins.PluginInterface):
         object_header.HandleValue = handle_value
         return object_header
         
+    #@lru_cache(maxsize = 32)
+    def find_sar_value(self):
+        """Locate ObpCaptureHandleInformationEx if it exists in the 
+        sample. Once found, parse it for the SAR value that we need
+        to decode pointers in the _HANDLE_TABLE_ENTRY which allows us 
+        to find the associated _OBJECT_HEADER."""
+                
+        if not has_capsone:
+            return None
+        
+        virtual_layer_name = self.config['primary']
+        kvo = self.config['primary.kernel_virtual_offset']
+        ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual_layer_name, offset = kvo)
+
+        try:
+            func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
+        except AttributeError:
+            return None
+                
+        data = self.context.memory.read(virtual_layer_name, kvo + func_addr, 0x200)
+        if data == None:
+            return None
+            
+        md = Cs(CS_ARCH_X86, CS_MODE_64)
+        
+        for (address, size, mnemonic, op_str) in md.disasm_lite(data, kvo + func_addr):
+            #print("{} {} {} {}".format(address, size, mnemonic, op_str))
+                
+            if mnemonic.startswith("sar"):
+                # if we don't want to parse op strings, we can disasm the 
+                # single sar instruction again, but we use disasm_lite for speed
+                op_int = int(op_str.split(",")[1].strip(), 16)
+                return op_int
+            
+        return None
+        
+    #@lru_cache(maxsize = 32)
     def list_objects(self):
         """List the executive object types (_OBJECT_TYPE) using the 
         ObTypeIndexTable or ObpObjectTypes symbol (differs per OS). 
@@ -63,7 +112,7 @@ class Handles(interfaces_plugins.PluginInterface):
             table_addr = ntkrnlmp.get_symbol("ObTypeIndexTable").address
         except AttributeError:
             table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
-                
+            
         ptrs = ntkrnlmp.object(type_name = "array", offset = kvo + table_addr, 
             subtype = ntkrnlmp.get_type("pointer"), 
             count = 100)
@@ -74,13 +123,13 @@ class Handles(interfaces_plugins.PluginInterface):
             if i > 0 and ptr == 0:
                 break 
             objt = ptr.dereference().cast(self.config["nt"] + constants.BANG + "_OBJECT_TYPE")
-            
+        
             try:
                 type_name = objt.Name.String
             except exceptions.PagedInvalidAddressException:
                 continue
-            
-            yield i, type_name 
+        
+            yield i, type_name
 
     def object_type(self, object_header):
         try:
@@ -171,30 +220,33 @@ class Handles(interfaces_plugins.PluginInterface):
             process_name = utility.array_to_string(proc.ImageFileName)
             
             for entry in self.handles(object_table):
-                #try:
-                obj_type = self.object_type(entry)
+                try:
+                    obj_type = self.object_type(entry)
                 
-                if obj_type == None:
-                    continue
+                    if obj_type == None:
+                        continue
                 
-                if obj_type == "File":
-                    item = entry.dereference_as(self.config["nt"] + constants.BANG + "_FILE_OBJECT")
-                    obj_name = item.file_name_with_device()
-                elif obj_type == "Process":
-                    item = entry.dereference_as(self.config["nt"] + constants.BANG + "_EPROCESS")
-                    obj_name = "{} Pid {}".format(utility.array_to_string(proc.ImageFileName),
-                                              item.UniqueProcessId)
-                elif obj_type == "Thread":
-                    item = entry.dereference_as(self.config["nt"] + constants.BANG + "_ETHREAD")
-                    obj_name = "Tid {} Pid {}".format(item.Cid.UniqueThread, item.Cid.UniqueProcess)
-                elif obj_type == "Key":
-                    item = entry.dereference_as(self.config["nt"] + constants.BANG + "_CM_KEY_BODY")
-                    obj_name = item.full_key_name() 
-                else:
-                    obj_name = "blah" 
+                    if obj_type == "File":
+                        item = entry.dereference_as(self.config["nt"] + constants.BANG + "_FILE_OBJECT")
+                        obj_name = item.file_name_with_device()
+                    elif obj_type == "Process":
+                        item = entry.dereference_as(self.config["nt"] + constants.BANG + "_EPROCESS")
+                        obj_name = "{} Pid {}".format(utility.array_to_string(proc.ImageFileName),
+                                                  item.UniqueProcessId)
+                    elif obj_type == "Thread":
+                        item = entry.dereference_as(self.config["nt"] + constants.BANG + "_ETHREAD")
+                        obj_name = "Tid {} Pid {}".format(item.Cid.UniqueThread, item.Cid.UniqueProcess)
+                    elif obj_type == "Key":
+                        item = entry.dereference_as(self.config["nt"] + constants.BANG + "_CM_KEY_BODY")
+                        obj_name = item.full_key_name() 
+                    else:
+                        try:
+                            obj_name = entry.NameInfo.Name.String
+                        except exceptions.InvalidAddressException:
+                            obj_name = ""
                     
-            #except exceptions.InvalidAddressException:
-            #continue
+                except (exceptions.InvalidAddressException, exceptions.PagedInvalidAddressException):
+                    continue
             
                 yield (0, (proc.UniqueProcessId, 
                     process_name, 

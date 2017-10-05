@@ -46,7 +46,12 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
         name = ""
         if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
             name = "\\Device\\{}".format(self.DeviceObject.device_name())
-        name += self.FileName.String
+        
+        try:    
+            name += self.FileName.String
+        except exceptions.PagedInvalidAddressException:
+            pass
+        
         return name
 
 class _OBJECT_HEADER(objects.Struct):
@@ -55,6 +60,8 @@ class _OBJECT_HEADER(objects.Struct):
 
     @property
     def NameInfo(self):
+        symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
+    
         try:
             header_offset = ord(self.NameInfoOffset)
         except AttributeError:
@@ -68,17 +75,17 @@ class _OBJECT_HEADER(objects.Struct):
             if kvo == None:
                 raise AttributeError
             
-            ntkrnlmp = self._context.module(layer.config["nt"], layer_name = self.vol.layer_name, offset = kvo)
+            ntkrnlmp = self._context.module(symbol_table_name, layer_name = self.vol.layer_name, offset = kvo)
             address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
             calculated_index = ord(self.InfoMask) & (name_info_bit | (name_info_bit - 1))
                         
-            header_offset = self._context.object(layer.config["nt"] + constants.BANG + "unsigned char", 
+            header_offset = self._context.object(symbol_table_name + constants.BANG + "unsigned char", 
                                                 layer_name = self.vol.layer_name, 
                                                 offset = kvo + address + calculated_index)
                                                 
             header_offset = ord(header_offset)
-                                                                                                   
-        header = self._context.object(layer.config["nt"] + constants.BANG + "_OBJECT_HEADER_NAME_INFO", 
+                                                                                                               
+        header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO", 
                                       layer_name = self.vol.layer_name, 
                                       offset = self.vol.offset - header_offset)
         return header
