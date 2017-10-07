@@ -1,3 +1,4 @@
+import logging
 import os.path as os_path
 
 from volatility.framework import constants, exceptions, interfaces
@@ -5,6 +6,8 @@ from volatility.framework.configuration import requirements
 from volatility.framework.configuration.requirements import IntRequirement
 from volatility.framework.interfaces.configuration import TranslationLayerRequirement
 from volatility.framework.symbols import intermed
+
+vollog = logging.getLogger(__name__)
 
 
 class RegistryFormatException(exceptions.LayerException):
@@ -48,14 +51,20 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         return super().address_mask | 0x80000000
 
     @property
-    def root_cell(self):
+    def root_cell_offset(self):
+        """Returns the offset for the root cell in this hive"""
         return self._base_block.RootCell
 
     def get_cell(self, cell_offset):
         """Returns the appropriate Cell value for a cell offset"""
         cell = self._context.object(symbol = self._table_name + constants.BANG + "_CM_CACHED_VALUE_INDEX",
                                     offset = cell_offset, layer_name = self.name).Data.CellData
-        signature = cell.u.KeyNode.Signature.cast("string", max_length = 2, encoding = "latin-1")
+        return cell
+
+    def get_node(self, cell_offset):
+        """Returns the appropriate Node, interpreted from the Cell based on its Signature"""
+        cell = self.get_cell(cell_offset)
+        signature = cell.cast('string', max_length = 2, encoding = 'latin-1')
         if signature == 'nk':
             return cell.u.KeyNode
         elif signature == 'sk':
@@ -64,13 +73,40 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             return cell.u.KeyValue
         elif signature == 'db':
             return cell.u.ValueData
-        elif signature == 'lf':
+        elif signature == 'lf' or signature == 'lh':
             return cell.u.KeyIndex
-        elif signature == '':
-            return cell.u.KeyString
         else:
-            print("Unknown Signature", repr(signature))
-            return cell.u.KeyList
+            # It doesn't matter that we use KeyNode, we're just after the first two bytes
+            print("Unknown Signature", repr(signature), hex(cell.u.KeyNode.Signature))
+            return cell
+
+    def get_key(self, key):
+        """Gets a specific registry key by key path"""
+        node_key = self.get_node(self.root_cell_offset)
+        if key.endswith("\\"):
+            key = key[:-1]
+        key_array = key.split('\\')
+        depth = 0
+        found_key = []
+        while len(key_array) > 1 and node_key:
+            for subkey in node_key.subkeys:
+                if subkey.keyname == key_array[depth]:
+                    node_key = subkey
+                    found_key, key_array = found_key + [key_array[0]], key_array[1:]
+                    break
+            else:
+                node_key = None
+        if not node_key:
+            raise KeyError("Key {} not found under {}", key_array[0], found_key.join('\\'))
+        return node_key
+
+    def visit_nodes(self, visitor, node = None):
+        """Applies a callable (visitor) to all nodes within the registry tree from a given node"""
+        if not node:
+            node = self.get_node(self.root_cell_offset)
+        visitor(node)
+        for node in node.subkeys:
+            self.visit_nodes(visitor, node)
 
     @staticmethod
     def _mask(value, high_bit, low_bit):
@@ -113,20 +149,23 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         while length > 0:
             # Try using the symbol first
             hbin_offset = self._translate(self._mask(offset, 31, 12))
-            hbin_size = self.context.object(self._reg_table_name + constants.BANG + "_HBIN",
-                                            offset = hbin_offset, layer_name = self._base_layer).Size
+            hbin = self.context.object(self._reg_table_name + constants.BANG + "_HBIN",
+                                       offset = hbin_offset, layer_name = self._base_layer)
 
             # Now get the cell's offset and figure out if it goes outside the bin
             # We could use some invariants such as whether cells always fit within a bin?
             translated_offset = self._translate(offset)
-            if translated_offset + length > hbin_offset + hbin_size:
-                usable_size = (hbin_offset + hbin_size - translated_offset)
-                response.append((offset, translated_offset, usable_size, self._base_layer))
-                length -= usable_size
-                offset += usable_size
-            else:
-                response.append((offset, translated_offset, length, self._base_layer))
-                length -= length
+            if translated_offset + length > hbin_offset + hbin.Size:
+                # Generally suggests the hbin is a large (larger than a page) bin
+                # In which case, hunt backwards for the right hbin header and check the size again
+                while hbin.Signature.cast("string", max_length = 4, encoding = "latin-1") != 'hbin':
+                    hbin_offset = hbin_offset - 0x1000
+                    hbin = self.context.object(self._reg_table_name + constants.BANG + "_HBIN",
+                                               offset = hbin_offset, layer_name = self._base_layer)
+                if translated_offset + length > hbin_offset + hbin.Size:
+                    raise RegistryFormatException("Cell address outside expected HBIN")
+            response.append((offset, translated_offset, length, self._base_layer))
+            length -= length
         return response
 
     @property

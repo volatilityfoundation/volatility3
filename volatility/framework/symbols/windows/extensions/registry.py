@@ -27,16 +27,13 @@ class _CM_KEY_NODE(objects.Struct):
         if not isinstance(hive, RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
         for index in range(2):
-            subkey_node = hive.get_cell(self.SubKeyLists[index])
-            if subkey_node.vol.type_name.endswith(constants.BANG + '_CM_KEY_INDEX'):
-                # The keylist appears to include 4 bytes of key name after each value
-                # We can either double the list and only use the even items, or
-                # We could change the array type to a struct with both parts
-                subkey_node.List.count = subkey_node.Count * 2
-                for key_offset in subkey_node.List[::2]:
-                    yield hive.get_cell(key_offset)
-            else:
-                raise TypeError("Unexpected SubKeyList item")
+            subkey_node = hive.get_cell(self.SubKeyLists[index]).u.KeyIndex
+            # The keylist appears to include 4 bytes of key name after each value
+            # We can either double the list and only use the even items, or
+            # We could change the array type to a struct with both parts
+            subkey_node.List.count = subkey_node.Count * 2
+            for key_offset in subkey_node.List[::2]:
+                yield hive.get_node(key_offset)
 
     @property
     def values(self):
@@ -48,9 +45,9 @@ class _CM_KEY_NODE(objects.Struct):
         child_list.count = self.ValueList.Count
         for v in child_list:
             if v != 0:
-                node = hive.get_cell(v)
+                node = hive.get_node(v)
                 if node.vol.type_name.endswith(constants.BANG + '_CM_KEY_VALUE'):
-                    yield hive.get_cell(v)
+                    yield node
 
     @property
     def keyname(self):
