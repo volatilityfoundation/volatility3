@@ -25,8 +25,8 @@ def hex_bytes_as_text(value):
 
 
 class QuickTextRenderer(interfaces.renderers.Renderer):
-    type_renderers = {format_hints.Bin: lambda x: "{:b}".format(x),
-                      format_hints.Hex: lambda x: "{:x}".format(x),
+    type_renderers = {format_hints.Bin: lambda x: "0b{:b}".format(x),
+                      format_hints.Hex: lambda x: "0x{:x}".format(x),
                       format_hints.HexBytes: hex_bytes_as_text,
                       bytes: lambda x: x.decode("utf-8"),
                       'default': lambda x: "{}".format(x)}
