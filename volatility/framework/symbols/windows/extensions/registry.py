@@ -25,14 +25,14 @@ class RegValueTypes(enum.Enum):
 
 class _CMHIVE(objects.Struct):
     @property
-    def name(self):
+    def helper_name(self):
         """Determine a name for the hive. Note that some attributes are
         unpredictably blank across different OS versions while others are populated,
         so we check all possibilities and take the first one that's not empty"""
 
         for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
             try:
-                return getattr(self, attr).String
+                return getattr(self, attr).helper_string
             except (AttributeError, exceptions.InvalidAddressException):
                 pass
 
@@ -71,7 +71,7 @@ class _CM_KEY_NODE(objects.Struct):
                     yield node
 
     @property
-    def name(self):
+    def helper_name(self):
         """Since this is just a casting convenience, it can be a property"""
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
 
@@ -80,15 +80,15 @@ class _CM_KEY_NODE(objects.Struct):
         # Using the offset adds a significant delay (since it cannot be cached easily)
         # if self.vol.offset == reg.get_node(reg.root_cell_offset).vol.offset:
         if self.vol.offset == reg.root_cell_offset + 4:
-            return self.name
-        return reg.get_node(self.Parent).get_key_path() + '\\' + self.name
+            return self.helper_name
+        return reg.get_node(self.Parent).get_key_path() + '\\' + self.helper_name
 
 
 class _CM_KEY_VALUE(objects.Struct):
     """Extensions to extract data from CM_KEY_VALUE nodes"""
 
     @property
-    def name(self):
+    def helper_name(self):
         """Since this is just a casting convenience, it can be a property"""
         self.Name.count = self.NameLength
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
@@ -114,15 +114,15 @@ class _CM_KEY_VALUE(objects.Struct):
         self_type = RegValueTypes(self.Type)
         if self_type == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):
-                raise ValueError("Size of data does not match the type of registry value {}".format(self.name))
+                raise ValueError("Size of data does not match the type of registry value {}".format(self.helper_name))
             return struct.unpack("<L", data)[0]
         if self_type == RegValueTypes.REG_DWORD_BIG_ENDIAN:
             if len(data) != struct.calcsize(">L"):
-                raise ValueError("Size of data does not match the type of registry value {}".format(self.name))
+                raise ValueError("Size of data does not match the type of registry value {}".format(self.helper_name))
             return struct.unpack(">L", data)[0]
         if self_type == RegValueTypes.REG_QWORD:
             if len(data) != struct.calcsize("<Q"):
-                raise ValueError("Size of data does not match the type of registry value {}".format(self.name))
+                raise ValueError("Size of data does not match the type of registry value {}".format(self.helper_name))
             return struct.unpack("<Q", data)[0]
         if self_type in [RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK]:
             return str(data, encoding = "utf-16-le")

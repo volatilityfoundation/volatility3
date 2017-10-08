@@ -42,7 +42,7 @@ class PrintKey(plugins.PluginInterface):
                       (key_path,
                        str(datetime.datetime.utcfromtimestamp(unix_time)),
                        RegValueTypes(value_node.Type).name,
-                       value_node.name,
+                       value_node.helper_name,
                        str(value_node.decode_data())))
             yield result
 
