@@ -17,6 +17,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_UNICODE_STRING', extensions._UNICODE_STRING)
         self.set_type_class('_CMHIVE', registry._CMHIVE)
         self.set_type_class('_CM_KEY_NODE', registry._CM_KEY_NODE)
+        self.set_type_class('_CM_KEY_VALUE', registry._CM_KEY_VALUE)
 
     @classmethod
     def get_requirements(cls):

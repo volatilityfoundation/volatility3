@@ -6,6 +6,7 @@ from volatility.framework.interfaces import configuration
 from volatility.framework.interfaces.configuration import HierarchicalDict
 from volatility.framework.layers.registry import RegistryHive
 from volatility.framework.renderers import TreeGrid
+from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
 
 
 class RegTest(plugins.PluginInterface):
@@ -33,7 +34,15 @@ class RegTest(plugins.PluginInterface):
         unix_time = node.LastWriteTime.QuadPart // 10000000
         unix_time = unix_time - 11644473600
 
-        yield (key_path.count("\\"), (key_path, str(datetime.datetime.utcfromtimestamp(unix_time))))
+        for value_node in node.get_values():
+            result = (key_path.count("\\"),
+                      (key_path,
+                       str(datetime.datetime.utcfromtimestamp(unix_time)),
+                       value_node.name,
+                       RegValueTypes(value_node.Type).name,
+                       str(value_node.decode_data())))
+            yield result
+
         for node in node.get_subkeys():
             yield from self.registry_walker(registry, node)
 
@@ -45,9 +54,12 @@ class RegTest(plugins.PluginInterface):
         self.config.splice('registry', reg_config)
 
         registry_config_path = configuration.path_join(self.config_path, 'registry')
-        registry_layer = RegistryHive(self.context, registry_config_path, name = 'hive0', os = 'Windows')
+        registry_layer = RegistryHive(self.context, registry_config_path, name = 'hive', os = 'Windows')
         self.context.memory.add_layer(registry_layer)
 
-        return TreeGrid(columns = [('Name', str),
-                                   ('Last Write Time', str)],
+        return TreeGrid(columns = [('Key', str),
+                                   ('Last Write Time', str),
+                                   ('Name', str),
+                                   ('Type', str),
+                                   ('Data', str)],
                         generator = self.registry_walker(registry_layer))

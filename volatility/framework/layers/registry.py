@@ -33,12 +33,15 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                                                  name = self._reg_table_name, isf_filepath = reg_path)
         context.symbol_space.append(table)
 
-        self._hive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
-                                         self._hive_offset)
+        self.hive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
+                                        self._hive_offset).Hive
 
         # TODO: Check the checksum
+        if self.hive.Signature != 0xbee0bee0:
+            raise RegistryFormatException(
+                "Registry hive at {} does not have a valid signature".format(self._hive_offset))
 
-        self._base_block = self._hive.Hive.BaseBlock.dereference()
+        self._base_block = self.hive.BaseBlock.dereference()
 
         self._minaddr = 0
         self._maxaddr = self._base_block.Length
@@ -130,7 +133,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             raise RegistryInvalidIndex("Mapping request for value greater than maxaddr")
 
         volatile = self._mask(offset, 31, 31) >> 31
-        storage = self._hive.Hive.Storage[volatile]
+        storage = self.hive.Storage[volatile]
         dir_index = self._mask(offset, 30, 21) >> 21
         table_index = self._mask(offset, 20, 12) >> 12
         suboffset = self._mask(offset, 11, 0) >> 0
