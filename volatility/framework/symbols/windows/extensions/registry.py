@@ -2,7 +2,7 @@ import enum
 import logging
 import struct
 
-from volatility.framework import objects, constants, exceptions
+from volatility.framework import constants, exceptions, objects
 from volatility.framework.layers.registry import RegistryHive
 
 vollog = logging.getLogger(__name__)
@@ -37,6 +37,8 @@ class _CMHIVE(objects.Struct):
                 pass
 
         return None
+
+    name = helper_name
 
 
 class _CM_KEY_NODE(objects.Struct):
