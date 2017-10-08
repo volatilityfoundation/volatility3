@@ -15,14 +15,14 @@ class _ETHREAD(objects.Struct):
 
 class _CMHIVE(objects.Struct):
     @property
-    def name(self):
+    def helper_name(self):
         """Determine a name for the hive. Note that some attributes are
         unpredictably blank across different OS versions while others are populated,
         so we check all possibilities and take the first one that's not empty"""
 
         for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
             try:
-                return getattr(self, attr).String
+                return getattr(self, attr).helper_string
             except (AttributeError, exceptions.InvalidAddressException):
                 pass
 
@@ -31,7 +31,7 @@ class _CMHIVE(objects.Struct):
 
 class _UNICODE_STRING(objects.Struct):
     @property
-    def String(self):
+    def helper_string(self):
         # We explicitly do *not* catch errors here, we allow an exception to be thrown
         # (otherwise there's no way to determine anything went wrong)
         # It's up to the user of this method to catch exceptions
