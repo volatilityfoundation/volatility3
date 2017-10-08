@@ -28,6 +28,8 @@ class _CMHIVE(objects.Struct):
 
         return None
 
+    name = helper_name
+
 
 class _UNICODE_STRING(objects.Struct):
     @property
@@ -37,6 +39,8 @@ class _UNICODE_STRING(objects.Struct):
         # It's up to the user of this method to catch exceptions
         return self.Buffer.dereference().cast("string", max_length = self.Length, errors = "replace",
                                               encoding = "utf16")
+
+    String = helper_string
 
 
 class _EPROCESS(generic.GenericIntelProcess):
