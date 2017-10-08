@@ -21,12 +21,13 @@ class _CMHIVE(objects.Struct):
 class _CM_KEY_NODE(objects.Struct):
     """Extension to allow traversal of registry keys"""
 
-    @property
-    def subkeys(self):
+    def get_subkeys(self):
+        """Returns a list of the key nodes"""
         hive = self._context.memory[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
         for index in range(2):
+            # Use get_cell because it should *always* be a KeyIndex
             subkey_node = hive.get_cell(self.SubKeyLists[index]).u.KeyIndex
             # The keylist appears to include 4 bytes of key name after each value
             # We can either double the list and only use the even items, or
@@ -35,8 +36,7 @@ class _CM_KEY_NODE(objects.Struct):
             for key_offset in subkey_node.List[::2]:
                 yield hive.get_node(key_offset)
 
-    @property
-    def values(self):
+    def get_values(self):
         """Returns a list of the Value nodes for a key"""
         hive = self._context.memory[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
@@ -50,5 +50,14 @@ class _CM_KEY_NODE(objects.Struct):
                     yield node
 
     @property
-    def keyname(self):
+    def name(self):
+        """Since this is just a casting convenience, it can be a property"""
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
+
+    def get_key_path(self):
+        reg = self._context.memory[self.vol.layer_name]
+        # Using the offset adds a significant delay (since it cannot be cached easily)
+        # if self.vol.offset == reg.get_node(reg.root_cell_offset).vol.offset:
+        if self.vol.offset == reg.root_cell_offset + 4:
+            return self.name
+        return reg.get_node(self.Parent).get_key_path() + '\\' + self.name

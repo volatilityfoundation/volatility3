@@ -89,7 +89,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         depth = 0
         found_key = []
         while len(key_array) > 1 and node_key:
-            for subkey in node_key.subkeys:
+            for subkey in node_key.get_subkeys():
                 if subkey.keyname == key_array[depth]:
                     node_key = subkey
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
@@ -105,7 +105,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         if not node:
             node = self.get_node(self.root_cell_offset)
         visitor(node)
-        for node in node.subkeys:
+        for node in node.get_subkeys():
             self.visit_nodes(visitor, node)
 
     @staticmethod
