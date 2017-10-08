@@ -9,7 +9,7 @@ from volatility.framework.renderers import TreeGrid
 from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
 
 
-class RegTest(plugins.PluginInterface):
+class PrintKey(plugins.PluginInterface):
     """Lists the processes present in a particular memory image"""
 
     @classmethod
