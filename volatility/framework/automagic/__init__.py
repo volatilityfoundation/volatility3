@@ -25,7 +25,6 @@ windows_automagic = ['ConstructionMagic',
 linux_automagic = ['ConstructionMagic',
                    'LayerStacker',
                    'LinuxSymbolCache',
-                   'NlpDtbfinder',
                    'LinuxSymbolFinder']
 
 
