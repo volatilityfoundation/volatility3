@@ -21,8 +21,11 @@ class RegTest(plugins.PluginInterface):
                                                description = "Windows OS"),
                 requirements.IntRequirement(name = 'offset',
                                             description = "Hive Offset",
-                                            default = 0,
-                                            optional = True)]
+                                            default = 0),
+                requirements.StringRequirement(name = 'key',
+                                               description = "Key to start from",
+                                               default = None,
+                                               optional = True)]
 
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
@@ -48,7 +51,7 @@ class RegTest(plugins.PluginInterface):
 
     def run(self):
         layer = self.context.memory[self.config['primary']]
-        reg_config = HierarchicalDict({'hive_offset': 0xe1ca8210,
+        reg_config = HierarchicalDict({'hive_offset': self.config['offset'],
                                        'base_layer': self.config['primary'],
                                        'ntkrnlmp': self.config['ntkrnlmp']})
         self.config.splice('registry', reg_config)
@@ -56,6 +59,10 @@ class RegTest(plugins.PluginInterface):
         registry_config_path = configuration.path_join(self.config_path, 'registry')
         registry_layer = RegistryHive(self.context, registry_config_path, name = 'hive', os = 'Windows')
         self.context.memory.add_layer(registry_layer)
+
+        node = None
+        if self.config.get('key', None):
+            node = registry_layer.get_key(self.config['key'])
 
         return TreeGrid(columns = [('Key', str),
                                    ('Last Write Time', str),
