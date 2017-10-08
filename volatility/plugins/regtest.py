@@ -38,8 +38,8 @@ class RegTest(plugins.PluginInterface):
             result = (key_path.count("\\"),
                       (key_path,
                        str(datetime.datetime.utcfromtimestamp(unix_time)),
-                       value_node.name,
                        RegValueTypes(value_node.Type).name,
+                       value_node.name,
                        str(value_node.decode_data())))
             yield result
 
@@ -59,7 +59,7 @@ class RegTest(plugins.PluginInterface):
 
         return TreeGrid(columns = [('Key', str),
                                    ('Last Write Time', str),
-                                   ('Name', str),
                                    ('Type', str),
+                                   ('Name', str),
                                    ('Data', str)],
                         generator = self.registry_walker(registry_layer))
