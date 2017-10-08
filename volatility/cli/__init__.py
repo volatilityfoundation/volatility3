@@ -196,6 +196,8 @@ class CommandLine(object):
                     "Plugin contains requirements that are not RequirementInterfaces: {}".format(configurable.__name__))
             if isinstance(requirement, interfaces.configuration.InstanceRequirement):
                 additional["type"] = requirement.instance_type
+                if isinstance(requirement, requirements.IntRequirement):
+                    additional["type"] = lambda x: int(x, 0)
                 if isinstance(requirement, requirements.BooleanRequirement):
                     additional["action"] = "store_true"
             elif isinstance(requirement, interfaces.configuration.ListRequirement):
