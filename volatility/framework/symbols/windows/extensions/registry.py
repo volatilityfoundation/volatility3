@@ -1,8 +1,11 @@
 import enum
+import logging
 import struct
 
 from volatility.framework import objects, constants, exceptions
 from volatility.framework.layers.registry import RegistryHive
+
+vollog = logging.getLogger(__name__)
 
 
 class RegValueTypes(enum.Enum):
@@ -131,5 +134,5 @@ class _CM_KEY_VALUE(objects.Struct):
             return ''
 
         # Fall back if it's something weird
-        print("UNKNOWN TYPE", self.Type)
+        vollog.debug("Unknow registry value type encountered: {}", self.Type)
         return self.Data.cast("string", max_length = self.DataLength, encoding = "latin-1")

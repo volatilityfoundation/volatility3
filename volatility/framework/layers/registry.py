@@ -80,7 +80,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             return cell.u.KeyIndex
         else:
             # It doesn't matter that we use KeyNode, we're just after the first two bytes
-            print("Unknown Signature", repr(signature), hex(cell.u.KeyNode.Signature))
+            vollog.debug(
+                "Unknown Signature {} ({}) at offset {}".format(signature, cell.u.KeyNode.Signature, cell_offset))
             return cell
 
     def get_key(self, key):
