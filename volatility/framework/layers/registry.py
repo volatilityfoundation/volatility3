@@ -60,8 +60,9 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
     def get_cell(self, cell_offset):
         """Returns the appropriate Cell value for a cell offset"""
-        cell = self._context.object(symbol = self._table_name + constants.BANG + "_CM_CACHED_VALUE_INDEX",
-                                    offset = cell_offset, layer_name = self.name).Data.CellData
+        # This would be an _HCELL containing CELL_DATA, but to save time we skip the size of the HCELL
+        cell = self._context.object(symbol = self._table_name + constants.BANG + "_CELL_DATA", offset = cell_offset + 4,
+                                    layer_name = self.name)
         return cell
 
     def get_node(self, cell_offset):
