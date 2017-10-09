@@ -141,7 +141,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         table = storage.Map.Directory[dir_index]
         entry = table.Table[table_index]
-        return entry.BlockAddress + suboffset
+        return entry.helper_block_offset + suboffset
 
     def mapping(self, offset, length, ignore_errors = False):
 

@@ -23,6 +23,15 @@ class RegValueTypes(enum.Enum):
     REG_QWORD = 11
 
 
+class _HMAP_ENTRY(objects.Struct):
+    @property
+    def helper_block_offset(self):
+        try:
+            return self.PermanentBinAddress ^ (self.PermanentBinAddress & 0x3)
+        except AttributeError:
+            return self.BlockAddress
+
+
 class _CMHIVE(objects.Struct):
     @property
     def helper_name(self):
