@@ -25,7 +25,11 @@ class PrintKey(plugins.PluginInterface):
                 requirements.StringRequirement(name = 'key',
                                                description = "Key to start from",
                                                default = None,
-                                               optional = True)]
+                                               optional = True),
+                requirements.BooleanRequirement(name = 'recurse',
+                                                description = 'Recurses through keys',
+                                                default = False,
+                                                optional = True)]
 
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
@@ -37,17 +41,29 @@ class PrintKey(plugins.PluginInterface):
         unix_time = node.LastWriteTime.QuadPart // 10000000
         unix_time = unix_time - 11644473600
 
+        for key_node in node.get_subkeys():
+            result = (key_path.count("\\"),
+                      (key_path,
+                       str(datetime.datetime.utcfromtimestamp(unix_time)),
+                       "Key",
+                       key_node.helper_name,
+                       "",
+                       key_node.volatile))
+            yield result
+
         for value_node in node.get_values():
             result = (key_path.count("\\"),
                       (key_path,
                        str(datetime.datetime.utcfromtimestamp(unix_time)),
                        RegValueTypes(value_node.Type).name,
                        value_node.helper_name,
-                       str(value_node.decode_data())))
+                       str(value_node.decode_data()),
+                       node.volatile))
             yield result
 
-        for node in node.get_subkeys():
-            yield from self.registry_walker(registry, node)
+        if self.config['recurse']:
+            for node in node.get_subkeys():
+                yield from self.registry_walker(registry, node)
 
     def run(self):
         layer = self.context.memory[self.config['primary']]
@@ -68,5 +84,6 @@ class PrintKey(plugins.PluginInterface):
                                    ('Last Write Time', str),
                                    ('Type', str),
                                    ('Name', str),
-                                   ('Data', str)],
+                                   ('Data', str),
+                                   ('Volatile', bool)],
                         generator = self.registry_walker(registry_layer))
