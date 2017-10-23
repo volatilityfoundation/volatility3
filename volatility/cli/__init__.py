@@ -220,6 +220,8 @@ class CommandLine(object):
                     additional["type"] = lambda x: int(x, 0)
                 if isinstance(requirement, requirements.BooleanRequirement):
                     additional["action"] = "store_true"
+                    if "type" in additional:
+                        del additional["type"]
             elif isinstance(requirement, interfaces.configuration.ListRequirement):
                 if requirement.min_elements != requirement.max_elements:
                     if requirement.min_elements > 0:
