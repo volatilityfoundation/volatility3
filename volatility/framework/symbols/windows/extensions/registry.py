@@ -53,6 +53,12 @@ class _CMHIVE(objects.Struct):
 class _CM_KEY_NODE(objects.Struct):
     """Extension to allow traversal of registry keys"""
 
+    @property
+    def volatile(self):
+        if not isinstance(self._context.memory[self.vol.layer_name], RegistryHive):
+            raise ValueError("Cannot determine volatility of registry key without an offset in a RegistryHive layer")
+        return bool(self.vol.offset & 0x80000000)
+
     def get_subkeys(self):
         """Returns a list of the key nodes"""
         hive = self._context.memory[self.vol.layer_name]
