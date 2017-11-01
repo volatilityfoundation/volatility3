@@ -5,7 +5,6 @@ from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework import constants
 from volatility.framework.objects import utility
-from functools import lru_cache
 
 try:
     from capstone import Cs, CS_ARCH_X86, CS_MODE_64, CS_MODE_32
@@ -16,6 +15,12 @@ except ImportError:
 class Handles(interfaces_plugins.PluginInterface):
     """Lists process open handles"""
 
+    def __init__(self, context, config_path):
+        super().__init__(context, config_path)
+        self._sar_value = None
+        self._type_map = None
+        self._cookie = None
+
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
@@ -25,8 +30,8 @@ class Handles(interfaces_plugins.PluginInterface):
                     
         value = value & 0xFFFFFFFFFFFFFFF8
         value = value >> magic
-        if (value & (1 << 47)):
-            value = value | 0xFFFF000000000000
+        #if (value & (1 << 47)):
+        #    value = value | 0xFFFF000000000000
     
         return value
 
@@ -52,49 +57,50 @@ class Handles(interfaces_plugins.PluginInterface):
                 raise AttributeError
             
             offset = self.decode_pointer(handle_table_entry.LowValue, magic)
+            #print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
             object_header = self.context.object(self.config["nt"] + constants.BANG + "_OBJECT_HEADER", virtual, offset = offset)
             object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
          
         object_header.HandleValue = handle_value
         return object_header
         
-    #@lru_cache(maxsize = 32)
     def find_sar_value(self):
         """Locate ObpCaptureHandleInformationEx if it exists in the 
         sample. Once found, parse it for the SAR value that we need
         to decode pointers in the _HANDLE_TABLE_ENTRY which allows us 
         to find the associated _OBJECT_HEADER."""
                 
-        if not has_capsone:
-            return None
+        if self._sar_value is None:
+                
+            if not has_capsone:
+                return None
         
-        virtual_layer_name = self.config['primary']
-        kvo = self.config['primary.kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual_layer_name, offset = kvo)
+            virtual_layer_name = self.config['primary']
+            kvo = self.config['primary.kernel_virtual_offset']
+            ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual_layer_name, offset = kvo)
 
-        try:
-            func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
-        except AttributeError:
-            return None
+            try:
+                func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
+            except AttributeError:
+                return None
                 
-        data = self.context.memory.read(virtual_layer_name, kvo + func_addr, 0x200)
-        if data == None:
-            return None
+            data = self.context.memory.read(virtual_layer_name, kvo + func_addr, 0x200)
+            if data == None:
+                return None
             
-        md = Cs(CS_ARCH_X86, CS_MODE_64)
+            md = Cs(CS_ARCH_X86, CS_MODE_64)
         
-        for (address, size, mnemonic, op_str) in md.disasm_lite(data, kvo + func_addr):
-            #print("{} {} {} {}".format(address, size, mnemonic, op_str))
+            for (address, size, mnemonic, op_str) in md.disasm_lite(data, kvo + func_addr):
+                #print("{} {} {} {}".format(address, size, mnemonic, op_str))
                 
-            if mnemonic.startswith("sar"):
-                # if we don't want to parse op strings, we can disasm the 
-                # single sar instruction again, but we use disasm_lite for speed
-                op_int = int(op_str.split(",")[1].strip(), 16)
-                return op_int
-            
-        return None
+                if mnemonic.startswith("sar"):
+                    # if we don't want to parse op strings, we can disasm the 
+                    # single sar instruction again, but we use disasm_lite for speed
+                    self._sar_value = int(op_str.split(",")[1].strip(), 16)
+                    break 
+                    
+        return self._sar_value
         
-    #@lru_cache(maxsize = 32)
     def list_objects(self):
         """List the executive object types (_OBJECT_TYPE) using the 
         ObTypeIndexTable or ObpObjectTypes symbol (differs per OS). 
@@ -104,34 +110,40 @@ class Handles(interfaces_plugins.PluginInterface):
         Note: The object type index map was hard coded into profiles 
         in vol2, but we generate it dynamically now."""
 
-        virtual_layer = self.config['primary']
-        kvo = self.config['primary.kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual_layer, offset = kvo)
-
-        try:
-            table_addr = ntkrnlmp.get_symbol("ObTypeIndexTable").address
-        except AttributeError:
-            table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
-            
-        ptrs = ntkrnlmp.object(type_name = "array", offset = kvo + table_addr, 
-            subtype = ntkrnlmp.get_type("pointer"), 
-            count = 100)
-
-        for i, ptr in enumerate(ptrs):
-            # the first entry in the table is always null. break the
-            # loop when we encounter the first null entry after that
-            if i > 0 and ptr == 0:
-                break 
-            objt = ptr.dereference().cast(self.config["nt"] + constants.BANG + "_OBJECT_TYPE")
+        if self._type_map is None:
         
+            self._type_map = {}
+
+            virtual_layer = self.config['primary']
+            kvo = self.config['primary.kernel_virtual_offset']
+            ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual_layer, offset = kvo)
+
             try:
-                type_name = objt.Name.String
-            except exceptions.PagedInvalidAddressException:
-                continue
-        
-            yield i, type_name
+                table_addr = ntkrnlmp.get_symbol("ObTypeIndexTable").address
+            except AttributeError:
+                table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
+            
+            ptrs = ntkrnlmp.object(type_name = "array", offset = kvo + table_addr, 
+                subtype = ntkrnlmp.get_type("pointer"), 
+                count = 100)
 
-    def object_type(self, object_header):
+            for i, ptr in enumerate(ptrs):
+                # the first entry in the table is always null. break the
+                # loop when we encounter the first null entry after that
+                if i > 0 and ptr == 0:
+                    break 
+                objt = ptr.dereference().cast(self.config["nt"] + constants.BANG + "_OBJECT_TYPE")
+        
+                try:
+                    type_name = objt.Name.String
+                except exceptions.PagedInvalidAddressException:
+                    continue
+        
+                self._type_map[i] = type_name
+                
+        return self._type_map 
+        
+    def object_type(self, object_header, type_map):
         try:
             # vista and earlier have a Type member 
             return object_header.Type.Name.String
@@ -140,14 +152,15 @@ class Handles(interfaces_plugins.PluginInterface):
             # further encodes the index value with nt1!ObHeaderCookie 
             virtual = self.config["primary"]
             try:
-                offset = self.context.symbol_space.get_symbol(self.config["nt"] + constants.BANG + "ObHeaderCookie").address
-                kvo = self.config['primary.kernel_virtual_offset']
-                cookie = self.context.object(self.config["nt"] + constants.BANG + "unsigned int", virtual, offset = kvo + offset)
-                type_index = ((object_header.vol.offset >> 8) ^ cookie ^ ord(object_header.TypeIndex)) & 0xFF    
+                if self._cookie is None:
+                    offset = self.context.symbol_space.get_symbol(self.config["nt"] + constants.BANG + "ObHeaderCookie").address
+                    kvo = self.config['primary.kernel_virtual_offset']
+                    self._cookie = self.context.object(self.config["nt"] + constants.BANG + "unsigned int", virtual, offset = kvo + offset)
+
+                type_index = ((object_header.vol.offset >> 8) ^ self._cookie ^ ord(object_header.TypeIndex)) & 0xFF    
             except AttributeError:
                 type_index = ord(object_header.TypeIndex)
             
-            type_map = dict((index, type_name) for index, type_name in self.list_objects())
             return type_map.get(type_index)
 
     def make_handle_array(self, offset, level, depth = 0):
@@ -169,6 +182,9 @@ class Handles(interfaces_plugins.PluginInterface):
         table = ntkrnlmp.object(type_name = "array", offset = offset, 
             subtype = subtype, count = int(count))
             
+        layer_object = self.context.memory[virtual]
+        masked_offset = layer_object._mask(offset, 0, layer_object._maxvirtaddr)
+            
         for entry in table:
 
             if level > 0:
@@ -178,7 +194,8 @@ class Handles(interfaces_plugins.PluginInterface):
             else:
                 handle_multiplier = 4
                 handle_level_base = depth * count * handle_multiplier
-                handle_value = ((entry.vol.offset - offset) /
+                                
+                handle_value = ((entry.vol.offset - masked_offset) /
                                (subtype.size / handle_multiplier)) + handle_level_base
 
                 item = self.get_item(entry, handle_value)
@@ -210,6 +227,8 @@ class Handles(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
+        type_map = self.list_objects()
+        
         for proc in procs:
         
             try:
@@ -221,7 +240,7 @@ class Handles(interfaces_plugins.PluginInterface):
             
             for entry in self.handles(object_table):
                 try:
-                    obj_type = self.object_type(entry)
+                    obj_type = self.object_type(entry, type_map)
                 
                     if obj_type == None:
                         continue
