@@ -150,6 +150,9 @@ class CommandLine(object):
                 address, value = extension[:extension.find('=')], json.loads(extension[extension.find('=') + 1:])
                 ctx.config[address] = value
 
+        # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
+        automagics = self.choose_automagic(automagics, plugin)
+
         ###
         # BACK TO THE FRAMEWORK
         ###
@@ -176,6 +179,23 @@ class CommandLine(object):
         # Construct and run the plugin
         text.QuickTextRenderer().render(constructed.run())
 
+    def choose_automagic(self, automagics, plugin):
+        """Chooses which automagics to run, maintaining the order they were handed in"""
+        plugin_category = plugin.__module__.split('.')[2]
+        vollog.info("Detected a {} category plugin".format(plugin_category))
+        output = []
+        for amagic in automagics:
+            if plugin_category == 'windows':
+                if amagic.__class__.__name__ in automagic.windows_automagic:
+                    output += [amagic]
+            elif plugin_category == 'linux':
+                if amagic.__class__.__name__ in automagic.linux_automagic:
+                    output += [amagic]
+            else:
+                return automagics
+        vollog.info("Restricting automagics to: {}".format([x.__class__.__name__ for x in output]))
+        return output
+
     def populate_requirements_argparse(self, parser, configurable):
         """Adds the plugin's simple requirements to the provided parser
 
@@ -196,8 +216,12 @@ class CommandLine(object):
                     "Plugin contains requirements that are not RequirementInterfaces: {}".format(configurable.__name__))
             if isinstance(requirement, interfaces.configuration.InstanceRequirement):
                 additional["type"] = requirement.instance_type
+                if isinstance(requirement, requirements.IntRequirement):
+                    additional["type"] = lambda x: int(x, 0)
                 if isinstance(requirement, requirements.BooleanRequirement):
                     additional["action"] = "store_true"
+                    if "type" in additional:
+                        del additional["type"]
             elif isinstance(requirement, interfaces.configuration.ListRequirement):
                 if requirement.min_elements != requirement.max_elements:
                     if requirement.min_elements > 0:

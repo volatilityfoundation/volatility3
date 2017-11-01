@@ -1,9 +1,12 @@
+import logging
 import struct
 from collections import abc
 
 from volatility.framework import interfaces
 from volatility.framework.interfaces.objects import ObjectInformation
 from volatility.framework.objects import templates
+
+vollog = logging.getLogger(__name__)
 
 
 class Void(interfaces.objects.ObjectInterface):
@@ -336,7 +339,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
     @property
     def count(self):
         """Returns the count dynamically"""
-        return self._vol['count']
+        return self.vol.count
 
     @count.setter
     def count(self, value):
@@ -462,6 +465,23 @@ class Struct(interfaces.objects.ObjectInterface):
     def member(self, attr = 'member'):
         """Specifically named method for retrieving members."""
         return self.__getattr__(attr)
+
+    def __getattribute__(self, attr):
+        """Make sure that class overrides all start with helper_"""
+        if attr == '__dict__' or attr == '__class__' or attr in self.__dict__:
+            return object.__getattribute__(self, attr)
+
+        if not isinstance(getattr(self.__class__, attr), property):
+            return object.__getattribute__(self, attr)
+        elif not hasattr(Struct, attr) and not attr.startswith('helper_'):
+            # Is a property, of an override class that doesn't start with helper
+            vollog.debug("Deprecated non-helper attribute {} requested from class override {}".format(attr,
+                                                                                                      self.vol.type_name))
+            # Uncomment the following line if we want to prohibit using non-helper properties
+            # return self.__getattr_(attr)
+
+            # Change this to an attribute error if we want to prohibit rather than deprecate member collisisons
+        return object.__getattribute__(self, attr)
 
     def __getattr__(self, attr):
         """Method for accessing members of the type"""

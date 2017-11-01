@@ -16,6 +16,17 @@ from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
+windows_automagic = ['ConstructionMagic',
+                     'LayerStacker',
+                     'NlpDtbfinder',
+                     'WintelHelper',
+                     'KernelPDBScanner']
+
+linux_automagic = ['ConstructionMagic',
+                   'LayerStacker',
+                   'LinuxSymbolCache',
+                   'LinuxSymbolFinder']
+
 
 def available(context):
     """Returns an ordered list of all subclasses of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface`.

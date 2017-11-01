@@ -1,7 +1,7 @@
 import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.plugins.windows import pslist
 from volatility.framework import exceptions, renderers
 from volatility.framework.renderers import format_hints
+from volatility.plugins.windows import pslist
 
 
 class DllList(interfaces_plugins.PluginInterface):
@@ -20,9 +20,9 @@ class DllList(interfaces_plugins.PluginInterface):
 
                 BaseDllName = FullDllName = ""
                 try:
-                    BaseDllName = entry.BaseDllName.String
+                    BaseDllName = entry.BaseDllName.helper_string
                     # We assume that if the BaseDllName points to an invalid buffer, so will FullDllName
-                    FullDllName = entry.FullDllName.String
+                    FullDllName = entry.FullDllName.helper_string
                 except exceptions.InvalidAddressException:
                     pass
 

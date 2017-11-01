@@ -1,6 +1,6 @@
 import collections.abc
 
-from volatility.framework import constants, exceptions, objects
+from volatility.framework import constants, objects
 from volatility.framework.symbols import generic
 
 
@@ -99,30 +99,16 @@ class _ETHREAD(objects.Struct):
         return self.ThreadsProcess.dereference(kernel_layer)
 
 
-class _CMHIVE(objects.Struct):
-    @property
-    def name(self):
-        """Determine a name for the hive. Note that some attributes are
-        unpredictably blank across different OS versions while others are populated,
-        so we check all possibilities and take the first one that's not empty"""
-
-        for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
-            try:
-                return getattr(self, attr).String
-            except (AttributeError, exceptions.InvalidAddressException):
-                pass
-
-        return None
-
-
 class _UNICODE_STRING(objects.Struct):
     @property
-    def String(self):
+    def helper_string(self):
         # We explicitly do *not* catch errors here, we allow an exception to be thrown
         # (otherwise there's no way to determine anything went wrong)
         # It's up to the user of this method to catch exceptions
         return self.Buffer.dereference().cast("string", max_length = self.Length, errors = "replace",
                                               encoding = "utf16")
+
+    String = helper_string
 
 
 class _EPROCESS(generic.GenericIntelProcess):
