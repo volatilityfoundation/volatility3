@@ -17,7 +17,7 @@ class PrintKey(plugins.PluginInterface):
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "ntkrnlmp",
+                requirements.SymbolRequirement(name = "ntsymbols",
                                                description = "Windows OS"),
                 requirements.IntRequirement(name = 'offset',
                                             description = "Hive Offset",
@@ -69,7 +69,7 @@ class PrintKey(plugins.PluginInterface):
         layer = self.context.memory[self.config['primary']]
         reg_config = HierarchicalDict({'hive_offset': self.config['offset'],
                                        'base_layer': self.config['primary'],
-                                       'ntkrnlmp': self.config['ntkrnlmp']})
+                                       'ntsymbols': self.config['ntsymbols']})
         self.config.splice('registry', reg_config)
 
         registry_config_path = configuration.path_join(self.config_path, 'registry')

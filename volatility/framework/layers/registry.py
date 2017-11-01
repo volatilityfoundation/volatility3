@@ -24,7 +24,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         self._base_layer = self.config["base_layer"]
         self._hive_offset = self.config["hive_offset"]
-        self._table_name = self.config["ntkrnlmp"]
+        self._table_name = self.config["ntsymbols"]
 
         self._reg_table_name = context.symbol_space.free_table_name("registry")
 
@@ -124,7 +124,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
     def get_requirements(cls):
         return [IntRequirement(name = 'hive_offset', description = '', default = 0, optional = False),
-                requirements.SymbolRequirement(name = "ntkrnlmp", description = "Windows OS"),
+                requirements.SymbolRequirement(name = "ntsymbols", description = "Windows OS"),
                 TranslationLayerRequirement(name = 'base_layer', optional = False)]
 
     def _translate(self, offset):
