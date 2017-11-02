@@ -2,11 +2,8 @@ import base64
 import copy
 import json
 import logging
-import lzma
 import os
 import pathlib
-import urllib.parse
-import urllib.request
 
 from volatility import schemas
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
@@ -70,18 +67,9 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         :type validate: bool
         """
         # Check there are no obvious errors
-        url = urllib.parse.urlparse(isf_filepath)
-        if url.scheme != 'file':
-            raise NotImplementedError(
-                "This scheme is not yet implemented for the Intermediate Symbol Format: {}".format(url.scheme))
-
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        url_path = urllib.request.url2pathname(url.path)
-        if url_path.endswith('.xz'):
-            fp = lzma.open(url_path, 'rt')
-        else:
-            fp = open(url_path, "r")
+        fp = interfaces.layers.ResourceAccessor().open(isf_filepath)
         json_object = json.load(fp)
         fp.close()
 

@@ -105,7 +105,7 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
         """Attempt to stack this based on the starting information"""
         if not isinstance(context.memory[layer_name], physical.FileLayer):
             return
-        location = context.memory[layer_name].filename
+        location = context.memory[layer_name].location
         if location.endswith(".vmem"):
             vmss = location[:-5] + ".vmss"
             vmsn = location[:-5] + ".vmsn"
@@ -113,10 +113,10 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
             current_config_path = interfaces.configuration.path_join("automagic", "layer_stacker", "stack",
                                                                      current_layer_name)
             if os.path.exists(vmss):
-                context.config[interfaces.configuration.path_join(current_config_path, "filename")] = vmss
+                context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
                 context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
             elif os.path.exists(vmsn):
-                context.config[interfaces.configuration.path_join(current_config_path, "filename")] = vmss
+                context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
                 context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
             else:
                 return

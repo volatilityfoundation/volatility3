@@ -1,17 +1,34 @@
 """Defines layers for containing data.  One layer may combine other layers, map data based on the data itself,
  or map a procedure (such as decryption) across another layer of data."""
+import bz2
 import collections
 import collections.abc
+import contextlib
 import functools
+import gzip
+import hashlib
 import logging
+import lzma
 import math
 import multiprocessing
+import os
+import urllib.parse
+import urllib.request
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants, exceptions, validity
 from volatility.framework.interfaces import configuration, context
 
 vollog = logging.getLogger(__name__)
+
+IMPORTED_MAGIC = False
+try:
+    import magic
+
+    IMPORTED_MAGIC = True
+    vollog.debug("Imported python-magic, autodetecting compressed files based on content")
+except ImportError:
+    pass
 
 
 class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
@@ -388,3 +405,66 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
 class DummyProgress(object):
     def __init__(self):
         self.value = 0
+
+
+class ResourceAccessor(object):
+    """Object for openning URLs as files (downloading locally first if necessary)"""
+
+    def __init__(self, progress_callback = None, context = None):
+        self._progress_callback = progress_callback
+        self._context = context
+
+    def open(self, url, mode = "rb"):
+        """Returns a file-like object for a particular URL opened in mode"""
+        with contextlib.closing(urllib.request.urlopen(url, context = self._context)) as fp:
+            # Cache the file locally
+            url_type, path = urllib.parse.splittype(url)
+
+            if url_type == 'file':
+                curfile = urllib.request.urlopen(url, context = self._context)
+            else:
+                block_size = 1028 * 8
+                temp_filename = os.path.join(constants.CACHE_PATH,
+                                             "data_" + hashlib.sha512(bytes(url, 'latin-1')).hexdigest())
+                cache_file = open(temp_filename, "wb")
+                while True:
+                    block = fp.read(block_size)
+                    if not block:
+                        break
+                    cache_file.write(block)
+                    if self._progress_callback:
+                        self._progress_callback("Reading file: {}".format(url))
+                cache_file.close()
+                # Re-open the cache with a different mode
+                curfile = open(temp_filename)
+
+        # Determine whether the file is a particular type of file, and if so, open it as such
+        # Determine compression
+        if IMPORTED_MAGIC:
+            while True:
+                try:
+                    # Detect the content
+                    detected = magic.detect_from_fobj(curfile)
+                except:
+                    break
+
+                if detected:
+                    if detected.mime_type == 'application/x-xz':
+                        curfile = lzma.LZMAFile(curfile, mode)
+                    elif detected.mime_type == 'application/x-bzip2':
+                        curfile = bz2.BZ2File(curfile, mode)
+                    elif detected.mime_type == 'application/x-gzip':
+                        curfile = gzip.GzipFile(fileobj = curfile, mode = mode)
+                    else:
+                        break
+                else:
+                    break
+
+                # Read and rewind to ensure we're inside any compressed file layers
+                curfile.read(1)
+                curfile.seek(0)
+
+        # Fallback in case the file doesn't exist
+        if curfile is None:
+            raise ValueError("URL does not reference an openable file")
+        return curfile
