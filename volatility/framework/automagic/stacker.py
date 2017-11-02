@@ -8,7 +8,8 @@ once a layer successfully stacks on top of the existing layers, it is removed fr
 """
 
 import logging
-from urllib import parse
+import urllib.parse
+import urllib.request
 
 import volatility
 from volatility.framework import configuration, interfaces
@@ -64,12 +65,12 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             return []
         self._check_type(location, str)
         self._check_type(requirement, interfaces.configuration.RequirementInterface)
-        location = parse.urlparse(location)
+        location = urllib.parse.urlparse(location)
 
         # Setup the local copy of the resource
         self.local_store = None
         if location.scheme == "file":
-            self.local_store = location.path
+            self.local_store = urllib.request.url2pathname(location.path)
         else:
             vollog.warning("Only file scheme supported for single-location")
             return []

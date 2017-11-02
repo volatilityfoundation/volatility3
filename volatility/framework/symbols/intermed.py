@@ -6,6 +6,7 @@ import lzma
 import os
 import pathlib
 import urllib.parse
+import urllib.request
 
 from volatility import schemas
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
@@ -76,7 +77,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        url_path = urllib.parse.unquote(url.path)
+        url_path = urllib.request.url2pathname(url.path)
         if url_path.endswith('.xz'):
             fp = lzma.open(url_path, 'rt')
         else:
