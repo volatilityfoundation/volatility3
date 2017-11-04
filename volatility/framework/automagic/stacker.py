@@ -10,7 +10,7 @@ once a layer successfully stacks on top of the existing layers, it is removed fr
 import logging
 
 import volatility
-from volatility.framework import configuration, interfaces
+from volatility.framework import configuration, interfaces, constants
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical
@@ -82,7 +82,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                         new_context.memory.add_layer(new_layer)
                         break
                 except Exception as excp:
-                    pass
+                    # Stacking exceptions are likely only of interest to developers, so the lowest level of logging
+                    vollog.log(constants.LOGLEVEL_VVV, "Exception during stacking: {}".format(str(excp)))
             else:
                 stacked = False
             if new_layer and stacker_cls:
