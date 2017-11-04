@@ -66,7 +66,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         stacked_layers = [current_layer_name]
         stack_set = sorted(volatility.framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
                            key = lambda x: x.stack_order)
-        while stacked == True:
+        while stacked:
             stacked = False
             new_layer = None
             stacker_cls = None
