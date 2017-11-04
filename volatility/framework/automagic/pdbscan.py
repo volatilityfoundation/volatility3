@@ -169,6 +169,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         :param context: Context on which to operate
         :type context: ~volatility.framework.interfaces.context.ContextInterface
         """
+        join = interfaces.configuration.path_join
         for config_path, sub_config_path, requirement in self._symbol_requirements:
             # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
             # TODO: Consider whether a single found kernel can fulfill multiple requirements
@@ -191,8 +192,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         vollog.debug("Using symbol library: {}".format(midfix))
                         clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
                         # Set the discovered options
-                        context.config[interfaces.configuration.path_join(sub_config_path, "class")] = clazz
-                        context.config[interfaces.configuration.path_join(sub_config_path, "isf_filepath")] = isf_path
+                        context.config[join(sub_config_path, "class")] = clazz
+                        context.config[join(sub_config_path, "isf_url")] = isf_path
                         # Construct the appropriate symbol table
                         requirement.construct(context, config_path)
                         break
@@ -239,9 +240,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             if virtual_layer_name and isinstance(context.memory[virtual_layer_name], layers.intel.Intel):
                 # TODO: Verify this is a windows image
                 vlayer = context.memory[virtual_layer_name]
-                physical_layer_name = context.config.get(
-                    interfaces.configuration.path_join(vlayer.config_path, 'memory_layer'), None)
-                kvo_path = interfaces.configuration.path_join(virtual_config_path, 'kernel_virtual_offset')
+                join = interfaces.configuration.path_join
+                physical_layer_name = context.config.get(join(vlayer.config_path, 'memory_layer'), None)
+                kvo_path = join(virtual_config_path, 'kernel_virtual_offset')
                 for kernel in kernels:
                     # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
                     if kernel['mz_offset'] is None:

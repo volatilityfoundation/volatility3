@@ -1,4 +1,5 @@
 import logging
+import pathlib
 
 from volatility.framework import interfaces, constants
 from volatility.framework.automagic import linux_symbol_cache
@@ -55,13 +56,13 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
             vollog.debug("Identified banner: {}".format(repr(banner)))
             symbol_files = self._linux_banners[banner]
             if symbol_files:
-                isf_path = symbol_files[0]
+                isf_path = pathlib.Path(symbol_files[0]).as_uri()
                 vollog.debug("Using symbol library: {}".format(symbol_files[0]))
                 clazz = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
                 # Set the discovered options
                 path_join = interfaces.configuration.path_join
                 context.config[path_join(config_path, requirement.name, "class")] = clazz
-                context.config[path_join(config_path, requirement.name, "isf_filepath")] = isf_path
+                context.config[path_join(config_path, requirement.name, "isf_url")] = isf_path
                 # Construct the appropriate symbol table
                 requirement.construct(context, config_path)
                 break
@@ -97,7 +98,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('LintelStacker')
                 table = linux.LinuxKernelIntermedSymbols(context, 'temporary.' + table_name, name = table_name,
-                                                         isf_filepath = isf_path)
+                                                         isf_url = isf_path)
                 context.symbol_space.append(table)
                 kaslr_shift, _ = LinuxUtilities.find_aslr(context, table_name, layer_name,
                                                           progress_callback = progress_callback)

@@ -30,7 +30,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         reg_path = "file://" + os_path.join(os_path.dirname(__file__), '..', 'symbols', 'windows', 'reg.json')
         table = intermed.IntermediateSymbolTable(context = context, config_path = config_path,
-                                                 name = self._reg_table_name, isf_filepath = reg_path)
+                                                 name = self._reg_table_name, isf_url = reg_path)
         context.symbol_space.append(table)
 
         self.hive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
