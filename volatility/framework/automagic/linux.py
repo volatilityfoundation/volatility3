@@ -31,13 +31,9 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                     # Find the TranslationLayer sibling to the SymbolRequirement
                     if (isinstance(tl_requirement, interfaces.configuration.TranslationLayerRequirement) and
                                 tl_path == path):
-                        # TODO: Find the physical layer properly, not just for Intel
-                        physical_path = interfaces.configuration.path_join(tl_sub_path, "memory_layer")
-                        # Ensure the stackers succeeded
-                        if context.config.get(physical_path, None):
-                            self._banner_scan(context, path, requirement, context.config[physical_path],
-                                              progress_callback)
-                            break
+                        self._banner_scan(context, path, requirement, context.config[tl_sub_path],
+                                          progress_callback)
+                        break
 
     def _banner_scan(self, context, config_path, requirement, layer_name, progress_callback = None):
         """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
@@ -51,9 +47,18 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
 
         layer = context.memory[layer_name]
 
-        for offset, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
+        # Check if the Stacker has already found what we're looking for
+        if layer.config.get('linux_banner', None):
+            banner_list = [(0, bytes(layer.config['linux_banner'], 'latin-1'))]
+        else:
+            # Swap to the physical layer for scanning
+            # TODO: Fix this so it works for layers other than just Intel
+            layer = context.memory[layer.config['memory_layer']]
+            banner_list = layer.scan(context = context, scanner = mss, progress_callback = progress_callback)
+
+        for _, banner in banner_list:
             vollog.debug("Identified banner: {}".format(repr(banner)))
-            symbol_files = self._linux_banners[banner]
+            symbol_files = self._linux_banners.get(banner, None)
             if symbol_files:
                 isf_path = symbol_files[0]
                 vollog.debug("Using symbol library: {}".format(symbol_files[0]))
@@ -80,6 +85,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls, context, layer_name, progress_callback = None):
         """Attempts to identify linux within this layer"""
         layer = context.memory[layer_name]
+        join = interfaces.configuration.path_join
 
         # Bail out if we're not a physical layer
         # TODO: We need a better way of doing this
@@ -90,9 +96,9 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
 
         linux_banners = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
-        for offset, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
+        for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             vollog.debug("Identified banner: {}".format(repr(banner)))
-            symbol_files = linux_banners[banner]
+            symbol_files = linux_banners.get(banner, None)
             if symbol_files:
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('LintelStacker')
@@ -114,9 +120,11 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
 
                 # Build the new layer
                 new_layer_name = context.memory.free_layer_name("IntelLayer")
-                config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
-                context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
-                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = dtb
+                config_path = join("IntelHelper", new_layer_name)
+                context.config[join(config_path, "memory_layer")] = layer_name
+                context.config[join(config_path, "page_map_offset")] = dtb
+                context.config[join(config_path, "linux_banner")] = str(banner, 'latin-1')
+
                 layer = layer_class(context, config_path = config_path, name = new_layer_name)
 
         if layer:

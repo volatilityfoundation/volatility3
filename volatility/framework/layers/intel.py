@@ -170,7 +170,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 requirements.IntRequirement(name = 'page_map_offset',
                                             optional = False),
                 requirements.IntRequirement(name = 'kernel_virtual_offset',
-                                            optional = True)]
+                                            optional = True),
+                requirements.StringRequirement(name = 'linux_banner',
+                                               optional = True)]
 
     def _scan_iterator(self, scanner, min_address, max_address):
         previous = None
