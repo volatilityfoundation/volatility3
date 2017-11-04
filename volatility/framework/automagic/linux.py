@@ -31,9 +31,10 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                     # Find the TranslationLayer sibling to the SymbolRequirement
                     if (isinstance(tl_requirement, interfaces.configuration.TranslationLayerRequirement) and
                                 tl_path == path):
-                        self._banner_scan(context, path, requirement, context.config[tl_sub_path],
-                                          progress_callback)
-                        break
+                        if context.config.get(tl_sub_path, None):
+                            self._banner_scan(context, path, requirement, context.config[tl_sub_path],
+                                              progress_callback)
+                            break
 
     def _banner_scan(self, context, config_path, requirement, layer_name, progress_callback = None):
         """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
