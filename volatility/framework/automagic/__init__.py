@@ -9,6 +9,7 @@ loading of file format types) as well as a module to reconstruct layers based on
 
 import logging
 import sys
+import traceback
 
 from volatility.framework import class_subclasses, import_files, interfaces
 from volatility.framework.automagic import construct_layers, stacker, windows, pdbscan
@@ -55,6 +56,8 @@ def run(automagics, context, configurable, config_path, progress_callback = None
 
     This is where any automagic is allowed to run, and alter the context in order to satisfy/improve all requirements
 
+    Returns a list of traceback objects that occurred during the autorun procedure
+
     .. note:: The order of the `automagics` list is important.  An `automagic` that populates configurations may be necessary
         for an `automagic` that populates the context based on the configuration information.
     """
@@ -75,6 +78,12 @@ def run(automagics, context, configurable, config_path, progress_callback = None
     for req in configurable.get_requirements():
         requirement.add_requirement(req)
 
+    exceptions = []
+
     for automagic in automagics:
-        vollog.info("Running automagic: {}".format(automagic.__class__.__name__))
-        automagic(context, config_path, requirement, progress_callback)
+        try:
+            vollog.info("Running automagic: {}".format(automagic.__class__.__name__))
+            automagic(context, config_path, requirement, progress_callback)
+        except Exception as excp:
+            exceptions.append(traceback.TracebackException.from_exception(excp))
+    return exceptions

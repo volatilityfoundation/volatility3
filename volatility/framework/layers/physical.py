@@ -61,6 +61,8 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._location = self.config["location"]
         self._file_ = None
         self._size = None
+        # Instantiate the file to throw exceptions if the file doesn't open
+        _ = self._file
 
     @property
     def location(self):

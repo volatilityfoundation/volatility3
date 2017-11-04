@@ -227,7 +227,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                                           "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
                     yield from scan_chunk(value)
         except Exception as e:
-            vollog.debug("Exception: {}".format(str(e)))
+            # We don't care the kind of exception, so catch and report on everything, yielding nothing further
+            vollog.debug("Scan Failure: {}".format(str(e)))
 
     def _scan_iterator(self, scanner, min_address, max_address):
         return range(min_address, max_address, scanner.chunk_size)
@@ -423,6 +424,7 @@ class ResourceAccessor(object):
             if url_type == 'file':
                 curfile = urllib.request.urlopen(url, context = self._context)
             else:
+                # TODO: find a way to check if we already have this file (look at http headers?)
                 block_size = 1028 * 8
                 temp_filename = os.path.join(constants.CACHE_PATH,
                                              "data_" + hashlib.sha512(bytes(url, 'latin-1')).hexdigest())
@@ -433,7 +435,8 @@ class ResourceAccessor(object):
                         break
                     cache_file.write(block)
                     if self._progress_callback:
-                        self._progress_callback("Reading file: {}".format(url))
+                        # TODO: Figure out the size and therefore percentage complete
+                        self._progress_callback(0, "Reading file {}".format(url))
                 cache_file.close()
                 # Re-open the cache with a different mode
                 curfile = open(temp_filename)

@@ -158,13 +158,17 @@ class CommandLine(object):
         ###
         # Clever magic figures out how to fulfill each requirement that might not be fulfilled
         if not args.quiet:
-            automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
+            errors = automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
         else:
-            automagic.run(automagics, ctx, plugin, "plugins")
+            errors = automagic.run(automagics, ctx, plugin, "plugins")
 
         # Check all the requirements and/or go back to the automagic step
         unsatisfied = plugin.unsatisfied(ctx, plugin_config_path)
         if unsatisfied:
+            for error in errors:
+                error_string = [x for x in error.format_exception_only()][-1]
+                vollog.warning("Automagic exception occured: {}".format(error_string[:-1]))
+                vollog.log(constants.LOGLEVEL_V, "\n".join(error.format(chain = True)))
             raise RuntimeError("Unable to validate the plugin configuration: {}".format(unsatisfied))
 
         print("\n\n")
