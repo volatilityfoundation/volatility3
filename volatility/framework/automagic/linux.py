@@ -1,5 +1,4 @@
 import logging
-import pathlib
 
 from volatility.framework import interfaces, constants
 from volatility.framework.automagic import linux_symbol_cache
@@ -56,7 +55,7 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
             vollog.debug("Identified banner: {}".format(repr(banner)))
             symbol_files = self._linux_banners[banner]
             if symbol_files:
-                isf_path = pathlib.Path(symbol_files[0]).as_uri()
+                isf_path = symbol_files[0]
                 vollog.debug("Using symbol library: {}".format(symbol_files[0]))
                 clazz = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
                 # Set the discovered options
