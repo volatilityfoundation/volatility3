@@ -2,16 +2,26 @@ import bz2
 import contextlib
 import gzip
 import hashlib
+import logging
 import lzma
 import os
 import urllib.parse
 import urllib.request
+import zipfile
+from urllib import request
 
-import magic
+try:
+    import magic
+
+    IMPORTED_MAGIC = True
+except ImportError:
+    IMPORTED_MAGIC = False
 
 from volatility.framework import constants
 from volatility.framework.interfaces.layers import IMPORTED_MAGIC
 from volatility.framework.layers import intel, lime, physical, segmented, vmware
+
+vollog = logging.getLogger(__name__)
 
 
 class ResourceAccessor(object):
@@ -45,7 +55,7 @@ class ResourceAccessor(object):
                         self._progress_callback(0, "Reading file {}".format(url))
                 cache_file.close()
                 # Re-open the cache with a different mode
-                curfile = open(temp_filename)
+                curfile = open(temp_filename, mode = "rb")
 
         # Determine whether the file is a particular type of file, and if so, open it as such
         if IMPORTED_MAGIC:
