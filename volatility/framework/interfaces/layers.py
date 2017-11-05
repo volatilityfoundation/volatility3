@@ -442,7 +442,6 @@ class ResourceAccessor(object):
                 curfile = open(temp_filename)
 
         # Determine whether the file is a particular type of file, and if so, open it as such
-        # Determine compression
         if IMPORTED_MAGIC:
             while True:
                 try:

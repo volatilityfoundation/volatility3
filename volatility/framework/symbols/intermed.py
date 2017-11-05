@@ -135,6 +135,31 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     set_type_class = _construct_delegate_function('set_type_class')
     del_type_class = _construct_delegate_function('del_type_class')
 
+    @classmethod
+    def file_symbol_url(cls, sub_path, filename = None):
+        """Returns an iterator of appropriate file-scheme symbol URLs that can be opened by a ResourceAccessor class
+
+        Filter reduces the number of results returned to only those URLs containing that string
+        """
+        # Check user-modifiable files first, then compressed ones
+        extensions = ['.json', '.json.xz', '.json.gz', '.json.bz2']
+        if filename is None:
+            filename = "*"
+        # Check user symbol directory first, then fallback to the framework's library to allow for overloading
+        for path in constants.SYMBOL_BASEPATHS:
+            if not os.path.isabs(path):
+                path = os.path.abspath(os.path.join(__file__, path))
+            for extension in extensions:
+                # Hopefully these will not be large lists, otherwise this might be slow
+                try:
+                    for found in pathlib.Path(path).joinpath(sub_path).resolve().rglob(filename + extension):
+                        yield found.as_uri()
+                except FileNotFoundError:
+                    # If there's no linux symbols, don't cry about it
+                    pass
+        # Finally try looking in zip files
+        pass
+
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface):
     """Provide a base class to identify all subclasses"""
