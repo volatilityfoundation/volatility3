@@ -1,4 +1,4 @@
-from volatility.framework import exceptions, interfaces
+from volatility.framework import exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
 
 
@@ -75,7 +75,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
         mode = "rb"
         if not self._file_:
-            self._file_ = interfaces.layers.ResourceAccessor().open(self._location, mode)
+            self._file_ = layers.ResourceAccessor().open(self._location, mode)
         return self._file_
 
     @property

@@ -6,7 +6,7 @@ import os
 import pathlib
 
 from volatility import schemas
-from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
+from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects, layers
 from volatility.framework.symbols import native
 
 vollog = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         # Check there are no obvious errors
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        fp = interfaces.layers.ResourceAccessor().open(isf_url)
+        fp = layers.ResourceAccessor().open(isf_url)
         json_object = json.load(fp)
         fp.close()
 
