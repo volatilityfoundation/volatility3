@@ -37,9 +37,9 @@ class ResourceAccessor(object):
 
         with contextlib.closing(urllib.request.urlopen(url, context = self._context)) as fp:
             # Cache the file locally
-            url_type, path = urllib.parse.splittype(url)
+            parsed_url = urllib.parse.urlparse(url)
 
-            if url_type == 'file':
+            if parsed_url.scheme == 'file':
                 curfile = urllib.request.urlopen(url, context = self._context)
             else:
                 # TODO: find a way to check if we already have this file (look at http headers?)
@@ -83,6 +83,19 @@ class ResourceAccessor(object):
                 # Read and rewind to ensure we're inside any compressed file layers
                 curfile.read(1)
                 curfile.seek(0)
+        else:
+            # Somewhat of a hack, but prevents a hard dependency on the magic module
+            url_path = parsed_url.path
+            while True:
+                if url_path.endswith(".xz"):
+                    curfile = lzma.LZMAFile(curfile, mode)
+                elif url_path.endswith(".bz2"):
+                    curfile = bz2.BZ2File(curfile, mode)
+                elif url_path.endswith(".gz"):
+                    curfile = gzip.GzipFile(fileobj = curfile, mode = mode)
+                else:
+                    break
+                url_path = ".".join(url_path.split(".")[:-1])
 
         # Fallback in case the file doesn't exist
         if curfile is None:
