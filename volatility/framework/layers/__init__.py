@@ -33,6 +33,8 @@ class ResourceAccessor(object):
 
     def open(self, url, mode = "rb"):
         """Returns a file-like object for a particular URL opened in mode"""
+        urllib.request.install_opener(urllib.request.build_opener(JarHandler))
+
         with contextlib.closing(urllib.request.urlopen(url, context = self._context)) as fp:
             # Cache the file locally
             url_type, path = urllib.parse.splittype(url)
@@ -86,3 +88,24 @@ class ResourceAccessor(object):
         if curfile is None:
             raise ValueError("URL does not reference an openable file")
         return curfile
+
+
+class JarHandler(request.BaseHandler):
+    """Handles the jar scheme for URIs"""
+
+    def default_open(self, req):
+        """Handles the request if it's the jar scheme"""
+        if req.type == 'jar':
+            subscheme, remainder = req.full_url.split(":")[1], ":".join(req.full_url.split(":")[2:])
+            if subscheme != 'file':
+                vollog.log(constants.LOGLEVEL_VVV, "Unsupported jar subscheme {}".format(subscheme))
+                return None
+
+            zipsplit = remainder.split("!")
+            if len(zipsplit) != 2:
+                vollog.log(constants.LOGLEVEL_VVV,
+                           "Path did not contain exactly one fragment indicator: {}".format(remainder))
+                return None
+
+            zippath, filepath = zipsplit
+            return zipfile.ZipFile(zippath).open(filepath)

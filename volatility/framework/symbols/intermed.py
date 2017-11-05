@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import pathlib
+import zipfile
 
 from volatility import schemas
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects, layers
@@ -135,8 +136,16 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                 except FileNotFoundError:
                     # If there's no linux symbols, don't cry about it
                     pass
-        # Finally try looking in zip files
-        pass
+            # Finally try looking in zip files
+            zip_path = os.path.join(path, sub_path + ".zip")
+            if os.path.exists(zip_path):
+                # We have a zipfile, so run through it and look for sub files that match the filename
+                with zipfile.ZipFile(zip_path) as zfile:
+                    for name in zfile.namelist():
+                        for extension in extensions:
+                            # By ending with an extension (and therefore, not /), we should not return any directories
+                            if name.endswith(filename + extension) or (filename == "*" and name.endswith(extension)):
+                                yield "jar:file:" + str(pathlib.Path(zip_path)) + "!" + name
 
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface):
