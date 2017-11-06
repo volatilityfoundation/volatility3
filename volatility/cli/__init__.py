@@ -168,7 +168,7 @@ class CommandLine(object):
             for error in errors:
                 error_string = [x for x in error.format_exception_only()][-1]
                 vollog.warning("Automagic exception occured: {}".format(error_string[:-1]))
-                vollog.log(constants.LOGLEVEL_V, "\n".join(error.format(chain = False)))
+                vollog.log(constants.LOGLEVEL_V, "".join(error.format(chain = True)))
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format(unsatisfied))
 
         print("\n\n")
