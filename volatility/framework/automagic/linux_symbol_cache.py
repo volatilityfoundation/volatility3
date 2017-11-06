@@ -12,6 +12,10 @@ vollog = logging.getLogger(__name__)
 class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
     """Runs through all Linux symbols tables and caches their banners"""
 
+    # Since this is necessary for ConstructionMagic, we set a lower priority
+    # The user would run it eventually either way, but running it first means it can be used that run
+    priority = 0
+
     @classmethod
     def load_linux_banners(cls):
         linuxbanners = {}

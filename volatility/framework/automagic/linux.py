@@ -15,7 +15,14 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
     def __init__(self, context, config_path):
         super().__init__(context, config_path)
         self._requirements = None
-        self._linux_banners = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
+        self._linux_banners_ = None
+
+    @property
+    def _linux_banners(self):
+        """Creates a cached copy of the results, but only it's been requested"""
+        if self._linux_banners_ is None:
+            self._linux_banners_ = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
+        return self._linux_banners_
 
     def __call__(self, context, config_path, requirement, progress_callback = None):
         """Searches for LinuxSymbolRequirements and attempt to populate them"""
