@@ -1,4 +1,5 @@
 import base64
+import codecs
 import copy
 import json
 import logging
@@ -71,7 +72,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
         fp = layers.ResourceAccessor().open(isf_url)
-        json_object = json.load(fp)
+        reader = codecs.getreader("utf-8")
+        json_object = json.load(reader(fp))
         fp.close()
 
         # Validation is expensive, but we cache to store the hashes of successfully validated json objects
