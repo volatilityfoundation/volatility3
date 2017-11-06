@@ -40,6 +40,7 @@ class ResourceAccessor(object):
             parsed_url = urllib.parse.urlparse(url)
 
             if parsed_url.scheme == 'file':
+                # ZipExtFiles (files in zips) cannot seek, so must be cached in order to use and/or decompress
                 curfile = urllib.request.urlopen(url, context = self._context)
             else:
                 # TODO: find a way to check if we already have this file (look at http headers?)
