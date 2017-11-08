@@ -86,4 +86,4 @@ class PrintKey(plugins.PluginInterface):
                                    ('Name', str),
                                    ('Data', str),
                                    ('Volatile', bool)],
-                        generator = self.registry_walker(registry_layer))
+                        generator = self.registry_walker(registry_layer, node = node))
