@@ -105,7 +105,14 @@ class ResourceAccessor(object):
 
 
 class JarHandler(request.BaseHandler):
-    """Handles the jar scheme for URIs"""
+    """Handles the jar scheme for URIs
+
+    Reference used for the schema syntax:
+    http://docs.netkernel.org/book/view/book:mod:reference/doc:layer1:schemes:jar
+
+    Actual reference (found from https://www.w3.org/wiki/UriSchemes/jar) seemed not to return:
+    http://developer.java.sun.com/developer/onlineTraining/protocolhandlers/
+    """
 
     def default_open(self, req):
         """Handles the request if it's the jar scheme"""
