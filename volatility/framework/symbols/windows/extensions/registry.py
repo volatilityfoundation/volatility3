@@ -72,7 +72,31 @@ class _CM_KEY_NODE(objects.Struct):
             # We could change the array type to a struct with both parts
             subkey_node.List.count = subkey_node.Count * 2
             for key_offset in subkey_node.List[::2]:
-                yield hive.get_node(key_offset)
+                if key_offset < hive.maximum_address:
+                    node = hive.get_node(key_offset)
+                    if node.vol.type_name.endswith(constants.BANG + "_CM_KEY_INDEX"):
+                        signature = node.cast('string', max_length = 2, encoding = 'latin-1')
+                        listjump = None
+                        if signature == 'lh' or signature == 'lf':
+                            # Leaf node (either Fast Leaf or Hash Leaf)
+                            # We need to descend down these nodes
+                            listjump = 2
+                        elif signature == 'ri':
+                            # Index root found
+                            listjump = 1
+                        if listjump:
+                            node.List.count = node.Count
+                            for subnode_offset in node.List[::listjump]:
+                                subnode = hive.get_node(subnode_offset)
+                                yield subnode
+                    elif node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
+                        yield node
+                    else:
+                        vollog.debug(
+                            "Unexpected node type encountered when traversing subkeys: {}".format(node.vol.type_name))
+                else:
+                    vollog.log(constants.LOGLEVEL_VVV,
+                               "Node found with address outside the valid Hive size: {}".format(key_offset))
 
     def get_values(self):
         """Returns a list of the Value nodes for a key"""
