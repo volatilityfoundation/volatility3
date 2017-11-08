@@ -77,7 +77,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             return cell.u.KeyValue
         elif signature == 'db':
             return cell.u.ValueData
-        elif signature == 'lf' or signature == 'lh':
+        elif signature == 'lf' or signature == 'lh' or signature == 'ri':
             return cell.u.KeyIndex
         else:
             # It doesn't matter that we use KeyNode, we're just after the first two bytes
