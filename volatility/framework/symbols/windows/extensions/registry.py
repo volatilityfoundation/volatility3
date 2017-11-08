@@ -142,7 +142,11 @@ class _CM_KEY_VALUE(objects.Struct):
                 raise ValueError("Size of data does not match the type of registry value {}".format(self.helper_name))
             return struct.unpack("<Q", data)[0]
         if self_type in [RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK]:
-            return str(data, encoding = "utf-16-le")
+            # truncate after \x00\x00 to ensure it can
+            output = str(data, encoding = "utf-16-le", errors = 'replace')
+            if output.find("\x00") > 0:
+                output = output[:output.find("\x00")]
+            return output
         if self_type == RegValueTypes.REG_MULTI_SZ:
             return str(data, encoding = "utf-16-le").split("\x00")
         if self_type == RegValueTypes.REG_BINARY:

@@ -91,11 +91,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         if key.endswith("\\"):
             key = key[:-1]
         key_array = key.split('\\')
-        depth = 0
         found_key = []
-        while len(key_array) > 1 and node_key:
+        while key_array and node_key:
             for subkey in node_key.get_subkeys():
-                if subkey.keyname == key_array[depth]:
+                if subkey.helper_name == key_array[0]:
                     node_key = subkey
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
                     break
