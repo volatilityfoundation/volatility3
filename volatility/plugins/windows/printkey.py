@@ -48,7 +48,7 @@ class PrintKey(plugins.PluginInterface):
                        "Key",
                        key_node.helper_name,
                        "",
-                       key_node.volatile))
+                       key_node.helper_volatile))
             yield result
 
         for value_node in node.get_values():
@@ -58,7 +58,7 @@ class PrintKey(plugins.PluginInterface):
                        RegValueTypes(value_node.Type).name,
                        value_node.helper_name,
                        str(value_node.decode_data()),
-                       node.volatile))
+                       node.helper_volatile))
             yield result
 
         if self.config['recurse']:
