@@ -7,6 +7,8 @@ from volatility.framework.layers.registry import RegistryHive
 
 vollog = logging.getLogger(__name__)
 
+BIG_DATA_MAXLEN = 0x3fd8
+
 
 class RegValueTypes(enum.Enum):
     REG_NONE = 0
@@ -138,6 +140,7 @@ class _CM_KEY_VALUE(objects.Struct):
         """Since this is just a casting convenience, it can be a property"""
         # Determine if the data is stored inline
         datalen = self.DataLength & 0x7fffffff
+        data = b""
         # Check if the data is stored inline
         layer = self._context.memory[self.vol.layer_name]
         if self.DataLength & 0x80000000 and (0 > datalen or datalen > 4):
@@ -146,7 +149,17 @@ class _CM_KEY_VALUE(objects.Struct):
             data = layer.read(self.Data.vol.offset, datalen)
         elif layer.hive.Version == 5 and datalen > 0x4000:
             # We're bigdata
-            raise NotImplementedError("Registry BIG_DATA not yet implmented")
+            big_data = layer.get_cell(self.Data).cast("_CM_BIG_DATA")
+            table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
+            unsigned_int = self._context.symbol_space.get_type(table_name + constants.BANG + "unsigned int")
+            # Oddly, we get a list of addersses, at which are addresses, which then point to data blocks
+            print(hex(big_data.List))
+            for i in range(big_data.Count):
+                block_offset = layer.get_cell(big_data.List + (i * unsigned_int.size)).cast("unsigned int")
+                if block_offset < layer.maximum_address:
+                    amount = min(BIG_DATA_MAXLEN, datalen)
+                    data += layer.read(offset = layer.get_cell(block_offset).vol.offset, length = amount)
+                    datalen -= amount
         else:
             # Suspect Data actually points to a Cell,
             # but the length at the start could be negative so just adding 4 to jump past it
