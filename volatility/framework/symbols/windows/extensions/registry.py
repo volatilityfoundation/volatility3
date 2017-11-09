@@ -149,11 +149,10 @@ class _CM_KEY_VALUE(objects.Struct):
             data = layer.read(self.Data.vol.offset, datalen)
         elif layer.hive.Version == 5 and datalen > 0x4000:
             # We're bigdata
-            big_data = layer.get_cell(self.Data).cast("_CM_BIG_DATA")
+            big_data = layer.get_node(self.Data)
             table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
             unsigned_int = self._context.symbol_space.get_type(table_name + constants.BANG + "unsigned int")
             # Oddly, we get a list of addersses, at which are addresses, which then point to data blocks
-            print(hex(big_data.List))
             for i in range(big_data.Count):
                 block_offset = layer.get_cell(big_data.List + (i * unsigned_int.size)).cast("unsigned int")
                 if block_offset < layer.maximum_address:
