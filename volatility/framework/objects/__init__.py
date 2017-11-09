@@ -2,7 +2,7 @@ import logging
 import struct
 from collections import abc
 
-from volatility.framework import interfaces
+from volatility.framework import interfaces, constants
 from volatility.framework.interfaces.objects import ObjectInformation
 from volatility.framework.objects import templates
 
