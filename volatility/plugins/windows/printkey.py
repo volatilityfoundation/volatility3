@@ -43,9 +43,9 @@ class PrintKey(plugins.PluginInterface):
 
         for key_node in node.get_subkeys():
             result = (key_path.count("\\"),
-                      (key_path,
-                       str(datetime.datetime.utcfromtimestamp(unix_time)),
+                      (str(datetime.datetime.utcfromtimestamp(unix_time)),
                        "Key",
+                       key_path,
                        key_node.helper_name,
                        "",
                        key_node.helper_volatile))
@@ -53,9 +53,9 @@ class PrintKey(plugins.PluginInterface):
 
         for value_node in node.get_values():
             result = (key_path.count("\\"),
-                      (key_path,
-                       str(datetime.datetime.utcfromtimestamp(unix_time)),
+                      (str(datetime.datetime.utcfromtimestamp(unix_time)),
                        RegValueTypes(value_node.Type).name,
+                       key_path,
                        value_node.helper_name,
                        str(value_node.decode_data()),
                        node.helper_volatile))
@@ -80,9 +80,9 @@ class PrintKey(plugins.PluginInterface):
         if self.config.get('key', None):
             node = registry_layer.get_key(self.config['key'])
 
-        return TreeGrid(columns = [('Key', str),
-                                   ('Last Write Time', str),
+        return TreeGrid(columns = [('Last Write Time', str),
                                    ('Type', str),
+                                   ('Key', str),
                                    ('Name', str),
                                    ('Data', str),
                                    ('Volatile', bool)],
