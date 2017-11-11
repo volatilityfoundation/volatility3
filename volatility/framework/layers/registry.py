@@ -46,7 +46,9 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._minaddr = 0
         self._maxaddr = self._base_block.Length
 
-        # print("MAPPING", self.mapping(self._base_block.RootCell, length = 2))
+        if self._base_block.Length <= 0:
+            raise exceptions.StructureException(
+                "Invalid registry base_block length: {}".format(self._base_block.Length))
 
     @property
     def address_mask(self):
