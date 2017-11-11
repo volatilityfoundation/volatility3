@@ -150,11 +150,11 @@ class _CM_KEY_VALUE(objects.Struct):
         elif layer.hive.Version == 5 and datalen > 0x4000:
             # We're bigdata
             big_data = layer.get_node(self.Data)
-            table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
-            unsigned_int = self._context.symbol_space.get_type(table_name + constants.BANG + "unsigned int")
-            # Oddly, we get a list of addersses, at which are addresses, which then point to data blocks
+            # Oddly, we get a list of addresses, at which are addresses, which then point to data blocks
             for i in range(big_data.Count):
-                block_offset = layer.get_cell(big_data.List + (i * unsigned_int.size)).cast("unsigned int")
+                # The value 4 should actually be unsigned-int.size, but since it's a file format that shouldn't change
+                # the direct value 4 can be used instead
+                block_offset = layer.get_cell(big_data.List + (i * 4)).cast("unsigned int")
                 if block_offset < layer.maximum_address:
                     amount = min(BIG_DATA_MAXLEN, datalen)
                     data += layer.read(offset = layer.get_cell(block_offset).vol.offset, length = amount)
