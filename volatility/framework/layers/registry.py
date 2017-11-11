@@ -78,8 +78,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         elif signature == 'vk':
             return cell.u.KeyValue
         elif signature == 'db':
+            # Big Data
             return cell.u.ValueData
         elif signature == 'lf' or signature == 'lh' or signature == 'ri':
+            # Fast Leaf, Hash Leaf, Index Root
             return cell.u.KeyIndex
         else:
             # It doesn't matter that we use KeyNode, we're just after the first two bytes
