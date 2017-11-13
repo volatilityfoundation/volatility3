@@ -2,8 +2,6 @@ import datetime
 
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import configuration
-from volatility.framework.interfaces.configuration import HierarchicalDict
 from volatility.framework.layers.registry import RegistryHive
 from volatility.framework.renderers import TreeGrid
 from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
@@ -66,14 +64,10 @@ class PrintKey(plugins.PluginInterface):
                 yield from self.registry_walker(registry, node)
 
     def run(self):
-        layer = self.context.memory[self.config['primary']]
-        reg_config = HierarchicalDict({'hive_offset': self.config['offset'],
-                                       'base_layer': self.config['primary'],
-                                       'ntsymbols': self.config['ntsymbols']})
-        self.config.splice('registry', reg_config)
-
-        registry_config_path = configuration.path_join(self.config_path, 'registry')
-        registry_layer = RegistryHive(self.context, registry_config_path, name = 'hive', os = 'Windows')
+        reg_config_path = self.make_subconfig(hive_offset = self.config['offset'],
+                                              base_layer = self.config['primary'],
+                                              ntsymbols = self.config['ntsymbols'])
+        registry_layer = RegistryHive(self.context, reg_config_path, name = 'hive', os = 'Windows')
         self.context.memory.add_layer(registry_layer)
 
         node = None

@@ -12,6 +12,8 @@ import collections.abc
 import copy
 import json
 import logging
+import random
+import string
 import sys
 from abc import ABCMeta, abstractmethod
 
@@ -488,6 +490,26 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                 for value in subresult:
                     result.append(value)
         return result
+
+    def make_subconfig(self, *args, **kwargs):
+        """Constructs a new subconfig, containing each element from kwargs and returns the full config_path to it"""
+        if args:
+            vollog.debug("Non-keyword arguments to make_subconfig are ignored - this is a bug in the calling code")
+
+        random_config_dict = ''.join(
+            random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+        new_config_path = path_join(self.config_path, random_config_dict)
+        # TODO: Check that the new_config_path is empty, although it's not critical if it's not since the values are merged in
+
+        # This should check that each k corresponds to a requirement and each v is of the appropriate type
+        # This would require knowledge of the new configurable itself to verify, and they should do validation in the
+        # constructor anyway, however, to prevent bad types getting into the config tree we just verify that v is a simple type
+        for k, v in kwargs.items():
+            if not isinstance(v, (int, str, bool, float, bytes)):
+                raise TypeError("Config values passed to make_subconfig can only be simple types")
+            self.context.config[path_join(new_config_path, k)] = v
+
+        return new_config_path
 
 
 class TranslationLayerRequirement(ConstructableRequirementInterface):
