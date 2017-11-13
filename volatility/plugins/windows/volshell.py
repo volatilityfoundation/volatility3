@@ -11,7 +11,7 @@ class Volshell(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return (volshell.Volshell.get_requirements() +
-                [requirements.SymbolRequirement(name = "nt", description = "Windows OS"),
+                [requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
                  requirements.IntRequirement(name = 'pid',
                                              description = "Process ID",
                                              optional = True)])
@@ -25,7 +25,7 @@ class Volshell(plugins.PluginInterface):
         # We only use the object factory to demonstrate how to use one
         layer_name = self.config['primary']
         kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config['nt'], layer_name = layer_name, offset = kvo)
+        ntkrnlmp = self.context.module(self.config['nt_symbols'], layer_name = layer_name, offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
         list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
@@ -34,7 +34,7 @@ class Volshell(plugins.PluginInterface):
         #
         # ```
         # reloff = self.context.symbol_space.get_type(
-        #          self.config['nt'] + constants.BANG + "_EPROCESS").relative_child_offset(
+        #          self.config['nt_symbols'] + constants.BANG + "_EPROCESS").relative_child_offset(
         #          "ActiveProcessLinks")
         # ```
         #
@@ -54,7 +54,7 @@ class Volshell(plugins.PluginInterface):
         # Provide some OS-agnostic convenience elements for ease
         layer_name = self.config['primary']
         kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
-        nt = self.context.module(self.config['nt'], layer_name = layer_name, offset = kvo)
+        nt = self.context.module(self.config['nt_symbols'], layer_name = layer_name, offset = kvo)
 
         ps = lambda: list(self.list_processes())
 

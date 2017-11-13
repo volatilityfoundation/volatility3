@@ -73,7 +73,7 @@ class PrintKey(plugins.PluginInterface):
             try:
                 import volatility.plugins.windows.hivelist as hivelist
                 plugin_config_path = self.make_subconfig(primary = self.config['primary'],
-                                                         nt = self.config['ntsymbols'])
+                                                         nt_symbols = self.config['nt_symbols'])
                 plugin = hivelist.HiveList(self.context, plugin_config_path)
                 hive_offsets = [hive.vol.offset for hive in plugin.list_hives()]
             except:
@@ -86,7 +86,7 @@ class PrintKey(plugins.PluginInterface):
             # Construct the hive
             reg_config_path = self.make_subconfig(hive_offset = hive_offset,
                                                   base_layer = self.config['primary'],
-                                                  ntsymbols = self.config['ntsymbols'])
+                                                  nt_symbols = self.config['nt_symbols'])
             hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset), os = 'Windows')
             self.context.memory.add_layer(hive)
 
