@@ -24,7 +24,7 @@ class Volshell(plugins.PluginInterface):
         context = self.context
         config = self.config
         layer_name = self.config['primary']
-        kvo = config.get('primary.kernel_virtual_offset', None)
+        kvo = context.memory[layer_name].config.get('kernel_virtual_offset')
         members = lambda x: list(sorted(x.vol.members.keys()))
 
         # Determine locals

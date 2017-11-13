@@ -43,7 +43,7 @@ class Modules(plugins.PluginInterface):
 
         layer_name = self.config['primary']
 
-        kvo = self.config['primary.kernel_virtual_offset']
+        kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = self.context.module(self.config["nt"], layer_name = layer_name, offset = kvo)
 
         list_head = ntkrnlmp.get_symbol("PsLoadedModuleList").address

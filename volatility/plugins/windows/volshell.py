@@ -23,8 +23,9 @@ class Volshell(plugins.PluginInterface):
         """Lists all the processes in the primary layer"""
 
         # We only use the object factory to demonstrate how to use one
-        kvo = self.config['primary.kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config['nt'], layer_name = self.config['primary'], offset = kvo)
+        layer_name = self.config['primary']
+        kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = self.context.module(self.config['nt'], layer_name = layer_name, offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
         list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
@@ -52,7 +53,7 @@ class Volshell(plugins.PluginInterface):
 
         # Provide some OS-agnostic convenience elements for ease
         layer_name = self.config['primary']
-        kvo = self.config['primary.kernel_virtual_offset']
+        kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
         nt = self.context.module(self.config['nt'], layer_name = layer_name, offset = kvo)
 
         ps = lambda: list(self.list_processes())
