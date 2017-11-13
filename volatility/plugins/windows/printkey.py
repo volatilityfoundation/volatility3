@@ -1,10 +1,13 @@
 import datetime
+import logging
 
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.registry import RegistryHive
 from volatility.framework.renderers import TreeGrid
 from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
+
+vollog = logging.getLogger(__name__)
 
 
 class PrintKey(plugins.PluginInterface):
@@ -19,7 +22,8 @@ class PrintKey(plugins.PluginInterface):
                                                description = "Windows OS"),
                 requirements.IntRequirement(name = 'offset',
                                             description = "Hive Offset",
-                                            default = 0),
+                                            default = None,
+                                            optional = True),
                 requirements.StringRequirement(name = 'key',
                                                description = "Key to start from",
                                                default = None,
@@ -32,9 +36,9 @@ class PrintKey(plugins.PluginInterface):
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
 
-    def registry_walker(self, registry, node = None):
+    def hive_walker(self, hive, node = None):
         if not node:
-            node = registry.get_node(registry.root_cell_offset)
+            node = hive.get_node(hive.root_cell_offset)
         key_path = node.get_key_path()
         unix_time = node.LastWriteTime.QuadPart // 10000000
         unix_time = unix_time - 11644473600
@@ -61,18 +65,43 @@ class PrintKey(plugins.PluginInterface):
 
         if self.config['recurse']:
             for node in node.get_subkeys():
-                yield from self.registry_walker(registry, node)
+                yield from self.hive_walker(hive, node)
+
+    def registry_walker(self):
+        """Walks through a registry, hive by hive"""
+        if self.config.get('offset', None) is None:
+            try:
+                import volatility.plugins.windows.hivelist as hivelist
+                plugin_config_path = self.make_subconfig(primary = self.config['primary'],
+                                                         nt = self.config['ntsymbols'])
+                plugin = hivelist.HiveList(self.context, plugin_config_path)
+                hive_offsets = [hive.vol.offset for hive in plugin.list_hives()]
+            except:
+                vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")
+                raise ValueError("Unable to import windows.hivelist plugin, please provide a hive offset")
+        else:
+            hive_offsets = [self.config['offset']]
+
+        for hive_offset in hive_offsets:
+            # Construct the hive
+            reg_config_path = self.make_subconfig(hive_offset = hive_offset,
+                                                  base_layer = self.config['primary'],
+                                                  ntsymbols = self.config['ntsymbols'])
+            hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset), os = 'Windows')
+            self.context.memory.add_layer(hive)
+
+            node = None
+            if self.config.get('key', None):
+                node = hive.get_key()
+
+            # Walk it
+            if 'key' in self.config:
+                node = hive.get_key(self.config['key'])
+            else:
+                node = hive.get_node(hive.root_cell_offset)
+            yield from self.hive_walker(hive, node)
 
     def run(self):
-        reg_config_path = self.make_subconfig(hive_offset = self.config['offset'],
-                                              base_layer = self.config['primary'],
-                                              ntsymbols = self.config['ntsymbols'])
-        registry_layer = RegistryHive(self.context, reg_config_path, name = 'hive', os = 'Windows')
-        self.context.memory.add_layer(registry_layer)
-
-        node = None
-        if self.config.get('key', None):
-            node = registry_layer.get_key(self.config['key'])
 
         return TreeGrid(columns = [('Last Write Time', str),
                                    ('Type', str),
@@ -80,4 +109,4 @@ class PrintKey(plugins.PluginInterface):
                                    ('Name', str),
                                    ('Data', str),
                                    ('Volatile', bool)],
-                        generator = self.registry_walker(registry_layer, node = node))
+                        generator = self.registry_walker())
