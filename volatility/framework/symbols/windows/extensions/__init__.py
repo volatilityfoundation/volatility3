@@ -2,7 +2,7 @@ import collections.abc
 
 from volatility.framework import constants, objects
 from volatility.framework.symbols import generic
-
+from volatility.framework import exceptions
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
