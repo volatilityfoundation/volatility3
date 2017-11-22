@@ -18,7 +18,7 @@ class PrintKey(plugins.PluginInterface):
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "ntsymbols",
+                requirements.SymbolRequirement(name = "nt_symbols",
                                                description = "Windows OS"),
                 requirements.IntRequirement(name = 'offset',
                                             description = "Hive Offset",
@@ -91,8 +91,6 @@ class PrintKey(plugins.PluginInterface):
             self.context.memory.add_layer(hive)
 
             node = None
-            if self.config.get('key', None):
-                node = hive.get_key()
 
             # Walk it
             if 'key' in self.config:
