@@ -182,14 +182,11 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     def get_symbols_by_location(self, offset):
         """Returns the name of all symbols in this table that live at a particular offset"""
-        sort_symbols = [(s.offset, s) for s in
-                        sorted([self.get_symbol(sn) for sn in self.symbols], key = lambda x: x.offset)]
-        result = bisect.bisect_left(sort_symbols, offset)
-        if result == len(sort_symbols):
-            raise StopIteration
-        closest_symbol = sort_symbols[result][1]
-        if closest_symbol.address == offset:
-            yield closest_symbol.name
+        sort_symbols = sorted([(self.get_symbol(sn).address, sn) for sn in self.symbols])
+        result = bisect.bisect_left(sort_symbols, (offset, ""))
+        while result < len(sort_symbols) and sort_symbols[result][0] == offset:
+            yield sort_symbols[result][1]
+            result += 1
 
 
 class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface):
