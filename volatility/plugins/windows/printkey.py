@@ -36,10 +36,11 @@ class PrintKey(plugins.PluginInterface):
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
 
-    def hive_walker(self, hive, node = None):
+    def hive_walker(self, hive, node = None, key_path = None):
         if not node:
             node = hive.get_node(hive.root_cell_offset)
-        key_path = node.get_key_path()
+        if key_path is None:
+            key_path = node.get_key_path()
         unix_time = node.LastWriteTime.QuadPart // 10000000
         unix_time = unix_time - 11644473600
 
@@ -65,7 +66,7 @@ class PrintKey(plugins.PluginInterface):
 
         if self.config['recurse']:
             for node in node.get_subkeys():
-                yield from self.hive_walker(hive, node)
+                yield from self.hive_walker(hive, node, key_path + "\\" + node.helper_name)
 
     def registry_walker(self):
         """Walks through a registry, hive by hive"""
