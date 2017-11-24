@@ -10,6 +10,8 @@ import urllib.request
 import zipfile
 from urllib import request
 
+from volatility import framework
+
 try:
     import magic
 
@@ -28,12 +30,19 @@ class ResourceAccessor(object):
     """Object for openning URLs as files (downloading locally first if necessary)"""
 
     def __init__(self, progress_callback = None, context = None):
+        """Creates a resource accessor
+
+        Note: context is an SSL context, not a volatility context
+        """
         self._progress_callback = progress_callback
         self._context = context
+        self._handlers = list(framework.class_subclasses(request.BaseHandler))
+        vollog.log(constants.LOGLEVEL_VVV,
+                   "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
 
     def open(self, url, mode = "rb"):
         """Returns a file-like object for a particular URL opened in mode"""
-        urllib.request.install_opener(urllib.request.build_opener(JarHandler))
+        urllib.request.install_opener(urllib.request.build_opener(*self._handlers))
 
         with contextlib.closing(urllib.request.urlopen(url, context = self._context)) as fp:
             # Cache the file locally

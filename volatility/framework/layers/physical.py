@@ -59,6 +59,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         super().__init__(context, config_path, name)
 
         self._location = self.config["location"]
+        self._accessor = layers.ResourceAccessor()
         self._file_ = None
         self._size = None
         # Instantiate the file to throw exceptions if the file doesn't open
@@ -75,7 +76,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
         mode = "rb"
         if not self._file_:
-            self._file_ = layers.ResourceAccessor().open(self._location, mode)
+            self._file_ = self._accessor.open(self._location, mode)
         return self._file_
 
     @property
