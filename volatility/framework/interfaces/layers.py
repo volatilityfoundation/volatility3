@@ -6,6 +6,7 @@ import functools
 import logging
 import math
 import multiprocessing
+import traceback
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants, exceptions, validity
@@ -221,6 +222,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         except Exception as e:
             # We don't care the kind of exception, so catch and report on everything, yielding nothing further
             vollog.debug("Scan Failure: {}".format(str(e)))
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
 
     def _scan_iterator(self, scanner, min_address, max_address):
         return range(min_address, max_address, scanner.chunk_size)
