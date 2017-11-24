@@ -10,8 +10,6 @@ import urllib.request
 import zipfile
 from urllib import request
 
-from volatility import framework
-
 try:
     import magic
 
@@ -19,6 +17,12 @@ try:
 except ImportError:
     IMPORTED_MAGIC = False
 
+try:
+    import smb.SMBHandler
+except ImportError:
+    pass
+
+from volatility import framework
 from volatility.framework import constants
 from volatility.framework.interfaces.layers import IMPORTED_MAGIC
 from volatility.framework.layers import intel, lime, physical, segmented, vmware
