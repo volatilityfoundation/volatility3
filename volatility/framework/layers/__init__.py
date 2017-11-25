@@ -40,6 +40,7 @@ class ResourceAccessor(object):
         """
         self._progress_callback = progress_callback
         self._context = context
+        self._cached_files = []
         self._handlers = list(framework.class_subclasses(request.BaseHandler))
         vollog.log(constants.LOGLEVEL_VVV,
                    "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
@@ -60,16 +61,26 @@ class ResourceAccessor(object):
                 block_size = 1028 * 8
                 temp_filename = os.path.join(constants.CACHE_PATH,
                                              "data_" + hashlib.sha512(bytes(url, 'latin-1')).hexdigest())
-                cache_file = open(temp_filename, "wb")
-                while True:
-                    block = fp.read(block_size)
-                    if not block:
-                        break
-                    cache_file.write(block)
-                    if self._progress_callback:
-                        # TODO: Figure out the size and therefore percentage complete
-                        self._progress_callback(0, "Reading file {}".format(url))
-                cache_file.close()
+
+                if not temp_filename in self._cached_files or not os.path.exists(temp_filename):
+                    vollog.info("Caching file at: {}".format(temp_filename))
+
+                    content_length = fp.info().get('Content-Length', -1)
+                    cache_file = open(temp_filename, "wb")
+
+                    count = 0
+                    while True:
+                        block = fp.read(block_size)
+                        count += len(block)
+                        if not block:
+                            break
+                        if self._progress_callback:
+                            self._progress_callback(count / max(count, int(content_length)),
+                                                    "Reading file {}".format(url))
+                        cache_file.write(block)
+                    cache_file.close()
+                    # Globally stash the file as cached this python session
+                    self._cached_files += [temp_filename]
                 # Re-open the cache with a different mode
                 curfile = open(temp_filename, mode = "rb")
 
