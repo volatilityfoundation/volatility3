@@ -4,7 +4,7 @@ from volatility.framework.configuration import requirements
 
 
 class PsList(plugins.PluginInterface):
-    """Lists the processes present in a particular memory image"""
+    """Lists the processes present in a particular windows memory image"""
 
     @classmethod
     def get_requirements(cls):

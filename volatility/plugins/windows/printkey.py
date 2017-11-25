@@ -11,7 +11,7 @@ vollog = logging.getLogger(__name__)
 
 
 class PrintKey(plugins.PluginInterface):
-    """Lists the processes present in a particular memory image"""
+    """Lists the registry keys under a hive or specific key value"""
 
     @classmethod
     def get_requirements(cls):

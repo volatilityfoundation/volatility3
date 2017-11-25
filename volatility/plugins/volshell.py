@@ -7,7 +7,7 @@ from volatility.framework.interfaces import plugins
 
 
 class Volshell(plugins.PluginInterface):
-    """Lists the processes present in a particular memory image"""
+    """Shell environment to directly interact with a memory image"""
 
     @classmethod
     def get_requirements(cls):
