@@ -88,14 +88,22 @@ class SymbolSpaceInterface(collections.abc.Mapping):
 
 
 class BaseSymbolTableInterface(validity.ValidityRoutines):
-    """The base interface, inherited by both NativeTables and SymbolTables"""
+    """The base interface, inherited by both NativeTables and SymbolTables
 
-    def __init__(self, name, native_types = None):
-        self._check_type(native_types, NativeTableInterface)
+    native_types is a NativeTableInterface used for native types for the particular loaded symbol table
+    table_mapping allows tables referenced by symbols to be remapped to a different table name if necessary
+
+    Note: table_mapping is a rarely used feature (since symbol tables are typically self-contained)
+    """
+
+    def __init__(self, name, native_types = None, table_mapping = None):
         if name:
             self._check_type(name, str)
         self.name = name or None
-        self._native_types = native_types
+        if table_mapping is None:
+            table_mapping = {}
+        self.table_mapping = self._check_type(table_mapping, dict)
+        self._native_types = self._check_type(native_types, NativeTableInterface)
 
     # ## Required Symbol functions
 

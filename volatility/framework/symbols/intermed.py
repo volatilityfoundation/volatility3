@@ -273,6 +273,10 @@ class Version1Format(ISFormatTable):
         reference_name = dictionary['name']
         if constants.BANG not in reference_name:
             reference_name = self.name + constants.BANG + reference_name
+        else:
+            reference_parts = reference_name.split(constants.BANG)
+            reference_name = (self.table_mapping.get(reference_parts[0], reference_parts[0]) +
+                              constants.BANG + constants.BANG.join(reference_parts[1:]))
 
         return objects.templates.ReferenceTemplate(type_name = reference_name)
 
