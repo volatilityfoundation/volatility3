@@ -1,5 +1,6 @@
 import logging
 import struct
+import typing
 from collections import abc
 
 from volatility.framework import interfaces
@@ -29,7 +30,7 @@ class Function(interfaces.objects.ObjectInterface):
 
 class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
-    _struct_type = int
+    _struct_type: typing.Type = int
 
     def __init__(self, context, type_name, object_info, struct_format):
         super().__init__(context = context,
@@ -493,7 +494,7 @@ class Struct(interfaces.objects.ObjectInterface):
             member = member(context = self._context,
                             object_info = interfaces.objects.ObjectInformation(layer_name = self.vol.layer_name,
                                                                                offset = mask & (
-                                                                                   self.vol.offset + relative_offset),
+                                                                                       self.vol.offset + relative_offset),
                                                                                member_name = attr,
                                                                                parent = self))
             self._concrete_members[attr] = member

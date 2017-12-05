@@ -10,8 +10,9 @@ loading of file format types) as well as a module to reconstruct layers based on
 import logging
 import sys
 import traceback
+import typing
 
-from volatility.framework import class_subclasses, import_files, interfaces
+from volatility.framework import class_subclasses, import_files, interfaces, validity
 from volatility.framework.automagic import construct_layers, stacker, windows, pdbscan
 from volatility.framework.configuration import requirements
 
@@ -29,7 +30,8 @@ linux_automagic = ['ConstructionMagic',
                    'LinuxSymbolFinder']
 
 
-def available(context):
+def available(context: interfaces.context.ContextInterface) \
+        -> typing.List[typing.Type[interfaces.automagic.AutomagicInterface]]:
     """Returns an ordered list of all subclasses of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface`.
 
     The order is based on the priority attributes of the subclasses, in order to ensure the automagics are listed in
@@ -45,7 +47,12 @@ def available(context):
                   key = lambda x: x.priority)
 
 
-def run(automagics, context, configurable, config_path, progress_callback = None):
+def run(automagics: typing.List[interfaces.automagic.AutomagicInterface],
+        context: interfaces.context.ContextInterface,
+        configurable: typing.Union[interfaces.configuration.ConfigurableInterface,
+                                   typing.Type[interfaces.configuration.ConfigurableInterface]],
+        config_path: str,
+        progress_callback: validity.ProgressCallback = None) -> typing.List[traceback.TracebackException]:
     """Runs through the list of `automagics` in order, allowing them to make changes to the context
 
     :param automagics: A list of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` objects
@@ -66,14 +73,16 @@ def run(automagics, context, configurable, config_path, progress_callback = None
             raise TypeError("Automagics must only contain AutomagicInterface subclasses")
 
     if (not isinstance(configurable, interfaces.configuration.ConfigurableInterface)
-        and not issubclass(configurable, interfaces.configuration.ConfigurableInterface)):
+            and not issubclass(configurable, interfaces.configuration.ConfigurableInterface)):
         raise TypeError("Automagic operates on configurables only")
 
     # TODO: Fix need for top level config element just because we're using a MultiRequirement to group the
     # configurable's config requirements
-    configurable_class = configurable
+    configurable_class: typing.Type[interfaces.configuration.ConfigurableInterface]
     if isinstance(configurable, interfaces.configuration.ConfigurableInterface):
         configurable_class = configurable.__class__
+    else:
+        configurable_class = configurable
     requirement = requirements.MultiRequirement(name = configurable_class.__name__)
     for req in configurable.get_requirements():
         requirement.add_requirement(req)

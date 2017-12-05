@@ -6,6 +6,7 @@ etc) as well as indicating what they expect to be in the context (such as partic
 """
 
 import logging
+import typing
 
 from volatility.framework.interfaces import configuration as interfaces_configuration
 

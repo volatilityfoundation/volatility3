@@ -8,8 +8,9 @@ import logging
 import math
 import os
 import struct
+import typing
 
-from volatility.framework import exceptions, layers
+from volatility.framework import exceptions, layers, validity
 from volatility.framework.layers import scanners
 from volatility.framework.symbols import native, intermed
 
@@ -38,11 +39,12 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
 
     _RSDS_format = struct.Struct("<16BI")
 
-    def __init__(self, pdb_names):
+    def __init__(self, pdb_names: typing.List[bytes]) -> None:
         super().__init__()
         self._pdb_names = pdb_names
 
-    def __call__(self, data, data_offset):
+    def __call__(self, data: bytes, data_offset: int) \
+            -> typing.Generator[typing.Tuple[str, typing.Any, bytes, int], None, None]:
         sig = data.find(b"RSDS")
         while sig >= 0:
             null = data.find(b'\0', sig + 4 + self._RSDS_format.size)
@@ -52,7 +54,7 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
                     pdb_name = data[name_offset:null]
                     if pdb_name in self._pdb_names:
 
-                        ## thie ordering is intentional due to mixed endianness in the GUID
+                        ## this ordering is intentional due to mixed endianness in the GUID
                         (g3, g2, g1, g0, g5, g4, g7, g6, g8, g9, ga, gb, gc, gd, ge, gf, a) = \
                             self._RSDS_format.unpack(data[sig + 4:name_offset])
 
@@ -61,7 +63,13 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
             sig = data.find(b"RSDS", sig + 1)
 
 
-def scan(ctx, layer_name, page_size, progress_callback = None, start = None, end = None):
+def scan(ctx: interfaces.context.ContextInterface,
+         layer_name: str,
+         page_size: int,
+         progress_callback: validity.ProgressCallback = None,
+         start: typing.Union[int, None] = None,
+         end: typing.Union[int, None] = None) \
+        -> typing.Generator[typing.Dict[str, typing.Union[bytes, str, int]], None, None]:
     """Scans through `layer_name` at `ctx` looking for RSDS headers that indicate one of four common pdb kernel names
        (as listed in `self.pdb_names`) and returns the tuple (GUID, age, pdb_name, signature_offset, mz_offset)
 
@@ -124,11 +132,18 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     suffixes = ['.json', '.json.xz']
     """Provides a list of supported suffixes for Intermediate Format data files"""
 
-    def __init__(self, context, config_path):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str) -> None:
         super().__init__(context, config_path)
-        self.valid_kernels = []
+        self.valid_kernels: typing.Dict[str, typing.Tuple[int, typing.Dict]] = {}
 
-    def recurse_pdb_finder(self, context, config_path, requirement, progress_callback = None):
+    def recurse_pdb_finder(self,
+                           context: interfaces.context.ContextInterface,
+                           config_path: str,
+                           requirement: interfaces.configuration.RequirementInterface,
+                           progress_callback: validity.ProgressCallback = None) \
+            -> typing.Dict[bytes, typing.Dict]:
         """Traverses the requirement tree, rooted at `requirement` looking for virtual layers that might contain a windows PDB.
 
         Returns a list of possible kernel locations in the physical memory
@@ -142,7 +157,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         :return: A list of (layer_name, scan_results)
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        results = {}
+        results: typing.Dict[bytes, typing.Dict] = {}
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
@@ -160,7 +175,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 results.update(self.recurse_pdb_finder(context, sub_config_path, subreq))
         return results
 
-    def recurse_symbol_fulfiller(self, context):
+    def recurse_symbol_fulfiller(self,
+                                 context: interfaces.context.ContextInterface) \
+            -> None:
         """Fulfills the SymbolRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
 
         This pass will construct any requirements that may need it in the context it was passed
@@ -195,7 +212,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
 
-    def set_kernel_virtual_offset(self, context):
+    def set_kernel_virtual_offset(self,
+                                  context: interfaces.context.ContextInterface) -> None:
         """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting and sets
         it based on the previously identified `valid_kernels`.
 
@@ -210,7 +228,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             context.config[kvo_path] = kvo
             vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
 
-    def determine_valid_kernels(self, context, potential_kernels, progress_callback = None):
+    def determine_valid_kernels(self,
+                                context: interfaces.context.ContextInterface,
+                                potential_kernels: typing.Dict[str, typing.Any],
+                                progress_callback: validity.ProgressCallback = None) \
+            -> typing.Dict[str, typing.Tuple[int, typing.Any]]:
         """Runs through the identified potential kernels and verifies their suitability
 
         This carries out a scan using the pdb_signature scanner on a physical layer.  It uses the
@@ -267,7 +289,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
                     results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
                                                   progress_callback = progress_callback)
-                    seen = set()
+                    seen: typing.Set[int] = set()
                     # Because this will launch a scan of the virtual layer, we want to be careful
                     for result in results:
                         # TODO: Identify the specific structure we're finding and document this a bit better

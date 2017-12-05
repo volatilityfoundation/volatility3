@@ -1,5 +1,8 @@
 """A set of classes providing consistent type checking and error handling for type/class validity
 """
+import typing
+
+ProgressCallback = typing.Union[typing.Callable[[int, str], None], None]
 
 
 class ValidityRoutines(object):
