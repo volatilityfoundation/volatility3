@@ -1,19 +1,22 @@
 import logging
 import math
 import struct
+import typing
 
-from volatility.framework import exceptions, interfaces
+from volatility.framework import exceptions, interfaces, validity
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel
 
 vollog = logging.getLogger(__name__)
 
-validity_tests = {intel.Intel: [],
-                  intel.IntelPAE: [],
-                  intel.Intel32e: [(0b10111011, 0b00100011),
-                                   (0b1, 0b1),
-                                   (0b1111011, 0b1100011),
-                                   (0b1111011, 0b1100011)]}
+validity_tests: typing.Dict[typing.Type[intel.Intel],
+                            typing.List[typing.Tuple[int, int]]] = {intel.Intel: [],
+                                                                    intel.IntelPAE: [],
+                                                                    intel.Intel32e: [
+                                                                        (0b10111011, 0b00100011),
+                                                                        (0b1, 0b1),
+                                                                        (0b1111011, 0b1100011),
+                                                                        (0b1111011, 0b1100011)]}
 
 
 class NlpDtbScanner(interfaces.layers.ScannerInterface):
@@ -28,12 +31,14 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
     # Overlap must be a multiple of the page size
     overlap = 0x4000
 
-    def __init__(self, layer_class, physical_layer):
+    def __init__(self,
+                 layer_class: typing.Type[intel.Intel],
+                 physical_layer: interfaces.layers.DataLayerInterface) -> None:
         super().__init__()
         self._layer_class = layer_class
         self._physical_layer = physical_layer
 
-    def test_entries(self, valid_entries):
+    def test_entries(self, valid_entries: typing.List[typing.Tuple[int, int]]) -> bool:
         """Scans through valid_entries, descending to see whether one can be successfully mapped to completion
 
         Returns the first valid DTB or None is no valid DTBs could be found
@@ -43,12 +48,12 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
                 return True
         return False
 
-    def _get_mask(self, value):
+    def _get_mask(self, value: int) -> int:
         """Returns a value that correctly masks all numbers less than that of value"""
         bits = int(math.ceil(math.log(value, 2)))
         return (1 << (bits + 1)) - 1
 
-    def test_entry(self, entry, level = 0):
+    def test_entry(self, entry: int, level: int = 0) -> bool:
         """Tests an individual entry at a particular level in the structure"""
         name, size, large_page = self._layer_class.structure[level]
 
@@ -89,7 +94,8 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
                 return True
         return False
 
-    def __call__(self, data, data_offset):
+    def __call__(self, data: bytes, data_offset: int) \
+            -> typing.Generator[typing.Tuple[int, typing.List[typing.Tuple[int, int]]], None, None]:
         structure = self._layer_class.structure
         name, size, large_page = structure[0]
 
@@ -105,7 +111,7 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
             if len(data[page_offset:page_offset + calcsize]) < calcsize:
                 continue
             entries = struct.unpack('<' + str(2 ** size) + format_str, data[page_offset:page_offset + calcsize])
-            valid_entries = []
+            valid_entries: typing.List[typing.Tuple[int, int]] = []
             invalid_count = 0
             user_count = 0
             supervisor_count = 0
@@ -137,7 +143,12 @@ class NlpDtbfinder(interfaces.automagic.AutomagicInterface):
     """
     priority = 11
 
-    def __call__(self, context, config_path, requirement, progress_callback = None):
+    def __call__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 requirement: interfaces.configuration.RequirementInterface,
+                 progress_callback: validity.ProgressCallback = None) \
+            -> None:
         results = {}
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if (not interfaces.configuration.path_join(sub_config_path, "page_map_offset") in context.config and
@@ -175,7 +186,10 @@ class NlpDtbStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 13
 
     @classmethod
-    def stack(cls, context, layer_name, progress_callback = None):
+    def stack(cls,
+              context: interfaces.context.ContextInterface,
+              layer_name: str,
+              progress_callback: validity.ProgressCallback = None):
         """Attempts to determine and stack an intel layer on a physical layer where possible"""
         if isinstance(context.memory[layer_name], intel.Intel):
             return None

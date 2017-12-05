@@ -1,12 +1,15 @@
 import logging
 import os
 import pickle
+import typing
 from urllib import parse
 
 from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
+
+LinuxBanners = typing.Dict[bytes, typing.List[str]]
 
 
 class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
@@ -17,8 +20,8 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
     priority = 0
 
     @classmethod
-    def load_linux_banners(cls):
-        linuxbanners = {}
+    def load_linux_banners(cls) -> LinuxBanners:
+        linuxbanners: LinuxBanners = {}
         if os.path.exists(constants.LINUX_BANNERS_PATH):
             with open(constants.LINUX_BANNERS_PATH, "rb") as f:
                 # We use pickle over JSON because we're dealing with bytes objects

@@ -2,7 +2,7 @@
 
 Automagic objects attempt to automatically fill configuration values that a user has not filled.
 """
-
+import typing
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity
@@ -46,7 +46,8 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
     def __call__(self, context, config_path, configurable, progress_callback = None):
         """Runs the automagic over the configurable"""
 
-    def find_requirements(self, context, config_path, requirement_root, requirement_type, shortcut = True):
+    def find_requirements(self, context, config_path, requirement_root, requirement_type, shortcut = True) \
+            -> typing.List[typing.Tuple[str, str, interfaces_configuration.ConstructableRequirementInterface]]:
         """Determines if there is actually an unfulfilled symbol requirement waiting
 
         This ensures we do not carry out an expensive search when there is no requirement for a particular symbol table.

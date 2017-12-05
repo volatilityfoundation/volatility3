@@ -2,6 +2,7 @@
 of a :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`."""
 
 import logging
+import typing
 
 from volatility.framework import constants
 from volatility.framework import interfaces
@@ -20,7 +21,11 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
     """
     priority = 0
 
-    def __call__(self, context, config_path, requirement, progress_callback = None, optional = False):
+    def __call__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 requirement: interfaces.configuration.RequirementInterface,
+                 progress_callback = None, optional = False) -> typing.List[str]:
         result = []
         if requirement.unsatisfied(context, config_path):
             # Having called validate at the top level tells us both that we need to dig deeper

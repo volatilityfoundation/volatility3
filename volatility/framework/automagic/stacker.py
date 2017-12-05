@@ -8,9 +8,10 @@ once a layer successfully stacks on top of the existing layers, it is removed fr
 """
 
 import logging
+import typing
 
 import volatility
-from volatility.framework import configuration, interfaces, constants
+from volatility.framework import configuration, interfaces, constants, validity
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical
@@ -33,7 +34,12 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     priority = 10
     page_map_offset = None
 
-    def __call__(self, context, config_path, requirement, progress_callback = None):
+    def __call__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 requirement: interfaces.configuration.ConstructableRequirementInterface,
+                 progress_callback: validity.ProgressCallback = None) \
+            -> None:
         """Runs the automagic over the configurable"""
 
         # Quick exit if we're not needed
@@ -103,7 +109,11 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                                                                                                 "ConstructionMagic"))
             constructor(context, config_path, requirement)
 
-    def find_suitable_requirements(self, stacked_layers, requirement, context, config_path):
+    def find_suitable_requirements(self,
+                                   stacked_layers: typing.List,
+                                   requirement: interfaces.configuration.RequirementInterface,
+                                   context: interfaces.context.ContextInterface,
+                                   config_path: str) -> typing.Union[None, typing.Tuple[str, str]]:
         """Looks for translation layer requirements and attempts to apply the stacked layers to it.  If it succeeds
         it returns the configuration path and layer name where the stacked nodes were spliced into the tree.
 
@@ -127,9 +137,10 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             result = self.find_suitable_requirements(stacked_layers, req, context, child_config_path)
             if result:
                 return result
+        return None
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
         return [requirements.StringRequirement("single_location",
                                                description = "Specifies a base location on which to stack",

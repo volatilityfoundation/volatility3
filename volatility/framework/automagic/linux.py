@@ -1,6 +1,7 @@
 import logging
+import typing
 
-from volatility.framework import interfaces, constants
+from volatility.framework import interfaces, constants, validity
 from volatility.framework.automagic import linux_symbol_cache
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
@@ -12,19 +13,26 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
     """Linux symbol loader based on uname signature strings"""
     priority = 40
 
-    def __init__(self, context, config_path):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str) -> None:
         super().__init__(context, config_path)
-        self._requirements = None
-        self._linux_banners_ = None
+        self._requirements: typing.List[
+            typing.Tuple[str, str, interfaces.configuration.ConstructableRequirementInterface]] = []
+        self._linux_banners_: linux_symbol_cache.LinuxBanners = {}
 
     @property
-    def _linux_banners(self):
+    def _linux_banners(self) -> linux_symbol_cache.LinuxBanners:
         """Creates a cached copy of the results, but only it's been requested"""
         if self._linux_banners_ is None:
             self._linux_banners_ = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
         return self._linux_banners_
 
-    def __call__(self, context, config_path, requirement, progress_callback = None):
+    def __call__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 requirement: interfaces.configuration.RequirementInterface,
+                 progress_callback: validity.ProgressCallback = None) -> None:
         """Searches for LinuxSymbolRequirements and attempt to populate them"""
         self._requirements = self.find_requirements(context, config_path, requirement,
                                                     (interfaces.configuration.TranslationLayerRequirement,
@@ -37,13 +45,18 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                 for (tl_path, tl_sub_path, tl_requirement) in self._requirements:
                     # Find the TranslationLayer sibling to the SymbolRequirement
                     if (isinstance(tl_requirement, interfaces.configuration.TranslationLayerRequirement) and
-                                tl_path == path):
+                            tl_path == path):
                         if context.config.get(tl_sub_path, None):
                             self._banner_scan(context, path, requirement, context.config[tl_sub_path],
                                               progress_callback)
                             break
 
-    def _banner_scan(self, context, config_path, requirement, layer_name, progress_callback = None):
+    def _banner_scan(self,
+                     context: interfaces.context.ContextInterface,
+                     config_path: str,
+                     requirement: interfaces.configuration.ConstructableRequirementInterface,
+                     layer_name: str,
+                     progress_callback: validity.ProgressCallback = None) -> None:
         """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
         and scans the layer for linux banners"""
 
@@ -90,7 +103,11 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 12
 
     @classmethod
-    def stack(cls, context, layer_name, progress_callback = None):
+    def stack(cls,
+              context: interfaces.context.ContextInterface,
+              layer_name: str,
+              progress_callback: validity.ProgressCallback = None) \
+            -> typing.Union[None, typing.Type[interfaces.layers.DataLayerInterface]]:
         """Attempts to identify linux within this layer"""
         layer = context.memory[layer_name]
         join = interfaces.configuration.path_join
@@ -116,11 +133,11 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                 kaslr_shift, _ = LinuxUtilities.find_aslr(context, table_name, layer_name,
                                                           progress_callback = progress_callback)
 
+                layer_class: typing.Type = intel.Intel
                 if ('init_level4_pgt' in table.symbols):
                     layer_class = intel.Intel32e
                     dtb_symbol_name = 'init_level4_pgt'
                 else:
-                    layer_class = intel.Intel
                     dtb_symbol_name = 'swapper_pg_dir'
 
                 dtb = LinuxUtilities.virtual_to_physical_address(table.get_symbol(dtb_symbol_name).address +
@@ -144,7 +161,12 @@ class LinuxUtilities(object):
     """Class with multiple useful linux functions"""
 
     @classmethod
-    def find_aslr(cls, context, symbol_table, layer_name, progress_callback = None):
+    def find_aslr(cls,
+                  context: interfaces.context.ContextInterface,
+                  symbol_table: str,
+                  layer_name: str,
+                  progress_callback: validity.ProgressCallback = None) \
+            -> typing.Tuple[typing.Union[None, int], typing.Union[None, int]]:
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'
         table_dtb = context.symbol_space.get_symbol(init_task_symbol).address
@@ -174,7 +196,7 @@ class LinuxUtilities(object):
         return None, None
 
     @classmethod
-    def virtual_to_physical_address(cls, addr):
+    def virtual_to_physical_address(cls, addr: int) -> int:
         """Converts a virtual linux address to a physical one (does not account of ASLR)"""
         if addr > 0xffffffff80000000:
             return addr - 0xffffffff80000000

@@ -15,6 +15,7 @@ import logging
 import random
 import string
 import sys
+import typing
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants
@@ -303,7 +304,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
 class InstanceRequirement(RequirementInterface):
     """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
-    instance_type = bool
+    instance_type: typing.Type = bool
 
     def add_requirement(self, requirement):
         """Always raises a TypeError as instance requirements cannot have children"""
