@@ -18,7 +18,7 @@ import sys
 import typing
 from abc import ABCMeta, abstractmethod
 
-from volatility.framework import constants
+from volatility.framework import constants, interfaces
 from volatility.framework import validity
 from volatility.framework.interfaces.context import ContextInterface
 
@@ -269,21 +269,23 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     # Child operations
     @property
-    def requirements(self):
+    def requirements(self) -> typing.Dict[str, 'RequirementInterface']:
         """Returns a dictionary of all the child requirements, indexed by name"""
         return self._requirements.copy()
 
-    def add_requirement(self, requirement):
+    def add_requirement(self, requirement: 'RequirementInterface') -> None:
         """Adds a child to the list of requirements"""
         self._check_type(requirement, RequirementInterface)
         self._requirements[requirement.name] = requirement
 
-    def remove_requirement(self, requirement):
+    def remove_requirement(self, requirement: 'RequirementInterface') -> None:
         """Removes a child from the list of requirements"""
         self._check_type(requirement, RequirementInterface)
         del self._requirements[requirement.name]
 
-    def unsatisfied_children(self, context, config_path):
+    def unsatisfied_children(self,
+                             context: interfaces.context.ContextInterface,
+                             config_path: str) -> typing.List[str]:
         """Method that will validate all child requirements"""
         result = []
         for requirement in self.requirements.values():
@@ -295,7 +297,9 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     # Validation routines
     @abstractmethod
-    def unsatisfied(self, context, config_path):
+    def unsatisfied(self,
+                    context: interfaces.context.ContextInterface,
+                    config_path: str) -> typing.List[str]:
         """Method to validate the value stored at config_path for the configuration object against a context
 
            Returns a list containing its own name (or multiple unsatisfied requirement names) when invalid
