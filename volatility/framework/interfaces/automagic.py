@@ -5,7 +5,7 @@ Automagic objects attempt to automatically fill configuration values that a user
 import typing
 from abc import ABCMeta, abstractmethod
 
-from volatility.framework import validity
+from volatility.framework import validity, interfaces
 from volatility.framework.interfaces import configuration as interfaces_configuration
 
 
@@ -33,7 +33,9 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
     priority = 10
     """An ordering to indicate how soon this automagic should be run"""
 
-    def __init__(self, context, config_path, *args, **kwargs):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str, *args, **kwargs) -> None:
         super().__init__(context, config_path)
         for requirement in self.get_requirements():
             if not isinstance(requirement, (interfaces_configuration.InstanceRequirement,
@@ -43,7 +45,11 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
                     "Automagic requirements must be an InstanceRequirement, ChoiceRequirement or ListRequirement")
 
     @abstractmethod
-    def __call__(self, context, config_path, configurable, progress_callback = None):
+    def __call__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 configurable: interfaces.configuration.ConfigurableInterface,
+                 progress_callback: validity.ProgressCallback = None) -> typing.List[str]:
         """Runs the automagic over the configurable"""
 
     def find_requirements(self, context, config_path, requirement_root, requirement_type, shortcut = True) \
@@ -85,7 +91,11 @@ class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     @classmethod
     @abstractmethod
-    def stack(self, context, layer_name, progress_callback = None):
+    def stack(self,
+              context: interfaces.context.ContextInterface,
+              layer_name: str,
+              progress_callback: validity.ProgressCallback = None) \
+            -> typing.Optional[interfaces.layers.DataLayerInterface]:
         """Method to determine whether this builder can operate on the named layer,
            If so, modify the context appropriately.
 
