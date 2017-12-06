@@ -3,6 +3,7 @@
 This has been made an object to allow quick swapping and changing of contexts, to allow a plugin
 to act on multiple different contexts without them interfering eith each other.
 """
+import typing
 
 from volatility.framework import constants, interfaces, symbols
 
@@ -36,30 +37,30 @@ class Context(interfaces.context.ContextInterface):
     # ## Symbol Space Functions
 
     @property
-    def config(self):
+    def config(self) -> interfaces.configuration.HierarchicalDict:
         """Returns a mutable copy of the configuration, but does not allow the whole configuration to be altered"""
         return self._config
 
     @config.setter
-    def config(self, value):
+    def config(self, value: interfaces.configuration.HierarchicalDict) -> None:
         if not isinstance(value, interfaces.configuration.HierarchicalDict):
             raise TypeError("Config must be of type HierarchicalDict")
         self._config = value
 
     @property
-    def symbol_space(self):
+    def symbol_space(self) -> interfaces.symbols.SymbolSpaceInterface:
         """The space of all symbols that can be accessed within this context.
         """
         return self._symbol_space
 
     @property
-    def memory(self):
+    def memory(self) -> interfaces.layers.Memory:
         """A Memory object, allowing access to all data and translation layers currently available within the context"""
         return self._memory
 
     # ## Address Space Functions
 
-    def add_layer(self, layer):
+    def add_layer(self, layer: interfaces.layers.DataLayerInterface) -> None:
         """Adds a named translation layer to the context
 
         :param layer: The layer to be added to the memory
@@ -71,7 +72,10 @@ class Context(interfaces.context.ContextInterface):
 
     # ## Object Factory Functions
 
-    def object(self, symbol, layer_name, offset, **arguments):
+    def object(self,
+               symbol: interfaces.objects.Template,
+               layer_name: str,
+               offset: int, **arguments) -> interfaces.objects.ObjectInterface:
         """Object factory, takes a context, symbol, offset and optional layername
 
         Looks up the layername in the context, finds the object template based on the symbol,
@@ -95,16 +99,16 @@ class Context(interfaces.context.ContextInterface):
                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
                                                                                   offset = offset))
 
-    def module(self, module_name, layer_name, offset):
+    def module(self, module_name: str, layer_name: str, offset: int) -> interfaces.context.Module:
         """Create a module object """
 
         return Module(self, module_name, layer_name, offset)
 
 
-def get_module_wrapper(method):
+def get_module_wrapper(method: str) -> typing.Callable:
     """Returns a symbol using the symbol_table of the Module"""
 
-    def wrapper(self, name):
+    def wrapper(self, name: str) -> typing.Callable:
         self._check_type(name, str)
         if constants.BANG in name:
             raise ValueError("Name cannot reference another module")
@@ -114,7 +118,11 @@ def get_module_wrapper(method):
 
 
 class Module(interfaces.context.Module):
-    def object(self, symbol_name = None, type_name = None, offset = None, **kwargs):
+    def object(self,
+               symbol_name: str = None,
+               type_name: str = None,
+               offset: int = None,
+               **kwargs) -> interfaces.objects.ObjectInterface:
         """Returns an object created using the symbol_table and layer_name of the Module
 
         @param symbol_name: Name of the symbol (within the module) to construct, type_name and offset must not be specified

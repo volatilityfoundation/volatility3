@@ -24,6 +24,7 @@ The self-referential indices for older versions of windows are listed below:
 """
 import logging
 import struct
+import typing
 
 from volatility.framework import interfaces, layers, validity
 from volatility.framework.configuration import requirements
@@ -39,7 +40,11 @@ class DtbTest(validity.ValidityRoutines):
     and determine whether it points back to that page's offset.
     """
 
-    def __init__(self, layer_type = None, ptr_struct = None, ptr_reference = None, mask = None):
+    def __init__(self,
+                 layer_type: typing.Type[layers.intel.Intel] = None,
+                 ptr_struct: str = None,
+                 ptr_reference: int = None,
+                 mask: int = None) -> None:
         self.layer_type = self._check_class(layer_type, layers.intel.Intel)
         self.ptr_struct = self._check_type(ptr_struct, str)
         self.ptr_size = struct.calcsize(ptr_struct)
@@ -47,10 +52,13 @@ class DtbTest(validity.ValidityRoutines):
         self.mask = self._check_type(mask, int)
         self.page_size = layer_type.page_size
 
-    def _unpack(self, value):
+    def _unpack(self, value: bytes) -> int:
         return struct.unpack("<" + self.ptr_struct, value)[0]
 
-    def __call__(self, data, data_offset, page_offset):
+    def __call__(self,
+                 data: bytes,
+                 data_offset: int,
+                 page_offset: int) -> typing.Optional[typing.Tuple[int, typing.Any]]:
         """Tests a specific page in a chunk of data to see if it contains a self-referential pointer.
 
         :param data: The chunk of data that contains the page to be scanned
@@ -59,10 +67,10 @@ class DtbTest(validity.ValidityRoutines):
         :type data_offset: int
         :param page_offset: Where, within the data, the page to be scanned starts
         :type page_offset: int
-        :return: A valid DTB within this page
+        :return: A valid DTB within this page (and an additional parameter for data)
         """
         value = data[page_offset + (self.ptr_reference * self.ptr_size):page_offset + (
-            (self.ptr_reference + 1) * self.ptr_size)]
+                (self.ptr_reference + 1) * self.ptr_size)]
         ptr = self._unpack(value)
         # The value *must* be present (bit 0) since it's a mapped page
         # It's almost always writable (bit 1)
@@ -72,8 +80,9 @@ class DtbTest(validity.ValidityRoutines):
         if ptr != 0 and (ptr & self.mask == data_offset + page_offset) & (ptr & 0xFF1 == 0x61):
             dtb = (ptr & self.mask)
             return self.second_pass(dtb, data, data_offset)
+        return None
 
-    def second_pass(self, dtb, data, data_offset):
+    def second_pass(self, dtb: int, data: bytes, data_offset: int) -> typing.Optional[typing.Tuple[int, typing.Any]]:
         """Re-reads over the whole page to validate other records based on the number of pages marked user vs super
 
         :param dtb: The identified dtb that needs validating
@@ -95,7 +104,8 @@ class DtbTest(validity.ValidityRoutines):
         # We sometimes find bogus DTBs at 0x16000 with a very low sup_count and 0 usr_count
         # I have a winxpsp2-x64 image with identical usr/sup counts at 0x16000 and 0x24c00 as well as the actual 0x3c3000
         if usr_count or sup_count > 5:
-            return dtb
+            return dtb, None
+        return None
 
 
 class DtbTest32bit(DtbTest):
@@ -121,7 +131,7 @@ class DtbTestPae(DtbTest):
                          ptr_reference = 0x3,
                          mask = 0x3FFFFFFFFFF000)
 
-    def second_pass(self, dtb, data, data_offset):
+    def second_pass(self, dtb: int, data: bytes, data_offset: int) -> typing.Optional[typing.Tuple[int, typing.Any]]:
         """PAE top level directory tables contains four entries and the self-referential pointer occurs in the second
         level of tables (so as not to use up a full quarter of the space).  This is very high in the space, and occurs
         in the fourht (last quarter) second-level table.  The second-level tables appear always to come sequentially
@@ -143,22 +153,28 @@ class DtbTestPae(DtbTest):
             pointers = data[dtb - data_offset + (3 * self.ptr_size): dtb - data_offset + (4 * self.ptr_size)]
             val = self._unpack(pointers)
             if (val & self.mask == dtb + 0x4000) and (val & 0xFFF == 0x001):
-                return dtb
+                return dtb, None
+        return None
 
 
 class DtbSelfReferential(DtbTest):
     """A generic DTB test which looks for a self-referential pointer at *any* index within the page."""
 
-    def __init__(self, layer_type, ptr_struct, ptr_reference, mask):
+    def __init__(self,
+                 layer_type: typing.Type[layers.intel.Intel],
+                 ptr_struct: str,
+                 ptr_reference: int,
+                 mask: int) -> None:
         super().__init__(layer_type = layer_type,
                          ptr_struct = ptr_struct,
                          ptr_reference = ptr_reference,
                          mask = mask)
 
-    def __call__(self, data, data_offset, page_offset):
+    def __call__(self, data: bytes, data_offset: int, page_offset: int) \
+            -> typing.Optional[typing.Tuple[int, int]]:
         page = data[page_offset:page_offset + self.page_size]
         if not page:
-            return
+            return None
         ref_pages = set()
         for ref in range(0, self.page_size, self.ptr_size):
             ptr_data = page[ref:ref + self.ptr_size]
@@ -168,7 +184,8 @@ class DtbSelfReferential(DtbTest):
                     ref_pages.add(ref)
         # The DTB is extremely unlikely to refer back to itself. so the number of reference should always be exactly 1
         if len(ref_pages) == 1:
-            return (data_offset + page_offset), ref_pages
+            return (data_offset + page_offset), ref_pages.pop()
+        return None
 
 
 class DtbSelfRef32bit(DtbSelfReferential):
@@ -187,17 +204,18 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
     """Scans through all pages using DTB tests to determine a dtb offset and architecture"""
     overlap = 0x4000
     thread_safe = True
-    tests = [DtbTest32bit, DtbTest64bit, DtbTestPae]
+    tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
     """The default tests to run when searching for DTBs"""
 
-    def __init__(self, tests):
+    def __init__(self, tests: typing.List[DtbTest]) -> None:
         super().__init__()
         for value in tests:
             self._check_type(value, DtbTest)
         self.tests = tests
 
-    def __call__(self, data, data_offset):
-        results = {}
+    def __call__(self, data: bytes, data_offset: int) \
+            -> typing.Generator[typing.Tuple[DtbTest, typing.Set[int]], None, None]:
+        results: typing.Dict[DtbTest, typing.Set[int]] = {}
         for test in self.tests:
             results[test] = set()
 
@@ -205,7 +223,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
             for page_offset in range(0, len(data), 0x1000):
                 result = test(data, data_offset, page_offset)
                 if result is not None:
-                    yield (test, result)
+                    yield (test, result[0])
 
 
 class WintelHelper(interfaces.automagic.AutomagicInterface):
@@ -219,7 +237,12 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
     priority = 20
     tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
 
-    def __call__(self, context, config_path, requirement, progress_callback = None):
+    def __call__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 requirement: interfaces.configuration.RequirementInterface,
+                 progress_callback: validity.ProgressCallback = None) \
+            -> None:
         useful = []
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if (isinstance(requirement, requirements.TranslationLayerRequirement) and
@@ -243,8 +266,9 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
                         context.config[interfaces.configuration.path_join(sub_config_path, "page_map_offset")] = dtb
                         break
                     else:
-                        return
-                requirement.construct(context, config_path)
+                        return None
+                if isinstance(requirement, interfaces.configuration.ConstructableRequirementInterface):
+                    requirement.construct(context, config_path)
         else:
             for subreq in requirement.requirements.values():
                 self(context, sub_config_path, subreq)
@@ -252,7 +276,10 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
 
 class WintelStacker(interfaces.automagic.StackerLayerInterface):
     @classmethod
-    def stack(cls, context, layer_name, progress_callback = None):
+    def stack(cls,
+              context: interfaces.context.ContextInterface,
+              layer_name: str,
+              progress_callback: validity.ProgressCallback = None) -> typing.Optional[str]:
         """Attempts to determine and stack an intel layer on a physical layer where possible
 
         Where the DTB scan fails, it attempts a heuristic of checking for the DTB within a specific range.

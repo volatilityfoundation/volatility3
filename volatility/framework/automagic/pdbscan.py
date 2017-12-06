@@ -67,8 +67,8 @@ def scan(ctx: interfaces.context.ContextInterface,
          layer_name: str,
          page_size: int,
          progress_callback: validity.ProgressCallback = None,
-         start: typing.Union[int, None] = None,
-         end: typing.Union[int, None] = None) \
+         start: typing.Optional[int] = None,
+         end: typing.Optional[int] = None) \
         -> typing.Generator[typing.Dict[str, typing.Union[bytes, str, int]], None, None]:
     """Scans through `layer_name` at `ctx` looking for RSDS headers that indicate one of four common pdb kernel names
        (as listed in `self.pdb_names`) and returns the tuple (GUID, age, pdb_name, signature_offset, mz_offset)
@@ -143,7 +143,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                            config_path: str,
                            requirement: interfaces.configuration.RequirementInterface,
                            progress_callback: validity.ProgressCallback = None) \
-            -> typing.Dict[bytes, typing.Dict]:
+            -> typing.Dict[str, typing.Iterable]:
         """Traverses the requirement tree, rooted at `requirement` looking for virtual layers that might contain a windows PDB.
 
         Returns a list of possible kernel locations in the physical memory
@@ -157,7 +157,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         :return: A list of (layer_name, scan_results)
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        results: typing.Dict[bytes, typing.Dict] = {}
+        results: typing.Dict[str, typing.Iterable] = {}
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
@@ -317,7 +317,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             vollog.info("No suitable kernels found during pdbscan")
         return valid_kernels
 
-    def __call__(self, context, config_path, requirement, progress_callback = None):
+    def __call__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 requirement: interfaces.configuration.ConstructableRequirementInterface,
+                 progress_callback: validity.ProgressCallback = None) -> None:
         # TODO: Check if we really need to search for pdbs
         if requirement.unsatisfied(context, config_path):
             if "pdbscan" not in context.symbol_space:

@@ -24,7 +24,7 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
     @property
     def _linux_banners(self) -> linux_symbol_cache.LinuxBanners:
         """Creates a cached copy of the results, but only it's been requested"""
-        if self._linux_banners_ is None:
+        if not self._linux_banners_:
             self._linux_banners_ = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
         return self._linux_banners_
 
@@ -107,7 +107,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: validity.ProgressCallback = None) \
-            -> typing.Union[None, typing.Type[interfaces.layers.DataLayerInterface]]:
+            -> typing.Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify linux within this layer"""
         layer = context.memory[layer_name]
         join = interfaces.configuration.path_join
@@ -166,7 +166,7 @@ class LinuxUtilities(object):
                   symbol_table: str,
                   layer_name: str,
                   progress_callback: validity.ProgressCallback = None) \
-            -> typing.Tuple[typing.Union[None, int], typing.Union[None, int]]:
+            -> typing.Tuple[typing.Optional[int], typing.Optional[int]]:
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'
         table_dtb = context.symbol_space.get_symbol(init_task_symbol).address
