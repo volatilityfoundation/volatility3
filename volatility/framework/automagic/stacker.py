@@ -113,7 +113,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                                    stacked_layers: typing.List,
                                    requirement: interfaces.configuration.RequirementInterface,
                                    context: interfaces.context.ContextInterface,
-                                   config_path: str) -> typing.Union[None, typing.Tuple[str, str]]:
+                                   config_path: str) -> typing.Optional[typing.Tuple[str, str]]:
         """Looks for translation layer requirements and attempts to apply the stacked layers to it.  If it succeeds
         it returns the configuration path and layer name where the stacked nodes were spliced into the tree.
 

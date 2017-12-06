@@ -24,7 +24,9 @@ class MultiRequirement(interfaces_configuration.RequirementInterface):
        Technically the Interface could handle this, but it's an interface, so this is a concrete implementation.
     """
 
-    def unsatisfied(self, context, config_path):
+    def unsatisfied(self,
+                    context: interfaces_configuration.ContextInterface,
+                    config_path: str) -> typing.List[str]:
         return self.unsatisfied_children(context, config_path)
 
 
