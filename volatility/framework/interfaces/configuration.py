@@ -27,15 +27,17 @@ CONFIG_SEPARATOR = "."
 
 vollog = logging.getLogger(__name__)
 
+ConfigSimpleType = typing.Union[str, int, float, bool, typing.List[typing.Union[str, int, float, bool]]]
 
-def path_join(*args):
+
+def path_join(*args) -> str:
     """Joins configuration paths together"""
     # If a path element (particularly the first) is empty, then remove it from the list
-    args = [arg for arg in args if arg]
+    args = tuple([arg for arg in args if arg])
     return CONFIG_SEPARATOR.join(args)
 
 
-def path_depth(path, depth = 1):
+def path_depth(path: str, depth: int = 1) -> str:
     """Returns the `path` up to a certain depth
 
        Note that `depth` can be negative (such as `-x`) and will return all elements except for the last `x` components
@@ -49,12 +51,14 @@ class HierarchicalDict(collections.abc.Mapping):
 
     """
 
-    def __init__(self, initial_dict = None, separator = CONFIG_SEPARATOR):
+    def __init__(self,
+                 initial_dict: typing.Dict = None,
+                 separator: str = CONFIG_SEPARATOR) -> None:
         if not (isinstance(separator, str) and len(separator) == 1):
             raise TypeError("Separator must be a one character string: {}".format(separator))
         self._separator = separator
-        self._data = {}
-        self._subdict = {}
+        self._data: typing.Dict[str, ConfigSimpleType] = {}
+        self._subdict: typing.Dict[str, 'HierarchicalDict'] = {}
         if isinstance(initial_dict, str):
             initial_dict = json.loads(initial_dict)
         if isinstance(initial_dict, dict):
@@ -65,16 +69,16 @@ class HierarchicalDict(collections.abc.Mapping):
                 initial_dict))
 
     @property
-    def separator(self):
+    def separator(self) -> str:
         """Specifies the hierarchy separator in use in this HierarchyDict"""
         return self._separator
 
     @property
-    def data(self):
+    def data(self) -> typing.Dict:
         """Returns just the data-containing mappings on this level of the Hierarchy"""
         return self._data.copy()
 
-    def _key_head(self, key):
+    def _key_head(self, key: str) -> str:
         """Returns the first division of a key based on the dict separator,
            or the full key if the separator is not present
         """
@@ -83,7 +87,7 @@ class HierarchicalDict(collections.abc.Mapping):
         else:
             return key
 
-    def _key_tail(self, key):
+    def _key_tail(self, key: str) -> str:
         """Returns all but the first division of a key based on the dict separator,
            or None if the separator is not in the key
         """
@@ -95,7 +99,7 @@ class HierarchicalDict(collections.abc.Mapping):
         """Returns an iterator object that supports the iterator protocol"""
         return self.generator()
 
-    def generator(self):
+    def generator(self) -> typing.Generator[str, None, None]:
         """A generator for the data in this level and lower levels of this mapping"""
         for key in self._data:
             yield key
@@ -114,11 +118,11 @@ class HierarchicalDict(collections.abc.Mapping):
         except KeyError:
             raise KeyError(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: typing.Any) -> None:
         """Sets an item or creates a subdict and sets the item within that"""
         self._setitem(key, value)
 
-    def _setitem(self, key, value, is_data = True):
+    def _setitem(self, key: str, value: typing.Any, is_data: bool = True) -> None:
         """Set an item or appends a whole subtree at a key location"""
         if self.separator in key:
             subdict = self._subdict.get(self._key_head(key), HierarchicalDict(separator = self.separator))
@@ -134,7 +138,7 @@ class HierarchicalDict(collections.abc.Mapping):
                             type(value)))
                 self._subdict[key] = value
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         """Deletes an item from the hierarchical dict"""
         try:
             if self.separator in key:
@@ -145,7 +149,7 @@ class HierarchicalDict(collections.abc.Mapping):
         except KeyError:
             raise KeyError(key)
 
-    def __contains__(self, key):
+    def __contains__(self, key: typing.Any) -> bool:
         """Determines whether the key is present in the hierarchy"""
         if self.separator in key:
             try:
@@ -156,11 +160,11 @@ class HierarchicalDict(collections.abc.Mapping):
         else:
             return key in self._data
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Returns the length of all items"""
         return len(self._data) + sum([len(subdict) for subdict in self._subdict])
 
-    def branch(self, key):
+    def branch(self, key: str) -> typing.Optional['HierarchicalDict']:
         """Returns the HierarchicalDict housed under the key
 
         This differs from the data property, in that it is directed by the `key`, and all layers under that key are
@@ -178,8 +182,9 @@ class HierarchicalDict(collections.abc.Mapping):
                 return self._subdict[key]
         except KeyError:
             self._setitem(key = key, value = HierarchicalDict(separator = self.separator), is_data = True)
+        return None
 
-    def splice(self, key, value):
+    def splice(self, key: str, value: 'HierarchicalDict') -> None:
         """Splices an existing HierarchicalDictionary under a specific key
 
         This can be thought of as an inverse of :func:`branch`, although `branch` does not remove the requested
@@ -189,7 +194,7 @@ class HierarchicalDict(collections.abc.Mapping):
             raise TypeError("Splice requires a string key and HierarchicalDict value")
         self._setitem(key, value, False)
 
-    def merge(self, key, value, overwrite = False):
+    def merge(self, key: str, value: 'HierarchicalDict', overwrite: bool = False):
         """Acts similarly to splice, but maintains previous values
 
         If overwrite is true, then entries in the new value are used over those that exist within key already
@@ -208,11 +213,11 @@ class HierarchicalDict(collections.abc.Mapping):
             else:
                 self[key + self._separator + item] = value[item]
 
-    def clone(self):
+    def clone(self) -> 'HierarchicalDict':
         """Duplicates the configuration, allowing changes without affecting the original"""
         return copy.deepcopy(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Turns the Hierarchical dict into a string representation"""
         return json.dumps(dict([(key, self[key]) for key in sorted(self.generator())]), indent = 2)
 
@@ -229,7 +234,11 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     as :class:`TranslationLayerRequirement`, :class:`SymbolRequirement` and :class:`ClassRequirement`
     """
 
-    def __init__(self, name, description = None, default = None, optional = False):
+    def __init__(self,
+                 name: str,
+                 description: str = None,
+                 default: ConfigSimpleType = None,
+                 optional: bool = False) -> None:
         super().__init__()
         self._check_type(name, str)
         if CONFIG_SEPARATOR in name:
@@ -238,32 +247,35 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._description = description or ""
         self._default = default
         self._optional = optional
-        self._requirements = {}
+        self._requirements: typing.Dict[str, RequirementInterface] = {}
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<" + self.__class__.__name__ + ": " + self.name + ">"
 
     @property
-    def name(self):
+    def name(self) -> str:
         """The name of the Requirement.  Names cannot contain "." since this is used within the configuration hierarchy."""
         return self._name
 
     @property
-    def description(self):
+    def description(self) -> str:
         """A short description of what the Requirement is designed to affect or achieve."""
         return self._description
 
     @property
-    def default(self):
+    def default(self) -> ConfigSimpleType:
         """Returns the default value if one is set"""
         return self._default
 
     @property
-    def optional(self):
+    def optional(self) -> bool:
         """Whether the Requirement is optional or not"""
         return self._optional
 
-    def config_value(self, context, config_path, default = None):
+    def config_value(self,
+                     context: interfaces.context.ContextInterface,
+                     config_path: str,
+                     default: ConfigSimpleType = None) -> ConfigSimpleType:
         """Returns the value for this Requirement from its config path"""
         return context.config.get(path_join(config_path, self.name), default)
 
@@ -308,17 +320,17 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
 class InstanceRequirement(RequirementInterface):
     """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
-    instance_type: typing.Type = bool
+    instance_type: typing.ClassVar[typing.Type] = bool
 
-    def add_requirement(self, requirement):
+    def add_requirement(self, requirement: RequirementInterface):
         """Always raises a TypeError as instance requirements cannot have children"""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
-    def remove_requirement(self, requirement):
+    def remove_requirement(self, requirement: RequirementInterface):
         """Always raises a TypeError as instance requirements cannot have children"""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
-    def unsatisfied(self, context, config_path):
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Validates the instance requirement based upon its `instance_type`."""
         value = self.config_value(context, config_path, None)
         if not isinstance(value, self.instance_type):
@@ -339,14 +351,14 @@ class ClassRequirement(RequirementInterface):
         self._cls = None
 
     @property
-    def cls(self):
+    def cls(self) -> typing.Type:
         return self._cls
 
-    def unsatisfied(self, context, config_path):
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Checks to see if a class can be recovered"""
         value = self.config_value(context, config_path, None)
         self._cls = None
-        if value is not None:
+        if value is not None and isinstance(value, str):
             if "." in value:
                 # TODO: consider importing the prefix
                 module = sys.modules.get(value[:value.rindex(".")], None)
@@ -377,16 +389,16 @@ class ConstructableRequirementInterface(RequirementInterface):
         self._current_class_requirements = set()
 
     @abstractmethod
-    def construct(self, context, config_path):
+    def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Method for constructing within the context any required elements from subrequirements"""
 
-    def _validate_class(self, context, config_path):
+    def _validate_class(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Method to check if the class Requirement is valid and if so populate the other requirements
            (but no need to validate, since we're invalid already)
         """
         class_req = self.requirements['class']
         subreq_config_path = path_join(config_path, self.name)
-        if not class_req.unsatisfied(context, subreq_config_path):
+        if not class_req.unsatisfied(context, subreq_config_path) and isinstance(class_req, ClassRequirement):
             # We have a class, and since it's validated we can construct our requirements from it
             if issubclass(class_req.cls, ConfigurableInterface):
                 # In case the class has changed, clear out the old requirements
@@ -398,8 +410,14 @@ class ConstructableRequirementInterface(RequirementInterface):
                     self._current_class_requirements.add(requirement.name)
                     self.add_requirement(requirement)
 
-    def _construct_class(self, context, config_path, requirement_dict = None):
+    def _construct_class(self,
+                         context: interfaces.context.ContextInterface,
+                         config_path: str,
+                         requirement_dict: typing.Dict[str, object] = None) \
+            -> typing.Optional['interfaces.objects.ObjectInterface']:
         """Constructs the class, handing args and the subrequirements as parameters to __init__"""
+        if not isinstance(self.requirements["class"], ClassRequirement):
+            return None
         cls = self.requirements["class"].cls
 
         # These classes all have a name property
@@ -422,7 +440,9 @@ class ConstructableRequirementInterface(RequirementInterface):
 class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to allow objects to have requirements and read configuration data from the context config tree"""
 
-    def __init__(self, context, config_path):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str) -> None:
         """Basic initializer that allows configurables to access their own config settings"""
         super().__init__()
         self._context = self._check_type(context, ContextInterface)
@@ -433,25 +453,25 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         for requirement in self.get_requirements():
             # Create the (private) properties using the config as backend storage
             # TODO: Based on the requirement, do proper type checking
-            setattr(self, "_" + requirement.name, self._context._config.get(requirement.name, requirement.default))
+            setattr(self, "_" + requirement.name, self._context.config.get(requirement.name, requirement.default))
 
     @property
-    def context(self):
+    def context(self) -> 'interfaces.context.ContextInterface':
         return self._context
 
     @property
-    def config_path(self):
+    def config_path(self) -> str:
         return self._config_path
 
     @config_path.setter
-    def config_path(self, value):
+    def config_path(self, value: str) -> None:
         self._config_path = self._check_type(value, str)
 
     @property
-    def config(self):
+    def config(self) -> HierarchicalDict:
         return self._context.config.branch(self._config_path)
 
-    def build_configuration(self):
+    def build_configuration(self) -> HierarchicalDict:
         """Constructs a HierarchicalDictionary of all the options required to build this component in the current context.
 
            Ensures that if the class has been created, it can be recreated using the configuration built
@@ -472,12 +492,12 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return result
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[RequirementInterface]:
         """Returns a list of RequirementInterface objects required by this object"""
         return []
 
     @classmethod
-    def unsatisfied(cls, context, config_path):
+    def unsatisfied(cls, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Returns a list of the names of all unsatisfied requirements
 
         Since a satisfied set of requirements will return [], it can be used in tests as follows:
@@ -496,7 +516,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                     result.append(value)
         return result
 
-    def make_subconfig(self, *args, **kwargs):
+    def make_subconfig(self, *args, **kwargs) -> str:
         """Constructs a new subconfig, containing each element from kwargs and returns the full config_path to it"""
         if args:
             vollog.debug("Non-keyword arguments to make_subconfig are ignored - this is a bug in the calling code")
@@ -520,7 +540,13 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 class TranslationLayerRequirement(ConstructableRequirementInterface):
     """Class maintaining the limitations on what sort of translation layers are acceptable"""
 
-    def __init__(self, name, description = None, default = None, optional = False, oses = None, architectures = None):
+    def __init__(self,
+                 name: str,
+                 description: str = None,
+                 default: ConfigSimpleType = None,
+                 optional: bool = False,
+                 oses: typing.List = None,
+                 architectures: typing.List = None) -> None:
         """Constructs a Translation Layer Requirement
 
         The configuration option's value will be the name of the layer once it exists in the store
@@ -532,12 +558,14 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
         if oses is None:
             oses = []
         if architectures is None:
-            self.architectures = []
+            architectures = []
         self.oses = oses
         self.architectures = architectures
         super().__init__(name, description, default, optional)
 
-    def unsatisfied(self, context, config_path):
+    def unsatisfied(self,
+                    context: interfaces.context.ContextInterface,
+                    config_path: str) -> typing.List[str]:
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
         value = self.config_value(context, config_path, None)
         if isinstance(value, str):
@@ -566,7 +594,7 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
                    "IndexError - No configuration provided: {}".format(config_path + CONFIG_SEPARATOR + self.name))
         return [path_join(config_path, self.name)]
 
-    def construct(self, context, config_path):
+    def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the appropriate layer and adds it based on the class parameter"""
         # Determine the layer name
         name = self.name
@@ -583,19 +611,18 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
 
         if any([subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
                 not subreq.optional]):
-            return False
+            return None
 
         obj = self._construct_class(context, config_path, args)
-        if obj is None:
-            return False
-        context.add_layer(obj)
-        return True
+        if obj is not None:
+            context.add_layer(obj)
+        return None
 
 
 class SymbolRequirement(ConstructableRequirementInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
 
-    def unsatisfied(self, context, config_path):
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Validate that the value is a valid within the symbol space of the provided context"""
         value = self.config_value(context, config_path, None)
         if not isinstance(value, str):
@@ -609,7 +636,7 @@ class SymbolRequirement(ConstructableRequirementInterface):
             return [path_join(config_path, self.name)]
         return []
 
-    def construct(self, context, config_path):
+    def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the symbol space within the context based on the subrequirements"""
         # Determine the space name
         name = context.symbol_space.free_table_name(self.name)
@@ -621,9 +648,12 @@ class SymbolRequirement(ConstructableRequirementInterface):
 
         if any([subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
                 not subreq.optional]):
-            return False
+            return None
 
         # Fill out the parameter for class creation
+        if not isinstance(self.requirements["class"], ClassRequirement):
+            raise ValueError(
+                "Class requirement is not of type ClassRequirement: {}".format(repr(self.requirements["class"])))
         cls = self.requirements["class"].cls
         node_config = context.config.branch(config_path)
         for req in cls.get_requirements():
@@ -631,16 +661,15 @@ class SymbolRequirement(ConstructableRequirementInterface):
                 args[req.name] = node_config.data[req.name]
 
         obj = self._construct_class(context, config_path, args)
-        if obj is None:
-            return False
-        context.symbol_space.append(obj)
-        return True
+        if obj is not None:
+            context.symbol_space.append(obj)
+        return None
 
 
 class ChoiceRequirement(RequirementInterface):
     """Allows one from a choice of strings"""
 
-    def __init__(self, choices, *args, **kwargs):
+    def __init__(self, choices: typing.List[str], *args, **kwargs) -> None:
         """Constructs the object
 
         :param choices: A list of possible string options that can be chosen from
@@ -651,7 +680,7 @@ class ChoiceRequirement(RequirementInterface):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self.choices = choices
 
-    def unsatisfied(self, context, config_path):
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Validates the provided value to ensure it is one of the available choices"""
         value = self.config_value(context, config_path)
         if value not in self.choices:
@@ -670,7 +699,10 @@ class ListRequirement(RequirementInterface):
     and does not allow for a dynamic number of values.
     """
 
-    def __init__(self, element_type, max_elements, min_elements, *args, **kwargs):
+    def __init__(self,
+                 element_type: InstanceRequirement,
+                 max_elements: int,
+                 min_elements: int, *args, **kwargs) -> None:
         """Constructs the object
 
         :param element_type: The (requirement) type of each element within the list
@@ -684,22 +716,25 @@ class ListRequirement(RequirementInterface):
         if not isinstance(element_type, InstanceRequirement):
             raise TypeError("ListRequirements can only contain simple InstanceRequirements")
         self.element_type = element_type
-        self.min_elements = min_elements
-        self.max_elements = max_elements
+        self.min_elements: int = min_elements
+        self.max_elements: int = max_elements
 
-    def unsatisfied(self, context, config_path):
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Check the types on each of the returned values and their number and then call the element type's check for each one"""
         value = self.config_value(context, config_path)
-        self._check_type(value, list)
+        if not isinstance(value, list):
+            # TODO: Check this is the correct response for an error
+            raise ValueError("")
         if not (self.min_elements <= len(value) <= self.max_elements):
             vollog.log(constants.LOGLEVEL_V, "TypeError - List option provided more or less elements than allowed.")
             return [path_join(config_path, self.name)]
-        if not all([self._check_type(element, self.element_type) for element in value]):
+        if not all([self._check_type(element, self.element_type.instance_type) for element in value]):
             vollog.log(constants.LOGLEVEL_V, "TypeError - At least one element in the list is not of the correct type.")
             return [path_join(config_path, self.name)]
         result = []
         for element in value:
-            subresult = self.element_type.unsatisfied(context, element)
-            for subvalue in subresult:
-                result.append(subvalue)
+            if isinstance(element, str):
+                subresult = self.element_type.unsatisfied(context, element)
+                for subvalue in subresult:
+                    result.append(subvalue)
         return result
