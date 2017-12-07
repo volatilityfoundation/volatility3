@@ -39,12 +39,12 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                  config_path: str,
                  requirement: interfaces.configuration.ConstructableRequirementInterface,
                  progress_callback: validity.ProgressCallback = None) \
-            -> None:
+            -> typing.Optional[typing.List[str]]:
         """Runs the automagic over the configurable"""
 
         # Quick exit if we're not needed
         if not requirement.unsatisfied(context, config_path):
-            return
+            return None
 
         # Bow out quickly if the UI hasn't provided a single_location
         unsatisfied = self.unsatisfied(self.context, self.config_path)
@@ -108,6 +108,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                                                              interfaces.configuration.path_join(self.config_path,
                                                                                                 "ConstructionMagic"))
             constructor(context, config_path, requirement)
+        return None
 
     def find_suitable_requirements(self,
                                    stacked_layers: typing.List,

@@ -8,6 +8,8 @@ from abc import ABCMeta, abstractmethod
 from volatility.framework import validity, interfaces
 from volatility.framework.interfaces import configuration as interfaces_configuration
 
+RequirementInterfaceType = typing.Type[interfaces.configuration.RequirementInterface]
+
 
 class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metaclass = ABCMeta):
     """Class that defines an automagic component that can help fulfill a Requirement
@@ -52,7 +54,13 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
                  progress_callback: validity.ProgressCallback = None) -> typing.List[str]:
         """Runs the automagic over the configurable"""
 
-    def find_requirements(self, context, config_path, requirement_root, requirement_type, shortcut = True) \
+    def find_requirements(self,
+                          context: interfaces.context.ContextInterface,
+                          config_path: str,
+                          requirement_root: interfaces.configuration.RequirementInterface,
+                          requirement_type: typing.Union[RequirementInterfaceType,
+                                                         typing.Tuple[RequirementInterfaceType, ...]],
+                          shortcut: bool = True) \
             -> typing.List[typing.Tuple[str, str, interfaces_configuration.ConstructableRequirementInterface]]:
         """Determines if there is actually an unfulfilled symbol requirement waiting
 

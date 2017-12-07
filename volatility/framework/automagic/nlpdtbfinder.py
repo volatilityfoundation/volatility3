@@ -162,11 +162,10 @@ class NlpDtbfinder(interfaces.automagic.AutomagicInterface):
                     if ("memory_layer" in requirement.requirements and
                             not requirement.requirements["memory_layer"].unsatisfied(context, sub_config_path)):
                         physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
-
-                        valid_entries = context.memory[physical_layer].scan(context,
-                                                                            NlpDtbScanner(layer_class,
-                                                                                          physical_layer),
-                                                                            progress_callback)
+                        layer = context.memory[physical_layer]
+                        valid_entries = layer.scan(context,
+                                                   NlpDtbScanner(layer_class, layer),
+                                                   progress_callback)
                         results[layer_class] = physical_layer, valid_entries
 
             for layer_class in results:

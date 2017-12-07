@@ -15,8 +15,10 @@ class ValidityRoutines(object):
     These are currently implemented by assertions that will be optimized out of production code.
     """
 
+    V = typing.TypeVar('V')
+
     @classmethod
-    def _check_type(cls, value, valid_type):
+    def _check_type(cls, value: V, valid_type: typing.Type) -> V:
         """Checks that value is an instance of valid_type, and returns value if it is, or throws a TypeError otherwise
 
         :param value: The value of which to validate the type
@@ -30,7 +32,7 @@ class ValidityRoutines(object):
         return value
 
     @classmethod
-    def _check_class(cls, klass, valid_class):
+    def _check_class(cls, klass: typing.Type, valid_class: typing.Type) -> typing.Type:
         """Checks that class is an instance of valid_class, and returns klass if it is, or throws a TypeError otherwise
 
         :param klass: Class to validate

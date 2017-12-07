@@ -37,15 +37,15 @@ class BooleanRequirement(interfaces_configuration.InstanceRequirement):
 
 class IntRequirement(interfaces_configuration.InstanceRequirement):
     """A requirement type that contains a single integer"""
-    instance_type = int
+    instance_type: typing.ClassVar[typing.Type] = int
 
 
 class StringRequirement(interfaces_configuration.InstanceRequirement):
     """A requirement type that contains a single unicode string"""
     # TODO: Maybe add string length limits?
-    instance_type = str
+    instance_type: typing.ClassVar[typing.Type] = str
 
 
 class BytesRequirement(interfaces_configuration.InstanceRequirement):
     """A requirement type that contains a byte string"""
-    instance_type = bytes
+    instance_type: typing.ClassVar[typing.Type] = bytes

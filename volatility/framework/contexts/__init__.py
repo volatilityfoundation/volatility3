@@ -75,7 +75,8 @@ class Context(interfaces.context.ContextInterface):
     def object(self,
                symbol: interfaces.objects.Template,
                layer_name: str,
-               offset: int, **arguments) -> interfaces.objects.ObjectInterface:
+               offset: int,
+               **arguments) -> interfaces.objects.ObjectInterface:
         """Object factory, takes a context, symbol, offset and optional layername
 
         Looks up the layername in the context, finds the object template based on the symbol,
