@@ -2,7 +2,7 @@
 """
 import typing
 
-ProgressCallback = typing.Optional[typing.Callable[[int, str], None]]
+ProgressCallback = typing.Optional[typing.Callable[[float, str], None]]
 
 
 class ValidityRoutines(object):

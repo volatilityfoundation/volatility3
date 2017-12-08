@@ -3,34 +3,37 @@ or in some other form.  This module defines both the output format (:class:`Tree
 which can interact with a TreeGrid to produce suitable output."""
 
 import collections
+import typing
 from abc import abstractmethod, ABCMeta
 
 from volatility.framework import validity
 
 Column = collections.namedtuple('Column', ['index', 'name', 'type'])
 
+RenderOption = typing.Any
+
 
 class Renderer(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class that defines the interface that all output renderers must support"""
 
-    def __init__(self, options):
+    def __init__(self, options: typing.List[RenderOption]) -> None:
         """Accepts an options object to configure the renderers"""
         # FIXME: Once the config option objects are in place, put the _type_check in place
 
     @abstractmethod
-    def get_render_options(self):
+    def get_render_options(self) -> typing.List[RenderOption]:
         """Returns a list of rendering options"""
 
     @abstractmethod
-    def render(self, grid):
+    def render(self, grid: 'TreeGrid') -> None:
         """Takes a grid object and renders it based on the object's preferences"""
 
 
 class ColumnSortKey(metaclass = ABCMeta):
-    ascending = True
+    ascending: bool = True
 
     @abstractmethod
-    def __call__(self, values):
+    def __call__(self, values: typing.List[typing.Any]) -> typing.Any:
         """The key function passed as a sort key to the TreeGrid's visit function"""
 
 
@@ -40,12 +43,12 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def values(self):
+    def values(self) -> typing.Any:
         """Returns the list of values from the particular node, based on column.index"""
 
     @property
     @abstractmethod
-    def path(self):
+    def path(self) -> str:
         """Returns a path identifying string
 
         This should be seen as opaque by external classes,
@@ -54,20 +57,25 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def parent(self):
+    def parent(self) -> 'TreeNode':
         """Returns the parent node of this node or None"""
 
     @property
     @abstractmethod
-    def path_depth(self):
+    def path_depth(self) -> int:
         """Return the path depth of the current node"""
 
     @abstractmethod
-    def path_changed(self, path, added = False):
+    def path_changed(self, path: str, added: bool = False) -> None:
         """Updates the path based on the addition or removal of a node higher up in the tree
 
            This should only be called by the containing TreeGrid and expects to only be called for affected nodes.
         """
+
+
+ColumnsType = typing.List[typing.Tuple[str, typing.Type]]
+SimpleTypes = typing.Union[int, str, float, bytes]
+_T = typing.TypeVar("_T")
 
 
 class TreeGrid(object, metaclass = ABCMeta):
@@ -83,9 +91,9 @@ class TreeGrid(object, metaclass = ABCMeta):
     and to create cycles.
     """
 
-    simple_types = {int, str, float, bytes}
+    simple_types: typing.ClassVar[typing.Set[typing.Type]] = {int, str, float, bytes}
 
-    def __init__(self, columns, generator):
+    def __init__(self, columns: ColumnsType, generator: typing.Generator) -> None:
         """Constructs a TreeGrid object using a specific set of columns
 
         The TreeGrid itself is a root element, that can have children but no values.
@@ -97,7 +105,10 @@ class TreeGrid(object, metaclass = ABCMeta):
         """
 
     @abstractmethod
-    def populate(self, func = None, initial_accumulator = None):
+    def populate(self,
+                 func: typing.Callable[[typing.Tuple[SimpleTypes]], TreeNode] = None,
+                 initial_accumulator: typing.Any = None) \
+            -> typing.Generator[typing.Tuple[SimpleTypes, ...], None, None]:
         """Generator that returns the next available Node
 
            This is equivalent to a one-time visit.
@@ -105,44 +116,48 @@ class TreeGrid(object, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def populated(self):
+    def populated(self) -> bool:
         """Indicates that population has completed and the tree may now be manipulated separately"""
 
     @property
     @abstractmethod
-    def columns(self):
+    def columns(self) -> ColumnsType:
         """Returns the available columns and their ordering and types"""
 
     @abstractmethod
-    def children(self, node):
+    def children(self, node: TreeNode) -> typing.List[TreeNode]:
         """Returns the subnodes of a particular node in order"""
 
     @abstractmethod
-    def values(self, node):
+    def values(self, node: TreeNode) -> typing.Tuple[SimpleTypes, ...]:
         """Returns the values for a particular node
 
            The values returned are mutable,
         """
 
     @abstractmethod
-    def is_ancestor(self, node, descendant):
+    def is_ancestor(self, node: TreeNode, descendant: TreeNode) -> bool:
         """Returns true if descendent is a child, grandchild, etc of node"""
 
     @abstractmethod
-    def max_depth(self):
+    def max_depth(self) -> int:
         """Returns the maximum depth of the tree"""
 
     @staticmethod
-    def path_depth(node):
+    def path_depth(node: TreeNode) -> int:
         """Returns the path depth of a particular node"""
         return node.path_depth
 
-    def path_is_valid(self, node):
+    def path_is_valid(self, node: TreeNode) -> bool:
         """Returns True is a given path is valid for this treegrid"""
         return node in self.children(node.parent)
 
     @abstractmethod
-    def visit(self, node, function, initial_accumulator = None, sort_key = None):
+    def visit(self,
+              node: TreeNode,
+              function: typing.Callable[[TreeNode, _T], _T],
+              initial_accumulator: _T = None,
+              sort_key: ColumnSortKey = None) -> None:
         """Visits all the nodes in a tree, calling function on each one.
 
            function should have the signature function(node, accumulator) and return new_accumulator

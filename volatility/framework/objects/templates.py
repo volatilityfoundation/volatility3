@@ -1,4 +1,5 @@
 import logging
+import typing
 
 from volatility.framework import interfaces, validity, exceptions
 
@@ -66,15 +67,16 @@ class ReferenceTemplate(interfaces.objects.Template):
     def children(self):
         return []
 
-    def _unresolved(self, *args, **kwargs):
+    def _unresolved(self, *args, **kwargs) -> typing.Any:
         """Referenced symbols must be appropriately resolved before they can provide information such as size
            This is because the size request has no context within which to determine the actual symbol structure.
         """
         raise exceptions.SymbolError(
             "Template contains no information about its structure: {}".format(self.vol.type_name))
 
-    size = property(_unresolved)
-    replace_child = relative_child_offset = _unresolved
+    size: typing.ClassVar[typing.Any] = property(_unresolved)
+    replace_child: typing.ClassVar[typing.Any] = _unresolved
+    relative_child_offset: typing.ClassVar[typing.Any] = _unresolved
 
     def __call__(self, context, object_info):
         template = context.symbol_space.get_type(self.vol.type_name)
