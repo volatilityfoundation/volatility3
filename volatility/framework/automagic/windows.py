@@ -71,7 +71,10 @@ class DtbTest(validity.ValidityRoutines):
         """
         value = data[page_offset + (self.ptr_reference * self.ptr_size):page_offset + (
                 (self.ptr_reference + 1) * self.ptr_size)]
-        ptr = self._unpack(value)
+        try:
+            ptr = self._unpack(value)
+        except struct.error:
+            return None
         # The value *must* be present (bit 0) since it's a mapped page
         # It's almost always writable (bit 1)
         # It's occasionally Super, but not reliably so, haven't checked when/why not
