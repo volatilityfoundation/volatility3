@@ -4,9 +4,10 @@
 import collections
 import collections.abc
 import logging
+import typing
 from abc import ABCMeta, abstractmethod
 
-from volatility.framework import constants, validity
+from volatility.framework import constants, validity, interfaces
 from volatility.framework.interfaces import context as interfaces_context
 
 vollog = logging.getLogger(__name__)
@@ -18,16 +19,16 @@ class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
     This ensures that the data stored in the mapping should not be modified, making an immutable mapping.
     """
 
-    def __init__(self, dictionary):
+    def __init__(self, dictionary: typing.ChainMap[str, typing.Any]) -> None:
         self._dict = dictionary
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> typing.Any:
         """Returns the item as an attribute"""
         if attr in self._dict:
             return self._dict[attr]
         raise AttributeError("Object has no attribute: {}.{}".format(self.__class__.__name__, attr))
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str) -> typing.Any:
         """Returns the item requested"""
         return self._dict[name]
 
@@ -35,7 +36,7 @@ class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
         """Returns an iterator of the dictionary items"""
         return self._dict.__iter__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Returns the length of the internal dictionary"""
         return len(self._dict)
 
@@ -63,7 +64,11 @@ class ObjectInformation(ReadOnlyMapping):
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """A base object required to be the ancestor of every object used in volatility"""
 
-    def __init__(self, context, type_name, object_info, **kwargs):
+    def __init__(self,
+                 context: 'interfaces_context.ContextInterface',
+                 type_name: str,
+                 object_info: 'ObjectInformation',
+                 **kwargs) -> None:
         # Since objects are likely to be instantiated often,
         # we're only checking that context, offset and parent
         # Everything else may be wrong, but that will get caught later on
@@ -86,22 +91,22 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._context = context
 
     @property
-    def vol(self):
+    def vol(self) -> ReadOnlyMapping:
         """Returns the volatility specific object information"""
         # Wrap the outgoing vol in a read-only proxy
         return ReadOnlyMapping(self._vol)
 
     @abstractmethod
-    def write(self, value):
+    def write(self, value: typing.Any):
         """Writes the new value into the format at the offset the object currently resides at"""
 
-    def validate(self):
+    def validate(self) -> bool:
         """A method that can be overridden to validate this object.  It does not return and its return value should not be used.
 
         Raises InvalidDataException on failure to validate the data correctly.
         """
 
-    def get_symbol_table(self):
+    def get_symbol_table(self) -> 'interfaces.symbols.SymbolTableInterface':
         """Returns the symbol table for this particular object
 
         Returns none if the symbol table cannot be identified.
@@ -114,7 +119,9 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             vollog.debug("Symbol table not found in context's symbol_space for symbol: {}".format(self.vol.type_name))
         return self._context.symbol_space[table_name]
 
-    def cast(self, new_type_name, **additional):
+    def cast(self,
+             new_type_name: str,
+             **additional) -> 'ObjectInterface':
         """Returns a new object at the offset and from the layer that the current object inhabits
 
         .. note:: If new type name does not include a symbol table, the symbol table for the current object is used
@@ -143,21 +150,26 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         new templates for each and every potental object type."""
 
         @classmethod
-        def size(cls, template):
+        def size(cls, template: 'Template') -> int:
             """Returns the size of the template object"""
 
         @classmethod
-        def children(cls, template):
+        def children(cls, template: 'Template') -> 'typing.List[Template]':
             """Returns the children of the template"""
             return []
 
         @classmethod
-        def replace_child(cls, template, old_child, new_child):
+        def replace_child(cls,
+                          template: 'Template',
+                          old_child: 'Template',
+                          new_child: 'Template') -> None:
             """Substitutes the old_child for the new_child"""
             raise KeyError("Template does not contain any children to replace: {}".format(template.vol.type_name))
 
         @classmethod
-        def relative_child_offset(cls, template, child):
+        def relative_child_offset(cls,
+                                  template: 'Template',
+                                  child: 'Template') -> int:
             """Returns the relative offset from the head of the parent data to the child member"""
             raise KeyError("Template does not contain any children: {}".format(template.vol.type_name))
 
@@ -185,20 +197,21 @@ class Template(validity.ValidityRoutines):
     constructed at resolution time and then cached.
     """
 
-    def __init__(self, type_name, **arguments):
+    def __init__(self, type_name: str, **arguments) -> None:
         """Stores the keyword arguments for later use"""
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
         self._arguments = arguments
-        self._vol = collections.ChainMap({}, self._arguments, {'type_name': type_name})
+        empty_dict: typing.Dict[str, typing.Any] = {}
+        self._vol = collections.ChainMap(empty_dict, self._arguments, {'type_name': type_name})
 
     @property
-    def vol(self):
+    def vol(self) -> ReadOnlyMapping:
         """Returns a volatility information object, much like the :class:`~volatility.framework.interfaces.objects.ObjectInformation` provides"""
         return ReadOnlyMapping(self._vol)
 
     @property
-    def children(self):
+    def children(self) -> typing.List['Template']:
         """The children of this template (such as member types, sub-types and base-types where they are relevant).
         Used to traverse the template tree.
         """
@@ -206,32 +219,34 @@ class Template(validity.ValidityRoutines):
 
     @property
     @abstractmethod
-    def size(self):
+    def size(self) -> int:
         """Returns the size of the template"""
 
     @abstractmethod
-    def relative_child_offset(self, child):
+    def relative_child_offset(self, child: 'Template') -> int:
         """Returns the relative offset of the `child` member from its parent offset"""
 
     @abstractmethod
-    def replace_child(self, old_child, new_child):
+    def replace_child(self, old_child: 'Template', new_child: 'Template') -> None:
         """Replaces `old_child` with `new_child` in the list of children"""
 
-    def clone(self):
+    def clone(self) -> 'Template':
         """Returns a copy of the original Template as constructed (without `update_vol` additions having been made)"""
         clone = self.__class__(**self._vol.parents.new_child())
         return clone
 
-    def update_vol(self, **new_arguments):
+    def update_vol(self, **new_arguments) -> None:
         """Updates the keyword arguments with values that will **not** be carried across to clones"""
         self._vol.update(new_arguments)
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> typing.Any:
         """Exposes any other values stored in ._vol as attributes (for example, enumeration choices)"""
         if attr != '_vol':
             if attr in self._vol:
                 return self._vol[attr]
         raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, attr))
 
-    def __call__(self, context, object_info):
+    def __call__(self,
+                 context: 'interfaces_context.ContextInterface',
+                 object_info: ObjectInformation) -> ObjectInterface:
         """Constructs the object"""

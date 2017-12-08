@@ -3,6 +3,7 @@
 Renderers display the unified output format in some manner (be it text or file or graphical output"""
 
 import collections
+import typing
 
 from volatility.framework import interfaces
 
@@ -226,7 +227,13 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """Returns the maximum depth of the tree"""
         return self.visit(None, lambda n, a: max(a, self.path_depth(n)), )
 
-    def visit(self, node, function, initial_accumulator = None, sort_key = None):
+    _T = typing.TypeVar("_T")
+
+    def visit(self,
+              node: interfaces.renderers.TreeNode,
+              function: typing.Callable[[interfaces.renderers.TreeNode, _T], _T],
+              initial_accumulator: _T = None,
+              sort_key: interfaces.renderers.ColumnSortKey = None):
         """Visits all the nodes in a tree, calling function on each one.
 
            function should have the signature function(node, accumulator) and return new_accumulator
@@ -257,7 +264,11 @@ class TreeGrid(interfaces.renderers.TreeGrid):
             accumulator = self._visit(children, function, accumulator, sort_key)
         return accumulator
 
-    def _visit(self, list_of_children, function, accumulator, sort_key = None):
+    def _visit(self,
+               list_of_children: typing.List['TreeNode'],
+               function: typing.Callable,
+               accumulator: _T,
+               sort_key: interfaces.renderers.ColumnSortKey = None) -> _T:
         """Visits all the nodes in a tree, calling function on each one"""
         if list_of_children is not None:
             for n, children in list_of_children:
@@ -271,7 +282,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
 
 class ColumnSortKey(interfaces.renderers.ColumnSortKey):
-    def __init__(self, treegrid, column_name, ascending = True):
+    def __init__(self, treegrid: TreeGrid, column_name: str, ascending: bool = True) -> None:
         self._index = None
         self.ascending = ascending
         for i in treegrid.columns:
@@ -280,6 +291,6 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
         if self._index is None:
             raise ValueError("Column not found in TreeGrid columns: {}".format(column_name))
 
-    def __call__(self, values):
+    def __call__(self, values: typing.List[typing.Any]) -> typing.Any:
         """The key function passed as the sort key"""
         return values[self._index]

@@ -5,6 +5,7 @@ They are called and carry out some algorithms on data stored in layers using obj
 
 # Configuration interfaces must be imported separately, since we're part of interfaces and can't import ourselves
 import logging
+import typing
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import exceptions
@@ -12,6 +13,9 @@ from volatility.framework import validity
 from volatility.framework.interfaces import configuration as interfaces_configuration
 
 vollog = logging.getLogger(__name__)
+
+if typing.TYPE_CHECKING:
+    from volatility.framework import interfaces, renderers
 
 
 #
@@ -34,7 +38,9 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
     context it is passed.
     """
 
-    def __init__(self, context, config_path):
+    def __init__(self,
+                 context: 'interfaces.context.ContextInterface',
+                 config_path: str) -> None:
         super().__init__(context, config_path)
         # Plugins self validate on construction, it makes it more difficult to work with them, but then
         # the validation doesn't need to be repeated over and over again by externals
@@ -43,12 +49,12 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List['interfaces.configuration.RequirementInterface']:
         """Returns a list of Requirement objects for this plugin"""
         return []
 
     @abstractmethod
-    def run(self):
+    def run(self) -> 'renderers.TreeGrid':
         """Executes the functionality of the code
 
         .. note:: This method expects `self.validate` to have been called to ensure all necessary options have been provided
