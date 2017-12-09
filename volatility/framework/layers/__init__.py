@@ -5,10 +5,13 @@ import hashlib
 import logging
 import lzma
 import os
+import typing
 import urllib.parse
 import urllib.request
 import zipfile
 from urllib import request
+
+from urllib3 import util
 
 try:
     import magic
@@ -23,24 +26,29 @@ except ImportError:
     pass
 
 from volatility import framework
-from volatility.framework import constants
+from volatility.framework import constants, validity
 from volatility.framework.interfaces.layers import IMPORTED_MAGIC
 from volatility.framework.layers import intel, lime, physical, segmented, vmware
 
 vollog = logging.getLogger(__name__)
 
 
+# TODO: Type-annotating the ResourceAccessor.open method is difficult because HTTPResponse is not actually an IO[Any] type
+#   fix this
+
 class ResourceAccessor(object):
     """Object for openning URLs as files (downloading locally first if necessary)"""
 
-    def __init__(self, progress_callback = None, context = None):
+    def __init__(self,
+                 progress_callback: typing.Optional[validity.ProgressCallback] = None,
+                 context: typing.Optional[util.SSLContext] = None) -> None:
         """Creates a resource accessor
 
         Note: context is an SSL context, not a volatility context
         """
         self._progress_callback = progress_callback
         self._context = context
-        self._cached_files = []
+        self._cached_files: typing.List[str] = []
         self._handlers = list(framework.class_subclasses(request.BaseHandler))
         vollog.log(constants.LOGLEVEL_VVV,
                    "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
@@ -154,3 +162,4 @@ class JarHandler(request.BaseHandler):
 
             zippath, filepath = zipsplit
             return zipfile.ZipFile(zippath).open(filepath)
+        return None
