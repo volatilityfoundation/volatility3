@@ -54,7 +54,7 @@ class ContextInterface(object, metaclass = ABCMeta):
 
     @abstractmethod
     def object(self,
-               symbol: 'interfaces.objects.Template',
+               symbol: str,
                layer_name: str,
                offset: int,
                **arguments):

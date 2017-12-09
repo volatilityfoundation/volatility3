@@ -78,7 +78,7 @@ def run(automagics: typing.List[interfaces.automagic.AutomagicInterface],
 
     # TODO: Fix need for top level config element just because we're using a MultiRequirement to group the
     # configurable's config requirements
-    configurable_class: typing.Type[interfaces.configuration.ConfigurableInterface]
+    # configurable_class: typing.Type[interfaces.configuration.ConfigurableInterface]
     if isinstance(configurable, interfaces.configuration.ConfigurableInterface):
         configurable_class = configurable.__class__
     else:

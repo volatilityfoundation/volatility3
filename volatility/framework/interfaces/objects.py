@@ -202,7 +202,7 @@ class Template(validity.ValidityRoutines):
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
         self._arguments = arguments
-        empty_dict: typing.Dict[str, typing.Any] = {}
+        empty_dict = {}  # type: typing.Dict[str, typing.Any]
         self._vol = collections.ChainMap(empty_dict, self._arguments, {'type_name': type_name})
 
     @property
