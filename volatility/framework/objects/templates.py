@@ -74,9 +74,9 @@ class ReferenceTemplate(interfaces.objects.Template):
         raise exceptions.SymbolError(
             "Template contains no information about its structure: {}".format(self.vol.type_name))
 
-    size: typing.ClassVar[typing.Any] = property(_unresolved)
-    replace_child: typing.ClassVar[typing.Any] = _unresolved
-    relative_child_offset: typing.ClassVar[typing.Any] = _unresolved
+    size = property(_unresolved)  # type: typing.ClassVar[typing.Any]
+    replace_child = _unresolved  # type: typing.ClassVar[typing.Any]
+    relative_child_offset = _unresolved  # type: typing.ClassVar[typing.Any]
 
     def __call__(self, context, object_info):
         template = context.symbol_space.get_type(self.vol.type_name)

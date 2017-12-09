@@ -17,9 +17,8 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str) -> None:
         super().__init__(context, config_path)
-        self._requirements: typing.List[
-            typing.Tuple[str, str, interfaces.configuration.ConstructableRequirementInterface]] = []
-        self._linux_banners_: linux_symbol_cache.LinuxBanners = {}
+        self._requirements = []  # type: typing.List[typing.Tuple[str, str, interfaces.configuration.ConstructableRequirementInterface]]
+        self._linux_banners_ = {}  # type: linux_symbol_cache.LinuxBanners
 
     @property
     def _linux_banners(self) -> linux_symbol_cache.LinuxBanners:
@@ -133,7 +132,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                 kaslr_shift, _ = LinuxUtilities.find_aslr(context, table_name, layer_name,
                                                           progress_callback = progress_callback)
 
-                layer_class: typing.Type = intel.Intel
+                layer_class = intel.Intel  # type: typing.Type
                 if ('init_level4_pgt' in table.symbols):
                     layer_class = intel.Intel32e
                     dtb_symbol_name = 'init_level4_pgt'

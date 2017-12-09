@@ -53,7 +53,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self.chunk_size = 0x1000000  # Default to 16Mb chunks
         self.overlap = 0x1000  # A page of overlap by default
         self._context = None
-        self._layer_name: typing.Optional[str] = None
+        self._layer_name = None  # type: typing.Optional[str]
 
     @property
     def context(self) -> 'interfaces.context.ContextInterface':
@@ -210,7 +210,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         max_address = min(self.maximum_address, max_address)
 
         try:
-            progress: ProgressValue
+            progress = DummyProgress()  # type: ProgressValue
             scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
             scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
             if scanner.thread_safe and not constants.DISABLE_MULTITHREADED_SCANNING:
@@ -319,7 +319,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
         current_offset = offset
-        output: typing.List[bytes] = []
+        output = []  # type: typing.List[bytes]
         for (offset, mapped_offset, length, layer) in self.mapping(offset, length, ignore_errors = pad):
             if not pad and offset > current_offset:
                 raise exceptions.InvalidAddressException(self.name, current_offset,
@@ -358,7 +358,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                     progress: ProgressValue,
                     iterator_value: int) -> typing.List[typing.Any]:
         size_to_scan = min(max_address - min_address, scanner.chunk_size + scanner.overlap)
-        result: typing.List[typing.Any] = []
+        result = []  # type: typing.List[typing.Any]
         for map in self.mapping(iterator_value, size_to_scan, ignore_errors = True):
             offset, mapped_offset, length, layer = map
             progress.value += length
@@ -371,7 +371,7 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
     """Container for multiple layers of data"""
 
     def __init__(self) -> None:
-        self._layers: typing.Dict[str, DataLayerInterface] = {}
+        self._layers = {}  # type: typing.Dict[str, DataLayerInterface]
 
     def read(self,
              layer: str,

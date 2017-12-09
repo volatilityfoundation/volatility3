@@ -218,7 +218,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
 
     def __call__(self, data: bytes, data_offset: int) \
             -> typing.Generator[typing.Tuple[DtbTest, typing.Set[int]], None, None]:
-        results: typing.Dict[DtbTest, typing.Set[int]] = {}
+        results = {}  # type: typing.Dict[DtbTest, typing.Set[int]]
         for test in self.tests:
             results[test] = set()
 

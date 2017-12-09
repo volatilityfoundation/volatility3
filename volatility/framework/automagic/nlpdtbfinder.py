@@ -9,14 +9,14 @@ from volatility.framework.layers import intel
 
 vollog = logging.getLogger(__name__)
 
-validity_tests: typing.Dict[typing.Type[intel.Intel],
-                            typing.List[typing.Tuple[int, int]]] = {intel.Intel: [],
-                                                                    intel.IntelPAE: [],
-                                                                    intel.Intel32e: [
-                                                                        (0b10111011, 0b00100011),
-                                                                        (0b1, 0b1),
-                                                                        (0b1111011, 0b1100011),
-                                                                        (0b1111011, 0b1100011)]}
+validity_tests = {}  # type: typing.Dict[typing.Type[intel.Intel], typing.List[typing.Tuple[int, int]]]
+validity_tests.update({intel.Intel: [],
+                       intel.IntelPAE: [],
+                       intel.Intel32e: [
+                           (0b10111011, 0b00100011),
+                           (0b1, 0b1),
+                           (0b1111011, 0b1100011),
+                           (0b1111011, 0b1100011)]})
 
 
 class NlpDtbScanner(interfaces.layers.ScannerInterface):
@@ -111,7 +111,7 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
             if len(data[page_offset:page_offset + calcsize]) < calcsize:
                 continue
             entries = struct.unpack('<' + str(2 ** size) + format_str, data[page_offset:page_offset + calcsize])
-            valid_entries: typing.List[typing.Tuple[int, int]] = []
+            valid_entries = []  # type: typing.List[typing.Tuple[int, int]]
             invalid_count = 0
             user_count = 0
             supervisor_count = 0

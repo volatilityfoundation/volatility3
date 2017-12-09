@@ -21,7 +21,7 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
 
     @classmethod
     def load_linux_banners(cls) -> LinuxBanners:
-        linuxbanners: LinuxBanners = {}
+        linuxbanners = {}  # type: LinuxBanners
         if os.path.exists(constants.LINUX_BANNERS_PATH):
             with open(constants.LINUX_BANNERS_PATH, "rb") as f:
                 # We use pickle over JSON because we're dealing with bytes objects

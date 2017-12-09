@@ -136,7 +136,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str) -> None:
         super().__init__(context, config_path)
-        self.valid_kernels: typing.Dict[str, typing.Tuple[int, typing.Dict]] = {}
+        self.valid_kernels = {}  # type: typing.Dict[str, typing.Tuple[int, typing.Dict]]
 
     def recurse_pdb_finder(self,
                            context: interfaces.context.ContextInterface,
@@ -157,7 +157,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         :return: A list of (layer_name, scan_results)
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        results: typing.Dict[str, typing.Iterable] = {}
+        results = {}  # type: typing.Dict[str, typing.Iterable]
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
@@ -289,7 +289,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
                     results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
                                                   progress_callback = progress_callback)
-                    seen: typing.Set[int] = set()
+                    seen = set()  # type: typing.Set[int]
                     # Because this will launch a scan of the virtual layer, we want to be careful
                     for result in results:
                         # TODO: Identify the specific structure we're finding and document this a bit better

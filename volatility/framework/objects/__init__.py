@@ -30,7 +30,7 @@ class Function(interfaces.objects.ObjectInterface):
 
 class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
-    _struct_type: typing.Type = int
+    _struct_type = int  # type: typing.Type
 
     def __init__(self, context, type_name, object_info, struct_format):
         super().__init__(context = context,

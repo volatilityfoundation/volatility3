@@ -57,8 +57,8 @@ class HierarchicalDict(collections.abc.Mapping):
         if not (isinstance(separator, str) and len(separator) == 1):
             raise TypeError("Separator must be a one character string: {}".format(separator))
         self._separator = separator
-        self._data: typing.Dict[str, ConfigSimpleType] = {}
-        self._subdict: typing.Dict[str, 'HierarchicalDict'] = {}
+        self._data = {}  # type: typing.Dict[str, ConfigSimpleType]
+        self._subdict = {}  # type: typing.Dict[str, 'HierarchicalDict']
         if isinstance(initial_dict, str):
             initial_dict = json.loads(initial_dict)
         if isinstance(initial_dict, dict):
@@ -247,7 +247,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._description = description or ""
         self._default = default
         self._optional = optional
-        self._requirements: typing.Dict[str, RequirementInterface] = {}
+        self._requirements = {}  # type: typing.Dict[str, RequirementInterface]
 
     def __repr__(self) -> str:
         return "<" + self.__class__.__name__ + ": " + self.name + ">"
@@ -320,7 +320,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
 class InstanceRequirement(RequirementInterface):
     """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
-    instance_type: typing.ClassVar[typing.Type] = bool
+    instance_type = bool  # type: typing.ClassVar[typing.Type]
 
     def add_requirement(self, requirement: RequirementInterface):
         """Always raises a TypeError as instance requirements cannot have children"""
@@ -716,8 +716,8 @@ class ListRequirement(RequirementInterface):
         if not isinstance(element_type, InstanceRequirement):
             raise TypeError("ListRequirements can only contain simple InstanceRequirements")
         self.element_type = element_type
-        self.min_elements: int = min_elements
-        self.max_elements: int = max_elements
+        self.min_elements = min_elements  # type: int
+        self.max_elements = max_elements  # type: int
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Check the types on each of the returned values and their number and then call the element type's check for each one"""

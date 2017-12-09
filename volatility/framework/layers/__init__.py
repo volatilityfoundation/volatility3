@@ -48,7 +48,7 @@ class ResourceAccessor(object):
         """
         self._progress_callback = progress_callback
         self._context = context
-        self._cached_files: typing.List[str] = []
+        self._cached_files = []  # type: typing.List[str]
         self._handlers = list(framework.class_subclasses(request.BaseHandler))
         vollog.log(constants.LOGLEVEL_VVV,
                    "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))

@@ -30,7 +30,7 @@ class Renderer(validity.ValidityRoutines, metaclass = ABCMeta):
 
 
 class ColumnSortKey(metaclass = ABCMeta):
-    ascending: bool = True
+    ascending = True  # type: bool
 
     @abstractmethod
     def __call__(self, values: typing.List[typing.Any]) -> typing.Any:
@@ -91,7 +91,7 @@ class TreeGrid(object, metaclass = ABCMeta):
     and to create cycles.
     """
 
-    simple_types: typing.ClassVar[typing.Set[typing.Type]] = {int, str, float, bytes}
+    simple_types = {int, str, float, bytes}  # type: typing.ClassVar[typing.Set[typing.Type]]
 
     def __init__(self, columns: ColumnsType, generator: typing.Generator) -> None:
         """Constructs a TreeGrid object using a specific set of columns
