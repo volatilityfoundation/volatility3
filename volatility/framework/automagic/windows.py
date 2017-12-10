@@ -315,7 +315,7 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
             hits = list(hits)
             if hits:
                 # TODO: Decide which to use if there are multiple options
-                page_map_offset = hits[0][1][0]
+                test, page_map_offset = hits[0]
                 new_layer_name = context.memory.free_layer_name("IntelLayer")
                 config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
                 context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
