@@ -73,7 +73,7 @@ class Context(interfaces.context.ContextInterface):
     # ## Object Factory Functions
 
     def object(self,
-               symbol: str,
+               symbol: typing.Union[str, interfaces.objects.Template],
                layer_name: str,
                offset: int,
                **arguments) -> interfaces.objects.ObjectInterface:
@@ -91,9 +91,10 @@ class Context(interfaces.context.ContextInterface):
         :return: A fully constructed object
         :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
         """
-        object_template = self.symbol_space.get_type(symbol)
         if not isinstance(symbol, interfaces.objects.Template):
             object_template = self._symbol_space.get_type(symbol)
+        else:
+            object_template = symbol
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
         return object_template(context = self,

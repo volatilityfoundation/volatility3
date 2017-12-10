@@ -5,6 +5,7 @@ of symbols that can be used to interpret data in a layer.  The context also prov
 notably the object constructor function, `object`, which will construct a symbol on a layer at a particular offset.
 """
 import copy
+import typing
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import validity, interfaces
@@ -54,7 +55,7 @@ class ContextInterface(object, metaclass = ABCMeta):
 
     @abstractmethod
     def object(self,
-               symbol: str,
+               symbol: typing.Union[str, 'interfaces.objects.Template'],
                layer_name: str,
                offset: int,
                **arguments):

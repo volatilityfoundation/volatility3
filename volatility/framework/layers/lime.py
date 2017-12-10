@@ -5,8 +5,9 @@ Created on 6 Apr 2016
 """
 
 import struct
+import typing
 
-from volatility.framework import exceptions, interfaces
+from volatility.framework import exceptions, interfaces, validity
 from volatility.framework.layers import segmented
 
 
@@ -29,13 +30,16 @@ class LimeLayer(segmented.SegmentedLayer):
     # XXX move this to a custom SymbolSpace?
     _header_struct = struct.Struct('<IIQQQ')
 
-    def __init__(self, context, config_path, name):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 name: str) -> None:
         super().__init__(context, config_path, name)
 
         # We must run this on creation in order to get the right min/maxaddr in case scanning is our first action
         self._load_segments()
 
-    def _load_segments(self):
+    def _load_segments(self) -> None:
         base_layer = self._context.memory[self._base_layer]
         base_maxaddr = base_layer.maximum_address
         maxaddr = 0
@@ -61,7 +65,9 @@ class LimeLayer(segmented.SegmentedLayer):
         self._segments = segments
 
     @classmethod
-    def _check_header(cls, base_layer, offset = 0):
+    def _check_header(cls,
+                      base_layer: interfaces.layers.DataLayerInterface,
+                      offset: int = 0) -> typing.Tuple[int, int]:
         header_data = base_layer.read(offset, cls._header_struct.size)
         (magic, version, start, end, reserved) = cls._header_struct.unpack(header_data)
         if magic != cls.MAGIC:
@@ -75,11 +81,15 @@ class LimeStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 10
 
     @classmethod
-    def stack(cls, context, layer_name, progress_callback = None):
+    def stack(cls,
+              context: interfaces.context.ContextInterface,
+              layer_name: str,
+              progress_callback: validity.ProgressCallback = None) \
+            -> typing.Optional[interfaces.layers.DataLayerInterface]:
         try:
             LimeLayer._check_header(context.memory[layer_name])
         except LimeFormatException:
-            return
+            return None
         new_name = context.memory.free_layer_name("LimeLayer")
         context.config[interfaces.configuration.path_join(new_name, "base_layer")] = layer_name
         return LimeLayer(context, new_name, new_name)

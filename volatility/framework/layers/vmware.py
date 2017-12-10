@@ -1,7 +1,8 @@
 import os
 import struct
+import typing
 
-from volatility.framework import interfaces
+from volatility.framework import interfaces, validity
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical, segmented
 from volatility.framework.symbols import native
@@ -14,7 +15,10 @@ class VmwareLayer(segmented.SegmentedLayer):
     header_structure = "<4sII"
     group_structure = "64sQQ"
 
-    def __init__(self, context, config_path, name):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 name: str) -> None:
         # Construct these so we can use self.config
         self._context = context
         self._config_path = config_path
@@ -23,11 +27,11 @@ class VmwareLayer(segmented.SegmentedLayer):
         # Then call the super, which will call load_segments (which needs the base_layer before it'll work)
         super().__init__(context, config_path = config_path, name = name)
 
-    def _load_segments(self):
+    def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer"""
         self._read_header()
 
-    def _read_header(self):
+    def _read_header(self) -> None:
         """Checks the vmware header to make sure it's valid"""
         if "vmware" not in self._context.symbol_space:
             self._context.symbol_space.append(native.NativeTable("vmware", native.std_ctypes))
@@ -86,11 +90,11 @@ class VmwareLayer(segmented.SegmentedLayer):
             self._segments.append((offset, mapped_offset, length))
 
     @property
-    def dependencies(self):
+    def dependencies(self) -> typing.List[str]:
         return [self._base_layer, self._meta_layer]
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         """This vmware translation layer always requires a separate metadata layer"""
         return [requirements.TranslationLayerRequirement(name = 'base_layer',
                                                          optional = False),
@@ -101,10 +105,14 @@ class VmwareLayer(segmented.SegmentedLayer):
 
 class VmwareStacker(interfaces.automagic.StackerLayerInterface):
     @classmethod
-    def stack(cls, context, layer_name, progress_callback = None):
+    def stack(cls,
+              context: interfaces.context.ContextInterface,
+              layer_name: str,
+              progress_callback: validity.ProgressCallback = None) \
+            -> typing.Optional[interfaces.layers.DataLayerInterface]:
         """Attempt to stack this based on the starting information"""
         if not isinstance(context.memory[layer_name], physical.FileLayer):
-            return
+            return None
         location = context.memory[layer_name].location
         if location.endswith(".vmem"):
             vmss = location[:-5] + ".vmss"
@@ -119,10 +127,11 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
                 context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
             else:
-                return
+                return None
             new_layer_name = context.memory.free_layer_name("VmwareLayer")
             context.config[interfaces.configuration.path_join(current_config_path, "base_layer")] = layer_name
             context.config[
                 interfaces.configuration.path_join(current_config_path, "meta_layer")] = current_layer_name
             new_layer = VmwareLayer(context, current_config_path, new_layer_name)
             return new_layer
+        return None

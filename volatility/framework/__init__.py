@@ -18,6 +18,7 @@ import sys
 # 4. If changes or removals of the interface have been made, set age to 0
 
 # We use the libtool library versioning
+import typing
 
 CURRENT = 0  # Number of releases of the library with any change
 REVISION = 0  # Number of changes that don't affect the interface
@@ -48,19 +49,19 @@ def require_interface_version(*args):
 
 
 class noninheritable(object):
-    def __init__(self, f, cls):
-        self.f = f
+    def __init__(self, value: typing.Any, cls: typing.Type) -> None:
+        self.default_value = value
         self.cls = cls
 
-    def __get__(self, obj, type = None):
+    def __get__(self, obj: typing.Any, type: typing.Type = None) -> typing.Any:
         if type == self.cls:
-            if hasattr(self.f, '__get__'):
-                return self.f.__get__(obj, type)
-            return self.f
+            if hasattr(self.default_value, '__get__'):
+                return self.default_value.__get__(obj, type)
+            return self.default_value
         raise AttributeError
 
 
-def hide_from_subclasses(cls):
+def hide_from_subclasses(cls: typing.Type) -> typing.Type:
     cls.hidden = noninheritable(True, cls)
     return cls
 
@@ -76,7 +77,7 @@ def class_subclasses(cls):
             yield return_value
 
 
-def import_files(base_module):
+def import_files(base_module) -> None:
     """Imports all plugins present under plugins path"""
     if not isinstance(base_module.__path__, list):
         raise TypeError("[base_module].__path__ must be a list of paths")
@@ -99,6 +100,7 @@ def import_files(base_module):
                             raise
                     else:
                         vollog.info("Skipping existing module: {}".format(module))
+    return None
 
 
 # Check the python version to ensure it's suitable

@@ -1,3 +1,4 @@
+import typing
 from abc import ABCMeta, abstractmethod
 from bisect import bisect_right
 
@@ -11,32 +12,35 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
        In the documentation "mapped address" or "mapped offset" refers to an offset once it has been mapped to the underlying layer
     """
 
-    def __init__(self, context, config_path, name):
+    def __init__(self,
+                 context: interfaces.configuration.ContextInterface,
+                 config_path: str,
+                 name: str) -> None:
         super().__init__(context, config_path = config_path, name = name)
 
         self._base_layer = self.config["base_layer"]
-        self._segments = []
-        self._minaddr = None
-        self._maxaddr = None
+        self._segments = []  # type: typing.List[typing.Tuple[int, int, int]]
+        self._minaddr = None  # type: typing.Optional[int]
+        self._maxaddr = None  # type: typing.Optional[int]
 
         self._load_segments()
 
     @abstractmethod
-    def _load_segments(self):
+    def _load_segments(self) -> None:
         """Populates the _segments variable
 
            Segments must be (address, mapped address, length) and must be sorted by address when this method exits
         """
 
-    def is_valid(self, offset, length = 1):
+    def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the address offset can be translated to a valid address"""
         try:
-            return all([self._context.memory[self._base_layer].is_valid(mapped_offset) for _, mapped_offset, _, _ in
+            return all([self._context.memory[self._base_layer].is_valid(mapped_offset) for _i, mapped_offset, _i, _s in
                         self.mapping(offset, length)])
         except exceptions.InvalidAddressException:
             return False
 
-    def _find_segment(self, offset, next = False):
+    def _find_segment(self, offset: int, next: bool = False) -> typing.Tuple[int, int, int]:
         """Finds the segment containing a given offset
 
            Returns the segment tuple (offset, mapped_offset, length)
@@ -57,7 +61,8 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
                     return self._segments[i]
         raise exceptions.InvalidAddressException(self.name, offset, "Invalid address at {:0x}".format(offset))
 
-    def mapping(self, offset, length, ignore_errors = False):
+    def mapping(self, offset: int, length: int, ignore_errors: bool = False) \
+            -> typing.Iterable[typing.Tuple[int, int, int, str]]:
         """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings"""
         done = False
         current_offset = offset
@@ -94,7 +99,7 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
                 done = True
 
     @property
-    def minimum_address(self):
+    def minimum_address(self) -> int:
         if not self._segments:
             raise ValueError("SegmentedLayer must contain some segments")
         if self._minaddr is None:
@@ -103,7 +108,7 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
         return self._minaddr
 
     @property
-    def maximum_address(self):
+    def maximum_address(self) -> int:
         if not self._segments:
             raise ValueError("SegmentedLayer must contain some segments")
         if self._maxaddr is None:
@@ -112,11 +117,11 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
         return self._maxaddr
 
     @property
-    def dependencies(self):
+    def dependencies(self) -> typing.List[str]:
         """Returns a list of the lower layers that this layer is dependent upon"""
         return [self._base_layer]
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'base_layer',
                                                          optional = False)]
