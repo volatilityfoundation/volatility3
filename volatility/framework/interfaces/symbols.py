@@ -68,11 +68,11 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
 
     @abstractmethod
-    def get_symbols_by_type(self, type_name: str) -> typing.List[Symbol]:
+    def get_symbols_by_type(self, type_name: str) -> typing.Iterable[str]:
         """Returns all symbols based on the type of the symbol"""
 
     @abstractmethod
-    def get_symbols_by_location(self, address: int, table_name: typing.Optional[str] = None) -> typing.List[Symbol]:
+    def get_symbols_by_location(self, address: int, table_name: typing.Optional[str] = None) -> typing.Iterable[str]:
         """Returns all symbols that exist at a specific relative address"""
 
     @abstractmethod
@@ -195,7 +195,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         """Resolves a symbol name into a symbol and then resolves the symbol's type"""
         return self.get_type(self.get_symbol(name).type_name)
 
-    def get_symbols_by_type(self, type_name: str) -> typing.Generator[str, None, None]:
+    def get_symbols_by_type(self, type_name: str) -> typing.Iterable[str]:
         """Returns the name of all symbols in this table that have type matching type_name"""
         for symbol_name in self.symbols:
             # This allows for searching with and without the table name (in case multiple tables contain
@@ -204,7 +204,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
             if symbol.type_name == type_name or (symbol.type_name.endswith(constants.BANG + type_name)):
                 yield symbol.name
 
-    def get_symbols_by_location(self, offset: int) -> typing.Generator[str, None, None]:
+    def get_symbols_by_location(self, offset: int) -> typing.Iterable[str]:
         """Returns the name of all symbols in this table that live at a particular offset"""
         sort_symbols = sorted([(self.get_symbol(sn).address, sn) for sn in self.symbols])
         result = bisect.bisect_left(sort_symbols, (offset, ""))
@@ -239,12 +239,12 @@ class NativeTableInterface(BaseSymbolTableInterface):
         raise exceptions.SymbolError("NativeTables never hold symbols")
 
     @property
-    def symbols(self) -> typing.List[str]:
+    def symbols(self) -> typing.Iterable[str]:
         return []
 
-    def get_enumeration(self, name: str):
+    def get_enumeration(self, name: str) -> typing.Dict[str, typing.Any]:
         raise exceptions.SymbolError("NativeTables never hold enumerations")
 
     @property
-    def enumerations(self) -> typing.List[str]:
+    def enumerations(self) -> typing.Iterable[str]:
         return []

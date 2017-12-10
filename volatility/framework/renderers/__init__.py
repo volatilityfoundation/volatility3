@@ -11,25 +11,29 @@ from volatility.framework import interfaces
 class TreeNode(interfaces.renderers.TreeNode):
     """Class representing a particular node in a tree grid"""
 
-    def __init__(self, path, treegrid, parent, values):
+    def __init__(self,
+                 path: str,
+                 treegrid: 'TreeGrid',
+                 parent: typing.Optional['TreeNode'],
+                 values: typing.List[interfaces.renderers.SimpleTypes]) -> None:
         if not isinstance(treegrid, TreeGrid):
             raise TypeError("Treegrid must be an instance of TreeGrid")
         self._treegrid = treegrid
         self._parent = parent
         self._path = path
         self._validate_values(values)
-        self._values = treegrid.RowStructure(*values)
+        self._values = treegrid.RowStructure(*values)  # type: ignore
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<TreeNode [{}] - {}>".format(self.path, self._values)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: typing.Union[int, slice]) -> typing.Any:
         return self._treegrid.children(self).__getitem__(item)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._treegrid.children(self))
 
-    def _validate_values(self, values):
+    def _validate_values(self, values: typing.List[interfaces.renderers.SimpleTypes]) -> None:
         """A function for raising exceptions if a given set of values is invalid according to the column properties."""
         if not (isinstance(values, collections.Sequence) and len(values) == len(self._treegrid.columns)):
             raise TypeError(
@@ -45,12 +49,12 @@ class TreeNode(interfaces.renderers.TreeNode):
                         column.type))
 
     @property
-    def values(self):
+    def values(self) -> typing.Iterable[interfaces.renderers.SimpleTypes]:
         """Returns the list of values from the particular node, based on column.index"""
         return self._values
 
     @property
-    def path(self):
+    def path(self) -> str:
         """Returns a path identifying string
 
         This should be seen as opaque by external classes,
@@ -59,16 +63,16 @@ class TreeNode(interfaces.renderers.TreeNode):
         return self._path
 
     @property
-    def parent(self):
+    def parent(self) -> typing.Optional['TreeNode']:
         """Returns the parent node of this node or None"""
         return self._parent
 
     @property
-    def path_depth(self):
+    def path_depth(self) -> int:
         """Return the path depth of the current node"""
         return len(self.path.split(TreeGrid.path_sep))
 
-    def path_changed(self, path, added = False):
+    def path_changed(self, path: str, added: bool = False) -> None:
         """Updates the path based on the addition or removal of a node higher up in the tree
 
            This should only be called by the containing TreeGrid and expects to only be called for affected nodes.
@@ -96,7 +100,9 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
     path_sep = "|"
 
-    def __init__(self, columns, generator):
+    def __init__(self,
+                 columns: typing.List[typing.Tuple[str, interfaces.renderers.SimpleTypes]],
+                 generator: typing.Optional[typing.Iterable[typing.Tuple[int, typing.Tuple]]]) -> None:
         """Constructs a TreeGrid object using a specific set of columns
 
         The TreeGrid itself is a root element, that can have children but no values.
@@ -108,14 +114,12 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """
         self._populated = False
         self._row_count = 0
-        self._children = []
-        converted_columns = []
+        self._children = []  # type: typing.List[TreeNode]
+        converted_columns = []  # type: typing.List[interfaces.renderers.Column]
         if len(columns) < 1:
             raise ValueError("Columns must be a list containing at least one column")
         for (name, column_type) in columns:
-            is_simple_type = False
-            for stype in self.simple_types:
-                is_simple_type = is_simple_type or issubclass(column_type, stype)
+            is_simple_type = issubclass(column_type, self.simple_types)
             if not is_simple_type:
                 raise TypeError(
                     "Column {}'s type is not a simple type: {}".format(name, column_type.__class__.__name__))
@@ -130,14 +134,17 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         self._generator = generator
 
     @staticmethod
-    def _sanitize(text):
+    def _sanitize(text: str) -> str:
         output = ""
         for letter in text.lower():
             if letter != ' ':
                 output += (letter if letter in 'abcdefghiljklmnopqrstuvwxyz_' else '_')
         return output
 
-    def populate(self, func = None, initial_accumulator = None):
+    def populate(self,
+                 func: interfaces.renderers.VisitorSignature = None,
+                 initial_accumulator: typing.Any = None) \
+            -> typing.Generator[typing.Tuple[interfaces.renderers.SimpleTypes, ...], None, None]:
         """Populates the tree by consuming the TreeGrid's construction generator
            Func is called on every node, so can be used to create output on demand
 
@@ -145,11 +152,11 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """
         accumulator = initial_accumulator
         if func is None:
-            def func(_x, _y):
+            def func(_x: interfaces.renderers.TreeNode, _y: typing.Any) -> typing.Any:
                 return None
 
         if not self.populated:
-            prev_nodes = []
+            prev_nodes = []  # type: typing.List[TreeNode]
             for (level, item) in self._generator:
                 parent_index = min(len(prev_nodes), level)
                 parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
@@ -158,6 +165,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 accumulator = func(treenode, accumulator)
                 self._row_count += 1
         self._populated = True
+        return None
 
     @property
     def populated(self):

@@ -4,7 +4,7 @@ from volatility.framework import interfaces
 from volatility.framework.renderers import format_hints
 
 
-def hex_bytes_as_text(value):
+def hex_bytes_as_text(value: bytes) -> str:
     """Renders HexBytes as text"""
     if not isinstance(value, bytes):
         raise TypeError("hex_bytes_as_text takes bytes not: {}".format(type(value)))
@@ -31,19 +31,20 @@ class QuickTextRenderer(interfaces.renderers.Renderer):
                       bytes: lambda x: x.decode("utf-8"),
                       'default': lambda x: "{}".format(x)}
 
-    def __init__(self, options = None):
+    def __init__(self, options = None) -> None:
         super().__init__(options)
 
     def get_render_options(self):
         pass
 
-    def render(self, grid):
+    def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         # TODO: Docstrings
         # TODO: Improve text output
         outfd = sys.stdout
 
         for column in grid.columns:
-            outfd.write("\t{}".format(column.name))
+            # Ignore the type because namedtuples don't realize they have accessible attributes
+            outfd.write("\t{}".format(column.name))  # type: ignore
         outfd.write("\n")
 
         def visitor(node, accumulator):

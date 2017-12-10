@@ -43,7 +43,7 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def values(self) -> typing.Any:
+    def values(self) -> typing.Iterable['SimpleTypes']:
         """Returns the list of values from the particular node, based on column.index"""
 
     @property
@@ -73,9 +73,10 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
         """
 
 
+_Type = typing.TypeVar("_Type")
 ColumnsType = typing.List[typing.Tuple[str, typing.Type]]
-SimpleTypes = typing.Union[int, str, float, bytes]
-_T = typing.TypeVar("_T")
+SimpleTypes = typing.Union[typing.Type[int], typing.Type[str], typing.Type[float], typing.Type[bytes]]
+VisitorSignature = typing.Callable[[TreeNode, _Type], _Type]
 
 
 class TreeGrid(object, metaclass = ABCMeta):
@@ -91,7 +92,7 @@ class TreeGrid(object, metaclass = ABCMeta):
     and to create cycles.
     """
 
-    simple_types = {int, str, float, bytes}  # type: typing.ClassVar[typing.Set[typing.Type]]
+    simple_types = (int, str, float, bytes)  # type: typing.ClassVar[typing.Tuple]
 
     def __init__(self, columns: ColumnsType, generator: typing.Generator) -> None:
         """Constructs a TreeGrid object using a specific set of columns
@@ -106,7 +107,7 @@ class TreeGrid(object, metaclass = ABCMeta):
 
     @abstractmethod
     def populate(self,
-                 func: typing.Callable[[typing.Tuple[SimpleTypes]], TreeNode] = None,
+                 func: VisitorSignature = None,
                  initial_accumulator: typing.Any = None) \
             -> typing.Generator[typing.Tuple[SimpleTypes, ...], None, None]:
         """Generator that returns the next available Node
@@ -155,8 +156,8 @@ class TreeGrid(object, metaclass = ABCMeta):
     @abstractmethod
     def visit(self,
               node: TreeNode,
-              function: typing.Callable[[TreeNode, _T], _T],
-              initial_accumulator: _T = None,
+              function: VisitorSignature,
+              initial_accumulator: _Type = None,
               sort_key: ColumnSortKey = None) -> None:
         """Visits all the nodes in a tree, calling function on each one.
 
