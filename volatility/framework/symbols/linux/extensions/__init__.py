@@ -1,16 +1,19 @@
 import collections.abc
+import typing
 
-from volatility.framework import objects
 from volatility.framework import constants
-from volatility.framework.symbols import generic
+from volatility.framework import objects, interfaces
 from volatility.framework.objects import utility
+from volatility.framework.symbols import generic
 
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
 
 class task_struct(generic.GenericIntelProcess):
-    def add_process_layer(self, config_prefix = None, preferred_name = None):
+    def add_process_layer(self,
+                          config_prefix: str = None,
+                          preferred_name: str = None) -> typing.Optional[str]:
         """Constructs a new layer based on the process's DTB.
         Returns the name of the Layer or None.
         """
@@ -30,7 +33,7 @@ class task_struct(generic.GenericIntelProcess):
 
 class mm_struct(objects.Struct):
     @property
-    def mmap_iter(self):
+    def mmap_iter(self) -> typing.Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct."""
 
         if not self.mmap:
@@ -52,22 +55,22 @@ class super_block(objects.Struct):
     MINORBITS = 20
 
     @property
-    def major(self):
+    def major(self) -> int:
         return self.s_dev >> self.MINORBITS
 
     @property
-    def minor(self):
+    def minor(self) -> int:
         return self.s_dev & ((1 << self.MINORBITS) - 1)
 
 
 class vm_area_struct(objects.Struct):
     # include/linux/mm.h
-    VM_READ  = 0x00000001
+    VM_READ = 0x00000001
     VM_WRITE = 0x00000002
-    VM_EXEC  = 0x00000004
+    VM_EXEC = 0x00000004
 
     @property
-    def flags(self):
+    def flags(self) -> str:
         """Returns an rwx string representation of the flags in a vm_area_struct."""
 
         retval = ""
@@ -80,19 +83,20 @@ class vm_area_struct(objects.Struct):
 
         return retval
 
-    def page_offset(self):
+    def page_offset(self) -> int:
         if self.vm_file == 0:
             return 0
 
         return self.vm_pgoff << constants.linux.PAGE_SHIFT
 
+
 class struct_file(objects.Struct):
     @property
-    def full_path(self):
-        parts = []
+    def full_path(self) -> str:
+        parts = []  # type: typing.List[str]
         path = self.f_path
         path_dentry = path.dentry
-        seen = set()
+        seen = set()  # type: typing.Set[int]
         while path_dentry != 0 and path_dentry.vol.offset not in seen:
             name = utility.pointer_to_string(path_dentry.d_name.name, path_dentry.d_name.len)
             if name == "/":
@@ -105,7 +109,12 @@ class struct_file(objects.Struct):
 
 
 class list_head(objects.Struct, collections.abc.Iterable):
-    def to_list(self, symbol_type, member, forward = True, sentinel = True, layer = None):
+    def to_list(self,
+                symbol_type: str,
+                member: str,
+                forward: bool = True,
+                sentinel: bool = True,
+                layer: typing.Optional[str] = None) -> typing.Iterator[interfaces.objects.ObjectInterface]:
         """Returns an iterator of the entries in the list."""
 
         if layer is None:
@@ -130,5 +139,5 @@ class list_head(objects.Struct, collections.abc.Iterable):
             seen.add(link.vol.offset)
             link = getattr(link, direction).dereference()
 
-    def __iter__(self):
+    def __iter__(self) -> typing.Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)

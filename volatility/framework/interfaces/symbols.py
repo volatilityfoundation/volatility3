@@ -174,14 +174,14 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     # ## Functions for overriding classes
 
-    def set_type_class(self, name: str, clazz: objects.ObjectInterface) -> None:
+    def set_type_class(self, name: str, clazz: typing.Type[objects.ObjectInterface]) -> None:
         """Overrides the object class for a specific Symbol type
 
            Name *must* be present in self.types
         """
         raise NotImplementedError("Abstract method set_type_class not implemented yet.")
 
-    def get_type_class(self, name: str) -> objects.ObjectInterface:
+    def get_type_class(self, name: str) -> typing.Type[objects.ObjectInterface]:
         """Returns the class associated with a Symbol type"""
         raise NotImplementedError("Abstract method get_type_class not implemented yet.")
 

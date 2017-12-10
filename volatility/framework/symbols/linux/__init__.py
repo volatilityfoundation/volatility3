@@ -1,3 +1,6 @@
+import typing
+
+from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.linux import extensions
@@ -6,7 +9,11 @@ from volatility.framework.symbols.linux import extensions
 class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
     provides = {"type": "interface"}
 
-    def __init__(self, context, config_path, name, isf_url):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 name: str,
+                 isf_url: str) -> None:
         super().__init__(context = context, config_path = config_path, name = name, isf_url = isf_url)
 
         # Set-up Linux specific types
@@ -18,6 +25,6 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('vm_area_struct', extensions.vm_area_struct)
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.StringRequirement("isf_url",
                                                description = "JSON file containing the symbols encoded in the Intermediate Symbol Format")]

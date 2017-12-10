@@ -19,7 +19,7 @@ class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
     This ensures that the data stored in the mapping should not be modified, making an immutable mapping.
     """
 
-    def __init__(self, dictionary: typing.ChainMap[str, typing.Any]) -> None:
+    def __init__(self, dictionary: typing.Mapping[str, typing.Any]) -> None:
         self._dict = dictionary
 
     def __getattr__(self, attr: str) -> typing.Any:
