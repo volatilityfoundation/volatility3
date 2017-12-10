@@ -1,20 +1,25 @@
 import logging
 import math
 import struct
+import typing
 
 from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
+IteratorValue = typing.Tuple[typing.List[typing.Tuple[str, int, int]], int]
+
 
 class classproperty(object):
-    """Class property decorator"""
+    """Class property decorator
 
-    def __init__(self, func):
+    Note this will change the return type """
+
+    def __init__(self, func: typing.Callable[[typing.Any], typing.Any]) -> None:
         self._func = func
 
-    def __get__(self, owner_self, owner_cls):
+    def __get__(self, _owner_self, owner_cls: typing.Type) -> typing.Any:
         return self._func(owner_cls)
 
 
@@ -32,7 +37,10 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     _structure = [('page directory', 10, False),
                   ('page table', 10, True)]
 
-    def __init__(self, context, config_path, name):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 name: str) -> None:
         super().__init__(context, config_path, name)
         self._base_layer = self._check_type(self.config["memory_layer"], str)
         self._page_map_offset = self._check_type(self.config["page_map_offset"], int)
@@ -42,31 +50,31 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
 
     @classproperty
-    def page_size(cls):
+    def page_size(cls) -> int:
         """Page size for the intel address space.
 
         All Intel address spaces work on 4096 byte pages"""
         return 1 << cls._page_size_in_bits
 
     @classproperty
-    def bits_per_register(cls):
+    def bits_per_register(cls) -> int:
         """Returns the bits_per_register to determine the range of an IntelTranslationLayer"""
         return cls._bits_per_register
 
     @classproperty
-    def minimum_address(cls):
+    def minimum_address(cls) -> int:  # type: ignore
         return 0
 
     @classproperty
-    def maximum_address(cls):
+    def maximum_address(cls) -> int:  # type: ignore
         return (1 << cls._maxvirtaddr) - 1
 
     @classproperty
-    def structure(cls):
+    def structure(cls) -> typing.List[typing.Tuple[str, int, bool]]:
         return cls._structure
 
     @staticmethod
-    def _mask(value, high_bit, low_bit):
+    def _mask(value: int, high_bit: int, low_bit: int) -> int:
         """Returns the bits of a value between highbit and lowbit inclusive"""
         high_mask = (2 ** (high_bit + 1)) - 1
         low_mask = (2 ** low_bit) - 1
@@ -75,11 +83,11 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         return value & mask
 
     @staticmethod
-    def _page_is_valid(entry):
+    def _page_is_valid(entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry"""
-        return entry & 1
+        return bool(entry & 1)
 
-    def _translate(self, offset):
+    def _translate(self, offset: int) -> typing.Tuple[int, int, str]:
         """Translates a specific offset based on paging tables
 
            Returns the translated offset, the contiguous pagesize that the translated address lives in and the layer_name that the address lives in
@@ -121,7 +129,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
         return page, 1 << (position + 1), self._base_layer
 
-    def is_valid(self, offset, length = 1):
+    def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the address offset can be translated to a valid address"""
         try:
             # TODO: Consider reimplementing this, since calls to mapping can call is_valid
@@ -130,12 +138,14 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         except exceptions.InvalidAddressException:
             return False
 
-    def mapping(self, offset, length, ignore_errors = False):
+    def mapping(self,
+                offset: int,
+                length: int,
+                ignore_errors: bool = False) -> typing.Iterable[typing.Tuple[int, int, int, str]]:
         """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
 
            This allows translation layers to provide maps of contiguous regions in one layer
         """
-        result = []
         if length == 0:
             if ignore_errors and not self.is_valid(offset):
                 raise StopIteration
@@ -156,13 +166,13 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             offset += chunk_size
 
     @property
-    def dependencies(self):
+    def dependencies(self) -> typing.List[str]:
         """Returns a list of the lower layer names that this layer is dependent upon"""
         # TODO: Add in the whole buffalo
         return [self._base_layer]
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'memory_layer',
                                                          optional = False),
                 requirements.TranslationLayerRequirement(name = 'swap_layer',
@@ -174,10 +184,14 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 requirements.StringRequirement(name = 'linux_banner',
                                                optional = True)]
 
-    def _scan_iterator(self, scanner, min_address, max_address):
+    def _scan_iterator(self,
+                       scanner: interfaces.layers.ScannerInterface,
+                       min_address: int,
+                       max_address: int) \
+            -> typing.Iterable[IteratorValue]:
         previous = None
-        data_to_scan = []
-        scanned_pairs = set()
+        data_to_scan = []  # type: typing.List[typing.Tuple[str, int, int]]
+        scanned_pairs = set()  # type: typing.Set[typing.Tuple[int, int]]
         chunk_end = min_address
         while chunk_end <= max_address:
             try:
@@ -206,7 +220,13 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             previous = address
             chunk_end += chunk_size
 
-    def _scan_chunk(self, scanner, min_address, max_address, progress, iterator_value):
+    # We ignore the type due to the iterator_value, actually it only needs to match the output from _scan_iterator
+    def _scan_chunk(self,
+                    scanner: interfaces.layers.ScannerInterface,
+                    min_address: int,
+                    max_address: int,
+                    progress: interfaces.layers.ProgressValue,
+                    iterator_value: IteratorValue) -> typing.List[typing.Any]:
         data_to_scan, chunk_end = iterator_value
         data = b''
         for layer_name, address, chunk_size in data_to_scan:
@@ -219,7 +239,11 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         progress.value = chunk_end
         return list(scanner(data, chunk_end - len(data_to_scan)))
 
-    def _scan_metric(self, _scanner, min_address, max_address, value):
+    def _scan_metric(self,
+                     _scanner: interfaces.layers.ScannerInterface,
+                     min_address: int,
+                     max_address: int,
+                     value: int) -> float:
         return max(0, ((value - min_address) * 100) / (max_address - min_address))
 
 
@@ -254,7 +278,7 @@ class Intel32e(Intel):
 
 class WindowsMixin(object):
     @staticmethod
-    def _page_is_valid(entry):
+    def _page_is_valid(entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry
 
            Windows uses additional "available" bits to store flags
@@ -264,7 +288,7 @@ class WindowsMixin(object):
 
            For more information, see Windows Internals (6th Ed, Part 2, pages 268-269)
         """
-        return (entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10)
+        return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
 
 ### These must be full separate classes so that JSON configs re-create them properly

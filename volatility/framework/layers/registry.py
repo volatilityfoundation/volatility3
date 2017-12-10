@@ -1,7 +1,8 @@
 import logging
 import os.path as os_path
+import typing
 
-from volatility.framework import constants, exceptions, interfaces
+from volatility.framework import constants, exceptions, interfaces, objects
 from volatility.framework.configuration import requirements
 from volatility.framework.configuration.requirements import IntRequirement
 from volatility.framework.interfaces.configuration import TranslationLayerRequirement
@@ -19,7 +20,11 @@ class RegistryInvalidIndex(exceptions.LayerException):
 
 
 class RegistryHive(interfaces.layers.TranslationLayerInterface):
-    def __init__(self, context, config_path, name, os = "Unknown"):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 name: str,
+                 os: str = "Unknown") -> None:
         super().__init__(context, config_path, name, os)
 
         self._base_layer = self.config["base_layer"]
@@ -51,23 +56,23 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                 "Invalid registry base_block length: {}".format(self._base_block.Length))
 
     @property
-    def address_mask(self):
+    def address_mask(self) -> int:
         """Return a mask that allows for the volatile bit to be set"""
         return super().address_mask | 0x80000000
 
     @property
-    def root_cell_offset(self):
+    def root_cell_offset(self) -> int:
         """Returns the offset for the root cell in this hive"""
         return self._base_block.RootCell
 
-    def get_cell(self, cell_offset):
+    def get_cell(self, cell_offset: int) -> 'objects.Struct':
         """Returns the appropriate Cell value for a cell offset"""
         # This would be an _HCELL containing CELL_DATA, but to save time we skip the size of the HCELL
         cell = self._context.object(symbol = self._table_name + constants.BANG + "_CELL_DATA", offset = cell_offset + 4,
                                     layer_name = self.name)
         return cell
 
-    def get_node(self, cell_offset):
+    def get_node(self, cell_offset: int) -> 'objects.Struct':
         """Returns the appropriate Node, interpreted from the Cell based on its Signature"""
         cell = self.get_cell(cell_offset)
         signature = cell.cast('string', max_length = 2, encoding = 'latin-1')
@@ -89,13 +94,13 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                 "Unknown Signature {} (0x{:x}) at offset {}".format(signature, cell.u.KeyNode.Signature, cell_offset))
             return cell
 
-    def get_key(self, key):
+    def get_key(self, key: str) -> interfaces.objects.ObjectInterface:
         """Gets a specific registry key by key path"""
         node_key = self.get_node(self.root_cell_offset)
         if key.endswith("\\"):
             key = key[:-1]
         key_array = key.split('\\')
-        found_key = []
+        found_key = []  # type: typing.List[str]
         while key_array and node_key:
             for subkey in node_key.get_subkeys():
                 if subkey.helper_name == key_array[0]:
@@ -105,10 +110,12 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             else:
                 node_key = None
         if not node_key:
-            raise KeyError("Key {} not found under {}", key_array[0], found_key.join('\\'))
+            raise KeyError("Key {} not found under {}", key_array[0], '\\'.join(found_key))
         return node_key
 
-    def visit_nodes(self, visitor, node = None):
+    def visit_nodes(self,
+                    visitor: typing.Callable[[objects.Struct], None],
+                    node: typing.Optional[objects.Struct] = None) -> None:
         """Applies a callable (visitor) to all nodes within the registry tree from a given node"""
         if not node:
             node = self.get_node(self.root_cell_offset)
@@ -117,7 +124,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             self.visit_nodes(visitor, node)
 
     @staticmethod
-    def _mask(value, high_bit, low_bit):
+    def _mask(value: int, high_bit: int, low_bit: int) -> int:
         """Returns the bits of a value between highbit and lowbit inclusive"""
         high_mask = (2 ** (high_bit + 1)) - 1
         low_mask = (2 ** low_bit) - 1
@@ -125,12 +132,13 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask
 
-    def get_requirements(cls):
+    @classmethod
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [IntRequirement(name = 'hive_offset', description = '', default = 0, optional = False),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
                 TranslationLayerRequirement(name = 'base_layer', optional = False)]
 
-    def _translate(self, offset):
+    def _translate(self, offset: int) -> int:
         """Translates a single cell index to a cell memory offset and the suboffset within it"""
 
         # Ignore the volatile bit when determining maxaddr validity
@@ -147,7 +155,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         entry = table.Table[table_index]
         return entry.helper_block_offset + suboffset
 
-    def mapping(self, offset, length, ignore_errors = False):
+    def mapping(self,
+                offset: int,
+                length: int,
+                ignore_errors: bool = False) -> typing.Iterable[typing.Tuple[int, int, int, str]]:
 
         # TODO: Check the offset and offset + length are not outside the norms
         if (length < 0):
@@ -177,19 +188,19 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         return response
 
     @property
-    def dependencies(self):
+    def dependencies(self) -> typing.List[str]:
         """Returns a list of layer names that this layer translates onto"""
         return [self.config['base_layer']]
 
-    def is_valid(self, offset, length = 1):
+    def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns a boolean based on whether the offset is valid or not"""
         # TODO: Fix me
         return True
 
     @property
-    def minimum_address(self):
+    def minimum_address(self) -> int:
         return self._minaddr
 
     @property
-    def maximum_address(self):
+    def maximum_address(self) -> int:
         return self._maxaddr

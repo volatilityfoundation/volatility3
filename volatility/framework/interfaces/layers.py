@@ -245,15 +245,15 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     def _scan_iterator(self,
                        scanner: 'ScannerInterface',
                        min_address: int,
-                       max_address: int) -> range:
+                       max_address: int) -> typing.Iterable[typing.Any]:
         return range(min_address, max_address, scanner.chunk_size)
 
     def _scan_chunk(self,
                     scanner: 'ScannerInterface',
                     min_address: int,
                     max_address: int,
-                    progress: multiprocessing.Value,
-                    iterator_value: int) -> typing.List[typing.Any]:
+                    progress: ProgressValue,
+                    iterator_value: typing.Any) -> typing.List[typing.Any]:
         length = min(scanner.chunk_size + scanner.overlap, max_address - iterator_value)
         chunk = self.read(iterator_value, length)
         # Don't include the overlaps, or we'll go over 100%
@@ -286,7 +286,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     def mapping(self,
                 offset: int,
                 length: int,
-                ignore_errors: bool = False) -> typing.List[typing.Tuple[int, int, int, str]]:
+                ignore_errors: bool = False) -> typing.Iterable[typing.Tuple[int, int, int, str]]:
         """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
 
            ignore_errors will provide all available maps with gaps, but their total length may not add up to the requested length
@@ -302,7 +302,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     ### Translation layer convenience function
 
-    def translate(self, offset: int, ignore_errors: bool = False) -> typing.Tuple[int, str]:
+    def translate(self, offset: int, ignore_errors: bool = False) \
+            -> typing.Tuple[typing.Optional[int], typing.Optional[str]]:
         mapping = self.mapping(offset, 0, ignore_errors)
         if mapping:
             _, mapped_offset, _, layer = list(mapping)[0]
@@ -356,7 +357,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                     min_address: int,
                     max_address: int,
                     progress: ProgressValue,
-                    iterator_value: int) -> typing.List[typing.Any]:
+                    iterator_value: typing.Any) -> typing.List[typing.Any]:
         size_to_scan = min(max_address - min_address, scanner.chunk_size + scanner.overlap)
         result = []  # type: typing.List[typing.Any]
         for map in self.mapping(iterator_value, size_to_scan, ignore_errors = True):
