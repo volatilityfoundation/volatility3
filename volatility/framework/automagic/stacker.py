@@ -8,6 +8,7 @@ once a layer successfully stacks on top of the existing layers, it is removed fr
 """
 
 import logging
+import traceback
 import typing
 
 import volatility
@@ -85,7 +86,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                         break
                 except Exception as excp:
                     # Stacking exceptions are likely only of interest to developers, so the lowest level of logging
+                    fulltrace = traceback.TracebackException.from_exception(excp).format(chain = True)
                     vollog.log(constants.LOGLEVEL_VVV, "Exception during stacking: {}".format(str(excp)))
+                    vollog.log(constants.LOGLEVEL_VVVV, "\n".join(fulltrace))
             else:
                 stacked = False
             if new_layer and stacker_cls:
