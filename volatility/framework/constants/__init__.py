@@ -18,6 +18,7 @@ DISABLE_MULTITHREADED_SCANNING = False
 LOGLEVEL_V = 9
 LOGLEVEL_VV = 8
 LOGLEVEL_VVV = 7
+LOGLEVEL_VVVV = 6
 
 if sys.platform == 'windows':
     CACHE_PATH = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "volatility3")
