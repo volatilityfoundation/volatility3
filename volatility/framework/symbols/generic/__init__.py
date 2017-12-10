@@ -1,11 +1,16 @@
 import random
 import string
+import typing
 
 from volatility.framework import objects, interfaces
 
 
 class GenericIntelProcess(objects.Struct):
-    def _add_process_layer(self, context, dtb, config_prefix = None, preferred_name = None):
+    def _add_process_layer(self,
+                           context: interfaces.context.ContextInterface,
+                           dtb: typing.Union[int, interfaces.objects.ObjectInterface],
+                           config_prefix: str = None,
+                           preferred_name: str = None) -> str:
         """Constructs a new layer based on the process's DirectoryTableBase"""
 
         if config_prefix is None:

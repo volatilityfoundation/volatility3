@@ -1,6 +1,7 @@
 import collections.abc
+import typing
 
-from volatility.framework import constants, objects
+from volatility.framework import constants, objects, interfaces
 from volatility.framework.symbols import generic
 from volatility.framework import exceptions
 
@@ -108,14 +109,14 @@ class _OBJECT_HEADER(objects.Struct):
         
 
 class _ETHREAD(objects.Struct):
-    def owning_process(self, kernel_layer = None):
+    def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread"""
         return self.ThreadsProcess.dereference(kernel_layer)
 
 
 class _UNICODE_STRING(objects.Struct):
     @property
-    def helper_string(self):
+    def helper_string(self) -> interfaces.objects.ObjectInterface:
         # We explicitly do *not* catch errors here, we allow an exception to be thrown
         # (otherwise there's no way to determine anything went wrong)
         # It's up to the user of this method to catch exceptions
@@ -126,7 +127,10 @@ class _UNICODE_STRING(objects.Struct):
 
 
 class _EPROCESS(generic.GenericIntelProcess):
-    def add_process_layer(self, context, config_prefix = None, preferred_name = None):
+    def add_process_layer(self,
+                          context: interfaces.context.ContextInterface,
+                          config_prefix: str = None,
+                          preferred_name: str = None):
         """Constructs a new layer based on the process's DirectoryTableBase"""
 
         parent_layer = context.memory[self.vol.layer_name]
@@ -140,7 +144,7 @@ class _EPROCESS(generic.GenericIntelProcess):
         # Add the constructed layer and return the name
         return self._add_process_layer(context, dtb, config_prefix, preferred_name)
 
-    def load_order_modules(self):
+    def load_order_modules(self) -> typing.Iterable[int]:
         """Generator for DLLs in the order that they were loaded"""
 
         if constants.BANG not in self.vol.type_name:
@@ -162,7 +166,12 @@ class _EPROCESS(generic.GenericIntelProcess):
 
 
 class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
-    def to_list(self, symbol_type, member, forward = True, sentinel = True, layer = None):
+    def to_list(self,
+                symbol_type: str,
+                member: str,
+                forward: bool = True,
+                sentinel: bool = True,
+                layer: typing.Optional[str] = None) -> typing.Iterator[interfaces.objects.ObjectInterface]:
         """Returns an iterator of the entries in the list"""
 
         if layer is None:
@@ -187,5 +196,5 @@ class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
             seen.add(link.vol.offset)
             link = getattr(link, direction).dereference()
 
-    def __iter__(self):
+    def __iter__(self) -> typing.Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)

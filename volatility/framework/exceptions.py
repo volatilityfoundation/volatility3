@@ -33,7 +33,11 @@ class PagedInvalidAddressException(InvalidAddressException):
     Includes the invalid address and the number of bits of the address that are invalid
     """
 
-    def __init__(self, layer_name, invalid_address, invalid_bits, *args):
+    def __init__(self,
+                 layer_name: str,
+                 invalid_address: int,
+                 invalid_bits: int,
+                 *args) -> None:
         super().__init__(layer_name, invalid_address, *args)
         self.invalid_bits = invalid_bits
 
@@ -41,8 +45,8 @@ class PagedInvalidAddressException(InvalidAddressException):
 class InvalidDataException(VolatilityException):
     """Thrown when an object contains some data known to be invalid for that structure"""
 
-    def __init__(self, invalid_object, *args):
-        super.__init__(invalid_object, *args)
+    def __init__(self, invalid_object: object, *args) -> None:
+        super().__init__(invalid_object, *args)
         self._invalid_object = invalid_object
 
 

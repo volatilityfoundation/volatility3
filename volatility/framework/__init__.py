@@ -33,7 +33,7 @@ def interface_version():
 vollog = logging.getLogger(__name__)
 
 
-def require_interface_version(*args):
+def require_interface_version(*args) -> None:
     """Checks the required version of a plugin"""
     if len(args):
         if args[0] != interface_version()[0]:
@@ -66,12 +66,13 @@ def hide_from_subclasses(cls: typing.Type) -> typing.Type:
     return cls
 
 
-def class_subclasses(cls):
+def class_subclasses(cls: typing.Type) -> typing.Iterable[typing.Type]:
     """Returns all the (recursive) subclasses of a given class"""
     if not inspect.isclass(cls):
         raise TypeError("class_subclasses parameter not a valid class: {}".format(cls))
     for clazz in cls.__subclasses__():
-        if not hasattr(clazz, 'hidden') or not clazz.hidden:
+        # The typing system is not clever enough to realize that clazz has a hidden attr after the hasattr check
+        if not hasattr(clazz, 'hidden') or not clazz.hidden:  # type: ignore
             yield clazz
         for return_value in class_subclasses(clazz):
             yield return_value

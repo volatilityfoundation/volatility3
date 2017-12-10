@@ -1,8 +1,9 @@
 import enum
 import logging
 import struct
+import typing
 
-from volatility.framework import constants, exceptions, objects
+from volatility.framework import constants, exceptions, objects, interfaces
 from volatility.framework.layers.registry import RegistryHive
 
 vollog = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ class RegValueTypes(enum.Enum):
 
 class _HMAP_ENTRY(objects.Struct):
     @property
-    def helper_block_offset(self):
+    def helper_block_offset(self) -> int:
         try:
             return self.PermanentBinAddress ^ (self.PermanentBinAddress & 0x3)
         except AttributeError:
@@ -36,7 +37,7 @@ class _HMAP_ENTRY(objects.Struct):
 
 class _CMHIVE(objects.Struct):
     @property
-    def helper_name(self):
+    def helper_name(self) -> typing.Optional[interfaces.objects.ObjectInterface]:
         """Determine a name for the hive. Note that some attributes are
         unpredictably blank across different OS versions while others are populated,
         so we check all possibilities and take the first one that's not empty"""
@@ -56,12 +57,12 @@ class _CM_KEY_NODE(objects.Struct):
     """Extension to allow traversal of registry keys"""
 
     @property
-    def helper_volatile(self):
+    def helper_volatile(self) -> bool:
         if not isinstance(self._context.memory[self.vol.layer_name], RegistryHive):
             raise ValueError("Cannot determine volatility of registry key without an offset in a RegistryHive layer")
         return bool(self.vol.offset & 0x80000000)
 
-    def get_subkeys(self):
+    def get_subkeys(self) -> typing.Iterable[interfaces.objects.ObjectInterface]:
         """Returns a list of the key nodes"""
         hive = self._context.memory[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
@@ -100,7 +101,7 @@ class _CM_KEY_NODE(objects.Struct):
                     vollog.log(constants.LOGLEVEL_VVV,
                                "Node found with address outside the valid Hive size: {}".format(key_offset))
 
-    def get_values(self):
+    def get_values(self) -> typing.Iterable[interfaces.objects.ObjectInterface]:
         """Returns a list of the Value nodes for a key"""
         hive = self._context.memory[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
@@ -114,11 +115,11 @@ class _CM_KEY_NODE(objects.Struct):
                     yield node
 
     @property
-    def helper_name(self):
+    def helper_name(self) -> interfaces.objects.ObjectInterface:
         """Since this is just a casting convenience, it can be a property"""
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
 
-    def get_key_path(self):
+    def get_key_path(self) -> interfaces.objects.ObjectInterface:
         reg = self._context.memory[self.vol.layer_name]
         # Using the offset adds a significant delay (since it cannot be cached easily)
         # if self.vol.offset == reg.get_node(reg.root_cell_offset).vol.offset:
@@ -131,12 +132,12 @@ class _CM_KEY_VALUE(objects.Struct):
     """Extensions to extract data from CM_KEY_VALUE nodes"""
 
     @property
-    def helper_name(self):
+    def helper_name(self) -> interfaces.objects.ObjectInterface:
         """Since this is just a casting convenience, it can be a property"""
         self.Name.count = self.NameLength
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
 
-    def decode_data(self):
+    def decode_data(self) -> typing.Union[str, bytes]:
         """Since this is just a casting convenience, it can be a property"""
         # Determine if the data is stored inline
         datalen = self.DataLength & 0x7fffffff
@@ -184,7 +185,7 @@ class _CM_KEY_VALUE(objects.Struct):
                 output = output[:output.find("\x00")]
             return output
         if self_type == RegValueTypes.REG_MULTI_SZ:
-            return str(data, encoding = "utf-16-le").split("\x00")
+            return str(data, encoding = "utf-16-le").split("\x00")[0]
         if self_type == RegValueTypes.REG_BINARY:
             return data
         if self_type == RegValueTypes.REG_NONE:
