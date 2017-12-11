@@ -151,8 +151,9 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
 
                 layer = layer_class(context, config_path = config_path, name = new_layer_name)
 
-        if layer:
-            vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
+            if layer:
+                vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
+                break
         return layer
 
 
