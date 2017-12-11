@@ -5,13 +5,12 @@ import hashlib
 import logging
 import lzma
 import os
+import ssl
 import typing
 import urllib.parse
 import urllib.request
 import zipfile
 from urllib import request
-
-from urllib3 import util
 
 try:
     import magic
@@ -41,7 +40,7 @@ class ResourceAccessor(object):
 
     def __init__(self,
                  progress_callback: typing.Optional[validity.ProgressCallback] = None,
-                 context: typing.Optional[util.SSLContext] = None) -> None:
+                 context: typing.Optional[ssl.SSLContext] = None) -> None:
         """Creates a resource accessor
 
         Note: context is an SSL context, not a volatility context
