@@ -462,8 +462,15 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
                 return 0
             raise IndexError("Member not present in array template: {}".format(child))
 
-    def __getitem__(self, i: typing.Union[int, slice]) \
-            -> typing.Union[typing.List[interfaces.objects.Template], interfaces.objects.Template]:
+    @typing.overload
+    def __getitem__(self, i: int) -> interfaces.objects.Template:
+        ...
+
+    @typing.overload
+    def __getitem__(self, s: slice) -> typing.List[interfaces.objects.Template]:
+        ...
+
+    def __getitem__(self, i):
         """Returns the i-th item from the array"""
         result = []  # type: typing.List[interfaces.objects.Template]
         mask = self._context.memory[self.vol.layer_name].address_mask
