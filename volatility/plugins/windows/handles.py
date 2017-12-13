@@ -5,10 +5,13 @@ from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework import constants
 from volatility.framework.objects import utility
+import logging
+
+vollog = logging.getLogger()
 
 try:
-    from capstone import Cs, CS_ARCH_X86, CS_MODE_64, CS_MODE_32
-    has_capsone = True
+    import capstone
+    has_capstone = True
 except ImportError:
     has_capstone = False
 
@@ -20,13 +23,17 @@ class Handles(interfaces_plugins.PluginInterface):
         self._sar_value = None
         self._type_map = None
         self._cookie = None
+        self._level_mask = 7
 
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return pslist.PsList.get_requirements() + []
 
-    def decode_pointer(self, value, magic):
+    def _decode_pointer(self, value, magic):
+        """Windows encodes pointers to objects and decodes them on the fly 
+        before using them. This function mimics the decoding routine so we
+        can generate the proper pointer values as well."""
                     
         value = value & 0xFFFFFFFFFFFFFFF8
         value = value >> magic
@@ -35,7 +42,11 @@ class Handles(interfaces_plugins.PluginInterface):
     
         return value
 
-    def get_item(self, handle_table_entry, handle_value):
+    def _get_item(self, handle_table_entry, handle_value):
+        """Given  a handle table entry (_HANDLE_TABLE_ENTRY) structure from
+        a process' handle table, determine where the corresponding object's 
+        _OBJECT_HEADER can be found."""
+        
         virtual = self.config["primary"]
         
         try:
@@ -43,7 +54,7 @@ class Handles(interfaces_plugins.PluginInterface):
             if not self.context.memory[virtual].is_valid(handle_table_entry.Object):
                 return None
             fast_ref = handle_table_entry.Object.cast(self.config["nt"] + constants.BANG + "_EX_FAST_REF")
-            object_header = fast_ref.dereference_as(self.config["nt"] + constants.BANG + "_OBJECT_HEADER")  
+            object_header = fast_ref.dereference().cast(self.config["nt"] + constants.BANG + "_OBJECT_HEADER")  
             object_header.GrantedAccess = handle_table_entry.GrantedAccess
         except AttributeError:
             # starting with windows 8 
@@ -54,9 +65,9 @@ class Handles(interfaces_plugins.PluginInterface):
             
             # is this the right thing to raise here?
             if magic == None:
-                raise AttributeError
+                raise AttributeError("Unable to find the SAR value for decoding handle table pointers")
             
-            offset = self.decode_pointer(handle_table_entry.LowValue, magic)
+            offset = self._decode_pointer(handle_table_entry.LowValue, magic)
             #print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
             object_header = self.context.object(self.config["nt"] + constants.BANG + "_OBJECT_HEADER", virtual, offset = offset)
             object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
@@ -72,11 +83,11 @@ class Handles(interfaces_plugins.PluginInterface):
                 
         if self._sar_value is None:
                 
-            if not has_capsone:
+            if not has_capstone:
                 return None
         
             virtual_layer_name = self.config['primary']
-            kvo = self.config['primary.kernel_virtual_offset']
+            kvo = self.context.memory[virtual_layer_name].config['kernel_virtual_offset']
             ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual_layer_name, offset = kvo)
 
             try:
@@ -88,7 +99,7 @@ class Handles(interfaces_plugins.PluginInterface):
             if data == None:
                 return None
             
-            md = Cs(CS_ARCH_X86, CS_MODE_64)
+            md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
         
             for (address, size, mnemonic, op_str) in md.disasm_lite(data, kvo + func_addr):
                 #print("{} {} {} {}".format(address, size, mnemonic, op_str))
@@ -115,7 +126,7 @@ class Handles(interfaces_plugins.PluginInterface):
             self._type_map = {}
 
             virtual_layer = self.config['primary']
-            kvo = self.config['primary.kernel_virtual_offset']
+            kvo = self.context.memory[virtual_layer].config['kernel_virtual_offset']
             ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual_layer, offset = kvo)
 
             try:
@@ -137,6 +148,7 @@ class Handles(interfaces_plugins.PluginInterface):
                 try:
                     type_name = objt.Name.String
                 except exceptions.PagedInvalidAddressException:
+                    vollog.log(constants.LOGLEVEL_VVV, "Cannot access _OBJECT_HEADER.Name at {0:#x}".format(objt.Name.vol.offset))
                     continue
         
                 self._type_map[i] = type_name
@@ -144,6 +156,10 @@ class Handles(interfaces_plugins.PluginInterface):
         return self._type_map 
         
     def object_type(self, object_header, type_map):
+        """Across all Windows versions, the _OBJECT_HEADER embeds details on the type of 
+        object (i.e. process, file) but the way its embedded differs between versions.
+        This API abstracts away those details."""
+    
         try:
             # vista and earlier have a Type member 
             return object_header.Type.Name.String
@@ -154,7 +170,7 @@ class Handles(interfaces_plugins.PluginInterface):
             try:
                 if self._cookie is None:
                     offset = self.context.symbol_space.get_symbol(self.config["nt"] + constants.BANG + "ObHeaderCookie").address
-                    kvo = self.config['primary.kernel_virtual_offset']
+                    kvo = self.context.memory[virtual].config['kernel_virtual_offset']
                     self._cookie = self.context.object(self.config["nt"] + constants.BANG + "unsigned int", virtual, offset = kvo + offset)
 
                 type_index = ((object_header.vol.offset >> 8) ^ self._cookie ^ ord(object_header.TypeIndex)) & 0xFF    
@@ -163,10 +179,13 @@ class Handles(interfaces_plugins.PluginInterface):
             
             return type_map.get(type_index)
 
-    def make_handle_array(self, offset, level, depth = 0):
+    def _make_handle_array(self, offset, level, depth = 0):
+        """Parse a process' handle table and yield valid handle table 
+        entries, going as deep into the table "levels" as necessary."""
     
-        kvo = self.config["primary.kernel_virtual_offset"]
         virtual = self.config["primary"]
+        kvo = self.context.memory[virtual].config['kernel_virtual_offset']
+        
         ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual, offset = kvo) 
     
         if level > 0:
@@ -188,7 +207,7 @@ class Handles(interfaces_plugins.PluginInterface):
         for entry in table:
 
             if level > 0:
-                for x in self.make_handle_array(entry, level - 1, depth):
+                for x in self._make_handle_array(entry, level - 1, depth):
                     yield x
                 depth += 1 
             else:
@@ -198,7 +217,7 @@ class Handles(interfaces_plugins.PluginInterface):
                 handle_value = ((entry.vol.offset - masked_offset) /
                                (subtype.size / handle_multiplier)) + handle_level_base
 
-                item = self.get_item(entry, handle_value)
+                item = self._get_item(entry, handle_value)
 
                 if item == None:
                     continue 
@@ -213,16 +232,15 @@ class Handles(interfaces_plugins.PluginInterface):
                     continue
 
     def handles(self, handle_table):
-    
-        LEVEL_MASK = 7
 
         try:
-            TableCode = handle_table.TableCode & ~LEVEL_MASK
-            table_levels = handle_table.TableCode & LEVEL_MASK
+            TableCode = handle_table.TableCode & ~self._level_mask
+            table_levels = handle_table.TableCode & self._level_mask
         except exceptions.PagedInvalidAddressException:
+            vollog.log(constants.LOGLEVEL_VVV, "Handle table parsing was aborted due to an invalid address exception")
             raise StopIteration
                         
-        for handle_table_entry in self.make_handle_array(TableCode, table_levels):
+        for handle_table_entry in self._make_handle_array(TableCode, table_levels):
             yield handle_table_entry
 
     def _generator(self, procs):
@@ -234,6 +252,7 @@ class Handles(interfaces_plugins.PluginInterface):
             try:
                 object_table = proc.ObjectTable
             except exceptions.PagedInvalidAddressException:
+                vollog.log(constants.LOGLEVEL_VVV, "Cannot access _EPROCESS.ObjectType at {0:#x}".format(proc.ObjectTable.vol.offset))
                 continue
         
             process_name = utility.array_to_string(proc.ImageFileName)
@@ -246,25 +265,26 @@ class Handles(interfaces_plugins.PluginInterface):
                         continue
                 
                     if obj_type == "File":
-                        item = entry.dereference_as(self.config["nt"] + constants.BANG + "_FILE_OBJECT")
+                        item = entry.Body.cast(self.config["nt"] + constants.BANG + "_FILE_OBJECT")
                         obj_name = item.file_name_with_device()
                     elif obj_type == "Process":
-                        item = entry.dereference_as(self.config["nt"] + constants.BANG + "_EPROCESS")
+                        item = entry.Body.cast(self.config["nt"] + constants.BANG + "_EPROCESS")
                         obj_name = "{} Pid {}".format(utility.array_to_string(proc.ImageFileName),
                                                   item.UniqueProcessId)
                     elif obj_type == "Thread":
-                        item = entry.dereference_as(self.config["nt"] + constants.BANG + "_ETHREAD")
+                        item = entry.Body.cast(self.config["nt"] + constants.BANG + "_ETHREAD")
                         obj_name = "Tid {} Pid {}".format(item.Cid.UniqueThread, item.Cid.UniqueProcess)
                     elif obj_type == "Key":
-                        item = entry.dereference_as(self.config["nt"] + constants.BANG + "_CM_KEY_BODY")
-                        obj_name = item.full_key_name() 
+                        item = entry.Body.cast(self.config["nt"] + constants.BANG + "_CM_KEY_BODY")
+                        obj_name = item.helper_full_key_name 
                     else:
                         try:
                             obj_name = entry.NameInfo.Name.String
                         except exceptions.InvalidAddressException:
                             obj_name = ""
                     
-                except (exceptions.InvalidAddressException, exceptions.PagedInvalidAddressException):
+                except (exceptions.InvalidAddressException):
+                    vollog.log(constants.LOGLEVEL_VVV, "Cannot access _OBJECT_HEADER at {0:#x}".format(entry.vol.offset))
                     continue
             
                 yield (0, (proc.UniqueProcessId, 

@@ -7,7 +7,14 @@ from volatility.framework import exceptions
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
 class _EX_FAST_REF(objects.Struct):
-    def dereference_as(self, target):
+    """This is a standard Windows structure that stores a pointer to an
+    object but also leverages the least significant bits to encode additional
+    details. When dereferencing the pointer, we need to strip off the extra bits."""
+    
+    def dereference(self):
+    
+        if constants.BANG not in self.vol.type_name:
+            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
     
         # the mask value is different on 32 and 64 bits 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
@@ -16,16 +23,25 @@ class _EX_FAST_REF(objects.Struct):
         else:
             max_fast_ref = 15
     
-        return self._context.object(target, layer_name = self.vol.layer_name, offset = self.Object & ~max_fast_ref)
+        return self._context.object(symbol_table_name + constants.BANG + "pointer", layer_name = self.vol.layer_name, offset = self.Object & ~max_fast_ref)
 
 class ExecutiveObject(object):
+    """This is used as a "mixin" that provides all kernel executive 
+    objects with a means of finding their own object header."""
+    
     def object_header(self):
+        if constants.BANG not in self.vol.type_name:
+            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
         body_offset = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_OBJECT_HEADER").relative_child_offset("Body") 
         return self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER", layer_name = self.vol.layer_name, offset = self.vol.offset - body_offset)
 
 class _CM_KEY_BODY(objects.Struct):
-    def full_key_name(self):
+    """This represents an open handle to a registry key and 
+    is not tied to the registry hive file format on disk."""
+    
+    @property
+    def helper_full_key_name(self):
         output = []
         kcb = self.KeyControlBlock
         while kcb.ParentKcb:
@@ -39,7 +55,8 @@ class _CM_KEY_BODY(objects.Struct):
         return "\\".join(reversed(output))
 
 class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
-    def device_name(self):
+    @property
+    def helper_device_name(self):
         header = self.object_header()
         return header.NameInfo.Name.String
 
@@ -47,7 +64,7 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
     def file_name_with_device(self):
         name = ""
         if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
-            name = "\\Device\\{}".format(self.DeviceObject.device_name())
+            name = "\\Device\\{}".format(self.DeviceObject.helper_device_name)
         
         try:    
             name += self.FileName.String
@@ -57,36 +74,33 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
         return name
 
 class _OBJECT_HEADER(objects.Struct):
-    def dereference_as(self, target):
-        return self._context.object(target, layer_name = self.vol.layer_name, offset = self.Body.vol.offset)
-
     @property
     def NameInfo(self):
+        if constants.BANG not in self.vol.type_name:
+            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
+            
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
     
         try:
             header_offset = ord(self.NameInfoOffset)
         except AttributeError:
-            #http://codemachine.com/article_objectheader.html
+            #http://codemachine.com/article_objectheader.html (Windows 7 and later)
             name_info_bit = 0x2 
             
             layer = self._context.memory[self.vol.layer_name]            
-            kvo = layer.config["kernel_virtual_offset"]
+            kvo = layer.config.get("kernel_virtual_offset", None)
                     
-            # is this the right thing to raise here?
             if kvo == None:
-                raise AttributeError
+                raise AttributeError("Could not find kernel_virtual_offset for layer: {}".format(self.vol.layer_name))
             
             ntkrnlmp = self._context.module(symbol_table_name, layer_name = self.vol.layer_name, offset = kvo)
             address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
             calculated_index = ord(self.InfoMask) & (name_info_bit | (name_info_bit - 1))
                         
-            header_offset = self._context.object(symbol_table_name + constants.BANG + "unsigned char", 
+            header_offset = ord(self._context.object(symbol_table_name + constants.BANG + "unsigned char", 
                                                 layer_name = self.vol.layer_name, 
-                                                offset = kvo + address + calculated_index)
-                                                
-            header_offset = ord(header_offset)
-                                                                                                               
+                                                offset = kvo + address + calculated_index))
+                                                                                                                                                               
         header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO", 
                                       layer_name = self.vol.layer_name, 
                                       offset = self.vol.offset - header_offset)
@@ -128,6 +142,9 @@ class _EPROCESS(generic.GenericIntelProcess):
 
     def load_order_modules(self):
         """Generator for DLLs in the order that they were loaded"""
+
+        if constants.BANG not in self.vol.type_name:
+            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
 
         proc_layer_name = self.add_process_layer(self._context)
 
