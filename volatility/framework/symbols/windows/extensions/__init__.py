@@ -2,8 +2,9 @@ import collections.abc
 import typing
 
 from volatility.framework import constants, objects, interfaces
-from volatility.framework.symbols import generic
 from volatility.framework import exceptions
+from volatility.framework.symbols import generic
+
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
@@ -11,102 +12,110 @@ class _EX_FAST_REF(objects.Struct):
     """This is a standard Windows structure that stores a pointer to an
     object but also leverages the least significant bits to encode additional
     details. When dereferencing the pointer, we need to strip off the extra bits."""
-    
-    def dereference(self):
-    
+
+    def dereference(self) -> interfaces.objects.ObjectInterface:
+
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
-    
-        # the mask value is different on 32 and 64 bits 
+
+        # the mask value is different on 32 and 64 bits
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
         if self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer").size == 4:
             max_fast_ref = 7
         else:
             max_fast_ref = 15
-    
-        return self._context.object(symbol_table_name + constants.BANG + "pointer", layer_name = self.vol.layer_name, offset = self.Object & ~max_fast_ref)
 
-class ExecutiveObject(object):
-    """This is used as a "mixin" that provides all kernel executive 
+        return self._context.object(symbol_table_name + constants.BANG + "pointer", layer_name = self.vol.layer_name,
+                                    offset = self.Object & ~max_fast_ref)
+
+
+class ExecutiveObject(interfaces.objects.ObjectInterface):
+    """This is used as a "mixin" that provides all kernel executive
     objects with a means of finding their own object header."""
-    
-    def object_header(self):
+
+    def object_header(self) -> '_OBJECT_HEADER':
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-        body_offset = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_OBJECT_HEADER").relative_child_offset("Body") 
-        return self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER", layer_name = self.vol.layer_name, offset = self.vol.offset - body_offset)
+        body_offset = self._context.symbol_space.get_type(
+            symbol_table_name + constants.BANG + "_OBJECT_HEADER").relative_child_offset("Body")
+        return self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER",
+                                    layer_name = self.vol.layer_name, offset = self.vol.offset - body_offset)
+
 
 class _CM_KEY_BODY(objects.Struct):
-    """This represents an open handle to a registry key and 
+    """This represents an open handle to a registry key and
     is not tied to the registry hive file format on disk."""
-    
+
     @property
-    def helper_full_key_name(self):
+    def helper_full_key_name(self) -> str:
         output = []
         kcb = self.KeyControlBlock
         while kcb.ParentKcb:
             if kcb.NameBlock.Name == None:
                 break
-            output.append(kcb.NameBlock.Name.cast("string", 
-                          encoding = "utf8", 
-                          max_length = kcb.NameBlock.NameLength, 
-                          errors = "replace"))
+            output.append(kcb.NameBlock.Name.cast("string",
+                                                  encoding = "utf8",
+                                                  max_length = kcb.NameBlock.NameLength,
+                                                  errors = "replace"))
             kcb = kcb.ParentKcb
         return "\\".join(reversed(output))
 
+
 class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
     @property
-    def helper_device_name(self):
+    def helper_device_name(self) -> str:
         header = self.object_header()
-        return header.NameInfo.Name.String
+        return header.NameInfo.Name.String  # type: ignore
+
 
 class _FILE_OBJECT(objects.Struct, ExecutiveObject):
-    def file_name_with_device(self):
+    def file_name_with_device(self) -> str:
         name = ""
         if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
             name = "\\Device\\{}".format(self.DeviceObject.helper_device_name)
-        
-        try:    
+
+        try:
             name += self.FileName.String
         except exceptions.PagedInvalidAddressException:
             pass
-        
+
         return name
+
 
 class _OBJECT_HEADER(objects.Struct):
     @property
-    def NameInfo(self):
+    def NameInfo(self) -> interfaces.objects.ObjectInterface:
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
-            
+
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-    
+
         try:
             header_offset = ord(self.NameInfoOffset)
         except AttributeError:
-            #http://codemachine.com/article_objectheader.html (Windows 7 and later)
-            name_info_bit = 0x2 
-            
-            layer = self._context.memory[self.vol.layer_name]            
+            # http://codemachine.com/article_objectheader.html (Windows 7 and later)
+            name_info_bit = 0x2
+
+            layer = self._context.memory[self.vol.layer_name]
             kvo = layer.config.get("kernel_virtual_offset", None)
-                    
+
             if kvo == None:
                 raise AttributeError("Could not find kernel_virtual_offset for layer: {}".format(self.vol.layer_name))
-            
+
             ntkrnlmp = self._context.module(symbol_table_name, layer_name = self.vol.layer_name, offset = kvo)
             address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
             calculated_index = ord(self.InfoMask) & (name_info_bit | (name_info_bit - 1))
-                        
-            header_offset = ord(self._context.object(symbol_table_name + constants.BANG + "unsigned char", 
-                                                layer_name = self.vol.layer_name, 
-                                                offset = kvo + address + calculated_index))
-                                                                                                                                                               
-        header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO", 
-                                      layer_name = self.vol.layer_name, 
+
+            header_offset = ord(self._context.object(symbol_table_name + constants.BANG + "unsigned char",
+                                                     layer_name = self.vol.layer_name,
+                                                     offset = kvo + address + calculated_index))
+
+        header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
+                                      layer_name = self.vol.layer_name,
                                       offset = self.vol.offset - header_offset)
         return header
-        
+
 
 class _ETHREAD(objects.Struct):
     def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
