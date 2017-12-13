@@ -1,14 +1,14 @@
 import base64
+import codecs
 import copy
 import json
 import logging
-import lzma
 import os
 import pathlib
-import urllib.parse
+import zipfile
 
 from volatility import schemas
-from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
+from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects, layers
 from volatility.framework.symbols import native
 
 vollog = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def _construct_delegate_function(name, is_property = False):
 
 
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
-    def __init__(self, context, config_path, name, isf_filepath, native_types = None, validate = True):
+    def __init__(self, context, config_path, name, isf_url, native_types = None, validate = True):
         """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
         done.
@@ -61,32 +61,24 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         :type config_path:
         :param name:
         :type name:
-        :param isf_filepath:
-        :type isf_filepath:
+        :param isf_url:
+        :type isf_url:
         :param native_types:
         :type native_types:
         :param validate: Determines whether the ISF file will be validated against the appropriate schema
         :type validate: bool
         """
         # Check there are no obvious errors
-        url = urllib.parse.urlparse(isf_filepath)
-        if url.scheme != 'file':
-            raise NotImplementedError(
-                "This scheme is not yet implemented for the Intermediate Symbol Format: {}".format(url.scheme))
-
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        url_path = urllib.parse.unquote(url.path)
-        if url_path.endswith('.xz'):
-            fp = lzma.open(url_path, 'rt')
-        else:
-            fp = open(url_path, "r")
-        json_object = json.load(fp)
+        fp = layers.ResourceAccessor().open(isf_url)
+        reader = codecs.getreader("utf-8")
+        json_object = json.load(reader(fp))
         fp.close()
 
         # Validation is expensive, but we cache to store the hashes of successfully validated json objects
         if validate and not schemas.validate(json_object):
-            raise exceptions.SymbolSpaceError("File does not pass version validation: {}".format(url.geturl()))
+            raise exceptions.SymbolSpaceError("File does not pass version validation: {}".format(isf_url))
 
         metadata = json_object.get('metadata', None)
 
@@ -99,28 +91,6 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Inherit
         super().__init__(context, config_path, name, native_types or self._delegate.natives)
-
-    @classmethod
-    def open(cls, context, config_path, name, relative_isf, native_types = None):
-        """Constructs an IntermediateSymbolTable based on a relative path rather than a full URL
-
-        This will attempt to load .json and .json.xz files
-        """
-        search_paths = constants.SYMBOL_BASEPATHS
-        isf_url = None
-        for path in search_paths:
-            # Favour specific name, over uncompressed JSON (user-editable), over compressed JSON over uncompressed files
-            for extension in ['', '.json', '.json.xz']:
-                test = os.path.join(path, relative_isf + extension)
-                if os.path.exists(test):
-                    isf_url = pathlib.Path(test).as_uri()
-                    break
-            if isf_url:
-                break
-        else:
-            raise FileNotFoundError(
-                "ISF path fragment {} could not be found in standard search paths".format(relative_isf))
-        return cls(context, config_path, name, isf_url, native_types)
 
     def _closest_version(self, version, versions):
         """Determines the highest suitable handler for specified version format
@@ -145,6 +115,39 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     get_type_class = _construct_delegate_function('get_type_class')
     set_type_class = _construct_delegate_function('set_type_class')
     del_type_class = _construct_delegate_function('del_type_class')
+
+    @classmethod
+    def file_symbol_url(cls, sub_path, filename = None):
+        """Returns an iterator of appropriate file-scheme symbol URLs that can be opened by a ResourceAccessor class
+
+        Filter reduces the number of results returned to only those URLs containing that string
+        """
+        # Check user-modifiable files first, then compressed ones
+        extensions = ['.json', '.json.xz', '.json.gz', '.json.bz2']
+        if filename is None:
+            filename = "*"
+        # Check user symbol directory first, then fallback to the framework's library to allow for overloading
+        for path in constants.SYMBOL_BASEPATHS:
+            if not os.path.isabs(path):
+                path = os.path.abspath(os.path.join(__file__, path))
+            for extension in extensions:
+                # Hopefully these will not be large lists, otherwise this might be slow
+                try:
+                    for found in pathlib.Path(path).joinpath(sub_path).resolve().rglob(filename + extension):
+                        yield found.as_uri()
+                except FileNotFoundError:
+                    # If there's no linux symbols, don't cry about it
+                    pass
+            # Finally try looking in zip files
+            zip_path = os.path.join(path, sub_path + ".zip")
+            if os.path.exists(zip_path):
+                # We have a zipfile, so run through it and look for sub files that match the filename
+                with zipfile.ZipFile(zip_path) as zfile:
+                    for name in zfile.namelist():
+                        for extension in extensions:
+                            # By ending with an extension (and therefore, not /), we should not return any directories
+                            if name.endswith(filename + extension) or (filename == "*" and name.endswith(extension)):
+                                yield "jar:file:" + str(pathlib.Path(zip_path)) + "!" + name
 
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface):
@@ -270,6 +273,10 @@ class Version1Format(ISFormatTable):
         reference_name = dictionary['name']
         if constants.BANG not in reference_name:
             reference_name = self.name + constants.BANG + reference_name
+        else:
+            reference_parts = reference_name.split(constants.BANG)
+            reference_name = (self.table_mapping.get(reference_parts[0], reference_parts[0]) +
+                              constants.BANG + constants.BANG.join(reference_parts[1:]))
 
         return objects.templates.ReferenceTemplate(type_name = reference_name)
 

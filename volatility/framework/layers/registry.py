@@ -24,13 +24,13 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         self._base_layer = self.config["base_layer"]
         self._hive_offset = self.config["hive_offset"]
-        self._table_name = self.config["ntkrnlmp"]
+        self._table_name = self.config["nt_symbols"]
 
         self._reg_table_name = context.symbol_space.free_table_name("registry")
 
         reg_path = "file://" + os_path.join(os_path.dirname(__file__), '..', 'symbols', 'windows', 'reg.json')
         table = intermed.IntermediateSymbolTable(context = context, config_path = config_path,
-                                                 name = self._reg_table_name, isf_filepath = reg_path)
+                                                 name = self._reg_table_name, isf_url = reg_path)
         context.symbol_space.append(table)
 
         self.hive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
@@ -46,7 +46,9 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._minaddr = 0
         self._maxaddr = self._base_block.Length
 
-        # print("MAPPING", self.mapping(self._base_block.RootCell, length = 2))
+        if self._base_block.Length <= 0:
+            raise exceptions.StructureException(
+                "Invalid registry base_block length: {}".format(self._base_block.Length))
 
     @property
     def address_mask(self):
@@ -76,8 +78,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         elif signature == 'vk':
             return cell.u.KeyValue
         elif signature == 'db':
+            # Big Data
             return cell.u.ValueData
-        elif signature == 'lf' or signature == 'lh':
+        elif signature == 'lf' or signature == 'lh' or signature == 'ri':
+            # Fast Leaf, Hash Leaf, Index Root
             return cell.u.KeyIndex
         else:
             # It doesn't matter that we use KeyNode, we're just after the first two bytes
@@ -91,11 +95,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         if key.endswith("\\"):
             key = key[:-1]
         key_array = key.split('\\')
-        depth = 0
         found_key = []
-        while len(key_array) > 1 and node_key:
+        while key_array and node_key:
             for subkey in node_key.get_subkeys():
-                if subkey.keyname == key_array[depth]:
+                if subkey.helper_name == key_array[0]:
                     node_key = subkey
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
                     break
@@ -124,7 +127,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
     def get_requirements(cls):
         return [IntRequirement(name = 'hive_offset', description = '', default = 0, optional = False),
-                requirements.SymbolRequirement(name = "ntkrnlmp", description = "Windows OS"),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
                 TranslationLayerRequirement(name = 'base_layer', optional = False)]
 
     def _translate(self, offset):
@@ -167,8 +170,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                     hbin_offset = hbin_offset - 0x1000
                     hbin = self.context.object(self._reg_table_name + constants.BANG + "_HBIN",
                                                offset = hbin_offset, layer_name = self._base_layer)
-                if translated_offset + length > hbin_offset + hbin.Size:
-                    raise RegistryFormatException("Cell address outside expected HBIN")
+                    if translated_offset + length > hbin_offset + hbin.Size:
+                        raise RegistryFormatException("Cell address outside expected HBIN")
             response.append((offset, translated_offset, length, self._base_layer))
             length -= length
         return response

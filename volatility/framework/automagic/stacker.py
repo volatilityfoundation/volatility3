@@ -8,24 +8,14 @@ once a layer successfully stacks on top of the existing layers, it is removed fr
 """
 
 import logging
-from urllib import parse
 
 import volatility
-from volatility.framework import configuration, interfaces
+from volatility.framework import configuration, interfaces, constants
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical
 
 vollog = logging.getLogger(__name__)
-
-IMPORTED_MAGIC = False
-try:
-    import magic
-
-    IMPORTED_MAGIC = True
-    vollog.debug("Imported python-magic, autodetecting compressed files based on content")
-except ImportError:
-    pass
 
 
 class LayerStacker(interfaces.automagic.AutomagicInterface):
@@ -55,47 +45,20 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         if unsatisfied:
             vollog.info("Unable to run LayerStacker, unsatisfied requirement: {}".format(unsatisfied))
             return unsatisfied
-        if 'single_location' not in self.config:
-            vollog.info("Unable to run LayerStacker, single_location parameter not provided")
-            return []
-        location = self.config["single_location"]
-        if not location:
-            vollog.info("Unable to run LayerStacker, single_location parameter not provided")
-            return []
+        if not self.config.get('single_location', None):
+            raise ValueError("Unable to run LayerStacker, single_location parameter not provided")
+        location = self.config['single_location']
         self._check_type(location, str)
         self._check_type(requirement, interfaces.configuration.RequirementInterface)
-        location = parse.urlparse(location)
 
         # Setup the local copy of the resource
-        self.local_store = None
-        if location.scheme == "file":
-            self.local_store = location.path
-        else:
-            vollog.warning("Only file scheme supported for single-location")
-            return []
-
         new_context = context.clone()
         current_layer_name = context.memory.free_layer_name("FileLayer")
         current_config_path = interfaces.configuration.path_join(config_path, "stack", current_layer_name)
         # This must be specific to get us started, setup the config and run
-        new_context.config[interfaces.configuration.path_join(current_config_path, "filename")] = self.local_store
+        new_context.config[interfaces.configuration.path_join(current_config_path, "location")] = location
 
-        # Determine compression
-        detected = None
-        if IMPORTED_MAGIC:
-            try:
-                detected = magic.detect_from_filename(self.local_store)
-            except:
-                pass
-
-        if self.local_store.endswith('.xz') or (detected and detected.mime_type == 'application/x-xz'):
-            physical_layer = physical.XzFileLayer(new_context, current_config_path, current_layer_name)
-        elif self.local_store.endswith('.bz2') or (detected and detected.mime_type == 'application/x-bzip2'):
-            physical_layer = physical.Bz2FileLayer(new_context, current_config_path, current_layer_name)
-        elif self.local_store.endswith('.gz') or (detected and detected.mime_type == 'application/x-gzip'):
-            physical_layer = physical.GzFileLayer(new_context, current_config_path, current_layer_name)
-        else:
-            physical_layer = physical.FileLayer(new_context, current_config_path, current_layer_name)
+        physical_layer = physical.FileLayer(new_context, current_config_path, current_layer_name)
         new_context.add_layer(physical_layer)
 
         # Repeatedly apply "determine what this is" code and build as much up as possible
@@ -103,7 +66,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         stacked_layers = [current_layer_name]
         stack_set = sorted(volatility.framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
                            key = lambda x: x.stack_order)
-        while stacked == True:
+        while stacked:
             stacked = False
             new_layer = None
             stacker_cls = None
@@ -115,7 +78,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                         new_context.memory.add_layer(new_layer)
                         break
                 except Exception as excp:
-                    pass
+                    # Stacking exceptions are likely only of interest to developers, so the lowest level of logging
+                    vollog.log(constants.LOGLEVEL_VVV, "Exception during stacking: {}".format(str(excp)))
             else:
                 stacked = False
             if new_layer and stacker_cls:

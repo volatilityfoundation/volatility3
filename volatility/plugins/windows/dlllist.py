@@ -5,7 +5,7 @@ from volatility.plugins.windows import pslist
 
 
 class DllList(interfaces_plugins.PluginInterface):
-    """Lists the loaded modules in a particular memory image"""
+    """Lists the loaded modules in a particular windows memory image"""
 
     @classmethod
     def get_requirements(cls):
@@ -34,7 +34,7 @@ class DllList(interfaces_plugins.PluginInterface):
 
     def run(self):
 
-        plugin = pslist.PsList(self.context, "plugins.DllList")
+        plugin = pslist.PsList(self.context, self.config_path)
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),

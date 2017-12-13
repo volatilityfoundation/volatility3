@@ -6,6 +6,8 @@ from volatility.framework.objects import utility
 
 
 class PsList(interfaces_plugins.PluginInterface):
+    """Lists the processes present in a particular linux memory image"""
+
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',
@@ -29,7 +31,7 @@ class PsList(interfaces_plugins.PluginInterface):
     def list_tasks(self):
         """Lists all the tasks in the primary layer"""
 
-        layer_name = self.config['primary.memory_layer']
+        layer_name = self.context.memory[self.config['primary']].config['memory_layer']
 
         _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config["vmlinux"], layer_name)
         vmlinux = self.context.module(self.config["vmlinux"], self.config["primary"], aslr_shift)

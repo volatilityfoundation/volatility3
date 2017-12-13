@@ -6,12 +6,22 @@ import functools
 import logging
 import math
 import multiprocessing
+import traceback
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants, exceptions, validity
 from volatility.framework.interfaces import configuration, context
 
 vollog = logging.getLogger(__name__)
+
+IMPORTED_MAGIC = False
+try:
+    import magic
+
+    IMPORTED_MAGIC = True
+    vollog.debug("Imported python-magic, autodetecting compressed files based on content")
+except ImportError:
+    pass
 
 
 class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
@@ -210,7 +220,10 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                                           "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
                     yield from scan_chunk(value)
         except Exception as e:
-            vollog.debug("Exception: {}".format(str(e)))
+            # We don't care the kind of exception, so catch and report on everything, yielding nothing further
+            vollog.debug("Scan Failure: {}".format(str(e)))
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
 
     def _scan_iterator(self, scanner, min_address, max_address):
         return range(min_address, max_address, scanner.chunk_size)
@@ -388,3 +401,5 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
 class DummyProgress(object):
     def __init__(self):
         self.value = 0
+
+

@@ -100,7 +100,7 @@ class DtbTest(validity.ValidityRoutines):
 
 class DtbTest32bit(DtbTest):
     def __init__(self):
-        super().__init__(layer_type = layers.intel.Intel,
+        super().__init__(layer_type = layers.intel.WindowsIntel,
                          ptr_struct = "I",
                          ptr_reference = 0x300,
                          mask = 0xFFFFF000)
@@ -108,7 +108,7 @@ class DtbTest32bit(DtbTest):
 
 class DtbTest64bit(DtbTest):
     def __init__(self):
-        super().__init__(layer_type = layers.intel.Intel32e,
+        super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
                          ptr_reference = 0x1ED,
                          mask = 0x3FFFFFFFFFF000)
@@ -116,7 +116,7 @@ class DtbTest64bit(DtbTest):
 
 class DtbTestPae(DtbTest):
     def __init__(self):
-        super().__init__(layer_type = layers.intel.IntelPAE,
+        super().__init__(layer_type = layers.intel.WindowsIntelPAE,
                          ptr_struct = "Q",
                          ptr_reference = 0x3,
                          mask = 0x3FFFFFFFFFF000)
@@ -173,13 +173,13 @@ class DtbSelfReferential(DtbTest):
 
 class DtbSelfRef32bit(DtbSelfReferential):
     def __init__(self):
-        super().__init__(layer_type = layers.intel.Intel, ptr_struct = "I", ptr_reference = 0x300,
+        super().__init__(layer_type = layers.intel.WindowsIntel, ptr_struct = "I", ptr_reference = 0x300,
                          mask = 0xFFFFF000)
 
 
 class DtbSelfRef64bit(DtbSelfReferential):
     def __init__(self):
-        super().__init__(layer_type = layers.intel.Intel32e, ptr_struct = "Q", ptr_reference = 0x1ED,
+        super().__init__(layer_type = layers.intel.WindowsIntel32e, ptr_struct = "Q", ptr_reference = 0x1ED,
                          mask = 0x3FFFFFFFFFF000)
 
 
@@ -291,7 +291,8 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
                 context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
                 # TODO: Need to determine the layer type (chances are high it's x64, hence this default)
-                layer = layers.intel.Intel32e(context, config_path = config_path, name = new_layer_name)
+                layer = layers.intel.WindowsIntel32e(context, config_path = config_path,
+                                                     name = new_layer_name)
         if layer is not None and config_path:
             vollog.debug("DTB was found at: 0x{:0x}".format(
                 context.config[interfaces.configuration.path_join(config_path, "page_map_offset")]))

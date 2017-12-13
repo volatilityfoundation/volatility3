@@ -56,10 +56,3 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
         :return: a TreeGrid object that can then be passed to a Renderer.
         :rtype: interfaces.renderers.TreeGrid
         """
-
-    def __call__(self, method = 'run', **kwargs):
-        """Method to make a plugin callable.  It must still have been instantiated with a context and a config_path"""
-        for k, v in kwargs:
-            self.config[k] = v
-        method = getattr(self, method)
-        return method()

@@ -12,7 +12,7 @@ class HiveList(plugins.PluginInterface):
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt", description = "Windows OS")]
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
@@ -29,8 +29,8 @@ class HiveList(plugins.PluginInterface):
         layer_name = self.config['primary']
 
         # We only use the object factory to demonstrate how to use one
-        kvo = self.config['primary.kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config["nt"], layer_name = layer_name, offset = kvo)
+        kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = layer_name, offset = kvo)
 
         list_head = ntkrnlmp.get_symbol("CmpHiveListHead").address
         list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + list_head)

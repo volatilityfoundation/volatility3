@@ -96,7 +96,7 @@ class CommandLine(object):
                 self.populate_requirements_argparse(parser, amagic.__class__)
                 configurables_list[amagic.__class__.__name__] = amagic
 
-        subparser = parser.add_subparsers(title = "Plugins", dest = "plugin")
+        subparser = parser.add_subparsers(title = "Plugins", dest = "plugin", action = HelpfulSubparserAction)
         for plugin in plugin_list:
             plugin_parser = subparser.add_parser(plugin, help = plugin_list[plugin].__doc__)
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
@@ -158,14 +158,18 @@ class CommandLine(object):
         ###
         # Clever magic figures out how to fulfill each requirement that might not be fulfilled
         if not args.quiet:
-            automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
+            errors = automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
         else:
-            automagic.run(automagics, ctx, plugin, "plugins")
+            errors = automagic.run(automagics, ctx, plugin, "plugins")
 
         # Check all the requirements and/or go back to the automagic step
         unsatisfied = plugin.unsatisfied(ctx, plugin_config_path)
         if unsatisfied:
-            raise RuntimeError("Unable to validate the plugin configuration: {}".format(unsatisfied))
+            for error in errors:
+                error_string = [x for x in error.format_exception_only()][-1]
+                vollog.warning("Automagic exception occured: {}".format(error_string[:-1]))
+                vollog.log(constants.LOGLEVEL_V, "".join(error.format(chain = True)))
+            parser.exit(1, "Unable to validate the plugin requirements: {}\n".format(unsatisfied))
 
         print("\n\n")
 
@@ -240,6 +244,50 @@ class CommandLine(object):
             parser.add_argument("--" + requirement.name.replace('_', '-'), help = requirement.description,
                                 default = requirement.default, dest = requirement.name,
                                 required = not requirement.optional, **additional)
+
+
+# We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
+class HelpfulSubparserAction(argparse._SubParsersAction):
+    """Class to either select a unique plugin based on a substring, or identity the alternatives"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # We don't want the action self-check to kick in, so we remove the choices list, the check happens in __call__
+        self.choices = None
+
+    def __call__(self, parser, namespace, values, option_string = None):
+        parser_name = values[0]
+        arg_strings = values[1:]
+
+        # set the parser name if requested
+        if self.dest is not argparse.SUPPRESS:
+            setattr(namespace, self.dest, parser_name)
+
+        matched_parsers = [name for name in self._name_parser_map if parser_name in name]
+
+        if len(matched_parsers) < 1:
+            msg = 'invalid choice {} (choose from {})'.format(parser_name, ', '.join(self._name_parser_map))
+            raise argparse.ArgumentError(self, msg)
+        if len(matched_parsers) > 1:
+            msg = 'plugin {} matches multiple plugins ({})'.format(parser_name, ', '.join(matched_parsers))
+            raise argparse.ArgumentError(self, msg)
+        parser = self._name_parser_map[matched_parsers[0]]
+        setattr(namespace, 'plugin', matched_parsers[0])
+
+        # parse all the remaining options into the namespace
+        # store any unrecognized options on the object, so that the top
+        # level parser can decide what to do with them
+
+        # In case this subparser defines new defaults, we parse them
+        # in a new namespace object and then update the original
+        # namespace for the relevant parts.
+        subnamespace, arg_strings = parser.parse_known_args(arg_strings, None)
+        for key, value in vars(subnamespace).items():
+            setattr(namespace, key, value)
+
+        if arg_strings:
+            vars(namespace).setdefault(argparse._UNRECOGNIZED_ARGS_ATTR, [])
+            getattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
 
 
 def progress_callback(progress, description = None):

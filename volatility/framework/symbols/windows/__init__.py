@@ -7,8 +7,8 @@ from volatility.framework.symbols.windows.extensions import registry
 class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
     provides = {"type": "interface"}
 
-    def __init__(self, context, config_path, name, isf_filepath):
-        super().__init__(context = context, config_path = config_path, name = name, isf_filepath = isf_filepath)
+    def __init__(self, context, config_path, name, isf_url):
+        super().__init__(context = context, config_path = config_path, name = name, isf_url = isf_url)
 
         # Set-up windows specific types
         self.set_type_class('_ETHREAD', extensions._ETHREAD)
@@ -27,5 +27,5 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.StringRequirement("isf_filepath",
+        return [requirements.StringRequirement("isf_url",
                                                description = "JSON file containing the symbols encoded in the Intermediate Symbol Format")]

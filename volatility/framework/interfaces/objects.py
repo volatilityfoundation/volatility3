@@ -3,10 +3,13 @@
 
 import collections
 import collections.abc
+import logging
 from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants, validity
 from volatility.framework.interfaces import context as interfaces_context
+
+vollog = logging.getLogger(__name__)
 
 
 class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
@@ -97,6 +100,19 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
         Raises InvalidDataException on failure to validate the data correctly.
         """
+
+    def get_symbol_table(self):
+        """Returns the symbol table for this particular object
+
+        Returns none if the symbol table cannot be identified.
+        """
+        if constants.BANG not in self.vol.type_name:
+            vollog.debug("Unable to determine table for symbol: {}".format(self.vol.type_name))
+            return None
+        table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
+        if table_name not in self._context.symbol_space:
+            vollog.debug("Symbol table not found in context's symbol_space for symbol: {}".format(self.vol.type_name))
+        return self._context.symbol_space[table_name]
 
     def cast(self, new_type_name, **additional):
         """Returns a new object at the offset and from the layer that the current object inhabits

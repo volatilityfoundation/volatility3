@@ -7,6 +7,8 @@ from volatility.framework.layers.registry import RegistryHive
 
 vollog = logging.getLogger(__name__)
 
+BIG_DATA_MAXLEN = 0x3fd8
+
 
 class RegValueTypes(enum.Enum):
     REG_NONE = 0
@@ -54,7 +56,7 @@ class _CM_KEY_NODE(objects.Struct):
     """Extension to allow traversal of registry keys"""
 
     @property
-    def volatile(self):
+    def helper_volatile(self):
         if not isinstance(self._context.memory[self.vol.layer_name], RegistryHive):
             raise ValueError("Cannot determine volatility of registry key without an offset in a RegistryHive layer")
         return bool(self.vol.offset & 0x80000000)
@@ -72,7 +74,31 @@ class _CM_KEY_NODE(objects.Struct):
             # We could change the array type to a struct with both parts
             subkey_node.List.count = subkey_node.Count * 2
             for key_offset in subkey_node.List[::2]:
-                yield hive.get_node(key_offset)
+                if key_offset < hive.maximum_address:
+                    node = hive.get_node(key_offset)
+                    if node.vol.type_name.endswith(constants.BANG + "_CM_KEY_INDEX"):
+                        signature = node.cast('string', max_length = 2, encoding = 'latin-1')
+                        listjump = None
+                        if signature == 'lh' or signature == 'lf':
+                            # Leaf node (either Fast Leaf or Hash Leaf)
+                            # We need to descend down these nodes
+                            listjump = 2
+                        elif signature == 'ri':
+                            # Index root found
+                            listjump = 1
+                        if listjump:
+                            node.List.count = node.Count
+                            for subnode_offset in node.List[::listjump]:
+                                subnode = hive.get_node(subnode_offset)
+                                yield subnode
+                    elif node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
+                        yield node
+                    else:
+                        vollog.debug(
+                            "Unexpected node type encountered when traversing subkeys: {}".format(node.vol.type_name))
+                else:
+                    vollog.log(constants.LOGLEVEL_VVV,
+                               "Node found with address outside the valid Hive size: {}".format(key_offset))
 
     def get_values(self):
         """Returns a list of the Value nodes for a key"""
@@ -114,6 +140,7 @@ class _CM_KEY_VALUE(objects.Struct):
         """Since this is just a casting convenience, it can be a property"""
         # Determine if the data is stored inline
         datalen = self.DataLength & 0x7fffffff
+        data = b""
         # Check if the data is stored inline
         layer = self._context.memory[self.vol.layer_name]
         if self.DataLength & 0x80000000 and (0 > datalen or datalen > 4):
@@ -122,7 +149,16 @@ class _CM_KEY_VALUE(objects.Struct):
             data = layer.read(self.Data.vol.offset, datalen)
         elif layer.hive.Version == 5 and datalen > 0x4000:
             # We're bigdata
-            raise NotImplementedError("Registry BIG_DATA not yet implmented")
+            big_data = layer.get_node(self.Data)
+            # Oddly, we get a list of addresses, at which are addresses, which then point to data blocks
+            for i in range(big_data.Count):
+                # The value 4 should actually be unsigned-int.size, but since it's a file format that shouldn't change
+                # the direct value 4 can be used instead
+                block_offset = layer.get_cell(big_data.List + (i * 4)).cast("unsigned int")
+                if block_offset < layer.maximum_address:
+                    amount = min(BIG_DATA_MAXLEN, datalen)
+                    data += layer.read(offset = layer.get_cell(block_offset).vol.offset, length = amount)
+                    datalen -= amount
         else:
             # Suspect Data actually points to a Cell,
             # but the length at the start could be negative so just adding 4 to jump past it
@@ -142,7 +178,11 @@ class _CM_KEY_VALUE(objects.Struct):
                 raise ValueError("Size of data does not match the type of registry value {}".format(self.helper_name))
             return struct.unpack("<Q", data)[0]
         if self_type in [RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK]:
-            return str(data, encoding = "utf-16-le")
+            # truncate after \x00\x00 to ensure it can
+            output = str(data, encoding = "utf-16-le", errors = 'replace')
+            if output.find("\x00") > 0:
+                output = output[:output.find("\x00")]
+            return output
         if self_type == RegValueTypes.REG_MULTI_SZ:
             return str(data, encoding = "utf-16-le").split("\x00")
         if self_type == RegValueTypes.REG_BINARY:

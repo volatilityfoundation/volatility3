@@ -170,7 +170,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 requirements.IntRequirement(name = 'page_map_offset',
                                             optional = False),
                 requirements.IntRequirement(name = 'kernel_virtual_offset',
-                                            optional = True)]
+                                            optional = True),
+                requirements.StringRequirement(name = 'linux_banner',
+                                               optional = True)]
 
     def _scan_iterator(self, scanner, min_address, max_address):
         previous = None
@@ -263,3 +265,14 @@ class WindowsMixin(object):
            For more information, see Windows Internals (6th Ed, Part 2, pages 268-269)
         """
         return (entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10)
+
+
+### These must be full separate classes so that JSON configs re-create them properly
+
+class WindowsIntel(WindowsMixin, Intel): pass
+
+
+class WindowsIntelPAE(WindowsMixin, IntelPAE): pass
+
+
+class WindowsIntel32e(WindowsMixin, Intel32e): pass

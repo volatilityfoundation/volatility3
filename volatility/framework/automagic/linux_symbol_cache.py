@@ -1,6 +1,5 @@
 import logging
 import os
-import pathlib
 import pickle
 from urllib import parse
 
@@ -12,6 +11,10 @@ vollog = logging.getLogger(__name__)
 
 class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
     """Runs through all Linux symbols tables and caches their banners"""
+
+    # Since this is necessary for ConstructionMagic, we set a lower priority
+    # The user would run it eventually either way, but running it first means it can be used that run
+    priority = 0
 
     @classmethod
     def load_linux_banners(cls):
@@ -41,18 +44,7 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
         # We only need to be called once, so no recursion necessary
         linuxbanners = self.load_linux_banners()
 
-        search_paths = constants.SYMBOL_BASEPATHS
-        cacheables = []
-        for path in search_paths:
-            # Favour specific name, over uncompressed JSON (user-editable), over compressed JSON over uncompressed files
-            for extension in ['.json', '.json.xz']:
-                # Hopefully these will not be large lists, otherwise this might be slow
-                try:
-                    cacheables += [x.as_uri() for x in
-                                   pathlib.Path(path).joinpath('linux').resolve().rglob('*' + extension)]
-                except FileNotFoundError:
-                    # If there's no linux symbols, don't cry about it
-                    pass
+        cacheables = list(intermed.IntermediateSymbolTable.file_symbol_url("linux"))
 
         for banner in linuxbanners:
             for json_file in linuxbanners[banner]:

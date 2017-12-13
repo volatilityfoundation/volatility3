@@ -1,9 +1,4 @@
-import bz2
-import gzip
-import lzma
-import os.path
-
-from volatility.framework import exceptions, interfaces
+from volatility.framework import exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
 
 
@@ -63,14 +58,17 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def __init__(self, context, config_path, name):
         super().__init__(context, config_path, name)
 
-        self._filename = self.config["filename"]
+        self._location = self.config["location"]
+        self._accessor = layers.ResourceAccessor()
         self._file_ = None
-        self._size = os.path.getsize(self._filename)
+        self._size = None
+        # Instantiate the file to throw exceptions if the file doesn't open
+        _ = self._file
 
     @property
-    def filename(self):
-        """Returns the filename on which this Layer abstracts"""
-        return self._filename
+    def location(self):
+        """Returns the location on which this Layer abstracts"""
+        return self._location
 
     @property
     def _file(self):
@@ -78,14 +76,20 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
         mode = "rb"
         if not self._file_:
-            self._file_ = open(self._filename, mode)
+            self._file_ = self._accessor.open(self._location, mode)
         return self._file_
 
     @property
     def maximum_address(self):
         """Returns the largest available address in the space"""
         # Zero based, so we return the size of the file minus 1
-        return self._size - 1
+        if self._size:
+            return self._size
+        orig = self._file.tell()
+        self._file.seek(0, 2)
+        self._size = self._file.tell()
+        self._file.seek(orig)
+        return self._size
 
     @property
     def minimum_address(self):
@@ -146,53 +150,4 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.StringRequirement(name = 'filename', optional = False)]
-
-
-class XzFileLayer(FileLayer):
-    def __init__(self, context, config_path, name):
-        super().__init__(context, config_path, name)
-        self._size = None
-
-    @property
-    def _file(self):
-        """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
-        # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
-        mode = "rb"
-        if not self._file_:
-            self._file_ = lzma.open(self._filename, mode)
-        return self._file_
-
-    @property
-    def maximum_address(self):
-        """Returns the largest available address in the space"""
-        # Calculate the size by seeking to the end and telling
-        if self._size:
-            return self._size
-        orig = self._file.tell()
-        self._file.seek(0, 2)
-        self._size = self._file.tell()
-        self._file.seek(orig)
-        return self._size
-
-
-class GzFileLayer(XzFileLayer):
-    @property
-    def _file(self):
-        """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
-        # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
-        mode = "rb"
-        if not self._file_:
-            self._file_ = gzip.open(self._filename, mode)
-        return self._file_
-
-
-class Bz2FileLayer(XzFileLayer):
-    @property
-    def _file(self):
-        """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
-        # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
-        mode = "rb"
-        if not self._file_:
-            self._file_ = bz2.open(self._filename, mode)
-        return self._file_
+        return [requirements.StringRequirement(name = 'location', optional = False)]

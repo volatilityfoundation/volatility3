@@ -52,3 +52,7 @@ class SymbolSpaceError(VolatilityException):
 
 class LayerException(VolatilityException):
     """Thrown when an error occurs dealing with memory and layers"""
+
+
+class StructureException(VolatilityException):
+    """Thrown when an error occurs dealing with an expected structure type"""
