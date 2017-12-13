@@ -53,8 +53,8 @@ class Handles(interfaces_plugins.PluginInterface):
             # before windows 7 
             if not self.context.memory[virtual].is_valid(handle_table_entry.Object):
                 return None
-            fast_ref = handle_table_entry.Object.cast(self.config["nt"] + constants.BANG + "_EX_FAST_REF")
-            object_header = fast_ref.dereference().cast(self.config["nt"] + constants.BANG + "_OBJECT_HEADER")  
+            fast_ref = handle_table_entry.Object.cast(self.config["nt_symbols"] + constants.BANG + "_EX_FAST_REF")
+            object_header = fast_ref.dereference().cast(self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER")  
             object_header.GrantedAccess = handle_table_entry.GrantedAccess
         except AttributeError:
             # starting with windows 8 
@@ -69,7 +69,7 @@ class Handles(interfaces_plugins.PluginInterface):
             
             offset = self._decode_pointer(handle_table_entry.LowValue, magic)
             #print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
-            object_header = self.context.object(self.config["nt"] + constants.BANG + "_OBJECT_HEADER", virtual, offset = offset)
+            object_header = self.context.object(self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER", virtual, offset = offset)
             object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
          
         object_header.HandleValue = handle_value
@@ -88,7 +88,7 @@ class Handles(interfaces_plugins.PluginInterface):
         
             virtual_layer_name = self.config['primary']
             kvo = self.context.memory[virtual_layer_name].config['kernel_virtual_offset']
-            ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual_layer_name, offset = kvo)
+            ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual_layer_name, offset = kvo)
 
             try:
                 func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
@@ -127,7 +127,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
             virtual_layer = self.config['primary']
             kvo = self.context.memory[virtual_layer].config['kernel_virtual_offset']
-            ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual_layer, offset = kvo)
+            ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual_layer, offset = kvo)
 
             try:
                 table_addr = ntkrnlmp.get_symbol("ObTypeIndexTable").address
@@ -143,7 +143,7 @@ class Handles(interfaces_plugins.PluginInterface):
                 # loop when we encounter the first null entry after that
                 if i > 0 and ptr == 0:
                     break 
-                objt = ptr.dereference().cast(self.config["nt"] + constants.BANG + "_OBJECT_TYPE")
+                objt = ptr.dereference().cast(self.config["nt_symbols"] + constants.BANG + "_OBJECT_TYPE")
         
                 try:
                     type_name = objt.Name.String
@@ -169,9 +169,9 @@ class Handles(interfaces_plugins.PluginInterface):
             virtual = self.config["primary"]
             try:
                 if self._cookie is None:
-                    offset = self.context.symbol_space.get_symbol(self.config["nt"] + constants.BANG + "ObHeaderCookie").address
+                    offset = self.context.symbol_space.get_symbol(self.config["nt_symbols"] + constants.BANG + "ObHeaderCookie").address
                     kvo = self.context.memory[virtual].config['kernel_virtual_offset']
-                    self._cookie = self.context.object(self.config["nt"] + constants.BANG + "unsigned int", virtual, offset = kvo + offset)
+                    self._cookie = self.context.object(self.config["nt_symbols"] + constants.BANG + "unsigned int", virtual, offset = kvo + offset)
 
                 type_index = ((object_header.vol.offset >> 8) ^ self._cookie ^ ord(object_header.TypeIndex)) & 0xFF    
             except AttributeError:
@@ -186,7 +186,7 @@ class Handles(interfaces_plugins.PluginInterface):
         virtual = self.config["primary"]
         kvo = self.context.memory[virtual].config['kernel_virtual_offset']
         
-        ntkrnlmp = self.context.module(self.config["nt"], layer_name = virtual, offset = kvo) 
+        ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual, offset = kvo) 
     
         if level > 0:
             subtype = ntkrnlmp.get_type("pointer")
@@ -265,17 +265,17 @@ class Handles(interfaces_plugins.PluginInterface):
                         continue
                 
                     if obj_type == "File":
-                        item = entry.Body.cast(self.config["nt"] + constants.BANG + "_FILE_OBJECT")
+                        item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT")
                         obj_name = item.file_name_with_device()
                     elif obj_type == "Process":
-                        item = entry.Body.cast(self.config["nt"] + constants.BANG + "_EPROCESS")
+                        item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_EPROCESS")
                         obj_name = "{} Pid {}".format(utility.array_to_string(proc.ImageFileName),
                                                   item.UniqueProcessId)
                     elif obj_type == "Thread":
-                        item = entry.Body.cast(self.config["nt"] + constants.BANG + "_ETHREAD")
+                        item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_ETHREAD")
                         obj_name = "Tid {} Pid {}".format(item.Cid.UniqueThread, item.Cid.UniqueProcess)
                     elif obj_type == "Key":
-                        item = entry.Body.cast(self.config["nt"] + constants.BANG + "_CM_KEY_BODY")
+                        item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_CM_KEY_BODY")
                         obj_name = item.helper_full_key_name 
                     else:
                         try:
