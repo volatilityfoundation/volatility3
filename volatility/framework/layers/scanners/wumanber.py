@@ -72,15 +72,22 @@ class WuManber(object):
 
 
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(usage = "Searches through a haystack for a set of needles")
+    parser.add_argument("-n", "--needles", help = "The filename of the file containing newline separated needles",
+                        required = True)
+    parser.add_argument("haystack", help = "The filename of the binary haystack file to search")
+    args = parser.parse_args()
+
+    with open(args.needles, "rb") as needles_fp:
+        needles = needles_fp.read().split(b"\n")
+    with open(args.haystack, "rb") as haystack_fp:
+        haystack = haystack_fp.read()
     wm = WuManber()
-    print("Preprocessing")
-    for word in [b"quick bro", b"lazy do", b"abcd", b"fgh"]:
-        wm.add_pattern(word)
+    for needle in needles:
+        if len(needle):
+            wm.add_pattern(needle)
     wm.preprocess()
-    print("Preprocessed")
-    print("Quick fox")
-    for result in wm.search(b"the quick brown fox jumped over the lazy dog"):
-        print("RESULT", repr(result))
-    print("ABC")
-    for result in wm.search(b"abcdefghijk"):
-        print("RESULT", repr(result))
+    for result in wm.search(haystack):
+        print("0x{:x} - {}".format(*result))
