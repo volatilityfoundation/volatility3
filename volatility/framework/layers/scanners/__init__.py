@@ -2,7 +2,7 @@ import re
 import typing
 
 from volatility.framework.interfaces import layers
-from volatility.framework.layers.scanners import wumanber
+from volatility.framework.layers.scanners import multiregexp
 
 
 class BytesScanner(layers.ScannerInterface):
@@ -44,7 +44,7 @@ class MultiStringScanner(layers.ScannerInterface):
     def __init__(self, patterns: typing.List[bytes]) -> None:
         super().__init__()
         self._check_type(patterns, list)
-        self._patterns = wumanber.WuManber()
+        self._patterns = multiregexp.MultiRegexp()
         for pattern in patterns:
             self._check_type(pattern, bytes)
             self._patterns.add_pattern(pattern)
