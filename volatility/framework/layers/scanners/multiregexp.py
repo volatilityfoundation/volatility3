@@ -21,3 +21,9 @@ class MultiRegexp(object):
             raise TypeError("Search haystack must be a byte string")
         for match in re.finditer(self._regex, haystack):
             yield (match.start(0), match.group())
+
+
+if __name__ == '__main__':
+    import multistring_testrig
+
+    multistring_testrig.tester(MultiRegexp())

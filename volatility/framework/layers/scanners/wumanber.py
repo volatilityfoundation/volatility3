@@ -72,22 +72,6 @@ class WuManber(object):
 
 
 if __name__ == '__main__':
-    import argparse
+    import multistring_testrig
 
-    parser = argparse.ArgumentParser(usage = "Searches through a haystack for a set of needles")
-    parser.add_argument("-n", "--needles", help = "The filename of the file containing newline separated needles",
-                        required = True)
-    parser.add_argument("haystack", help = "The filename of the binary haystack file to search")
-    args = parser.parse_args()
-
-    with open(args.needles, "rb") as needles_fp:
-        needles = needles_fp.read().split(b"\n")
-    with open(args.haystack, "rb") as haystack_fp:
-        haystack = haystack_fp.read()
-    wm = WuManber()
-    for needle in needles:
-        if len(needle):
-            wm.add_pattern(needle)
-    wm.preprocess()
-    for result in wm.search(haystack):
-        print("0x{:x} - {}".format(*result))
+    multistring_testrig.tester(WuManber())
