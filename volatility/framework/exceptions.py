@@ -37,9 +37,11 @@ class PagedInvalidAddressException(InvalidAddressException):
                  layer_name: str,
                  invalid_address: int,
                  invalid_bits: int,
+                 entry: int,
                  *args) -> None:
         super().__init__(layer_name, invalid_address, *args)
         self.invalid_bits = invalid_bits
+        self.entry = entry
 
 
 class InvalidDataException(VolatilityException):
