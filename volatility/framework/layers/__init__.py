@@ -6,6 +6,7 @@ import logging
 import lzma
 import os
 import ssl
+import sys
 import typing
 import urllib.parse
 import urllib.request
@@ -14,10 +15,8 @@ from urllib import request
 
 try:
     import magic
-
-    IMPORTED_MAGIC = True
 except ImportError:
-    IMPORTED_MAGIC = False
+    pass
 
 try:
     import smb.SMBHandler
@@ -26,7 +25,6 @@ except ImportError:
 
 from volatility import framework
 from volatility.framework import constants, validity
-from volatility.framework.interfaces.layers import IMPORTED_MAGIC
 from volatility.framework.layers import intel, lime, physical, segmented, vmware
 
 vollog = logging.getLogger(__name__)
@@ -92,13 +90,18 @@ class ResourceAccessor(object):
                 curfile = open(temp_filename, mode = "rb")
 
         # Determine whether the file is a particular type of file, and if so, open it as such
-        if IMPORTED_MAGIC:
+        IMPORTED_MAGIC = False
+        if 'magic' in sys.modules:
             while True:
+                detected = None
                 try:
                     # Detect the content
                     detected = magic.detect_from_fobj(curfile)
+                    IMPORTED_MAGIC = True
+                except AttributeError:
+                    pass
                 except:
-                    break
+                    pass
 
                 if detected:
                     if detected.mime_type == 'application/x-xz':
@@ -115,7 +118,7 @@ class ResourceAccessor(object):
                 # Read and rewind to ensure we're inside any compressed file layers
                 curfile.read(1)
                 curfile.seek(0)
-        else:
+        if not IMPORTED_MAGIC:
             # Somewhat of a hack, but prevents a hard dependency on the magic module
             url_path = parsed_url.path
             while True:
