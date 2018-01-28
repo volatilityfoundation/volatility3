@@ -5,6 +5,7 @@ Automagic objects attempt to automatically fill configuration values that a user
 import typing
 from abc import ABCMeta, abstractmethod
 
+import volatility.framework.configuration.requirements
 from volatility.framework import validity, interfaces
 from volatility.framework.interfaces import configuration as interfaces_configuration
 
@@ -41,8 +42,8 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
         super().__init__(context, config_path)
         for requirement in self.get_requirements():
             if not isinstance(requirement, (interfaces_configuration.InstanceRequirement,
-                                            interfaces_configuration.ChoiceRequirement,
-                                            interfaces_configuration.ListRequirement)):
+                                            volatility.framework.configuration.requirements.ChoiceRequirement,
+                                            volatility.framework.configuration.requirements.ListRequirement)):
                 raise ValueError(
                     "Automagic requirements must be an InstanceRequirement, ChoiceRequirement or ListRequirement")
 

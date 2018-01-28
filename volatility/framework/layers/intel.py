@@ -43,6 +43,12 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                  name: str) -> None:
         super().__init__(context, config_path, name)
         self._base_layer = self._check_type(self.config["memory_layer"], str)
+        self._swap_layers = []
+        self._check_type(self.config.get("swap_layers", []), list)
+        for layer_name in self.config.get("swap_layers", []):
+            self._check_type(layer_name, str)
+            if layer_name in context.memory:
+                self._swap_layers.append(layer_name)
         self._page_map_offset = self._check_type(self.config["page_map_offset"], int)
         self._optimize_scan = False
 
@@ -169,14 +175,20 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def dependencies(self) -> typing.List[str]:
         """Returns a list of the lower layer names that this layer is dependent upon"""
         # TODO: Add in the whole buffalo
-        return [self._base_layer]
+        return [self._base_layer] + self._swap_layers
 
     @classmethod
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'memory_layer',
                                                          optional = False),
-                requirements.TranslationLayerRequirement(name = 'swap_layer',
-                                                         optional = True),
+                requirements.ListRequirement(name = 'swap_layers',
+                                             element_type = requirements.StringRequirement(
+                                                 name = 'layer_name',
+                                                 optional = False
+                                             ),
+                                             min_elements = 0,
+                                             max_elements = 100,
+                                             optional = True),
                 requirements.IntRequirement(name = 'page_map_offset',
                                             optional = False),
                 requirements.IntRequirement(name = 'kernel_virtual_offset',

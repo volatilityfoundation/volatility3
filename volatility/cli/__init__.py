@@ -15,6 +15,7 @@ import logging
 import sys
 
 import volatility.framework
+import volatility.framework.configuration.requirements
 import volatility.plugins
 from volatility.framework import automagic, constants, contexts, interfaces
 from volatility.framework.configuration import requirements
@@ -226,7 +227,7 @@ class CommandLine(object):
                     additional["action"] = "store_true"
                     if "type" in additional:
                         del additional["type"]
-            elif isinstance(requirement, interfaces.configuration.ListRequirement):
+            elif isinstance(requirement, volatility.framework.configuration.requirements.ListRequirement):
                 if requirement.min_elements != requirement.max_elements:
                     if requirement.min_elements > 0:
                         additional["nargs"] = "+"
@@ -236,7 +237,7 @@ class CommandLine(object):
                 else:
                     additional["nargs"] = requirement.max_elements
                 additional["type"] = requirement.element_type.instance_type
-            elif isinstance(requirement, interfaces.configuration.ChoiceRequirement):
+            elif isinstance(requirement, volatility.framework.configuration.requirements.ChoiceRequirement):
                 additional["type"] = str
                 additional["choices"] = requirement.choices
             else:
