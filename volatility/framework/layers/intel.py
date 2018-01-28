@@ -308,7 +308,28 @@ class WindowsMixin(object):
 class WindowsIntel(WindowsMixin, Intel): pass
 
 
-class WindowsIntelPAE(WindowsMixin, IntelPAE): pass
+class WindowsIntelPAE(WindowsMixin, IntelPAE):
+
+    def _translate(self, offset):
+        try:
+            return super()._translate(offset)
+        except exceptions.PagedInvalidAddressException as excp:
+            entry = excp.entry
+            tbit = bool(entry & (1 << 11))
+            pbit = bool(entry & (1 << 10))
+            vbit = bool(entry & 1)
+            if (not tbit and not pbit and not vbit) and (self._mask(entry, 64, 32) >> 32) != 0:
+                swap_offset = (self._mask(entry, 64, 32) >> 32 << excp.invalid_bits) | self._mask(excp.invalid_address,
+                                                                                                  excp.invalid_bits, 0)
+                print("OFFSET", hex(offset),
+                      "ENTRY", hex(entry),
+                      "SWAP_OFFSET", hex(swap_offset),
+                      "INVALID_BITS", excp.invalid_bits)
+                pagefile_number = 0
+                if len(self.config.get('swap_layers', [])) >= (pagefile_number + 1):
+                    swap_layer_name = self.config['swap_layers'][pagefile_number]
+                    return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+            raise
 
 
 class WindowsIntel32e(WindowsMixin, Intel32e): pass
