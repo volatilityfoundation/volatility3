@@ -6,7 +6,6 @@ import logging
 import lzma
 import os
 import ssl
-import sys
 import typing
 import urllib.parse
 import urllib.request
@@ -15,7 +14,7 @@ import zipfile
 try:
     import magic
 except ImportError:
-    pass
+    magic = None
 
 try:
     import smb.SMBHandler
@@ -94,7 +93,7 @@ class ResourceAccessor(object):
 
         # Determine whether the file is a particular type of file, and if so, open it as such
         IMPORTED_MAGIC = False
-        if 'magic' in sys.modules:
+        if not magic is None:
             while True:
                 detected = None
                 try:
