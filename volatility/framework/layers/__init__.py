@@ -6,17 +6,15 @@ import logging
 import lzma
 import os
 import ssl
-import sys
 import typing
 import urllib.parse
 import urllib.request
 import zipfile
-from urllib import request
 
 try:
     import magic
 except ImportError:
-    pass
+    magic = None
 
 try:
     import smb.SMBHandler
@@ -46,7 +44,7 @@ class ResourceAccessor(object):
         self._progress_callback = progress_callback
         self._context = context
         self._cached_files = []  # type: typing.List[str]
-        self._handlers = list(framework.class_subclasses(request.BaseHandler))
+        self._handlers = list(framework.class_subclasses(urllib.request.BaseHandler))
         vollog.log(constants.LOGLEVEL_VVV,
                    "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
 
@@ -70,7 +68,11 @@ class ResourceAccessor(object):
                 if not temp_filename in self._cached_files or not os.path.exists(temp_filename):
                     vollog.info("Caching file at: {}".format(temp_filename))
 
-                    content_length = fp.info().get('Content-Length', -1)
+                    try:
+                        content_length = fp.info().get('Content-Length', -1)
+                    except AttributeError:
+                        # If our fp doesn't have an info member, carry on gracefully
+                        content_length = -1
                     cache_file = open(temp_filename, "wb")
 
                     count = 0
@@ -91,7 +93,7 @@ class ResourceAccessor(object):
 
         # Determine whether the file is a particular type of file, and if so, open it as such
         IMPORTED_MAGIC = False
-        if 'magic' in sys.modules:
+        if not magic is None:
             while True:
                 detected = None
                 try:
@@ -138,7 +140,7 @@ class ResourceAccessor(object):
         return curfile
 
 
-class JarHandler(request.BaseHandler):
+class JarHandler(urllib.request.BaseHandler):
     """Handles the jar scheme for URIs
 
     Reference used for the schema syntax:
