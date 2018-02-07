@@ -14,3 +14,9 @@ workspace.xml
 .mypy_cache
 stubs
 volatility/symbols/windows/*.pdb
+
+# Mac metadata files
+.DS_Store
+
+# Volatility's config 
+config*.json

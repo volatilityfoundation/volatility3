@@ -12,7 +12,7 @@ import typing
 
 from volatility.framework import exceptions, layers, validity
 from volatility.framework.layers import scanners
-from volatility.framework.symbols import native, intermed
+from volatility.framework.symbols import intermed, native
 
 if __name__ == "__main__":
     import sys
@@ -197,7 +197,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     _kvo, kernel = self.valid_kernels[virtual_layer]
                     filter = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
                     # Take the first result of search for the intermediate file
-                    isf_path = intermed.IntermediateSymbolTable.file_symbol_url("windows", filter).__next__()
+                    try:
+                        isf_path = intermed.IntermediateSymbolTable.file_symbol_url("windows", filter).__next__()
+                    except StopIteration:
+                        isf_path = None
                     if isf_path:
                         vollog.debug("Using symbol library: {}".format(filter))
                         clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
