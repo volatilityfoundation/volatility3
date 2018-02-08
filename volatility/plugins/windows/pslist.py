@@ -12,8 +12,9 @@ class PsList(plugins.PluginInterface):
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+                # Convert this to a ListRequirement so that people can filter on sets of pids
                 requirements.IntRequirement(name = 'pid',
-                                            description = "Process ID",
+                                            description = "Process ID to include (all other processes are excluded)",
                                             optional = True)]
 
     def update_configuration(self):
@@ -26,7 +27,11 @@ class PsList(plugins.PluginInterface):
                                                errors = 'replace')))
 
     def list_processes(self):
-        """Lists all the processes in the primary layer"""
+        """Lists all the processes in the primary layer that are in the pid config option"""
+
+        filter = lambda _: False
+        if self.config.get('pid', None) is not None:
+            filter = lambda x: x.UniqueProcessId not in [self.config['pid']]
 
         layer_name = self.config['primary']
 
@@ -52,7 +57,8 @@ class PsList(plugins.PluginInterface):
         eproc = ntkrnlmp.object(type_name = "_EPROCESS", offset = list_entry.vol.offset - reloff)
 
         for proc in eproc.ActiveProcessLinks:
-            yield proc
+            if not filter(proc):
+                yield proc
 
     def run(self):
         return renderers.TreeGrid([("PID", int),
