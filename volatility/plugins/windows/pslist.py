@@ -12,7 +12,7 @@ class PsList(plugins.PluginInterface):
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                # Convert this to a ListRequirement so that people can filter on sets of pids
+                # TODO: Convert this to a ListRequirement so that people can filter on sets of pids
                 requirements.IntRequirement(name = 'pid',
                                             description = "Process ID to include (all other processes are excluded)",
                                             optional = True)]
