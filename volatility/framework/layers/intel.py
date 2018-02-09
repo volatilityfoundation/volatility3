@@ -305,7 +305,26 @@ class WindowsMixin(object):
 
 ### These must be full separate classes so that JSON configs re-create them properly
 
-class WindowsIntel(WindowsMixin, Intel): pass
+class WindowsIntel(WindowsMixin, Intel):
+
+    def _translate(self, offset):
+        try:
+            return super()._translate(offset)
+        except exceptions.PagedInvalidAddressException as excp:
+            entry = excp.entry
+            tbit = bool(entry & (1 << 11))
+            pbit = bool(entry & (1 << 10))
+            unknown_bit = bool(entry & (1 << 7))
+            n = (entry >> 1) & 0xF
+            vbit = bool(entry & 1)
+            if (not tbit and not pbit and not vbit and unknown_bit) and (
+                    (entry >> self._page_size_in_bits) != 0):
+                swap_offset = entry >> self._page_size_in_bits << self._page_size_in_bits
+
+                if len(self.config.get('swap_layers', [])) >= (n + 1):
+                    swap_layer_name = self.config['swap_layers'][n]
+                    return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+            raise
 
 
 class WindowsIntelPAE(WindowsMixin, IntelPAE):
@@ -317,17 +336,15 @@ class WindowsIntelPAE(WindowsMixin, IntelPAE):
             entry = excp.entry
             tbit = bool(entry & (1 << 11))
             pbit = bool(entry & (1 << 10))
+            unknown_bit = bool(entry & (1 << 7))
+            n = (entry >> 1) & 0xF
             vbit = bool(entry & 1)
-            if (not tbit and not pbit and not vbit) and (self._mask(entry, 64, 32) >> 32) != 0:
+            if ((not tbit and not pbit and not vbit and unknown_bit) and (
+                    self._mask(entry, 64, 32) >> 32) != 0) and excp.invalid_bits == 12:
                 swap_offset = (self._mask(entry, 64, 32) >> 32 << excp.invalid_bits) | self._mask(excp.invalid_address,
                                                                                                   excp.invalid_bits, 0)
-                print("OFFSET", hex(offset),
-                      "ENTRY", hex(entry),
-                      "SWAP_OFFSET", hex(swap_offset),
-                      "INVALID_BITS", excp.invalid_bits)
-                pagefile_number = 0
-                if len(self.config.get('swap_layers', [])) >= (pagefile_number + 1):
-                    swap_layer_name = self.config['swap_layers'][pagefile_number]
+                if len(self.config.get('swap_layers', [])) >= (n + 1):
+                    swap_layer_name = self.config['swap_layers'][n]
                     return swap_offset, 1 << excp.invalid_bits, swap_layer_name
             raise
 
