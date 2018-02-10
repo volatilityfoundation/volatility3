@@ -99,6 +99,10 @@ class SymbolSpaceInterface(collections.abc.Mapping):
     def has_enumeration(self, name: str) -> bool:
         """Determines whether an enumeration choice exists in the contained symbol tables"""
 
+    @abstractmethod
+    def append(self, value: interfaces.symbols.BaseSymbolTableInterface) -> None:
+        """Adds a symbol_list to the end of the space"""
+
 
 class BaseSymbolTableInterface(validity.ValidityRoutines):
     """The base interface, inherited by both NativeTables and SymbolTables

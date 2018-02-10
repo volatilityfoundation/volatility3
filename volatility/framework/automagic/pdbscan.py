@@ -255,9 +255,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         for virtual_layer_name in potential_kernels:
             kernels = potential_kernels[virtual_layer_name]
             virtual_config_path = context.memory[virtual_layer_name].config_path
-            if virtual_layer_name and isinstance(context.memory[virtual_layer_name], layers.intel.Intel):
+            vlayer = context.memory[virtual_layer_name]
+            if virtual_layer_name and isinstance(vlayer, layers.intel.Intel):
                 # TODO: Verify this is a windows image
-                vlayer = context.memory[virtual_layer_name]
                 join = interfaces.configuration.path_join
                 physical_layer_name = context.config.get(join(vlayer.config_path, 'memory_layer'), None)
                 kvo_path = join(virtual_config_path, 'kernel_virtual_offset')
@@ -271,7 +271,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     else:
                         kvo = kernel['mz_offset'] + (1 << (vlayer.bits_per_register - 1))
                     try:
-                        kvp = context.memory[virtual_layer_name].mapping(kvo, 0)
+                        kvp = vlayer.mapping(kvo, 0)
                         if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in
                                  kvp])):
                             valid_kernels[virtual_layer_name] = (kvo, kernel)
