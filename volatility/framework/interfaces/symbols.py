@@ -61,49 +61,6 @@ class Symbol(validity.ValidityRoutines):
         return self._constant_data
 
 
-class SymbolSpaceInterface(collections.abc.Mapping):
-    """An interface for the container that holds all the symbol-containing tables for use within a context"""
-
-    def free_table_name(self, prefix: str = "layer") -> str:
-        """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
-
-    @abstractmethod
-    def get_symbols_by_type(self, type_name: str) -> typing.Iterable[str]:
-        """Returns all symbols based on the type of the symbol"""
-
-    @abstractmethod
-    def get_symbols_by_location(self, address: int, table_name: typing.Optional[str] = None) -> typing.Iterable[str]:
-        """Returns all symbols that exist at a specific relative address"""
-
-    @abstractmethod
-    def get_type(self, type_name: str) -> objects.Template:
-        """Look-up a type name across all the contained symbol tables"""
-
-    @abstractmethod
-    def get_symbol(self, symbol_name: str) -> Symbol:
-        """Look-up a symbol name across all the contained symbol tables"""
-
-    @abstractmethod
-    def get_enumeration(self, enum_name: str) -> typing.Dict[str, typing.Any]:
-        """Look-up an enumeration across all the contained symbol tables"""
-
-    @abstractmethod
-    def has_type(self, name: str) -> bool:
-        """Determines whether a type exists in the contained symbol tables"""
-
-    @abstractmethod
-    def has_symbol(self, name: str) -> bool:
-        """Determines whether a symbol exists in the contained symbol tables"""
-
-    @abstractmethod
-    def has_enumeration(self, name: str) -> bool:
-        """Determines whether an enumeration choice exists in the contained symbol tables"""
-
-    @abstractmethod
-    def append(self, value: interfaces.symbols.BaseSymbolTableInterface) -> None:
-        """Adds a symbol_list to the end of the space"""
-
-
 class BaseSymbolTableInterface(validity.ValidityRoutines):
     """The base interface, inherited by both NativeTables and SymbolTables
 
@@ -215,6 +172,49 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         while result < len(sort_symbols) and sort_symbols[result][0] == offset:
             yield sort_symbols[result][1]
             result += 1
+
+
+class SymbolSpaceInterface(collections.abc.Mapping):
+    """An interface for the container that holds all the symbol-containing tables for use within a context"""
+
+    def free_table_name(self, prefix: str = "layer") -> str:
+        """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
+
+    @abstractmethod
+    def get_symbols_by_type(self, type_name: str) -> typing.Iterable[str]:
+        """Returns all symbols based on the type of the symbol"""
+
+    @abstractmethod
+    def get_symbols_by_location(self, address: int, table_name: typing.Optional[str] = None) -> typing.Iterable[str]:
+        """Returns all symbols that exist at a specific relative address"""
+
+    @abstractmethod
+    def get_type(self, type_name: str) -> objects.Template:
+        """Look-up a type name across all the contained symbol tables"""
+
+    @abstractmethod
+    def get_symbol(self, symbol_name: str) -> Symbol:
+        """Look-up a symbol name across all the contained symbol tables"""
+
+    @abstractmethod
+    def get_enumeration(self, enum_name: str) -> typing.Dict[str, typing.Any]:
+        """Look-up an enumeration across all the contained symbol tables"""
+
+    @abstractmethod
+    def has_type(self, name: str) -> bool:
+        """Determines whether a type exists in the contained symbol tables"""
+
+    @abstractmethod
+    def has_symbol(self, name: str) -> bool:
+        """Determines whether a symbol exists in the contained symbol tables"""
+
+    @abstractmethod
+    def has_enumeration(self, name: str) -> bool:
+        """Determines whether an enumeration choice exists in the contained symbol tables"""
+
+    @abstractmethod
+    def append(self, value: BaseSymbolTableInterface) -> None:
+        """Adds a symbol_list to the end of the space"""
 
 
 class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface):
