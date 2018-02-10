@@ -340,13 +340,31 @@ class WindowsIntelPAE(WindowsMixin, IntelPAE):
             n = (entry >> 1) & 0xF
             vbit = bool(entry & 1)
             if ((not tbit and not pbit and not vbit and unknown_bit) and (
-                    self._mask(entry, 64, 32) >> 32) != 0) and excp.invalid_bits == 12:
-                swap_offset = (self._mask(entry, 64, 32) >> 32 << excp.invalid_bits) | self._mask(excp.invalid_address,
-                                                                                                  excp.invalid_bits, 0)
+                    entry >> self._bits_per_register) != 0) and excp.invalid_bits == 12:
+                swap_offset = (entry >> self._bits_per_register << excp.invalid_bits)
                 if len(self.config.get('swap_layers', [])) >= (n + 1):
                     swap_layer_name = self.config['swap_layers'][n]
                     return swap_offset, 1 << excp.invalid_bits, swap_layer_name
             raise
 
 
-class WindowsIntel32e(WindowsMixin, Intel32e): pass
+class WindowsIntel32e(WindowsMixin, Intel32e):
+
+    def _translate(self, offset):
+        try:
+            return super()._translate(offset)
+        except exceptions.PagedInvalidAddressException as excp:
+            entry = excp.entry
+            tbit = bool(entry & (1 << 11))
+            pbit = bool(entry & (1 << 10))
+            unknown_bit = bool(entry & (1 << 7))
+            n = (entry >> 1) & 0xF
+            vbit = bool(entry & 1)
+            if (not tbit and not pbit and not vbit and unknown_bit) and (
+                    (entry >> self._page_size_in_bits) != 0) and excp.invalid_bits == 12:
+                swap_offset = entry >> (self._bits_per_register // 2) << excp.invalid_bits
+
+                if len(self.config.get('swap_layers', [])) >= (n + 1):
+                    swap_layer_name = self.config['swap_layers'][n]
+                    return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+            raise
