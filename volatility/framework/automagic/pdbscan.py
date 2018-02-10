@@ -325,16 +325,16 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                  config_path: str,
                  requirement: interfaces.configuration.ConstructableRequirementInterface,
                  progress_callback: validity.ProgressCallback = None) -> None:
-        # TODO: Check if we really need to search for pdbs
         if requirement.unsatisfied(context, config_path):
             if "pdbscan" not in context.symbol_space:
                 context.symbol_space.append(native.NativeTable("pdbscan", native.std_ctypes))
             # TODO: check if this is a windows symbol requirement, otherwise ignore it
             self._symbol_requirements = self.find_requirements(context, config_path, requirement,
                                                                interfaces.configuration.SymbolRequirement)
-            if self._symbol_requirements:
-                potential_kernels = self.recurse_pdb_finder(context, config_path, requirement, progress_callback)
-                self.valid_kernels = self.determine_valid_kernels(context, potential_kernels, progress_callback)
-                if self.valid_kernels:
-                    self.recurse_symbol_fulfiller(context)
-                    self.set_kernel_virtual_offset(context)
+            for symbol_req_config_path, _, symbol_req in self._symbol_requirements:
+                if symbol_req.unsatisfied(context, symbol_req_config_path):
+                    potential_kernels = self.recurse_pdb_finder(context, config_path, requirement, progress_callback)
+                    self.valid_kernels = self.determine_valid_kernels(context, potential_kernels, progress_callback)
+                    if self.valid_kernels:
+                        self.recurse_symbol_fulfiller(context)
+                        self.set_kernel_virtual_offset(context)
