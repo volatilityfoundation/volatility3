@@ -43,7 +43,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                  name: str) -> None:
         super().__init__(context, config_path, name)
         self._base_layer = self._check_type(self.config["memory_layer"], str)
-        self._swap_layers = []
+        self._swap_layers = []  # type: typing.List[str]
         self._check_type(self.config.get("swap_layers", []), list)
         for layer_name in self.config.get("swap_layers", []):
             self._check_type(layer_name, str)
@@ -361,7 +361,7 @@ class WindowsIntel32e(WindowsMixin, Intel32e):
             n = (entry >> 1) & 0xF
             vbit = bool(entry & 1)
             if (not tbit and not pbit and not vbit and unknown_bit) and (
-                    (entry >> self._page_size_in_bits) != 0) and excp.invalid_bits == 12:
+                    (entry >> (self._bits_per_register // 2)) != 0) and excp.invalid_bits == 12:
                 swap_offset = entry >> (self._bits_per_register // 2) << excp.invalid_bits
 
                 if len(self.config.get('swap_layers', [])) >= (n + 1):
