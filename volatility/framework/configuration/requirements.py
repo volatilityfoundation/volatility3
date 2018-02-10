@@ -63,44 +63,40 @@ class ListRequirement(interfaces_configuration.RequirementInterface):
     """
 
     def __init__(self,
-                 element_type: interfaces_configuration.InstanceRequirement,
-                 max_elements: int,
-                 min_elements: int, *args, **kwargs) -> None:
+                 element_type: typing.Type[interfaces_configuration.SimpleTypes] = str,
+                 max_elements: typing.Optional[int] = 0,
+                 min_elements: typing.Optional[int] = None, *args, **kwargs) -> None:
         """Constructs the object
 
         :param element_type: The (requirement) type of each element within the list
-        :type element_type: interfaces_configuration.InstanceRequirement
         :param max_elements; The maximum number of acceptable elements this list can contain
-        :type max_elements: int
         :param min_elements: The minimum number of acceptable elements this list can contain
-        :type min_elements:  int
         """
         super().__init__(*args, **kwargs)
-        if not isinstance(element_type, interfaces_configuration.InstanceRequirement):
-            raise TypeError("ListRequirements can only contain simple InstanceRequirements")
-        self.element_type = element_type
-        self.min_elements = min_elements  # type: int
-        self.max_elements = max_elements  # type: int
+        if not issubclass(element_type, interfaces_configuration.BasicTypes):
+            raise TypeError("ListRequirements can only be populated with simple InstanceRequirements")
+        self.element_type = element_type  # type: typing.Type
+        self.min_elements = min_elements or 0  # type: int
+        self.max_elements = max_elements  # type: typing.Optional[int]
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Check the types on each of the returned values and their number and then call the element type's check for each one"""
         value = self.config_value(context, config_path)
+        if value is None:
+            raise ValueError("No value stored in the configuration")
         if not isinstance(value, list):
             # TODO: Check this is the correct response for an error
-            raise ValueError("")
-        if not (self.min_elements <= len(value) <= self.max_elements):
-            vollog.log(constants.LOGLEVEL_V, "TypeError - List option provided more or less elements than allowed.")
+            raise ValueError("Unexpected config value found: {}".format(repr(value)))
+        if not (self.min_elements <= len(value)):
+            vollog.log(constants.LOGLEVEL_V, "TypeError - Too few values provided to list option.")
             return [interfaces_configuration.path_join(config_path, self.name)]
-        if not all([self._check_type(element, self.element_type.instance_type) for element in value]):
+        if self.max_elements and not (len(value) < self.max_elements):
+            vollog.log(constants.LOGLEVEL_V, "TypeError - Too many values provided to list option.")
+            return [interfaces_configuration.path_join(config_path, self.name)]
+        if not all([self._check_type(element, self.element_type) for element in value]):
             vollog.log(constants.LOGLEVEL_V, "TypeError - At least one element in the list is not of the correct type.")
             return [interfaces_configuration.path_join(config_path, self.name)]
-        result = []
-        for element in value:
-            if isinstance(element, str):
-                subresult = self.element_type.unsatisfied(context, element)
-                for subvalue in subresult:
-                    result.append(subvalue)
-        return result
+        return []
 
 
 class ChoiceRequirement(interfaces_configuration.RequirementInterface):
@@ -110,7 +106,6 @@ class ChoiceRequirement(interfaces_configuration.RequirementInterface):
         """Constructs the object
 
         :param choices: A list of possible string options that can be chosen from
-        :type choices: list of str
         """
         super().__init__(*args, **kwargs)
         if not isinstance(choices, list) or any([not isinstance(choice, str) for choice in choices]):

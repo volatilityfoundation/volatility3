@@ -27,7 +27,9 @@ CONFIG_SEPARATOR = "."
 
 vollog = logging.getLogger(__name__)
 
-ConfigSimpleType = typing.Union[str, int, float, bool, typing.List[typing.Union[str, int, float, bool]]]
+BasicTypes = (int, bool, bytes, str)
+SimpleTypes = typing.Union[int, bool, bytes, str]
+ConfigSimpleType = typing.Union[SimpleTypes, typing.List[SimpleTypes]]
 
 
 def path_join(*args) -> str:

@@ -63,16 +63,13 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
                                                          typing.Tuple[RequirementInterfaceType, ...]],
                           shortcut: bool = True) \
             -> typing.List[typing.Tuple[str, str, interfaces_configuration.ConstructableRequirementInterface]]:
-        """Determines if there is actually an unfulfilled symbol requirement waiting
+        """Determines if there is actually an unfulfilled requirement waiting
 
-        This ensures we do not carry out an expensive search when there is no requirement for a particular symbol table.
+        This ensures we do not carry out an expensive search when there is no requirement for a particular requirement
 
         :param context: Context on which to operate
-        :type context: ~volatility.framework.interfaces.context.ContextInterface
         :param config_path: Configuration path of the top-level requirement
-        :type config_path: str
         :param requirement: Top-level requirement whose subrequirements will all be searched
-        :type requirement: ~volatility.framework.interfaces.configuration.RequirementInterface
         :return: A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
         """
         sub_config_path = interfaces_configuration.path_join(config_path, requirement_root.name)

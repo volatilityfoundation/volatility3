@@ -236,7 +236,7 @@ class CommandLine(object):
                     # we expect the plugin to fail validation instead
                 else:
                     additional["nargs"] = requirement.max_elements
-                additional["type"] = requirement.element_type.instance_type
+                additional["type"] = requirement.element_type
             elif isinstance(requirement, volatility.framework.configuration.requirements.ChoiceRequirement):
                 additional["type"] = str
                 additional["choices"] = requirement.choices
