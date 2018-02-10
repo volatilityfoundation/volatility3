@@ -119,3 +119,42 @@ class ChoiceRequirement(interfaces_configuration.RequirementInterface):
             vollog.log(constants.LOGLEVEL_V, "ValueError - Value is not within the set of available choices")
             return [interfaces_configuration.path_join(config_path, self.name)]
         return []
+
+
+class LayerListRequirement(ListRequirement):
+    """Allows a variable length list of layers that must exist """
+
+    # TODO: Consider making this a ConstructableRequirement such that sub-config options can be held underneath it
+    # and the swap layers can be reconstructed automatically
+
+    def __init__(self, *args, **kwargs) -> None:
+        kwargs['element_type'] = str
+        super().__init__(*args, **kwargs)
+
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
+        """Determines whether any layer lists are not present (satisified)"""
+        list_check = super().unsatisfied(context, config_path)
+        if list_check:
+            return list_check
+
+        value = self.config_value(context, config_path)
+        if not isinstance(value, typing.List):
+            vollog.log(constants.LOGLEVEL_V, "LayerList configuration value was not a list")
+            return [interfaces_configuration.path_join(config_path, self.name)]
+
+        failed_layers = []
+        for item in value:
+            if item not in context.memory:
+                failed_layers.append(item)
+        if failed_layers:
+            vollog.log(constants.LOGLEVEL_V,
+                       "LayerList unsatisfied due to non-existant layers: {}".format(failed_layers))
+            return [interfaces_configuration.path_join(config_path, self.name)]
+        return []
+
+    @classmethod
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+        # This is not optional for the stacker to run, so optional must be marked as False
+        return [IntRequirement("number_of_elements",
+                               description = "Determines how many layers are in this list",
+                               optional = False)]

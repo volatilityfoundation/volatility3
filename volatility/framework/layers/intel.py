@@ -181,14 +181,10 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'memory_layer',
                                                          optional = False),
-                requirements.ListRequirement(name = 'swap_layers',
-                                             element_type = requirements.StringRequirement(
-                                                 name = 'layer_name',
-                                                 optional = False
-                                             ),
-                                             min_elements = 0,
-                                             max_elements = 100,
-                                             optional = True),
+                requirements.LayerListRequirement(name = 'swap_layers',
+                                                  min_elements = 0,
+                                                  max_elements = 100,
+                                                  optional = True),
                 requirements.IntRequirement(name = 'page_map_offset',
                                             optional = False),
                 requirements.IntRequirement(name = 'kernel_virtual_offset',
