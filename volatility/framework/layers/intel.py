@@ -182,8 +182,6 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         return [requirements.TranslationLayerRequirement(name = 'memory_layer',
                                                          optional = False),
                 requirements.LayerListRequirement(name = 'swap_layers',
-                                                  min_elements = 0,
-                                                  max_elements = 100,
                                                   optional = True),
                 requirements.IntRequirement(name = 'page_map_offset',
                                             optional = False),

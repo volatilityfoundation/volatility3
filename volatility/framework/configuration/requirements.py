@@ -128,36 +128,30 @@ class ChoiceRequirement(interfaces_configuration.RequirementInterface):
         return []
 
 
-class LayerListRequirement(ListRequirement):
+class LayerListRequirement(MultiRequirement):
     """Allows a variable length list of layers that must exist """
 
-    # TODO: Consider making this a ConstructableRequirement such that sub-config options can be held underneath it
-    # and the swap layers can be reconstructed automatically
-
-    def __init__(self, *args, **kwargs) -> None:
-        kwargs['element_type'] = str
-        super().__init__(*args, **kwargs)
-
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
-        """Determines whether any layer lists are not present (satisified)"""
-        list_check = super().unsatisfied(context, config_path)
-        if list_check:
-            return list_check
-
-        value = self.config_value(context, config_path)
-        if not isinstance(value, typing.List):
-            vollog.log(constants.LOGLEVEL_V, "LayerList configuration value was not a list")
-            return [interfaces_configuration.path_join(config_path, self.name)]
-
-        failed_layers = []
-        for item in value:
-            if item not in context.memory:
-                failed_layers.append(item)
-        if failed_layers:
-            vollog.log(constants.LOGLEVEL_V,
-                       "LayerList unsatisfied due to non-existant layers: {}".format(failed_layers))
+        """Validates the provided value to ensure it is one of the available choices"""
+        ret_list = super().unsatisfied(context, config_path)
+        if ret_list:
+            return ret_list
+        if (self.config_value(context, config_path, None) is None or
+                self.config_value(context, interfaces_configuration.path_join(config_path, 'number_of_elements'))):
             return [interfaces_configuration.path_join(config_path, self.name)]
         return []
+
+    def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
+        """Method for constructing within the context any required elements from subrequirements"""
+        new_config_path = interfaces_configuration.path_join(config_path, self.name)
+        num_layers_path = interfaces_configuration.path_join(new_config_path, "number_of_elements")
+        number_of_layers = context.config[num_layers_path]
+
+        # Build all the layers that can be built
+        for i in range(number_of_layers):
+            layer_req = self.requirements.get(self.name + str(i), None)
+            if layer_req is not None and isinstance(layer_req, TranslationLayerRequirement):
+                layer_req.construct(context, new_config_path)
 
     @classmethod
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
@@ -165,3 +159,22 @@ class LayerListRequirement(ListRequirement):
         return [IntRequirement("number_of_elements",
                                description = "Determines how many layers are in this list",
                                optional = False)]
+
+    def build_configuration(self,
+                            context: interfaces.context.ContextInterface,
+                            config_path: str) -> interfaces_configuration.HierarchicalDict:
+        result = interfaces_configuration.HierarchicalDict()
+        num_elem_config_path = interfaces_configuration.path_join(config_path, self.name, 'number_of_elements')
+        num_elements = context.config.get(num_elem_config_path, None)
+        if num_elements is not None:
+            result["number_of_elements"] = num_elements
+            for i in range(num_elements):
+                req = interfaces_configuration.TranslationLayerRequirement(name = self.name + str(i),
+                                                                           description = "Swap Layer",
+                                                                           optional = False)
+                self.add_requirement(req)
+                value_path = interfaces_configuration.path_join(config_path, self.name, req.name)
+                value = context.config.get(value_path, None)
+                if value is not None:
+                    result.splice(req.name, context.memory[value].build_configuration())
+        return result

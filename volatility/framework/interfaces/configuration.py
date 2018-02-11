@@ -20,6 +20,7 @@ from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants, interfaces
 from volatility.framework import validity
+from volatility.framework.configuration import requirements
 from volatility.framework.interfaces.context import ContextInterface
 
 CONFIG_SEPARATOR = "."
@@ -485,12 +486,16 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             # Do not include the name of constructed classes
             if value is not None and not isinstance(req, ConstructableRequirementInterface):
                 result[req.name] = value
+            # TODO: Move this to a generic requirement
             if isinstance(req, TranslationLayerRequirement):
                 if value is not None:
                     result.splice(req.name, self.context.memory[value].build_configuration())
             elif isinstance(req, SymbolRequirement):
                 if value is not None:
                     result.splice(req.name, self.context.symbol_space[value].build_configuration())
+            elif isinstance(req, requirements.LayerListRequirement):
+                if value is not None:
+                    result.splice(req.name, req.build_configuration(self.context, self.config_path))
         return result
 
     @classmethod
