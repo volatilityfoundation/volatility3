@@ -623,6 +623,7 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
         obj = self._construct_class(context, config_path, args)
         if obj is not None:
             context.add_layer(obj)
+            context.config[config_path] = obj.name
         return None
 
 

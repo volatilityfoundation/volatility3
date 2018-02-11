@@ -177,4 +177,5 @@ class LayerListRequirement(MultiRequirement):
                 value = context.config.get(value_path, None)
                 if value is not None:
                     result.splice(req.name, context.memory[value].build_configuration())
+                    result[req.name] = value
         return result

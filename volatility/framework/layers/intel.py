@@ -44,11 +44,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         super().__init__(context, config_path, name)
         self._base_layer = self._check_type(self.config["memory_layer"], str)
         self._swap_layers = []  # type: typing.List[str]
-        self._check_type(self.config.get("swap_layers", []), list)
-        for layer_name in self.config.get("swap_layers", []):
-            self._check_type(layer_name, str)
-            if layer_name in context.memory:
-                self._swap_layers.append(layer_name)
+        self._check_type(self.config.get("swap_layers", False), bool)
         self._page_map_offset = self._check_type(self.config["page_map_offset"], int)
         self._optimize_scan = False
 
@@ -315,9 +311,12 @@ class WindowsIntel(WindowsMixin, Intel):
                     (entry >> self._page_size_in_bits) != 0):
                 swap_offset = entry >> self._page_size_in_bits << self._page_size_in_bits
 
-                if len(self.config.get('swap_layers', [])) >= (n + 1):
-                    swap_layer_name = self.config['swap_layers'][n]
-                    return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+                if self.config.get('swap_layers', False):
+                    swap_layer_name = self.config.get(interfaces.configuration.path_join('swap_layers',
+                                                                                         'swap_layers' + str(n)),
+                                                      None)
+                    if swap_layer_name:
+                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
             raise
 
 
@@ -336,9 +335,12 @@ class WindowsIntelPAE(WindowsMixin, IntelPAE):
             if ((not tbit and not pbit and not vbit and unknown_bit) and (
                     entry >> self._bits_per_register) != 0) and excp.invalid_bits == 12:
                 swap_offset = (entry >> self._bits_per_register << excp.invalid_bits)
-                if len(self.config.get('swap_layers', [])) >= (n + 1):
-                    swap_layer_name = self.config['swap_layers'][n]
-                    return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+                if self.config.get('swap_layers', False):
+                    swap_layer_name = self.config.get(interfaces.configuration.path_join('swap_layers',
+                                                                                         'swap_layers' + str(n)),
+                                                      None)
+                    if swap_layer_name:
+                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
             raise
 
 
@@ -358,7 +360,10 @@ class WindowsIntel32e(WindowsMixin, Intel32e):
                     (entry >> (self._bits_per_register // 2)) != 0) and excp.invalid_bits == 12:
                 swap_offset = entry >> (self._bits_per_register // 2) << excp.invalid_bits
 
-                if len(self.config.get('swap_layers', [])) >= (n + 1):
-                    swap_layer_name = self.config['swap_layers'][n]
-                    return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+                if self.config.get('swap_layers', False):
+                    swap_layer_name = self.config.get(interfaces.configuration.path_join('swap_layers',
+                                                                                         'swap_layers' + str(n)),
+                                                      None)
+                    if swap_layer_name:
+                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
             raise
