@@ -22,7 +22,8 @@ windows_automagic = ['ConstructionMagic',
                      'LayerStacker',
                      'NlpDtbfinder',
                      'WintelHelper',
-                     'KernelPDBScanner']
+                     'KernelPDBScanner',
+                     'WinSwapLayers']
 
 linux_automagic = ['ConstructionMagic',
                    'LayerStacker',

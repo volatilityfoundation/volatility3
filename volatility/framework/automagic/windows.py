@@ -327,3 +327,77 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
             vollog.debug("DTB was found at: 0x{:0x}".format(
                 context.config[interfaces.configuration.path_join(config_path, "page_map_offset")]))
         return layer
+
+
+class WinSwapLayers(interfaces.automagic.AutomagicInterface):
+    """Class to read swap_layers filenames from single-swap-layers,
+    create the layers and populate the single-layers swap_layers"""
+
+    def __call__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 requirement: interfaces.configuration.RequirementInterface,
+                 progress_callback: validity.ProgressCallback = None) \
+            -> None:
+        """Finds translation layers that can have swap layers added"""
+        path_join = interfaces.configuration.path_join
+        self._translation_requirement = self.find_requirements(context, config_path, requirement,
+                                                               interfaces.configuration.TranslationLayerRequirement,
+                                                               shortcut = False)
+        for trans_config, trans_sub_config, trans_req in self._translation_requirement:
+            if not isinstance(trans_req, interfaces.configuration.TranslationLayerRequirement):
+                # We need this so the type-checker knows we're a TranslationLayerRequirement
+                continue
+            swap_config, swap_sub_config, swap_req = self.find_swap_requirement(trans_config, trans_sub_config,
+                                                                                trans_req)
+            counter = 0
+            if swap_req and swap_req.unsatisfied(context, swap_config):
+                # See if any of them need constructing
+                for swap_location in self.config.get('single_swap_locations', []):
+                    # Setup config locations/paths
+                    current_layer_name = swap_req.name + str(counter)
+                    current_layer_path = path_join(swap_sub_config, current_layer_name)
+                    layer_loc_path = path_join(current_layer_path, "location")
+                    layer_class_path = path_join(current_layer_path, "class")
+
+                    # Fill in the config
+                    context.config[layer_loc_path] = swap_location
+                    context.config[layer_class_path] = 'volatility.framework.layers.physical.FileLayer'
+                    counter += 1
+
+                    # Add the requirement
+                    new_req = interfaces.configuration.TranslationLayerRequirement(name = current_layer_name,
+                                                                                   description = "Swap Layer",
+                                                                                   optional = False)
+                    swap_req.add_requirement(new_req)
+
+                context.config[path_join(swap_sub_config, 'number_of_elements')] = counter
+                context.config[swap_sub_config] = True
+
+                swap_req.construct(context, swap_config)
+
+    def find_swap_requirement(self,
+                              config: str,
+                              sub_config: str,
+                              requirement: interfaces.configuration.TranslationLayerRequirement) \
+            -> typing.Tuple[str, str, requirements.LayerListRequirement]:
+        """Takes a Translation layer and returns its swap_layer requirement"""
+        swap_req = None
+        for req_name in requirement.requirements:
+            req = requirement.requirements[req_name]
+            if isinstance(req, requirements.LayerListRequirement) and req.name == 'swap_layers':
+                swap_req = req
+                continue
+
+        swap_config = interfaces.configuration.path_join(sub_config, 'swap_layers')
+        return sub_config, swap_config, swap_req
+
+    @classmethod
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+        """Returns the requirements of this plugin"""
+        return [requirements.ListRequirement(name = "single_swap_locations",
+                                             element_type = str,
+                                             min_elements = 0,
+                                             max_elements = 16,
+                                             description = "Specifies a list of swap layers for use with single-location",
+                                             optional = True)]
