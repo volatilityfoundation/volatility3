@@ -135,6 +135,10 @@ class CommandLine(object):
             for requirement in configurables_list[configurable].get_requirements():
                 value = vargs.get(requirement.name, None)
                 if value is not None:
+                    if isinstance(requirement, requirements.ListRequirement):
+                        if not isinstance(value, list):
+                            raise TypeError("Configuration for ListRequirement was not a list")
+                        value = [requirement.element_type(x) for x in value]
                     if not inspect.isclass(configurables_list[configurable]):
                         config_path = configurables_list[configurable].config_path
                     else:
@@ -228,15 +232,8 @@ class CommandLine(object):
                     if "type" in additional:
                         del additional["type"]
             elif isinstance(requirement, volatility.framework.configuration.requirements.ListRequirement):
-                if requirement.min_elements != requirement.max_elements:
-                    if requirement.min_elements > 0:
-                        additional["nargs"] = "+"
-                    additional["nargs"] = "*"
-                    # We can't test for min_elements > 1 or going over max_elements but rather than warning here,
-                    # we expect the plugin to fail validation instead
-                else:
-                    additional["nargs"] = requirement.max_elements
-                additional["type"] = requirement.element_type
+                # This is a trick to generate a list of values
+                additional["type"] = lambda x: x.split(',')
             elif isinstance(requirement, volatility.framework.configuration.requirements.ChoiceRequirement):
                 additional["type"] = str
                 additional["choices"] = requirement.choices

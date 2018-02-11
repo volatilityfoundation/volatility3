@@ -69,14 +69,16 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
 
         :param context: Context on which to operate
         :param config_path: Configuration path of the top-level requirement
-        :param requirement: Top-level requirement whose subrequirements will all be searched
+        :param requirement_root: Top-level requirement whose subrequirements will all be searched
+        :param requirement_type: Type of requirement to find
+        :param shortcut: Only returns requirements that live under unsatisfied requirements
         :return: A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
         """
         sub_config_path = interfaces_configuration.path_join(config_path, requirement_root.name)
         results = []
         recurse = not shortcut
         if isinstance(requirement_root, requirement_type):
-            if not shortcut or requirement_root.unsatisfied(context, config_path):
+            if recurse or requirement_root.unsatisfied(context, config_path):
                 results.append((config_path, sub_config_path, requirement_root))
         else:
             recurse = True

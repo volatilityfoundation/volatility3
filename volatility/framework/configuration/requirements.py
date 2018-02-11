@@ -81,9 +81,15 @@ class ListRequirement(interfaces_configuration.RequirementInterface):
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Check the types on each of the returned values and their number and then call the element type's check for each one"""
-        value = self.config_value(context, config_path)
-        if value is None:
-            raise ValueError("No value stored in the configuration")
+        default = None
+        value = self.config_value(context, config_path, default)
+        if not value and self.min_elements > 0:
+            vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - ListRequirement has non-zero min_elements")
+            return [interfaces_configuration.path_join(config_path, self.name)]
+        if value == default:
+            # We need to differentiate between no value and an empty list
+            vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - Value was not specified")
+            return [interfaces_configuration.path_join(config_path, self.name)]
         if not isinstance(value, list):
             # TODO: Check this is the correct response for an error
             raise ValueError("Unexpected config value found: {}".format(repr(value)))
@@ -94,7 +100,8 @@ class ListRequirement(interfaces_configuration.RequirementInterface):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too many values provided to list option.")
             return [interfaces_configuration.path_join(config_path, self.name)]
         if not all([self._check_type(element, self.element_type) for element in value]):
-            vollog.log(constants.LOGLEVEL_V, "TypeError - At least one element in the list is not of the correct type.")
+            vollog.log(constants.LOGLEVEL_V,
+                       "TypeError - At least one element in the list is not of the correct type.")
             return [interfaces_configuration.path_join(config_path, self.name)]
         return []
 
