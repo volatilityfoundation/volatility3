@@ -20,7 +20,6 @@ from abc import ABCMeta, abstractmethod
 
 from volatility.framework import constants, interfaces
 from volatility.framework import validity
-from volatility.framework.configuration import requirements
 from volatility.framework.interfaces.context import ContextInterface
 
 CONFIG_SEPARATOR = "."
@@ -440,6 +439,16 @@ class ConstructableRequirementInterface(RequirementInterface):
         return obj
 
 
+class ConfigurableRequirementInterface(object):
+    """Simple Abstract class to provide build_required_config"""
+
+    def build_configuration(self,
+                            context: interfaces.context.ContextInterface,
+                            config_path: str,
+                            value: typing.Any) -> HierarchicalDict:
+        """Proxies to a ConfigurableInterface if necessary"""
+
+
 class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to allow objects to have requirements and read configuration data from the context config tree"""
 
@@ -486,16 +495,11 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             # Do not include the name of constructed classes
             if value is not None and not isinstance(req, ConstructableRequirementInterface):
                 result[req.name] = value
-            # TODO: Move this to a generic requirement
-            if isinstance(req, TranslationLayerRequirement):
+            if isinstance(req, ConfigurableRequirementInterface):
                 if value is not None:
-                    result.splice(req.name, self.context.memory[value].build_configuration())
-            elif isinstance(req, SymbolRequirement):
-                if value is not None:
-                    result.splice(req.name, self.context.symbol_space[value].build_configuration())
-            elif isinstance(req, requirements.LayerListRequirement):
-                if value is not None:
-                    result.splice(req.name, req.build_configuration(self.context, self.config_path))
+                    result.splice(req.name, req.build_configuration(self.context,
+                                                                    self.config_path,
+                                                                    value))
         return result
 
     @classmethod
@@ -544,7 +548,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return new_config_path
 
 
-class TranslationLayerRequirement(ConstructableRequirementInterface):
+class TranslationLayerRequirement(ConstructableRequirementInterface, ConfigurableRequirementInterface):
     """Class maintaining the limitations on what sort of translation layers are acceptable"""
 
     def __init__(self,
@@ -626,6 +630,13 @@ class TranslationLayerRequirement(ConstructableRequirementInterface):
             context.config[config_path] = obj.name
         return None
 
+    def build_configuration(self,
+                            context: interfaces.context.ContextInterface,
+                            _: str,
+                            value: typing.Any) -> HierarchicalDict:
+        """Builds the appropriate configuration for the specified requirement"""
+        return context.memory[value].build_configuration()
+
 
 class SymbolRequirement(ConstructableRequirementInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
@@ -672,3 +683,10 @@ class SymbolRequirement(ConstructableRequirementInterface):
         if obj is not None:
             context.symbol_space.append(obj)
         return None
+
+    def build_configuration(self,
+                            context: interfaces.context.ContextInterface,
+                            _: str,
+                            value: typing.Any) -> HierarchicalDict:
+        """Builds the appropriate configuration for the specified requirement"""
+        return context.memory[value].build_configuration()

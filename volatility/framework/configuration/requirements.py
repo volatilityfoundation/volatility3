@@ -128,7 +128,7 @@ class ChoiceRequirement(interfaces_configuration.RequirementInterface):
         return []
 
 
-class LayerListRequirement(MultiRequirement):
+class LayerListRequirement(MultiRequirement, interfaces_configuration.ConfigurableRequirementInterface):
     """Allows a variable length list of layers that must exist """
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
@@ -162,7 +162,8 @@ class LayerListRequirement(MultiRequirement):
 
     def build_configuration(self,
                             context: interfaces.context.ContextInterface,
-                            config_path: str) -> interfaces_configuration.HierarchicalDict:
+                            config_path: str,
+                            _: typing.Any) -> interfaces_configuration.HierarchicalDict:
         result = interfaces_configuration.HierarchicalDict()
         num_elem_config_path = interfaces_configuration.path_join(config_path, self.name, 'number_of_elements')
         num_elements = context.config.get(num_elem_config_path, None)
