@@ -292,78 +292,44 @@ class WindowsMixin(object):
         """
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
+    def _translate_swap(self, layer: Intel, offset: int, bit_offset: int):
+        try:
+            return super(layer.__class__, layer)._translate(offset)
+        except exceptions.PagedInvalidAddressException as excp:
+            entry = excp.entry
+            tbit = bool(entry & (1 << 11))
+            pbit = bool(entry & (1 << 10))
+            unknown_bit = bool(entry & (1 << 7))
+            n = (entry >> 1) & 0xF
+            vbit = bool(entry & 1)
+            if (not tbit and not pbit and not vbit and unknown_bit) and (
+                    (entry >> bit_offset) != 0):
+                swap_offset = entry >> bit_offset << excp.invalid_bits
+
+                if layer.config.get('swap_layers', False):
+                    swap_layer_name = layer.config.get(interfaces.configuration.path_join('swap_layers',
+                                                                                          'swap_layers' + str(n)),
+                                                       None)
+                    if swap_layer_name:
+                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+            raise
+
 
 ### These must be full separate classes so that JSON configs re-create them properly
 
 class WindowsIntel(WindowsMixin, Intel):
 
     def _translate(self, offset):
-        try:
-            return super()._translate(offset)
-        except exceptions.PagedInvalidAddressException as excp:
-            entry = excp.entry
-            tbit = bool(entry & (1 << 11))
-            pbit = bool(entry & (1 << 10))
-            unknown_bit = bool(entry & (1 << 7))
-            n = (entry >> 1) & 0xF
-            vbit = bool(entry & 1)
-            if (not tbit and not pbit and not vbit and unknown_bit) and (
-                    (entry >> self._page_size_in_bits) != 0):
-                swap_offset = entry >> self._page_size_in_bits << self._page_size_in_bits
-
-                if self.config.get('swap_layers', False):
-                    swap_layer_name = self.config.get(interfaces.configuration.path_join('swap_layers',
-                                                                                         'swap_layers' + str(n)),
-                                                      None)
-                    if swap_layer_name:
-                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
-            raise
+        return self._translate_swap(self, offset, self._page_size_in_bits)
 
 
 class WindowsIntelPAE(WindowsMixin, IntelPAE):
 
     def _translate(self, offset):
-        try:
-            return super()._translate(offset)
-        except exceptions.PagedInvalidAddressException as excp:
-            entry = excp.entry
-            tbit = bool(entry & (1 << 11))
-            pbit = bool(entry & (1 << 10))
-            unknown_bit = bool(entry & (1 << 7))
-            n = (entry >> 1) & 0xF
-            vbit = bool(entry & 1)
-            if ((not tbit and not pbit and not vbit and unknown_bit) and (
-                    entry >> self._bits_per_register) != 0) and excp.invalid_bits == 12:
-                swap_offset = (entry >> self._bits_per_register << excp.invalid_bits)
-                if self.config.get('swap_layers', False):
-                    swap_layer_name = self.config.get(interfaces.configuration.path_join('swap_layers',
-                                                                                         'swap_layers' + str(n)),
-                                                      None)
-                    if swap_layer_name:
-                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
-            raise
+        return self._translate_swap(self, offset, self._bits_per_register)
 
 
 class WindowsIntel32e(WindowsMixin, Intel32e):
 
     def _translate(self, offset):
-        try:
-            return super()._translate(offset)
-        except exceptions.PagedInvalidAddressException as excp:
-            entry = excp.entry
-            tbit = bool(entry & (1 << 11))
-            pbit = bool(entry & (1 << 10))
-            unknown_bit = bool(entry & (1 << 7))
-            n = (entry >> 1) & 0xF
-            vbit = bool(entry & 1)
-            if (not tbit and not pbit and not vbit and unknown_bit) and (
-                    (entry >> (self._bits_per_register // 2)) != 0) and excp.invalid_bits == 12:
-                swap_offset = entry >> (self._bits_per_register // 2) << excp.invalid_bits
-
-                if self.config.get('swap_layers', False):
-                    swap_layer_name = self.config.get(interfaces.configuration.path_join('swap_layers',
-                                                                                         'swap_layers' + str(n)),
-                                                      None)
-                    if swap_layer_name:
-                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
-            raise
+        return self._translate_swap(self, offset, self._bits_per_register // 2)
