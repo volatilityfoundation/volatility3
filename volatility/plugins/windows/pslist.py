@@ -35,12 +35,12 @@ class PsList(plugins.PluginInterface):
                 memory = self.context.memory[layer_name]
                 (_, offset, _, _) = list(memory.mapping(offset=proc.vol.offset, length=0))[0]
 
-            yield (0, (format_hints.Hex(offset),
+            yield (0, (proc.UniqueProcessId,
+                       proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string",
                                                max_length = proc.ImageFileName.vol.count,
                                                errors = 'replace'),
-                       proc.UniqueProcessId,
-                       proc.InheritedFromUniqueProcessId,
+                       format_hints.Hex(offset),
                        proc.ActiveThreads,
                        proc.helper_handle_count,
                        proc.helper_session_id,
@@ -85,10 +85,10 @@ class PsList(plugins.PluginInterface):
     def run(self):
         offsettype = "(V)" if not self.config['physical'] else "(P)"
 
-        return renderers.TreeGrid([("Offset{0}".format(offsettype), format_hints.Hex),
-                                   ("ImageFileName", str),
-                                   ("PID", int),
+        return renderers.TreeGrid([("PID", int),
                                    ("PPID", int),
+                                   ("ImageFileName", str),
+                                   ("Offset{0}".format(offsettype), format_hints.Hex),
                                    ("Threads", int),
                                    ("Handles", int),
                                    ("SessionId", int),
