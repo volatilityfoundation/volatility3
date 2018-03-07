@@ -229,13 +229,19 @@ class _EPROCESS(generic.GenericIntelProcess):
     def helper_wow_64_process(self):
         if hasattr(self, "Wow64Process"):
             return self.Wow64Process
+
         elif hasattr(self, "WoW64Process"):
             return self.WoW64Process
-        return None
+
+        raise AttributeError("Unable to find Wow64Process")
 
     @property
     def helper_is_wow64(self):
-        value = self.helper_wow_64_process
+        try:
+            value = self.helper_wow_64_process
+        except AttributeError:
+            return False
+        
         return value != 0 and value != None
 
 class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
