@@ -7,7 +7,7 @@ from volatility.framework import constants, objects, interfaces
 from volatility.framework import exceptions
 from volatility.framework.symbols import generic
 
-vollog = logging.getLogger()
+vollog = logging.getLogger(__name__)
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
