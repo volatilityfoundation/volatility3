@@ -186,14 +186,14 @@ class _EPROCESS(generic.GenericIntelProcess):
         except exceptions.PagedInvalidAddressException:
             vollog.log(constants.LOGLEVEL_VVV, "Cannot access _EPROCESS.ObjectTable.HandleCount at {0:#x}".format(self.vol.offset))
 
-        return -1 # what's appropriate
+        return -1 # TODO: followup after decision around returning None
 
     @property
     def helper_session_id(self):
         try:
             if hasattr(self, "Session"):
                 if self.Session == 0:
-                    return -1 # what's appropriate for null pointer
+                    return -1 # TODO: followup after decision around returning None
 
                 layer_name = self.vol.layer_name
                 symbol_table_name = self.get_symbol_table().name
@@ -207,13 +207,13 @@ class _EPROCESS(generic.GenericIntelProcess):
         except exceptions.PagedInvalidAddressException:
             vollog.log(constants.LOGLEVEL_VVV, "Cannot access _EPROCESS.Session.SessionId at {0:#x}".format(self.vol.offset))
 
-        return -1 # what's appropriate
+        return -1 # TODO: followup after decision around returning None
 
     @property
     def helper_create_time(self):
         unix_time = self.CreateTime.QuadPart // 10000000
         if unix_time == 0:
-            return "" # what's appropriate
+            return "" # TODO: followup after decision around returning None
         unix_time = unix_time - 11644473600
         return str(datetime.datetime.utcfromtimestamp(unix_time))
 
@@ -221,7 +221,7 @@ class _EPROCESS(generic.GenericIntelProcess):
     def helper_exit_time(self):
         unix_time = self.ExitTime.QuadPart // 10000000
         if unix_time == 0:
-            return "" # what's appropriate
+            return "" # TODO: followup after decision around returning None
         unix_time = unix_time - 11644473600
         return str(datetime.datetime.utcfromtimestamp(unix_time))
 
