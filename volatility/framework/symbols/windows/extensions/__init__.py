@@ -1,10 +1,13 @@
 import collections.abc
 import typing
+import logging
+import datetime
 
 from volatility.framework import constants, objects, interfaces
 from volatility.framework import exceptions
 from volatility.framework.symbols import generic
 
+vollog = logging.getLogger()
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
@@ -173,6 +176,61 @@ class _EPROCESS(generic.GenericIntelProcess):
                 "{}{}_LDR_DATA_TABLE_ENTRY".format(sym_table, constants.BANG), "InLoadOrderLinks"):
             yield entry
 
+    @property
+    def helper_handle_count(self):
+        try:
+            if hasattr(self, "ObjectTable"):
+                if hasattr(self.ObjectTable, "HandleCount"):
+                    return self.ObjectTable.HandleCount
+
+        except exceptions.PagedInvalidAddressException:
+            vollog.log(constants.LOGLEVEL_VVV, "Cannot access _EPROCESS.ObjectTable.HandleCount at {0:#x}".format(self.vol.offset))
+
+        return -1 # what's appropriate
+
+    @property
+    def helper_session_id(self):
+        try:
+            if hasattr(self, "Session"):
+                if self.Session == 0:
+                    return -1 # what's appropriate for null pointer
+
+                layer_name = self.vol.layer_name
+                symbol_table_name = self.get_symbol_table().name
+                kvo = self._context.memory[layer_name].config['kernel_virtual_offset']
+                ntkrnlmp = self._context.module(symbol_table_name, layer_name = layer_name, offset = kvo)
+                session = ntkrnlmp.object(type_name = "_MM_SESSION_SPACE", offset = self.Session)
+
+                if hasattr(session, "SessionId"):
+                    return session.SessionId
+
+        except exceptions.PagedInvalidAddressException:
+            vollog.log(constants.LOGLEVEL_VVV, "Cannot access _EPROCESS.Session.SessionId at {0:#x}".format(self.vol.offset))
+
+        return -1 # what's appropriate
+
+    @property
+    def helper_create_time(self):
+        unix_time = self.CreateTime.QuadPart // 10000000
+        if unix_time == 0:
+            return "" # what's appropriate
+        unix_time = unix_time - 11644473600
+        return str(datetime.datetime.utcfromtimestamp(unix_time))
+
+    @property
+    def helper_exit_time(self):
+        unix_time = self.ExitTime.QuadPart // 10000000
+        if unix_time == 0:
+            return "" # what's appropriate
+        unix_time = unix_time - 11644473600
+        return str(datetime.datetime.utcfromtimestamp(unix_time))
+
+    @property
+    def helper_is_wow64(self):
+        if hasattr(self, "Wow64Process"):
+            value = self.Wow64Process
+            return value != 0 and value != None
+        return False
 
 class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
     def to_list(self,
