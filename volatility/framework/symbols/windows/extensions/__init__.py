@@ -226,11 +226,17 @@ class _EPROCESS(generic.GenericIntelProcess):
         return str(datetime.datetime.utcfromtimestamp(unix_time))
 
     @property
-    def helper_is_wow64(self):
+    def helper_wow_64_process(self):
         if hasattr(self, "Wow64Process"):
-            value = self.Wow64Process
-            return value != 0 and value != None
-        return False
+            return self.Wow64Process
+        elif hasattr(self, "WoW64Process"):
+            return self.WoW64Process
+        return None
+
+    @property
+    def helper_is_wow64(self):
+        value = self.helper_wow_64_process
+        return value != 0 and value != None
 
 class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
     def to_list(self,
