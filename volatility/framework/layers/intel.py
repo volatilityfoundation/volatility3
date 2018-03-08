@@ -278,7 +278,7 @@ class Intel32e(Intel):
                   ('page table', 9, True)]
 
 
-class WindowsMixin(object):
+class WindowsMixin(Intel):
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry
@@ -294,7 +294,7 @@ class WindowsMixin(object):
 
     def _translate_swap(self, layer: Intel, offset: int, bit_offset: int):
         try:
-            return super(layer.__class__, layer)._translate(offset)
+            return super()._translate(offset)
         except exceptions.PagedInvalidAddressException as excp:
             entry = excp.entry
             tbit = bool(entry & (1 << 11))
