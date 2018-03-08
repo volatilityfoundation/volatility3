@@ -1,3 +1,4 @@
+import datetime
 import sys
 import typing
 
@@ -43,6 +44,7 @@ class QuickTextRenderer(interfaces.renderers.Renderer):
                       format_hints.Hex: Optional(lambda x: "0x{:x}".format(x)),
                       format_hints.HexBytes: Optional(hex_bytes_as_text),
                       bytes: Optional(lambda x: x.decode("utf-8")),
+                      datetime.datetime: Optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
                       'default': Optional(lambda x: "{}".format(x))}
 
     def __init__(self, options = None) -> None:
