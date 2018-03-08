@@ -58,6 +58,9 @@ class CommandLine(object):
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument("-l", "--log", help = "Log output to a file as well as the console", default = None,
                             type = str)
+        parser.add_argument("--write-config", help = "Write configuration JSON file out to config.json",
+                            default = False,
+                            action = 'store_true')
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -180,7 +183,7 @@ class CommandLine(object):
 
         constructed = plugin(ctx, plugin_config_path)
 
-        if args.verbosity >= 2:
+        if args.write_config:
             vollog.debug("Writing out configuration data to config.json")
             with open("config.json", "w") as f:
                 json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
