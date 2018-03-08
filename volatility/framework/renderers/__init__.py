@@ -168,8 +168,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
     def populate(self,
                  func: interfaces.renderers.VisitorSignature = None,
-                 initial_accumulator: typing.Any = None) \
-            -> typing.Generator[typing.Tuple[interfaces.renderers.SimpleTypes, ...], None, None]:
+                 initial_accumulator: typing.Any = None) -> None:
         """Populates the tree by consuming the TreeGrid's construction generator
            Func is called on every node, so can be used to create output on demand
 
@@ -190,7 +189,6 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 accumulator = func(treenode, accumulator)
                 self._row_count += 1
         self._populated = True
-        return None
 
     @property
     def populated(self):
@@ -263,7 +261,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
     _T = typing.TypeVar("_T")
 
     def visit(self,
-              node: interfaces.renderers.TreeNode,
+              node: typing.Optional[interfaces.renderers.TreeNode],
               function: typing.Callable[[interfaces.renderers.TreeNode, _T], _T],
               initial_accumulator: _T = None,
               sort_key: interfaces.renderers.ColumnSortKey = None):

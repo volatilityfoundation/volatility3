@@ -130,9 +130,9 @@ class TreeGrid(object, metaclass = ABCMeta):
     @abstractmethod
     def populate(self,
                  func: VisitorSignature = None,
-                 initial_accumulator: typing.Any = None) \
-            -> typing.Generator[typing.Tuple[SimpleTypes, ...], None, None]:
-        """Generator that returns the next available Node
+                 initial_accumulator: typing.Any = None) -> None:
+        """Populates the tree by consuming the TreeGrid's construction generator
+           Func is called on every node, so can be used to create output on demand
 
            This is equivalent to a one-time visit.
         """
