@@ -1,6 +1,7 @@
 import sys
+import typing
 
-from volatility.framework import interfaces
+from volatility.framework import interfaces, renderers
 from volatility.framework.renderers import format_hints
 
 
@@ -24,12 +25,25 @@ def hex_bytes_as_text(value: bytes) -> str:
     return output
 
 
+class Optional(object):
+    def __init__(self, func: typing.Callable[[typing.Any], str]) -> None:
+        self._func = func
+
+    def __call__(self, x: typing.Any) -> str:
+        if isinstance(x, interfaces.renderers.BaseAbsentValue):
+            if isinstance(x, renderers.NotApplicableValue):
+                return "N/A"
+            else:
+                return "-"
+        return self._func(x)
+
+
 class QuickTextRenderer(interfaces.renderers.Renderer):
-    type_renderers = {format_hints.Bin: lambda x: "0b{:b}".format(x),
-                      format_hints.Hex: lambda x: "0x{:x}".format(x),
-                      format_hints.HexBytes: hex_bytes_as_text,
-                      bytes: lambda x: x.decode("utf-8"),
-                      'default': lambda x: "{}".format(x)}
+    type_renderers = {format_hints.Bin: Optional(lambda x: "0b{:b}".format(x)),
+                      format_hints.Hex: Optional(lambda x: "0x{:x}".format(x)),
+                      format_hints.HexBytes: Optional(hex_bytes_as_text),
+                      bytes: Optional(lambda x: x.decode("utf-8")),
+                      'default': Optional(lambda x: "{}".format(x))}
 
     def __init__(self, options = None) -> None:
         super().__init__(options)

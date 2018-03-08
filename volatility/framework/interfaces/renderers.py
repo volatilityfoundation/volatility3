@@ -73,9 +73,17 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
         """
 
 
+class BaseAbsentValue(object):
+    """Class that represents values which are not present for some reason"""
+
+
 _Type = typing.TypeVar("_Type")
 ColumnsType = typing.List[typing.Tuple[str, typing.Type]]
-SimpleTypes = typing.Union[typing.Type[int], typing.Type[str], typing.Type[float], typing.Type[bytes]]
+SimpleTypes = typing.Union[typing.Type[int],
+                           typing.Type[str],
+                           typing.Type[float],
+                           typing.Type[bytes],
+                           typing.Type[BaseAbsentValue]]
 VisitorSignature = typing.Callable[[TreeNode, _Type], _Type]
 
 

@@ -8,6 +8,18 @@ import typing
 from volatility.framework import interfaces
 
 
+class UnreadableValue(interfaces.renderers.BaseAbsentValue):
+    """Class that represents values which are empty because the data cannot be read"""
+
+
+class UnparsableValue(interfaces.renderers.BaseAbsentValue):
+    """Class that represents values which are empty because the data cannot be interpreted correctly"""
+
+
+class NotApplicableValue(interfaces.renderers.BaseAbsentValue):
+    """Class that represents values which are empty because they don't make sense for this node"""
+
+
 class TreeNode(interfaces.renderers.TreeNode):
     """Class representing a particular node in a tree grid"""
 
@@ -40,7 +52,7 @@ class TreeNode(interfaces.renderers.TreeNode):
                 "Values must be a list of objects made up of simple types and number the same as the columns")
         for index in range(len(self._treegrid.columns)):
             column = self._treegrid.columns[index]
-            if not isinstance(values[index], column.type):
+            if not isinstance(values[index], (column.type, interfaces.renderers.BaseAbsentValue)):
                 raise TypeError(
                     "Values item with index {} is the wrong type for column {} (got {} but expected {})".format(
                         index,
