@@ -3,6 +3,7 @@ or in some other form.  This module defines both the output format (:class:`Tree
 which can interact with a TreeGrid to produce suitable output."""
 
 import collections
+import datetime
 import typing
 from abc import abstractmethod, ABCMeta
 
@@ -77,12 +78,25 @@ class BaseAbsentValue(object):
     """Class that represents values which are not present for some reason"""
 
 
+# We don't class these off a shared base, because the SimpleTypes must only
+# contain the types that the validator will accept (which would not include the base)
+
+class TZAwareValue(datetime.datetime):
+    """Class for TZ-aware datetimes"""
+
+
+class TZNaiveValue(datetime.datetime):
+    """Class for TZ-aware datetimes"""
+
+
 _Type = typing.TypeVar("_Type")
 ColumnsType = typing.List[typing.Tuple[str, typing.Type]]
 SimpleTypes = typing.Union[typing.Type[int],
                            typing.Type[str],
                            typing.Type[float],
                            typing.Type[bytes],
+                           typing.Type[TZAwareValue],
+                           typing.Type[TZNaiveValue],
                            typing.Type[BaseAbsentValue]]
 VisitorSignature = typing.Callable[[TreeNode, _Type], _Type]
 
@@ -100,7 +114,7 @@ class TreeGrid(object, metaclass = ABCMeta):
     and to create cycles.
     """
 
-    simple_types = (int, str, float, bytes)  # type: typing.ClassVar[typing.Tuple]
+    simple_types = (int, str, float, bytes, datetime)  # type: typing.ClassVar[typing.Tuple]
 
     def __init__(self, columns: ColumnsType, generator: typing.Generator) -> None:
         """Constructs a TreeGrid object using a specific set of columns

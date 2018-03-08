@@ -52,13 +52,26 @@ class TreeNode(interfaces.renderers.TreeNode):
                 "Values must be a list of objects made up of simple types and number the same as the columns")
         for index in range(len(self._treegrid.columns)):
             column = self._treegrid.columns[index]
-            if not isinstance(values[index], (column.type, interfaces.renderers.BaseAbsentValue)):
+            val = values[index]
+            if not isinstance(val, (column.type, interfaces.renderers.BaseAbsentValue)):
                 raise TypeError(
                     "Values item with index {} is the wrong type for column {} (got {} but expected {})".format(
                         index,
                         column.name,
-                        type(values[index]),
+                        type(val),
                         column.type))
+            if isinstance(val, (interfaces.renderers.TZAwareValue, interfaces.renderers.TZNaiveValue)):
+                tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
+                if isinstance(val, interfaces.renderers.TZAwareValue) and tznaive:
+                    raise TypeError(
+                        "Values item with index {} is not a timezone aware datetime object as required by column {}".format(
+                            index,
+                            column.name))
+                elif isinstance(val, interfaces.renderers.TZNaiveValue) and not tznaive:
+                    raise TypeError(
+                        "Values item with index {} is not a timezone naive datetime object as required by column {}".format(
+                            index,
+                            column.name))
 
     @property
     def values(self) -> typing.Iterable[interfaces.renderers.SimpleTypes]:
