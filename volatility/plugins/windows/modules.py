@@ -22,12 +22,12 @@ class Modules(plugins.PluginInterface):
         for mod in self.list_modules():
 
             try:
-                BaseDllName = mod.BaseDllName.helper_string
+                BaseDllName = mod.BaseDllName.get_string()
             except exceptions.InvalidAddressException:
                 BaseDllName = ""
 
             try:
-                FullDllName = mod.FullDllName.helper_string
+                FullDllName = mod.FullDllName.get_string()
             except exceptions.InvalidAddressException:
                 FullDllName = ""
 

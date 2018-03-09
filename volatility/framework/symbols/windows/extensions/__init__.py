@@ -47,8 +47,7 @@ class _CM_KEY_BODY(objects.Struct):
     """This represents an open handle to a registry key and
     is not tied to the registry hive file format on disk."""
 
-    @property
-    def helper_full_key_name(self) -> str:
+    def get_full_key_name(self) -> str:
         output = []
         kcb = self.KeyControlBlock
         while kcb.ParentKcb:
@@ -63,8 +62,7 @@ class _CM_KEY_BODY(objects.Struct):
 
 
 class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
-    @property
-    def helper_device_name(self) -> str:
+    def get_device_name(self) -> str:
         header = self.object_header()
         return header.NameInfo.Name.String  # type: ignore
 
@@ -73,7 +71,7 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
     def file_name_with_device(self) -> str:
         name = ""
         if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
-            name = "\\Device\\{}".format(self.DeviceObject.helper_device_name)
+            name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
 
         try:
             name += self.FileName.String
@@ -124,15 +122,14 @@ class _ETHREAD(objects.Struct):
 
 
 class _UNICODE_STRING(objects.Struct):
-    @property
-    def helper_string(self) -> interfaces.objects.ObjectInterface:
+    def get_string(self) -> interfaces.objects.ObjectInterface:
         # We explicitly do *not* catch errors here, we allow an exception to be thrown
         # (otherwise there's no way to determine anything went wrong)
         # It's up to the user of this method to catch exceptions
         return self.Buffer.dereference().cast("string", max_length = self.Length, errors = "replace",
                                               encoding = "utf16")
 
-    String = helper_string
+    String = property(get_string)
 
 
 class _EPROCESS(generic.GenericIntelProcess):

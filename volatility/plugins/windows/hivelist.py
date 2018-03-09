@@ -21,7 +21,7 @@ class HiveList(plugins.PluginInterface):
         for hive in self.list_hives():
 
             yield (0, (format_hints.Hex(hive.vol.offset),
-                       hive.helper_name or ""))
+                       hive.get_name() or ""))
 
     def list_hives(self):
         """Lists all the hives in the primary layer"""

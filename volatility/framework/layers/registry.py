@@ -103,7 +103,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         found_key = []  # type: typing.List[str]
         while key_array and node_key:
             for subkey in node_key.get_subkeys():
-                if subkey.helper_name == key_array[0]:
+                if subkey.get_name() == key_array[0]:
                     node_key = subkey
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
                     break
@@ -153,7 +153,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         table = storage.Map.Directory[dir_index]
         entry = table.Table[table_index]
-        return entry.helper_block_offset + suboffset
+        return entry.get_block_offset() + suboffset
 
     def mapping(self,
                 offset: int,

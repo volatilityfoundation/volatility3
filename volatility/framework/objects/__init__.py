@@ -584,9 +584,9 @@ class Struct(interfaces.objects.ObjectInterface):
             vollog.debug("Deprecated non-helper attribute {} requested from class override {}".format(attr,
                                                                                                       self.vol.type_name))
             # Uncomment the following line if we want to prohibit using non-helper properties
-            # return self.__getattr_(attr)
+            # return self.__getattr__(attr)
 
-            # Change this to an attribute error if we want to prohibit rather than deprecate member collisisons
+        # Change this to an attribute error if we want to prohibit rather than deprecate member collisisons
         return object.__getattribute__(self, attr)
 
     def __getattr__(self, attr: str) -> typing.Any:

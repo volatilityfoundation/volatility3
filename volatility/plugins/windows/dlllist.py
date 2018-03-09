@@ -20,9 +20,9 @@ class DllList(interfaces_plugins.PluginInterface):
 
                 BaseDllName = FullDllName = ""
                 try:
-                    BaseDllName = entry.BaseDllName.helper_string
+                    BaseDllName = entry.BaseDllName.get_string()
                     # We assume that if the BaseDllName points to an invalid buffer, so will FullDllName
-                    FullDllName = entry.FullDllName.helper_string
+                    FullDllName = entry.FullDllName.get_string()
                 except exceptions.InvalidAddressException:
                     pass
 

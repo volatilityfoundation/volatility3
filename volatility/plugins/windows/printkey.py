@@ -49,9 +49,9 @@ class PrintKey(plugins.PluginInterface):
                       (str(datetime.datetime.utcfromtimestamp(unix_time)),
                        "Key",
                        key_path,
-                       key_node.helper_name,
+                       key_node.get_name(),
                        "",
-                       key_node.helper_volatile))
+                       key_node.get_volatile()))
             yield result
 
         for value_node in node.get_values():
@@ -59,14 +59,14 @@ class PrintKey(plugins.PluginInterface):
                       (str(datetime.datetime.utcfromtimestamp(unix_time)),
                        RegValueTypes(value_node.Type).name,
                        key_path,
-                       value_node.helper_name,
+                       value_node.get_name(),
                        str(value_node.decode_data()),
-                       node.helper_volatile))
+                       node.get_volatile()))
             yield result
 
         if self.config['recurse']:
             for node in node.get_subkeys():
-                yield from self.hive_walker(hive, node, key_path + "\\" + node.helper_name)
+                yield from self.hive_walker(hive, node, key_path + "\\" + node.get_name())
 
     def registry_walker(self):
         """Walks through a registry, hive by hive"""

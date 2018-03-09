@@ -27,8 +27,7 @@ class RegValueTypes(enum.Enum):
 
 
 class _HMAP_ENTRY(objects.Struct):
-    @property
-    def helper_block_offset(self) -> int:
+    def get_block_offset(self) -> int:
         try:
             return self.PermanentBinAddress ^ (self.PermanentBinAddress & 0x3)
         except AttributeError:
@@ -36,28 +35,26 @@ class _HMAP_ENTRY(objects.Struct):
 
 
 class _CMHIVE(objects.Struct):
-    @property
-    def helper_name(self) -> typing.Optional[interfaces.objects.ObjectInterface]:
+    def get_name(self) -> typing.Optional[interfaces.objects.ObjectInterface]:
         """Determine a name for the hive. Note that some attributes are
         unpredictably blank across different OS versions while others are populated,
         so we check all possibilities and take the first one that's not empty"""
 
         for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
             try:
-                return getattr(self, attr).helper_string
+                return getattr(self, attr).get_string()
             except (AttributeError, exceptions.InvalidAddressException):
                 pass
 
         return None
 
-    name = helper_name
+    name = property(get_name)
 
 
 class _CM_KEY_NODE(objects.Struct):
     """Extension to allow traversal of registry keys"""
 
-    @property
-    def helper_volatile(self) -> bool:
+    def get_volatile(self) -> bool:
         if not isinstance(self._context.memory[self.vol.layer_name], RegistryHive):
             raise ValueError("Cannot determine volatility of registry key without an offset in a RegistryHive layer")
         return bool(self.vol.offset & 0x80000000)
@@ -114,8 +111,7 @@ class _CM_KEY_NODE(objects.Struct):
                 if node.vol.type_name.endswith(constants.BANG + '_CM_KEY_VALUE'):
                     yield node
 
-    @property
-    def helper_name(self) -> interfaces.objects.ObjectInterface:
+    def get_name(self) -> interfaces.objects.ObjectInterface:
         """Since this is just a casting convenience, it can be a property"""
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
 
@@ -124,15 +120,14 @@ class _CM_KEY_NODE(objects.Struct):
         # Using the offset adds a significant delay (since it cannot be cached easily)
         # if self.vol.offset == reg.get_node(reg.root_cell_offset).vol.offset:
         if self.vol.offset == reg.root_cell_offset + 4:
-            return self.helper_name
-        return reg.get_node(self.Parent).get_key_path() + '\\' + self.helper_name
+            return self.get_name()
+        return reg.get_node(self.Parent).get_key_path() + '\\' + self.get_name()
 
 
 class _CM_KEY_VALUE(objects.Struct):
     """Extensions to extract data from CM_KEY_VALUE nodes"""
 
-    @property
-    def helper_name(self) -> interfaces.objects.ObjectInterface:
+    def get_name(self) -> interfaces.objects.ObjectInterface:
         """Since this is just a casting convenience, it can be a property"""
         self.Name.count = self.NameLength
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
@@ -168,15 +163,15 @@ class _CM_KEY_VALUE(objects.Struct):
         self_type = RegValueTypes(self.Type)
         if self_type == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):
-                raise ValueError("Size of data does not match the type of registry value {}".format(self.helper_name))
+                raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
             return struct.unpack("<L", data)[0]
         if self_type == RegValueTypes.REG_DWORD_BIG_ENDIAN:
             if len(data) != struct.calcsize(">L"):
-                raise ValueError("Size of data does not match the type of registry value {}".format(self.helper_name))
+                raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
             return struct.unpack(">L", data)[0]
         if self_type == RegValueTypes.REG_QWORD:
             if len(data) != struct.calcsize("<Q"):
-                raise ValueError("Size of data does not match the type of registry value {}".format(self.helper_name))
+                raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
             return struct.unpack("<Q", data)[0]
         if self_type in [RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK]:
             # truncate after \x00\x00 to ensure it can
@@ -192,5 +187,5 @@ class _CM_KEY_VALUE(objects.Struct):
             return ''
 
         # Fall back if it's something weird
-        vollog.debug("Unknow registry value type encountered: {}", self.Type)
+        vollog.debug("Unknown registry value type encountered: {}", self.Type)
         return self.Data.cast("string", max_length = self.DataLength, encoding = "latin-1")
