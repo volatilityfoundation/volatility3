@@ -56,6 +56,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                 "Invalid registry base_block length: {}".format(self._base_block.Length))
 
     @property
+    def hive_offset(self) -> int:
+        return self._hive_offset
+
+    @property
     def address_mask(self) -> int:
         """Return a mask that allows for the volatile bit to be set"""
         return super().address_mask | 0x80000000

@@ -1,7 +1,9 @@
 import datetime
 import logging
+import typing
 
 import volatility.framework.interfaces.plugins as plugins
+from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.registry import RegistryHive
 from volatility.framework.renderers import TreeGrid
@@ -36,7 +38,8 @@ class PrintKey(plugins.PluginInterface):
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
 
-    def hive_walker(self, hive, node = None, key_path = None):
+    def hive_walker(self, hive: RegistryHive, node: int = None, key_path: str = None) \
+            -> typing.Generator:
         if not node:
             node = hive.get_node(hive.root_cell_offset)
         if key_path is None:
@@ -47,6 +50,7 @@ class PrintKey(plugins.PluginInterface):
         for key_node in node.get_subkeys():
             result = (key_path.count("\\"),
                       (str(datetime.datetime.utcfromtimestamp(unix_time)),
+                       renderers.format_hints.Hex(hive.hive_offset),
                        "Key",
                        key_path,
                        key_node.get_name(),
@@ -57,6 +61,7 @@ class PrintKey(plugins.PluginInterface):
         for value_node in node.get_values():
             result = (key_path.count("\\"),
                       (str(datetime.datetime.utcfromtimestamp(unix_time)),
+                       renderers.format_hints.Hex(hive.hive_offset),
                        RegValueTypes(value_node.Type).name,
                        key_path,
                        value_node.get_name(),
@@ -103,6 +108,7 @@ class PrintKey(plugins.PluginInterface):
     def run(self):
 
         return TreeGrid(columns = [('Last Write Time', str),
+                                   ('Hive Offset', renderers.format_hints.Hex),
                                    ('Type', str),
                                    ('Key', str),
                                    ('Name', str),
