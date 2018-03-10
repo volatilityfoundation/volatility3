@@ -189,7 +189,7 @@ class _EPROCESS(generic.GenericIntelProcess):
         try:
             if hasattr(self, "Session"):
                 if self.Session == 0:
-                    return renderers.UnparsableValue()
+                    return renderers.NotApplicableValue()
 
                 layer_name = self.vol.layer_name
                 symbol_table_name = self.get_symbol_table().name
@@ -209,14 +209,14 @@ class _EPROCESS(generic.GenericIntelProcess):
     def get_create_time(self):
         unix_time = self.CreateTime.QuadPart // 10000000
         if unix_time == 0:
-            return renderers.UnparsableValue()
+            return renderers.NotApplicableValue()
         unix_time = unix_time - 11644473600
         return str(datetime.datetime.utcfromtimestamp(unix_time))
 
     def get_exit_time(self):
         unix_time = self.ExitTime.QuadPart // 10000000
         if unix_time == 0:
-            return renderers.UnparsableValue()
+            return renderers.NotApplicableValue()
         unix_time = unix_time - 11644473600
         return str(datetime.datetime.utcfromtimestamp(unix_time))
 
