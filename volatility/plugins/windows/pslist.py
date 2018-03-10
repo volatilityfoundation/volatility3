@@ -1,5 +1,6 @@
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers
+from volatility.framework.renderers import format_hints
 from volatility.framework.configuration import requirements
 
 
@@ -15,16 +16,37 @@ class PsList(plugins.PluginInterface):
                 # TODO: Convert this to a ListRequirement so that people can filter on sets of pids
                 requirements.IntRequirement(name = 'pid',
                                             description = "Process ID to include (all other processes are excluded)",
-                                            optional = True)]
+                                            optional = True),
+                requirements.BooleanRequirement(name = 'physical',
+                                                description = 'Display physical offsets instead of virtual',
+                                                default = False,
+                                                optional = True)]
 
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
 
     def _generator(self):
         for proc in self.list_processes():
-            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
-                       proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
-                                               errors = 'replace')))
+
+            if not self.config['physical']:
+                offset = proc.vol.offset
+            else:
+                layer_name = self.config['primary']
+                memory = self.context.memory[layer_name]
+                (_, offset, _, _) = list(memory.mapping(offset=proc.vol.offset, length=0))[0]
+
+            yield (0, (proc.UniqueProcessId,
+                       proc.InheritedFromUniqueProcessId,
+                       proc.ImageFileName.cast("string",
+                                               max_length = proc.ImageFileName.vol.count,
+                                               errors = 'replace'),
+                       format_hints.Hex(offset),
+                       proc.ActiveThreads,
+                       proc.helper_handle_count,
+                       proc.helper_session_id,
+                       proc.helper_is_wow64,
+                       proc.helper_create_time,
+                       proc.helper_exit_time))
 
     def list_processes(self):
         """Lists all the processes in the primary layer that are in the pid config option"""
@@ -61,7 +83,16 @@ class PsList(plugins.PluginInterface):
                 yield proc
 
     def run(self):
+        offsettype = "(V)" if not self.config['physical'] else "(P)"
+
         return renderers.TreeGrid([("PID", int),
                                    ("PPID", int),
-                                   ("ImageFileName", str)],
+                                   ("ImageFileName", str),
+                                   ("Offset{0}".format(offsettype), format_hints.Hex),
+                                   ("Threads", int),
+                                   ("Handles", int),
+                                   ("SessionId", int),
+                                   ("Wow64", bool),
+                                   ("CreateTime", str),
+                                   ("ExitTime", str)],
                                   self._generator())
