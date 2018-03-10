@@ -3,7 +3,7 @@ import logging
 import typing
 
 import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import renderers
+from volatility.framework import objects, renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.registry import RegistryHive
 from volatility.framework.renderers import TreeGrid
@@ -38,7 +38,7 @@ class PrintKey(plugins.PluginInterface):
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
 
-    def hive_walker(self, hive: RegistryHive, node: int = None, key_path: str = None) \
+    def hive_walker(self, hive: RegistryHive, node: objects.Struct = None, key_path: str = None) \
             -> typing.Generator:
         if not node:
             node = hive.get_node(hive.root_cell_offset)
