@@ -3,7 +3,7 @@ import datetime
 import logging
 import typing
 
-from volatility.framework import constants, exceptions, interfaces, objects
+from volatility.framework import constants, exceptions, interfaces, objects, renderers
 from volatility.framework.symbols import generic
 
 vollog = logging.getLogger(__name__)
@@ -183,13 +183,13 @@ class _EPROCESS(generic.GenericIntelProcess):
             vollog.log(constants.LOGLEVEL_VVV,
                        "Cannot access _EPROCESS.ObjectTable.HandleCount at {0:#x}".format(self.vol.offset))
 
-        return -1  # TODO: followup after decision around returning None
+        return renderers.UnreadableValue()
 
     def get_session_id(self):
         try:
             if hasattr(self, "Session"):
                 if self.Session == 0:
-                    return -1  # TODO: followup after decision around returning None
+                    return renderers.UnparsableValue()
 
                 layer_name = self.vol.layer_name
                 symbol_table_name = self.get_symbol_table().name
@@ -204,19 +204,19 @@ class _EPROCESS(generic.GenericIntelProcess):
             vollog.log(constants.LOGLEVEL_VVV,
                        "Cannot access _EPROCESS.Session.SessionId at {0:#x}".format(self.vol.offset))
 
-        return -1  # TODO: followup after decision around returning None
+        return renderers.UnreadableValue()
 
     def get_create_time(self):
         unix_time = self.CreateTime.QuadPart // 10000000
         if unix_time == 0:
-            return ""  # TODO: followup after decision around returning None
+            return renderers.UnparsableValue()
         unix_time = unix_time - 11644473600
         return str(datetime.datetime.utcfromtimestamp(unix_time))
 
     def get_exit_time(self):
         unix_time = self.ExitTime.QuadPart // 10000000
         if unix_time == 0:
-            return ""  # TODO: followup after decision around returning None
+            return renderers.UnparsableValue()
         unix_time = unix_time - 11644473600
         return str(datetime.datetime.utcfromtimestamp(unix_time))
 
