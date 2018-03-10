@@ -1,7 +1,7 @@
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers
-from volatility.framework.renderers import format_hints
 from volatility.framework.configuration import requirements
+from volatility.framework.renderers import format_hints
 
 
 class PsList(plugins.PluginInterface):
@@ -33,7 +33,7 @@ class PsList(plugins.PluginInterface):
             else:
                 layer_name = self.config['primary']
                 memory = self.context.memory[layer_name]
-                (_, offset, _, _) = list(memory.mapping(offset=proc.vol.offset, length=0))[0]
+                (_, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
             yield (0, (proc.UniqueProcessId,
                        proc.InheritedFromUniqueProcessId,
@@ -42,11 +42,11 @@ class PsList(plugins.PluginInterface):
                                                errors = 'replace'),
                        format_hints.Hex(offset),
                        proc.ActiveThreads,
-                       proc.helper_handle_count,
-                       proc.helper_session_id,
-                       proc.helper_is_wow64,
-                       proc.helper_create_time,
-                       proc.helper_exit_time))
+                       proc.get_handle_count(),
+                       proc.get_session_id(),
+                       proc.get_is_wow64(),
+                       proc.get_create_time(),
+                       proc.get_exit_time()))
 
     def list_processes(self):
         """Lists all the processes in the primary layer that are in the pid config option"""
