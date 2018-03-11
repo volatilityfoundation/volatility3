@@ -38,10 +38,14 @@ class PrintKey(plugins.PluginInterface):
     def update_configuration(self):
         """No operation since all values provided by config/requirements initially"""
 
-    def hive_walker(self, hive: RegistryHive, node: objects.Struct = None, key_path: str = None) \
+    def hive_walker(self, hive: RegistryHive, node_path: typing.Sequence[objects.Struct] = None, key_path: str = None) \
             -> typing.Generator:
-        if not node:
-            node = hive.get_node(hive.root_cell_offset)
+        if not node_path:
+            node_path = [hive.get_node(hive.root_cell_offset)]
+        if not isinstance(node_path, list) or len(node_path) < 1:
+            vollog.warning("Hive walker was not passed a valid node_path (or None)")
+            raise StopIteration
+        node = node_path[-1]
         if key_path is None:
             key_path = node.get_key_path()
         unix_time = node.LastWriteTime.QuadPart // 10000000
@@ -70,8 +74,9 @@ class PrintKey(plugins.PluginInterface):
             yield result
 
         if self.config['recurse']:
-            for node in node.get_subkeys():
-                yield from self.hive_walker(hive, node, key_path + "\\" + node.get_name())
+            for sub_node in node.get_subkeys():
+                if sub_node.vol.offset not in [x.vol.offset for x in node_path]:
+                    yield from self.hive_walker(hive, node_path + [sub_node], key_path + "\\" + sub_node.get_name())
 
     def registry_walker(self):
         """Walks through a registry, hive by hive"""
@@ -96,14 +101,12 @@ class PrintKey(plugins.PluginInterface):
             hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset), os = 'Windows')
             self.context.memory.add_layer(hive)
 
-            node = None
-
             # Walk it
             if 'key' in self.config:
-                node = hive.get_key(self.config['key'])
+                node_path = hive.get_key(self.config['key'], return_list = True)
             else:
-                node = hive.get_node(hive.root_cell_offset)
-            yield from self.hive_walker(hive, node)
+                node_path = [hive.get_node(hive.root_cell_offset)]
+            yield from self.hive_walker(hive, node_path)
 
     def run(self):
 
