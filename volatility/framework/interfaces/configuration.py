@@ -638,7 +638,7 @@ class TranslationLayerRequirement(ConstructableRequirementInterface, Configurabl
         return context.memory[value].build_configuration()
 
 
-class SymbolRequirement(ConstructableRequirementInterface):
+class SymbolRequirement(ConstructableRequirementInterface, ConfigurableRequirementInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
@@ -689,4 +689,4 @@ class SymbolRequirement(ConstructableRequirementInterface):
                             _: str,
                             value: typing.Any) -> HierarchicalDict:
         """Builds the appropriate configuration for the specified requirement"""
-        return context.memory[value].build_configuration()
+        return context.symbol_space[value].build_configuration()
