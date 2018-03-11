@@ -40,6 +40,9 @@ class PrintKey(plugins.PluginInterface):
 
     def hive_walker(self, hive: RegistryHive, node_path: typing.Sequence[objects.Struct] = None, key_path: str = None) \
             -> typing.Generator:
+        """Walks through a set of nodes from a given node (last one in node_path).
+        Avoids loops by not traversing into nodes already present in the node_path
+        """
         if not node_path:
             node_path = [hive.get_node(hive.root_cell_offset)]
         if not isinstance(node_path, list) or len(node_path) < 1:

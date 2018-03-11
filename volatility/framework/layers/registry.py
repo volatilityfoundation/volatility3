@@ -99,7 +99,11 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             return cell
 
     def get_key(self, key: str, return_list: bool = False) -> interfaces.objects.ObjectInterface:
-        """Gets a specific registry key by key path"""
+        """Gets a specific registry key by key path
+
+        return_list specifies whether the return result will be a single node (default) or a list of nodes from
+        root to the current node (if return_list is true).
+        """
         node_key = self.get_node(self.root_cell_offset) if not return_list else [self.get_node(self.root_cell_offset)]
         if key.endswith("\\"):
             key = key[:-1]
