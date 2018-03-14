@@ -150,7 +150,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                     "Column {}'s type is not a simple type: {}".format(name, column_type.__class__.__name__))
             converted_columns.append(interfaces.renderers.Column(len(converted_columns), name, column_type))
         self.RowStructure = collections.namedtuple("RowStructure",
-                                                   [self._sanitize(column.name) for column in converted_columns])
+                                                   [self.sanitize_name(column.name) for column in converted_columns])
         self._columns = converted_columns
         if generator is None:
             generator = []
@@ -159,11 +159,11 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         self._generator = generator
 
     @staticmethod
-    def _sanitize(text: str) -> str:
+    def sanitize_name(text: str) -> str:
         output = ""
         for letter in text.lower():
             if letter != ' ':
-                output += (letter if letter in 'abcdefghiljklmnopqrstuvwxyz_' else '_')
+                output += (letter if letter in 'abcdefghiljklmnopqrstuvwxyz_0123456789' else '_')
         return output
 
     def populate(self,

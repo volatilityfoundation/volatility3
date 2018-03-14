@@ -127,6 +127,11 @@ class TreeGrid(object, metaclass = ABCMeta):
         :param generator: A generator that populates the tree/grid structure
         """
 
+    @staticmethod
+    @abstractmethod
+    def sanitize_name(text: str) -> str:
+        """Method used to sanitize column names for TreeNodes"""
+
     @abstractmethod
     def populate(self,
                  func: VisitorSignature = None,
