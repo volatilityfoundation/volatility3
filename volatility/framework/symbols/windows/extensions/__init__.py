@@ -11,6 +11,232 @@ vollog = logging.getLogger(__name__)
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
+class _MMVAD_SHORT(objects.Struct):
+
+    def traverse(self, visited = None, depth = 0):
+        """Traverse the VAD tree, determining each underlying VAD node type by looking
+        up the tag in memory behind the structure (essentially the pool tag)."""
+
+        if depth > 100:
+            vollog.log(constants.LOGLEVEL_VVV, "Vad tree is too deep, something went wrong!")
+            raise RuntimeError("Vad tree is too deep")
+
+        if visited == None:
+            visited = set()
+
+        vad_address = self.vol.offset
+
+        if vad_address in visited:
+            vollog.log(constants.LOGLEVEL_VVV, "VAD node already seen!")
+            return
+
+        visited.add(vad_address)
+        memory = self._context.memory[self.vol.layer_name]
+
+        # the offset is different on 32 and 64 bits
+        symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
+        if self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer").size == 4:
+            vad_address -= 4
+        else:
+            vad_address -= 12
+
+        try:
+            tag = memory.read(vad_address, 4, pad = False).decode()
+
+            if tag in ["VadS", "VadF"]:
+                target = "_MMVAD_SHORT"
+            elif tag.startswith("Vad"):
+                target = "_MMVAD"
+            elif depth == 0:
+                # the root node at depth 0 is allowed to not have a tag
+                # but we still want to continue and access its right & left child
+                target = None
+            else:
+                # any node other than the root that doesn't have a recognized tag
+                # is just garbage and we skip the node entirely
+                return
+
+            if target:
+                vad_object = self.cast(target)
+
+                setattr(vad_object, "Tag", tag)
+                yield vad_object
+
+        except exceptions.InvalidAddressException:
+            return
+        except UnicodeDecodeError:
+            pass
+
+        for vad_node in self.get_left_child().dereference().traverse(visited, depth + 1):
+            yield vad_node
+
+        for vad_node in self.get_right_child().dereference().traverse(visited, depth + 1):
+            yield vad_node
+
+    def get_right_child(self):
+        """Get the right child member"""
+
+        if hasattr(self, "RightChild"):
+            return self.RightChild
+
+        elif hasattr(self, "Right"):
+            return self.Right
+
+        raise AttributeError("Unable to find the right child member")
+
+    def get_left_child(self):
+        """Get the left child member"""
+
+        if hasattr(self, "LeftChild"):
+            return self.LeftChild
+
+        elif hasattr(self, "Left"):
+            return self.Left
+
+        raise AttributeError("Unable to find the left child member")
+
+    def get_parent(self):
+        """Get the VAD's parent member"""
+
+        # this is for xp and 2003
+        if hasattr(self, "Parent"):
+            return self.Parent
+
+        # this is for vista through windows 7
+        elif hasattr(self, "u1") and hasattr(self.u1, "Parent"):
+            return self.u1.Parent & ~0x3
+
+        # this is for windows 8 and 10
+        elif hasattr(self, "VadNode"):
+
+            if hasattr(self.VadNode, "u1"):
+                return self.VadNode.u1.Parent & ~0x3
+
+            elif hasattr(self.VadNode, "ParentValue"):
+                return self.VadNode.ParentValue & ~0x3
+
+        # also for windows 8 and 10
+        elif hasattr(self, "Core"):
+
+            if hasattr(self.Core.VadNode, "u1"):
+                return self.Core.VadNode.u1.Parent & ~0x3
+
+            elif hasattr(self.Core.VadNode, "ParentValue"):
+                return self.Core.VadNode.ParentValue & ~0x3
+
+        raise AttributeError("Unable to find the parent member")
+
+    def get_start(self):
+        """Get the VAD's starting virtual address"""
+
+        if hasattr(self, "StartingVpn"):
+
+            if hasattr(self, "StartingVpnHigh"):
+                return (self.StartingVpn << 12) | (self.StartingVpnHigh << 44)
+            else:
+                return self.StartingVpn << 12
+
+        elif hasattr(self, "Core"):
+
+            if hasattr(self.Core, "StartingVpnHigh"):
+                return (self.Core.StartingVpn << 12) | (self.Core.StartingVpnHigh << 44)
+            else:
+                return self.Core.StartingVpn << 12
+
+        raise AttributeError("Unable to find the starting VPN member")
+
+    def get_end(self):
+        """Get the VAD's ending virtual address"""
+
+        if hasattr(self, "EndingVpn"):
+
+            if hasattr(self, "EndingVpnHigh"):
+                return (self.EndingVpn << 12) | (self.EndingVpnHigh << 44)
+            else:
+                return ((self.EndingVpn + 1) << 12) - 1
+
+        elif hasattr(self, "Core"):
+
+            if hasattr(self.Core, "EndingVpnHigh"):
+                return (self.Core.EndingVpn << 12) | (self.Core.EndingVpnHigh << 44)
+            else:
+                return ((self.Core.EndingVpn + 1) << 12) - 1
+
+        raise AttributeError("Unable to find the ending VPN member")
+
+    def get_commit_charge(self):
+        """Get the VAD's commit charge (number of committed pages)"""
+
+        if hasattr(self, "u1") and hasattr(self.u1, "VadFlags1"):
+            return self.u1.VadFlags1.CommitCharge
+
+        if hasattr(self, "u") and hasattr(self.u, "VadFlags"):
+            return self.u.VadFlags.CommitCharge
+
+        elif hasattr(self, "Core"):
+            return self.Core.u1.VadFlags1.CommitCharge
+
+        raise AttributeError("Unable to find the commit charge member")
+
+    def get_private_memory(self):
+        """Get the VAD's private memory setting"""
+
+        if hasattr(self, "u1") and hasattr(self.u1, "VadFlags1"):
+            return self.u1.VadFlags1.PrivateMemory
+
+        if hasattr(self, "u") and hasattr(self.u, "VadFlags"):
+            return self.u.VadFlags.PrivateMemory
+
+        elif hasattr(self, "Core"):
+            return self.Core.u1.VadFlags1.PrivateMemory
+
+        raise AttributeError("Unable to find the private memory member")
+
+    def get_protection(self, protect_values, winnt_protections):
+        """Get the VAD's protection constants as a string"""
+
+        protect = None
+
+        if hasattr(self, "u"):
+            protect = self.u.VadFlags.Protection
+
+        elif hasattr(self, "Core"):
+            protect = self.Core.u.VadFlags.Protection
+
+        value = protect_values[protect]
+        names = []
+
+        for name, mask in winnt_protections.items():
+            if value & mask != 0:
+                names.append(name)
+
+        return "|".join(names)
+
+    def get_file_name(self):
+        """Only long(er) vads have mapped files"""
+        return "" # TODO: followup after decision around returning None
+
+class _MMVAD(_MMVAD_SHORT):
+
+    def get_file_name(self):
+        """Get the name of the file mapped into the memory range (if any)"""
+    
+        file_name = "" # TODO: followup after decision around returning None
+
+        try:
+            # this is for xp and 2003
+            if hasattr(self, "ControlArea"):
+                file_name = self.ControlArea.FilePointer.FileName.get_string()
+
+            # this is for vista through windows 7
+            else:
+                file_name = self.Subsection.ControlArea.FilePointer.dereference().cast("_FILE_OBJECT").FileName.get_string()
+
+        except exceptions.PagedInvalidAddressException:
+            pass
+
+        return file_name
+
 class _EX_FAST_REF(objects.Struct):
     """This is a standard Windows structure that stores a pointer to an
     object but also leverages the least significant bits to encode additional
@@ -72,7 +298,7 @@ class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
 
 class _FILE_OBJECT(objects.Struct, ExecutiveObject):
     def file_name_with_device(self) -> str:
-        name = ""
+        name = "" # TODO: followup after decision around returning None
         if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
             name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
 
@@ -236,6 +462,20 @@ class _EPROCESS(generic.GenericIntelProcess):
             return False
 
         return value != 0 and value != None
+        
+    def get_vad_root(self):
+
+        # windows 8 and 2012 (_MM_AVL_TABLE)
+        if hasattr(self.VadRoot, "BalancedRoot"):
+            return self.VadRoot.BalancedRoot
+
+        # windows 8.1 and windows 10 (_RTL_AVL_TREE)
+        elif hasattr(self.VadRoot, "Root"):
+            return self.VadRoot.Root.dereference() # .cast("_MMVAD")
+
+        else:
+            # windows xp and 2003
+            return self.VadRoot.dereference().cast("_MMVAD")
 
 
 class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
