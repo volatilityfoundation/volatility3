@@ -47,7 +47,7 @@ class VadInfo(interfaces_plugins.PluginInterface):
         These don't change often, but if they do in the future, then finding them 
         # dynamically versus hard-coding here will ensure we parse them properly."""
 
-        if self._protect_values == None:
+        if self._protect_values is None:
             virtual_layer = self.config["primary"]
             kvo = self.context.memory[virtual_layer].config["kernel_virtual_offset"]
             ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name=virtual_layer, offset=kvo)
@@ -80,7 +80,7 @@ class VadInfo(interfaces_plugins.PluginInterface):
                            format_hints.Hex(vad.vol.offset),
                            format_hints.Hex(vad.get_start()),
                            format_hints.Hex(vad.get_end()),
-                           vad.Tag,
+                           vad.get_tag(),
                            vad.get_protection(self.protect_values(), winnt_protections),
                            vad.get_commit_charge(),
                            vad.get_private_memory(),
