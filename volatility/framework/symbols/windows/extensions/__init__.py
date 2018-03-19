@@ -2,6 +2,7 @@ import collections.abc
 import datetime
 import logging
 import typing
+import functools
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers
 from volatility.framework.symbols import generic
@@ -13,10 +14,35 @@ vollog = logging.getLogger(__name__)
 
 class _MMVAD_SHORT(objects.Struct):
 
+    @functools.lru_cache(maxsize = None)
+    def get_tag(self):
+        vad_address = self.vol.offset
+
+        # the offset is different on 32 and 64 bits
+        symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
+        if self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer").size == 4:
+            vad_address -= 4
+        else:
+            vad_address -= 12
+
+        try:
+            # TODO: instantiate a _POOL_HEADER and return PoolTag
+            bytesobj = self._context.object(symbol_table_name + constants.BANG + "bytes",
+                                         layer_name = self.vol.layer_name,
+                                         offset = vad_address,
+                                         length = 4)
+
+            return bytesobj.decode()
+        except exceptions.InvalidAddressException:
+            return None
+        except UnicodeDecodeError:
+            return None
+
     def traverse(self, visited = None, depth = 0):
         """Traverse the VAD tree, determining each underlying VAD node type by looking
-        up the tag in memory behind the structure (essentially the pool tag)."""
+        up the pool tag for the structure and then casting into a new object."""
 
+        # TODO: this is an arbitrary limit chosen based on past observations
         if depth > 100:
             vollog.log(constants.LOGLEVEL_VVV, "Vad tree is too deep, something went wrong!")
             raise RuntimeError("Vad tree is too deep")
@@ -31,41 +57,25 @@ class _MMVAD_SHORT(objects.Struct):
             return
 
         visited.add(vad_address)
-        memory = self._context.memory[self.vol.layer_name]
+        tag = self.get_tag()
 
-        # the offset is different on 32 and 64 bits
-        symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-        if self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer").size == 4:
-            vad_address -= 4
+        if tag in ["VadS", "VadF"]:
+            target = "_MMVAD_SHORT"
+        elif tag != None and tag.startswith("Vad"):
+            target = "_MMVAD"
+        elif depth == 0:
+            # the root node at depth 0 is allowed to not have a tag
+            # but we still want to continue and access its right & left child
+            target = None
         else:
-            vad_address -= 12
-
-        try:
-            tag = memory.read(vad_address, 4, pad = False).decode()
-
-            if tag in ["VadS", "VadF"]:
-                target = "_MMVAD_SHORT"
-            elif tag.startswith("Vad"):
-                target = "_MMVAD"
-            elif depth == 0:
-                # the root node at depth 0 is allowed to not have a tag
-                # but we still want to continue and access its right & left child
-                target = None
-            else:
-                # any node other than the root that doesn't have a recognized tag
-                # is just garbage and we skip the node entirely
-                return
-
-            if target:
-                vad_object = self.cast(target)
-
-                setattr(vad_object, "Tag", tag)
-                yield vad_object
-
-        except exceptions.InvalidAddressException:
+            # any node other than the root that doesn't have a recognized tag
+            # is just garbage and we skip the node entirely
+            vollog.log(constants.LOGLEVEL_VVV, "Skipping VAD at {} depth {} with tag {}".format(self.vol.offset, depth, tag))
             return
-        except UnicodeDecodeError:
-            pass
+
+        if target:
+            vad_object = self.cast(target)
+            yield vad_object
 
         for vad_node in self.get_left_child().dereference().traverse(visited, depth + 1):
             yield vad_node
@@ -203,7 +213,11 @@ class _MMVAD_SHORT(objects.Struct):
         elif hasattr(self, "Core"):
             protect = self.Core.u.VadFlags.Protection
 
-        value = protect_values[protect]
+        try:
+            value = protect_values[protect]
+        except IndexError:
+            value = 0
+
         names = []
 
         for name, mask in winnt_protections.items():
@@ -214,14 +228,14 @@ class _MMVAD_SHORT(objects.Struct):
 
     def get_file_name(self):
         """Only long(er) vads have mapped files"""
-        return "" # TODO: followup after decision around returning None
+        return renderers.NotApplicableValue()
 
 class _MMVAD(_MMVAD_SHORT):
 
     def get_file_name(self):
         """Get the name of the file mapped into the memory range (if any)"""
     
-        file_name = "" # TODO: followup after decision around returning None
+        file_name = renderers.NotApplicableValue()
 
         try:
             # this is for xp and 2003
@@ -298,7 +312,8 @@ class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
 
 class _FILE_OBJECT(objects.Struct, ExecutiveObject):
     def file_name_with_device(self) -> str:
-        name = "" # TODO: followup after decision around returning None
+        name = renderers.UnreadableValue()
+
         if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
             name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
 

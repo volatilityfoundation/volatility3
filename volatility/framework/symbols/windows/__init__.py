@@ -34,16 +34,19 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_MMVAD_SHORT', extensions._MMVAD_SHORT)
         self.set_type_class('_MMVAD', extensions._MMVAD)
 
+        # these don't exist in windows XP
         try:
             self.set_type_class('_MMADDRESS_NODE', extensions._MMVAD_SHORT)
         except ValueError:
             pass
 
+        # these were introduced starting in windows 8
         try:
             self.set_type_class('_MM_AVL_NODE', extensions._MMVAD_SHORT)
         except ValueError:
             pass
 
+        # these were introduced starting in windows 7
         try:
             self.set_type_class('_RTL_BALANCED_NODE', extensions._MMVAD_SHORT)
         except ValueError:

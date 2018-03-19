@@ -28,7 +28,7 @@ class VadDump(interfaces_plugins.PluginInterface):
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
 
-            # what kind of exceptions could this raise?
+            # TODO: what kind of exceptions could this raise and what should we do?
             proc_layer_name = proc.add_process_layer(self.context)
             proc_layer = self.context.memory[proc_layer_name]
 
@@ -36,6 +36,9 @@ class VadDump(interfaces_plugins.PluginInterface):
                 try:
                     file_name = os.path.join(self.config["outdir"],
                                              "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc.UniqueProcessId, vad.get_start(), vad.get_end()))
+
+                    if os.path.exists(file_name):
+                        raise FileExistsError
 
                     with open(file_name, "wb") as handle:
                         offset = vad.get_start()
@@ -49,7 +52,9 @@ class VadDump(interfaces_plugins.PluginInterface):
                             offset += to_read
 
                     result_text = "Saved to {}".format(os.path.basename(file_name))
-                except:
+                except FileExistsError:
+                    result_text = "Refusing to overwrite the existing {}".format(file_name)
+                except Exception:
                     result_text = "Unable to dump {0:#x} - {1:#x}".format(vad.get_start(), vad.get_end())
 
                 yield (0, (proc.UniqueProcessId,
