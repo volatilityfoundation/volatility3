@@ -105,6 +105,8 @@ def import_files(base_module) -> None:
 
 
 # Check the python version to ensure it's suitable
-required_python_version = (3, 5)
-if sys.version_info.major != required_python_version[0] or sys.version_info.minor < required_python_version[1]:
-    raise RuntimeError("Volatility framework requires python version {}.{} or greater".format(*required_python_version))
+required_python_version = (3, 5, 2)
+if (sys.version_info.major != required_python_version[0] or sys.version_info.minor < required_python_version[1] or
+        (sys.version_info.minor == required_python_version[1] and sys.version_info.micro < required_python_version[2])):
+    raise RuntimeError(
+        "Volatility framework requires python version {}.{}.{} or greater".format(*required_python_version))
