@@ -236,7 +236,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
     and both determines the directory table base of an intel layer if one hasn't been specified, and constructs
     the intel layer if necessary (for example when reconstructing a pre-existing configuration).
 
-    It will scan for existing TranslationLayers that do not have a DTB  using the :class:`PageMapScanner"""
+    It will scan for existing TranslationLayers that do not have a DTB  using the :class:`PageMapScanner`"""
     priority = 20
     tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
 

@@ -6,10 +6,7 @@ import typing
 from abc import abstractmethod
 
 from volatility.framework import constants, exceptions, validity
-from volatility.framework.interfaces import configuration, objects
-
-if typing.TYPE_CHECKING:
-    from volatility.framework import interfaces
+from volatility.framework.interfaces import configuration, objects, context as interfaces_context
 
 
 class Symbol(validity.ValidityRoutines):
@@ -222,14 +219,14 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
     """Handles a table of symbols"""
 
     def __init__(self,
-                 context: 'interfaces.context.ContextInterface',
+                 context: 'interfaces_context.ContextInterface',
                  config_path: str,
                  name: str,
                  native_types: 'NativeTableInterface' = None) -> None:
         configuration.ConfigurableInterface.__init__(self, context, config_path)
         BaseSymbolTableInterface.__init__(self, name, native_types)
 
-    def build_configuration(self) -> 'interfaces.configuration.HierarchicalDict':
+    def build_configuration(self) -> 'configuration.HierarchicalDict':
         config = super().build_configuration()
 
         # Translation Layers are constructable, and therefore require a class configuration variable
