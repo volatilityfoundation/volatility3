@@ -44,7 +44,8 @@ class Symbol(validity.ValidityRoutines):
     @property
     def type_name(self) -> typing.Optional[str]:
         """Returns the name of the type that the symbol represents"""
-        return self.type.name
+        # Objects and ObjectTemplates should *always* get a type_name when they're constructed, so allow the IndexError
+        return self.type.vol['type_name']
 
     @property
     def type(self) -> typing.Optional[objects.Template]:
