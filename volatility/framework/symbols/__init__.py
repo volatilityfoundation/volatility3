@@ -5,6 +5,7 @@ import logging
 import typing
 
 from volatility.framework import constants, exceptions, interfaces, objects, validity
+from volatility.framework.objects import templates
 from volatility.framework.symbols import native, windows, linux
 
 vollog = logging.getLogger(__name__)
@@ -130,6 +131,33 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
                 raise exceptions.SymbolError('Type {} references missing Type/Symbol/Enum: {}'.format(name, e))
         raise exceptions.SymbolError("Malformed name: {}".format(name))
 
+    def _recursive_resolve(self, traverse_list):
+        """Recursively resolves a type, populating linked child ReferenceTemplates with their properly resolved counterparts"""
+        replacements = set()
+        # Whole Symbols that still need traversing
+        while traverse_list:
+            template_traverse_list, traverse_list = [traverse_list[0]], traverse_list[1:]
+            # Traverse a single symbol looking for any ReferenceTemplate objects
+            while template_traverse_list:
+                traverser, template_traverse_list = template_traverse_list[0], template_traverse_list[1:]
+                for child in traverser.children:
+                    if isinstance(child, objects.templates.ReferenceTemplate):
+                        # If we haven't seen it before, subresolve it and also add it
+                        # to the "symbols that still need traversing" list
+                        if child.vol.type_name not in self._resolved:
+                            traverse_list.append(child)
+                            try:
+                                self._resolved[child.vol.type_name] = self._weak_resolve(SymbolType.TYPE,
+                                                                                         child.vol.type_name)
+                            except exceptions.SymbolError:
+                                self._resolved[child.vol.type_name] = self._UnresolvedTemplate(child.vol.type_name)
+                        # Stash the replacement
+                        replacements.add((traverser, child))
+                    elif child.children:
+                        template_traverse_list.append(child)
+        for (parent, child) in replacements:
+            parent.replace_child(child, self._resolved[child.vol.type_name])
+
     def get_type(self, type_name: str) -> interfaces.objects.Template:
         """Takes a symbol name and resolves it
 
@@ -139,31 +167,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
         # Traverse down any resolutions
         if type_name not in self._resolved:
             self._resolved[type_name] = self._weak_resolve(SymbolType.TYPE, type_name)  # type: ignore
-            traverse_list = [type_name]
-            replacements = set()
-            # Whole Symbols that still need traversing
-            while traverse_list:
-                template_traverse_list, traverse_list = [self._resolved[traverse_list[0]]], traverse_list[1:]
-                # Traverse a single symbol looking for any ReferenceTemplate objects
-                while template_traverse_list:
-                    traverser, template_traverse_list = template_traverse_list[0], template_traverse_list[1:]
-                    for child in traverser.children:
-                        if isinstance(child, objects.templates.ReferenceTemplate):
-                            # If we haven't seen it before, subresolve it and also add it
-                            # to the "symbols that still need traversing" list
-                            if child.vol.type_name not in self._resolved:
-                                traverse_list.append(child.vol.type_name)
-                                try:
-                                    self._resolved[child.vol.type_name] = self._weak_resolve(SymbolType.TYPE,
-                                                                                             child.vol.type_name)
-                                except exceptions.SymbolError:
-                                    self._resolved[child.vol.type_name] = self._UnresolvedTemplate(child.vol.type_name)
-                            # Stash the replacement
-                            replacements.add((traverser, child))
-                        elif child.children:
-                            template_traverse_list.append(child)
-            for (parent, child) in replacements:
-                parent.replace_child(child, self._resolved[child.vol.type_name])
+            self._recursive_resolve([self._resolved[type_name]])
         if isinstance(self._resolved[type_name], objects.templates.ReferenceTemplate):
             raise exceptions.SymbolError("Unresolvable symbol requested: {}".format(type_name))
         return self._resolved[type_name]
@@ -171,6 +175,8 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
     def get_symbol(self, symbol_name: str) -> interfaces.symbols.Symbol:
         """Look-up a symbol name across all the contained symbol spaces"""
         retval = self._weak_resolve(SymbolType.SYMBOL, symbol_name)
+        if isinstance(retval.type, templates.ObjectTemplate):
+            self._recursive_resolve([retval.type])
         if not isinstance(retval, interfaces.symbols.Symbol):
             raise exceptions.SymbolError("Unresolvable Symbol: {}".format(symbol_name))
         return retval

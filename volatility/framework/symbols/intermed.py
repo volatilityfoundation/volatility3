@@ -367,7 +367,10 @@ class Version2Format(Version1Format):
             raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
         if type_name not in self._json_object['user_types']:
             # Fall back to the natives table
-            return self.natives.get_type(self.name + constants.BANG + type_name)
+            if type_name in self.natives.types:
+                return self.natives.get_type(self.name + constants.BANG + type_name)
+            else:
+                raise exceptions.SymbolError("Unknown symbol: {}".format(type_name))
         curdict = self._json_object['user_types'][type_name]
         members = {}
         for member_name in curdict['fields']:
