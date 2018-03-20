@@ -31,6 +31,26 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_CM_KEY_NODE', registry._CM_KEY_NODE)
         self.set_type_class('_CM_KEY_VALUE', registry._CM_KEY_VALUE)
         self.set_type_class('_HMAP_ENTRY', registry._HMAP_ENTRY)
+        self.set_type_class('_MMVAD_SHORT', extensions._MMVAD_SHORT)
+        self.set_type_class('_MMVAD', extensions._MMVAD)
+
+        # these don't exist in windows XP
+        try:
+            self.set_type_class('_MMADDRESS_NODE', extensions._MMVAD_SHORT)
+        except ValueError:
+            pass
+
+        # these were introduced starting in windows 8
+        try:
+            self.set_type_class('_MM_AVL_NODE', extensions._MMVAD_SHORT)
+        except ValueError:
+            pass
+
+        # these were introduced starting in windows 7
+        try:
+            self.set_type_class('_RTL_BALANCED_NODE', extensions._MMVAD_SHORT)
+        except ValueError:
+            pass
 
     @classmethod
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
