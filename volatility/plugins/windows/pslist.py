@@ -1,3 +1,5 @@
+import datetime
+
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
@@ -95,6 +97,6 @@ class PsList(plugins.PluginInterface):
                                    ("Handles", int),
                                    ("SessionId", int),
                                    ("Wow64", bool),
-                                   ("CreateTime", str),
-                                   ("ExitTime", str)],
+                                   ("CreateTime", datetime.datetime),
+                                   ("ExitTime", datetime.datetime)],
                                   self._generator())

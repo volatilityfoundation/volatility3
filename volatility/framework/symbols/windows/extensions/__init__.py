@@ -5,6 +5,7 @@ import typing
 import functools
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers
+from volatility.framework.objects import utility
 from volatility.framework.symbols import generic
 
 vollog = logging.getLogger(__name__)
@@ -448,18 +449,10 @@ class _EPROCESS(generic.GenericIntelProcess):
         return renderers.UnreadableValue()
 
     def get_create_time(self):
-        unix_time = self.CreateTime.QuadPart // 10000000
-        if unix_time == 0:
-            return renderers.NotApplicableValue()
-        unix_time = unix_time - 11644473600
-        return str(datetime.datetime.utcfromtimestamp(unix_time))
+        return utility.wintime_to_datetime(self.CreateTime)
 
     def get_exit_time(self):
-        unix_time = self.ExitTime.QuadPart // 10000000
-        if unix_time == 0:
-            return renderers.NotApplicableValue()
-        unix_time = unix_time - 11644473600
-        return str(datetime.datetime.utcfromtimestamp(unix_time))
+        return utility.wintime_to_datetime(self.ExitTime)
 
     def get_wow_64_process(self):
         if hasattr(self, "Wow64Process"):
