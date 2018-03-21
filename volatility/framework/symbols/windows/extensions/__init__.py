@@ -1,8 +1,8 @@
 import collections.abc
 import datetime
+import functools
 import logging
 import typing
-import functools
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers
 from volatility.framework.symbols import generic
@@ -28,9 +28,9 @@ class _MMVAD_SHORT(objects.Struct):
         try:
             # TODO: instantiate a _POOL_HEADER and return PoolTag
             bytesobj = self._context.object(symbol_table_name + constants.BANG + "bytes",
-                                         layer_name = self.vol.layer_name,
-                                         offset = vad_address,
-                                         length = 4)
+                                            layer_name = self.vol.layer_name,
+                                            offset = vad_address,
+                                            length = 4)
 
             return bytesobj.decode()
         except exceptions.InvalidAddressException:
@@ -70,7 +70,8 @@ class _MMVAD_SHORT(objects.Struct):
         else:
             # any node other than the root that doesn't have a recognized tag
             # is just garbage and we skip the node entirely
-            vollog.log(constants.LOGLEVEL_VVV, "Skipping VAD at {} depth {} with tag {}".format(self.vol.offset, depth, tag))
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "Skipping VAD at {} depth {} with tag {}".format(self.vol.offset, depth, tag))
             return
 
         if target:
@@ -230,11 +231,12 @@ class _MMVAD_SHORT(objects.Struct):
         """Only long(er) vads have mapped files"""
         return renderers.NotApplicableValue()
 
+
 class _MMVAD(_MMVAD_SHORT):
 
     def get_file_name(self):
         """Get the name of the file mapped into the memory range (if any)"""
-    
+
         file_name = renderers.NotApplicableValue()
 
         try:
@@ -244,12 +246,14 @@ class _MMVAD(_MMVAD_SHORT):
 
             # this is for vista through windows 7
             else:
-                file_name = self.Subsection.ControlArea.FilePointer.dereference().cast("_FILE_OBJECT").FileName.get_string()
+                file_name = self.Subsection.ControlArea.FilePointer.dereference().cast(
+                    "_FILE_OBJECT").FileName.get_string()
 
         except exceptions.PagedInvalidAddressException:
             pass
 
         return file_name
+
 
 class _EX_FAST_REF(objects.Struct):
     """This is a standard Windows structure that stores a pointer to an
@@ -311,8 +315,8 @@ class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
 
 
 class _FILE_OBJECT(objects.Struct, ExecutiveObject):
-    def file_name_with_device(self) -> str:
-        name = renderers.UnreadableValue()
+    def file_name_with_device(self) -> typing.Union[str, interfaces.renderers.BaseAbsentValue]:
+        name = renderers.UnreadableValue()  # type: typing.Union[str, interfaces.renderers.BaseAbsentValue]
 
         if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
             name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
@@ -477,7 +481,7 @@ class _EPROCESS(generic.GenericIntelProcess):
             return False
 
         return value != 0 and value != None
-        
+
     def get_vad_root(self):
 
         # windows 8 and 2012 (_MM_AVL_TABLE)
@@ -486,7 +490,7 @@ class _EPROCESS(generic.GenericIntelProcess):
 
         # windows 8.1 and windows 10 (_RTL_AVL_TREE)
         elif hasattr(self.VadRoot, "Root"):
-            return self.VadRoot.Root.dereference() # .cast("_MMVAD")
+            return self.VadRoot.Root.dereference()  # .cast("_MMVAD")
 
         else:
             # windows xp and 2003

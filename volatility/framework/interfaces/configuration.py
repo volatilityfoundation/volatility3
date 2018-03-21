@@ -627,7 +627,8 @@ class TranslationLayerRequirement(ConstructableRequirementInterface, Configurabl
         obj = self._construct_class(context, config_path, args)
         if obj is not None:
             context.add_layer(obj)
-            context.config[config_path] = obj.name
+            # This should already be done by the _construct_class method
+            # context.config[config_path] = obj.name
         return None
 
     def build_configuration(self,
