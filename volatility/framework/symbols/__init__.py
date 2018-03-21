@@ -5,7 +5,6 @@ import logging
 import typing
 
 from volatility.framework import constants, exceptions, interfaces, objects, validity
-from volatility.framework.objects import templates
 from volatility.framework.symbols import native, windows, linux
 
 vollog = logging.getLogger(__name__)
@@ -35,6 +34,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
         self._dict = collections.OrderedDict()  # type: typing.Dict[str, interfaces.symbols.BaseSymbolTableInterface]
         # Permanently cache all resolved symbols
         self._resolved = {}  # type: typing.Dict[str, interfaces.objects.Template]
+        self._resolved_symbols = set()  # type: typing.Set[str]
 
     def free_table_name(self, prefix: str = "layer") -> str:
         """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
@@ -131,12 +131,12 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
                 raise exceptions.SymbolError('Type {} references missing Type/Symbol/Enum: {}'.format(name, e))
         raise exceptions.SymbolError("Malformed name: {}".format(name))
 
-    def _recursive_resolve(self, traverse_list):
-        """Recursively resolves a type, populating linked child ReferenceTemplates with their properly resolved counterparts"""
+    def _iterative_resolve(self, traverse_list):
+        """Iteratively resolves a type, populating linked child ReferenceTemplates with their properly resolved counterparts"""
         replacements = set()
         # Whole Symbols that still need traversing
         while traverse_list:
-            template_traverse_list, traverse_list = [traverse_list[0]], traverse_list[1:]
+            template_traverse_list, traverse_list = [self._resolved[traverse_list[0]]], traverse_list[1:]
             # Traverse a single symbol looking for any ReferenceTemplate objects
             while template_traverse_list:
                 traverser, template_traverse_list = template_traverse_list[0], template_traverse_list[1:]
@@ -145,7 +145,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
                         # If we haven't seen it before, subresolve it and also add it
                         # to the "symbols that still need traversing" list
                         if child.vol.type_name not in self._resolved:
-                            traverse_list.append(child)
+                            traverse_list.append(child.vol.type_name)
                             try:
                                 self._resolved[child.vol.type_name] = self._weak_resolve(SymbolType.TYPE,
                                                                                          child.vol.type_name)
@@ -167,7 +167,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
         # Traverse down any resolutions
         if type_name not in self._resolved:
             self._resolved[type_name] = self._weak_resolve(SymbolType.TYPE, type_name)  # type: ignore
-            self._recursive_resolve([self._resolved[type_name]])
+            self._iterative_resolve([type_name])
         if isinstance(self._resolved[type_name], objects.templates.ReferenceTemplate):
             raise exceptions.SymbolError("Unresolvable symbol requested: {}".format(type_name))
         return self._resolved[type_name]
@@ -175,8 +175,16 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
     def get_symbol(self, symbol_name: str) -> interfaces.symbols.Symbol:
         """Look-up a symbol name across all the contained symbol spaces"""
         retval = self._weak_resolve(SymbolType.SYMBOL, symbol_name)
-        if isinstance(retval.type, templates.ObjectTemplate):
-            self._recursive_resolve([retval.type])
+        if symbol_name not in self._resolved_symbols and retval.type is not None:
+            # Stash the old resolved type if it exists
+            old_resolved = self._resolved.get(symbol_name, None)
+            try:
+                self._resolved[symbol_name] = retval.type
+                self._iterative_resolve([symbol_name])
+                self._resolved_symbols.add(symbol_name)
+            finally:
+                if old_resolved is not None:
+                    self._resolved[symbol_name] = old_resolved
         if not isinstance(retval, interfaces.symbols.Symbol):
             raise exceptions.SymbolError("Unresolvable Symbol: {}".format(symbol_name))
         return retval
