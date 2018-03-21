@@ -6,6 +6,7 @@ import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import objects, renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.registry import RegistryHive
+from volatility.framework.objects import utility
 from volatility.framework.renderers import TreeGrid
 from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
 
@@ -51,12 +52,11 @@ class PrintKey(plugins.PluginInterface):
         node = node_path[-1]
         if key_path is None:
             key_path = node.get_key_path()
-        unix_time = node.LastWriteTime.QuadPart // 10000000
-        unix_time = unix_time - 11644473600
+        last_write_time = utility.wintime_to_datetime(node.LastWriteTime)
 
         for key_node in node.get_subkeys():
             result = (key_path.count("\\"),
-                      (str(datetime.datetime.utcfromtimestamp(unix_time)),
+                      (last_write_time,
                        renderers.format_hints.Hex(hive.hive_offset),
                        "Key",
                        key_path,
@@ -67,7 +67,7 @@ class PrintKey(plugins.PluginInterface):
 
         for value_node in node.get_values():
             result = (key_path.count("\\"),
-                      (str(datetime.datetime.utcfromtimestamp(unix_time)),
+                      (last_write_time,
                        renderers.format_hints.Hex(hive.hive_offset),
                        RegValueTypes(value_node.Type).name,
                        key_path,
@@ -113,7 +113,7 @@ class PrintKey(plugins.PluginInterface):
 
     def run(self):
 
-        return TreeGrid(columns = [('Last Write Time', str),
+        return TreeGrid(columns = [('Last Write Time', datetime.datetime),
                                    ('Hive Offset', renderers.format_hints.Hex),
                                    ('Type', str),
                                    ('Key', str),

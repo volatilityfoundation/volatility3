@@ -1,6 +1,7 @@
 import typing
+import datetime
 
-from volatility.framework import objects, interfaces
+from volatility.framework import interfaces, objects, renderers
 from volatility.framework.objects import templates
 
 
@@ -39,3 +40,11 @@ def array_of_pointers(array: objects.Array,
         raise TypeError("Subtype must be a valid object template")
     subtype_pointer = objects.templates.ObjectTemplate(objects.Pointer, type_name = 'pointer', subtype = subtype)
     return array.cast("array", count = count, subtype = subtype_pointer)
+
+
+def wintime_to_datetime(wintime: objects.Struct) -> datetime.datetime:
+    unix_time = wintime.QuadPart // 10000000
+    if unix_time == 0:
+        return renderers.NotApplicableValue()
+    unix_time = unix_time - 11644473600
+    return datetime.datetime.utcfromtimestamp(unix_time)
