@@ -23,7 +23,7 @@ except ImportError:
 
 from volatility import framework
 from volatility.framework import constants, validity
-from volatility.framework.layers import intel, lime, physical, segmented, vmware
+from volatility.framework.layers import intel, lime, physical, segmented, vmware, crash
 
 vollog = logging.getLogger(__name__)
 
