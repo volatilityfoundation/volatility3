@@ -1,5 +1,5 @@
-import typing
 import datetime
+import typing
 
 from volatility.framework import interfaces, objects, renderers
 from volatility.framework.objects import templates
@@ -42,7 +42,7 @@ def array_of_pointers(array: objects.Array,
     return array.cast("array", count = count, subtype = subtype_pointer)
 
 
-def wintime_to_datetime(wintime: objects.Struct) -> datetime.datetime:
+def wintime_to_datetime(wintime: objects.Struct) -> typing.Union[renderers.NotApplicableValue, datetime.datetime]:
     unix_time = wintime.QuadPart // 10000000
     if unix_time == 0:
         return renderers.NotApplicableValue()

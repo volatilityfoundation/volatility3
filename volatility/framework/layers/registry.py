@@ -98,29 +98,32 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                 "Unknown Signature {} (0x{:x}) at offset {}".format(signature, cell.u.KeyNode.Signature, cell_offset))
             return cell
 
-    def get_key(self, key: str, return_list: bool = False) -> interfaces.objects.ObjectInterface:
+    def get_key(self, key: str, return_list: bool = False) -> typing.Union[
+        typing.List[objects.Struct], objects.Struct]:
         """Gets a specific registry key by key path
 
         return_list specifies whether the return result will be a single node (default) or a list of nodes from
         root to the current node (if return_list is true).
         """
-        node_key = self.get_node(self.root_cell_offset) if not return_list else [self.get_node(self.root_cell_offset)]
+        node_key = [self.get_node(self.root_cell_offset)]
         if key.endswith("\\"):
             key = key[:-1]
         key_array = key.split('\\')
         found_key = []  # type: typing.List[str]
         while key_array and node_key:
-            subkeys = node_key.get_subkeys() if not return_list else node_key[-1].get_subkeys()
+            subkeys = node_key[-1].get_subkeys()
             for subkey in subkeys:
                 if subkey.get_name() == key_array[0]:
-                    node_key = subkey if not return_list else node_key + [subkey]
+                    node_key = node_key + [subkey]
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
                     break
             else:
                 node_key = None
         if not node_key:
             raise KeyError("Key {} not found under {}", key_array[0], '\\'.join(found_key))
-        return node_key
+        if return_list:
+            return node_key
+        return node_key[-1]
 
     def visit_nodes(self,
                     visitor: typing.Callable[[objects.Struct], None],
