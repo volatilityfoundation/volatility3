@@ -36,7 +36,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         """
         return self.vol.object_class.VolTemplateProxy.children(self)
 
-    def relative_child_offset(self, child: interfaces.objects.Template) -> int:
+    def relative_child_offset(self, child: str) -> int:
         """Returns the relative offset of a child of the templated object (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)
         """
         return self.vol.object_class.VolTemplateProxy.relative_child_offset(self, child)

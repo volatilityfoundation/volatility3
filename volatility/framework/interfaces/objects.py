@@ -169,7 +169,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         @classmethod
         def relative_child_offset(cls,
                                   template: 'Template',
-                                  child: 'Template') -> int:
+                                  child: str) -> int:
             """Returns the relative offset from the head of the parent data to the child member"""
             raise KeyError("Template does not contain any children: {}".format(template.vol.type_name))
 
@@ -223,7 +223,7 @@ class Template(validity.ValidityRoutines):
         """Returns the size of the template"""
 
     @abstractmethod
-    def relative_child_offset(self, child: 'Template') -> int:
+    def relative_child_offset(self, child: str) -> int:
         """Returns the relative offset of the `child` member from its parent offset"""
 
     @abstractmethod

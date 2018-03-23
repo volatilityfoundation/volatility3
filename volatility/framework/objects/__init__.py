@@ -456,9 +456,9 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
         @classmethod
         def relative_child_offset(cls,
                                   template: interfaces.objects.Template,
-                                  child: interfaces.objects.Template) -> int:
+                                  child: str) -> int:
             """Returns the relative offset from the head of the parent data to the child member"""
-            if 'subtype' in template and child == 'subtype':
+            if 'subtype' in template.vol and child == 'subtype':
                 return 0
             raise IndexError("Member not present in array template: {}".format(child))
 
@@ -551,7 +551,7 @@ class Struct(interfaces.objects.ObjectInterface):
         @classmethod
         def relative_child_offset(cls,
                                   template: interfaces.objects.Template,
-                                  child: interfaces.objects.Template) -> int:
+                                  child: str) -> int:
             """Returns the relative offset of a child to its parent"""
             retlist = template.vol.members.get(child, None)
             if retlist is None:
