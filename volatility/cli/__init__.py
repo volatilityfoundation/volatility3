@@ -33,6 +33,24 @@ console.setFormatter(formatter)
 vollog.addHandler(console)
 
 
+class PrintedProgress(object):
+    def __init__(self):
+        self._max_message_len = 0
+
+    def __call__(self, progress, description = None):
+        """ A sinmple function for providing text-based feedback
+
+        .. warning:: Only for development use.
+
+        :param progress: Percentage of progress of the current procedure
+        :type progress: int or float
+        """
+        message = "\rProgress: {0: 7.2f}\t\t{1:}".format(round(progress, 2), description or '')
+        message_len = len(message)
+        self._max_message_len = max([self._max_message_len, message_len])
+        print(message, end = ' ' * (self._max_message_len - message_len))
+
+
 class CommandLine(object):
     """Constructs a command-line interface object for users to run plugins"""
 
@@ -165,10 +183,11 @@ class CommandLine(object):
         # BACK TO THE FRAMEWORK
         ###
         # Clever magic figures out how to fulfill each requirement that might not be fulfilled
-        if not args.quiet:
-            errors = automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
-        else:
-            errors = automagic.run(automagics, ctx, plugin, "plugins")
+        progress_callback = PrintedProgress()
+        if args.quiet:
+            progress_callback = None
+
+        errors = automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
 
         # Check all the requirements and/or go back to the automagic step
         unsatisfied = plugin.unsatisfied(ctx, plugin_config_path)
@@ -181,7 +200,7 @@ class CommandLine(object):
 
         print("\n\n")
 
-        constructed = plugin(ctx, plugin_config_path)
+        constructed = plugin(ctx, plugin_config_path, progress_callback = progress_callback)
 
         if args.write_config:
             vollog.debug("Writing out configuration data to config.json")
@@ -289,17 +308,6 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         if arg_strings:
             vars(namespace).setdefault(argparse._UNRECOGNIZED_ARGS_ATTR, [])
             getattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
-
-
-def progress_callback(progress, description = None):
-    """ A sinmple function for providing text-based feedback
-
-    .. warning:: Only for development use.
-
-    :param progress: Percentage of progress of the current procedure
-    :type progress: int or float
-    """
-    print("\rProgress: {0: 7.2f}\t\t{1:}".format(round(progress, 2), description or ''), end = '\n')
 
 
 def main():

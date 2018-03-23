@@ -40,8 +40,10 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
-                 config_path: str) -> None:
+                 config_path: str,
+                 progress_callback: validity.ProgressCallback = None) -> None:
         super().__init__(context, config_path)
+        self._progress_callback = progress_callback
         # Plugins self validate on construction, it makes it more difficult to work with them, but then
         # the validation doesn't need to be repeated over and over again by externals
         if self.unsatisfied(context, config_path):
