@@ -312,6 +312,11 @@ class WindowsMixin(Intel):
                                                        None)
                     if swap_layer_name:
                         return swap_offset, 1 << excp.invalid_bits, swap_layer_name
+                raise exceptions.SwappedInvalidAddressException(layer_name = excp.layer_name,
+                                                                invalid_address = excp.invalid_address,
+                                                                invalid_bits = excp.invalid_bits,
+                                                                entry = excp.entry,
+                                                                swap_offset = swap_offset)
             raise
 
 

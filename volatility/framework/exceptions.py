@@ -44,6 +44,23 @@ class PagedInvalidAddressException(InvalidAddressException):
         self.entry = entry
 
 
+class SwappedInvalidAddressException(PagedInvalidAddressException):
+    """Thrown when an address is not valid in the paged space in which it was requested,
+    but expected to be in swap space
+
+    Includes the swap lookup"""
+
+    def __init__(self,
+                 layer_name: str,
+                 invalid_address: int,
+                 invalid_bits: int,
+                 entry: int,
+                 swap_offset: int,
+                 *args) -> None:
+        super().__init__(layer_name, invalid_address, invalid_bits, entry, *args)
+        self.swap_offset = swap_offset
+
+
 class InvalidDataException(VolatilityException):
     """Thrown when an object contains some data known to be invalid for that structure"""
 
