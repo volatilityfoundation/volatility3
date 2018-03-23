@@ -20,8 +20,8 @@ except ImportError:
 class Handles(interfaces_plugins.PluginInterface):
     """Lists process open handles"""
 
-    def __init__(self, context, config_path):
-        super().__init__(context, config_path)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._sar_value = None
         self._type_map = None
         self._cookie = None

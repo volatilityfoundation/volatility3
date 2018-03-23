@@ -1,10 +1,11 @@
+import logging
+
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
 from volatility.framework import renderers
-from volatility.framework.renderers import format_hints
-from volatility.framework.objects import utility
 from volatility.framework.configuration import requirements
-import logging
+from volatility.framework.objects import utility
+from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger()
 
@@ -24,11 +25,12 @@ winnt_protections = {
     "PAGE_TARGETS_INVALID": 0x40000000,
 }
 
+
 class VadInfo(interfaces_plugins.PluginInterface):
     """Lists process memory ranges"""
 
-    def __init__(self, context, config_path):
-        super().__init__(context, config_path)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._protect_values = None
 
     @classmethod
@@ -36,25 +38,25 @@ class VadInfo(interfaces_plugins.PluginInterface):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return pslist.PsList.get_requirements() + [
             # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
-            requirements.IntRequirement(name='address',
-                                        description="Process virtual memory address to include "\
-                                            "(all other address ranges are excluded). This must be "\
-                                            "a base address, not an address within the desired range.",
-                                        optional=True)]
+            requirements.IntRequirement(name = 'address',
+                                        description = "Process virtual memory address to include " \
+                                                      "(all other address ranges are excluded). This must be " \
+                                                      "a base address, not an address within the desired range.",
+                                        optional = True)]
 
     def protect_values(self):
         """Look up the array of memory protection constants from the memory sample.
-        These don't change often, but if they do in the future, then finding them 
+        These don't change often, but if they do in the future, then finding them
         # dynamically versus hard-coding here will ensure we parse them properly."""
 
         if self._protect_values is None:
             virtual_layer = self.config["primary"]
             kvo = self.context.memory[virtual_layer].config["kernel_virtual_offset"]
-            ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name=virtual_layer, offset=kvo)
+            ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual_layer, offset = kvo)
             addr = ntkrnlmp.get_symbol("MmProtectToValue").address
-            values = ntkrnlmp.object(type_name="array", offset=kvo + addr,
-                                     subtype=ntkrnlmp.get_type("int"),
-                                     count=32)
+            values = ntkrnlmp.object(type_name = "array", offset = kvo + addr,
+                                     subtype = ntkrnlmp.get_type("int"),
+                                     count = 32)
             self._protect_values = values
 
         return self._protect_values
