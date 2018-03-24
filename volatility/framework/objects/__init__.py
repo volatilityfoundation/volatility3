@@ -235,6 +235,12 @@ class Pointer(Integer):
                                     offset = offset,
                                     parent = self))
 
+    def is_readable(self, layer_name: typing.Optional[str] = None) -> bool:
+        """Determines whether the address of this pointer can be read from memory"""
+        if layer_name is None:
+            layer_name = self.vol.layer_name
+        return self._context.memory[layer_name].is_valid(self)
+
     def __getattr__(self, attr: str) -> typing.Any:
         """Convenience function to access unknown attributes by getting them from the subtype object"""
         return getattr(self.dereference(), attr)
