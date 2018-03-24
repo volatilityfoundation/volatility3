@@ -64,10 +64,12 @@ class QuickTextRenderer(interfaces.renderers.Renderer):
         outfd.write("\n")
 
         def visitor(node, accumulator):
+            accumulator.write("\n")
             for column in grid.columns:
                 renderer = self.type_renderers.get(column.type, self.type_renderers['default'])
                 accumulator.write("\t" + renderer(node.values[column.index]))
-            accumulator.write("\n")
             return accumulator
 
         grid.populate(visitor, outfd)
+
+        outfd.write("\n")
