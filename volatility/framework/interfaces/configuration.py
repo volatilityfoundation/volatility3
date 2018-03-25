@@ -184,7 +184,7 @@ class HierarchicalDict(collections.abc.Mapping):
                 return self._subdict[key]
         except KeyError:
             self._setitem(key = key, value = HierarchicalDict(separator = self.separator), is_data = True)
-        return None
+        return HierarchicalDict()
 
     def splice(self, key: str, value: 'HierarchicalDict') -> None:
         """Splices an existing HierarchicalDictionary under a specific key
