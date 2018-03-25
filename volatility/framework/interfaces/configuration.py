@@ -274,6 +274,11 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """Whether the Requirement is optional or not"""
         return self._optional
 
+    @optional.setter
+    def optional(self, value) -> None:
+        """Sets the optional value for a requirement"""
+        self._optional = bool(value)
+
     def config_value(self,
                      context: interfaces.context.ContextInterface,
                      config_path: str,
