@@ -48,6 +48,24 @@ def available(context: interfaces.context.ContextInterface) \
                   key = lambda x: x.priority)
 
 
+def choose_automagic(automagics, plugin):
+    """Chooses which automagics to run, maintaining the order they were handed in"""
+    plugin_category = plugin.__module__.split('.')[2]
+    vollog.info("Detected a {} category plugin".format(plugin_category))
+    output = []
+    for amagic in automagics:
+        if plugin_category == 'windows':
+            if amagic.__class__.__name__ in windows_automagic:
+                output += [amagic]
+        elif plugin_category == 'linux':
+            if amagic.__class__.__name__ in linux_automagic:
+                output += [amagic]
+        else:
+            return automagics
+    vollog.info("Restricting automagics to: {}".format([x.__class__.__name__ for x in output]))
+    return output
+
+
 def run(automagics: typing.List[interfaces.automagic.AutomagicInterface],
         context: interfaces.context.ContextInterface,
         configurable: typing.Union[interfaces.configuration.ConfigurableInterface,

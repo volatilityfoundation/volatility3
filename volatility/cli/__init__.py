@@ -174,7 +174,7 @@ class CommandLine(object):
                 ctx.config[address] = value
 
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
-        automagics = self.choose_automagic(automagics, plugin)
+        automagics = automagic.choose_automagic(automagics, plugin)
 
         ###
         # BACK TO THE FRAMEWORK
@@ -207,24 +207,9 @@ class CommandLine(object):
         # Construct and run the plugin
         text.QuickTextRenderer().render(constructed.run())
 
-    def choose_automagic(self, automagics, plugin):
-        """Chooses which automagics to run, maintaining the order they were handed in"""
-        plugin_category = plugin.__module__.split('.')[2]
-        vollog.info("Detected a {} category plugin".format(plugin_category))
-        output = []
-        for amagic in automagics:
-            if plugin_category == 'windows':
-                if amagic.__class__.__name__ in automagic.windows_automagic:
-                    output += [amagic]
-            elif plugin_category == 'linux':
-                if amagic.__class__.__name__ in automagic.linux_automagic:
-                    output += [amagic]
-            else:
-                return automagics
-        vollog.info("Restricting automagics to: {}".format([x.__class__.__name__ for x in output]))
-        return output
-
-    def populate_requirements_argparse(self, parser, configurable):
+    def populate_requirements_argparse(self,
+                                       parser: argparse.ArgumentParser,
+                                       configurable: typing.Type[interfaces.configuration.ConfigurableInterface]):
         """Adds the plugin's simple requirements to the provided parser
 
         :param parser: The parser to add the plugin's (simple) requirements to
