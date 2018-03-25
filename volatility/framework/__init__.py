@@ -4,6 +4,8 @@ import logging
 import os
 import sys
 
+from volatility.framework import interfaces
+
 # ##
 #
 # Libtool version scheme
