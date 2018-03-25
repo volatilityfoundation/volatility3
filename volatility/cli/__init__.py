@@ -223,7 +223,7 @@ class CommandLine(object):
         # Construct an argparse group
 
         for requirement in configurable.get_requirements():
-            additional = {}  # typing.Dict[str, typing.Any]
+            additional = {}  # type: typing.Dict[str, typing.Any]
             if not isinstance(requirement, interfaces.configuration.RequirementInterface):
                 raise TypeError(
                     "Plugin contains requirements that are not RequirementInterfaces: {}".format(configurable.__name__))
