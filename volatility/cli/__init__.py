@@ -13,10 +13,12 @@ import inspect
 import json
 import logging
 import sys
+import typing
 
 import volatility.framework
 import volatility.framework.configuration.requirements
 import volatility.plugins
+from volatility import framework
 from volatility.framework import automagic, constants, contexts, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import text
@@ -98,15 +100,10 @@ class CommandLine(object):
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
-        volatility.framework.import_files(volatility.plugins)  # Will not log as console's default level is WARNING
+        framework.import_files(volatility.plugins)  # Will not log as console's default level is WARNING
         automagics = automagic.available(ctx)
 
-        plugin_list = {}
-        for plugin in volatility.framework.class_subclasses(interfaces.plugins.PluginInterface):
-            plugin_name = plugin.__module__ + "." + plugin.__name__
-            if plugin_name.startswith("volatility.plugins."):
-                plugin_name = plugin_name[len("volatility.plugins."):]
-            plugin_list[plugin_name] = plugin
+        plugin_list = framework.list_plugins()
 
         seen_automagics = set()
         configurables_list = {}

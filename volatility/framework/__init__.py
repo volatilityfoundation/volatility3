@@ -104,6 +104,16 @@ def import_files(base_module) -> None:
     return None
 
 
+def list_plugins() -> typing.Dict[str, typing.Type[interfaces.plugins.PluginInterface]]:
+    plugin_list = {}
+    for plugin in class_subclasses(interfaces.plugins.PluginInterface):
+        plugin_name = plugin.__module__ + "." + plugin.__name__
+        if plugin_name.startswith("volatility.plugins."):
+            plugin_name = plugin_name[len("volatility.plugins."):]
+        plugin_list[plugin_name] = plugin
+    return plugin_list
+
+
 # Check the python version to ensure it's suitable
 # We currently require 3.5.3 since 3.5.1 has no typing.Type and 3.5.2 is broken for ''/delayed encapsulated types
 required_python_version = (3, 5, 3)
