@@ -76,7 +76,7 @@ class PrintKey(plugins.PluginInterface):
                        node.get_volatile()))
             yield result
 
-        if self.config['recurse']:
+        if self.config.get('recurse', None):
             for sub_node in node.get_subkeys():
                 if sub_node.vol.offset not in [x.vol.offset for x in node_path]:
                     yield from self.hive_walker(hive, node_path + [sub_node], key_path + "\\" + sub_node.get_name())
