@@ -8,7 +8,6 @@ provide configurations values that fulfill those requirements.  Where the user d
 values, automagic modules may extend the configuration tree themselves.
 """
 
-import collections.abc
 import copy
 import json
 import logging
@@ -17,6 +16,8 @@ import string
 import sys
 import typing
 from abc import ABCMeta, abstractmethod
+
+import collections.abc
 
 from volatility.framework import constants, interfaces
 from volatility.framework import validity
@@ -183,7 +184,7 @@ class HierarchicalDict(collections.abc.Mapping):
             else:
                 return self._subdict[key]
         except KeyError:
-            self._setitem(key = key, value = HierarchicalDict(separator = self.separator), is_data = True)
+            self._setitem(key = key, value = HierarchicalDict(separator = self.separator), is_data = False)
         return HierarchicalDict()
 
     def splice(self, key: str, value: 'HierarchicalDict') -> None:
