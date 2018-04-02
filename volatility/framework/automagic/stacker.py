@@ -34,7 +34,10 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     # Most important automagic, must happen first!
     priority = 10
     page_map_offset = None
-    cache = {}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cached = None
 
     def __call__(self,
                  context: interfaces.context.ContextInterface,
@@ -57,31 +60,16 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             raise ValueError("Unable to run LayerStacker, single_location parameter not provided")
         self._check_type(requirement, interfaces.configuration.RequirementInterface)
 
-        # If we've already run for this requirement, stick the configuration under the new config_path
-        if requirement.name in self.cache:
-            stacked_layers, config = self.cache[requirement]
-            print("     CONFIG", dict(config))
-            context.config.merge(config_path, config)
-            return stacked_layers
-
         # Search for suitable requirements
-        stacked_layers = self.stack(context, config_path, [requirement], progress_callback)
+        self.stack(context, config_path, requirement, progress_callback)
 
-        if stacked_layers:
-            # Call the construction magic now we may have new things to construct
-            constructor = construct_layers.ConstructionMagic(context,
-                                                             interfaces.configuration.path_join(self.config_path,
-                                                                                                "ConstructionMagic"))
-            constructor(context, config_path, requirement)
-            print(dict(context.config), config_path)
-            self.cache[requirement.name] = context.config[config_path], stacked_layers
         return None
 
     def stack(self,
               context: interfaces.context.ContextInterface,
               config_path: str,
-              requirements: typing.List[interfaces.configuration.RequirementInterface],
-              progress_callback: validity.ProgressCallback) -> typing.List[str]:
+              requirement: interfaces.configuration.RequirementInterface,
+              progress_callback: validity.ProgressCallback) -> None:
         """Stacks the various layers and attaches these to a specific requirement
 
         :param context: Context on which to operate
@@ -90,11 +78,22 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         :param requirements: List of requirements, each of which has the stack built on the first suitable (sub-)requirement
         :param progress_callback: Function to provide callback progress
         """
+        # If we're cached, find Now we need to find where to apply the stack configuration
+        if self._cached:
+            top_layer_name, subconfig = self._cached
+            result = self.find_suitable_requirements(context, config_path, requirement, [top_layer_name])
+            if result:
+                appropriate_config_path, layer_name = result
+                context.config.merge(appropriate_config_path, subconfig)
+                context.config[appropriate_config_path] = top_layer_name
+                return
+            self._cached = None
+
+        new_context = context.clone()
         location = self.config.get('single_location', None)
         self._check_type(location, str)
 
         # Setup the local copy of the resource
-        new_context = context.clone()
         current_layer_name = context.memory.free_layer_name("FileLayer")
         current_config_path = interfaces.configuration.path_join(config_path, "stack", current_layer_name)
 
@@ -132,24 +131,31 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 stacked = True
                 stack_set.remove(stacker_cls)
 
+        if stacked_layers is not None:
+            # Applies the stacked_layers to each requirement in the requirements list
+            result = self.find_suitable_requirements(new_context, config_path, requirement, stacked_layers)
+            if result:
+                path, layer = result
+                # splice in the new configuration into the original context
+                context.config.merge(path, new_context.memory[layer].build_configuration())
+
+                # Call the construction magic now we may have new things to construct
+                constructor = construct_layers.ConstructionMagic(context,
+                                                                 interfaces.configuration.path_join(
+                                                                     self.config_path,
+                                                                     "ConstructionMagic"))
+                constructor(context, config_path, requirement)
+
+                # Stash the changed config items
+                self._cached = context.config.get(path, None), context.config.branch(path)
+
         vollog.debug("Stacked layers: {}".format(stacked_layers))
 
-        if stacked_layers:
-            # Applies the stacked_layers to each requirement in the requirements list
-            for requirement in requirements:
-                result = self.find_suitable_requirements(stacked_layers, requirement, new_context, config_path)
-                if result:
-                    path, layer = result
-                    # splice in the new configuration into the original context
-                    context.config.merge(path, new_context.memory[layer].build_configuration())
-
-        return stacked_layers
-
     def find_suitable_requirements(self,
-                                   stacked_layers: typing.List,
-                                   requirement: interfaces.configuration.RequirementInterface,
                                    context: interfaces.context.ContextInterface,
-                                   config_path: str) -> typing.Optional[typing.Tuple[str, str]]:
+                                   config_path: str,
+                                   requirement: interfaces.configuration.RequirementInterface,
+                                   stacked_layers: [str]) -> typing.Optional[typing.Tuple[str, str]]:
         """Looks for translation layer requirements and attempts to apply the stacked layers to it.  If it succeeds
         it returns the configuration path and layer name where the stacked nodes were spliced into the tree.
 
@@ -169,8 +175,10 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                         context.config[child_config_path] = original_setting
                     else:
                         del context.config[child_config_path]
+            else:
+                return child_config_path, context.config.get(child_config_path, None)
         for req_name, req in requirement.requirements.items():
-            result = self.find_suitable_requirements(stacked_layers, req, context, child_config_path)
+            result = self.find_suitable_requirements(context, child_config_path, req, stacked_layers)
             if result:
                 return result
         return None
