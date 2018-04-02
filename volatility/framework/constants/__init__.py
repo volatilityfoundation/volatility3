@@ -2,8 +2,9 @@
 
 Stores all the constant values that are generally fixed throughout volatility
 This includes default scanning block sizes, etc."""
-import os.path
 import sys
+
+import os.path
 
 import volatility.framework.constants.linux
 
@@ -14,6 +15,7 @@ SYMBOL_BASEPATHS = [os.path.abspath(os.path.join(os.path.dirname(__file__), ".."
 BANG = "!"
 PACKAGE_VERSION = "3.0.0_alpha1"
 DISABLE_MULTITHREADED_SCANNING = False
+AUTOMAGIC_CONFIG_PATH = 'automagic'
 
 LOGLEVEL_V = 9
 LOGLEVEL_VV = 8

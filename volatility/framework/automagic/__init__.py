@@ -12,7 +12,7 @@ import sys
 import traceback
 import typing
 
-from volatility.framework import class_subclasses, import_files, interfaces, validity
+from volatility.framework import class_subclasses, import_files, interfaces, validity, constants
 from volatility.framework.automagic import construct_layers, stacker, windows, pdbscan
 from volatility.framework.configuration import requirements
 
@@ -42,7 +42,7 @@ def available(context: interfaces.context.ContextInterface) \
     :type context: volatility.framework.interfaces.context.ContextInterface
     """
     import_files(sys.modules[__name__])
-    config_path = 'automagic'
+    config_path = constants.AUTOMAGIC_CONFIG_PATH
     return sorted([clazz(context, interfaces.configuration.path_join(config_path, clazz.__name__)) for clazz in
                    class_subclasses(interfaces.automagic.AutomagicInterface)],
                   key = lambda x: x.priority)
