@@ -148,17 +148,7 @@ class HierarchicalDict(collections.abc.Mapping):
                 subdict = self._subdict[self._key_head(key)]
                 del subdict[self._key_tail(key)]
             else:
-                key_head = self._key_head(key)
-                present = False
-                if key_head in self._data:
-                    present = True
-                    del self._data[self._key_head(key)]
-                if key_head in self._subdict:
-                    present = True
-                    del self._subdict[key_head]
-                if not present:
-                    # Make a call to throw the right exception
-                    del self._data[key_head]
+                del self._subdict[self._key_head(key)]
         except KeyError:
             raise KeyError(key)
 
