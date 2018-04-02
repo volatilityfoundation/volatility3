@@ -1,9 +1,10 @@
 """Renderers
 
 Renderers display the unified output format in some manner (be it text or file or graphical output"""
+import datetime
+import typing
 
 import collections
-import typing
 
 from volatility.framework import interfaces
 
@@ -315,13 +316,21 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 class ColumnSortKey(interfaces.renderers.ColumnSortKey):
     def __init__(self, treegrid: TreeGrid, column_name: str, ascending: bool = True) -> None:
         self._index = None
+        self._type = None
         self.ascending = ascending
         for i in treegrid.columns:
             if i.name.lower() == column_name.lower():
                 self._index = i.index
+                self._type = i.type
         if self._index is None:
             raise ValueError("Column not found in TreeGrid columns: {}".format(column_name))
 
     def __call__(self, values: typing.List[typing.Any]) -> typing.Any:
         """The key function passed as the sort key"""
-        return values[self._index]
+        value = values[self._index]
+        if isinstance(value, interfaces.renderers.BaseAbsentValue):
+            if self._type == datetime.datetime:
+                value = datetime.datetime.min
+            elif self._type == int:
+                value = -1
+        return value
