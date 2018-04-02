@@ -148,7 +148,7 @@ class HierarchicalDict(collections.abc.Mapping):
                 subdict = self._subdict[self._key_head(key)]
                 del subdict[self._key_tail(key)]
             else:
-                del self._subdict[self._key_head(key)]
+                del self._data[self._key_head(key)]
         except KeyError:
             raise KeyError(key)
 
