@@ -114,9 +114,6 @@ class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
            are to be used by this method to build a space where possible
 
            :param context: Context in which to construct the higher layer
-           :type context: ~volatility.framework.interfaces.context.ContextInterface
            :param layer_name: Name of the layer to stack on top of
-           :type layer_name: str
            :param progress_callback: A callback function to indicate progress through a scan (if one is necessary)
-           :type progress_callback: A function that takes a percentage and an optional description
         """
