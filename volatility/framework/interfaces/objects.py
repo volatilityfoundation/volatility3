@@ -1,11 +1,12 @@
 """Objects are the core of volatility, and provide pythonic access to interpreted values of data from a layer.
 """
 
-import collections
-import collections.abc
 import logging
 import typing
 from abc import ABCMeta, abstractmethod
+
+import collections
+import collections.abc
 
 from volatility.framework import constants, validity, interfaces
 from volatility.framework.interfaces import context as interfaces_context
@@ -24,6 +25,8 @@ class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
 
     def __getattr__(self, attr: str) -> typing.Any:
         """Returns the item as an attribute"""
+        if attr == '_dict':
+            return super().__getattribute__(attr)
         if attr in self._dict:
             return self._dict[attr]
         raise AttributeError("Object has no attribute: {}.{}".format(self.__class__.__name__, attr))
