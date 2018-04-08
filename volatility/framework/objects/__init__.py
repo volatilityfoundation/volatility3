@@ -48,16 +48,38 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
                 struct_format: str,
+                new_value = None,
                 **kwargs) -> typing.Type['PrimitiveObject']:
-        """Creates the appropriate class and returns it so that the native type is inherritted
+        """Creates the appropriate class and returns it so that the native type is inherited
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
-        without needing to override __new__"""
-        return cls._struct_type.__new__(cls,
-                                        cls._struct_value(context,
-                                                          struct_format,
-                                                          object_info.layer_name,
-                                                          object_info.offset))
+        without needing to override __new__
+
+        We also sneak in new_value, so that we don't have to do expensive (read: impossible) context reads
+        when unpickling."""
+        if new_value is None:
+            value = cls._struct_value(context,
+                                      struct_format,
+                                      object_info.layer_name,
+                                      object_info.offset)
+        else:
+            value = new_value
+        result = super().__new__(cls, value)
+        # This prevents us having to go read a context layer when recreating after unpickling
+        result.__new_value = value
+        return result
+
+    def __getnewargs_ex__(self):
+        """Make sure that when pickling, all appropiate parameters for new are provided"""
+        kwargs = {}
+        for k, v in self._vol.maps[-1].items():
+            if k not in ["context", "struct_format", "object_info", "type_name"]:
+                kwargs[k] = v
+        kwargs['new_value'] = self.__new_value
+        return (self._context,
+                self._vol.maps[-2]['type_name'],
+                self._vol.maps[-3],
+                self._struct_format), kwargs
 
     @classmethod
     def _struct_value(cls,

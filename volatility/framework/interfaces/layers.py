@@ -1,6 +1,5 @@
 """Defines layers for containing data.  One layer may combine other layers, map data based on the data itself,
  or map a procedure (such as decryption) across another layer of data."""
-import collections.abc
 import functools
 import logging
 import math
@@ -8,6 +7,8 @@ import multiprocessing
 import traceback
 import typing
 from abc import ABCMeta, abstractmethod
+
+import collections.abc
 
 from volatility.framework import constants, exceptions, validity, interfaces
 from volatility.framework.interfaces import configuration, context
