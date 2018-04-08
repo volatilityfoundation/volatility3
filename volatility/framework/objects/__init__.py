@@ -602,7 +602,7 @@ class Struct(interfaces.objects.ObjectInterface):
 
     def __getattribute__(self, attr: str) -> typing.Any:
         """Make sure that class overrides all start with helper_"""
-        if attr == '__dict__' or attr == '__class__' or attr in self.__dict__:
+        if attr in ['__dict__', '__class__'] or attr in self.__dict__:
             return object.__getattribute__(self, attr)
 
         if not isinstance(getattr(self.__class__, attr), property):
@@ -619,8 +619,8 @@ class Struct(interfaces.objects.ObjectInterface):
 
     def __getattr__(self, attr: str) -> typing.Any:
         """Method for accessing members of the type"""
-        if attr in self._concrete_members:
-            return self._concrete_members[attr]
+        if attr in self.__getattribute__("_concrete_members"):
+            return self.__getattribute__("_concrete_members")[attr]
         elif attr in self.vol.members:
             mask = self._context.memory[self.vol.layer_name].address_mask
             relative_offset, member = self.vol.members[attr]
