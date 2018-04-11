@@ -29,7 +29,7 @@ def pointer_to_string(pointer: objects.Pointer,
     return char.cast("string", max_length = count, errors = errors)
 
 
-def array_of_pointers(array: objects.Array,
+def array_of_pointers(array: interfaces.objects.ObjectInterface,
                       count: int,
                       subtype: templates.ObjectTemplate = None,
                       context: interfaces.context.ContextInterface = None) -> interfaces.objects.ObjectInterface:
