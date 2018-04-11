@@ -182,7 +182,7 @@ class _MMVAD_SHORT(objects.Struct):
         if hasattr(self, "u1") and hasattr(self.u1, "VadFlags1"):
             return self.u1.VadFlags1.CommitCharge
 
-        if hasattr(self, "u") and hasattr(self.u, "VadFlags"):
+        elif hasattr(self, "u") and hasattr(self.u, "VadFlags"):
             return self.u.VadFlags.CommitCharge
 
         elif hasattr(self, "Core"):
@@ -193,14 +193,18 @@ class _MMVAD_SHORT(objects.Struct):
     def get_private_memory(self):
         """Get the VAD's private memory setting"""
 
-        if hasattr(self, "u1") and hasattr(self.u1, "VadFlags1"):
+        if hasattr(self, "u1") and hasattr(self.u1, "VadFlags1") and hasattr(self.u1.VadFlags1, "PrivateMemory"):
             return self.u1.VadFlags1.PrivateMemory
 
-        if hasattr(self, "u") and hasattr(self.u, "VadFlags"):
+        elif hasattr(self, "u") and hasattr(self.u, "VadFlags") and hasattr(self.u.VadFlags, "PrivateMemory"):
             return self.u.VadFlags.PrivateMemory
 
         elif hasattr(self, "Core"):
-            return self.Core.u1.VadFlags1.PrivateMemory
+            if hasattr(self.Core, "u1") and hasattr(self.Core.u1, "VadFlags1") and hasattr(self.Core.u1.VadFlags1, "PrivateMemory"):
+                return self.Core.u1.VadFlags1.PrivateMemory
+
+            elif hasattr(self.Core, "u") and hasattr(self.Core.u, "VadFlags") and hasattr(self.Core.u.VadFlags, "PrivateMemory"):
+                return self.Core.u.VadFlags.PrivateMemory
 
         raise AttributeError("Unable to find the private memory member")
 
