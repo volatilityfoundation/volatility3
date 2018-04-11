@@ -49,7 +49,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                 object_info: interfaces.objects.ObjectInformation,
                 struct_format: str,
                 new_value = None,
-                **kwargs) -> typing.Type['PrimitiveObject']:
+                **kwargs) -> 'PrimitiveObject':
         """Creates the appropriate class and returns it so that the native type is inherited
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -64,7 +64,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                                       object_info.offset)
         else:
             value = new_value
-        result = super().__new__(cls, value)
+        result = cls._struct_type.__new__(cls, value)
         # This prevents us having to go read a context layer when recreating after unpickling
         result.__new_value = value
         return result
