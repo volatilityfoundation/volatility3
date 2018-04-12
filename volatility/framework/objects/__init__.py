@@ -49,7 +49,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                 object_info: interfaces.objects.ObjectInformation,
                 struct_format: str,
                 new_value: typing.Union[int, float, bool, bytes, str] = None,
-                **kwargs) -> 'PrimitiveObject':
+                **kwargs) -> typing.Type:
         """Creates the appropriate class and returns it so that the native type is inherited
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
