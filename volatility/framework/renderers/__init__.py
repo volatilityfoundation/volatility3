@@ -61,18 +61,9 @@ class TreeNode(interfaces.renderers.TreeNode):
                         column.name,
                         type(val),
                         column.type))
-            if isinstance(val, (interfaces.renderers.TZAwareValue, interfaces.renderers.TZNaiveValue)):
-                tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
-                if isinstance(val, interfaces.renderers.TZAwareValue) and tznaive:
-                    raise TypeError(
-                        "Values item with index {} is not a timezone aware datetime object as required by column {}".format(
-                            index,
-                            column.name))
-                elif isinstance(val, interfaces.renderers.TZNaiveValue) and not tznaive:
-                    raise TypeError(
-                        "Values item with index {} is not a timezone naive datetime object as required by column {}".format(
-                            index,
-                            column.name))
+            # TODO: Consider how to deal with timezone naive/aware datetimes (and alert plugin uses to be precise)
+            # if isinstance(val, datetime.datetime):
+            #     tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
 
     @property
     def values(self) -> typing.Iterable[interfaces.renderers.SimpleTypes]:

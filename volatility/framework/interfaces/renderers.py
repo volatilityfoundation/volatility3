@@ -2,10 +2,11 @@
 or in some other form.  This module defines both the output format (:class:`TreeGrid`) and the renderer interface
 which can interact with a TreeGrid to produce suitable output."""
 
-import collections
 import datetime
 import typing
 from abc import abstractmethod, ABCMeta
+
+import collections
 
 from volatility.framework import validity
 
@@ -81,22 +82,13 @@ class BaseAbsentValue(object):
 # We don't class these off a shared base, because the SimpleTypes must only
 # contain the types that the validator will accept (which would not include the base)
 
-class TZAwareValue(datetime.datetime):
-    """Class for TZ-aware datetimes"""
-
-
-class TZNaiveValue(datetime.datetime):
-    """Class for TZ-aware datetimes"""
-
-
 _Type = typing.TypeVar("_Type")
 ColumnsType = typing.List[typing.Tuple[str, typing.Type]]
 SimpleTypes = typing.Union[typing.Type[int],
                            typing.Type[str],
                            typing.Type[float],
                            typing.Type[bytes],
-                           typing.Type[TZAwareValue],
-                           typing.Type[TZNaiveValue],
+                           typing.Type[datetime.datetime],
                            typing.Type[BaseAbsentValue]]
 VisitorSignature = typing.Callable[[TreeNode, _Type], _Type]
 
