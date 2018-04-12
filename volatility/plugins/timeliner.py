@@ -1,3 +1,4 @@
+import abc
 import datetime
 import enum
 import logging
@@ -19,11 +20,16 @@ class TimeLinerType(enum.IntEnum):
     CHANGED = 4
 
 
-class TimeLinerInterface(object):
-    """Interface defining methosd that timeliner will use to generate a body file"""
+class TimeLinerInterface(object, metaclass = abc.ABCMeta):
+    """Interface defining methods that timeliner will use to generate a body file"""
 
-    def generate_timeline(self) -> typing.Generator[typing.Tuple[str, datetime.datetime, TimeLinerType], None, None]:
-        """Method generates Tuples of (timestamp, timestamp_type, textual description)"""
+    @abc.abstractmethod
+    def generate_timeline(self) -> typing.Generator[
+        typing.Tuple[str, TimeLinerType, datetime.datetime, TimeLinerType], None, None]:
+        """Method generates Tuples of (description, timestamp_type, timestamp)
+
+        These need not be generated in any particular order, sorting will be done later
+        """
 
 
 class Timeliner(plugins.PluginInterface):
@@ -44,31 +50,37 @@ class Timeliner(plugins.PluginInterface):
         """Takes a timeline, sorts it and output the data from each relevant row from each plugin"""
         # Generate the results for each plugin
         for plugin in self.runable_plugins:
+            plugin_name = plugin.__class__.__name__
             try:
-                vollog.log(logging.INFO, "Running {}".format(plugin.name))
-                for (item, timestamp, timestamp_type) in plugin.generate_timeline():
-                    times = self.timeline.get((plugin.name, item), {})
+                vollog.log(logging.INFO, "Running {}".format(plugin_name))
+                for (item, timestamp_type, timestamp) in plugin.generate_timeline():
+                    times = self.timeline.get((plugin_name, item), {})
                     if times.get(timestamp_type, None) is not None:
                         vollog.debug(
-                            "Multiple timestamps for the same plugin/file combination found: {} {}".format(plugin.name,
+                            "Multiple timestamps for the same plugin/file combination found: {} {}".format(plugin_name,
                                                                                                            item))
                     times[timestamp_type] = timestamp
-                    self.timeline[(plugin.name, item)] = times
+                    self.timeline[(plugin_name, item)] = times
             except Exception:
                 # FIXME: traceback shouldn't be printed directly, but logged instead
                 traceback.print_exc()
-                vollog.log(logging.INFO, "Exception occurred running plugin: {}".format(plugin.name))
+                vollog.log(logging.INFO, "Exception occurred running plugin: {}".format(plugin_name))
 
         for (plugin_name, item) in self.timeline:
-            # TODO: Fix up the columns
-            yield (0, [])
+            times = self.timeline[(plugin_name, item)]
+            data = (0, [plugin_name, item,
+                        times.get(TimeLinerType.CREATED, renderers.NotApplicableValue()),
+                        times.get(TimeLinerType.MODIFIED, renderers.NotApplicableValue()),
+                        times.get(TimeLinerType.ACCESSED, renderers.NotApplicableValue()),
+                        times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())])
+            yield data
 
     def run(self):
         """Isolate each plugin and run it"""
 
         # Initialize for the run
         sep = configuration.CONFIG_SEPARATOR
-        plugin_list = framework.class_subclasses(TimeLinerInterface)
+        plugin_list = list(framework.class_subclasses(TimeLinerInterface))
         automagics = automagic.available(self._context)
         self.runable_plugins = []
 
@@ -76,6 +88,9 @@ class Timeliner(plugins.PluginInterface):
         selected_list = self.config.get('plugins', None)
         if selected_list is not None:
             selected_list = selected_list.split(",")
+        else:
+            # Use all the plugins if there's no filter
+            selected_list = [plugin.__name__ for plugin in plugin_list]
 
         # Identify plugins that we can run which output datetimes
         for plugin_class in plugin_list:
@@ -85,7 +100,6 @@ class Timeliner(plugins.PluginInterface):
                 if selected in plugin_name:
                     usable = True
             if usable:
-                plugin_class = plugin_list[plugin_name]
                 try:
                     automagics = automagic.choose_automagic(automagics, plugin_class)
                     automagic_config_path = configuration.path_join(self.config_path,
@@ -105,7 +119,10 @@ class Timeliner(plugins.PluginInterface):
                     # Remove the failed plugin from the list and continue
                     continue
 
-        return renderers.TreeGrid(columns = [("Date", datetime.datetime),
-                                             ("Relevant Column", str),
-                                             ("Data", str)],
+        return renderers.TreeGrid(columns = [("Plugin", str),
+                                             ("Description", str),
+                                             ("Created Date", datetime.datetime),
+                                             ("Modified Date", datetime.datetime),
+                                             ("Accessed Date", datetime.datetime),
+                                             ("Changed Date", datetime.datetime)],
                                   generator = self._generator())

@@ -4,9 +4,10 @@ import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
+from volatility.plugins import timeliner
 
 
-class PsList(plugins.PluginInterface):
+class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular windows memory image"""
 
     PHYSICAL_DEFAULT = False
@@ -48,6 +49,13 @@ class PsList(plugins.PluginInterface):
                        proc.get_is_wow64(),
                        proc.get_create_time(),
                        proc.get_exit_time()))
+
+    def generate_timeline(self):
+        for row in self._generator():
+            _depth, row_data = row
+            description = "Process: {} ({})".format(row_data[2], row_data[3])
+            yield (description, timeliner.TimeLinerType.CREATED, row_data[8])
+            yield (description, timeliner.TimeLinerType.MODIFIED, row_data[9])
 
     def list_processes(self):
         """Lists all the processes in the primary layer that are in the pid config option"""
