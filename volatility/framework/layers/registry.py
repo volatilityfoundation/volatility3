@@ -1,5 +1,4 @@
 import logging
-import os.path as os_path
 import typing
 
 from volatility.framework import constants, exceptions, interfaces, objects
@@ -31,12 +30,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._hive_offset = self.config["hive_offset"]
         self._table_name = self.config["nt_symbols"]
 
-        self._reg_table_name = context.symbol_space.free_table_name("registry")
-
-        reg_path = "file://" + os_path.join(os_path.dirname(__file__), '..', 'symbols', 'windows', 'reg.json')
-        table = intermed.IntermediateSymbolTable(context = context, config_path = config_path,
-                                                 name = self._reg_table_name, isf_url = reg_path)
-        context.symbol_space.append(table)
+        self._reg_table_name = intermed.IntermediateSymbolTable.create(context,
+                                                                       self._config_path,
+                                                                       'windows',
+                                                                       'registry')
 
         self.hive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
                                         self._hive_offset).Hive

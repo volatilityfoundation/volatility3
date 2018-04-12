@@ -156,6 +156,23 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                             if name.endswith(filename + extension) or (filename == "*" and name.endswith(extension)):
                                 yield "jar:file:" + str(pathlib.Path(zip_path)) + "!" + name
 
+    @classmethod
+    def create(cls,
+               context: interfaces.context.ContextInterface,
+               config_path: str,
+               sub_path: str,
+               filename: str) -> str:
+        """Takes a context and loads an intermediate symbol table based on a filename.
+
+        Returns the name of the added symbol table"""
+        urls = list(cls.file_symbol_url(sub_path, filename))
+        if not urls:
+            raise ValueError("No symbol files found at provided filename: {}", filename)
+        table_name = context.symbol_space.free_table_name(filename)
+        table = cls(context = context, config_path = config_path, name = table_name, isf_url = urls[0])
+        context.symbol_space.append(table)
+        return table_name
+
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta):
     """Provide a base class to identify all subclasses"""
