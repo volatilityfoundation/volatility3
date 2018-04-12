@@ -48,7 +48,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
                 struct_format: str,
-                new_value = None,
+                new_value: typing.Union[int, float, bool, bytes, str] = None,
                 **kwargs) -> 'PrimitiveObject':
         """Creates the appropriate class and returns it so that the native type is inherited
 
@@ -66,7 +66,8 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             value = new_value
         result = cls._struct_type.__new__(cls, value)
         # This prevents us having to go read a context layer when recreating after unpickling
-        result.__new_value = value
+        # Mypy complains that result doesn't have a __new_value, but using setattr causes pycharm to complain further down
+        result.__new_value = value  # type: ignore
         return result
 
     def __getnewargs_ex__(self):

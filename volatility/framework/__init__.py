@@ -3,6 +3,7 @@ import inspect
 import logging
 import os
 import sys
+import typing
 
 from volatility.framework import interfaces
 
@@ -20,8 +21,6 @@ from volatility.framework import interfaces
 # 4. If changes or removals of the interface have been made, set age to 0
 
 # We use the libtool library versioning
-import typing
-
 CURRENT = 0  # Number of releases of the library with any change
 REVISION = 0  # Number of changes that don't affect the interface
 AGE = 0  # Number of consecutive versions of the interface the current version supports
@@ -68,7 +67,10 @@ def hide_from_subclasses(cls: typing.Type) -> typing.Type:
     return cls
 
 
-def class_subclasses(cls: typing.Type) -> typing.Iterable[typing.Type]:
+T = typing.TypeVar('T', typing.Type, typing.Type)
+
+
+def class_subclasses(cls: T) -> typing.Generator[T, None, None]:
     """Returns all the (recursive) subclasses of a given class"""
     if not inspect.isclass(cls):
         raise TypeError("class_subclasses parameter not a valid class: {}".format(cls))
