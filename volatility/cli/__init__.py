@@ -225,7 +225,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         if not os.path.exists(output_filename):
             with open(output_filename, "wb") as current_file:
-                current_file.write(filedata.data.getbuffer())
+                current_file.write(filedata.data.getvalue())
                 vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
         else:
             vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
