@@ -12,6 +12,7 @@ import argparse
 import inspect
 import json
 import logging
+import os
 import sys
 import typing
 
@@ -53,11 +54,11 @@ class PrintedProgress(object):
         print(message, end = ' ' * (self._max_message_len - message_len))
 
 
-class CommandLine(object):
+class CommandLine(interfaces.plugins.FileConsumerInterface):
     """Constructs a command-line interface object for users to run plugins"""
 
     def __init__(self):
-        pass
+        self.output_dir = None
 
     def run(self):
         """Executes the command line module, taking the system arguments, determining the plugin to run and then running it"""
@@ -75,6 +76,8 @@ class CommandLine(object):
         parser.add_argument("-p", "--plugins", help = "Semi-colon separated list of paths to find plugins",
                             default = "", type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
+        parser.add_argument("-o", "--output-dir", help = "Directory in which to output any generated files",
+                            default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')), type = str)
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument("-l", "--log", help = "Log output to a file as well as the console", default = None,
                             type = str)
@@ -204,8 +207,28 @@ class CommandLine(object):
             with open("config.json", "w") as f:
                 json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
+        self.output_dir = args.output_dir
+        constructed.set_file_consumer(self)
+
         # Construct and run the plugin
         text.QuickTextRenderer().render(constructed.run())
+
+    def consume_file(self, filedata: interfaces.plugins.FileInterface):
+        """Consumes a file as produced by a plugin"""
+        if self.output_dir is None:
+            raise ValueError("Output directory has not been correctly specified")
+        os.makedirs(self.output_dir, exist_ok = True)
+
+        pref_name_array = filedata.preferred_filename.split('.')
+        filename, extension = os.path.join(self.output_dir, '.'.join(pref_name_array[:-1])), pref_name_array[-1]
+        output_filename = "{}.{}".format(filename, extension)
+
+        if not os.path.exists(output_filename):
+            with open(output_filename, "wb") as current_file:
+                current_file.write(filedata.data.getbuffer())
+                vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
+        else:
+            vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
 
     def populate_requirements_argparse(self,
                                        parser: argparse.ArgumentParser,

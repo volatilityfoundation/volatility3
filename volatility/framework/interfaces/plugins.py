@@ -4,6 +4,7 @@ They are called and carry out some algorithms on data stored in layers using obj
 """
 
 # Configuration interfaces must be imported separately, since we're part of interfaces and can't import ourselves
+import io
 import logging
 import typing
 from abc import ABCMeta, abstractmethod
@@ -16,6 +17,25 @@ vollog = logging.getLogger(__name__)
 
 if typing.TYPE_CHECKING:
     from volatility.framework import interfaces, renderers
+
+
+class FileInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+    """Class for storing Files in the plugin as a means to output a file or files when necessary"""
+
+    def __init__(self, filename: str, data: bytes = None):
+        self.preferred_filename = filename
+        self.data = io.BytesIO(data)
+
+
+class FileConsumerInterface(object):
+    """Class for consuming files potentially produced by plugins
+
+    We use the producer/consumer model to ensure we can avoid running out of memory by storing every file produced.
+    The downside is, we can't provide much feedback to the producer about what happened to their file (other than exceptions).
+    """
+
+    def consume_file(self, file: FileInterface) -> None:
+        """Consumes a file as passed back to a UI by a plugin"""
 
 
 #
@@ -49,6 +69,17 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
         if self.unsatisfied(context, config_path):
             vollog.warning("Plugin failed validation")
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
+        self._file_consumer = None  # type: FileConsumerInterface
+
+    def set_file_consumer(self, consumer: FileConsumerInterface) -> None:
+        self._file_consumer = self._check_type(consumer, FileConsumerInterface)
+
+    def produce_file(self, filedata: FileInterface) -> None:
+        """Adds a file to the plugin's file store and returns the chosen filename for the file"""
+        if self._file_consumer:
+            self._file_consumer.consume_file(filedata)
+        else:
+            vollog.debug("No file consumer specified to consume: {}".format(filedata.preferred_filename))
 
     @classmethod
     def get_requirements(cls) -> typing.List['interfaces.configuration.RequirementInterface']:
