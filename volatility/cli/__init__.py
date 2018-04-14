@@ -22,7 +22,7 @@ import volatility.plugins
 from volatility import framework
 from volatility.framework import automagic, constants, contexts, interfaces
 from volatility.framework.configuration import requirements
-from volatility.framework.renderers import text
+from volatility.cli import text_renderer
 
 # Make sure we log everything
 
@@ -211,7 +211,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         constructed.set_file_consumer(self)
 
         # Construct and run the plugin
-        text.QuickTextRenderer().render(constructed.run())
+        text_renderer.QuickTextRenderer().render(constructed.run())
 
     def consume_file(self, filedata: interfaces.plugins.FileInterface):
         """Consumes a file as produced by a plugin"""
