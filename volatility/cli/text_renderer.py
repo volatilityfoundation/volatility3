@@ -1,9 +1,20 @@
 import datetime
+import logging
 import sys
 import typing
 
-from volatility.framework import interfaces, renderers
 from volatility.framework.renderers import format_hints
+
+vollog = logging.getLogger(__name__)
+
+try:
+    CAPSTONE_PRESENT = True
+    import capstone
+except ImportError:
+    CAPSTONE_PRESENT = False
+    vollog.debug("Disassembly library capstone not found")
+
+from volatility.framework import interfaces, renderers
 
 
 def hex_bytes_as_text(value: bytes) -> str:
@@ -39,11 +50,25 @@ class Optional(object):
         return self._func(x)
 
 
+def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
+    if CAPSTONE_PRESENT:
+        disasm_types = {'intel': capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32),
+                        'intel64': capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64),
+                        'arm': capstone.Cs(capstone.CS_ARCH_ARM, capstone.CS_MODE_ARM),
+                        'arm64': capstone.Cs(capstone.CS_ARCH_ARM64, capstone.CS_MODE_ARM)}
+        output = ""
+        for i in disasm_types[disasm.architecture].disasm(disasm.data, disasm.offset):
+            output += "\n0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str)
+        return output
+    return QuickTextRenderer.type_renderers[bytes](disasm.data)
+
+
 class QuickTextRenderer(interfaces.renderers.Renderer):
     type_renderers = {format_hints.Bin: Optional(lambda x: "0b{:b}".format(x)),
                       format_hints.Hex: Optional(lambda x: "0x{:x}".format(x)),
                       format_hints.HexBytes: Optional(hex_bytes_as_text),
-                      bytes: Optional(lambda x: x.decode("utf-8")),
+                      interfaces.renderers.Disassembly: Optional(display_disassembly),
+                      bytes: Optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
                       datetime.datetime: Optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
                       'default': Optional(lambda x: "{}".format(x))}
 
