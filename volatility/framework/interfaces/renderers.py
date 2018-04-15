@@ -45,7 +45,7 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def values(self) -> typing.Iterable['SimpleTypes']:
+    def values(self) -> typing.Iterable['BaseTypes']:
         """Returns the list of values from the particular node, based on column.index"""
 
     @property
@@ -79,17 +79,32 @@ class BaseAbsentValue(object):
     """Class that represents values which are not present for some reason"""
 
 
-# We don't class these off a shared base, because the SimpleTypes must only
+class Disassembly(object):
+    """A class to indicate that the bytes provided should be disassembled (based on the architecture)"""
+    possible_architectures = ['intel', 'intel64', 'arm', 'arm64']
+
+    def __init__(self, data: bytes, offset: int = 0, architecture: str = 'intel64'):
+        self.data = data
+        self.architecture = None
+        if architecture in self.possible_architectures:
+            self.architecture = architecture
+        if not isinstance(offset, int):
+            raise TypeError("Offset must be an integer type")
+        self.offset = offset
+
+
+# We don't class these off a shared base, because the BaseTypes must only
 # contain the types that the validator will accept (which would not include the base)
 
 _Type = typing.TypeVar("_Type")
 ColumnsType = typing.List[typing.Tuple[str, typing.Type]]
-SimpleTypes = typing.Union[typing.Type[int],
-                           typing.Type[str],
-                           typing.Type[float],
-                           typing.Type[bytes],
-                           typing.Type[datetime.datetime],
-                           typing.Type[BaseAbsentValue]]
+BaseTypes = typing.Union[typing.Type[int],
+                         typing.Type[str],
+                         typing.Type[float],
+                         typing.Type[bytes],
+                         typing.Type[datetime.datetime],
+                         typing.Type[BaseAbsentValue],
+                         typing.Type[Disassembly]]
 VisitorSignature = typing.Callable[[TreeNode, _Type], _Type]
 
 
@@ -106,7 +121,7 @@ class TreeGrid(object, metaclass = ABCMeta):
     and to create cycles.
     """
 
-    simple_types = (int, str, float, bytes, datetime.datetime)  # type: typing.ClassVar[typing.Tuple]
+    base_types = (int, str, float, bytes, datetime.datetime, Disassembly)  # type: typing.ClassVar[typing.Tuple]
 
     def __init__(self, columns: ColumnsType, generator: typing.Generator) -> None:
         """Constructs a TreeGrid object using a specific set of columns
@@ -149,7 +164,7 @@ class TreeGrid(object, metaclass = ABCMeta):
         """Returns the subnodes of a particular node in order"""
 
     @abstractmethod
-    def values(self, node: TreeNode) -> typing.Tuple[SimpleTypes, ...]:
+    def values(self, node: TreeNode) -> typing.Tuple[BaseTypes, ...]:
         """Returns the values for a particular node
 
            The values returned are mutable,

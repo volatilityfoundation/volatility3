@@ -28,7 +28,7 @@ class TreeNode(interfaces.renderers.TreeNode):
                  path: str,
                  treegrid: 'TreeGrid',
                  parent: typing.Optional['TreeNode'],
-                 values: typing.List[interfaces.renderers.SimpleTypes]) -> None:
+                 values: typing.List[interfaces.renderers.BaseTypes]) -> None:
         if not isinstance(treegrid, TreeGrid):
             raise TypeError("Treegrid must be an instance of TreeGrid")
         self._treegrid = treegrid
@@ -46,7 +46,7 @@ class TreeNode(interfaces.renderers.TreeNode):
     def __len__(self) -> int:
         return len(self._treegrid.children(self))
 
-    def _validate_values(self, values: typing.List[interfaces.renderers.SimpleTypes]) -> None:
+    def _validate_values(self, values: typing.List[interfaces.renderers.BaseTypes]) -> None:
         """A function for raising exceptions if a given set of values is invalid according to the column properties."""
         if not (isinstance(values, collections.Sequence) and len(values) == len(self._treegrid.columns)):
             raise TypeError(
@@ -66,7 +66,7 @@ class TreeNode(interfaces.renderers.TreeNode):
             #     tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
 
     @property
-    def values(self) -> typing.Iterable[interfaces.renderers.SimpleTypes]:
+    def values(self) -> typing.Iterable[interfaces.renderers.BaseTypes]:
         """Returns the list of values from the particular node, based on column.index"""
         return self._values
 
@@ -118,7 +118,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
     path_sep = "|"
 
     def __init__(self,
-                 columns: typing.List[typing.Tuple[str, interfaces.renderers.SimpleTypes]],
+                 columns: typing.List[typing.Tuple[str, interfaces.renderers.BaseTypes]],
                  generator: typing.Optional[typing.Iterable[typing.Tuple[int, typing.Tuple]]]) -> None:
         """Constructs a TreeGrid object using a specific set of columns
 
@@ -136,7 +136,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         if len(columns) < 1:
             raise ValueError("Columns must be a list containing at least one column")
         for (name, column_type) in columns:
-            is_simple_type = issubclass(column_type, self.simple_types)
+            is_simple_type = issubclass(column_type, self.base_types)
             if not is_simple_type:
                 raise TypeError(
                     "Column {}'s type is not a simple type: {}".format(name, column_type.__class__.__name__))
