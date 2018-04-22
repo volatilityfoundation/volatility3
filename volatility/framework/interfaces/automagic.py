@@ -3,13 +3,13 @@
 Automagic objects attempt to automatically fill configuration values that a user has not filled.
 """
 import typing
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 
 import volatility.framework.configuration.requirements
 from volatility.framework import validity, interfaces
 from volatility.framework.interfaces import configuration as interfaces_configuration
 
-RequirementInterfaceType = typing.Type[interfaces.configuration.RequirementInterface]
+R = typing.TypeVar('R', bound = interfaces.configuration.RequirementInterface)
 
 
 class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metaclass = ABCMeta):
@@ -47,22 +47,24 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
                 raise ValueError(
                     "Automagic requirements must be an InstanceRequirement, ChoiceRequirement or ListRequirement")
 
-    @abstractmethod
     def __call__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
-                 configurable: interfaces.configuration.ConfigurableInterface,
+                 requirement: interfaces.configuration.RequirementInterface,
                  progress_callback: validity.ProgressCallback = None) -> typing.List[str]:
         """Runs the automagic over the configurable"""
+        return []
+
+    # TODO: requirement_type can be made typing.Union[typing.Type[T], typing.Tuple[typing.Type[T], ...]]
+    #       once mypy properly supports Tuples in instance
 
     def find_requirements(self,
                           context: interfaces.context.ContextInterface,
                           config_path: str,
                           requirement_root: interfaces.configuration.RequirementInterface,
-                          requirement_type: typing.Union[RequirementInterfaceType,
-                                                         typing.Tuple[RequirementInterfaceType, ...]],
+                          requirement_type: typing.Type[R],
                           shortcut: bool = True) \
-            -> typing.List[typing.Tuple[str, str, interfaces_configuration.ConstructableRequirementInterface]]:
+            -> typing.List[typing.Tuple[str, str, R]]:
         """Determines if there is actually an unfulfilled requirement waiting
 
         This ensures we do not carry out an expensive search when there is no requirement for a particular requirement
@@ -75,7 +77,7 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
         :return: A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
         """
         sub_config_path = interfaces_configuration.path_join(config_path, requirement_root.name)
-        results = []
+        results = []  # type: typing.List[typing.Tuple[str, str, R]]
         recurse = not shortcut
         if isinstance(requirement_root, requirement_type):
             if recurse or requirement_root.unsatisfied(context, config_path):
@@ -98,7 +100,6 @@ class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     stack_order = 0
 
     @classmethod
-    @abstractmethod
     def stack(self,
               context: interfaces.context.ContextInterface,
               layer_name: str,

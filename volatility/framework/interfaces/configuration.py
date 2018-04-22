@@ -8,6 +8,7 @@ provide configurations values that fulfill those requirements.  Where the user d
 values, automagic modules may extend the configuration tree themselves.
 """
 
+import collections.abc
 import copy
 import json
 import logging
@@ -16,8 +17,6 @@ import string
 import sys
 import typing
 from abc import ABCMeta, abstractmethod
-
-import collections.abc
 
 from volatility.framework import constants, interfaces
 from volatility.framework import validity
@@ -631,7 +630,7 @@ class TranslationLayerRequirement(ConstructableRequirementInterface, Configurabl
             return None
 
         obj = self._construct_class(context, config_path, args)
-        if obj is not None:
+        if obj is not None and isinstance(obj, interfaces.layers.DataLayerInterface):
             context.add_layer(obj)
             # This should already be done by the _construct_class method
             # context.config[config_path] = obj.name
@@ -687,7 +686,7 @@ class SymbolRequirement(ConstructableRequirementInterface, ConfigurableRequireme
                 args[req.name] = node_config.data[req.name]
 
         obj = self._construct_class(context, config_path, args)
-        if obj is not None:
+        if obj is not None and isinstance(obj, interfaces.symbols.SymbolTableInterface):
             context.symbol_space.append(obj)
         return None
 

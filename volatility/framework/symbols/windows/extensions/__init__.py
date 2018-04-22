@@ -1,10 +1,10 @@
 import collections.abc
-import datetime
 import functools
 import logging
 import typing
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers
+from volatility.framework.layers import intel
 from volatility.framework.objects import utility
 from volatility.framework.symbols import generic
 
@@ -200,10 +200,12 @@ class _MMVAD_SHORT(objects.Struct):
             return self.u.VadFlags.PrivateMemory
 
         elif hasattr(self, "Core"):
-            if hasattr(self.Core, "u1") and hasattr(self.Core.u1, "VadFlags1") and hasattr(self.Core.u1.VadFlags1, "PrivateMemory"):
+            if hasattr(self.Core, "u1") and hasattr(self.Core.u1, "VadFlags1") and hasattr(self.Core.u1.VadFlags1,
+                                                                                           "PrivateMemory"):
                 return self.Core.u1.VadFlags1.PrivateMemory
 
-            elif hasattr(self.Core, "u") and hasattr(self.Core.u, "VadFlags") and hasattr(self.Core.u.VadFlags, "PrivateMemory"):
+            elif hasattr(self.Core, "u") and hasattr(self.Core.u, "VadFlags") and hasattr(self.Core.u.VadFlags,
+                                                                                          "PrivateMemory"):
                 return self.Core.u.VadFlags.PrivateMemory
 
         raise AttributeError("Unable to find the private memory member")
@@ -393,6 +395,11 @@ class _EPROCESS(generic.GenericIntelProcess):
         """Constructs a new layer based on the process's DirectoryTableBase"""
 
         parent_layer = context.memory[self.vol.layer_name]
+
+        if not isinstance(parent_layer, intel.Intel):
+            # We can't get bits_per_register unless we're an intel space (since that's not defined at the higher layer)
+            raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
+
         # Presumably for 64-bit systems, the DTB is defined as an array, rather than an unsigned long long
         if isinstance(self.Pcb.DirectoryTableBase, objects.Array):
             dtb = self.Pcb.DirectoryTableBase.cast("unsigned long long")

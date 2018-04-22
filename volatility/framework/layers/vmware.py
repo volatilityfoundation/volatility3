@@ -111,9 +111,10 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
               progress_callback: validity.ProgressCallback = None) \
             -> typing.Optional[interfaces.layers.DataLayerInterface]:
         """Attempt to stack this based on the starting information"""
-        if not isinstance(context.memory[layer_name], physical.FileLayer):
+        memlayer = context.memory[layer_name]
+        if not isinstance(memlayer, physical.FileLayer):
             return None
-        location = context.memory[layer_name].location
+        location = memlayer.location
         if location.endswith(".vmem"):
             vmss = location[:-5] + ".vmss"
             vmsn = location[:-5] + ".vmsn"

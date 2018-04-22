@@ -2,11 +2,10 @@
 or in some other form.  This module defines both the output format (:class:`TreeGrid`) and the renderer interface
 which can interact with a TreeGrid to produce suitable output."""
 
+import collections
 import datetime
 import typing
 from abc import abstractmethod, ABCMeta
-
-import collections
 
 from volatility.framework import validity
 
@@ -83,7 +82,7 @@ class Disassembly(object):
     """A class to indicate that the bytes provided should be disassembled (based on the architecture)"""
     possible_architectures = ['intel', 'intel64', 'arm', 'arm64']
 
-    def __init__(self, data: bytes, offset: int = 0, architecture: str = 'intel64'):
+    def __init__(self, data: bytes, offset: int = 0, architecture: str = 'intel64') -> None:
         self.data = data
         self.architecture = None
         if architecture in self.possible_architectures:
@@ -96,7 +95,7 @@ class Disassembly(object):
 # We don't class these off a shared base, because the BaseTypes must only
 # contain the types that the validator will accept (which would not include the base)
 
-_Type = typing.TypeVar("_Type")
+_Type = typing.TypeVar("_Type", bound = typing.Type)
 ColumnsType = typing.List[typing.Tuple[str, typing.Type]]
 BaseTypes = typing.Union[typing.Type[int],
                          typing.Type[str],

@@ -67,7 +67,7 @@ def hide_from_subclasses(cls: typing.Type) -> typing.Type:
     return cls
 
 
-T = typing.TypeVar('T', typing.Type, typing.Type)
+T = typing.TypeVar('T', bound = typing.Type)
 
 
 def class_subclasses(cls: T) -> typing.Generator[T, None, None]:

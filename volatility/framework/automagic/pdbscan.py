@@ -11,7 +11,7 @@ import struct
 import typing
 
 from volatility.framework import exceptions, layers, validity
-from volatility.framework.layers import scanners
+from volatility.framework.layers import scanners, intel
 from volatility.framework.symbols import intermed, native
 
 if __name__ == "__main__":
@@ -165,25 +165,24 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             virtual_layer_name = context.config.get(sub_config_path, None)
             layer_name = context.config.get(interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
             if layer_name and virtual_layer_name:
-                page_size = context.memory[virtual_layer_name].page_size
-                results = {virtual_layer_name: scan(context,
-                                                    layer_name,
-                                                    page_size,
-                                                    progress_callback = progress_callback)}
+                memlayer = context.memory[virtual_layer_name]
+                if isinstance(memlayer, intel.Intel):
+                    page_size = memlayer.page_size
+                    results = {virtual_layer_name: scan(context,
+                                                        layer_name,
+                                                        page_size,
+                                                        progress_callback = progress_callback)}
         else:
             for subreq in requirement.requirements.values():
                 results.update(self.recurse_pdb_finder(context, sub_config_path, subreq))
         return results
 
-    def recurse_symbol_fulfiller(self,
-                                 context: interfaces.context.ContextInterface) \
-            -> None:
+    def recurse_symbol_fulfiller(self, context: interfaces.context.ContextInterface) -> None:
         """Fulfills the SymbolRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
 
         This pass will construct any requirements that may need it in the context it was passed
 
         :param context: Context on which to operate
-        :type context: ~volatility.framework.interfaces.context.ContextInterface
         """
         join = interfaces.configuration.path_join
         for config_path, sub_config_path, requirement in self._symbol_requirements:
@@ -323,7 +322,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     def __call__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
-                 requirement: interfaces.configuration.ConstructableRequirementInterface,
+                 requirement: interfaces.configuration.RequirementInterface,
                  progress_callback: validity.ProgressCallback = None) -> None:
         if requirement.unsatisfied(context, config_path):
             if "pdbscan" not in context.symbol_space:

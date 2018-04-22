@@ -1,5 +1,6 @@
 """Defines layers for containing data.  One layer may combine other layers, map data based on the data itself,
  or map a procedure (such as decryption) across another layer of data."""
+import collections.abc
 import functools
 import logging
 import math
@@ -7,8 +8,6 @@ import multiprocessing
 import traceback
 import typing
 from abc import ABCMeta, abstractmethod
-
-import collections.abc
 
 from volatility.framework import constants, exceptions, validity, interfaces
 from volatility.framework.interfaces import configuration, context
@@ -53,7 +52,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def __init__(self) -> None:
         self.chunk_size = 0x1000000  # Default to 16Mb chunks
         self.overlap = 0x1000  # A page of overlap by default
-        self._context = None
+        self._context = None  # type: typing.Optional[interfaces.context.ContextInterface]
         self._layer_name = None  # type: typing.Optional[str]
 
     @property
@@ -348,7 +347,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                                                                                                  current_offset))
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
-            self._context.memory.write(layer, mapped_offset, length)
+            self._context.memory.write(layer, mapped_offset, value)
             current_offset += length
 
     # ## Scan implementation with knowledge of pages

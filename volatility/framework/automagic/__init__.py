@@ -32,7 +32,7 @@ linux_automagic = ['ConstructionMagic',
 
 
 def available(context: interfaces.context.ContextInterface) \
-        -> typing.List[typing.Type[interfaces.automagic.AutomagicInterface]]:
+        -> typing.List[interfaces.automagic.AutomagicInterface]:
     """Returns an ordered list of all subclasses of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface`.
 
     The order is based on the priority attributes of the subclasses, in order to ensure the automagics are listed in

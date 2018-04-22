@@ -42,7 +42,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     def __call__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
-                 requirement: interfaces.configuration.ConstructableRequirementInterface,
+                 requirement: interfaces.configuration.RequirementInterface,
                  progress_callback: validity.ProgressCallback = None) \
             -> typing.Optional[typing.List[str]]:
         """Runs the automagic over the configurable"""

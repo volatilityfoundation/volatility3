@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
 class FileInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class for storing Files in the plugin as a means to output a file or files when necessary"""
 
-    def __init__(self, filename: str, data: bytes = None):
+    def __init__(self, filename: str, data: bytes = None) -> None:
         self.preferred_filename = filename
         self.data = io.BytesIO(data)
 

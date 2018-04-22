@@ -26,7 +26,7 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
                  progress_callback = None, optional = False) -> typing.List[str]:
-        result = []
+        result = []  # type: typing.List[str]
         if requirement.unsatisfied(context, config_path):
             # Having called validate at the top level tells us both that we need to dig deeper
             # but also ensures that TranslationLayerRequirements have got the correct subrequirements if their class is populated

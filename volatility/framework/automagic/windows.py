@@ -264,6 +264,8 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
                 # Only bother getting the DTB if we don't already have one
                 if not context.config.get(interfaces.configuration.path_join(sub_config_path, "page_map_offset"), None):
                     physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
+                    if not isinstance(physical_layer, str):
+                        raise TypeError("Physical layer name is not a string: {}".format(sub_config_path))
                     hits = context.memory[physical_layer].scan(context, PageMapScanner(useful), progress_callback)
                     for test, dtb in hits:
                         context.config[interfaces.configuration.path_join(sub_config_path, "page_map_offset")] = dtb
@@ -282,7 +284,8 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) -> typing.Optional[str]:
+              progress_callback: validity.ProgressCallback = None) \
+            -> typing.Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to determine and stack an intel layer on a physical layer where possible
 
         Where the DTB scan fails, it attempts a heuristic of checking for the DTB within a specific range.

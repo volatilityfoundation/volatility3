@@ -138,6 +138,7 @@ class Module(interfaces.context.Module):
         """
         symbol_type = symbol_name and not (type_name or offset)
         type_type = (type_name and offset) and not symbol_name
+        type_arg = None  # type: typing.Optional[typing.Union[str, interfaces.objects.Template]]
         if symbol_type and type_type or not (symbol_type or type_type):
             raise ValueError("One of symbol_name, or type_name & offset, must be specified to construct a module")
         if symbol_type is not None:

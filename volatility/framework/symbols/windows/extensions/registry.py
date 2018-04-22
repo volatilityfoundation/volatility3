@@ -117,6 +117,8 @@ class _CM_KEY_NODE(objects.Struct):
 
     def get_key_path(self) -> interfaces.objects.ObjectInterface:
         reg = self._context.memory[self.vol.layer_name]
+        if not isinstance(reg, RegistryHive):
+            raise TypeError("Key was not instantiated on a RegistryHive layer")
         # Using the offset adds a significant delay (since it cannot be cached easily)
         # if self.vol.offset == reg.get_node(reg.root_cell_offset).vol.offset:
         if self.vol.offset == reg.root_cell_offset + 4:
@@ -139,6 +141,9 @@ class _CM_KEY_VALUE(objects.Struct):
         data = b""
         # Check if the data is stored inline
         layer = self._context.memory[self.vol.layer_name]
+        if not isinstance(layer, RegistryHive):
+            raise TypeError("Key value was not instantiated on a RegistryHive layer")
+
         if self.DataLength & 0x80000000 and (0 > datalen or datalen > 4):
             raise ValueError("Unable to read inline registry value with excessive length: {}".format(datalen))
         elif self.DataLength & 0x80000000:
@@ -151,7 +156,7 @@ class _CM_KEY_VALUE(objects.Struct):
                 # The value 4 should actually be unsigned-int.size, but since it's a file format that shouldn't change
                 # the direct value 4 can be used instead
                 block_offset = layer.get_cell(big_data.List + (i * 4)).cast("unsigned int")
-                if block_offset < layer.maximum_address:
+                if isinstance(block_offset, int) and block_offset < layer.maximum_address:
                     amount = min(BIG_DATA_MAXLEN, datalen)
                     data += layer.read(offset = layer.get_cell(block_offset).vol.offset, length = amount)
                     datalen -= amount

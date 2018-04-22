@@ -23,6 +23,9 @@ class task_struct(generic.GenericIntelProcess):
         if not pgd:
             return None
 
+        if not isinstance(parent_layer, interfaces.layers.TranslationLayerInterface):
+            raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
+
         dtb, layer_name = parent_layer.translate(pgd)
         if not dtb:
             return None
