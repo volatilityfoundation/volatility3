@@ -7,7 +7,6 @@ from volatility.framework.configuration import requirements
 class BufferDataLayer(interfaces.layers.DataLayerInterface):
     """A DataLayer class backed by a buffer in memory, designed for testing and swift data access"""
 
-    provides = {"type": "physical"}
     priority = 10
 
     def __init__(self,
@@ -58,7 +57,6 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 class FileLayer(interfaces.layers.DataLayerInterface):
     """a DataLayer backed by a file on the filesystem"""
 
-    provides = {"type": "physical"}
     priority = 20
 
     def __init__(self,

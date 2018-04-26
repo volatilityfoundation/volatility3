@@ -20,7 +20,6 @@ class LimeLayer(segmented.SegmentedLayer):
     physical memory images where there are large holes in the physical
     address space"""
 
-    provides = {"type": "physical"}
     priority = 21
 
     MAGIC = 0x4c694d45

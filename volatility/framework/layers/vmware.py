@@ -9,7 +9,6 @@ from volatility.framework.symbols import native
 
 
 class VmwareLayer(segmented.SegmentedLayer):
-    provides = {"type": "physical"}
     priority = 22
 
     header_structure = "<4sII"

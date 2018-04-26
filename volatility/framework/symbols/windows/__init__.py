@@ -8,7 +8,6 @@ from volatility.framework.symbols.windows.extensions import registry
 
 
 class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
-    provides = {"type": "interface"}
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,

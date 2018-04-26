@@ -279,8 +279,6 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     """Provides a layer that translates or transforms another layer or layers.  Translation layers always depend on
     another layer (typically translating offsets in a virtual offset space into a smaller physical offset space).
     """
-    # Unfortunately class attributes can't easily be inheritted from parent classes
-    provides = {"type": "interface"}
 
     @abstractmethod
     def mapping(self,
