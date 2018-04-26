@@ -17,14 +17,15 @@ class VmwareLayer(segmented.SegmentedLayer):
     def __init__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
-                 name: str) -> None:
+                 name: str,
+                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
         # Construct these so we can use self.config
         self._context = context
         self._config_path = config_path
         self._page_size = 0x1000
         self._base_layer, self._meta_layer = self.config["base_layer"], self.config["meta_layer"]
         # Then call the super, which will call load_segments (which needs the base_layer before it'll work)
-        super().__init__(context, config_path = config_path, name = name)
+        super().__init__(context, config_path = config_path, name = name, metadata = metadata)
 
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer"""

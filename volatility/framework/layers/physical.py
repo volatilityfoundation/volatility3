@@ -13,8 +13,9 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  name: str,
-                 buffer: bytes) -> None:
-        super().__init__(context, config_path, name)
+                 buffer: bytes,
+                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+        super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
         self._buffer = self._check_type(buffer, bytes)
 
     @property
@@ -62,8 +63,9 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def __init__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
-                 name: str) -> None:
-        super().__init__(context, config_path, name)
+                 name: str,
+                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+        super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
         self._location = self.config["location"]
         self._accessor = layers.ResourceAccessor()

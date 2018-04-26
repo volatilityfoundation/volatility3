@@ -591,7 +591,8 @@ class TranslationLayerRequirement(ConstructableRequirementInterface, Configurabl
             if self.oses and context.memory[value].os not in self.oses:
                 vollog.log(9, "TypeError - Layer is not the required OS: {}".format(value))
                 return [path_join(config_path, self.name)]
-            if self.architectures and context.memory[value].architecture not in self.architectures:
+            if (self.architectures and
+                    context.memory[value].metadata.get('architecture', None) not in self.architectures):
                 vollog.log(9, "TypeError - Layer is not the required Architecture: {}".format(value))
                 return [path_join(config_path, self.name)]
             return []

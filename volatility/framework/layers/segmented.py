@@ -15,8 +15,9 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
     def __init__(self,
                  context: interfaces.configuration.ContextInterface,
                  config_path: str,
-                 name: str) -> None:
-        super().__init__(context, config_path = config_path, name = name)
+                 name: str,
+                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+        super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
         self._base_layer = self.config["base_layer"]
         self._segments = []  # type: typing.List[typing.Tuple[int, int, int]]

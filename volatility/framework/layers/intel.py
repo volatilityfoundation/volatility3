@@ -1,3 +1,4 @@
+import collections
 import logging
 import math
 import struct
@@ -27,7 +28,6 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     """Translation Layer for the Intel IA32 memory mapping"""
 
     priority = 40
-    _architecture = "Intel32"
     _entry_format = "<I"
     _page_size_in_bits = 12
     _bits_per_register = 32
@@ -36,12 +36,15 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     _maxvirtaddr = _maxphyaddr
     _structure = [('page directory', 10, False),
                   ('page table', 10, True)]
+    _direct_metadata = collections.ChainMap({'architecture': 'Intel32'},
+                                            interfaces.layers.TranslationLayerInterface._direct_metadata)
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
-                 name: str) -> None:
-        super().__init__(context, config_path, name)
+                 name: str,
+                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+        super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
         self._base_layer = self._check_type(self.config["memory_layer"], str)
         self._swap_layers = []  # type: typing.List[str]
         self._check_type(self.config.get("swap_layers", False), bool)
@@ -253,7 +256,6 @@ class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel architectures"""
 
     priority = 35
-    _architecture = "Intel32"
     _entry_format = "<Q"
     _bits_per_register = 32
     _maxphyaddr = 40
@@ -267,7 +269,7 @@ class Intel32e(Intel):
     """Class for handling 64-bit (32-bit extensions) for Intel architectures"""
 
     priority = 30
-    _architecture = "Intel64"
+    _direct_metadata = collections.ChainMap({'architecture': 'Intel64'}, Intel._direct_metadata)
     _entry_format = "<Q"
     _bits_per_register = 64
     _maxphyaddr = 52
@@ -279,6 +281,7 @@ class Intel32e(Intel):
 
 
 class WindowsMixin(Intel):
+
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry

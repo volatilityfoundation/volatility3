@@ -62,7 +62,7 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
                           context: interfaces.context.ContextInterface,
                           config_path: str,
                           requirement_root: interfaces.configuration.RequirementInterface,
-                          requirement_type: typing.Type[R],
+                          requirement_type: typing.Union[typing.Tuple[typing.Type[R], ...], typing.Type[R]],
                           shortcut: bool = True) \
             -> typing.List[typing.Tuple[str, str, R]]:
         """Determines if there is actually an unfulfilled requirement waiting

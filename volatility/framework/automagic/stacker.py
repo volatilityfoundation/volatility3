@@ -33,7 +33,6 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     """
     # Most important automagic, must happen first!
     priority = 10
-    page_map_offset = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

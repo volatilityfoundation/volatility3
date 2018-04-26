@@ -87,36 +87,18 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     """A Layer that directly holds data (and does not translate it).  This is effectively a leaf node in a layer tree.
     It directly accesses a data source and exposes it within volatility."""
 
-    _architecture = "Unknown"
+    _direct_metadata = collections.ChainMap({}, {'architecture': 'Unknown',
+                                                 'os': 'Unknown'})
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
                  config_path: str,
                  name: str,
-                 os: str = "Unknown") -> None:
+                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
         super().__init__(context, config_path)
         self._name = self._check_type(name, str)
-        self._os = self._check_type(os, str)
-
-    # Memory specific attributes
-
-    @property
-    def architecture(self) -> str:
-        """The architecutre of the TranslationLayer
-
-        This cannot be modified after construction outside of the class
-        """
-        return self._architecture
-
-    @property
-    def os(self) -> str:
-        """The operating system related to the TranslationLayer"""
-        return self._os
-
-    @os.setter
-    def os(self, value: str) -> None:
-        """Sets the operating system of the TranslationLayer"""
-        self._os = self._check_type(value, str)
+        if metadata:
+            self._direct_metadata.update(metadata)
 
     # Standard attributes
 
@@ -273,6 +255,14 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         # Translation Layers are constructable, and therefore require a class configuration variable
         config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
         return config
+
+    # ## Metadata methods
+
+    @property
+    def metadata(self) -> typing.Mapping:
+        """Returns a ReadOnly copy of the metadata published by this layer"""
+        maps = [self.context.memory[layer_name].metadata for layer_name in self.dependencies]
+        return interfaces.objects.ReadOnlyMapping(collections.ChainMap({}, self._direct_metadata, *maps))
 
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):

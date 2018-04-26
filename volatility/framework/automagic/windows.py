@@ -262,16 +262,23 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
             if ("memory_layer" in requirement.requirements and
                     not requirement.requirements["memory_layer"].unsatisfied(context, sub_config_path)):
                 # Only bother getting the DTB if we don't already have one
-                if not context.config.get(interfaces.configuration.path_join(sub_config_path, "page_map_offset"), None):
-                    physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
-                    if not isinstance(physical_layer, str):
+                page_map_offset_path = interfaces.configuration.path_join(sub_config_path, "page_map_offset")
+                if not context.config.get(page_map_offset_path, None):
+                    physical_layer_name = requirement.requirements["memory_layer"].config_value(context,
+                                                                                                sub_config_path)
+                    if not isinstance(physical_layer_name, str):
                         raise TypeError("Physical layer name is not a string: {}".format(sub_config_path))
-                    hits = context.memory[physical_layer].scan(context, PageMapScanner(useful), progress_callback)
-                    for test, dtb in hits:
-                        context.config[interfaces.configuration.path_join(sub_config_path, "page_map_offset")] = dtb
-                        break
+                    physical_layer = context.memory[physical_layer_name]
+                    # Check lower layer metadata first
+                    if physical_layer.metadata.get('page_map_offset', None):
+                        context.config[page_map_offset_path] = physical_layer.metadata['page_map_offset']
                     else:
-                        return None
+                        hits = physical_layer.scan(context, PageMapScanner(useful), progress_callback)
+                        for test, dtb in hits:
+                            context.config[page_map_offset_path] = dtb
+                            break
+                        else:
+                            return None
                 if isinstance(requirement, interfaces.configuration.ConstructableRequirementInterface):
                     requirement.construct(context, config_path)
         else:
@@ -294,24 +301,56 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
         that range, and ignore any that contain multiple self-references (since the DTB is very unlikely to point to
         itself more than once).
         """
-        if isinstance(context.memory[layer_name], intel.Intel):
+        base_layer = context.memory[layer_name]
+        if isinstance(base_layer, intel.Intel):
             return None
-        hits = context.memory[layer_name].scan(context, PageMapScanner(WintelHelper.tests))
-        layer = None
-        config_path = None
-        for test, dtb in hits:
+        if (base_layer.metadata.get('os', None) not in ['Windows', 'Unknown']):
+            return None
+        layer = config_path = None
+
+        # Check the metadata
+        if (base_layer.metadata.get('os', None) == 'Windows' and
+                base_layer.metadata.get('page_map_offset')):
+            arch = base_layer.metadata.get('architecture', None)
+            if arch not in ['Intel32', 'Intel64']:
+                return None
+            # Set the layer type
+            layer_type = intel.WindowsIntel
+            if arch == 'Intel64':
+                layer_type = intel.WindowsIntel32e
+            elif base_layer.metadata.get('pae', False):
+                layer_type = intel.WindowsIntelPAE
+            # Construct the layer
             new_layer_name = context.memory.free_layer_name("IntelLayer")
             config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
             context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
-            context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = dtb
-            layer = test.layer_type(context,
-                                    config_path = config_path,
-                                    name = new_layer_name)
-            break
+            context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = base_layer.metadata[
+                'page_map_offset']
+            layer = layer_type(context,
+                               config_path = config_path,
+                               name = new_layer_name,
+                               metadata = {'os': 'Windows'})
+
+        # Check for the self-referential pointer
+        if layer is None:
+            hits = base_layer.scan(context, PageMapScanner(WintelHelper.tests))
+            layer = None
+            config_path = None
+            for test, dtb in hits:
+                new_layer_name = context.memory.free_layer_name("IntelLayer")
+                config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
+                context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
+                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = dtb
+                layer = test.layer_type(context,
+                                        config_path = config_path,
+                                        name = new_layer_name,
+                                        metadata = {'os': 'Windows'})
+                break
+
+        # Fall back to a heuristic for finding the Windows DTB
         if layer is None:
             vollog.debug("Self-referential pointer not in well-known location, moving to recent windows heuristic")
             # There is a very high chance that the DTB will live in this narrow segment, assuming we couldn't find it previously
-            # TODO: This scan takes time, it might be worth adding a progress callback to it
             hits = context.memory[layer_name].scan(context, PageMapScanner([DtbSelfRef64bit()]), min_address = 0x1a0000,
                                                    max_address = 0x1f0000, progress_callback = progress_callback)
             # Flatten the generator
@@ -325,7 +364,7 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
                 # TODO: Need to determine the layer type (chances are high it's x64, hence this default)
                 layer = layers.intel.WindowsIntel32e(context, config_path = config_path,
-                                                     name = new_layer_name)
+                                                     name = new_layer_name, metadata = {'os': 'Windows'})
         if layer is not None and config_path:
             vollog.debug("DTB was found at: 0x{:0x}".format(
                 context.config[interfaces.configuration.path_join(config_path, "page_map_offset")]))
