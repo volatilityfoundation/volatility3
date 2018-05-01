@@ -588,7 +588,7 @@ class TranslationLayerRequirement(ConstructableRequirementInterface, Configurabl
             if value not in context.memory:
                 vollog.log(9, "IndexError - Layer not found in memory space: {}".format(value))
                 return [path_join(config_path, self.name)]
-            if self.oses and context.memory[value].os not in self.oses:
+            if self.oses and context.memory[value].metadata.get('os', None) not in self.oses:
                 vollog.log(9, "TypeError - Layer is not the required OS: {}".format(value))
                 return [path_join(config_path, self.name)]
             if (self.architectures and
