@@ -88,7 +88,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     It directly accesses a data source and exposes it within volatility."""
 
     _direct_metadata = collections.ChainMap({}, {'architecture': 'Unknown',
-                                                 'os': 'Unknown'})
+                                                 'os': 'Unknown'})  # type: typing.ChainMap[str, str]
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
