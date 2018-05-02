@@ -35,13 +35,13 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                  config_path: str, 
                  name: str) -> None:
 
+        # Construct these so we can use self.config
         self._context = context
         self._config_path = config_path
         self._page_size = 0x1000
-        #self._base_layer, self._meta_layer = self.config["base_layer"], self.config["meta_layer"]
         self._base_layer = self.config["base_layer"] 
 
-        #Create a custom SymbolSpace
+        # Create a custom SymbolSpace
         self._crash_table_name = intermed.IntermediateSymbolTable.create(context,
                                                                        self._config_path,
                                                                        'windows',
