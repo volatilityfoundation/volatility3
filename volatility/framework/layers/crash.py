@@ -8,14 +8,15 @@
 
 import struct
 import typing
-import os.path as os_path
 
 from volatility.framework import constants, exceptions, interfaces, validity
 from volatility.framework.layers import segmented
 from volatility.framework.symbols import intermed
 
+
 class WindowsCrashDump32FormatException(exceptions.LayerException):
     """Thrown when an error occurs with the underlying Crash file format"""
+
 
 class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     """A Windows crash format TranslationLayer. This TranslationLayer supports 
@@ -30,38 +31,38 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     _magic_struct = struct.Struct('<II')
     headerpages = 1
 
-    def __init__(self, 
-                 context: interfaces.context.ContextInterface, 
-                 config_path: str, 
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
                  name: str) -> None:
 
         # Construct these so we can use self.config
         self._context = context
         self._config_path = config_path
         self._page_size = 0x1000
-        self._base_layer = self.config["base_layer"] 
+        self._base_layer = self.config["base_layer"]
 
         # Create a custom SymbolSpace
         self._crash_table_name = intermed.IntermediateSymbolTable.create(context,
-                                                                       self._config_path,
-                                                                       'windows',
-                                                                       'crash')
+                                                                         self._config_path,
+                                                                         'windows',
+                                                                         'crash')
         # Check Header
         hdr_layer = self._context.memory[self._base_layer]
-        hdr_offset = 0 
+        hdr_offset = 0
         self._check_header(hdr_layer, hdr_offset)
 
         # Need to create a header object
         self.header = self.context.object(self._crash_table_name + constants.BANG +
-                                      "_DMP_HEADER", offset = hdr_offset,
-                                      layer_name  = self._base_layer)
+                                          "_DMP_HEADER", offset = hdr_offset,
+                                          layer_name = self._base_layer)
 
         # Extract the DTB
         self.dtb = self.header.DirectoryTableBase
 
         # Verify that it is a supported format
         if self.header.DumpType != 0x1:
-             raise WindowsCrashDump32FormatException("unsupported dump format 0x{:x}".format(self.header.DumpType)) 
+            raise WindowsCrashDump32FormatException("unsupported dump format 0x{:x}".format(self.header.DumpType))
 
         super().__init__(context, config_path, name)
 
@@ -73,9 +74,9 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         offset = self.headerpages
         for x in self.header.PhysicalMemoryBlockBuffer.Run:
             segments.append((x.BasePage * 0x1000,
-                              offset * 0x1000,
-                              x.PageCount * 0x1000))
-            #print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
+                             offset * 0x1000,
+                             x.PageCount * 0x1000))
+            # print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
             #                  offset * 0x1000,
             #                  x.PageCount * 0x1000)) 
             offset += x.PageCount
@@ -95,11 +96,13 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         (signature, validdump) = cls._magic_struct.unpack(header_data)
 
         if signature != cls.SIGNATURE:
-            raise  WindowsCrashDump32FormatException("bad signature 0x{:x} at file offset 0x{:x}".format(signature, offset))
+            raise WindowsCrashDump32FormatException(
+                "bad signature 0x{:x} at file offset 0x{:x}".format(signature, offset))
         if validdump != cls.VALIDDUMP:
-            raise  WindowsCrashDump32FormatException("invalid dump 0x{:x} at file offset 0x{:x}".format(validdump, offset))
+            raise WindowsCrashDump32FormatException(
+                "invalid dump 0x{:x} at file offset 0x{:x}".format(validdump, offset))
 
-        return
+        return (signature, validdump)
 
 
 class WindowsCrashDump32Stacker(interfaces.automagic.StackerLayerInterface):
