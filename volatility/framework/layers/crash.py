@@ -41,22 +41,11 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         #self._base_layer, self._meta_layer = self.config["base_layer"], self.config["meta_layer"]
         self._base_layer = self.config["base_layer"] 
 
-        # Create a custom SymbolSpace
-        #self._crash_table_name = intermed.IntermediateSymbolTable.create(context,
-        #                                                               self._config_path,
-        #                                                               'windows',
-        #                                                               'crash')
-        #context.symbol_space.append(self._crash_table_name)
-
-        self._crash_table_name = context.symbol_space.free_table_name("crash")
-        crash_path = "file://" + os_path.join(os_path.dirname(__file__), '..', \
-                                              'symbols', 'windows', 'crash.json')
-        table = intermed.IntermediateSymbolTable(context = context, 
-                                                 config_path = config_path,
-                                                 name = self._crash_table_name, 
-                                                 isf_url = crash_path)
-        context.symbol_space.append(table)
-
+        #Create a custom SymbolSpace
+        self._crash_table_name = intermed.IntermediateSymbolTable.create(context,
+                                                                       self._config_path,
+                                                                       'windows',
+                                                                       'crash')
         # Check Header
         hdr_layer = self._context.memory[self._base_layer]
         hdr_offset = 0 
