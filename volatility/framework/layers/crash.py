@@ -35,15 +35,19 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                  config_path: str, 
                  name: str) -> None:
 
-        # Construct these so we can use self.config
         self._context = context
         self._config_path = config_path
         self._page_size = 0x1000
         #self._base_layer, self._meta_layer = self.config["base_layer"], self.config["meta_layer"]
         self._base_layer = self.config["base_layer"] 
 
-
         # Create a custom SymbolSpace
+        #self._crash_table_name = intermed.IntermediateSymbolTable.create(context,
+        #                                                               self._config_path,
+        #                                                               'windows',
+        #                                                               'crash')
+        #context.symbol_space.append(self._crash_table_name)
+
         self._crash_table_name = context.symbol_space.free_table_name("crash")
         crash_path = "file://" + os_path.join(os_path.dirname(__file__), '..', \
                                               'symbols', 'windows', 'crash.json')
@@ -70,10 +74,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         if self.header.DumpType != 0x1:
              raise WindowsCrashDump32FormatException("unsupported dump format 0x{:x}".format(self.header.DumpType)) 
 
-        # Then call the super, which will call load_segments 
         super().__init__(context, config_path, name)
-
-        #self._load_segments()
 
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer"""

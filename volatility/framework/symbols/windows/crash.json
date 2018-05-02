@@ -16,7 +16,7 @@
           }
         }, 
         "ValidDump": {
-          "offset": 0,
+          "offset": 4,
           "type": {
             "count": 4,
             "kind": "array",
@@ -47,11 +47,136 @@
             "name": "unsigned long"
           }
         },
+        "PfnDataBase": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "PsLoadedModuleList": {
+          "offset": 24,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "PsActiveProcessHead": {
+          "offset": 28,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "MachineImageType": {
+          "offset": 32,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NumberProcessors": {
+          "offset": 36,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "BugCheckCode": {
+          "offset": 40,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "BugCheckCodeParameter": {
+          "offset": 44,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "VersionUser": {
+          "offset": 60,
+          "type": {
+            "count": 32,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "PaeEnabled": {
+          "offset": 92,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "KdSecondaryVersion": {
+          "offset": 93,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        }, 
+        "VersionUser2": {
+          "offset": 94,
+          "type": {
+            "count": 2,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        }, 
+        "KdDebuggerDataBlock": {
+          "offset": 96,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
         "PhysicalMemoryBlockBuffer": {
           "offset": 100,
           "type": {
             "kind": "struct",
             "name": "_PHYSICAL_MEMORY_DESCRIPTOR"
+          }
+        },
+        "ContextRecord": {
+          "offset": 800,
+          "type": {
+            "count": 1200,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "Exception": {
+          "offset": 2000,
+          "type": {
+            "kind": "struct",
+            "name": "_EXCEPTION_RECORD32"
+          }
+        },
+        "Comment": {
+          "offset": 2080,
+          "type": { 
+            "count": 128,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
           }
         },
         "DumpType": {
@@ -60,10 +185,129 @@
             "kind": "base",
             "name": "unsigned long"
           }
+        },
+        "MiniDumpFields": {
+          "offset": 3980,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SecondaryDataState": {
+          "offset": 3984,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ProductType": {
+          "offset": 3988,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SuiteMask": {
+          "offset": 3992,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "WriterStatus": {
+          "offset": 3996,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "RequiredDumpSpace": {
+          "offset": 4000,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "SystemUpTime": {
+          "offset": 4024,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "SystemTime": {
+          "offset": 4032,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "reserved3": {
+          "offset": 4040,
+          "type": {
+            "count": 56,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
         }
       },
       "kind": "struct",
       "size": 4096
+    },
+    "_EXCEPTION_RECORD32": {
+      "fields": {
+        "ExceptionCode": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "ExceptionFlags": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ExceptionRecord": {
+          "offset": 8,
+          "type": { 
+            "kind": "base",
+            "name": "unsigned long"
+          } 
+        },
+        "ExceptionAddress": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NumberParameters": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ExceptionInformation": {
+          "offset": 20,
+          "type": {
+            "count": 15,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 80
     },
     "_PHYSICAL_MEMORY_DESCRIPTOR": {
       "fields": {
@@ -165,10 +409,10 @@
   },
   "metadata": {
     "producer": {
-      "version": "0.0.1",
-      "name": "ikelos-by-hand",
-      "datetime": "2017-09-04T22:45:22"
+      "version": "0.0.2",
+      "name": "awalters-by-hand",
+      "datetime": "2018-05-01T16:30:00"
     },
-    "format": "4.0.0"
+    "format": "4.1.0"
   }
 }
