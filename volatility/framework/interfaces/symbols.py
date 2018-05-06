@@ -183,7 +183,7 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Returns all symbols based on the type of the symbol"""
 
     @abstractmethod
-    def get_symbols_by_location(self, address: int, table_name: typing.Optional[str] = None) -> typing.Iterable[str]:
+    def get_symbols_by_location(self, offset: int, table_name: typing.Optional[str] = None) -> typing.Iterable[str]:
         """Returns all symbols that exist at a specific relative address"""
 
     @abstractmethod

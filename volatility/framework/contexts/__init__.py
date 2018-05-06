@@ -5,7 +5,7 @@ to act on multiple different contexts without them interfering eith each other.
 """
 import typing
 
-from volatility.framework import constants, interfaces, symbols
+from volatility.framework import constants, interfaces, symbols, validity
 
 
 class Context(interfaces.context.ContextInterface):
@@ -167,3 +167,24 @@ class Module(interfaces.context.Module):
     has_symbol = get_module_wrapper('has_symbol')
     has_type = get_module_wrapper('has_type')
     has_enum = get_module_wrapper('has_enum')
+
+    def get_symbols_by_absolute_location(self, offset: int):
+        """Returns the symbols at a specified absolute location """
+        return self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset,
+                                                                  table_name = self.name)
+
+
+class ModuleCollection(validity.ValidityRoutines):
+    """Class to contain a collection of modules and reason about their contents"""
+
+    def __init__(self,
+                 modules: typing.List[Module]):
+        for module in modules:
+            self._check_type(module, Module)
+        self.modules = modules
+
+    def get_symbols_by_absolute_location(self, offset: int) -> typing.Tuple[str, str]:
+        """Returns a tuple of (module_name, symbol_name) for symbols found at the """
+        for module in self.modules:
+            for result in module.get_symbols_by_absolute_location(offset):
+                yield (module.name, result)

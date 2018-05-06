@@ -98,6 +98,10 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
         self._offset = self._check_type(offset, int)
         super().__init__()
 
+    @property
+    def name(self) -> str:
+        return self._module_name
+
     @abstractmethod
     def object(self,
                symbol_name: str = None,
