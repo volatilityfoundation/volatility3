@@ -4,9 +4,9 @@ import traceback
 import typing
 
 from volatility import framework
-from volatility.framework import renderers, automagic, interfaces
+from volatility.framework import automagic, interfaces, renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import plugins, configuration
+from volatility.framework.interfaces import configuration, plugins
 
 vollog = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class Timeliner(plugins.PluginInterface):
         """Takes a timeline, sorts it and output the data from each relevant row from each plugin"""
         for (timestamp, colname, timestamp_column, node, treegrid) in sorted(self.timeline, key = self.sortkey):
             # Render node data as string
-            data = [] # type: typing.List[str]
+            data = []  # type: typing.List[str]
             # TODO: Ideally the text renderer could render a single row as a string, so we could reuse it here
             for column in treegrid.columns:
                 data += [column.name + ": {}".format(getattr(node.values, treegrid.sanitize_name(column.name)))]
@@ -59,7 +59,7 @@ class Timeliner(plugins.PluginInterface):
         # Identify plugins that we can run which output datetimes
         for plugin_name in plugin_list:
             # TODO: find a way to demark "interactive" plugins, so that timeliner won't stop in the middle
-            if "timeliner" in plugin_name or "Volshell" in plugin_name:
+            if "timeliner" in plugin_name:
                 continue
             found = not selected_list
             if not found:
