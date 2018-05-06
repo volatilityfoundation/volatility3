@@ -14,5 +14,5 @@ class Hex(int):
     """A class to indicate that the integer value should be represented as a hexidecimal value"""
 
 
-class HexBytes(int):
+class HexBytes(bytes):
     """A class to indicate that the bytes should be display in an extended format showing hexadecimal and ascii printable display"""
