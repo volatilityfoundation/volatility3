@@ -29,10 +29,10 @@ def hex_bytes_as_text(value: bytes) -> str:
         hex.append("{:02x}".format(byte))
         ascii.append(chr(byte) if 0x20 < byte <= 0x7E else ".")
         if (count % 8) == 7:
+            output += "\n"
             output += " ".join(hex[count - 7: count])
             output += "\t"
             output += "".join(ascii[count - 7: count])
-            output += "\n"
         count += 1
     return output
 
