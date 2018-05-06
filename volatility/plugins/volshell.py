@@ -15,9 +15,6 @@ class Volshell(plugins.PluginInterface):
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"])]
 
-    def update_configuration(self):
-        """No operation since all values provided by config/requirements initially"""
-
     def run(self, additional_locals = None):
 
         # Provide some OS-agnostic convenience elements for ease

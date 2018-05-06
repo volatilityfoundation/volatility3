@@ -12,9 +12,6 @@ class Statistics(plugins.PluginInterface):
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"])]
 
-    def update_configuration(self):
-        """No operation since all values provided by config/requirements initially"""
-
     def _generator(self):
         # Do mass mapping and determine the number of different layers and how many pages go to each one
         layer = self.context.memory[self.config['primary']]

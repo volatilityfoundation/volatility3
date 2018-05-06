@@ -26,9 +26,6 @@ class PsList(plugins.PluginInterface):
                                                 default = cls.PHYSICAL_DEFEAULT,
                                                 optional = True)]
 
-    def update_configuration(self):
-        """No operation since all values provided by config/requirements initially"""
-
     def _generator(self):
         for proc in self.list_processes():
 

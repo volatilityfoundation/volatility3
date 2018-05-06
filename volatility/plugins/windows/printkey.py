@@ -36,9 +36,6 @@ class PrintKey(plugins.PluginInterface):
                                                 default = False,
                                                 optional = True)]
 
-    def update_configuration(self):
-        """No operation since all values provided by config/requirements initially"""
-
     def hive_walker(self, hive: RegistryHive, node_path: typing.Sequence[objects.Struct] = None, key_path: str = None) \
             -> typing.Generator:
         """Walks through a set of nodes from a given node (last one in node_path).

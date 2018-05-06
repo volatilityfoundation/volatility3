@@ -14,9 +14,6 @@ class HiveList(plugins.PluginInterface):
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
-    def update_configuration(self):
-        """No operation since all values provided by config/requirements initially"""
-
     def _generator(self):
         for hive in self.list_hives():
 

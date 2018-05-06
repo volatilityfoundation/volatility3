@@ -16,9 +16,6 @@ class PsList(interfaces_plugins.PluginInterface):
                 requirements.SymbolRequirement(name = "vmlinux",
                                                description = "Linux Kernel")]
 
-    def update_configuration(self):
-        """No operation since all values provided by config/requirements initially"""
-
     def _generator(self):
         for task in self.list_tasks():
             pid = task.pid

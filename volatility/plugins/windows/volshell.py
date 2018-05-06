@@ -16,9 +16,6 @@ class Volshell(plugins.PluginInterface):
                                              description = "Process ID",
                                              optional = True)])
 
-    def update_configuration(self):
-        """No operation since all values provided by config/requirements initially"""
-
     def list_processes(self):
         """Lists all the processes in the primary layer"""
 
