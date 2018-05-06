@@ -1,8 +1,8 @@
 import inspect
 
+from volatility.cli.volshell import shellplugin
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
-from volatility.plugins import volshell
 
 
 class Volshell(plugins.PluginInterface):
@@ -10,7 +10,7 @@ class Volshell(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return (volshell.Volshell.get_requirements() +
+        return (shellplugin.Volshell.get_requirements() +
                 [requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
                  requirements.IntRequirement(name = 'pid',
                                              description = "Process ID",
@@ -63,4 +63,4 @@ class Volshell(plugins.PluginInterface):
                     eproc = _x
                     break
 
-        return volshell.Volshell(self.context, "plugins.Volshell").run(curframe.f_locals)
+        return shellplugin.Volshell(self.context, "plugins.Volshell").run(curframe.f_locals)

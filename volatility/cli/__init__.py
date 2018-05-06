@@ -22,7 +22,7 @@ import volatility.framework.configuration.requirements
 import volatility.plugins
 from volatility import framework
 from volatility.cli import text_renderer
-from volatility.framework import automagic, constants, contexts, interfaces
+from volatility.framework import automagic, constants, contexts, interfaces, exceptions
 from volatility.framework.configuration import requirements
 
 # Make sure we log everything
@@ -164,8 +164,78 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 json_val = json.load(f)
                 ctx.config.splice(plugin_config_path, interfaces.configuration.HierarchicalDict(json_val))
 
-        # Populate the context config based on the returned args
-        # We have already determined these elements must be descended from ConfigurableInterface
+        self.populate_config(ctx, configurables_list, args, plugin_config_path)
+
+        if args.extend:
+            for extension in args.extend:
+                if '=' not in extension:
+                    raise ValueError(
+                        "Invalid extension (extensions must be of the format \"conf.path.value='value'\")")
+                address, value = extension[:extension.find('=')], json.loads(extension[extension.find('=') + 1:])
+                ctx.config[address] = value
+
+        # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
+        automagics = automagic.choose_automagic(automagics, plugin)
+        self.output_dir = args.output_dir
+
+        ###
+        # BACK TO THE FRAMEWORK
+        ###
+        try:
+            constructed = self.run_plugin(ctx,
+                                          automagics,
+                                          plugin,
+                                          plugin_config_path,
+                                          quiet = args.quiet,
+                                          write_config = args.write_config)
+
+            # Construct and run the plugin
+            text_renderer.QuickTextRenderer().render(constructed.run())
+        except UnsatisfiedException as excp:
+            parser.exit(1, "Unable to validate the plugin requirements: {}\n".format(excp.unsatisfied))
+
+    def run_plugin(self,
+                   context: interfaces.context.ContextInterface,
+                   automagics: typing.List[interfaces.automagic.AutomagicInterface],
+                   plugin: typing.Type[interfaces.plugins.PluginInterface],
+                   plugin_config_path: str,
+                   write_config: bool = False,
+                   quiet: bool = False):
+        """Run the actual plugin based on the parameters
+
+        Clever magic figures out how to fulfill each requirement that might not be fulfilled
+        """
+        progress_callback = PrintedProgress()
+        if quiet:
+            progress_callback = None
+        errors = automagic.run(automagics, context, plugin, "plugins", progress_callback = progress_callback)
+
+        # Check all the requirements and/or go back to the automagic step
+        unsatisfied = plugin.unsatisfied(context, plugin_config_path)
+        if unsatisfied:
+            for error in errors:
+                error_string = [x for x in error.format_exception_only()][-1]
+                vollog.warning("Automagic exception occured: {}".format(error_string[:-1]))
+                vollog.log(constants.LOGLEVEL_V, "".join(error.format(chain = True)))
+            raise UnsatisfiedException(unsatisfied)
+
+        print("\n\n")
+
+        constructed = plugin(context, plugin_config_path, progress_callback = progress_callback)
+        if write_config:
+            vollog.debug("Writing out configuration data to config.json")
+            with open("config.json", "w") as f:
+                json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
+        constructed.set_file_consumer(self)
+        return constructed
+
+    def populate_config(self,
+                        context: interfaces.context.ContextInterface,
+                        configurables_list: typing.Dict[str, interfaces.configuration.ConfigurableInterface],
+                        args: argparse.Namespace,
+                        plugin_config_path: str):
+        """Populate the context config based on the returned args
+        We have already determined these elements must be descended from ConfigurableInterface"""
         vargs = vars(args)
         for configurable in configurables_list:
             for requirement in configurables_list[configurable].get_requirements():
@@ -181,52 +251,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                         # We must be the plugin, so name it appropriately:
                         config_path = plugin_config_path
                     extended_path = interfaces.configuration.path_join(config_path, requirement.name)
-                    ctx.config[extended_path] = value
-
-        if args.extend:
-            for extension in args.extend:
-                if '=' not in extension:
-                    raise ValueError(
-                        "Invalid extension (extensions must be of the format \"conf.path.value='value'\")")
-                address, value = extension[:extension.find('=')], json.loads(extension[extension.find('=') + 1:])
-                ctx.config[address] = value
-
-        # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
-        automagics = automagic.choose_automagic(automagics, plugin)
-
-        ###
-        # BACK TO THE FRAMEWORK
-        ###
-        # Clever magic figures out how to fulfill each requirement that might not be fulfilled
-        progress_callback = PrintedProgress()
-        if args.quiet:
-            progress_callback = None
-
-        errors = automagic.run(automagics, ctx, plugin, "plugins", progress_callback = progress_callback)
-
-        # Check all the requirements and/or go back to the automagic step
-        unsatisfied = plugin.unsatisfied(ctx, plugin_config_path)
-        if unsatisfied:
-            for error in errors:
-                error_string = [x for x in error.format_exception_only()][-1]
-                vollog.warning("Automagic exception occured: {}".format(error_string[:-1]))
-                vollog.log(constants.LOGLEVEL_V, "".join(error.format(chain = True)))
-            parser.exit(1, "Unable to validate the plugin requirements: {}\n".format(unsatisfied))
-
-        print("\n\n")
-
-        constructed = plugin(ctx, plugin_config_path, progress_callback = progress_callback)
-
-        if args.write_config:
-            vollog.debug("Writing out configuration data to config.json")
-            with open("config.json", "w") as f:
-                json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
-
-        self.output_dir = args.output_dir
-        constructed.set_file_consumer(self)
-
-        # Construct and run the plugin
-        text_renderer.QuickTextRenderer().render(constructed.run())
+                    context.config[extended_path] = value
 
     def consume_file(self, filedata: interfaces.plugins.FileInterface):
         """Consumes a file as produced by a plugin"""
@@ -246,7 +271,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
 
     def populate_requirements_argparse(self,
-                                       parser: argparse.ArgumentParser,
+                                       parser: typing.Union[argparse.ArgumentParser, argparse._ArgumentGroup],
                                        configurable: typing.Type[interfaces.configuration.ConfigurableInterface]):
         """Adds the plugin's simple requirements to the provided parser
 
@@ -328,6 +353,12 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         if arg_strings:
             vars(namespace).setdefault(argparse._UNRECOGNIZED_ARGS_ATTR, [])
             getattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
+
+
+class UnsatisfiedException(exceptions.VolatilityException):
+    def __init__(self, unsatisfied):
+        super().__init__()
+        self.unsatisfied = unsatisfied
 
 
 def main():
