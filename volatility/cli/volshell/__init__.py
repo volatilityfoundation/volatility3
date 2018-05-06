@@ -87,7 +87,6 @@ class VolShell(cli.CommandLine):
         # We don't list plugin arguments, because they can be provided within python
         volshell_plugin_list = {'generic': shellplugin.Volshell,
                                 'windows': windows.Volshell}
-        print(repr(volshell_plugin_list))
         for plugin in volshell_plugin_list:
             subparser = parser.add_argument_group(title = plugin.capitalize(),
                                                   description = "Configuration options based on {} options".format(
