@@ -263,7 +263,7 @@ class IntelPAE(Intel):
     _entry_format = "<Q"
     _bits_per_register = 32
     _maxphyaddr = 40
-    _maxvirtaddr = _maxphyaddr
+    _maxvirtaddr = 32
     _structure = [('page directory pointer', 2, False),
                   ('page directory', 9, True),
                   ('page table', 9, True)]
