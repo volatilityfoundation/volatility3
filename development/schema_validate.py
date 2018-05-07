@@ -28,8 +28,7 @@ if __name__ == '__main__':
 
     schema = None
     if args.schema:
-        basepath = os.path.abspath(os.path.dirname(__file__))
-        with open(os.path.join(basepath, args.schema), 'r') as s:
+        with open(os.path.abspath(args.schema), 'r') as s:
             schema = json.load(s)
 
     failures = []
