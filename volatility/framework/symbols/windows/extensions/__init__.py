@@ -389,12 +389,11 @@ class _UNICODE_STRING(objects.Struct):
 
 class _EPROCESS(generic.GenericIntelProcess):
     def add_process_layer(self,
-                          context: interfaces.context.ContextInterface,
                           config_prefix: str = None,
                           preferred_name: str = None):
         """Constructs a new layer based on the process's DirectoryTableBase"""
 
-        parent_layer = context.memory[self.vol.layer_name]
+        parent_layer = self._context.memory[self.vol.layer_name]
 
         if not isinstance(parent_layer, intel.Intel):
             # We can't get bits_per_register unless we're an intel space (since that's not defined at the higher layer)
@@ -408,7 +407,7 @@ class _EPROCESS(generic.GenericIntelProcess):
         dtb = dtb & ((1 << parent_layer.bits_per_register) - 1)
 
         # Add the constructed layer and return the name
-        return self._add_process_layer(context, dtb, config_prefix, preferred_name)
+        return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
     def load_order_modules(self) -> typing.Iterable[int]:
         """Generator for DLLs in the order that they were loaded"""
@@ -416,7 +415,7 @@ class _EPROCESS(generic.GenericIntelProcess):
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
 
-        proc_layer_name = self.add_process_layer(self._context)
+        proc_layer_name = self.add_process_layer()
 
         proc_layer = self._context.memory[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):

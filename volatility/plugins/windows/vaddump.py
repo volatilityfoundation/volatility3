@@ -26,7 +26,7 @@ class VadDump(interfaces_plugins.PluginInterface):
             process_name = utility.array_to_string(proc.ImageFileName)
 
             # TODO: what kind of exceptions could this raise and what should we do?
-            proc_layer_name = proc.add_process_layer(self.context)
+            proc_layer_name = proc.add_process_layer()
             proc_layer = self.context.memory[proc_layer_name]
 
             for vad in plugin.list_vads(proc):
