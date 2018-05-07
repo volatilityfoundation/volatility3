@@ -152,23 +152,27 @@ class Intel(interfaces.layers.TranslationLayerInterface):
            This allows translation layers to provide maps of contiguous regions in one layer
         """
         if length == 0:
-            if ignore_errors and not self.is_valid(offset):
+            try:
+                mapped_offset, _, layer_name = self._translate(offset)
+            except exceptions.InvalidAddressException:
+                if not ignore_errors:
+                    raise
                 raise StopIteration
-            mapped_offset, _, layer_name = self._translate(offset)
             yield (offset, mapped_offset, length, layer_name)
             raise StopIteration
         while length > 0:
-            if ignore_errors:
-                while not self.is_valid(offset) and length > 0:
-                    length -= 1 << self._page_size_in_bits
-                    offset += 1 << self._page_size_in_bits
-                if length <= 0:
-                    raise StopIteration
-            chunk_offset, page_size, layer_name = self._translate(offset)
-            chunk_size = min(page_size - (chunk_offset % page_size), length)
-            yield (offset, chunk_offset, chunk_size, layer_name)
-            length -= chunk_size
-            offset += chunk_size
+            try:
+                chunk_offset, page_size, layer_name = self._translate(offset)
+            except exceptions.PagedInvalidAddressException as excp:
+                mask = (1 << excp.invalid_bits) - 1
+                length_diff = (mask + 1 - (offset & mask))
+                length -= length_diff
+                offset += length_diff
+            else:
+                chunk_size = min(page_size - (chunk_offset % page_size), length)
+                yield (offset, chunk_offset, chunk_size, layer_name)
+                length -= chunk_size
+                offset += chunk_size
 
     @property
     def dependencies(self) -> typing.List[str]:
