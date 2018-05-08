@@ -49,7 +49,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
     def _parse_line(self, line: bytes) -> typing.Tuple[int, bytes]:
         """Parses a single line from a strings file"""
-        pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w+)")
+        pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)")
         match = pattern.search(line)
         offset, string = match.group(1, 2)
         return int(offset), string
