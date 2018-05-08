@@ -47,6 +47,11 @@ class StringRequirement(interfaces_configuration.InstanceRequirement):
     instance_type = str  # type: typing.ClassVar[typing.Type]
 
 
+class URIRequirement(StringRequirement):
+    """A requirement type that contains a single unicode string that is a valid URI"""
+    # TODO: Maybe a a check that to unsatisfied that the path really is a URL?
+
+
 class BytesRequirement(interfaces_configuration.InstanceRequirement):
     """A requirement type that contains a byte string"""
     instance_type = bytes  # type: typing.ClassVar[typing.Type]

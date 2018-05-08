@@ -185,6 +185,6 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     @classmethod
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
-        return [requirements.StringRequirement("single_location",
-                                               description = "Specifies a base location on which to stack",
-                                               optional = True)]
+        return [requirements.URIRequirement("single_location",
+                                            description = "Specifies a base location on which to stack",
+                                            optional = True)]

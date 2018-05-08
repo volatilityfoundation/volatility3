@@ -441,5 +441,5 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                                              element_type = str,
                                              min_elements = 0,
                                              max_elements = 16,
-                                             description = "Specifies a list of swap layers for use with single-location",
+                                             description = "Specifies a list of swap layer URIs for use with single-location",
                                              optional = True)]

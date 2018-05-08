@@ -1,9 +1,8 @@
 import logging
-import os
 import re
 import typing
 
-from volatility.framework import interfaces, renderers
+from volatility.framework import interfaces, renderers, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel
 from volatility.framework.renderers import format_hints
@@ -20,12 +19,10 @@ class Strings(interfaces.plugins.PluginInterface):
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                requirements.StringRequirement(name = "strings_file", description = "Strings file")]
+                requirements.URIRequirement(name = "strings_file", description = "Strings file")]
         # TODO: Make URLRequirement that can accept a file address which the framework can open
 
     def run(self):
-        if not os.path.exists(self.config['strings_file']):
-            vollog.error("File {} does not exist".format(self.config['strings_file']))
 
         return renderers.TreeGrid([("String", str),
                                    ("Physical Address", format_hints.Hex),
@@ -36,7 +33,9 @@ class Strings(interfaces.plugins.PluginInterface):
         """Generates results from a strings file"""
         revmap = self.generate_mapping(self.config['primary'])
 
-        for line in open(self.config['strings_file'], "rb").readlines():
+        accessor = layers.ResourceAccessor()
+
+        for line in accessor.open(self.config['strings_file'], "rb").readlines():
             try:
                 offset, string = self._parse_line(line)
                 try:

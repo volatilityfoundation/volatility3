@@ -15,7 +15,7 @@ import logging
 import os
 import sys
 import typing
-from urllib import request
+from urllib import request, parse
 
 import volatility.framework
 import volatility.framework.configuration.requirements
@@ -241,6 +241,12 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             for requirement in configurables_list[configurable].get_requirements():
                 value = vargs.get(requirement.name, None)
                 if value is not None:
+                    if isinstance(requirement, requirements.URIRequirement):
+                        if isinstance(value, str):
+                            if not parse.urlparse(value).scheme:
+                                if not os.path.exists(value):
+                                    raise TypeError("Non-existant file {} passed to URIRequirement".format(value))
+                                value = "file://" + request.pathname2url(os.path.abspath(value))
                     if isinstance(requirement, requirements.ListRequirement):
                         if not isinstance(value, list):
                             raise TypeError("Configuration for ListRequirement was not a list")
