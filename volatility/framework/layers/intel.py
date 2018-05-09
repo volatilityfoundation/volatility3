@@ -201,36 +201,34 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                        min_address: int,
                        max_address: int) \
             -> typing.Iterable[IteratorValue]:
-        previous = None
+
         data_to_scan = []  # type: typing.List[typing.Tuple[str, int, int]]
-        scanned_pairs = set()  # type: typing.Set[typing.Tuple[int, int]]
-        chunk_end = min_address
-        while chunk_end <= max_address:
-            try:
-                address, page_size, layer_name = self._translate(chunk_end)
-                chunk_size = page_size - (address & (page_size - 1))
-            except exceptions.InvalidAddressException:
-                address, chunk_size, layer_name = None, 1 << self._page_size_in_bits, ''
-            # We've come to a break, so scan what we've seen so far
-            if address is None or (previous, address) in scanned_pairs:
-                yield data_to_scan, chunk_end
-                data_to_scan = []
-            else:
-                # TODO: We've already done the translation, so don't bother doing it again
-                data_to_scan += [(layer_name, address, chunk_size)]
-
-            # We can't actually use scanned_pairs because the user might want to find duplicate instances
-            # throughout the top layer, not just the one actual copy of the data in the bottom layer.
-            # We'd need to re-architect the scanner API to pass through multiple data_offsets to the scanners
-            # Then we'd also then need to batch all the data_offsets up until the end (so we know we're handing
-            # them a complete list) or we'd have to be able to add relevant offsets as they're found.
-            # All in all, massive complexity for little benefit in efficiency.
-            #
-            # At the moment, the following line is only good when you want *a* hit but don't care which one.
-            #    scanned_pairs.add((previous, address))
-
-            previous = address
-            chunk_end += chunk_size
+        position = min_address
+        block_size = 0
+        for mapped in self.mapping(min_address, max_address - min_address, ignore_errors = True):
+            offset, mapped_offset, length, layer_name = mapped
+            if position != offset or block_size > scanner.chunk_size:
+                # We've had a skip (or reached a chunk size
+                yield data_to_scan, position
+                if block_size > scanner.chunk_size:
+                    # We overlap by the entire last
+                    layer_name, mapped_offset, length = data_to_scan[-1]
+                    if length >= scanner.overlap:
+                        data_to_scan = [(layer_name, mapped_offset + length - scanner.overlap), scanner.overlap]
+                        block_size = scanner.overlap
+                    else:
+                        # FIXME: If we don't have enough in the last segment to overlap, we just provide the full segement
+                        # We probably out to step back to through chunks to get enough to make the overlap
+                        data_to_scan = [(layer_name, mapped_offset, length)]
+                        block_size = length
+                else:
+                    data_to_scan = []
+                    block_size = 0
+            data_to_scan += [(layer_name, mapped_offset, length)]
+            position = offset + length
+            block_size += length
+        if data_to_scan:
+            yield data_to_scan, position
 
     # We ignore the type due to the iterator_value, actually it only needs to match the output from _scan_iterator
     def _scan_chunk(self,
@@ -248,6 +246,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 vollog.debug(
                     "Invalid address in layer {} found scanning {} at address {:x}".format(layer_name, self.name,
                                                                                            address))
+
+        # TODO: We probably ought to filter duplicate results due to overlaps
         progress.value = chunk_end
         return list(scanner(data, chunk_end - len(data_to_scan)))
 
