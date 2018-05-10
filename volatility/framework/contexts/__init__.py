@@ -177,13 +177,12 @@ class Module(interfaces.context.Module):
 class ModuleCollection(validity.ValidityRoutines):
     """Class to contain a collection of modules and reason about their contents"""
 
-    def __init__(self,
-                 modules: typing.List[Module]):
+    def __init__(self, modules: typing.List[Module]) -> None:
         for module in modules:
             self._check_type(module, Module)
         self.modules = modules
 
-    def get_symbols_by_absolute_location(self, offset: int) -> typing.Tuple[str, str]:
+    def get_symbols_by_absolute_location(self, offset: int) -> typing.Generator[typing.Tuple[str, str], None, None]:
         """Returns a tuple of (module_name, symbol_name) for symbols found at the """
         for module in self.modules:
             for result in module.get_symbols_by_absolute_location(offset):
