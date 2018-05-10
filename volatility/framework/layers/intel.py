@@ -227,7 +227,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                     # We overlap by the overlap length of the last segment
                     layer_name, mapped_offset, length = data_to_scan[-1]
                     if length >= scanner.overlap:
-                        data_to_scan = [(layer_name, mapped_offset + length - scanner.overlap), scanner.overlap]
+                        data_to_scan = [(layer_name, mapped_offset + length - scanner.overlap, scanner.overlap)]
                         total_block_size = scanner.overlap
                     else:
                         # FIXME: If we don't have enough in the last segment to overlap, we just provide the full segement
