@@ -201,32 +201,45 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                        min_address: int,
                        max_address: int) \
             -> typing.Iterable[IteratorValue]:
-
         data_to_scan = []  # type: typing.List[typing.Tuple[str, int, int]]
-        position = min_address
-        block_size = 0
+        position = base_position = min_address
+        prev_layer_name = None
+        total_block_size = 0
         for mapped in self.mapping(min_address, max_address - min_address, ignore_errors = True):
             offset, mapped_offset, length, layer_name = mapped
-            if position != offset or block_size > scanner.chunk_size:
-                # We've had a skip (or reached a chunk size
-                yield data_to_scan, position
-                if block_size > scanner.chunk_size:
-                    # We overlap by the entire last
+
+            # If we're part of the same previous physical chunk
+            if (layer_name == prev_layer_name) and (base_position == mapped_offset) and data_to_scan:
+                # Update the data_to_scan to include the most recent block
+                data_to_scan, last_entry = data_to_scan[:-1], data_to_scan[-1]
+                prev_layer_name, chunk_mapped_offset, prev_block_size = last_entry
+                data_to_scan += [(prev_layer_name, chunk_mapped_offset, total_block_size)]
+            else:
+                # Otherwise tack it on the end
+                prev_layer_name = layer_name
+                data_to_scan += [(layer_name, mapped_offset, length)]
+
+            # Check if we've jumped to another (physical) segment or reached a chunk size
+            # Blocking up reads seems to take a lot longer, so we break more often
+            if base_position != mapped_offset or total_block_size > scanner.chunk_size:
+                yield data_to_scan, offset + length
+                if total_block_size > scanner.chunk_size:
+                    # We overlap by the overlap length of the last segment
                     layer_name, mapped_offset, length = data_to_scan[-1]
                     if length >= scanner.overlap:
                         data_to_scan = [(layer_name, mapped_offset + length - scanner.overlap), scanner.overlap]
-                        block_size = scanner.overlap
+                        total_block_size = scanner.overlap
                     else:
                         # FIXME: If we don't have enough in the last segment to overlap, we just provide the full segement
                         # We probably out to step back to through chunks to get enough to make the overlap
                         data_to_scan = [(layer_name, mapped_offset, length)]
-                        block_size = length
+                        total_block_size = length
                 else:
                     data_to_scan = []
-                    block_size = 0
-            data_to_scan += [(layer_name, mapped_offset, length)]
+                    total_block_size = 0
             position = offset + length
-            block_size += length
+            base_position = mapped_offset + length
+            total_block_size += length
         if data_to_scan:
             yield data_to_scan, position
 
