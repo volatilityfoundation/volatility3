@@ -27,17 +27,17 @@ class Malfind(interfaces_plugins.PluginInterface):
         :param vad: the MMVAD structure to test
         """
 
-        PAGE_SIZE = 0x1000
-        all_zero_page = "\x00" * PAGE_SIZE
+        CHUNK_SIZE = 0x1000
+        all_zero_page = "\x00" * CHUNK_SIZE
 
         offset = 0
         vad_length = vad.get_end() - vad.get_start()
 
         while offset < vad_length:
             next_addr = vad.get_start() + offset
-            if proc_layer.is_valid(next_addr) and proc_layer.read(next_addr, PAGE_SIZE) != all_zero_page:
+            if proc_layer.is_valid(next_addr) and proc_layer.read(next_addr, CHUNK_SIZE) != all_zero_page:
                 return False
-            offset += PAGE_SIZE
+            offset += CHUNK_SIZE
 
         return True
 
