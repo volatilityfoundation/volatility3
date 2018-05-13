@@ -10,14 +10,12 @@ from volatility.framework import constants
 class Malfind(interfaces_plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code"""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return pslist.PsList.get_requirements() + []
 
+    @classmethod
     def is_vad_empty(self, proc_layer, vad):
         """Check if a VAD region is either entirely unavailable
         due to paging, entirely consisting of zeros, or a
