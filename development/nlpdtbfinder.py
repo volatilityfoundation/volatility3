@@ -24,6 +24,7 @@ PAGE_SIZE = 0x1000
 PHYS_MASK = 0xfffffffffff
 PML4_ENTRY_SIZE = int((2 ** 64) / 512)
 
+
 class PML4EScanner(interfaces.layers.ScannerInterface):
     overlap = 0x4000
 
@@ -32,7 +33,7 @@ class PML4EScanner(interfaces.layers.ScannerInterface):
 
         # go through each page in the data, look for signs of PML4
         for page_offset in range(0, len(data), PAGE_SIZE):
-            entries = struct.unpack('<512Q', data[page_offset:page_offset+PAGE_SIZE])
+            entries = struct.unpack('<512Q', data[page_offset:page_offset + PAGE_SIZE])
             valid_entries = []
             invalid_count = 0
             user_count = 0
@@ -57,7 +58,8 @@ class PML4EScanner(interfaces.layers.ScannerInterface):
 
             # print("[%x] inv: %d val: %d" % (data_offset + page_offset, invalid_count, len(valid_entries)))
             if invalid_count == 0 and len(valid_entries) > 4 and user_count != 0 and supervisor_count != 0:
-                yield (data_offset + page_offset, valid_entries)
+                if page_offset < self.chunk_size:
+                    yield (data_offset + page_offset, valid_entries)
 
 
 def find_pt_mapping(ctx, layer_name, entries):
@@ -68,6 +70,7 @@ def find_pt_mapping(ctx, layer_name, entries):
             return True
 
     return False
+
 
 def find_pd_mapping(ctx, layer_name, entries):
     for entry in entries:
@@ -91,6 +94,7 @@ def find_pd_mapping(ctx, layer_name, entries):
         if find_pt_mapping(ctx, layer_name, pt_entries):
             return True
     return False
+
 
 def find_pdpt_mapping(ctx, layer_name, entries):
     for entry in entries:

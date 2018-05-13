@@ -59,7 +59,8 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
                             self._RSDS_format.unpack(data[sig + 4:name_offset])
 
                         GUID = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
-                        yield (GUID, a, pdb_name, data_offset + sig)
+                        if sig < self.chunk_size:
+                            yield (GUID, a, pdb_name, data_offset + sig)
             sig = data.find(b"RSDS", sig + 1)
 
 

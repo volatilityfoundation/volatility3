@@ -43,6 +43,10 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     scanning the chunk will take (ie, do not set an excessively large chunksize
     and try not to take a significant amount of time in the __call__ method).
 
+    Scanners must NOT return results found *after* self.chunk_size (ie, entirely contained
+    within the overlap).  It is the responsibility of the scanner not to return such
+    duplicate results.
+
     Scanners can mark themselves as thread_safe, if they do not require state
     in either their own class or the context.  This will allow the scanner to be run
     in parallel against multiple blocks.

@@ -17,7 +17,8 @@ class BytesScanner(layers.ScannerInterface):
         """
         find_pos = data.find(self.needle)
         while find_pos >= 0:
-            yield find_pos + data_offset
+            if find_pos < self.chunk_size:
+                yield find_pos + data_offset
             find_pos = data.find(self.needle, find_pos + 1)
 
 
@@ -35,7 +36,8 @@ class RegExScanner(layers.ScannerInterface):
         find_pos = self.regex.finditer(data)
         for match in find_pos:
             offset = match.start()
-            yield offset + data_offset
+            if offset < self.chunk_size:
+                yield offset + data_offset
 
 
 class MultiStringScanner(layers.ScannerInterface):
@@ -54,4 +56,5 @@ class MultiStringScanner(layers.ScannerInterface):
             -> typing.Generator[typing.Tuple[int, typing.Union[str, bytes]], None, None]:
         """Runs through the data looking for the needles"""
         for offset, pattern in self._patterns.search(data):
-            yield offset + data_offset, pattern
+            if offset < self.chunk_size:
+                yield offset + data_offset, pattern

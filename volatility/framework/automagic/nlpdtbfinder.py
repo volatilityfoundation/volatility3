@@ -135,7 +135,8 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
                 entry_num = entry_num + 1
 
             if invalid_count == 0 and len(valid_entries) > 3 and user_count != 0 and supervisor_count != 0:
-                yield (data_offset + page_offset, valid_entries)
+                if page_offset < self.chunk_size:
+                    yield (data_offset + page_offset, valid_entries)
 
 
 class NlpDtbfinder(interfaces.automagic.AutomagicInterface):

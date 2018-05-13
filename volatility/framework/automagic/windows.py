@@ -226,7 +226,8 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
             for page_offset in range(0, len(data), 0x1000):
                 result = test(data, data_offset, page_offset)
                 if result is not None:
-                    yield (test, result[0])
+                    if result[0] < self.chunk_size:
+                        yield (test, result[0])
 
 
 class WintelHelper(interfaces.automagic.AutomagicInterface):
