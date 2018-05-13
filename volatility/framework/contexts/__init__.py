@@ -21,14 +21,8 @@ class Context(interfaces.context.ContextInterface):
     in the volatility framework.  It maintains the
     """
 
-    def __init__(self):
-        """Initializes the context.
-
-        This initializes the context and provides a default set of native types for the empty symbol space.
-
-        :param natives: Defines the native types such as integers, floats, arrays and addresses.
-        :type natives: interfaces.symbols.NativeTableInterface
-        """
+    def __init__(self) -> None:
+        """Initializes the context."""
         super().__init__()
         self._symbol_space = symbols.SymbolSpace()
         self._memory = interfaces.layers.Memory()
