@@ -262,7 +262,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
         # TODO: We probably ought to filter duplicate results due to overlaps
         progress.value = chunk_end
-        return list(scanner(data, chunk_end - len(data_to_scan)))
+        return list(scanner(data, chunk_end - len(data)))
 
     def _scan_metric(self,
                      _scanner: interfaces.layers.ScannerInterface,
