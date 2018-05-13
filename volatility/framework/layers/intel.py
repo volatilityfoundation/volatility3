@@ -230,7 +230,6 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                     "Invalid address in layer {} found scanning {} at address {:x}".format(layer_name, self.name,
                                                                                            address))
 
-        # TODO: We probably ought to filter duplicate results due to overlaps
         progress.value = chunk_end
         return list(scanner(data, chunk_end - len(data)))
 
