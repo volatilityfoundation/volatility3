@@ -173,7 +173,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
              progress_callback: validity.ProgressCallback = None,
              min_address: typing.Optional[int] = None,
              max_address: typing.Optional[int] = None,
-             scan_iterator: typing.Optional[typing.Callable[['ScannerInterface', int, int], IteratorValue]] = None) -> \
+             scan_iterator: typing.Optional[typing.Callable[['ScannerInterface', int, int],
+                                                            typing.Iterable[IteratorValue]]] = None) -> \
             typing.Iterable[typing.Any]:
         """Scans a Translation layer by chunk
 
