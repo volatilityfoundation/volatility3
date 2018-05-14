@@ -82,8 +82,6 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument("-l", "--log", help = "Log output to a file as well as the console", default = None,
                             type = str)
-        parser.add_argument("-f", help = "Shorthand for --single-location=file:// if single-location is not defined",
-                            default = None, type = str)
         parser.add_argument("--write-config", help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
@@ -145,18 +143,6 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         plugin = plugin_list[args.plugin]
         plugin_config_path = interfaces.configuration.path_join('plugins', plugin.__name__)
-
-        # Special case the -f argument because people use is so frequently
-        # It has to go here so it can be overridden by single-location if it's defined
-        # NOTE: This will *BREAK* if LayerStacker, or the automagic configuration system, changes at all
-        ###
-        if args.f:
-            file_name = os.path.abspath(args.f)
-            if not os.path.exists(file_name):
-                vollog.log(logging.INFO, "File does not exist: {}".format(file_name))
-            else:
-                single_location = "file:" + request.pathname2url(file_name)
-                ctx.config['automagic.LayerStacker.single_location'] = single_location
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:
