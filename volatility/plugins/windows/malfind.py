@@ -1,11 +1,12 @@
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.framework.interfaces.renderers as interfaces_renderers
-import volatility.plugins.windows.vadinfo as vadinfo
 import volatility.plugins.windows.pslist as pslist
+import volatility.plugins.windows.vadinfo as vadinfo
+from volatility.framework import constants
 from volatility.framework import renderers
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
-from volatility.framework import constants
+
 
 class Malfind(interfaces_plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code"""
@@ -60,8 +61,9 @@ class Malfind(interfaces_plugins.PluginInterface):
             if not write_exec:
                 continue
 
-            if (vad.get_private_memory() == 1 and vad.get_tag() == "VadS") or (vad.get_private_memory() == 0 and protection_string != "PAGE_EXECUTE_WRITECOPY"):
-                if self.is_vad_empty(proc_layer,  vad):
+            if (vad.get_private_memory() == 1 and vad.get_tag() == "VadS") or (
+                    vad.get_private_memory() == 0 and protection_string != "PAGE_EXECUTE_WRITECOPY"):
+                if self.is_vad_empty(proc_layer, vad):
                     continue
 
                 data = proc_layer.read(vad.get_start(), 64, pad = True)
@@ -69,7 +71,7 @@ class Malfind(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        vadinfo_plugin = vadinfo.VadInfo(self.context, "plugins.Malfind")
+        vadinfo_plugin = vadinfo.VadInfo(self.context, self.config_path)
 
         # determine if we're on a 32 or 64 bit kernel
         if self.context.symbol_space.get_type(self.config["nt_symbols"] + constants.BANG + "pointer").size == 4:
@@ -103,7 +105,7 @@ class Malfind(interfaces_plugins.PluginInterface):
 
     def run(self):
 
-        plugin = pslist.PsList(self.context, "plugins.Malfind")
+        plugin = pslist.PsList(self.context, self.config_path)
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),

@@ -63,4 +63,4 @@ class Volshell(plugins.PluginInterface):
                     eproc = _x
                     break
 
-        return shellplugin.Volshell(self.context, "plugins.Volshell").run(curframe.f_locals)
+        return shellplugin.Volshell(self.context, self.config_path).run(curframe.f_locals)

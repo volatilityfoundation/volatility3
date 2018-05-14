@@ -19,7 +19,7 @@ class VadDump(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        plugin = vadinfo.VadInfo(self.context, "plugins.VadDump")
+        plugin = vadinfo.VadInfo(self.context, self.config_path)
         chunk_size = 1024 * 1024 * 10
 
         for proc in procs:
@@ -56,7 +56,7 @@ class VadDump(interfaces_plugins.PluginInterface):
                            result_text))
 
     def run(self):
-        plugin = pslist.PsList(self.context, "plugins.VadDump")
+        plugin = pslist.PsList(self.context, self.config_path)
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),

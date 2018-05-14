@@ -91,7 +91,7 @@ class VadInfo(interfaces_plugins.PluginInterface):
 
     def run(self):
 
-        plugin = pslist.PsList(self.context, "plugins.VadInfo")
+        plugin = pslist.PsList(self.context, self.config_path)
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),

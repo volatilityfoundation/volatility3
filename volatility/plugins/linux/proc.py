@@ -2,12 +2,11 @@
 typically found in Linux's /proc file system.
 """
 
-from volatility.framework.interfaces import plugins
 from volatility.framework import renderers
-from volatility.framework.renderers import format_hints
+from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
+from volatility.framework.renderers import format_hints
 from volatility.plugins.linux import pslist
-
 
 
 class Maps(plugins.PluginInterface):
@@ -17,7 +16,6 @@ class Maps(plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return pslist.PsList.get_requirements() + []
-
 
     def _generator(self, tasks):
         for task in tasks:
@@ -41,7 +39,7 @@ class Maps(plugins.PluginInterface):
                     inode = inode_object.i_ino
                     path = vma.vm_file.full_path
 
-                yield(
+                yield (
                     0,
                     (task.pid,
                      name,
@@ -56,17 +54,17 @@ class Maps(plugins.PluginInterface):
                      ))
 
     def run(self):
-        plugin = pslist.PsList(self.context, "plugins.Maps")
+        plugin = pslist.PsList(self.context, self.config_path)
 
         return renderers.TreeGrid(
-                [("PID", int),
-                 ("Process", str),
-                 ("Start", format_hints.Hex),
-                 ("End", format_hints.Hex),
-                 ("Flags", str),
-                 ("PgOff", format_hints.Hex),
-                 ("Major", int),
-                 ("Minor", int),
-                 ("Inode", int),
-                 ("File Path", str)],
-                self._generator(plugin.list_tasks()))
+            [("PID", int),
+             ("Process", str),
+             ("Start", format_hints.Hex),
+             ("End", format_hints.Hex),
+             ("Flags", str),
+             ("PgOff", format_hints.Hex),
+             ("Major", int),
+             ("Minor", int),
+             ("Inode", int),
+             ("File Path", str)],
+            self._generator(plugin.list_tasks()))
