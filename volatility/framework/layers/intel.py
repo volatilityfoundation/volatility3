@@ -9,8 +9,6 @@ from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
-IteratorValue = typing.Tuple[typing.List[typing.Tuple[str, int, int]], int]
-
 
 class classproperty(object):
     """Class property decorator
@@ -195,50 +193,6 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                                             optional = True),
                 requirements.StringRequirement(name = 'linux_banner',
                                                optional = True)]
-
-    def _scan_iterator(self,
-                       scanner: interfaces.layers.ScannerInterface,
-                       min_address: int,
-                       max_address: int) \
-            -> typing.Iterable[IteratorValue]:
-        for mapped in self.mapping(min_address, max_address - min_address, ignore_errors = True):
-            offset, mapped_offset, length, layer_name = mapped
-            while length > 0:
-                chunk_size = min(length, scanner.chunk_size + scanner.overlap)
-                yield [(layer_name, mapped_offset, chunk_size)], offset + chunk_size
-                # It we've got more than the scanner's chunk_size, only move up by the chunk_size
-                if chunk_size > scanner.chunk_size:
-                    chunk_size -= scanner.overlap
-                length -= chunk_size
-                mapped_offset += chunk_size
-                offset += chunk_size
-
-    # We ignore the type due to the iterator_value, actually it only needs to match the output from _scan_iterator
-    def _scan_chunk(self,
-                    scanner: interfaces.layers.ScannerInterface,
-                    min_address: int,
-                    max_address: int,
-                    progress: interfaces.layers.ProgressValue,
-                    iterator_value: IteratorValue) -> typing.List[typing.Any]:
-        data_to_scan, chunk_end = iterator_value
-        data = b''
-        for layer_name, address, chunk_size in data_to_scan:
-            try:
-                data += self.context.memory[layer_name].read(address, chunk_size)
-            except exceptions.InvalidAddressException:
-                vollog.debug(
-                    "Invalid address in layer {} found scanning {} at address {:x}".format(layer_name, self.name,
-                                                                                           address))
-
-        progress.value = chunk_end
-        return list(scanner(data, chunk_end - len(data)))
-
-    def _scan_metric(self,
-                     _scanner: interfaces.layers.ScannerInterface,
-                     min_address: int,
-                     max_address: int,
-                     value: int) -> float:
-        return max(0, ((value - min_address) * 100) / (max_address - min_address))
 
 
 class IntelPAE(Intel):

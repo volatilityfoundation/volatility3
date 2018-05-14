@@ -24,6 +24,7 @@ except ImportError:
     pass
 
 ProgressValue = typing.Union['DummyProgress', multiprocessing.Value]
+IteratorValue = typing.Tuple[typing.List[typing.Tuple[str, int, int]], int]
 
 
 class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
@@ -171,13 +172,18 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
              scanner: ScannerInterface,
              progress_callback: validity.ProgressCallback = None,
              min_address: typing.Optional[int] = None,
-             max_address: typing.Optional[int] = None) -> typing.Iterable[typing.Any]:
+             max_address: typing.Optional[int] = None,
+             scan_iterator: typing.Optional[typing.Callable[['ScannerInterface', int, int], IteratorValue]] = None) -> \
+            typing.Iterable[typing.Any]:
         """Scans a Translation layer by chunk
 
            Note: this will skip missing/unmappable chunks of memory
         """
         if progress_callback is not None and not callable(progress_callback):
             raise TypeError("Progress_callback is not callable")
+
+        if scan_iterator is None:
+            scan_iterator = self._scan_iterator
 
         scanner = self._check_type(scanner, ScannerInterface)
         scanner.context = context
@@ -197,7 +203,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
         try:
             progress = DummyProgress()  # type: ProgressValue
-            scan_iterator = functools.partial(self._scan_iterator, scanner, min_address, max_address)
+            scan_iterator = functools.partial(scan_iterator, scanner, min_address, max_address)
             scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
             if scanner.thread_safe and not constants.DISABLE_MULTITHREADED_SCANNING:
                 progress = multiprocessing.Manager().Value("Q", 0)
@@ -231,27 +237,51 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     def _scan_iterator(self,
                        scanner: 'ScannerInterface',
                        min_address: int,
-                       max_address: int) -> typing.Iterable[typing.Any]:
-        return range(min_address, max_address, scanner.chunk_size)
+                       max_address: int) \
+            -> typing.Iterable[IteratorValue]:
+        """Iterator that indicates which blocks in the layer are to be read by for the scanning
 
+        Returns a list of blocks (potentially in lower layers) that make up this chunk contiguously.
+        Chunks can be no bigger than scanner.chunk_size + scanner.overlap
+        DataLayers by default are assumed to have no holes
+        """
+        offset, mapped_offset, length, layer_name = min_address, min_address, max_address - min_address, self.name
+        while length > 0:
+            chunk_size = min(length, scanner.chunk_size + scanner.overlap)
+            yield [(layer_name, mapped_offset, chunk_size)], offset + chunk_size
+            # It we've got more than the scanner's chunk_size, only move up by the chunk_size
+            if chunk_size > scanner.chunk_size:
+                chunk_size -= scanner.overlap
+            length -= chunk_size
+            mapped_offset += chunk_size
+            offset += chunk_size
+
+    # We ignore the type due to the iterator_value, actually it only needs to match the output from _scan_iterator
     def _scan_chunk(self,
                     scanner: 'ScannerInterface',
                     min_address: int,
                     max_address: int,
-                    progress: ProgressValue,
-                    iterator_value: typing.Any) -> typing.List[typing.Any]:
-        length = min(scanner.chunk_size + scanner.overlap, max_address - iterator_value)
-        chunk = self.read(iterator_value, length)
-        # Don't include the overlaps, or we'll go over 100%
-        progress.value += min(scanner.chunk_size, max_address - iterator_value)
-        return list(scanner(chunk, iterator_value))
+                    progress: 'ProgressValue',
+                    iterator_value: IteratorValue) -> typing.List[typing.Any]:
+        data_to_scan, chunk_end = iterator_value
+        data = b''
+        for layer_name, address, chunk_size in data_to_scan:
+            try:
+                data += self.context.memory[layer_name].read(address, chunk_size)
+            except exceptions.InvalidAddressException:
+                vollog.debug(
+                    "Invalid address in layer {} found scanning {} at address {:x}".format(layer_name, self.name,
+                                                                                           address))
+
+        progress.value = chunk_end
+        return list(scanner(data, chunk_end - len(data)))
 
     def _scan_metric(self,
                      _scanner: 'ScannerInterface',
                      min_address: int,
                      max_address: int,
                      value: int) -> float:
-        return max(0, (value * 100) / (max_address - min_address))
+        return max(0, ((value - min_address) * 100) / (max_address - min_address))
 
     def build_configuration(self) -> interfaces.configuration.HierarchicalDict:
         config = super().build_configuration()
@@ -344,20 +374,22 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     # ## Scan implementation with knowledge of pages
 
-    def _scan_chunk(self,
-                    scanner: 'interfaces.layers.ScannerInterface',
-                    min_address: int,
-                    max_address: int,
-                    progress: ProgressValue,
-                    iterator_value: typing.Any) -> typing.List[typing.Any]:
-        size_to_scan = min(max_address - min_address, scanner.chunk_size + scanner.overlap)
-        result = []  # type: typing.List[typing.Any]
-        for map in self.mapping(iterator_value, size_to_scan, ignore_errors = True):
-            offset, mapped_offset, length, layer = map
-            progress.value += length
-            chunk = self._context.memory.read(layer, mapped_offset, length)
-            result += [x for x in scanner(chunk, offset)]
-        return result
+    def _scan_iterator(self,
+                       scanner: 'ScannerInterface',
+                       min_address: int,
+                       max_address: int) \
+            -> typing.Iterable[IteratorValue]:
+        for mapped in self.mapping(min_address, max_address - min_address, ignore_errors = True):
+            offset, mapped_offset, length, layer_name = mapped
+            while length > 0:
+                chunk_size = min(length, scanner.chunk_size + scanner.overlap)
+                yield [(layer_name, mapped_offset, chunk_size)], offset + chunk_size
+                # It we've got more than the scanner's chunk_size, only move up by the chunk_size
+                if chunk_size > scanner.chunk_size:
+                    chunk_size -= scanner.overlap
+                length -= chunk_size
+                mapped_offset += chunk_size
+                offset += chunk_size
 
 
 class Memory(validity.ValidityRoutines, collections.abc.Mapping):
