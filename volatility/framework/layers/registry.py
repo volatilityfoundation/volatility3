@@ -6,6 +6,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.configuration.requirements import IntRequirement
 from volatility.framework.interfaces.configuration import TranslationLayerRequirement
 from volatility.framework.symbols import intermed
+from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -42,6 +43,23 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         if self.hive.Signature != 0xbee0bee0:
             raise RegistryFormatException(
                 "Registry hive at {} does not have a valid signature".format(self._hive_offset))
+
+        # vol2 does a check for later than 17063, and only walks the process list
+        # if later.  not sure how to check that here.
+        #
+        # version = (meta.get("major", 0), meta.get("minor", 0), meta.get("build", 0))
+        # if version >= (6, 4, 17063):
+
+        pslist_config_path = self.make_subconfig(primary=self.config['base_layer'],
+                                                 nt_symbols=self.config['nt_symbols'])
+        plugin = pslist.PsList(self.context, pslist_config_path)
+        for proc in plugin.list_processes():
+            proc_name = proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
+                                                errors = 'replace')
+            if proc_name == "Registry" and proc.InheritedFromUniqueProcessId == 4:
+                proc_layer_name = proc.add_process_layer()
+                self._base_layer = proc_layer_name
+                break
 
         self._base_block = self.hive.BaseBlock.dereference()
 
@@ -145,7 +163,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [IntRequirement(name = 'hive_offset', description = '', default = 0, optional = False),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                TranslationLayerRequirement(name = 'base_layer', optional = False)]
+                TranslationLayerRequirement(name = 'base_layer', optional = False)] + pslist.PsList.get_requirements()
 
     def _translate(self, offset: int) -> int:
         """Translates a single cell index to a cell memory offset and the suboffset within it"""
