@@ -98,7 +98,7 @@ class PrintKey(plugins.PluginInterface):
             reg_config_path = self.make_subconfig(hive_offset = hive_offset,
                                                   base_layer = self.config['primary'],
                                                   nt_symbols = self.config['nt_symbols'])
-            hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset), os = 'Windows')
+            hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset))
             self.context.memory.add_layer(hive)
 
             # Walk it
