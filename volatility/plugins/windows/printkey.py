@@ -3,7 +3,7 @@ import logging
 import typing
 
 import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import objects, renderers
+from volatility.framework import objects, renderers, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.registry import RegistryHive
 from volatility.framework.objects import utility
@@ -98,15 +98,19 @@ class PrintKey(plugins.PluginInterface):
             reg_config_path = self.make_subconfig(hive_offset = hive_offset,
                                                   base_layer = self.config['primary'],
                                                   nt_symbols = self.config['nt_symbols'])
-            hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset), os = 'Windows')
-            self.context.memory.add_layer(hive)
+            try:
+                hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset))
+                self.context.memory.add_layer(hive)
 
-            # Walk it
-            if 'key' in self.config:
-                node_path = hive.get_key(self.config['key'], return_list = True)
-            else:
-                node_path = [hive.get_node(hive.root_cell_offset)]
-            yield from self.hive_walker(hive, node_path)
+                # Walk it
+                if 'key' in self.config:
+                    node_path = hive.get_key(self.config['key'], return_list = True)
+                else:
+                    node_path = [hive.get_node(hive.root_cell_offset)]
+                yield from self.hive_walker(hive, node_path)
+            except exceptions.StructureException:
+                # This is caused when the RegistryHive has no size (BaseBlock.Length <= 0)
+                pass
 
     def run(self):
 

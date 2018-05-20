@@ -46,11 +46,9 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._base_block = self.hive.BaseBlock.dereference()
 
         self._minaddr = 0
-        self._maxaddr = self._base_block.Length
-
-        if self._base_block.Length <= 0:
-            raise exceptions.StructureException(
-                "Invalid registry base_block length: {}".format(self._base_block.Length))
+        # If there's no base_block, we don't know how big the address space is
+        # We also don't know the root_cell_offset, so we use a hardcoded value of 0x20
+        self._maxaddr = self._base_block.Length or 0xffffffff
 
     @property
     def hive_offset(self) -> int:
@@ -64,6 +62,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     @property
     def root_cell_offset(self) -> int:
         """Returns the offset for the root cell in this hive"""
+        if self._base_block.Length <= 0:
+            return 0x20
         return self._base_block.RootCell
 
     def get_cell(self, cell_offset: int) -> 'objects.Struct':
