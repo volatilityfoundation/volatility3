@@ -44,12 +44,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             raise RegistryFormatException(
                 "Registry hive at {} does not have a valid signature".format(self._hive_offset))
 
-        # vol2 does a check for later than 17063, and only walks the process list
-        # if later.  not sure how to check that here.
-        #
-        # version = (meta.get("major", 0), meta.get("minor", 0), meta.get("build", 0))
-        # if version >= (6, 4, 17063):
-
+        # Win10 17063 introduced the Registry process to map most hives.  Check
+        # if it exists and update RegistryHive._base_layer
         pslist_config_path = self.make_subconfig(primary=self.config['base_layer'],
                                                  nt_symbols=self.config['nt_symbols'])
         plugin = pslist.PsList(self.context, pslist_config_path)
