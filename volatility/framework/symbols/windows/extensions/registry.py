@@ -72,8 +72,7 @@ class _CM_KEY_NODE(objects.Struct):
             # We could change the array type to a struct with both parts
             subkey_node.List.count = subkey_node.Count * 2
             for key_offset in subkey_node.List[::2]:
-                if ((index == 0 and key_offset < hive.maximum_address) or
-                        (index == 1 and 0x80000000 <= key_offset and key_offset <= 0xffffffff)):
+                if (key_offset & 0x7fffffff) < hive.maximum_address:
                     node = hive.get_node(key_offset)
                     if node.vol.type_name.endswith(constants.BANG + "_CM_KEY_INDEX"):
                         signature = node.cast('string', max_length = 2, encoding = 'latin-1')
