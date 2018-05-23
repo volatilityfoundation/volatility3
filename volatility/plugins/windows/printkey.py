@@ -108,9 +108,8 @@ class PrintKey(plugins.PluginInterface):
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
                 yield from self.hive_walker(hive, node_path)
-            except exceptions.StructureException:
-                # This is caused when the RegistryHive has no size (BaseBlock.Length <= 0)
-                pass
+            except exceptions.PagedInvalidAddressException as excp:
+                vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
 
     def run(self):
 
