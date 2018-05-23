@@ -33,6 +33,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_MMVAD_SHORT', extensions._MMVAD_SHORT)
         self.set_type_class('_MMVAD', extensions._MMVAD)
         self.set_type_class('_KSYSTEM_TIME', extensions._KSYSTEM_TIME)
+        self.set_type_class('_IMAGE_DOS_HEADER', extensions._IMAGE_DOS_HEADER)
 
         # these don't exist in windows XP
         try:

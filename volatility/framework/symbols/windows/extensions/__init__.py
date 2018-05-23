@@ -13,6 +13,25 @@ vollog = logging.getLogger(__name__)
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
+class _IMAGE_DOS_HEADER(objects.Struct):
+
+    def get_nt_header(self):
+
+        if self.e_magic != 0x5a4d:
+            raise ValueError("e_magic {0:04X} is not a valid DOS signature.".format(self.e_magic))
+
+        layer_name = self.vol.layer_name
+        symbol_table_name = self.get_symbol_table().name
+
+        nt_header = self._context.object(symbol_table_name + constants.BANG + "_IMAGE_NT_HEADERS",
+                                         layer_name=layer_name,
+                                         offset=self.vol.offset + self.e_lfanew)
+
+        if nt_header.Signature != 0x4550:
+            raise ValueError("NT header signature {0:04X} is not a valid".format(nt_header.Signature))
+
+        return nt_header
+
 class _KSYSTEM_TIME(objects.Struct):
 
     def get_time(self):
