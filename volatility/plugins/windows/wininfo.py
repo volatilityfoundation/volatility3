@@ -1,4 +1,4 @@
-import datetime
+import time
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
@@ -90,12 +90,27 @@ class WinInfo(plugins.PluginInterface):
                                 offset=kuser_addr)
 
         yield (0, ("SystemTime", str(kuser.SystemTime.get_time())))
-        yield (0, ("NtSystemRoot", str(kuser.NtSystemRoot.cast("string", encoding="utf-16", errors="replace", max_length=260))))
+        yield (0, ("NtSystemRoot", str(kuser.NtSystemRoot.cast("string",
+                                                               encoding="utf-16",
+                                                               errors="replace",
+                                                               max_length=260))))
         yield (0, ("NtProductType", str(kuser.NtProductType.description)))
         yield (0, ("NtMajorVersion", str(kuser.NtMajorVersion)))
         yield (0, ("NtMinorVersion", str(kuser.NtMinorVersion)))
         yield (0, ("KdDebuggerEnabled", "True" if ord(kuser.KdDebuggerEnabled) else "False"))
         yield (0, ("SafeBootMode", "True" if ord(kuser.SafeBootMode) else "False"))
+
+        dos_header = ntkrnlmp.object(type_name="_IMAGE_DOS_HEADER",
+                                     layer_name=virtual_layer_name,
+                                     offset=kvo)
+
+        nt_header = dos_header.get_nt_header()
+
+        yield (0, ("PE MajorOperatingSystemVersion", str(nt_header.OptionalHeader.MajorOperatingSystemVersion)))
+        yield (0, ("PE MinorOperatingSystemVersion", str(nt_header.OptionalHeader.MinorOperatingSystemVersion)))
+
+        yield (0, ("PE Machine", str(nt_header.FileHeader.Machine)))
+        yield (0, ("PE TimeDateStamp", time.asctime(time.gmtime(nt_header.FileHeader.TimeDateStamp))))
 
     def run(self):
 
