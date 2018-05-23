@@ -49,7 +49,7 @@ class PrintKey(plugins.PluginInterface):
         node = node_path[-1]
         if key_path is None:
             key_path = node.get_key_path()
-        last_write_time = utility.wintime_to_datetime(node.LastWriteTime)
+        last_write_time = utility.wintime_to_datetime(node.LastWriteTime.QuadPart)
 
         for key_node in node.get_subkeys():
             result = (key_path.count("\\"),
