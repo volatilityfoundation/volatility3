@@ -82,8 +82,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument("-l", "--log", help = "Log output to a file as well as the console", default = None,
                             type = str)
-        parser.add_argument("-f", help = "Shorthand for --single-location=file:// if single-location is not defined",
-                            default = None, type = str)
+        parser.add_argument("-f", "--file", metavar = 'FILE', default = None, type = str,
+                            help = "Shorthand for --single-location=file:// if single-location is not defined")
         parser.add_argument("--write-config", help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
@@ -150,8 +150,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # It has to go here so it can be overridden by single-location if it's defined
         # NOTE: This will *BREAK* if LayerStacker, or the automagic configuration system, changes at all
         ###
-        if args.f:
-            file_name = os.path.abspath(args.f)
+        if args.file:
+            file_name = os.path.abspath(args.file)
             if not os.path.exists(file_name):
                 vollog.log(logging.INFO, "File does not exist: {}".format(file_name))
             else:
