@@ -41,9 +41,9 @@ def array_of_pointers(array: interfaces.objects.ObjectInterface,
     return array.cast("array", count = count, subtype = subtype_pointer)
 
 
-def wintime_to_datetime(wintime: objects.Struct) -> typing.Union[
+def wintime_to_datetime(wintime: int) -> typing.Union[
     interfaces.renderers.BaseAbsentValue, datetime.datetime]:
-    unix_time = wintime.QuadPart // 10000000
+    unix_time = wintime // 10000000
     if unix_time == 0:
         return renderers.NotApplicableValue()
     unix_time = unix_time - 11644473600
