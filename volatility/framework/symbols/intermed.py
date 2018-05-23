@@ -57,6 +57,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                  config_path: str,
                  name: str,
                  isf_url: str,
+                 table_mapping: typing.Optional[typing.Dict[str, str]] = None,
                  native_types: interfaces.symbols.NativeTableInterface = None,
                  validate: bool = True) -> None:
         """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
@@ -89,10 +90,12 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                                                                                                 config_path,
                                                                                                 name,
                                                                                                 json_object,
-                                                                                                native_types)
+                                                                                                native_types,
+                                                                                                table_mapping)
 
         # Inherit
-        super().__init__(context, config_path, name, native_types or self._delegate.natives)
+        super().__init__(context, config_path, name, native_types or self._delegate.natives,
+                         table_mapping = table_mapping)
 
     def _closest_version(self,
                          version: str,
@@ -183,12 +186,13 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
                  config_path: str,
                  name: str,
                  json_object: typing.Any,
-                 native_types: interfaces.symbols.NativeTableInterface = None) -> None:
+                 native_types: interfaces.symbols.NativeTableInterface = None,
+                 table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> None:
         self._json_object = json_object
         self._validate_json()
         nt = native_types or self._get_natives()
         nt.name = name + "_natives"
-        super().__init__(context, config_path, name, nt)
+        super().__init__(context, config_path, name, nt, table_mapping = table_mapping)
         self._overrides = {}  # type: typing.Dict[str, typing.Type[interfaces.objects.ObjectInterface]]
         self._symbol_cache = {}  # type: typing.Dict[str, interfaces.symbols.Symbol]
 

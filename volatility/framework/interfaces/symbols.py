@@ -222,9 +222,10 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
                  context: 'interfaces_context.ContextInterface',
                  config_path: str,
                  name: str,
-                 native_types: 'NativeTableInterface' = None) -> None:
+                 native_types: 'NativeTableInterface' = None,
+                 table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> None:
         configuration.ConfigurableInterface.__init__(self, context, config_path)
-        BaseSymbolTableInterface.__init__(self, name, native_types)
+        BaseSymbolTableInterface.__init__(self, name, native_types, table_mapping)
 
     def build_configuration(self) -> 'configuration.HierarchicalDict':
         config = super().build_configuration()
