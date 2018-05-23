@@ -164,7 +164,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                context: interfaces.context.ContextInterface,
                config_path: str,
                sub_path: str,
-               filename: str) -> str:
+               filename: str,
+               table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> str:
         """Takes a context and loads an intermediate symbol table based on a filename.
 
         Returns the name of the added symbol table"""
@@ -172,7 +173,11 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         if not urls:
             raise ValueError("No symbol files found at provided filename: {}", filename)
         table_name = context.symbol_space.free_table_name(filename)
-        table = cls(context = context, config_path = config_path, name = table_name, isf_url = urls[0])
+        table = cls(context = context,
+                    config_path = config_path,
+                    name = table_name,
+                    isf_url = urls[0],
+                    table_mapping = table_mapping)
         context.symbol_space.append(table)
         return table_name
 
