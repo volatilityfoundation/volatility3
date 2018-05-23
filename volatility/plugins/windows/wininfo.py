@@ -1,7 +1,7 @@
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
-from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows.kdbg import KdbgIntermedSymbols
 from volatility.framework import constants
 
 class WinInfo(plugins.PluginInterface):
@@ -13,16 +13,17 @@ class WinInfo(plugins.PluginInterface):
                 requirements.SymbolRequirement(name="nt_symbols", description="Windows OS")]
 
     def _generator(self, kdbg):
+
         yield (0, ("Foo", "Bar"))
 
     def run(self):
         virtual_layer_name = self.config["primary"]
         virtual_layer = self.context.memory[virtual_layer_name]
 
-        kdbg_table_name = intermed.IntermediateSymbolTable.create(self.context,
-                                                                   self.config_path,
-                                                                   "windows",
-                                                                   "kdbg_{}".format(virtual_layer.bits_per_register))
+        kdbg_table_name = KdbgIntermedSymbols.create(self.context,
+                                                     self.config_path,
+                                                     "windows",
+                                                     "kdbg")
 
         kvo = virtual_layer.config["kernel_virtual_offset"]
         ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name=virtual_layer_name, offset=kvo)
@@ -32,6 +33,9 @@ class WinInfo(plugins.PluginInterface):
         kdbg = self.context.object(kdbg_table_name + constants.BANG +
                             "_KDDEBUGGER_DATA64", offset=kvo + kdbg_offset,
                             layer_name=virtual_layer_name)
+
+        for proc in kdbg.get_processes():
+            print(proc)
 
         #vers_addr = kvo + self.context.symbol_space.get_symbol("ntkrnlmp!KdVersionBlock").address
         #vers = self.context.object("ntkrnlmp!_DBGKD_GET_VERSION64", layer_name=virtual, offset=vers_addr)

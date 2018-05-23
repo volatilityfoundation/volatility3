@@ -14,12 +14,6 @@
             "signed": false, 
             "endian": "little"
         },
-        "pointer": {
-            "kind": "int",
-            "size": 8,
-            "signed": false,
-            "endian": "little"
-        },
         "unsigned long long": {
             "kind": "int", 
             "size": 8, 
@@ -94,8 +88,8 @@
                 }, 
                 "KiProcessorBlock": {
                     "type": {
-                        "kind": "base", 
-                        "name": "pointer"
+                        "kind": "base",
+                        "name": "unsigned long long"
                     }, 
                     "offset": 536
                 }, 
@@ -207,7 +201,7 @@
                 "PsActiveProcessHead": {
                     "type": {
                         "kind": "base", 
-                        "name": "pointer"
+                        "name": "unsigned long long"
                     }, 
                     "offset": 80
                 }, 
@@ -564,7 +558,7 @@
                 "MmUnloadedDrivers": {
                     "type": {
                         "kind": "base", 
-                        "name": "pointer"
+                        "name": "unsigned long long"
                     }, 
                     "offset": 544
                 }, 
@@ -606,14 +600,14 @@
                 "NtBuildLab": {
                     "type": {
                         "kind": "base", 
-                        "name": "pointer"
+                        "name": "unsigned long long"
                     }, 
                     "offset": 520
                 }, 
                 "MmLastUnloadedDriver": {
                     "type": {
                         "kind": "base", 
-                        "name": "pointer"
+                        "name": "unsigned long long"
                     }, 
                     "offset": 552
                 }, 
@@ -627,7 +621,7 @@
                 "PspCidTable": {
                     "type": {
                         "kind": "base", 
-                        "name": "pointer"
+                        "name": "unsigned long long"
                     }, 
                     "offset": 88
                 }, 
@@ -641,7 +635,7 @@
                 "PsLoadedModuleList": {
                     "type": {
                         "kind": "base", 
-                        "name": "pointer"
+                        "name": "unsigned long long"
                     }, 
                     "offset": 72
                 }, 
@@ -998,13 +992,33 @@
             }, 
             "kind": "struct", 
             "size": 832
+        }, 
+        "LIST_ENTRY64": {
+            "fields": {
+                "Flink": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 0
+                }, 
+                "Blink": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 8
+                }
+            }, 
+            "kind": "struct", 
+            "size": 16
         }
     }, 
     "metadata": {
         "producer": {
             "version": "0.0.1", 
             "name": "vtypes_to_json.py", 
-            "datetime": "2018-05-22T21:55:48.848154"
+            "datetime": "2018-05-22T22:47:20.182954"
         }, 
         "format": "4.1.0"
     }
