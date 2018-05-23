@@ -8,7 +8,7 @@ class _KDDEBUGGER_DATA64(objects.Struct):
         layer_name = self.vol.layer_name
 
         # FIXME: where does this come from?
-        nt_symbol_name = "nt_symbols1"
+        nt_symbol_name = self.get_symbol_table().table_mapping["nt_symbols"]
 
         kvo = self._context.memory[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = self._context.module(nt_symbol_name, layer_name=layer_name, offset=kvo)
@@ -28,7 +28,7 @@ class _KDDEBUGGER_DATA64(objects.Struct):
         layer_name = self.vol.layer_name
 
         # FIXME: where does this come from?
-        nt_symbol_name = "nt_symbols1"
+        nt_symbol_name = self.get_symbol_table().table_mapping["nt_symbols"]
 
         kvo = self._context.memory[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = self._context.module(nt_symbol_name, layer_name=layer_name, offset=kvo)

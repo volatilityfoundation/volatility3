@@ -11,8 +11,9 @@ class KdbgIntermedSymbols(intermed.IntermediateSymbolTable):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  name: str,
-                 isf_url: str) -> None:
-        super().__init__(context = context, config_path = config_path, name = name, isf_url = isf_url)
+                 isf_url: str,
+                 table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> None:
+        super().__init__(context = context, config_path = config_path, name = name, isf_url = isf_url, table_mapping = table_mapping)
 
         self.set_type_class('_KDDEBUGGER_DATA64', kdbg._KDDEBUGGER_DATA64)
 

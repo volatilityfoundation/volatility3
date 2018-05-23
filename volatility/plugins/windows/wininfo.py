@@ -34,10 +34,13 @@ class WinInfo(plugins.PluginInterface):
         virtual_layer_name = self.config["primary"]
         virtual_layer = self.context.memory[virtual_layer_name]
 
+        table_mapping = {"nt_symbols": self.config["nt_symbols"]}
+
         kdbg_table_name = KdbgIntermedSymbols.create(self.context,
                                                      self.config_path,
                                                      "windows",
-                                                     "kdbg")
+                                                     "kdbg",
+                                                     table_mapping=table_mapping)
 
         kvo = virtual_layer.config["kernel_virtual_offset"]
 
