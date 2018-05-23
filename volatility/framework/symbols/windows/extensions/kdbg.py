@@ -1,15 +1,23 @@
 from volatility.framework import objects
+from volatility.framework import constants
 
 class _KDDEBUGGER_DATA64(objects.Struct):
 
     def get_processes(self):
 
         layer_name = self.vol.layer_name
-        symbol_table_name = self.get_symbol_table().name
 
-        kvo = self._context.memory[layer_name].config["kernel_virtual_offset"]
-        ntkrnlmp = self._context.module(symbol_table_name, layer_name=layer_name, offset=kvo)
+        # FIXME: where does this come from?
+        nt_symbol_name = "nt_symbols1"
 
-        ## help please!
-        list_pointer = ntkrnlmp.object(type_name="nt_symbols!pointer", offset=self.PsActiveProcessHead)
-        yield list_pointer
+        kvo = self._context.memory[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = self._context.module(nt_symbol_name, layer_name=layer_name, offset=kvo)
+
+        list_pointer = ntkrnlmp.object(type_name="pointer", offset=self.PsActiveProcessHead)
+        list_entry = list_pointer.dereference().cast(nt_symbol_name + constants.BANG + "_LIST_ENTRY")
+
+        reloff = ntkrnlmp.get_type("_EPROCESS").relative_child_offset("ActiveProcessLinks")
+        eproc = ntkrnlmp.object(type_name="_EPROCESS", offset=list_entry.vol.offset - reloff)
+
+        for proc in eproc.ActiveProcessLinks:
+            yield proc
