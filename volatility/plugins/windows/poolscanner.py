@@ -57,7 +57,7 @@ class PoolScanner(plugins.PluginInterface):
                                      base_layer,
                                      self.config['nt_symbols'],
                                      constraints,
-                                     alignment = 4):
+                                     alignment = 8):
             print(repr(header))
 
     @classmethod
@@ -66,7 +66,7 @@ class PoolScanner(plugins.PluginInterface):
                   layer_name: str,
                   symbol_table: str,
                   pool_constraints: typing.List[PoolConstraint],
-                  alignment: int = 4) -> typing.Generator[objects.Struct, None, None]:
+                  alignment: int = 8) -> typing.Generator[objects.Struct, None, None]:
         """Returns the _POOL_HEADER object (based on the symbol_table template) after scanning through layer_name
         returning all headers that match any of the constraints provided.  Only one constraint can be provided per tag"""
         # Setup the pattern
@@ -74,7 +74,7 @@ class PoolScanner(plugins.PluginInterface):
         for constraint in pool_constraints:
             constraint_lookup[constraint.tag] = constraint
         # Setup the pool header and offset differential
-        module = context.module(symbol_table, layer_name)
+        module = context.module(symbol_table, layer_name, offset=0)
         header_type = module.get_type('_POOL_HEADER')
         header_offset = header_type.relative_child_offset('PoolTag')
 
@@ -96,15 +96,17 @@ class PoolScanner(plugins.PluginInterface):
 
             # Type check
             if test.page_type is not None:
-                if (test.page_type & PoolType.FREE):
-                    if header.PoolType != 0:
-                        continue
-                if (test.page_type & PoolType.PAGED):
-                    if header.PoolType % 2 == 0:
-                        continue
-                if (test.page_type & PoolType.NONPAGED):
-                    if header.PoolType % 2 == 1 or header.PoolType < 0:
-                        continue
+                checks_pass = False
+
+                if (test.page_type & PoolType.FREE) and header.PoolType == 0:
+                    checks_pass = True
+                elif (test.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
+                    checks_pass = True
+                elif (test.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
+                    checks_pass = True
+
+                if not checks_pass:
+                    continue
 
             if test.index is not None:
                 if test.index[0]:
