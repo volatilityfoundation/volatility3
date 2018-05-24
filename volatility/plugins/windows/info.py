@@ -5,7 +5,7 @@ from volatility.framework.renderers import TreeGrid
 from volatility.framework.symbols.windows.kdbg import KdbgIntermedSymbols
 from volatility.framework import constants
 
-class WinInfo(plugins.PluginInterface):
+class Info(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name='primary',
@@ -53,6 +53,7 @@ class WinInfo(plugins.PluginInterface):
                                    "_KDDEBUGGER_DATA64", offset=kvo + kdbg_offset,
                                    layer_name=virtual_layer_name)
 
+        yield (0, ("Memory Location", self.config["primary.memory_layer.location"]))
         yield (0, ("Kernel Base", hex(self.config["primary.kernel_virtual_offset"])))
         yield (0, ("DTB", hex(self.config["primary.page_map_offset"])))
         yield (0, ("Symbols", self.config["nt_symbols.isf_url"]))

@@ -6,8 +6,6 @@ class _KDDEBUGGER_DATA64(objects.Struct):
     def get_processes(self):
 
         layer_name = self.vol.layer_name
-
-        # FIXME: where does this come from?
         nt_symbol_name = self.get_symbol_table().table_mapping["nt_symbols"]
 
         kvo = self._context.memory[layer_name].config['kernel_virtual_offset']
@@ -26,8 +24,6 @@ class _KDDEBUGGER_DATA64(objects.Struct):
         """Returns the NT build lab string from the KDBG"""
 
         layer_name = self.vol.layer_name
-
-        # FIXME: where does this come from?
         nt_symbol_name = self.get_symbol_table().table_mapping["nt_symbols"]
 
         kvo = self._context.memory[layer_name].config['kernel_virtual_offset']
