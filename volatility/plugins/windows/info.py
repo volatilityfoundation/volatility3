@@ -3,6 +3,7 @@ import volatility.framework.interfaces.plugins as plugins
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
 from volatility.framework.symbols.windows.kdbg import KdbgIntermedSymbols
+from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 from volatility.framework import constants
 
 class Info(plugins.PluginInterface):
@@ -42,6 +43,11 @@ class Info(plugins.PluginInterface):
                                                      "kdbg",
                                                      table_mapping=table_mapping)
 
+        pe_table_name = PEIntermedSymbols.create(self.context,
+                                                 self.config_path,
+                                                 "windows",
+                                                 "pe")
+
         kvo = virtual_layer.config["kernel_virtual_offset"]
 
         ntkrnlmp = self.context.module(self.config["nt_symbols"],
@@ -61,9 +67,11 @@ class Info(plugins.PluginInterface):
         for i, layer in self.get_depends("primary"):
             yield (0, (layer.name, "{} {}".format(i, layer.__class__.__name__)))
 
-        yield (0, ("KdDebuggerDataBlock", hex(kdbg.vol.offset)))
-        yield (0, ("NTBuildLab", kdbg.get_build_lab()))
-        yield (0, ("CSDVersion", str(kdbg.get_csdversion())))
+        if kdbg.Header.OwnerTag == 0x4742444B:
+
+            yield (0, ("KdDebuggerDataBlock", hex(kdbg.vol.offset)))
+            yield (0, ("NTBuildLab", kdbg.get_build_lab()))
+            yield (0, ("CSDVersion", str(kdbg.get_csdversion())))
 
         vers_offset = ntkrnlmp.get_symbol("KdVersionBlock").address
 
@@ -101,12 +109,12 @@ class Info(plugins.PluginInterface):
         yield (0, ("NtProductType", str(kuser.NtProductType.description)))
         yield (0, ("NtMajorVersion", str(kuser.NtMajorVersion)))
         yield (0, ("NtMinorVersion", str(kuser.NtMinorVersion)))
-        yield (0, ("KdDebuggerEnabled", "True" if ord(kuser.KdDebuggerEnabled) else "False"))
-        yield (0, ("SafeBootMode", "True" if ord(kuser.SafeBootMode) else "False"))
+        #yield (0, ("KdDebuggerEnabled", "True" if ord(kuser.KdDebuggerEnabled) else "False"))
+        #yield (0, ("SafeBootMode", "True" if ord(kuser.SafeBootMode) else "False"))
 
-        dos_header = ntkrnlmp.object(type_name="_IMAGE_DOS_HEADER",
-                                     layer_name=virtual_layer_name,
-                                     offset=kvo)
+        dos_header = self.context.object(pe_table_name + constants.BANG +
+                                   "_IMAGE_DOS_HEADER", offset=kvo,
+                                   layer_name=virtual_layer_name)
 
         nt_header = dos_header.get_nt_header()
 
@@ -117,9 +125,6 @@ class Info(plugins.PluginInterface):
         yield (0, ("PE TimeDateStamp", time.asctime(time.gmtime(nt_header.FileHeader.TimeDateStamp))))
 
     def run(self):
-
-        #for proc in kdbg.get_processes():
-        #   print(proc)
 
         return TreeGrid([("Variable", str),
                          ("Value", str)],

@@ -1,0 +1,931 @@
+{
+  "metadata": {
+        "producer": {
+            "version": "0.0.1", 
+            "name": "vtypes_to_json.py", 
+            "datetime": "2018-05-22T22:47:20.182954"
+        }, 
+        "format": "4.1.0"
+  },
+  "base_types": {
+    "unsigned long": {
+        "kind": "int", 
+        "size": 4, 
+        "signed": false, 
+        "endian": "little"
+    }, 
+    "unsigned long long": {
+        "kind": "int", 
+        "size": 8, 
+        "signed": false, 
+        "endian": "little"
+    }, 
+    "long": {
+        "kind": "int", 
+        "size": 4, 
+        "signed": true, 
+        "endian": "little"
+    }, 
+    "unsigned short": {
+        "kind": "int", 
+        "size": 2, 
+        "signed": false, 
+        "endian": "little"
+    },
+    "unsigned char": {
+        "kind": "int", 
+        "size": 1, 
+        "signed": false, 
+        "endian": "little"
+    }
+  },
+  "symbols": {},
+  "enums": {},
+  "user_types": {
+    "_IMAGE_DATA_DIRECTORY": {
+      "fields": {
+        "Size": {
+          "offset": 4, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "VirtualAddress": {
+          "offset": 0, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }
+      }, 
+      "kind": "struct", 
+      "size": 8
+    }, 
+    "_IMAGE_DEBUG_DIRECTORY": {
+      "fields": {
+        "AddressOfRawData": {
+          "offset": 20, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "Characteristics": {
+          "offset": 0, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "MajorVersion": {
+          "offset": 8, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "MinorVersion": {
+          "offset": 10, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "PointerToRawData": {
+          "offset": 24, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfData": {
+          "offset": 16, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "TimeDateStamp": {
+          "offset": 4, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "Type": {
+          "offset": 12, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }
+      }, 
+      "kind": "struct", 
+      "size": 28
+    }, 
+    "_IMAGE_DOS_HEADER": {
+      "fields": {
+        "e_cblp": {
+          "offset": 2, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_cp": {
+          "offset": 4, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_cparhdr": {
+          "offset": 8, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_crlc": {
+          "offset": 6, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_cs": {
+          "offset": 22, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_csum": {
+          "offset": 18, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_ip": {
+          "offset": 20, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_lfanew": {
+          "offset": 60, 
+          "type": {
+            "kind": "base", 
+            "name": "long"
+          }
+        }, 
+        "e_lfarlc": {
+          "offset": 24, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_magic": {
+          "offset": 0, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_maxalloc": {
+          "offset": 12, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_minalloc": {
+          "offset": 10, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_oemid": {
+          "offset": 36, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_oeminfo": {
+          "offset": 38, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_ovno": {
+          "offset": 26, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_res": {
+          "offset": 28, 
+          "type": {
+            "count": 4, 
+            "kind": "array", 
+            "subtype": {
+              "kind": "base", 
+              "name": "unsigned short"
+            }
+          }
+        }, 
+        "e_res2": {
+          "offset": 40, 
+          "type": {
+            "count": 10, 
+            "kind": "array", 
+            "subtype": {
+              "kind": "base", 
+              "name": "unsigned short"
+            }
+          }
+        }, 
+        "e_sp": {
+          "offset": 16, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "e_ss": {
+          "offset": 14, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }
+      }, 
+      "kind": "struct", 
+      "size": 64
+    }, 
+    "_IMAGE_FILE_HEADER": {
+      "fields": {
+        "Characteristics": {
+          "offset": 18, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "Machine": {
+          "offset": 0, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "NumberOfSections": {
+          "offset": 2, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "NumberOfSymbols": {
+          "offset": 12, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "PointerToSymbolTable": {
+          "offset": 8, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfOptionalHeader": {
+          "offset": 16, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "TimeDateStamp": {
+          "offset": 4, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }
+      }, 
+      "kind": "struct", 
+      "size": 20
+    }, 
+    "_IMAGE_NT_HEADERS": {
+      "fields": {
+        "FileHeader": {
+          "offset": 4, 
+          "type": {
+            "kind": "struct", 
+            "name": "_IMAGE_FILE_HEADER"
+          }
+        }, 
+        "OptionalHeader": {
+          "offset": 24, 
+          "type": {
+            "kind": "struct", 
+            "name": "_IMAGE_OPTIONAL_HEADER"
+          }
+        }, 
+        "Signature": {
+          "offset": 0, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }
+      }, 
+      "kind": "struct", 
+      "size": 248
+    }, 
+    "_IMAGE_OPTIONAL_HEADER": {
+      "fields": {
+        "AddressOfEntryPoint": {
+          "offset": 16, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "BaseOfCode": {
+          "offset": 20, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "BaseOfData": {
+          "offset": 24, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "CheckSum": {
+          "offset": 64, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "DataDirectory": {
+          "offset": 96, 
+          "type": {
+            "count": 16, 
+            "kind": "array", 
+            "subtype": {
+              "kind": "struct", 
+              "name": "_IMAGE_DATA_DIRECTORY"
+            }
+          }
+        }, 
+        "DllCharacteristics": {
+          "offset": 70, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "FileAlignment": {
+          "offset": 36, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "ImageBase": {
+          "offset": 28, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "LoaderFlags": {
+          "offset": 88, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "Magic": {
+          "offset": 0, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "MajorImageVersion": {
+          "offset": 44, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "MajorLinkerVersion": {
+          "offset": 2, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned char"
+          }
+        }, 
+        "MajorOperatingSystemVersion": {
+          "offset": 40, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "MajorSubsystemVersion": {
+          "offset": 48, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "MinorImageVersion": {
+          "offset": 46, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "MinorLinkerVersion": {
+          "offset": 3, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned char"
+          }
+        }, 
+        "MinorOperatingSystemVersion": {
+          "offset": 42, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "MinorSubsystemVersion": {
+          "offset": 50, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "NumberOfRvaAndSizes": {
+          "offset": 92, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SectionAlignment": {
+          "offset": 32, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfCode": {
+          "offset": 4, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfHeaders": {
+          "offset": 60, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfHeapCommit": {
+          "offset": 84, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfHeapReserve": {
+          "offset": 80, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfImage": {
+          "offset": 56, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfInitializedData": {
+          "offset": 8, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfStackCommit": {
+          "offset": 76, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfStackReserve": {
+          "offset": 72, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfUninitializedData": {
+          "offset": 12, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "Subsystem": {
+          "offset": 68, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "Win32VersionValue": {
+          "offset": 52, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }
+      }, 
+      "kind": "struct", 
+      "size": 224
+    }, 
+    "__unnamed_46": {
+      "fields": {
+        "PhysicalAddress": {
+          "offset": 0, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "VirtualSize": {
+          "offset": 0, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }
+      }, 
+      "kind": "union", 
+      "size": 4
+    }, 
+    "_IMAGE_SECTION_HEADER": {
+      "fields": {
+        "Characteristics": {
+          "offset": 36, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "Misc": {
+          "offset": 8, 
+          "type": {
+            "kind": "union", 
+            "name": "__unnamed_46"
+          }
+        }, 
+        "Name": {
+          "offset": 0, 
+          "type": {
+            "count": 8, 
+            "kind": "array", 
+            "subtype": {
+              "kind": "base", 
+              "name": "unsigned char"
+            }
+          }
+        }, 
+        "NumberOfLinenumbers": {
+          "offset": 34, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "NumberOfRelocations": {
+          "offset": 32, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }
+        }, 
+        "PointerToLinenumbers": {
+          "offset": 28, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "PointerToRawData": {
+          "offset": 20, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "PointerToRelocations": {
+          "offset": 24, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "SizeOfRawData": {
+          "offset": 16, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "VirtualAddress": {
+          "offset": 12, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }
+      }, 
+      "kind": "struct", 
+      "size": 40
+    },
+    "_IMAGE_NT_HEADERS64": {
+      "fields": {
+        "Signature": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 0
+        }, 
+        "FileHeader": {
+          "type": {
+            "kind": "struct", 
+            "name": "_IMAGE_FILE_HEADER"
+          }, 
+          "offset": 4
+        }, 
+        "OptionalHeader": {
+          "type": {
+            "kind": "struct", 
+            "name": "_IMAGE_OPTIONAL_HEADER64"
+          }, 
+          "offset": 24
+        }
+      }, 
+      "kind": "struct", 
+      "size": 264
+    }, 
+    "_IMAGE_OPTIONAL_HEADER64": {
+      "fields": {
+        "Magic": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }, 
+          "offset": 0
+        }, 
+        "MajorLinkerVersion": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned char"
+          }, 
+          "offset": 2
+        }, 
+        "MinorLinkerVersion": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned char"
+          }, 
+          "offset": 3
+        }, 
+        "SizeOfCode": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 4
+        }, 
+        "SizeOfInitializedData": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 8
+        }, 
+        "SizeOfUninitializedData": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 12
+        }, 
+        "AddressOfEntryPoint": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 16
+        }, 
+        "BaseOfCode": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 20
+        }, 
+        "ImageBase": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long long"
+          }, 
+          "offset": 24
+        }, 
+        "SectionAlignment": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 32
+        }, 
+        "FileAlignment": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 36
+        }, 
+        "MajorOperatingSystemVersion": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }, 
+          "offset": 40
+        }, 
+        "MinorOperatingSystemVersion": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }, 
+          "offset": 42
+        }, 
+        "MajorImageVersion": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }, 
+          "offset": 44
+        }, 
+        "MinorImageVersion": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }, 
+          "offset": 46
+        }, 
+        "MajorSubsystemVersion": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }, 
+          "offset": 48
+        }, 
+        "MinorSubsystemVersion": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }, 
+          "offset": 50
+        }, 
+        "Win32VersionValue": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 52
+        }, 
+        "SizeOfImage": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 56
+        }, 
+        "SizeOfHeaders": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 60
+        }, 
+        "CheckSum": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 64
+        }, 
+        "Subsystem": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }, 
+          "offset": 68
+        }, 
+        "DllCharacteristics": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned short"
+          }, 
+          "offset": 70
+        }, 
+        "SizeOfStackReserve": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long long"
+          }, 
+          "offset": 72
+        }, 
+        "SizeOfStackCommit": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long long"
+          }, 
+          "offset": 80
+        }, 
+        "SizeOfHeapReserve": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long long"
+          }, 
+          "offset": 88
+        }, 
+        "SizeOfHeapCommit": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long long"
+          }, 
+          "offset": 96
+        }, 
+        "LoaderFlags": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 104
+        }, 
+        "NumberOfRvaAndSizes": {
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }, 
+          "offset": 108
+        }, 
+        "DataDirectory": {
+          "type": {
+            "count": 16, 
+            "subtype": {
+              "kind": "struct", 
+              "name": "_IMAGE_DATA_DIRECTORY"
+            }, 
+            "kind": "array"
+          }, 
+          "offset": 112
+        }
+      }, 
+      "kind": "struct", 
+      "size": 240
+    }
+  }
+}
