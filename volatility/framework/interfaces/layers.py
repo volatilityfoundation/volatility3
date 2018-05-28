@@ -350,7 +350,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                                                          "Layer {} cannot map offset: {}".format(self.name,
                                                                                                  current_offset))
             elif offset > current_offset:
-                output += [b"\x00" * (current_offset - offset)]
+                output += [b"\x00" * (offset - current_offset)]
                 current_offset = offset
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
