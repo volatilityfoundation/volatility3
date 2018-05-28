@@ -9,7 +9,7 @@ import traceback
 import typing
 from abc import ABCMeta, abstractmethod
 
-from volatility.framework import constants, exceptions, validity, interfaces
+from volatility.framework import constants, exceptions, interfaces, validity
 from volatility.framework.interfaces import configuration, context
 
 vollog = logging.getLogger(__name__)
@@ -344,7 +344,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
         current_offset = offset
         output = []  # type: typing.List[bytes]
-        for (offset, mapped_offset, length, layer) in self.mapping(offset, length, ignore_errors = pad):
+        for (offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
             if not pad and offset > current_offset:
                 raise exceptions.InvalidAddressException(self.name, current_offset,
                                                          "Layer {} cannot map offset: {}".format(self.name,
@@ -354,8 +354,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 current_offset = offset
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
-            output += [self._context.memory.read(layer, mapped_offset, length, pad)]
-            current_offset += length
+            output += [self._context.memory.read(layer, mapped_offset, mapped_length, pad)]
+            current_offset += mapped_length
         recovered_data = b"".join(output)
         return recovered_data + b"\x00" * (length - len(recovered_data))
 
