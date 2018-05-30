@@ -3,7 +3,7 @@ from volatility.framework import exceptions
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-
+from volatility.framework import constants
 
 class Modules(plugins.PluginInterface):
     """Lists the loaded kernel modules"""
@@ -43,10 +43,18 @@ class Modules(plugins.PluginInterface):
         kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = layer_name, offset = kvo)
 
+        try:
+            # use this type if its available (starting with windows 10)
+            ldr_entry_type = ntkrnlmp.get_type("_KLDR_DATA_TABLE_ENTRY")
+        except exceptions.SymbolError:
+            ldr_entry_type = ntkrnlmp.get_type("_LDR_DATA_TABLE_ENTRY")
+
+        type_name = ldr_entry_type.type_name.split(constants.BANG)[1]
+
         list_head = ntkrnlmp.get_symbol("PsLoadedModuleList").address
         list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + list_head)
-        reloff = ntkrnlmp.get_type("_LDR_DATA_TABLE_ENTRY").relative_child_offset("InLoadOrderLinks")
-        module = ntkrnlmp.object(type_name = "_LDR_DATA_TABLE_ENTRY", offset = list_entry.vol.offset - reloff)
+        reloff = ldr_entry_type.relative_child_offset("InLoadOrderLinks")
+        module = ntkrnlmp.object(type_name = type_name, offset = list_entry.vol.offset - reloff)
 
         for mod in module.InLoadOrderLinks:
             yield mod
