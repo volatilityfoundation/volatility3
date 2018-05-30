@@ -1,12 +1,12 @@
 import code
 import inspect
+import typing
 
-from volatility.framework import renderers
+from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import plugins
 
 
-class Volshell(plugins.PluginInterface):
+class Volshell(interfaces.plugins.PluginInterface):
     """Shell environment to directly interact with a memory image"""
 
     @classmethod
@@ -31,6 +31,8 @@ class Volshell(plugins.PluginInterface):
         if additional_locals is not None:
             vars.update(additional_locals)
 
+        vars.update(self.load_functions())
+
         # Try to enable tab completion
         try:
             import readline
@@ -48,3 +50,27 @@ class Volshell(plugins.PluginInterface):
         code.interact(local = vars)
 
         return renderers.TreeGrid([], lambda: [])
+
+    def load_functions(self) -> typing.Dict[str, typing.Callable]:
+        """Returns a dictionary listing the functions to be added to the environment"""
+        return {"dt": self.display_type}
+
+    def display_type(self, object: interfaces.objects.ObjectInterface):
+        """Display Type"""
+        longest_member = longest_offset = 0
+        for member in object.vol.members:
+            relative_offset, member_type = object.vol.members[member]
+            longest_member = max(len(member), longest_member)
+            longest_offset = max(len(hex(relative_offset)), longest_offset)
+
+        for member in object.vol.members:
+            relative_offset, member_type = object.vol.members[member]
+            len_offset = len(hex(relative_offset))
+            len_member = len(member)
+            print(" " * (longest_offset - len_offset),
+                  hex(relative_offset),
+                  "\t\t",
+                  member,
+                  " " * (longest_member - len_member),
+                  "\t\t",
+                  member_type.vol.type_name)
