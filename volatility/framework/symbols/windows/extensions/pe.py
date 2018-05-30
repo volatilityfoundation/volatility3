@@ -1,4 +1,4 @@
-import struct, hashlib
+import struct
 from volatility.framework import objects
 from volatility.framework import constants
 
