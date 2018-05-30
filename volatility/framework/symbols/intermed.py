@@ -57,8 +57,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                  config_path: str,
                  name: str,
                  isf_url: str,
-                 table_mapping: typing.Optional[typing.Dict[str, str]] = None,
                  native_types: interfaces.symbols.NativeTableInterface = None,
+                 table_mapping: typing.Optional[typing.Dict[str, str]] = None,
                  validate: bool = True) -> None:
         """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
