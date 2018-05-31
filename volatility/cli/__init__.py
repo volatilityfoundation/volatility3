@@ -74,7 +74,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         parser.add_argument("-e", "--extend", help = "Extend the configuration with a new (or changed) setting",
                             default = None,
                             action = 'append')
-        parser.add_argument("-p", "--plugins", help = "Semi-colon separated list of paths to find plugins",
+        parser.add_argument("-p", "--plugin-dirs", help = "Semi-colon separated list of paths to find plugins",
                             default = "", type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
         parser.add_argument("-o", "--output-dir", help = "Directory in which to output any generated files",
@@ -92,8 +92,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != '--help' and arg != '-h']
         partial_args, _ = parser.parse_known_args(known_args)
-        if partial_args.plugins:
-            volatility.plugins.__path__ = partial_args.plugins.split(";") + constants.PLUGINS_PATH
+        if partial_args.plugin_dirs:
+            volatility.plugins.__path__ = partial_args.plugin_dirs.split(";") + constants.PLUGINS_PATH
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
