@@ -6,6 +6,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.configuration.requirements import IntRequirement
 from volatility.framework.interfaces.configuration import TranslationLayerRequirement
 from volatility.framework.symbols import intermed
+from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -42,6 +43,19 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         if self.hive.Signature != 0xbee0bee0:
             raise RegistryFormatException(
                 "Registry hive at {} does not have a valid signature".format(self._hive_offset))
+
+        # Win10 17063 introduced the Registry process to map most hives.  Check
+        # if it exists and update RegistryHive._base_layer
+        pslist_config_path = self.make_subconfig(primary=self.config['base_layer'],
+                                                 nt_symbols=self.config['nt_symbols'])
+        plugin = pslist.PsList(self.context, pslist_config_path)
+        for proc in plugin.list_processes():
+            proc_name = proc.ImageFileName.cast("string", max_length=proc.ImageFileName.vol.count,
+                                                errors = 'replace')
+            if proc_name == "Registry" and proc.InheritedFromUniqueProcessId == 4:
+                proc_layer_name = proc.add_process_layer()
+                self._base_layer = proc_layer_name
+                break
 
         self._base_block = self.hive.BaseBlock.dereference()
 
@@ -190,10 +204,9 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                     hbin_offset = hbin_offset - 0x1000
                     hbin = self.context.object(self._reg_table_name + constants.BANG + "_HBIN",
                                                offset = hbin_offset, layer_name = self._base_layer)
-                    # FIXME: Why this check fails when everything else runs fine
-                    # if translated_offset + length > hbin_offset + hbin.Size and hbin.Size > 0:
-                    #     raise RegistryFormatException("Cell address {} outside expected HBIN limit: {}".format(
-                    #         hex(translated_offset + length), hex(hbin_offset + hbin.Size)))
+                    if translated_offset + length > hbin_offset + hbin.Size and hbin.Size > 0:
+                        raise RegistryFormatException("Cell address {} outside expected HBIN limit: {}".format(
+                            hex(translated_offset + length), hex(hbin_offset + hbin.Size)))
             response.append((offset, translated_offset, length, self._base_layer))
             length -= length
         return response
