@@ -29,7 +29,7 @@ class RegValueTypes(enum.Enum):
 class _HMAP_ENTRY(objects.Struct):
     def get_block_offset(self) -> int:
         try:
-            return self.PermanentBinAddress ^ (self.PermanentBinAddress & 0x3)
+            return self.PermanentBinAddress ^ (self.PermanentBinAddress & 0xf)
         except AttributeError:
             return self.BlockAddress
 

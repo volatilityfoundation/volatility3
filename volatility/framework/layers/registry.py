@@ -204,10 +204,9 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                     hbin_offset = hbin_offset - 0x1000
                     hbin = self.context.object(self._reg_table_name + constants.BANG + "_HBIN",
                                                offset = hbin_offset, layer_name = self._base_layer)
-                    # FIXME: Why this check fails when everything else runs fine
-                    # if translated_offset + length > hbin_offset + hbin.Size and hbin.Size > 0:
-                    #     raise RegistryFormatException("Cell address {} outside expected HBIN limit: {}".format(
-                    #         hex(translated_offset + length), hex(hbin_offset + hbin.Size)))
+                    if translated_offset + length > hbin_offset + hbin.Size and hbin.Size > 0:
+                        raise RegistryFormatException("Cell address {} outside expected HBIN limit: {}".format(
+                            hex(translated_offset + length), hex(hbin_offset + hbin.Size)))
             response.append((offset, translated_offset, length, self._base_layer))
             length -= length
         return response
