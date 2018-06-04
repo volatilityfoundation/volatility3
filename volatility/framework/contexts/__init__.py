@@ -117,9 +117,9 @@ def get_module_wrapper(method: str) -> typing.Callable:
 
 class Module(interfaces.context.Module):
     def object(self,
-               symbol_name: str,
-               type_name: str,
-               offset: int = None,
+               symbol_name: typing.Optional[str] = None,
+               type_name: typing.Optional[str] = None,
+               offset: typing.Optional[int] = None,
                **kwargs) -> interfaces.objects.ObjectInterface:
         """Returns an object created using the symbol_table and layer_name of the Module
 
@@ -130,12 +130,8 @@ class Module(interfaces.context.Module):
         @param offset: The location (absolute within memory), type_name must be specified and symbol_name must not
         @type offset: int
         """
-        symbol_type = symbol_name and not (type_name or offset)
-        type_type = (type_name and offset) and not symbol_name
         type_arg = None  # type: typing.Optional[typing.Union[str, interfaces.objects.Template]]
-        if symbol_type and type_type or not (symbol_type or type_type):
-            raise ValueError("One of symbol_name, or type_name & offset, must be specified to construct a module")
-        if symbol_type is not None:
+        if symbol_name is not None:
             self._check_type(symbol_name, str)
             if constants.BANG in symbol_name:
                 raise ValueError("Symbol_name cannot reference another module")
@@ -144,12 +140,14 @@ class Module(interfaces.context.Module):
                 raise ValueError("Symbol {} has no associated type information".format(symbol.name))
             type_arg = symbol.type
             offset = symbol.address + self._offset
-        else:
+        elif type_name is not None and offset is not None:
             self._check_type(type_name, str)
             self._check_type(offset, int)
             if constants.BANG in type_name:
                 raise ValueError("Type_name cannot reference another module")
             type_arg = self._module_name + constants.BANG + type_name
+        else:
+            raise ValueError("One of symbol_name, or type_name & offset, must be specified to construct a module")
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
         if 'layer_name' in kwargs:
             del kwargs['layer_name']

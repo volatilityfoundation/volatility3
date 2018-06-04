@@ -6,7 +6,7 @@ import volatility.plugins.windows.vadinfo as vadinfo
 from volatility.framework import renderers
 from volatility.framework.objects import utility
 
-vollog = logging.getLogger()
+vollog = logging.getLogger(__name__)
 
 
 class VadDump(interfaces_plugins.PluginInterface):
