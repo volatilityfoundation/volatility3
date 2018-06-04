@@ -159,7 +159,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [IntRequirement(name = 'hive_offset', description = '', default = 0, optional = False),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                TranslationLayerRequirement(name = 'base_layer', optional = False)] + pslist.PsList.get_requirements()
+                TranslationLayerRequirement(name = 'base_layer', optional = False)]
 
     def _translate(self, offset: int) -> int:
         """Translates a single cell index to a cell memory offset and the suboffset within it"""
