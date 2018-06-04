@@ -7,7 +7,7 @@ from volatility.framework import interfaces, validity
 class Flags(validity.ValidityRoutines):
     """Object that converts an integer into a set of flags based on their masks"""
 
-    def __init__(self, choices: typing.Mapping[str, int] = None) -> None:
+    def __init__(self, choices: typing.Mapping[str, int]) -> None:
         self._check_type(choices, collections.Mapping)
         for k, v in choices.items():
             self._check_type(k, str)

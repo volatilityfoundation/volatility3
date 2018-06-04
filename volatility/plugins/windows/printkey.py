@@ -47,8 +47,7 @@ class PrintKey(plugins.PluginInterface):
             vollog.warning("Hive walker was not passed a valid node_path (or None)")
             raise StopIteration
         node = node_path[-1]
-        if key_path is None:
-            key_path = node.get_key_path()
+        key_path = key_path or node.get_key_path()
         last_write_time = utility.wintime_to_datetime(node.LastWriteTime)
 
         for key_node in node.get_subkeys():
