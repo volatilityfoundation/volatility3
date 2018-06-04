@@ -1,6 +1,7 @@
 import struct
 from volatility.framework import objects
 from volatility.framework import constants
+from volatility.framework.objects import utility
 
 class _IMAGE_DOS_HEADER(objects.Struct):
 
@@ -29,24 +30,6 @@ class _IMAGE_DOS_HEADER(objects.Struct):
             nt_header = nt_header.cast("_IMAGE_NT_HEADERS64")
 
         return nt_header
-
-    @staticmethod
-    def round(addr, align, up = False):
-        """Round an address up or down based on an alignment.
-
-        :param addr: <int> the address
-        :param align: <int> the alignment value
-        :param up: <bool> true to round up
-
-        :return: <int> the aligned address
-        """
-
-        if addr % align == 0:
-            return addr
-        else:
-            if up:
-                return (addr + (align - (addr % align)))
-            return (addr - (addr % align))
 
     def replace_header_field(self, sect, header, item, value):
         """Replaces a member in an _IMAGE_SECTION_HEADER structure.
@@ -131,7 +114,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
                 sect_sizes.append(sect.VirtualAddress - prevsect.VirtualAddress)
             prevsect = sect
         if prevsect is not None:
-            sect_sizes.append(self.round(prevsect.Misc.VirtualSize, section_alignment, up=True))
+            sect_sizes.append(utility.round(prevsect.Misc.VirtualSize, section_alignment, up=True))
 
         counter = 0
         start_addr = nt_header.FileHeader.SizeOfOptionalHeader + \

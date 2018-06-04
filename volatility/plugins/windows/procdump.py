@@ -7,7 +7,7 @@ import volatility.framework.exceptions as exceptions
 from volatility.framework.objects import utility
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 
-vollog = logging.getLogger()
+vollog = logging.getLogger(__name__)
 
 class ProcDump(interfaces_plugins.PluginInterface):
     """Dumps process executable images"""

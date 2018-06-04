@@ -8,7 +8,7 @@ import volatility.framework.exceptions as exceptions
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 
-vollog = logging.getLogger()
+vollog = logging.getLogger(__name__)
 
 class ModDump(interfaces_plugins.PluginInterface):
     """Dumps kernel modules"""

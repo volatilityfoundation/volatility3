@@ -9,8 +9,7 @@ from volatility.framework.objects import utility
 import volatility.framework.constants as constants
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 
-vollog = logging.getLogger()
-
+vollog = logging.getLogger(__name__)
 
 class DllDump(interfaces_plugins.PluginInterface):
     """Dumps process memory ranges as DLLs"""

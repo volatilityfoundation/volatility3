@@ -51,3 +51,21 @@ def wintime_to_datetime(wintime: int) -> typing.Union[
         return datetime.datetime.utcfromtimestamp(unix_time)
     except ValueError:
         return renderers.UnparsableValue()
+
+
+def round(addr, align, up = False):
+    """Round an address up or down based on an alignment.
+
+    :param addr: <int> the address
+    :param align: <int> the alignment value
+    :param up: <bool> true to round up
+
+    :return: <int> the aligned address
+    """
+
+    if addr % align == 0:
+        return addr
+    else:
+        if up:
+            return (addr + (align - (addr % align)))
+        return (addr - (addr % align))
