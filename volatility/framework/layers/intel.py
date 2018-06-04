@@ -161,14 +161,17 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         while length > 0:
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)
-            except exceptions.PagedInvalidAddressException as excp:
-                if ignore_errors:
-                    mask = (1 << excp.invalid_bits) - 1
-                    length_diff = (mask + 1 - (offset & mask))
-                    length -= length_diff
-                    offset += length_diff
-                else:
+            except (exceptions.PagedInvalidAddressException, exceptions.InvalidAddressException) as excp:
+                if not ignore_errors:
                     raise
+                # We can jump more if we know where the page fault failed
+                if isinstance(excp, exceptions.PagedInvalidAddressException):
+                    mask = (1 << excp.invalid_bits) - 1
+                else:
+                    mask = (1 << self._page_size_in_bits) - 1
+                length_diff = (mask + 1 - (offset & mask))
+                length -= length_diff
+                offset += length_diff
             else:
                 chunk_size = min(page_size - (chunk_offset % page_size), length)
                 yield (offset, chunk_offset, chunk_size, layer_name)
