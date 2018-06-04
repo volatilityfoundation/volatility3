@@ -248,8 +248,7 @@ class Pointer(Integer):
            Layer_name is identifies the appropriate layer within the context that the pointer points to.
            If layer_name is None, it defaults to the same layer that the pointer is currently instantiated in.
         """
-        if layer_name is None:
-            layer_name = self.vol.layer_name
+        layer_name = layer_name or self.vol.layer_name
         mask = self._context.memory[layer_name].address_mask
         offset = self & mask
         return self.vol.subtype(context = self._context,
@@ -260,8 +259,7 @@ class Pointer(Integer):
 
     def is_readable(self, layer_name: typing.Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from memory"""
-        if layer_name is None:
-            layer_name = self.vol.layer_name
+        layer_name = layer_name or self.vol.layer_name
         return self._context.memory[layer_name].is_valid(self)
 
     def __getattr__(self, attr: str) -> typing.Any:
@@ -352,8 +350,8 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
                 context: interfaces.context.ContextInterface,
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
-                base_type: interfaces.objects.Template = None,
-                choices: typing.Dict[str, int] = None,
+                base_type: interfaces.objects.Template,
+                choices: typing.Dict[str, int],
                 **kwargs) -> typing.Type:
         cls._check_class(base_type.vol.object_class, Integer)
         value = base_type(context = context,
@@ -364,8 +362,8 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
                  context: interfaces.context.ContextInterface,
                  type_name: str,
                  object_info: interfaces.objects.ObjectInformation,
-                 base_type: typing.Optional[Integer] = None,
-                 choices: typing.Optional[typing.Dict[str, int]] = None) -> None:
+                 base_type: Integer,
+                 choices: typing.Dict[str, int]) -> None:
         super().__init__(context, type_name, object_info)
 
         self._inverse_choices = {}  # type: typing.Dict[int, str]

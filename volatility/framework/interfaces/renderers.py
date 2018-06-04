@@ -58,7 +58,7 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def parent(self) -> 'TreeNode':
+    def parent(self) -> typing.Optional['TreeNode']:
         """Returns the parent node of this node or None"""
 
     @property
@@ -182,15 +182,11 @@ class TreeGrid(object, metaclass = ABCMeta):
         """Returns the path depth of a particular node"""
         return node.path_depth
 
-    def path_is_valid(self, node: TreeNode) -> bool:
-        """Returns True is a given path is valid for this treegrid"""
-        return node in self.children(node.parent)
-
     @abstractmethod
     def visit(self,
               node: TreeNode,
               function: VisitorSignature,
-              initial_accumulator: _Type = None,
+              initial_accumulator: _Type,
               sort_key: ColumnSortKey = None) -> None:
         """Visits all the nodes in a tree, calling function on each one.
 

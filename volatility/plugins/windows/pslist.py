@@ -9,7 +9,7 @@ from volatility.framework.renderers import format_hints
 class PsList(plugins.PluginInterface):
     """Lists the processes present in a particular windows memory image"""
 
-    PHYSICAL_DEFEAULT = False
+    PHYSICAL_DEFAULT = False
 
     @classmethod
     def get_requirements(cls):
@@ -23,13 +23,13 @@ class PsList(plugins.PluginInterface):
                                             optional = True),
                 requirements.BooleanRequirement(name = 'physical',
                                                 description = 'Display physical offsets instead of virtual',
-                                                default = cls.PHYSICAL_DEFEAULT,
+                                                default = cls.PHYSICAL_DEFAULT,
                                                 optional = True)]
 
     def _generator(self):
         for proc in self.list_processes():
 
-            if not self.config.get('physical', self.PHYSICAL_DEFEAULT):
+            if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
             else:
                 layer_name = self.config['primary']
@@ -84,7 +84,7 @@ class PsList(plugins.PluginInterface):
                 yield proc
 
     def run(self):
-        offsettype = "(V)" if not self.config.get('physical', self.PHYSICAL_DEFEAULT) else "(P)"
+        offsettype = "(V)" if not self.config.get('physical', self.PHYSICAL_DEFAULT) else "(P)"
 
         return renderers.TreeGrid([("PID", int),
                                    ("PPID", int),

@@ -29,7 +29,7 @@ class PsTree(pslist.PsList):
         """Generates the """
         for proc in self.list_processes():
 
-            if not self.config.get('physical', self.PHYSICAL_DEFEAULT):
+            if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
             else:
                 layer_name = self.config['primary']

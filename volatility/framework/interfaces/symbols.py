@@ -42,6 +42,8 @@ class Symbol(validity.ValidityRoutines):
     def type_name(self) -> typing.Optional[str]:
         """Returns the name of the type that the symbol represents"""
         # Objects and ObjectTemplates should *always* get a type_name when they're constructed, so allow the IndexError
+        if self.type is None:
+            return None
         return self.type.vol['type_name']
 
     @property
@@ -70,11 +72,9 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     def __init__(self,
                  name: str,
-                 native_types: typing.Optional['NativeTableInterface'] = None,
+                 native_types: 'NativeTableInterface',
                  table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> None:
-        if name:
-            self._check_type(name, str)
-        self.name = name or None
+        self.name = self._check_type(name, str)
         if table_mapping is None:
             table_mapping = {}
         self.table_mapping = self._check_type(table_mapping, dict)
@@ -150,9 +150,12 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     # ## Convenience functions for location symbols
 
-    def get_symbol_type(self, name: str) -> objects.Template:
+    def get_symbol_type(self, name: str) -> typing.Optional[objects.Template]:
         """Resolves a symbol name into a symbol and then resolves the symbol's type"""
-        return self.get_type(self.get_symbol(name).type_name)
+        type_name = self.get_symbol(name).type_name
+        if type_name is None:
+            return None
+        return self.get_type(type_name)
 
     def get_symbols_by_type(self, type_name: str) -> typing.Iterable[str]:
         """Returns the name of all symbols in this table that have type matching type_name"""
@@ -160,7 +163,8 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
             # This allows for searching with and without the table name (in case multiple tables contain
             # the same symbol name and we've not specifically been told which one)
             symbol = self.get_symbol(symbol_name)
-            if symbol.type_name == type_name or (symbol.type_name.endswith(constants.BANG + type_name)):
+            if symbol.type_name is not None and (
+                    symbol.type_name == type_name or (symbol.type_name.endswith(constants.BANG + type_name))):
                 yield symbol.name
 
     def get_symbols_by_location(self, offset: int) -> typing.Iterable[str]:
@@ -222,9 +226,10 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
                  context: 'interfaces_context.ContextInterface',
                  config_path: str,
                  name: str,
-                 native_types: 'NativeTableInterface' = None) -> None:
+                 native_types: 'NativeTableInterface',
+                 table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> None:
         configuration.ConfigurableInterface.__init__(self, context, config_path)
-        BaseSymbolTableInterface.__init__(self, name, native_types)
+        BaseSymbolTableInterface.__init__(self, name, native_types, table_mapping)
 
     def build_configuration(self) -> 'configuration.HierarchicalDict':
         config = super().build_configuration()

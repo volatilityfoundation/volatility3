@@ -55,6 +55,11 @@ class PrintedProgress(object):
         print(message, end = ' ' * (self._max_message_len - message_len))
 
 
+class MuteProgress(PrintedProgress):
+    def __call__(self, progress, description = None):
+        pass
+
+
 class CommandLine(interfaces.plugins.FileConsumerInterface):
     """Constructs a command-line interface object for users to run plugins"""
 
@@ -74,7 +79,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         parser.add_argument("-e", "--extend", help = "Extend the configuration with a new (or changed) setting",
                             default = None,
                             action = 'append')
-        parser.add_argument("-p", "--plugins", help = "Semi-colon separated list of paths to find plugins",
+        parser.add_argument("-p", "--plugin-dirs", help = "Semi-colon separated list of paths to find plugins",
                             default = "", type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
         parser.add_argument("-o", "--output-dir", help = "Directory in which to output any generated files",
@@ -82,6 +87,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument("-l", "--log", help = "Log output to a file as well as the console", default = None,
                             type = str)
+        parser.add_argument("-f", "--file", metavar = 'FILE', default = None, type = str,
+                            help = "Shorthand for --single-location=file:// if single-location is not defined")
         parser.add_argument("--write-config", help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
@@ -90,8 +97,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != '--help' and arg != '-h']
         partial_args, _ = parser.parse_known_args(known_args)
-        if partial_args.plugins:
-            volatility.plugins.__path__ = partial_args.plugins.split(";") + constants.PLUGINS_PATH
+        if partial_args.plugin_dirs:
+            volatility.plugins.__path__ = partial_args.plugin_dirs.split(";") + constants.PLUGINS_PATH
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
@@ -144,6 +151,18 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         plugin = plugin_list[args.plugin]
         plugin_config_path = interfaces.configuration.path_join('plugins', plugin.__name__)
 
+        # Special case the -f argument because people use is so frequently
+        # It has to go here so it can be overridden by single-location if it's defined
+        # NOTE: This will *BREAK* if LayerStacker, or the automagic configuration system, changes at all
+        ###
+        if args.file:
+            file_name = os.path.abspath(args.file)
+            if not os.path.exists(file_name):
+                vollog.log(logging.INFO, "File does not exist: {}".format(file_name))
+            else:
+                single_location = "file:" + request.pathname2url(file_name)
+                ctx.config['automagic.LayerStacker.single_location'] = single_location
+
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:
             with open(args.config, "r") as f:
@@ -193,7 +212,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         """
         progress_callback = PrintedProgress()
         if quiet:
-            progress_callback = None
+            progress_callback = MuteProgress()
         errors = automagic.run(automagics, context, plugin, "plugins", progress_callback = progress_callback)
 
         # Check all the requirements and/or go back to the automagic step

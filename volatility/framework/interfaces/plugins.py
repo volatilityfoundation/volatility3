@@ -24,6 +24,8 @@ class FileInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     def __init__(self, filename: str, data: bytes = None) -> None:
         self.preferred_filename = filename
+        if data is None:
+            data = b''
         self.data = io.BytesIO(data)
 
 
@@ -69,7 +71,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
         if self.unsatisfied(context, config_path):
             vollog.warning("Plugin failed validation")
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
-        self._file_consumer = None  # type: FileConsumerInterface
+        self._file_consumer = None  # type: typing.Optional[FileConsumerInterface]
 
     def set_file_consumer(self, consumer: FileConsumerInterface) -> None:
         self._file_consumer = self._check_type(consumer, FileConsumerInterface)

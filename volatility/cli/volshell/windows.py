@@ -1,16 +1,16 @@
 import inspect
+import typing
 
 from volatility.cli.volshell import shellplugin
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import plugins
 
 
-class Volshell(plugins.PluginInterface):
+class Volshell(shellplugin.Volshell):
     """Shell environment to directly interact with a windows memory image"""
 
     @classmethod
     def get_requirements(cls):
-        return (shellplugin.Volshell.get_requirements() +
+        return (super().get_requirements() +
                 [requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
                  requirements.IntRequirement(name = 'pid',
                                              description = "Process ID",
@@ -44,7 +44,14 @@ class Volshell(plugins.PluginInterface):
         for proc in eproc.ActiveProcessLinks:
             yield proc
 
-    def run(self):
+    def load_functions(self) -> typing.Dict[str, typing.Callable]:
+        result = super().load_functions()
+        result.update({
+            'ps': lambda: list(self.list_processes())
+        })
+        return result
+
+    def run(self, additional_locals = None):
         # Determine locals
         curframe = inspect.currentframe()
 
@@ -52,7 +59,6 @@ class Volshell(plugins.PluginInterface):
         layer_name = self.config['primary']
         kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
         nt = self.context.module(self.config['nt_symbols'], layer_name = layer_name, offset = kvo)
-
         ps = lambda: list(self.list_processes())
 
         pid = self.config.get('pid', None)
@@ -63,4 +69,4 @@ class Volshell(plugins.PluginInterface):
                     eproc = _x
                     break
 
-        return shellplugin.Volshell(self.context, self.config_path).run(curframe.f_locals)
+        return super().run(curframe.f_locals)

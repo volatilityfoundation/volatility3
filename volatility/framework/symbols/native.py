@@ -45,7 +45,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             prefix = table_name + constants.BANG
 
         additional = {}  # type: typing.Dict[str, typing.Any]
-        obj = None  # type: typing.Type[interfaces.objects.ObjectInterface]
+        obj = None  # type: typing.Optional[typing.Type[interfaces.objects.ObjectInterface]]
         if type_name == 'void' or type_name == 'function':
             obj = objects.Void
         elif type_name == 'array':

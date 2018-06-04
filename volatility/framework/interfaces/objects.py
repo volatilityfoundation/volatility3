@@ -1,12 +1,11 @@
 """Objects are the core of volatility, and provide pythonic access to interpreted values of data from a layer.
 """
 
+import collections
+import collections.abc
 import logging
 import typing
 from abc import ABCMeta, abstractmethod
-
-import collections
-import collections.abc
 
 from volatility.framework import constants, validity, interfaces
 from volatility.framework.interfaces import context as interfaces_context
@@ -109,7 +108,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         Raises InvalidDataException on failure to validate the data correctly.
         """
 
-    def get_symbol_table(self) -> 'interfaces.symbols.SymbolTableInterface':
+    def get_symbol_table(self) -> typing.Optional['interfaces.symbols.SymbolTableInterface']:
         """Returns the symbol table for this particular object
 
         Returns none if the symbol table cannot be identified.

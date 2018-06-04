@@ -57,8 +57,9 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
                         'arm': capstone.Cs(capstone.CS_ARCH_ARM, capstone.CS_MODE_ARM),
                         'arm64': capstone.Cs(capstone.CS_ARCH_ARM64, capstone.CS_MODE_ARM)}
         output = ""
-        for i in disasm_types[disasm.architecture].disasm(disasm.data, disasm.offset):
-            output += "\n0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str)
+        if disasm.architecture is not None:
+            for i in disasm_types[disasm.architecture].disasm(disasm.data, disasm.offset):
+                output += "\n0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str)
         return output
     return QuickTextRenderer.type_renderers[bytes](disasm.data)
 

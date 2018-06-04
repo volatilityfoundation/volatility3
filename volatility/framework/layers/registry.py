@@ -62,7 +62,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._minaddr = 0
         # If there's no base_block, we don't know how big the address space is
         # We also don't know the root_cell_offset, so we use a hardcoded value of 0x20
-        self._maxaddr = self._base_block.Length or 0xffffffff
+        self._maxaddr = self._base_block.Length or 0x7fffffff
 
     @property
     def hive_offset(self) -> int:
@@ -129,7 +129,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
                     break
             else:
-                node_key = None
+                node_key = []
         if not node_key:
             raise KeyError("Key {} not found under {}", key_array[0], '\\'.join(found_key))
         if return_list:

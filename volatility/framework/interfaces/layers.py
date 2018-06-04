@@ -9,7 +9,7 @@ import traceback
 import typing
 from abc import ABCMeta, abstractmethod
 
-from volatility.framework import constants, exceptions, validity, interfaces
+from volatility.framework import constants, exceptions, interfaces, validity
 from volatility.framework.interfaces import configuration, context
 
 vollog = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._layer_name = None  # type: typing.Optional[str]
 
     @property
-    def context(self) -> 'interfaces.context.ContextInterface':
+    def context(self) -> typing.Optional['interfaces.context.ContextInterface']:
         return self._context
 
     @context.setter
@@ -70,7 +70,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._context = self._check_type(ctx, context.ContextInterface)
 
     @property
-    def layer_name(self) -> str:
+    def layer_name(self) -> typing.Optional[str]:
         return self._layer_name
 
     @layer_name.setter
@@ -344,18 +344,18 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
         current_offset = offset
         output = []  # type: typing.List[bytes]
-        for (offset, mapped_offset, length, layer) in self.mapping(offset, length, ignore_errors = pad):
+        for (offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
             if not pad and offset > current_offset:
                 raise exceptions.InvalidAddressException(self.name, current_offset,
                                                          "Layer {} cannot map offset: {}".format(self.name,
                                                                                                  current_offset))
             elif offset > current_offset:
-                output += [b"\x00" * (current_offset - offset)]
+                output += [b"\x00" * (offset - current_offset)]
                 current_offset = offset
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
-            output += [self._context.memory.read(layer, mapped_offset, length, pad)]
-            current_offset += length
+            output += [self._context.memory.read(layer, mapped_offset, mapped_length, pad)]
+            current_offset += mapped_length
         recovered_data = b"".join(output)
         return recovered_data + b"\x00" * (length - len(recovered_data))
 

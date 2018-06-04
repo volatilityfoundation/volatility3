@@ -106,7 +106,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
            indicate this failure in resolution.
         """
 
-        def __init__(self, type_name: str = None, **kwargs) -> None:
+        def __init__(self, type_name: str, **kwargs) -> None:
             vollog.debug("Unresolved reference: {}".format(type_name))
             super().__init__(type_name = type_name, **kwargs)
 

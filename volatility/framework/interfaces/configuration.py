@@ -95,7 +95,7 @@ class HierarchicalDict(collections.abc.Mapping):
         """
         if self.separator in key:
             return key[key.index(self.separator) + 1:]
-        return None
+        return ''
 
     def __iter__(self):
         """Returns an iterator object that supports the iterator protocol"""
@@ -134,7 +134,7 @@ class HierarchicalDict(collections.abc.Mapping):
             if is_data:
                 self._data[key] = value
             else:
-                if not isinstance(value, HierarchicalDict) and value is not None:
+                if not isinstance(value, HierarchicalDict):
                     raise TypeError(
                         "HierarchicalDicts can only store HierarchicalDicts within their structure: {}".format(
                             type(value)))
@@ -166,7 +166,7 @@ class HierarchicalDict(collections.abc.Mapping):
         """Returns the length of all items"""
         return len(self._data) + sum([len(subdict) for subdict in self._subdict])
 
-    def branch(self, key: str) -> typing.Optional['HierarchicalDict']:
+    def branch(self, key: str) -> 'HierarchicalDict':
         """Returns the HierarchicalDict housed under the key
 
         This differs from the data property, in that it is directed by the `key`, and all layers under that key are
@@ -239,7 +239,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def __init__(self,
                  name: str,
                  description: str = None,
-                 default: ConfigSimpleType = None,
+                 default: typing.Optional[ConfigSimpleType] = None,
                  optional: bool = False) -> None:
         super().__init__()
         self._check_type(name, str)
@@ -265,7 +265,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return self._description
 
     @property
-    def default(self) -> ConfigSimpleType:
+    def default(self) -> typing.Optional[ConfigSimpleType]:
         """Returns the default value if one is set"""
         return self._default
 
