@@ -69,7 +69,7 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
 
         # Check if the Stacker has already found what we're looking for
         if layer.config.get('linux_banner', None):
-            banner_list = [(0, bytes(layer.config['linux_banner'], 'latin-1'))]
+            banner_list = [(0, bytes(layer.config['linux_banner'], 'latin-1'))]  # type: typing.Iterable[typing.Any]
         else:
             # Swap to the physical layer for scanning
             # TODO: Fix this so it works for layers other than just Intel
@@ -91,8 +91,9 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                 requirement.construct(context, config_path)
                 break
             else:
-                vollog.debug("Symbol library path not found: {}".format(symbol_files[0]))
-                # print("Kernel", banner, hex(banner_offset))
+                if symbol_files:
+                    vollog.debug("Symbol library path not found: {}".format(symbol_files[0]))
+                    # print("Kernel", banner, hex(banner_offset))
         else:
             vollog.debug("No existing linux banners found")
             # TODO: Fallback to generic regex search?

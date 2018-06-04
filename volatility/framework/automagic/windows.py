@@ -41,10 +41,10 @@ class DtbTest(validity.ValidityRoutines):
     """
 
     def __init__(self,
-                 layer_type: typing.Type[layers.intel.Intel] = None,
-                 ptr_struct: str = None,
-                 ptr_reference: int = None,
-                 mask: int = None) -> None:
+                 layer_type: typing.Type[layers.intel.Intel],
+                 ptr_struct: str,
+                 ptr_reference: int,
+                 mask: int) -> None:
         self.layer_type = self._check_class(layer_type, layers.intel.Intel)
         self.ptr_struct = self._check_type(ptr_struct, str)
         self.ptr_size = struct.calcsize(ptr_struct)
@@ -217,11 +217,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
         self.tests = tests
 
     def __call__(self, data: bytes, data_offset: int) \
-            -> typing.Generator[typing.Tuple[DtbTest, typing.Set[int]], None, None]:
-        results = {}  # type: typing.Dict[DtbTest, typing.Set[int]]
-        for test in self.tests:
-            results[test] = set()
-
+            -> typing.Generator[typing.Tuple[DtbTest, int], None, None]:
         for test in self.tests:
             for page_offset in range(0, len(data), 0x1000):
                 result = test(data, data_offset, page_offset)
@@ -250,7 +246,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
         useful = []
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if (isinstance(requirement, requirements.TranslationLayerRequirement) and
-                requirement.requirements.get("class", None)):
+                requirement.requirements.get("class", False)):
             class_req = requirement.requirements["class"]
 
             for test in self.tests:
@@ -423,7 +419,7 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                               config: str,
                               sub_config: str,
                               requirement: interfaces.configuration.TranslationLayerRequirement) \
-            -> typing.Tuple[str, str, requirements.LayerListRequirement]:
+            -> typing.Tuple[str, str, typing.Optional[requirements.LayerListRequirement]]:
         """Takes a Translation layer and returns its swap_layer requirement"""
         swap_req = None
         for req_name in requirement.requirements:

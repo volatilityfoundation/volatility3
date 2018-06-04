@@ -51,7 +51,7 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) -> typing.List[str]:
+                 progress_callback: validity.ProgressCallback = None) -> typing.Optional[typing.List[typing.Any]]:
         """Runs the automagic over the configurable"""
         return []
 

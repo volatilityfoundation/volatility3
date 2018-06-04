@@ -38,7 +38,7 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
         self._layer_class = layer_class
         self._physical_layer = physical_layer
 
-    def test_entries(self, valid_entries: typing.List[typing.Tuple[int, int]]) -> bool:
+    def test_entries(self, valid_entries: typing.Iterable[typing.Tuple[int, int]]) -> bool:
         """Scans through valid_entries, descending to see whether one can be successfully mapped to completion
 
         Returns the first valid DTB or None is no valid DTBs could be found
@@ -156,7 +156,7 @@ class NlpDtbfinder(interfaces.automagic.AutomagicInterface):
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if (not interfaces.configuration.path_join(sub_config_path, "page_map_offset") in context.config and
                 isinstance(requirement, requirements.TranslationLayerRequirement) and
-                requirement.requirements.get("class", None)):
+                requirement.requirements.get("class", False)):
             class_req = requirement.requirements["class"]
             for layer_class in validity_tests:
                 if (layer_class.__module__ + "." + layer_class.__name__ == class_req.config_value(context,
@@ -165,6 +165,8 @@ class NlpDtbfinder(interfaces.automagic.AutomagicInterface):
                     if ("memory_layer" in requirement.requirements and
                             not requirement.requirements["memory_layer"].unsatisfied(context, sub_config_path)):
                         physical_layer = requirement.requirements["memory_layer"].config_value(context, sub_config_path)
+                        if not isinstance(physical_layer, str):
+                            raise ValueError("Physical Layer configuration must be a string")
                         layer = context.memory[physical_layer]
                         valid_entries = layer.scan(context,
                                                    NlpDtbScanner(layer_class, layer),

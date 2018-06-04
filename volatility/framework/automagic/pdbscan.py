@@ -70,7 +70,7 @@ def scan(ctx: interfaces.context.ContextInterface,
          progress_callback: validity.ProgressCallback = None,
          start: typing.Optional[int] = None,
          end: typing.Optional[int] = None) \
-        -> typing.Generator[typing.Dict[str, typing.Union[bytes, str, int]], None, None]:
+        -> typing.Generator[typing.Dict[str, typing.Optional[typing.Union[bytes, str, int]]], None, None]:
     """Scans through `layer_name` at `ctx` looking for RSDS headers that indicate one of four common pdb kernel names
        (as listed in `self.pdb_names`) and returns the tuple (GUID, age, pdb_name, signature_offset, mz_offset)
 
@@ -200,7 +200,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     try:
                         isf_path = intermed.IntermediateSymbolTable.file_symbol_url("windows", filter).__next__()
                     except StopIteration:
-                        isf_path = None
+                        isf_path = ''
                     if isf_path:
                         vollog.debug("Using symbol library: {}".format(filter))
                         clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
