@@ -6,8 +6,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
 
     def get_nt_header(self):
         """Carve out the NT header from this DOS header. This reflects on the
-        memory layer's bits per register and the PE file's Machine type to
-        determine if it should a 32- or 64-bit NT header structure.
+        PE file's Machine type to create a 32- or 64-bit NT header structure.
 
         :return: <_IMAGE_NT_HEADERS> or <_IMAGE_NT_HEADERS64> instance
         """
@@ -16,7 +15,6 @@ class _IMAGE_DOS_HEADER(objects.Struct):
             raise ValueError("e_magic {0:04X} is not a valid DOS signature.".format(self.e_magic))
 
         layer_name = self.vol.layer_name
-        layer = self._context.memory[layer_name]
         symbol_table_name = self.get_symbol_table().name
 
         nt_header = self._context.object(symbol_table_name + constants.BANG + "_IMAGE_NT_HEADERS",
@@ -102,6 +100,12 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         sect_header_size = self._context.symbol_space.get_type(
             symbol_table_name + constants.BANG + "_IMAGE_SECTION_HEADER").size
 
+        size_of_image = nt_header.OptionalHeader.SizeOfImage
+
+        # no legitimate PE is going to be larger than this
+        if size_of_image > (1024 * 1024 * 100):
+            raise ValueError("The claimed SizeOfImage is too large: {}".format(size_of_image))
+
         raw_data = self._context.memory[layer_name].read(self.vol.offset,
                                                           nt_header.OptionalHeader.SizeOfImage,
                                                           pad=True)
@@ -113,6 +117,16 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         prevsect = None
         sect_sizes = []
         for sect in nt_header.get_sections():
+
+            if sect.VirtualAddress > size_of_image:
+                raise ValueError("Section VirtualAddress is too large: {}".format(sect.VirtualAddress))
+
+            if sect.Misc.VirtualSize > size_of_image:
+                raise ValueError("Section VirtualSize is too large: {}".format(sect.Misc.VirtualSize))
+
+            if sect.SizeOfRawData > size_of_image:
+                raise ValueError("Section SizeOfRawData is too large: {}".format(sect.SizeOfRawData))
+
             if prevsect is not None:
                 sect_sizes.append(sect.VirtualAddress - prevsect.VirtualAddress)
             prevsect = sect
