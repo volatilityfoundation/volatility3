@@ -7,7 +7,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 
-vollog = logging.getLogger()
+vollog = logging.getLogger(__name__)
 
 # these are from WinNT.h
 winnt_protections = {

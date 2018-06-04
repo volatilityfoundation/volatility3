@@ -7,7 +7,7 @@ from volatility.framework import exceptions, renderers
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 
-vollog = logging.getLogger()
+vollog = logging.getLogger(__name__)
 
 try:
     import capstone
