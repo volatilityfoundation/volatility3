@@ -1,0 +1,1025 @@
+{
+    "symbols": {}, 
+    "enums": {}, 
+    "base_types": {
+        "unsigned long": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "unsigned short": {
+            "kind": "int", 
+            "size": 2, 
+            "signed": false, 
+            "endian": "little"
+        },
+        "unsigned long long": {
+            "kind": "int", 
+            "size": 8, 
+            "signed": false, 
+            "endian": "little"
+        }
+    }, 
+    "user_types": {
+        "_DBGKD_DEBUG_DATA_HEADER64": {
+            "fields": {
+                "OwnerTag": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long"
+                    }, 
+                    "offset": 16
+                }, 
+                "List": {
+                    "type": {
+                        "kind": "struct", 
+                        "name": "LIST_ENTRY64"
+                    }, 
+                    "offset": 0
+                }, 
+                "Size": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long"
+                    }, 
+                    "offset": 20
+                }
+            }, 
+            "kind": "struct", 
+            "size": 24
+        }, 
+        "_KDDEBUGGER_DATA64": {
+            "fields": {
+                "MmBadPagesDetected": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 800
+                }, 
+                "KeUserCallbackDispatcher": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 64
+                }, 
+                "MmPagedPoolCommit": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 368
+                }, 
+                "FramePointer": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 52
+                }, 
+                "MmPfnDatabase": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 192
+                }, 
+                "KiProcessorBlock": {
+                    "type": {
+                        "kind": "base",
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 536
+                }, 
+                "SizeEThread": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 704
+                }, 
+                "MmPeakCommitment": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 600
+                }, 
+                "OffsetPrcbContext": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 824
+                }, 
+                "ThCallbackStack": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 48
+                }, 
+                "GdtLdt": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 768
+                }, 
+                "MmModifiedPageListHead": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 408
+                }, 
+                "OffsetPrcbCurrentThread": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 692
+                }, 
+                "OffsetPrcbVendorString": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 698
+                }, 
+                "ObpTypeObjectType": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 160
+                }, 
+                "MmSystemCacheEnd": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 176
+                }, 
+                "MmDriverCommit": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 352
+                }, 
+                "OffsetPrcbCpuType": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 696
+                }, 
+                "MmTotalCommitLimit": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 328
+                }, 
+                "MmResidentAvailablePages": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 432
+                }, 
+                "OffsetEprocessPeb": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 682
+                }, 
+                "PsActiveProcessHead": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 80
+                }, 
+                "SizeEProcess": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 680
+                }, 
+                "Gdt64R3CmTeb": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 774
+                }, 
+                "MmFreePageListHead": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 392
+                }, 
+                "SizePrcb": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 688
+                }, 
+                "CmNtCSDVersion": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 616
+                }, 
+                "MmNumberOfPagingFiles": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 224
+                }, 
+                "KiNormalSystemCall": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 528
+                }, 
+                "OffsetKThreadBStoreLimit": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 678
+                }, 
+                "NextCallback": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 50
+                }, 
+                "IopNumTriageDumpDataBlocks": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 776
+                }, 
+                "MmProcessCommit": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 360
+                }, 
+                "MmPhysicalMemoryBlock": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 624
+                }, 
+                "OffsetPcrInitialBStore": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 744
+                }, 
+                "SizePcr": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 736
+                }, 
+                "OffsetKThreadBStore": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 676
+                }, 
+                "MmTotalCommittedPages": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 336
+                }, 
+                "OffsetKThreadApcProcess": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 672
+                }, 
+                "GdtR3Data": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 764
+                }, 
+                "GdtR0Pcr": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 760
+                }, 
+                "GdtR3Teb": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 766
+                }, 
+                "OffsetPcrContainedPrcb": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 742
+                }, 
+                "Gdt64R3CmCode": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 772
+                }, 
+                "KeBugCheckCallbackListHead": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 128
+                }, 
+                "MmZeroedPageSingleBitErrorsDetected": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 808
+                }, 
+                "OffsetPcrSelfPcr": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 738
+                }, 
+                "MmPagedPoolStart": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 288
+                }, 
+                "MmStandbyPageListHead": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 400
+                }, 
+                "MmVirtualTranslationBase": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 656
+                }, 
+                "GdtR0Data": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 758
+                }, 
+                "EtwpDebuggerData": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 816
+                }, 
+                "KdPrintBufferSize": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 720
+                }, 
+                "OffsetPrcbProcStateSpecialReg": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 754
+                }, 
+                "MmSystemParentTablePage": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 648
+                }, 
+                "MmSubsectionBase": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 216
+                }, 
+                "OffsetKThreadKernelStack": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 668
+                }, 
+                "MmHighestUserAddress": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 456
+                }, 
+                "KdPrintCircularBufferEnd": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 488
+                }, 
+                "MmPagedPoolEnd": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 296
+                }, 
+                "MmAvailablePages": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 424
+                }, 
+                "KiBugcheckData": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 136
+                }, 
+                "MmVerifierData": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 584
+                }, 
+                "OffsetKThreadState": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 674
+                }, 
+                "MmNonPagedSystemStart": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 264
+                }, 
+                "MmSystemPtesStart": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 200
+                }, 
+                "KeLoaderBlock": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 728
+                }, 
+                "OffsetPrcbProcStateContext": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 700
+                }, 
+                "MmNonPagedPoolStart": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 272
+                }, 
+                "VfCrashDataBlock": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 792
+                }, 
+                "ExpNumberOfPagedPools": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 112
+                }, 
+                "MmSharedCommit": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 344
+                }, 
+                "MmUnloadedDrivers": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 544
+                }, 
+                "GdtTss": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 770
+                }, 
+                "KernBase": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 24
+                }, 
+                "KeTimeIncrement": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 120
+                }, 
+                "OffsetPrcbPcrPage": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 752
+                }, 
+                "OffsetPcrCurrentPrcb": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 740
+                }, 
+                "NtBuildLab": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 520
+                }, 
+                "MmLastUnloadedDriver": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 552
+                }, 
+                "MmTriageActionTaken": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 560
+                }, 
+                "PspCidTable": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 88
+                }, 
+                "MmHighestPhysicalPage": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 240
+                }, 
+                "PsLoadedModuleList": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 72
+                }, 
+                "KdPrintWritePointer": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 496
+                }, 
+                "MmNonPagedPoolEnd": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 280
+                }, 
+                "OffsetPrcbNumber": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 702
+                }, 
+                "MmSystemCacheWs": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 184
+                }, 
+                "BreakpointWithStatus": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 32
+                }, 
+                "MmLowestPhysicalPage": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 232
+                }, 
+                "MmSystemPtesEnd": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 208
+                }, 
+                "MmModifiedNoWritePageListHead": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 416
+                }, 
+                "MmExtendedCommit": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 376
+                }, 
+                "OffsetPrcbDpcRoutine": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 690
+                }, 
+                "GdtR0Code": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 756
+                }, 
+                "OffsetEprocessParentCID": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 684
+                }, 
+                "MmZeroedPageListHead": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 384
+                }, 
+                "MmAllocatedNonPagedPool": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 592
+                }, 
+                "MmUserProbeAddress": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 472
+                }, 
+                "MmSystemCacheStart": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 168
+                }, 
+                "Header": {
+                    "type": {
+                        "kind": "struct", 
+                        "name": "_DBGKD_DEBUG_DATA_HEADER64"
+                    }, 
+                    "offset": 0
+                }, 
+                "OffsetKThreadNextProcessor": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 664
+                }, 
+                "ExpPagedPoolDescriptor": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 104
+                }, 
+                "MmNumberOfPhysicalPages": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 248
+                }, 
+                "OffsetPcrBStoreLimit": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 746
+                }, 
+                "MmPagedPoolInformation": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 304
+                }, 
+                "OffsetPrcbMhz": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 694
+                }, 
+                "MmSizeOfPagedPoolInBytes": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 320
+                }, 
+                "ObpRootDirectoryObject": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 152
+                }, 
+                "KdPrintCircularBuffer": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 480
+                }, 
+                "SavedContext": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 40
+                }, 
+                "KiCallUserMode": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 56
+                }, 
+                "MmTotalCommitLimitMaximum": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 608
+                }, 
+                "GdtR3Code": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 762
+                }, 
+                "MmPageSize": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 312
+                }, 
+                "IopErrorLogListHead": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 144
+                }, 
+                "KdPrintRolloverCount": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 504
+                }, 
+                "KdPrintCircularBufferPtr": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 712
+                }, 
+                "OffsetKThreadTeb": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 666
+                }, 
+                "MmLoadedUserImageList": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 512
+                }, 
+                "OffsetPcrStackLimit": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 750
+                }, 
+                "MmSessionBase": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 632
+                }, 
+                "NonPagedPoolDescriptor": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 448
+                }, 
+                "OffsetEprocessDirectoryTableBase": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 686
+                }, 
+                "IopTriageDumpDataBlocks": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 784
+                }, 
+                "OffsetKThreadInitialStack": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 670
+                }, 
+                "KernelVerifier": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 576
+                }, 
+                "PoolTrackTable": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 440
+                }, 
+                "MmSessionSize": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 640
+                }, 
+                "OffsetPcrInitialStack": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned short"
+                    }, 
+                    "offset": 748
+                }, 
+                "MmMaximumNonPagedPoolInBytes": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 256
+                }, 
+                "MmSystemRangeStart": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 464
+                }, 
+                "ExpSystemResourcesList": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 96
+                }, 
+                "MmSpecialPoolTag": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 568
+                }
+            }, 
+            "kind": "struct", 
+            "size": 832
+        }, 
+        "LIST_ENTRY64": {
+            "fields": {
+                "Flink": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 0
+                }, 
+                "Blink": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long long"
+                    }, 
+                    "offset": 8
+                }
+            }, 
+            "kind": "struct", 
+            "size": 16
+        }
+    }, 
+    "metadata": {
+        "producer": {
+            "version": "0.0.1", 
+            "name": "vtypes_to_json.py", 
+            "datetime": "2018-05-22T22:47:20.182954"
+        }, 
+        "format": "4.1.0"
+    }
+}
