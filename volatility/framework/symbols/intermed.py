@@ -196,6 +196,8 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
         self._json_object = json_object
         self._validate_json()
         nt = native_types or self._get_natives()
+        if nt is None:
+            raise ValueError("Native table not provided")
         nt.name = name + "_natives"
         super().__init__(context, config_path, name, nt, table_mapping = table_mapping)
         self._overrides = {}  # type: typing.Dict[str, typing.Type[interfaces.objects.ObjectInterface]]

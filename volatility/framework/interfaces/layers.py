@@ -61,7 +61,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._layer_name = None  # type: typing.Optional[str]
 
     @property
-    def context(self) -> 'interfaces.context.ContextInterface':
+    def context(self) -> typing.Optional['interfaces.context.ContextInterface']:
         return self._context
 
     @context.setter
@@ -70,7 +70,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._context = self._check_type(ctx, context.ContextInterface)
 
     @property
-    def layer_name(self) -> str:
+    def layer_name(self) -> typing.Optional[str]:
         return self._layer_name
 
     @layer_name.setter

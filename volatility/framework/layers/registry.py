@@ -115,7 +115,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
                     break
             else:
-                node_key = None
+                node_key = []
         if not node_key:
             raise KeyError("Key {} not found under {}", key_array[0], '\\'.join(found_key))
         if return_list:

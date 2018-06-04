@@ -5,7 +5,8 @@ class WuManber(object):
     """Algorithm for multi-string matching"""
 
     def __init__(self, block_size: int = 3) -> None:
-        self.minimum_pattern_length = None  # type: typing.Optional[int]
+        # Set a suitably large minimum
+        self.minimum_pattern_length = 1000000000000
 
         self._block_size = block_size
         self._maximum_hash = self._hash_function(b"\xff\xff\xff") + 1  # This depends on the hash function used

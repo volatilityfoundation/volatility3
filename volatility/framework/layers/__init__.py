@@ -13,8 +13,10 @@ import zipfile
 
 try:
     import magic
+
+    HAS_MAGIC = True
 except ImportError:
-    magic = None
+    HAS_MAGIC = False
 
 try:
     import smb.SMBHandler
@@ -93,13 +95,15 @@ class ResourceAccessor(object):
 
         # Determine whether the file is a particular type of file, and if so, open it as such
         IMPORTED_MAGIC = False
-        if not magic is None:
+        if HAS_MAGIC:
             while True:
                 detected = None
                 try:
                     # Detect the content
                     detected = magic.detect_from_fobj(curfile)
                     IMPORTED_MAGIC = True
+                    # This is because python-magic and file provide a magic module
+                    # Only file's python has magic.detect_from_fobj
                 except AttributeError:
                     pass
                 except:

@@ -177,7 +177,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
                 treenode = self._append(parent, item)
                 prev_nodes = prev_nodes[0: parent_index] + [treenode]
-                accumulator = func(treenode, accumulator)
+                if func is not None:
+                    accumulator = func(treenode, accumulator)
                 self._row_count += 1
         self._populated = True
 
@@ -254,8 +255,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
     def visit(self,
               node: typing.Optional[interfaces.renderers.TreeNode],
               function: typing.Callable[[interfaces.renderers.TreeNode, _T], _T],
-              initial_accumulator: _T = None,
-              sort_key: interfaces.renderers.ColumnSortKey = None):
+              initial_accumulator: _T,
+              sort_key: typing.Optional[interfaces.renderers.ColumnSortKey] = None):
         """Visits all the nodes in a tree, calling function on each one.
 
            function should have the signature function(node, accumulator) and return new_accumulator
@@ -290,7 +291,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                list_of_children: typing.List['TreeNode'],
                function: typing.Callable,
                accumulator: _T,
-               sort_key: interfaces.renderers.ColumnSortKey = None) -> _T:
+               sort_key: typing.Optional[interfaces.renderers.ColumnSortKey] = None) -> _T:
         """Visits all the nodes in a tree, calling function on each one"""
         if list_of_children is not None:
             for n, children in list_of_children:

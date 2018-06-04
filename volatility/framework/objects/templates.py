@@ -18,8 +18,8 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
     """
 
     def __init__(self,
-                 object_class: typing.Optional[typing.Type[interfaces.objects.ObjectInterface]] = None,
-                 type_name: str = None,
+                 object_class: typing.Type[interfaces.objects.ObjectInterface],
+                 type_name: str,
                  **arguments) -> None:
         super().__init__(type_name = type_name, **arguments)
         self._check_class(object_class, interfaces.objects.ObjectInterface)

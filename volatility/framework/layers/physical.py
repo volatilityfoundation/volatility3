@@ -69,7 +69,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
         self._location = self.config["location"]
         self._accessor = layers.ResourceAccessor()
-        self._file_ = None
+        self._file_ = None  # type: typing.Optional[typing.IO[typing.Any]]
         self._size = None  # type: typing.Optional[int]
         # Instantiate the file to throw exceptions if the file doesn't open
         _ = self._file
@@ -84,8 +84,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
         mode = "rb"
-        if not self._file_:
-            self._file_ = self._accessor.open(self._location, mode)
+        self._file_ = self._file_ or self._accessor.open(self._location, mode)
         return self._file_
 
     @property

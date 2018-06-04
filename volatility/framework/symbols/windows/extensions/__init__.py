@@ -509,8 +509,7 @@ class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
                 layer: typing.Optional[str] = None) -> typing.Iterator[interfaces.objects.ObjectInterface]:
         """Returns an iterator of the entries in the list"""
 
-        if layer is None:
-            layer = self.vol.layer_name
+        layer = layer or self.vol.layer_name
 
         relative_offset = self._context.symbol_space.get_type(symbol_type).relative_child_offset(member)
 

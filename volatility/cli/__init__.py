@@ -55,6 +55,11 @@ class PrintedProgress(object):
         print(message, end = ' ' * (self._max_message_len - message_len))
 
 
+class MuteProgress(PrintedProgress):
+    def __call__(self, progress, description = None):
+        pass
+
+
 class CommandLine(interfaces.plugins.FileConsumerInterface):
     """Constructs a command-line interface object for users to run plugins"""
 
@@ -207,7 +212,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         """
         progress_callback = PrintedProgress()
         if quiet:
-            progress_callback = None
+            progress_callback = MuteProgress()
         errors = automagic.run(automagics, context, plugin, "plugins", progress_callback = progress_callback)
 
         # Check all the requirements and/or go back to the automagic step

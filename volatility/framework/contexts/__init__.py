@@ -117,8 +117,8 @@ def get_module_wrapper(method: str) -> typing.Callable:
 
 class Module(interfaces.context.Module):
     def object(self,
-               symbol_name: str = None,
-               type_name: str = None,
+               symbol_name: str,
+               type_name: str,
                offset: int = None,
                **kwargs) -> interfaces.objects.ObjectInterface:
         """Returns an object created using the symbol_table and layer_name of the Module
