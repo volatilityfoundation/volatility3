@@ -13,6 +13,12 @@ vollog = logging.getLogger(__name__)
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
+class _KSYSTEM_TIME(objects.Struct):
+
+    def get_time(self):
+        wintime = (self.High1Time << 32) | self.LowPart
+        return utility.wintime_to_datetime(wintime)
+
 class _MMVAD_SHORT(objects.Struct):
 
     @functools.lru_cache(maxsize = None)
@@ -463,10 +469,10 @@ class _EPROCESS(generic.GenericIntelProcess):
         return renderers.UnreadableValue()
 
     def get_create_time(self):
-        return utility.wintime_to_datetime(self.CreateTime)
+        return utility.wintime_to_datetime(self.CreateTime.QuadPart)
 
     def get_exit_time(self):
-        return utility.wintime_to_datetime(self.ExitTime)
+        return utility.wintime_to_datetime(self.ExitTime.QuadPart)
 
     def get_wow_64_process(self):
         if hasattr(self, "Wow64Process"):
