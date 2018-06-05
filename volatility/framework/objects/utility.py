@@ -41,9 +41,9 @@ def array_of_pointers(array: interfaces.objects.ObjectInterface,
     return array.cast("array", count = count, subtype = subtype_pointer)
 
 
-def wintime_to_datetime(wintime: objects.Struct) -> typing.Union[
+def wintime_to_datetime(wintime: int) -> typing.Union[
     interfaces.renderers.BaseAbsentValue, datetime.datetime]:
-    unix_time = wintime.QuadPart // 10000000
+    unix_time = wintime // 10000000
     if unix_time == 0:
         return renderers.NotApplicableValue()
     unix_time = unix_time - 11644473600
@@ -51,3 +51,20 @@ def wintime_to_datetime(wintime: objects.Struct) -> typing.Union[
         return datetime.datetime.utcfromtimestamp(unix_time)
     except ValueError:
         return renderers.UnparsableValue()
+
+def round(addr, align, up = False):
+    """Round an address up or down based on an alignment.
+
+    :param addr: <int> the address
+    :param align: <int> the alignment value
+    :param up: <bool> true to round up
+
+    :return: <int> the aligned address
+    """
+
+    if addr % align == 0:
+        return addr
+    else:
+        if up:
+            return (addr + (align - (addr % align)))
+        return (addr - (addr % align))
