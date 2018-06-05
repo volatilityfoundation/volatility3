@@ -19,7 +19,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             self._overrides[native_type] = native_class
         # Create this once early, because it may get used a lot
         self._types = set(self._native_dictionary).union(
-            {'enum', 'array', 'bitfield', 'void', 'pointer', 'string', 'bytes', 'function'})
+            {'enum', 'array', 'bitfield', 'void', 'string', 'bytes', 'function'})
 
     def get_type_class(self, name: str) -> typing.Type[interfaces.objects.ObjectInterface]:
         ntype, _ = self._native_dictionary.get(name, (objects.Integer, None))

@@ -195,6 +195,7 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
                  table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> None:
         self._json_object = json_object
         self._validate_json()
+        self.name = self._check_type(name, str)
         nt = native_types or self._get_natives()
         if nt is None:
             raise ValueError("Native table not provided")
