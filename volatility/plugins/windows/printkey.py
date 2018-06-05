@@ -48,7 +48,7 @@ class PrintKey(plugins.PluginInterface):
             raise StopIteration
         node = node_path[-1]
         key_path = key_path or node.get_key_path()
-        last_write_time = utility.wintime_to_datetime(node.LastWriteTime)
+        last_write_time = utility.wintime_to_datetime(node.LastWriteTime.QuadPart)
 
         for key_node in node.get_subkeys():
             result = (key_path.count("\\"),
