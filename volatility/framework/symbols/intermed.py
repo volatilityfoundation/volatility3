@@ -165,6 +165,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                config_path: str,
                sub_path: str,
                filename: str,
+               native_types: typing.Optional[interfaces.symbols.NativeTableInterface] = None,
                table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> str:
         """Takes a context and loads an intermediate symbol table based on a filename.
 
@@ -177,6 +178,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                     config_path = config_path,
                     name = table_name,
                     isf_url = urls[0],
+                    native_types = native_types,
                     table_mapping = table_mapping)
         context.symbol_space.append(table)
         return table_name
