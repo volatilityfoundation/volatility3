@@ -192,5 +192,5 @@ class _CM_KEY_VALUE(objects.Struct):
             return ''
 
         # Fall back if it's something weird
-        vollog.debug("Unknown registry value type encountered: {}", self.Type)
+        vollog.debug("Unknown registry value type encountered: {}".format(self.Type))
         return self.Data.cast("string", max_length = self.DataLength, encoding = "latin-1")
