@@ -7,6 +7,8 @@ from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 from volatility.framework import constants
 
 class Info(plugins.PluginInterface):
+    """Show OS & kernel details of the memory sample being analyzed"""
+
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name='primary',
