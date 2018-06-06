@@ -24,7 +24,11 @@ class RegValueTypes(enum.Enum):
     REG_FULL_RESOURCE_DESCRIPTOR = 9
     REG_RESOURCE_REQUIREMENTS_LIST = 10
     REG_QWORD = 11
+    REG_UNKNOWN = 99999
 
+    @classmethod
+    def _missing_(cls, value):
+        return cls(RegValueTypes.REG_UNKNOWN)
 
 class _HMAP_ENTRY(objects.Struct):
     def get_block_offset(self) -> int:
