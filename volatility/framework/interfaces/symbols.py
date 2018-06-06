@@ -222,6 +222,7 @@ class SymbolSpaceInterface(collections.abc.Mapping):
 class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface):
     """Handles a table of symbols"""
 
+    # FIXME: native_types and table_mapping aren't recorded in the configuration
     def __init__(self,
                  context: 'interfaces_context.ContextInterface',
                  config_path: str,
