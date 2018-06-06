@@ -30,7 +30,7 @@ class Maps(plugins.PluginInterface):
             name = utility.array_to_string(task.comm)
 
             for vma in task.mm.mmap_iter:
-                flags = vma.flags
+                flags = vma.protection()
                 page_offset = vma.page_offset()
                 major = 0
                 minor = 0
@@ -42,7 +42,8 @@ class Maps(plugins.PluginInterface):
                     major = inode_object.i_sb.major
                     minor = inode_object.i_sb.minor
                     inode = inode_object.i_ino
-                    path = vma.vm_file.full_path
+                    # TODO - update the second parameter to hopefully go away once extension is updated
+                    path = task.path_for_file(vma.vm_file, "")
 
                 yield (
                     0,
