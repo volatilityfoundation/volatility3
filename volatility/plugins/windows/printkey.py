@@ -103,7 +103,11 @@ class PrintKey(plugins.PluginInterface):
 
                 # Walk it
                 if 'key' in self.config:
-                    node_path = hive.get_key(self.config['key'], return_list = True)
+                    try:
+                        node_path = hive.get_key(self.config['key'], return_list=True)
+                    except KeyError:
+                        vollog.debug("Key {} not found in Hive at offset {}.".format(self.config['key'], hex(hive_offset)))
+                        continue
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
                 yield from self.hive_walker(hive, node_path)
