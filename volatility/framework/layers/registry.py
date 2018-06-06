@@ -124,7 +124,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         while key_array and node_key:
             subkeys = node_key[-1].get_subkeys()
             for subkey in subkeys:
-                if subkey.get_name() == key_array[0]:
+                if subkey.get_name().lower() == key_array[0].lower():
                     node_key = node_key + [subkey]
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
                     break
