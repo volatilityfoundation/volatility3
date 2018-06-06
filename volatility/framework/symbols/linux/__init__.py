@@ -23,6 +23,12 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('super_block', extensions.super_block)
         self.set_type_class('task_struct', extensions.task_struct)
         self.set_type_class('vm_area_struct', extensions.vm_area_struct)
+        self.set_type_class('qstr', extensions.qstr)
+        self.set_type_class('dentry', extensions.dentry)
+        self.set_type_class('fs_struct', extensions.fs_struct)
+        self.set_type_class('files_struct', extensions.files_struct)
+        self.set_type_class('vfsmount', extensions.vfsmount)
+        self.set_type_class('mount', extensions.mount)
 
     @classmethod
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
