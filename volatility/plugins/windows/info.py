@@ -37,13 +37,13 @@ class Info(plugins.PluginInterface):
         virtual_layer_name = self.config["primary"]
         virtual_layer = self.context.memory[virtual_layer_name]
 
-        table_mapping = {"nt_symbols": self.config["nt_symbols"]}
+        native_types = self.context.symbol_space[self.config["nt_symbols"]].natives
 
         kdbg_table_name = KdbgIntermedSymbols.create(self.context,
                                                      self.config_path,
                                                      "windows",
                                                      "kdbg",
-                                                     table_mapping=table_mapping)
+                                                     native_types = native_types)
 
         pe_table_name = PEIntermedSymbols.create(self.context,
                                                  self.config_path,
