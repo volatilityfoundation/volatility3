@@ -85,7 +85,7 @@ class ModDump(interfaces_plugins.PluginInterface):
             try:
                 BaseDllName = mod.BaseDllName.get_string()
             except exceptions.InvalidAddressException:
-                BaseDllName = ""
+                BaseDllName = renderers.UnreadableValue()
 
             session_layer_name = self.find_session_layer(session_layers, mod.DllBase)
             if session_layer_name is None:
