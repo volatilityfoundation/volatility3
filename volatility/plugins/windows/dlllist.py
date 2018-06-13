@@ -18,7 +18,7 @@ class DllList(interfaces_plugins.PluginInterface):
 
             for entry in proc.load_order_modules():
 
-                BaseDllName = FullDllName = ""
+                BaseDllName = FullDllName = renderers.UnreadableValue()
                 try:
                     BaseDllName = entry.BaseDllName.get_string()
                     # We assume that if the BaseDllName points to an invalid buffer, so will FullDllName
