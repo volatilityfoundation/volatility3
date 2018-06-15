@@ -70,7 +70,6 @@ class Malfind(interfaces_plugins.PluginInterface):
                 yield vad, data
 
     def _generator(self, procs):
-
         vadinfo_plugin = vadinfo.VadInfo(self.context, self.config_path)
 
         # determine if we're on a 32 or 64 bit kernel
@@ -105,8 +104,6 @@ class Malfind(interfaces_plugins.PluginInterface):
 
     def run(self):
 
-        plugin = pslist.PsList(self.context, self.config_path)
-
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
                                    ("Start VPN", format_hints.Hex),
@@ -117,4 +114,6 @@ class Malfind(interfaces_plugins.PluginInterface):
                                    ("PrivateMemory", int),
                                    ("Hexdump", format_hints.HexBytes),
                                    ("Disasm", interfaces_renderers.Disassembly)],
-                                  self._generator(plugin.list_processes()))
+                                  self._generator(pslist.PsList.list_processes(self.context,
+                                                                               self.config['primary'],
+                                                                               self.config['nt_symbols'])))

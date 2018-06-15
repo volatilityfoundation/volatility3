@@ -27,7 +27,7 @@ class PsTree(pslist.PsList):
 
     def _generator(self):
         """Generates the """
-        for proc in self.list_processes():
+        for proc in self.list_processes(self.context, self.config['primary'], self.config['nt_symbols']):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
