@@ -5,6 +5,7 @@ from volatility.framework import constants, exceptions, interfaces, objects
 from volatility.framework.configuration import requirements
 from volatility.framework.configuration.requirements import IntRequirement
 from volatility.framework.interfaces.configuration import TranslationLayerRequirement
+from volatility.framework.exceptions import SwappedInvalidAddressException
 from volatility.framework.symbols import intermed
 from volatility.plugins.windows import pslist
 
@@ -78,7 +79,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     @property
     def root_cell_offset(self) -> int:
         """Returns the offset for the root cell in this hive"""
-        if self._base_block.Length <= 0:
+        try:
+            if self._base_block.Length <= 0:
+                return 0x20
+        except SwappedInvalidAddressException:
             return 0x20
         return self._base_block.RootCell
 
