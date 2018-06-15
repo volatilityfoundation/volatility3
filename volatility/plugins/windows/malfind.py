@@ -50,7 +50,7 @@ class Malfind(interfaces_plugins.PluginInterface):
         :param proc: an _EPROCESS instance
         """
 
-        proc_layer_name = proc.add_process_layer(self.context)
+        proc_layer_name = proc.add_process_layer()
         proc_layer = self.context.memory[proc_layer_name]
 
         for vad in proc.get_vad_root().traverse():
