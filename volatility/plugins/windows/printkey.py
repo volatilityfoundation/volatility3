@@ -103,16 +103,35 @@ class PrintKey(plugins.PluginInterface):
 
                 # Walk it
                 if 'key' in self.config:
+                    node_path = None
                     try:
                         node_path = hive.get_key(self.config['key'], return_list=True)
                     except KeyError:
-                        vollog.debug("Key {} not found in Hive at offset {}.".format(self.config['key'], hex(hive_offset)))
+                        vollog.debug("Key '{}' not found in Hive at offset {}.".format(self.config['key'], hex(hive_offset)))
+                        result = (0,
+                                  (renderers.UnreadableValue(),
+                                   renderers.format_hints.Hex(hive.hive_offset),
+                                   "Key",
+                                   self.config['key'],
+                                   renderers.UnreadableValue(),
+                                   renderers.UnreadableValue(),
+                                   renderers.UnreadableValue()))
+                        yield result
                         continue
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
                 yield from self.hive_walker(hive, node_path)
             except exceptions.PagedInvalidAddressException as excp:
                 vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
+                result = (0,
+                          (renderers.UnreadableValue(),
+                           renderers.format_hints.Hex(hive.hive_offset),
+                           "Key",
+                           self.config['key'],
+                           renderers.UnreadableValue(),
+                           renderers.UnreadableValue(),
+                           renderers.UnreadableValue()))
+                yield result
 
     def run(self):
 
