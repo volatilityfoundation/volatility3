@@ -19,7 +19,10 @@ class VadDump(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        plugin = vadinfo.VadInfo(self.context, self.config_path)
+        filter = lambda _: False
+        if self.config.get('address', None) is not None:
+            filter = lambda x: x.get_start() not in [self.config['address']]
+
         chunk_size = 1024 * 1024 * 10
 
         for proc in procs:
@@ -29,7 +32,7 @@ class VadDump(interfaces_plugins.PluginInterface):
             proc_layer_name = proc.add_process_layer()
             proc_layer = self.context.memory[proc_layer_name]
 
-            for vad in plugin.list_vads(proc):
+            for vad in vadinfo.VadInfo.list_vads(proc, filter = filter):
                 try:
                     filedata = interfaces_plugins.FileInterface(
                         "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc.UniqueProcessId,

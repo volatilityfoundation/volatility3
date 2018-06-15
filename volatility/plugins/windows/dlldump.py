@@ -27,14 +27,16 @@ class DllDump(interfaces_plugins.PluginInterface):
                                                  "windows",
                                                  "pe")
 
-        vadinfo_plugin = vadinfo.VadInfo(self.context, self.config_path)
+        filter = lambda _: False
+        if self.config.get('address', None) is not None:
+            filter = lambda x: x.get_start() not in [self.config['address']]
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
             # TODO: what kind of exceptions could this raise and what should we do?
             proc_layer_name = proc.add_process_layer()
 
-            for vad in vadinfo_plugin.list_vads(proc):
+            for vad in vadinfo.VadInfo.list_vads(proc, filter = filter):
 
                 # this parameter is inherited from the VadInfo plugin. if a user specifies
                 # an address, then it bypasses the DLL identification heuristics
@@ -43,7 +45,9 @@ class DllDump(interfaces_plugins.PluginInterface):
                     # rather than relying on the PEB for DLLs, which can be swapped,
                     # it requires special handling on wow64 processes, and its
                     # unreliable from an integrity standpoint, let's use the VADs instead
-                    protection_string = vad.get_protection(vadinfo_plugin.protect_values(),
+                    protection_string = vad.get_protection(vadinfo.VadInfo.protect_values(self.context,
+                                                                                          self.config['primary'],
+                                                                                          self.config['nt_symbols']),
                                                            vadinfo.winnt_protections)
 
                     # DLLs are write copy...
