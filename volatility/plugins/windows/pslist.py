@@ -28,7 +28,13 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                 optional = True)]
 
     def _generator(self):
-        for proc in self.list_processes():
+
+        filter = lambda _: False
+        if self.config.get('pid', None):
+            filter = lambda x: x != self.config['pid']
+
+        for proc in self.list_processes(self.context, self.config['primary'], self.config['nt_symbols'],
+                                        filter = filter):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
@@ -57,18 +63,13 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
             yield (description, timeliner.TimeLinerType.CREATED, row_data[8])
             yield (description, timeliner.TimeLinerType.MODIFIED, row_data[9])
 
-    def list_processes(self):
+    @classmethod
+    def list_processes(cls, context, layer_name, nt_symbols, filter = lambda _: False, ):
         """Lists all the processes in the primary layer that are in the pid config option"""
 
-        filter = lambda _: False
-        if self.config.get('pid', None) is not None:
-            filter = lambda x: x.UniqueProcessId not in [self.config['pid']]
-
-        layer_name = self.config['primary']
-
         # We only use the object factory to demonstrate how to use one
-        kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config['nt_symbols'], layer_name = layer_name, offset = kvo)
+        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(nt_symbols, layer_name = layer_name, offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
         list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
