@@ -2,7 +2,7 @@ import datetime
 import typing
 
 import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import renderers
+from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins import timeliner
@@ -29,11 +29,46 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                 optional = True)]
 
     @classmethod
-    def create_filter(cls, pid_list: typing.List[int] = None):
+    def create_filter(cls, pid_list: typing.List[int] = None) -> typing.Callable[[int], bool]:
+        pid_list = pid_list or []
         filter = lambda _: False
         if [x for x in pid_list if x is not None]:
             filter = lambda x: x not in pid_list
         return filter
+
+    @classmethod
+    def list_processes(cls,
+                       context: interfaces.context.ContextInterface,
+                       layer_name: str,
+                       nt_symbols: str,
+                       filter: typing.Callable[[int], bool] = lambda _: False) -> \
+            typing.Iterable[interfaces.objects.ObjectInterface]:
+        """Lists all the processes in the primary layer that are in the pid config option"""
+
+        # We only use the object factory to demonstrate how to use one
+        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(nt_symbols, layer_name = layer_name, offset = kvo)
+
+        ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
+        list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
+
+        # This is example code to demonstrate how to use symbol_space directly, rather than through a module:
+        #
+        # ```
+        # reloff = self.context.symbol_space.get_type(
+        #          self.config['nt_symbols'] + constants.BANG + "_EPROCESS").relative_child_offset(
+        #          "ActiveProcessLinks")
+        # ```
+        #
+        # Note: "nt_symbols!_EPROCESS" could have been used, but would rely on the "nt_symbols" symbol table not already
+        # having been present.  Strictly, the value of the requirement should be joined with the BANG character
+        # defined in the constants file
+        reloff = ntkrnlmp.get_type("_EPROCESS").relative_child_offset("ActiveProcessLinks")
+        eproc = ntkrnlmp.object(type_name = "_EPROCESS", offset = list_entry.vol.offset - reloff)
+
+        for proc in eproc.ActiveProcessLinks:
+            if not filter(proc):
+                yield proc
 
     def _generator(self):
 
@@ -68,35 +103,6 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
             description = "Process: {} ({})".format(row_data[2], row_data[3])
             yield (description, timeliner.TimeLinerType.CREATED, row_data[8])
             yield (description, timeliner.TimeLinerType.MODIFIED, row_data[9])
-
-    @classmethod
-    def list_processes(cls, context, layer_name, nt_symbols, filter = lambda _: False, ):
-        """Lists all the processes in the primary layer that are in the pid config option"""
-
-        # We only use the object factory to demonstrate how to use one
-        kvo = context.memory[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = context.module(nt_symbols, layer_name = layer_name, offset = kvo)
-
-        ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
-        list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
-
-        # This is example code to demonstrate how to use symbol_space directly, rather than through a module:
-        #
-        # ```
-        # reloff = self.context.symbol_space.get_type(
-        #          self.config['nt_symbols'] + constants.BANG + "_EPROCESS").relative_child_offset(
-        #          "ActiveProcessLinks")
-        # ```
-        #
-        # Note: "nt_symbols!_EPROCESS" could have been used, but would rely on the "nt_symbols" symbol table not already
-        # having been present.  Strictly, the value of the requirement should be joined with the BANG character
-        # defined in the constants file
-        reloff = ntkrnlmp.get_type("_EPROCESS").relative_child_offset("ActiveProcessLinks")
-        eproc = ntkrnlmp.object(type_name = "_EPROCESS", offset = list_entry.vol.offset - reloff)
-
-        for proc in eproc.ActiveProcessLinks:
-            if not filter(proc):
-                yield proc
 
     def run(self):
         offsettype = "(V)" if not self.config.get('physical', self.PHYSICAL_DEFAULT) else "(P)"
