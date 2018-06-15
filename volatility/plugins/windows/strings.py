@@ -72,9 +72,9 @@ class Strings(interfaces.plugins.PluginInterface):
 
             # TODO: Include kernel modules
 
-            plugin = pslist.PsList(self.context, self.config_path)
-
-            for process in plugin.list_processes():
+            for process in pslist.PsList.list_processes(self.context,
+                                                        self.config['primary'],
+                                                        self.config['nt_symbols']):
                 proc_layer_name = process.add_process_layer()
                 proc_layer = self.context.memory[proc_layer_name]
                 if isinstance(proc_layer, interfaces.layers.TranslationLayerInterface):

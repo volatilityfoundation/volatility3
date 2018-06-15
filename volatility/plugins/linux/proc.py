@@ -54,8 +54,6 @@ class Maps(plugins.PluginInterface):
                      ))
 
     def run(self):
-        plugin = pslist.PsList(self.context, self.config_path)
-
         return renderers.TreeGrid(
             [("PID", int),
              ("Process", str),
@@ -67,4 +65,6 @@ class Maps(plugins.PluginInterface):
              ("Minor", int),
              ("Inode", int),
              ("File Path", str)],
-            self._generator(plugin.list_tasks()))
+            self._generator(pslist.PsList.list_tasks(self.context,
+                                                     self.config['primary'],
+                                                     self.config['vmlinux'])))

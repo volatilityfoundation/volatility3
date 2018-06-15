@@ -1,13 +1,15 @@
 import logging
-import volatility.framework.interfaces.plugins as interfaces_plugins
-import volatility.plugins.windows.pslist as pslist
-import volatility.framework.renderers as renderers
+
 import volatility.framework.constants as constants
 import volatility.framework.exceptions as exceptions
+import volatility.framework.interfaces.plugins as interfaces_plugins
+import volatility.framework.renderers as renderers
+import volatility.plugins.windows.pslist as pslist
 from volatility.framework.objects import utility
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 
 vollog = logging.getLogger(__name__)
+
 
 class ProcDump(interfaces_plugins.PluginInterface):
     """Dumps process executable images"""
@@ -31,12 +33,12 @@ class ProcDump(interfaces_plugins.PluginInterface):
 
             try:
                 peb = self._context.object(self.config["nt_symbols"] + constants.BANG + "_PEB",
-                                           layer_name=proc_layer_name,
-                                           offset=proc.Peb)
+                                           layer_name = proc_layer_name,
+                                           offset = proc.Peb)
 
                 dos_header = self.context.object(pe_table_name + constants.BANG +
-                                                 "_IMAGE_DOS_HEADER", offset=peb.ImageBaseAddress,
-                                                 layer_name=proc_layer_name)
+                                                 "_IMAGE_DOS_HEADER", offset = peb.ImageBaseAddress,
+                                                 layer_name = proc_layer_name)
 
                 filedata = interfaces_plugins.FileInterface(
                     "pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
@@ -62,9 +64,12 @@ class ProcDump(interfaces_plugins.PluginInterface):
                        result_text))
 
     def run(self):
-        plugin = pslist.PsList(self.context, self.config_path)
+        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
                                    ("Result", str)],
-                                  self._generator(plugin.list_processes()))
+                                  self._generator(pslist.PsList.list_processes(self.context,
+                                                                               self.config['primary'],
+                                                                               self.config['nt_symbols'],
+                                                                               filter = filter)))

@@ -1,4 +1,5 @@
 import datetime
+import typing
 
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers
@@ -27,14 +28,19 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                 default = cls.PHYSICAL_DEFAULT,
                                                 optional = True)]
 
+    @classmethod
+    def create_filter(cls, pid_list: typing.List[int] = None):
+        filter = lambda _: False
+        if [x for x in pid_list if x is not None]:
+            filter = lambda x: x not in pid_list
+        return filter
+
     def _generator(self):
 
-        filter = lambda _: False
-        if self.config.get('pid', None):
-            filter = lambda x: x != self.config['pid']
-
-        for proc in self.list_processes(self.context, self.config['primary'], self.config['nt_symbols'],
-                                        filter = filter):
+        for proc in self.list_processes(self.context,
+                                        self.config['primary'],
+                                        self.config['nt_symbols'],
+                                        filter = self.create_filter([self.config.get('pid', None)])):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset

@@ -25,13 +25,14 @@ class PsList(interfaces_plugins.PluginInterface):
             name = utility.array_to_string(task.comm)
             yield (0, (pid, ppid, name))
 
-    def list_tasks(self):
+    @classmethod
+    def list_tasks(cls, context, primary_layer: str, vmlinux_table: str):
         """Lists all the tasks in the primary layer"""
 
-        layer_name = self.context.memory[self.config['primary']].config['memory_layer']
+        layer_name = context.memory[primary_layer].config['memory_layer']
 
-        _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config["vmlinux"], layer_name)
-        vmlinux = self.context.module(self.config["vmlinux"], self.config["primary"], aslr_shift)
+        _, aslr_shift = linux.LinuxUtilities.find_aslr(context, vmlinux_table, layer_name)
+        vmlinux = context.module(vmlinux_table, primary_layer, aslr_shift)
         init_task = vmlinux.object(symbol_name = "init_task")
 
         for task in init_task.tasks:

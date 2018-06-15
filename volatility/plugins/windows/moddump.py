@@ -1,14 +1,16 @@
 import logging
-import volatility.framework.interfaces.plugins as interfaces_plugins
-import volatility.plugins.windows.modules as modules
-import volatility.plugins.windows.pslist as pslist
-import volatility.framework.renderers as renderers
+
 import volatility.framework.constants as constants
 import volatility.framework.exceptions as exceptions
+import volatility.framework.interfaces.plugins as interfaces_plugins
+import volatility.framework.renderers as renderers
+import volatility.plugins.windows.modules as modules
+import volatility.plugins.windows.pslist as pslist
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 
 vollog = logging.getLogger(__name__)
+
 
 class ModDump(interfaces_plugins.PluginInterface):
     """Dumps kernel modules"""
@@ -31,17 +33,19 @@ class ModDump(interfaces_plugins.PluginInterface):
         layers = [layer_name]
 
         seen_ids = []
-        plugin = pslist.PsList(self.context, self.config_path)
+        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        for proc in plugin.list_processes():
+        for proc in pslist.PsList.list_processes(self.context,
+                                                 self.config['primary'],
+                                                 self.config['nt_symbols']):
             proc_layer_name = proc.add_process_layer()
 
             try:
                 # create the session space object in the process' own layer.
                 # not all processes have a valid session pointer.
                 session_space = self.context.object(self.config["nt_symbols"] + constants.BANG + "_MM_SESSION_SPACE",
-                                                    layer_name=layer_name,
-                                                    offset=proc.Session)
+                                                    layer_name = layer_name,
+                                                    offset = proc.Session)
 
                 if session_space.SessionId in seen_ids:
                     continue
@@ -93,8 +97,8 @@ class ModDump(interfaces_plugins.PluginInterface):
             else:
                 try:
                     dos_header = self.context.object(pe_table_name + constants.BANG +
-                                                     "_IMAGE_DOS_HEADER", offset=mod.DllBase,
-                                                     layer_name=session_layer_name)
+                                                     "_IMAGE_DOS_HEADER", offset = mod.DllBase,
+                                                     layer_name = session_layer_name)
 
                     filedata = interfaces_plugins.FileInterface(
                         "module.{0:#x}.dmp".format(mod.DllBase))

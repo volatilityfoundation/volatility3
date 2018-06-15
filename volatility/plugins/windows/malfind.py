@@ -103,6 +103,7 @@ class Malfind(interfaces_plugins.PluginInterface):
                            disasm))
 
     def run(self):
+        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
@@ -116,4 +117,5 @@ class Malfind(interfaces_plugins.PluginInterface):
                                    ("Disasm", interfaces_renderers.Disassembly)],
                                   self._generator(pslist.PsList.list_processes(self.context,
                                                                                self.config['primary'],
-                                                                               self.config['nt_symbols'])))
+                                                                               self.config['nt_symbols'],
+                                                                               filter = filter)))

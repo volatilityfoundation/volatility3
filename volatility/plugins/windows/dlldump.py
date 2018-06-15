@@ -1,15 +1,17 @@
-import logging, ntpath
+import logging
+import ntpath
 
+import volatility.framework.constants as constants
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
 from volatility.framework import interfaces
 from volatility.framework import renderers
 from volatility.framework.objects import utility
-import volatility.framework.constants as constants
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 
 vollog = logging.getLogger(__name__)
+
 
 class DllDump(interfaces_plugins.PluginInterface):
     """Dumps process memory ranges as DLLs"""
@@ -59,8 +61,8 @@ class DllDump(interfaces_plugins.PluginInterface):
                                                         vad.get_start()))
 
                     dos_header = self.context.object(pe_table_name + constants.BANG +
-                                                     "_IMAGE_DOS_HEADER", offset=vad.get_start(),
-                                                     layer_name=proc_layer_name)
+                                                     "_IMAGE_DOS_HEADER", offset = vad.get_start(),
+                                                     layer_name = proc_layer_name)
 
                     for offset, data in dos_header.reconstruct():
                         filedata.data.seek(offset)
@@ -76,9 +78,12 @@ class DllDump(interfaces_plugins.PluginInterface):
                            result_text))
 
     def run(self):
-        plugin = pslist.PsList(self.context, self.config_path)
+        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
                                    ("Result", str)],
-                                  self._generator(plugin.list_processes()))
+                                  self._generator(pslist.PsList.list_processes(self.context,
+                                                                               self.config['primary'],
+                                                                               self.config['nt_symbols'],
+                                                                               filter = filter)))

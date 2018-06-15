@@ -47,11 +47,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         # Win10 17063 introduced the Registry process to map most hives.  Check
         # if it exists and update RegistryHive._base_layer
-        pslist_config_path = self.make_subconfig(primary=self.config['base_layer'],
-                                                 nt_symbols=self.config['nt_symbols'])
-        plugin = pslist.PsList(self.context, pslist_config_path)
-        for proc in plugin.list_processes():
-            proc_name = proc.ImageFileName.cast("string", max_length=proc.ImageFileName.vol.count,
+        for proc in pslist.PsList.list_processes(self.context,
+                                                 self.config['base_layer'],
+                                                 self.config['nt_symbols']):
+            proc_name = proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
                                                 errors = 'replace')
             if proc_name == "Registry" and proc.InheritedFromUniqueProcessId == 4:
                 proc_layer_name = proc.add_process_layer()
