@@ -7,6 +7,7 @@ import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.framework.renderers as renderers
 import volatility.plugins.windows.modules as modules
 import volatility.plugins.windows.pslist as pslist
+from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
@@ -25,7 +26,12 @@ class ModDump(interfaces_plugins.PluginInterface):
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
-    def get_session_layers(self) -> typing.List[str]:
+    @classmethod
+    def get_session_layers(cls,
+                           context: interfaces.context.ContextInterface,
+                           layer_name: str,
+                           symbol_table: str,
+                           pids: typing.List[int] = None) -> typing.List[str]:
         """Build a cache of possible virtual layers, in priority starting with
         the primary/kernel layer. Then keep one layer per session by cycling
         through the process list.
@@ -35,24 +41,23 @@ class ModDump(interfaces_plugins.PluginInterface):
         """
 
         # the primary layer should be first
-        layer_name = self.config["primary"]
         layers = [layer_name]
 
         seen_ids = []
-        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter(pids or [])
 
-        for proc in pslist.PsList.list_processes(context = self.context,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols'],
+        for proc in pslist.PsList.list_processes(context = context,
+                                                 layer_name = layer_name,
+                                                 symbol_table = symbol_table,
                                                  filter_func = filter_func):
             proc_layer_name = proc.add_process_layer()
 
             try:
                 # create the session space object in the process' own layer.
                 # not all processes have a valid session pointer.
-                session_space = self.context.object(self.config["nt_symbols"] + constants.BANG + "_MM_SESSION_SPACE",
-                                                    layer_name = layer_name,
-                                                    offset = proc.Session)
+                session_space = context.object(symbol_table + constants.BANG + "_MM_SESSION_SPACE",
+                                               layer_name = layer_name,
+                                               offset = proc.Session)
 
                 if session_space.SessionId in seen_ids:
                     continue
@@ -68,7 +73,11 @@ class ModDump(interfaces_plugins.PluginInterface):
 
         return layers
 
-    def find_session_layer(self, session_layers: typing.List[str], base_address: int) -> typing.Optional[str]:
+    @classmethod
+    def find_session_layer(cls,
+                           context: interfaces.context.ContextInterface,
+                           session_layers: typing.Iterable[str],
+                           base_address: int):
         """Given a base address and a list of layer names, find a
         layer that can access the specified address.
 
@@ -81,14 +90,16 @@ class ModDump(interfaces_plugins.PluginInterface):
         """
 
         for layer_name in session_layers:
-            if self.context.memory[layer_name].is_valid(base_address):
+            if context.memory[layer_name].is_valid(base_address):
                 return layer_name
 
         return None
 
     def _generator(self, mods):
 
-        session_layers = self.get_session_layers()
+        session_layers = self.get_session_layers(self.context,
+                                                 self.config['primary'],
+                                                 self.config['nt_symbols'])
         pe_table_name = PEIntermedSymbols.create(self.context,
                                                  self.config_path,
                                                  "windows",
