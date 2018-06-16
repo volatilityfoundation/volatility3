@@ -60,7 +60,7 @@ class VadInfo(interfaces_plugins.PluginInterface):
         values = ntkrnlmp.object(type_name = "array", offset = kvo + addr,
                                  subtype = ntkrnlmp.get_type("int"),
                                  count = 32)
-        return values
+        return values  # type: ignore
 
     @classmethod
     def list_vads(cls, proc: interfaces.objects.ObjectInterface,
