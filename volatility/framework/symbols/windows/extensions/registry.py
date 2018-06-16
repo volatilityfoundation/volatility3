@@ -26,9 +26,11 @@ class RegValueTypes(enum.Enum):
     REG_QWORD = 11
     REG_UNKNOWN = 99999
 
-    @classmethod
-    def _missing_(cls, value):
-        return cls(RegValueTypes.REG_UNKNOWN)
+    # TODO: Uncomment once we target python-3.6
+    # @classmethod
+    # def _missing_(cls, value):
+    #     return cls(RegValueTypes.REG_UNKNOWN)
+
 
 class _HMAP_ENTRY(objects.Struct):
     def get_block_offset(self) -> int:
