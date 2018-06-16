@@ -633,6 +633,10 @@ class Struct(interfaces.objects.ObjectInterface):
             return member
         raise AttributeError("Struct has no attribute: {}.{}".format(self.vol.type_name, attr))
 
+    def __dir__(self) -> typing.Iterable[str]:
+        """Returns a complete list of members when dir is called"""
+        return list(super().__dir__()) + list(self.vol.members.keys())
+
     def write(self, value):
         raise TypeError("Structs cannot be written to directly, individual members must be written instead")
 
