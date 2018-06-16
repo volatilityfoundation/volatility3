@@ -5,6 +5,7 @@ from volatility.plugins.windows import pslist
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 import volatility.plugins.windows.modules as modules
 import volatility.plugins.windows.moddump as moddump
+from volatility.framework.configuration import requirements
 import io
 
 try:
@@ -20,7 +21,10 @@ class VerInfo(interfaces_plugins.PluginInterface):
     def get_requirements(cls):
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
-        return []
+        return [requirements.TranslationLayerRequirement(name='primary',
+                                                         description='Kernel Address Space',
+                                                         architectures=["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name="nt_symbols", description="Windows OS"),]
 
     def get_version_entries(self, pe_table_name, layer_name, base_address):
         """Get File and Product version information from PE files
