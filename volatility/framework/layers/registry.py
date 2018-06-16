@@ -5,7 +5,7 @@ from volatility.framework import constants, exceptions, interfaces, objects
 from volatility.framework.configuration import requirements
 from volatility.framework.configuration.requirements import IntRequirement
 from volatility.framework.interfaces.configuration import TranslationLayerRequirement
-from volatility.framework.exceptions import SwappedInvalidAddressException
+from volatility.framework.exceptions import InvalidAddressException
 from volatility.framework.symbols import intermed
 from volatility.plugins.windows import pslist
 
@@ -80,11 +80,12 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     def root_cell_offset(self) -> int:
         """Returns the offset for the root cell in this hive"""
         try:
-            if self._base_block.Length <= 0:
+            if self._base_block.Length > 0:
+                return self._base_block.RootCell
+            else:
                 return 0x20
-        except SwappedInvalidAddressException:
+        except InvalidAddressException:
             return 0x20
-        return self._base_block.RootCell
 
     def get_cell(self, cell_offset: int) -> 'objects.Struct':
         """Returns the appropriate Cell value for a cell offset"""
@@ -130,6 +131,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         while key_array and node_key:
             subkeys = node_key[-1].get_subkeys()
             for subkey in subkeys:
+                # registry keys are not case sensitive so compare lowercase
+                # https://msdn.microsoft.com/en-us/library/windows/desktop/ms724946(v=vs.85).aspx
                 if subkey.get_name().lower() == key_array[0].lower():
                     node_key = node_key + [subkey]
                     found_key, key_array = found_key + [key_array[0]], key_array[1:]
