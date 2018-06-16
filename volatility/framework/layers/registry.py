@@ -80,10 +80,9 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         try:
             if self._base_block.Length > 0:
                 return self._base_block.RootCell
-            else:
-                return 0x20
         except InvalidAddressException:
-            return 0x20
+            pass
+        return 0x20
 
     def get_cell(self, cell_offset: int) -> 'objects.Struct':
         """Returns the appropriate Cell value for a cell offset"""
