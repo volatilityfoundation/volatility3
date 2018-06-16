@@ -1,9 +1,10 @@
 import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import exceptions
+from volatility.framework import constants
+from volatility.framework import exceptions, interfaces
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.framework import constants
+
 
 class Modules(plugins.PluginInterface):
     """Lists the loaded kernel modules"""
@@ -16,7 +17,7 @@ class Modules(plugins.PluginInterface):
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
     def _generator(self):
-        for mod in self.list_modules():
+        for mod in self.list_modules(self.context, self.config['primary'], self.config['nt_symbols']):
 
             try:
                 BaseDllName = mod.BaseDllName.get_string()
@@ -35,13 +36,15 @@ class Modules(plugins.PluginInterface):
                        FullDllName,
                        ))
 
-    def list_modules(self):
+    @classmethod
+    def list_modules(cls,
+                     context: interfaces.context.ContextInterface,
+                     layer_name: str,
+                     nt_symbols: str):
         """Lists all the modules in the primary layer"""
 
-        layer_name = self.config['primary']
-
-        kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = layer_name, offset = kvo)
+        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(nt_symbols, layer_name = layer_name, offset = kvo)
 
         try:
             # use this type if its available (starting with windows 10)

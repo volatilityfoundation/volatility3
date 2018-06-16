@@ -17,8 +17,8 @@ class ModDump(interfaces_plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        # Since we're calling the plugin, make sure we have the plugin's requirements
-        return modules.Modules.get_requirements() + pslist.PsList.get_requirements()
+        # Reuse the requirements from the plugins we use
+        return modules.Modules.get_requirements()
 
     def get_session_layers(self):
         """Build a cache of possible virtual layers, in priority starting with
@@ -124,9 +124,10 @@ class ModDump(interfaces_plugins.PluginInterface):
                        result_text))
 
     def run(self):
-        plugin = modules.Modules(self.context, self.config_path)
 
         return renderers.TreeGrid([("Base", format_hints.Hex),
                                    ("Name", str),
                                    ("Result", str)],
-                                  self._generator(plugin.list_modules()))
+                                  self._generator(modules.Modules.list_modules(self.context,
+                                                                               self.config['primary'],
+                                                                               self.config['nt_symbols'])))
