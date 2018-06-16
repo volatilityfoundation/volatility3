@@ -117,7 +117,7 @@ class PrintKey(plugins.PluginInterface):
                           (renderers.UnreadableValue(),
                            renderers.format_hints.Hex(hive.hive_offset),
                            "Key",
-                           self.config['key'],
+                           self.config.get('key', "ROOT"),
                            renderers.UnreadableValue(),
                            renderers.UnreadableValue(),
                            renderers.UnreadableValue()))
