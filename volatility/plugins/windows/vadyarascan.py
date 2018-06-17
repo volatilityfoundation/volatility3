@@ -1,6 +1,12 @@
 import logging
 import typing
-import yara
+
+try:
+    import yara
+
+    has_yara = True
+except ImportError:
+    has_yara = False
 
 from volatility.framework import interfaces, layers, renderers
 from volatility.framework.renderers import format_hints
@@ -73,5 +79,8 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         return scan_iterator
 
     def run(self):
+        if not has_yara:
+            vollog.error("Please install Yara from https://plusvic.github.io/yara/")
+
         return renderers.TreeGrid([('Offset', format_hints.Hex),
                                    ('Rule', str)], self._generator())
