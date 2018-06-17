@@ -39,16 +39,20 @@ class YaraScan(plugins.PluginInterface):
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.BooleanRequirement(name = "all",
                                                 description = "Scan both process and kernel memory",
-                                                default = False),
+                                                default = False,
+                                                optional = True),
                 requirements.BooleanRequirement(name = "insensitive",
                                                 description = "Makes the search case insensitive",
-                                                default = False),
+                                                default = False,
+                                                optional = True),
                 requirements.BooleanRequirement(name = "kernel",
                                                 description = "Scan kernel modules",
-                                                default = False),
+                                                default = False,
+                                                optional = True),
                 requirements.BooleanRequirement(name = "wide",
                                                 description = "Match wide (unicode) strings",
-                                                default = False),
+                                                default = False,
+                                                optional = True),
                 requirements.StringRequirement(name = "yara_rules",
                                                description = "Yara rules (as a string)",
                                                optional = True),
@@ -57,7 +61,8 @@ class YaraScan(plugins.PluginInterface):
                                             optional = True),
                 requirements.IntRequirement(name = "max_size",
                                             default = 0x40000000,
-                                            description = "Set the maximum size (default is 1GB)")
+                                            description = "Set the maximum size (default is 1GB)",
+                                            optional = True)
                 ]
 
     def _generator(self):

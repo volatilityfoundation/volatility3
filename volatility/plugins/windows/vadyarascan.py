@@ -2,7 +2,7 @@ import logging
 import typing
 import yara
 
-from volatility.framework import interfaces, layers
+from volatility.framework import interfaces, layers, renderers
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols.windows import extensions
 from volatility.plugins import yarascan
@@ -15,7 +15,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return yarascan.YaraScan.get_requirements()
+        return yarascan.YaraScan.get_requirements() + pslist.PsList.get_requirements()
 
     def _generator(self):
 
@@ -35,9 +35,12 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
 
-        plugin = pslist.PsList(self.context, self.config_path)
+        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        for task in plugin.list_processes():
+        for task in pslist.PsList.list_processes(self.context,
+                                                 self.config['primary'],
+                                                 self.config['nt_symbols'],
+                                                 filter = filter):
             for offset, name in layer.scan(context = self.context,
                                            scanner = yarascan.YaraScanner(rules = rules),
                                            max_address = self.config['max_size'],
@@ -68,3 +71,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 yield [(layer_name, start, end - start)], end
 
         return scan_iterator
+
+    def run(self):
+        return renderers.TreeGrid([('Offset', format_hints.Hex),
+                                   ('Rule', str)], self._generator())
