@@ -108,10 +108,16 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             file_logger.setFormatter(file_formatter)
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
+        if partial_args.verbosity < 3:
+            console.setLevel(30 - (partial_args.verbosity * 10))
+        else:
+            console.setLevel(10 - (partial_args.verbosity - 2))
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
-        framework.import_files(volatility.plugins)  # Will not log as console's default level is WARNING
+        failures = framework.import_files(volatility.plugins,
+                                          True)  # Will not log as console's default level is WARNING
+        vollog.info("Plugins could not be loaded: " + ", ".join(failures))
         automagics = automagic.available(ctx)
 
         plugin_list = framework.list_plugins()
@@ -141,10 +147,6 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         args = parser.parse_args()
         if args.plugin is None:
             parser.error("Please select a plugin to run")
-        if args.verbosity < 3:
-            console.setLevel(30 - (args.verbosity * 10))
-        else:
-            console.setLevel(10 - (args.verbosity - 2))
 
         vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
 

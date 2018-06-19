@@ -82,8 +82,9 @@ def class_subclasses(cls: T) -> typing.Generator[T, None, None]:
             yield return_value
 
 
-def import_files(base_module) -> None:
+def import_files(base_module, ignore_errors = False) -> typing.List[str]:
     """Imports all plugins present under plugins path"""
+    failures = []
     if not isinstance(base_module.__path__, list):
         raise TypeError("[base_module].__path__ must be a list of paths")
     for path in base_module.__path__:
@@ -101,11 +102,13 @@ def import_files(base_module) -> None:
                             __import__(base_module.__name__ + "." + module)
                         except ImportError as e:
                             vollog.debug(str(e))
-                            vollog.warning("Failed to import module {} based on file: {}".format(module, modpath))
-                            raise
+                            vollog.debug("Failed to import module {} based on file: {}".format(module, modpath))
+                            failures.append(base_module.__name__ + "." + module)
+                            if not ignore_errors:
+                                raise
                     else:
                         vollog.info("Skipping existing module: {}".format(module))
-    return None
+    return failures
 
 
 def list_plugins() -> typing.Dict[str, typing.Type[interfaces.plugins.PluginInterface]]:

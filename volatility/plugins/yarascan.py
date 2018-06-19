@@ -6,14 +6,13 @@ from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import format_hints
 
+vollog = logging.getLogger(__name__)
+
 try:
     import yara
-
-    has_yara = True
-except:
-    has_yara = False
-
-vollog = logging.getLogger(__name__)
+except ImportError:
+    vollog.info("Python Yara module not found, plugin (and dependent plugins) not available")
+    raise
 
 
 class YaraScanner(interfaces.layers.ScannerInterface):
@@ -87,8 +86,5 @@ class YaraScan(plugins.PluginInterface):
             yield format_hints.Hex(offset), name
 
     def run(self):
-        if not has_yara:
-            vollog.error("Please install Yara from https://plusvic.github.io/yara/")
-
         return renderers.TreeGrid([('Offset', format_hints.Hex),
                                    ('Rule', str)], self._generator())
