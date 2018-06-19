@@ -1,18 +1,20 @@
 import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import exceptions, renderers, constants
+from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 import volatility.plugins.windows.modules as modules
 import volatility.plugins.windows.moddump as moddump
 from volatility.framework.configuration import requirements
-import io
+import io, typing, logging
+
+vollog = logging.getLogger(__name__)
 
 try:
-    import pefile
-    has_pefile = True
+   import pefile
 except ImportError:
-    has_pefile = False
+  vollog.info("Python pefile module not found, plugin (and dependent plugins) not available")
+  raise
 
 class VerInfo(interfaces_plugins.PluginInterface):
     """Lists version information from PE files"""
@@ -26,44 +28,59 @@ class VerInfo(interfaces_plugins.PluginInterface):
                                                          architectures=["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name="nt_symbols", description="Windows OS"),]
 
-    def get_version_entries(self, pe_table_name, layer_name, base_address):
+    @classmethod
+    def get_version_entries(cls,
+                            context: interfaces.context.ContextInterface,
+                            pe_table_name: str,
+                            layer_name: str,
+                            base_address: int) -> dict:
         """Get File and Product version information from PE files
 
-        :param pe_table_name: <PEIntermedSymbols>
+        :param pe_table_name: <str> name of the PE table
         :param layer_name: <str> name of the layer containing the PE file
         :param base_address: <int> base address of the PE (where MZ is found)
-
-        :return: <tuple> (file version, product version)
         """
 
         pe_data = io.BytesIO()
+        entries = {}
 
-        dos_header = self.context.object(pe_table_name + constants.BANG +
+        dos_header = context.object(pe_table_name + constants.BANG +
                                          "_IMAGE_DOS_HEADER", offset=base_address,
                                          layer_name=layer_name)
 
-        for offset, data in dos_header.reconstruct():
-            pe_data.seek(offset)
-            pe_data.write(data)
-
-        pe = pefile.PE(data = pe_data.getvalue(), fast_load = True)
-        pe.parse_data_directories([pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]])
-        entries = pe.FileInfo[0].StringTable[0].entries
-        pe_data.close()
-
         try:
-            file_version = entries[b"FileVersion"].decode()
-        except KeyError:
-            file_version = renderers.UnreadableValue()
+            for offset, data in dos_header.reconstruct():
+                pe_data.seek(offset)
+                pe_data.write(data)
 
-        try:
-            product_version = entries[b"ProductVersion"].decode()
-        except KeyError:
-            product_version = renderers.UnreadableValue()
+            pe = pefile.PE(data=pe_data.getvalue(), fast_load=True)
+            pe.parse_data_directories([pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]])
 
-        return file_version, product_version
+            entries = {}
 
-    def _generator(self, procs, mods, moddump_plugin):
+            for finfo in pe.FileInfo:
+                if finfo.name == "StringFileInfo":
+                    for table in finfo.StringTable:
+                        entries.update(table.entries)
+
+        except ValueError:
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "Error parsing PE at {0:#x} in layer {1}".format(base_address, layer_name))
+
+        except AttributeError:
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "Error locating the string resources for PE at {0:#x} in layer {1}".format(base_address, layer_name))
+
+        except exceptions.InvalidAddressException as exp:
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "Required data at {0:#x} in layer {1} is unavailable".format(exp.invalid_address, layer_name))
+
+        finally:
+            pe_data.close()
+
+        return entries
+
+    def _generator(self, procs: typing.Generator, mods: typing.Generator, moddump_plugin: moddump.ModDump):
         """Generates a list of PE file version info for processes, dlls, and modules.
 
         :param procs: <generator> of processes
@@ -90,12 +107,19 @@ class VerInfo(interfaces_plugins.PluginInterface):
                 file_version = renderers.UnreadableValue()
                 product_version = renderers.UnreadableValue()
             else:
+                entries = self.get_version_entries(self._context,
+                                                   pe_table_name,
+                                                   session_layer_name,
+                                                   mod.DllBase)
+
                 try:
-                    file_version, product_version = self.get_version_entries(pe_table_name,
-                                                                             session_layer_name,
-                                                                             mod.DllBase)
-                except Exception:
+                    file_version = entries[b"FileVersion"].decode()
+                except KeyError:
                     file_version = renderers.UnreadableValue()
+
+                try:
+                    product_version = entries[b"ProductVersion"].decode()
+                except KeyError:
                     product_version = renderers.UnreadableValue()
 
             # the pid and process are not applicable for kernel modules
@@ -116,12 +140,19 @@ class VerInfo(interfaces_plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     BaseDllName = renderers.UnreadableValue()
 
+                entries = self.get_version_entries(self._context,
+                                                   pe_table_name,
+                                                   proc_layer_name,
+                                                   entry.DllBase)
+
                 try:
-                    file_version, product_version = self.get_version_entries(pe_table_name,
-                                                                             proc_layer_name,
-                                                                             entry.DllBase)
-                except Exception:
+                    file_version = entries[b"FileVersion"].decode()
+                except KeyError:
                     file_version = renderers.UnreadableValue()
+
+                try:
+                    product_version = entries[b"ProductVersion"].decode()
+                except KeyError:
                     product_version = renderers.UnreadableValue()
 
                 yield (0, (proc.UniqueProcessId,
@@ -134,11 +165,6 @@ class VerInfo(interfaces_plugins.PluginInterface):
                            product_version))
 
     def run(self):
-
-        ## TODO: is this where we want to raise?
-        if not has_pefile:
-            raise ImportError("This plugin requires pefile")
-
         procs = pslist.PsList.list_processes(self.context,
                                              self.config["primary"],
                                              self.config["nt_symbols"])
