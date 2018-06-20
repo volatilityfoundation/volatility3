@@ -92,12 +92,12 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
                  module_name: str,
                  layer_name: str,
                  offset: int,
-                 symbol_table: typing.Optional[str] = None) -> None:
+                 symbol_table_name: typing.Optional[str] = None) -> None:
         self._context = self._check_type(context, ContextInterface)
         self._module_name = self._check_type(module_name, str)
         self._layer_name = self._check_type(layer_name, str)
         self._offset = self._check_type(offset, int)
-        self.symbol_table = symbol_table or self._module_name
+        self.symbol_table_name = symbol_table_name or self._module_name
         super().__init__()
 
     @property
@@ -110,7 +110,7 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
                type_name: str = None,
                offset: int = None,
                **kwargs) -> 'interfaces.objects.ObjectInterface':
-        """Returns an object created using the symbol_table and layer_name of the Module"""
+        """Returns an object created using the symbol_table_name and layer_name of the Module"""
 
     def get_type(self, name: str) -> 'interfaces.objects.Template':
         """Returns a type from the module"""
