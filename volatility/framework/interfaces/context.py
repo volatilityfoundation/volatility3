@@ -91,11 +91,13 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
                  context: ContextInterface,
                  module_name: str,
                  layer_name: str,
-                 offset: int) -> None:
+                 offset: int,
+                 symbol_table: typing.Optional[str] = None) -> None:
         self._context = self._check_type(context, ContextInterface)
         self._module_name = self._check_type(module_name, str)
         self._layer_name = self._check_type(layer_name, str)
         self._offset = self._check_type(offset, int)
+        self.symbol_table = symbol_table or self._module_name
         super().__init__()
 
     @property

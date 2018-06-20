@@ -135,7 +135,7 @@ class Module(interfaces.context.Module):
             self._check_type(symbol_name, str)
             if constants.BANG in symbol_name:
                 raise ValueError("Symbol_name cannot reference another module")
-            symbol = self._context.symbol_space.get_symbol(self._module_name + constants.BANG + symbol_name)
+            symbol = self._context.symbol_space.get_symbol(self.symbol_table + constants.BANG + symbol_name)
             if symbol.type is None:
                 raise ValueError("Symbol {} has no associated type information".format(symbol.name))
             type_arg = symbol.type
@@ -145,7 +145,7 @@ class Module(interfaces.context.Module):
             self._check_type(offset, int)
             if constants.BANG in type_name:
                 raise ValueError("Type_name cannot reference another module")
-            type_arg = self._module_name + constants.BANG + type_name
+            type_arg = self.symbol_table + constants.BANG + type_name
         else:
             raise ValueError("One of symbol_name, or type_name & offset, must be specified to construct a module")
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
@@ -163,7 +163,7 @@ class Module(interfaces.context.Module):
     def get_symbols_by_absolute_location(self, offset: int):
         """Returns the symbols at a specified absolute location """
         return self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset,
-                                                                  table_name = self.name)
+                                                                  table_name = self.symbol_table)
 
 
 class ModuleCollection(validity.ValidityRoutines):
