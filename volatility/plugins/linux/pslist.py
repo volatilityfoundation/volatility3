@@ -17,7 +17,7 @@ class PsList(interfaces_plugins.PluginInterface):
                                                description = "Linux Kernel")]
 
     def _generator(self):
-        for task in self.list_tasks():
+        for task in self.list_tasks(self.context, self.config['primary'], self.config['vmlinux']):
             pid = task.pid
             ppid = 0
             if task.parent:
