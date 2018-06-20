@@ -150,7 +150,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[join(config_path, "page_map_offset")] = dtb
                 context.config[join(config_path, "linux_banner")] = str(banner, 'latin-1')
 
-                layer = layer_class(context, config_path = config_path, name = new_layer_name, os = 'Linux')
+                layer = layer_class(context, config_path = config_path, name = new_layer_name)
 
             if layer:
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
