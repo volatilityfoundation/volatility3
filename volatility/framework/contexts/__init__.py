@@ -160,8 +160,10 @@ class Module(interfaces.context.Module):
     has_type = get_module_wrapper('has_type')
     has_enum = get_module_wrapper('has_enum')
 
-    def get_symbols_by_absolute_location(self, offset: int):
+    def get_symbols_by_absolute_location(self, offset: int) -> typing.Iterable[str]:
         """Returns the symbols at a specified absolute location """
+        if offset > self._offset + self.size:
+            return []
         return self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset,
                                                                   table_name = self.symbol_table_name)
 
@@ -174,8 +176,14 @@ class ModuleCollection(validity.ValidityRoutines):
             self._check_type(module, Module)
         self.modules = modules
 
-    def get_symbols_by_absolute_location(self, offset: int) -> typing.Generator[typing.Tuple[str, str], None, None]:
+    def get_symbols_by_absolute_location(self, offset: int) -> typing.Iterable[typing.Tuple[str, str]]:
         """Returns a tuple of (module_name, symbol_name) for symbols found at the """
         for module in self.modules:
             for result in module.get_symbols_by_absolute_location(offset):
                 yield (module.name, result)
+
+    def get_modules_by_absolute_location(self, offset: int) -> typing.Iterable[str]:
+        """Returns a dictionary of (module_name, symbol_name) where symbol_name is None if the offset is within the module"""
+        for module in self.modules:
+            if module.offset <= offset < module.offset + module.size:
+                yield module.name

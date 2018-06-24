@@ -92,17 +92,34 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
                  module_name: str,
                  layer_name: str,
                  offset: int,
+                 size: int = 0,
                  symbol_table_name: typing.Optional[str] = None) -> None:
         self._context = self._check_type(context, ContextInterface)
         self._module_name = self._check_type(module_name, str)
         self._layer_name = self._check_type(layer_name, str)
         self._offset = self._check_type(offset, int)
+        self._size = self._check_type(size, int)
         self.symbol_table_name = symbol_table_name or self._module_name
         super().__init__()
 
     @property
     def name(self) -> str:
         return self._module_name
+
+    @property
+    def size(self) -> int:
+        """Returns the size of the module (0 for unknown size)"""
+        return self._size
+
+    @property
+    def offset(self) -> int:
+        """Returns the offset that the module resides within the layer of layer_name """
+        return self._offset
+
+    @property
+    def layer_name(self) -> str:
+        """Layer name in which the Module resides"""
+        return self.layer_name
 
     @abstractmethod
     def object(self,
