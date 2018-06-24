@@ -1,20 +1,24 @@
+import io
+import logging
+import typing
+
 import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import exceptions, renderers, constants, interfaces
-from volatility.framework.renderers import format_hints
-from volatility.plugins.windows import pslist
-from volatility.framework.symbols.windows.pe import PEIntermedSymbols
-import volatility.plugins.windows.modules as modules
 import volatility.plugins.windows.moddump as moddump
+import volatility.plugins.windows.modules as modules
+from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
-import io, typing, logging
+from volatility.framework.renderers import format_hints
+from volatility.framework.symbols.windows.pe import PEIntermedSymbols
+from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
 try:
-   import pefile
+    import pefile
 except ImportError:
-  vollog.info("Python pefile module not found, plugin (and dependent plugins) not available")
-  raise
+    vollog.info("Python pefile module not found, plugin (and dependent plugins) not available")
+    raise
+
 
 class VerInfo(interfaces_plugins.PluginInterface):
     """Lists version information from PE files"""
@@ -23,10 +27,10 @@ class VerInfo(interfaces_plugins.PluginInterface):
     def get_requirements(cls):
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
-        return [requirements.TranslationLayerRequirement(name='primary',
-                                                         description='Kernel Address Space',
-                                                         architectures=["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name="nt_symbols", description="Windows OS"),]
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"), ]
 
     @classmethod
     def get_version_entries(cls,
@@ -42,18 +46,18 @@ class VerInfo(interfaces_plugins.PluginInterface):
         """
 
         pe_data = io.BytesIO()
-        entries = {}
+        entries = {}  # type: typing.Dict[str, typing.Any]
 
         dos_header = context.object(pe_table_name + constants.BANG +
-                                         "_IMAGE_DOS_HEADER", offset=base_address,
-                                         layer_name=layer_name)
+                                    "_IMAGE_DOS_HEADER", offset = base_address,
+                                    layer_name = layer_name)
 
         try:
             for offset, data in dos_header.reconstruct():
                 pe_data.seek(offset)
                 pe_data.write(data)
 
-            pe = pefile.PE(data=pe_data.getvalue(), fast_load=True)
+            pe = pefile.PE(data = pe_data.getvalue(), fast_load = True)
             pe.parse_data_directories([pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]])
 
             entries = {}
@@ -69,7 +73,8 @@ class VerInfo(interfaces_plugins.PluginInterface):
 
         except AttributeError:
             vollog.log(constants.LOGLEVEL_VVV,
-                       "Error locating the string resources for PE at {0:#x} in layer {1}".format(base_address, layer_name))
+                       "Error locating the string resources for PE at {0:#x} in layer {1}".format(base_address,
+                                                                                                  layer_name))
 
         except exceptions.InvalidAddressException as exp:
             vollog.log(constants.LOGLEVEL_VVV,
