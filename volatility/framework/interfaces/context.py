@@ -119,7 +119,7 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
     @property
     def layer_name(self) -> str:
         """Layer name in which the Module resides"""
-        return self.layer_name
+        return self._layer_name
 
     @abstractmethod
     def object(self,
