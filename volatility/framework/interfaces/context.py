@@ -100,6 +100,8 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
         self._offset = self._check_type(offset, int)
         self._size = self._check_type(size, int)
         self.symbol_table_name = symbol_table_name or self._module_name
+        if self._size <= 0:
+            self._size = max([0] + [s.address for s in self._context.symbol_space[self.symbol_table_name].symbols])
         super().__init__()
 
     @property
