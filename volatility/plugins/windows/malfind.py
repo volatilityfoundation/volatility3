@@ -54,7 +54,10 @@ class Malfind(interfaces_plugins.PluginInterface):
         proc_layer = self.context.memory[proc_layer_name]
 
         for vad in proc.get_vad_root().traverse():
-            protection_string = vad.get_protection(vadinfo_plugin.protect_values(), vadinfo.winnt_protections)
+            protection_string = vad.get_protection(vadinfo_plugin.protect_values(self.context,
+                                                                                 proc_layer_name,
+                                                                                 self.config["nt_symbols"]),
+                                                   vadinfo.winnt_protections)
             write_exec = "EXECUTE" in protection_string and "WRITE" in protection_string
 
             # the write/exec check applies to everything
