@@ -3,6 +3,7 @@
 This has been made an object to allow quick swapping and changing of contexts, to allow a plugin
 to act on multiple different contexts without them interfering eith each other.
 """
+import functools
 import typing
 
 from volatility.framework import constants, interfaces, symbols, validity
@@ -174,16 +175,38 @@ class ModuleCollection(validity.ValidityRoutines):
     def __init__(self, modules: typing.List[Module]) -> None:
         for module in modules:
             self._check_type(module, Module)
-        self.modules = modules
+        self._modules = modules
 
-    def get_symbols_by_absolute_location(self, offset: int) -> typing.Iterable[typing.Tuple[str, str]]:
-        """Returns a tuple of (module_name, symbol_name) for each symbol_name found within each module_name at the absolute offset in memory provided"""
-        for module in self.modules:
-            for result in module.get_symbols_by_absolute_location(offset):
-                yield (module.name, result)
+    def deduplicate(self) -> 'ModuleCollection':
+        """Returns a new deduplicated ModuleCollection featuring no repeated modules (based on data hash)
 
-    def get_modules_by_absolute_location(self, offset: int) -> typing.Iterable[str]:
-        """Returns a list of module names that could contain the absolute offset"""
-        for module in self.modules:
-            if module.offset <= offset < module.offset + module.size:
-                yield module.name
+        All 0 sized modules will have identical hashes and are therefore included in the deduplicated version
+        """
+        new_modules = []
+        seen = set()
+        for mod in self._modules:
+            if mod.hash not in seen or mod.size == 0:
+                new_modules.append(mod)
+                seen.add(mod.hash)
+        return ModuleCollection(new_modules)
+
+    @property
+    def modules(self) -> typing.Dict[str, typing.List[Module]]:
+        """A name indexed dictionary of modules using that name in this collection"""
+        return self._generate_module_dict(self._modules)
+
+    @functools.lru_cache()
+    @classmethod
+    def _generate_module_dict(cls, modules: typing.List[Module]) -> typing.Dict[str, typing.List[Module]]:
+        result = {}  # type: typing.Dict[str, typing.List[Module]]
+        for module in modules:
+            modlist = result.get(module.name, [])
+            modlist.append(module)
+            result[module.name] = modlist
+        return result
+
+    def get_module_symbols_by_absolute_location(self, offset: int) -> typing.Iterable[
+        typing.Tuple[str, typing.List[str]]]:
+        """Returns a tuple of (module_name, list_of_symbol_names) for each module, where symbols live at the absolute offset in memory provided"""
+        for module in self._modules:
+            yield (module.name, module.get_symbols_by_absolute_location(offset))

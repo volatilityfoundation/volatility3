@@ -5,10 +5,11 @@ of symbols that can be used to interpret data in a layer.  The context also prov
 notably the object constructor function, `object`, which will construct a symbol on a layer at a particular offset.
 """
 import copy
+import hashlib
 import typing
 from abc import ABCMeta, abstractmethod
 
-from volatility.framework import validity, interfaces
+from volatility.framework import interfaces, validity
 
 
 class ContextInterface(object, metaclass = ABCMeta):
@@ -102,6 +103,7 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
         self.symbol_table_name = symbol_table_name or self._module_name
         if self._size <= 0:
             self._size = max([0] + [s.address for s in self._context.symbol_space[self.symbol_table_name].symbols])
+        self.hash = hashlib.sha256(self._context.memory[self.layer_name].read(self.offset, self.size))
         super().__init__()
 
     @property
