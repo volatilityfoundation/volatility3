@@ -1,7 +1,7 @@
 import datetime
 import typing
 
-from volatility.framework import interfaces, objects, renderers
+from volatility.framework import interfaces, objects, renderers, constants
 
 
 def array_to_string(array: objects.Array,
@@ -33,11 +33,13 @@ def array_of_pointers(array: interfaces.objects.ObjectInterface,
                       subtype: typing.Optional[typing.Union[str, interfaces.objects.Template]] = None,
                       context: interfaces.context.ContextInterface = None) -> interfaces.objects.ObjectInterface:
     """Takes an object, and recasts it as an array of pointers to subtype"""
+    symbol_table = array.vol.type_name.split(constants.BANG)[0]
     if isinstance(subtype, str) and context is not None:
         subtype = context.symbol_space.get_type(subtype)
     if not isinstance(subtype, interfaces.objects.Template) or subtype is None:
         raise TypeError("Subtype must be a valid template (or string name of an object template)")
-    subtype_pointer = objects.templates.ObjectTemplate(objects.Pointer, type_name = 'pointer', subtype = subtype)
+    subtype_pointer = context.symbol_space.get_type(symbol_table + constants.BANG + "pointer")
+    subtype_pointer.update_vol(subtype = subtype)
     return array.cast("array", count = count, subtype = subtype_pointer)
 
 
