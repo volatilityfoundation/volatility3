@@ -102,7 +102,8 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
         self._size = self._check_type(size, int)
         self.symbol_table_name = symbol_table_name or self._module_name
         if self._size <= 0:
-            self._size = max([0] + [s.address for s in self._context.symbol_space[self.symbol_table_name].symbols])
+            symbol_table = self._context.symbol_space[self.symbol_table_name]
+            self._size = max([0] + [symbol_table.get_symbol(s).address for s in symbol_table.symbols])
         self.hash = hashlib.sha256(self._context.memory[self.layer_name].read(self.offset, self.size))
         super().__init__()
 

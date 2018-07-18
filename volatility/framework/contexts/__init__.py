@@ -195,8 +195,8 @@ class ModuleCollection(validity.ValidityRoutines):
         """A name indexed dictionary of modules using that name in this collection"""
         return self._generate_module_dict(self._modules)
 
-    @functools.lru_cache()
     @classmethod
+    @functools.lru_cache()
     def _generate_module_dict(cls, modules: typing.List[Module]) -> typing.Dict[str, typing.List[Module]]:
         result = {}  # type: typing.Dict[str, typing.List[Module]]
         for module in modules:
