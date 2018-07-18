@@ -20,6 +20,15 @@ class NotApplicableValue(interfaces.renderers.BaseAbsentValue):
     """Class that represents values which are empty because they don't make sense for this node"""
 
 
+class NotAvailableValue(interfaces.renderers.BaseAbsentValue):
+    """Class that represents values which cannot be provided now (but might in a future run)
+
+    This might occur when information packed with volatility (such as symbol information) is not available,
+    but a future version or a different run may later have that information available (ie, it could be applicable,
+    but we can't get it and it's not because it's unreadable or unparsable).
+    Unreadable and Unparsable should be used in preference, and only if neither fits should this be used.
+    """
+
 class TreeNode(interfaces.renderers.TreeNode):
     """Class representing a particular node in a tree grid"""
 
