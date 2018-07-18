@@ -196,7 +196,6 @@ class ModuleCollection(validity.ValidityRoutines):
         return self._generate_module_dict(self._modules)
 
     @classmethod
-    @functools.lru_cache()
     def _generate_module_dict(cls, modules: typing.List[Module]) -> typing.Dict[str, typing.List[Module]]:
         result = {}  # type: typing.Dict[str, typing.List[Module]]
         for module in modules:
