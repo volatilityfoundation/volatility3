@@ -5,6 +5,7 @@ of symbols that can be used to interpret data in a layer.  The context also prov
 notably the object constructor function, `object`, which will construct a symbol on a layer at a particular offset.
 """
 import copy
+import functools
 import hashlib
 import typing
 from abc import ABCMeta, abstractmethod
@@ -104,7 +105,6 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
         if self._size <= 0:
             symbol_table = self._context.symbol_space[self.symbol_table_name]
             self._size = max([0] + [symbol_table.get_symbol(s).address for s in symbol_table.symbols])
-        self.hash = hashlib.sha256(self._context.memory[self.layer_name].read(self.offset, self.size))
         super().__init__()
 
     @property
@@ -125,6 +125,16 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
     def layer_name(self) -> str:
         """Layer name in which the Module resides"""
         return self._layer_name
+
+    @property
+    @functools.lru_cache()
+    def hash(self) -> str:
+        """Hashes the module for equality checks
+
+        The mapping should be sorted and should be quicker than reading the data
+        We turn it into JSON to make a common string and use a quick hash, because collissions are unlikely"""
+        return hashlib.md5(
+            str(list(self._context.memory[self.layer_name].mapping(self.offset, self.size, ignore_errors = True))))
 
     @abstractmethod
     def object(self,

@@ -98,6 +98,7 @@ class Context(interfaces.context.ContextInterface):
                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
                                                                                   offset = offset))
 
+    @functools.lru_cache()
     def module(self, module_name: str, layer_name: str, offset: int) -> interfaces.context.Module:
         """Create a module object """
 
