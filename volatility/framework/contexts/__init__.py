@@ -162,11 +162,13 @@ class Module(interfaces.context.Module):
     has_type = get_module_wrapper('has_type')
     has_enum = get_module_wrapper('has_enum')
 
-    def get_symbols_by_absolute_location(self, offset: int) -> typing.Iterable[str]:
+    def get_symbols_by_absolute_location(self, offset: int, size: typing.Optional[int] = 0) -> typing.Iterable[str]:
         """Returns the symbols within this module that live at the specified absolute offset provided"""
+        if size < 0:
+            raise ValueError("Size must be strictly non-negative")
         if offset > self._offset + self.size:
             return []
-        return self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset,
+        return self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset, size = size,
                                                                   table_name = self.symbol_table_name)
 
 
@@ -205,9 +207,11 @@ class ModuleCollection(validity.ValidityRoutines):
             result[module.name] = modlist
         return result
 
-    def get_module_symbols_by_absolute_location(self, offset: int) -> typing.Iterable[
-        typing.Tuple[str, typing.List[str]]]:
+    def get_module_symbols_by_absolute_location(self, offset: int, size: typing.Optional[int] = 0) -> \
+            typing.Iterable[typing.Tuple[str, typing.List[str]]]:
         """Returns a tuple of (module_name, list_of_symbol_names) for each module, where symbols live at the absolute offset in memory provided"""
+        if size < 0:
+            raise ValueError("Size must be strictly non-negative")
         for module in self._modules:
-            if module.offset <= offset <= module.offset + module.size:
-                yield (module.name, module.get_symbols_by_absolute_location(offset))
+            if (offset <= module.offset + module.size) and (offset + size >= module.offset):
+                yield (module.name, module.get_symbols_by_absolute_location(offset, size))
