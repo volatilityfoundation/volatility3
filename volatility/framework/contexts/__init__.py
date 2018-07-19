@@ -209,4 +209,5 @@ class ModuleCollection(validity.ValidityRoutines):
         typing.Tuple[str, typing.List[str]]]:
         """Returns a tuple of (module_name, list_of_symbol_names) for each module, where symbols live at the absolute offset in memory provided"""
         for module in self._modules:
-            yield (module.name, module.get_symbols_by_absolute_location(offset))
+            if module.offset <= offset <= module.offset + module.size:
+                yield (module.name, module.get_symbols_by_absolute_location(offset))
