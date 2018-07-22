@@ -2,7 +2,9 @@ import logging
 import os
 import pickle
 import typing
-from urllib import parse
+import urllib
+import urllib.parse
+import urllib.request
 
 from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.symbols import intermed
@@ -30,10 +32,10 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
         # Remove possibilities that can't exist locally.
         for banner in linuxbanners:
             for path in linuxbanners[banner]:
-                url = parse.urlparse(path)
-                if url.scheme == 'file' and not os.path.exists(parse.unquote(url.path)):
+                url = urllib.parse.urlparse(path)
+                if url.scheme == 'file' and not os.path.exists(urllib.request.url2pathname(url.path)):
                     vollog.log(constants.LOGLEVEL_V,
-                               "Removing cached path {} for banner {}: files does not exist".format(path, banner))
+                               "Removing cached path {} for banner {}: file does not exist".format(path, banner))
                     linuxbanners[banner].remove(path)
         return linuxbanners
 
