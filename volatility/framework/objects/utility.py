@@ -54,6 +54,7 @@ def wintime_to_datetime(wintime: int) -> typing.Union[
     except ValueError:
         return renderers.UnparsableValue()
 
+
 def round(addr, align, up = False):
     """Round an address up or down based on an alignment.
 

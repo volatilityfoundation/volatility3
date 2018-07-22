@@ -126,15 +126,18 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
         """Layer name in which the Module resides"""
         return self._layer_name
 
-    @property
+    @property  # type: ignore # FIXME: mypy #5107
     @functools.lru_cache()
     def hash(self) -> str:
         """Hashes the module for equality checks
 
         The mapping should be sorted and should be quicker than reading the data
         We turn it into JSON to make a common string and use a quick hash, because collissions are unlikely"""
+        layer = self._context.memory[self.layer_name]
+        if not isinstance(layer, interfaces.layers.TranslationLayerInterface):
+            raise TypeError("Hashing modules on non-TranslationLayers is not allowed")
         return hashlib.md5(
-            str(list(self._context.memory[self.layer_name].mapping(self.offset, self.size, ignore_errors = True))))
+            bytes(str(list(layer.mapping(self.offset, self.size, ignore_errors = True))), 'utf-8')).hexdigest()
 
     @abstractmethod
     def object(self,

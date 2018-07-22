@@ -99,9 +99,11 @@ class Context(interfaces.context.ContextInterface):
                                                                                   offset = offset))
 
     @functools.lru_cache()
-    def module(self, module_name: str, layer_name: str, offset: int) -> interfaces.context.Module:
-        """Create a module object """
-
+    def module(self,  # type: ignore # FIXME: mypy #5107
+               module_name: str,
+               layer_name: str,
+               offset: int) -> interfaces.context.Module:
+        """Creates a module object"""
         return Module(self, module_name, layer_name, offset)
 
 
@@ -190,7 +192,7 @@ class ModuleCollection(validity.ValidityRoutines):
         for mod in self._modules:
             if mod.hash not in seen or mod.size == 0:
                 new_modules.append(mod)
-                seen.add(mod.hash)
+                seen.add(mod.hash)  # type: ignore # FIXME: mypy #5107
         return ModuleCollection(new_modules)
 
     @property

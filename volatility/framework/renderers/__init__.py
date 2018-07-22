@@ -29,6 +29,7 @@ class NotAvailableValue(interfaces.renderers.BaseAbsentValue):
     Unreadable and Unparsable should be used in preference, and only if neither fits should this be used.
     """
 
+
 class TreeNode(interfaces.renderers.TreeNode):
     """Class representing a particular node in a tree grid"""
 
