@@ -9,11 +9,13 @@ doc/source/volatility.*
 # Pycharm/PyDev development files
 workspace.xml
 .idea
+.vscode
 
 # Manually generated files
 .mypy_cache
 stubs
-volatility/symbols/windows/*.pdb
+volatility/symbols/linux*
+volatility/symbols/windows*
 
 # Mac metadata files
 .DS_Store
