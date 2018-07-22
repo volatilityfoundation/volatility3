@@ -167,7 +167,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
                     symbol.type_name == type_name or (symbol.type_name.endswith(constants.BANG + type_name))):
                 yield symbol.name
 
-    def get_symbols_by_location(self, offset: int, size: typing.Optional[int] = 0) -> typing.Iterable[str]:
+    def get_symbols_by_location(self, offset: int, size: int = 0) -> typing.Iterable[str]:
         """Returns the name of all symbols in this table that live at a particular offset"""
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
@@ -192,7 +192,7 @@ class SymbolSpaceInterface(collections.abc.Mapping):
     @abstractmethod
     def get_symbols_by_location(self,
                                 offset: int,
-                                size: typing.Optional[int] = 0,
+                                size: int = 0,
                                 table_name: typing.Optional[str] = None) -> typing.Iterable[str]:
         """Returns all symbols that exist at a specific relative address"""
 

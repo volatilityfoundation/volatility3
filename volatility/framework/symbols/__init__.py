@@ -53,8 +53,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
             for symbol_name in self._dict[table].get_symbols_by_type(type_name):
                 yield table + constants.BANG + symbol_name
 
-    def get_symbols_by_location(self, offset: int, size: typing.Optional[int] = 0, table_name: str = None) -> \
-            typing.Iterable[str]:
+    def get_symbols_by_location(self, offset: int, size: int = 0, table_name: str = None) -> typing.Iterable[str]:
         """Returns all symbols that exist at a specific relative address"""
         table_list = self._dict.values()  # type: typing.Iterable[interfaces.symbols.BaseSymbolTableInterface]
         if table_name is not None:

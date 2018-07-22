@@ -219,8 +219,8 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                         # Ensures we don't burn CPU cycles going round in a ready waiting loop
                         # without delaying the user too long between progress updates/results
                         result.wait(0.1)
-                    for value in result.get():
-                        yield from value
+                    for result_value in result.get():
+                        yield from result_value
             else:
                 progress = DummyProgress()
                 scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)

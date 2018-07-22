@@ -30,10 +30,12 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def create_filter(cls, pid_list: typing.List[int] = None) -> typing.Callable[[int], bool]:
-        pid_list = pid_list or []
         filter = lambda _: False
-        if [x for x in pid_list if x is not None]:
-            filter = lambda x: x not in pid_list
+        # FIXME: mypy #4973 or #2608
+        pid_list = pid_list or []
+        filter_list = [x for x in pid_list if x is not None]
+        if filter_list:
+            filter = lambda x: x not in filter_list
         return filter
 
     @classmethod

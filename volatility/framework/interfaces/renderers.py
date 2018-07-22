@@ -9,7 +9,7 @@ from abc import abstractmethod, ABCMeta
 
 from volatility.framework import validity
 
-Column = collections.namedtuple('Column', ['index', 'name', 'type'])
+Column = typing.NamedTuple('Column', [('index', int), ('name', str), ('type', typing.Any)])
 
 RenderOption = typing.Any
 
@@ -155,7 +155,7 @@ class TreeGrid(object, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def columns(self) -> ColumnsType:
+    def columns(self) -> typing.List[Column]:
         """Returns the available columns and their ordering and types"""
 
     @abstractmethod

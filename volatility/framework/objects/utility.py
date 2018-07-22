@@ -30,8 +30,8 @@ def pointer_to_string(pointer: objects.Pointer,
 
 def array_of_pointers(array: interfaces.objects.ObjectInterface,
                       count: int,
-                      subtype: typing.Optional[typing.Union[str, interfaces.objects.Template]] = None,
-                      context: interfaces.context.ContextInterface = None) -> interfaces.objects.ObjectInterface:
+                      subtype: typing.Union[str, interfaces.objects.Template],
+                      context: interfaces.context.ContextInterface) -> interfaces.objects.ObjectInterface:
     """Takes an object, and recasts it as an array of pointers to subtype"""
     symbol_table = array.vol.type_name.split(constants.BANG)[0]
     if isinstance(subtype, str) and context is not None:
