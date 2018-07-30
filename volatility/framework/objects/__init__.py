@@ -599,27 +599,10 @@ class Struct(interfaces.objects.ObjectInterface):
         """Specifically named method for retrieving members."""
         return self.__getattr__(attr)
 
-    def __getattribute__(self, attr: str) -> typing.Any:
-        """Make sure that class overrides all start with helper_"""
-        if attr in ['__dict__', '__class__'] or attr in self.__dict__:
-            return object.__getattribute__(self, attr)
-
-        if not isinstance(getattr(self.__class__, attr), property):
-            return object.__getattribute__(self, attr)
-        elif not hasattr(Struct, attr) and not attr.startswith('helper_'):
-            # Is a property, of an override class that doesn't start with helper
-            vollog.debug("Deprecated non-helper attribute {} requested from class override {}".format(attr,
-                                                                                                      self.vol.type_name))
-            # Uncomment the following line if we want to prohibit using non-helper properties
-            # return self.__getattr__(attr)
-
-        # Change this to an attribute error if we want to prohibit rather than deprecate member collisisons
-        return object.__getattribute__(self, attr)
-
     def __getattr__(self, attr: str) -> typing.Any:
         """Method for accessing members of the type"""
-        if attr in self.__getattribute__("_concrete_members"):
-            return self.__getattribute__("_concrete_members")[attr]
+        if attr in self._concrete_members:
+            return self._concrete_members[attr]
         elif attr in self.vol.members:
             mask = self._context.memory[self.vol.layer_name].address_mask
             relative_offset, member = self.vol.members[attr]
