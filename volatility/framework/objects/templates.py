@@ -56,8 +56,9 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
            Returns: an object adhereing to the :class:`~volatility.framework.interfaces.objects.ObjectInterface`
         """
         arguments = {}  # type: typing.Dict[str, typing.Any]
-        arguments.update(self.vol)
-        del arguments['object_class']
+        for arg in self.vol:
+            if arg != 'object_class':
+                arguments[arg] = self.vol[arg]
         return self.vol.object_class(context = context,
                                      object_info = object_info,
                                      **arguments)
