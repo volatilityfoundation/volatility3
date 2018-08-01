@@ -26,7 +26,7 @@ class Lsof(plugins.PluginInterface):
 
     def _generator(self, tasks):
         for task in tasks:
-            name = str(task.comm)
+            name = utility.array_to_string(task.comm)
             pid  = int(task.pid)
 
             for fd_num, _, full_path in linux.LinuxUtilities.files_descriptors_for_process(self.config, self.context, task):
