@@ -4,7 +4,8 @@ from volatility.framework import interfaces, constants
 
 
 def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
-                      address_mask: int = 0):
+                      address_mask: int = 0,
+                      table_aslr_shift: int = 0):
     """Alters a symbol table, such that all symbols returned have their address masked by the address mask"""
     original_get_symbol = symbol_table.get_symbol
     cached_symbols = {}  # type: typing.Dict[interfaces.symbols.SymbolInterface, interfaces.symbols.SymbolInterface]
@@ -15,7 +16,7 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
         if symbol in cached_symbols:
             return cached_symbols[symbol]
         new_symbol = interfaces.symbols.SymbolInterface(name = symbol.name,
-                                                        address = address_mask & symbol.address,
+                                                        address = address_mask & (symbol.address + table_aslr_shift),
                                                         type = symbol.type,
                                                         constant_data = symbol.constant_data)
         cached_symbols[symbol] = new_symbol
