@@ -6,6 +6,8 @@ from volatility.framework.automagic import linux_symbol_cache
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
+from volatility.framework.symbols import utility as symbols_utility 
+from volatility.framework.objects import utility
 
 vollog = logging.getLogger(__name__)
 
@@ -165,6 +167,171 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
 
 class LinuxUtilities(object):
     """Class with multiple useful linux functions"""
+
+    # based on __d_path from the Linux kernel
+    @classmethod
+    def _do_get_path(cls, rdentry, rmnt, dentry, vfsmnt) -> str:
+        try:
+            rdentry.validate()
+            dentry.validate()
+        except InvalidDataException:
+            return ""
+
+        ret_path = [] # type: typing.List[str]
+
+        while dentry != rdentry or vfsmnt != rmnt: 
+            dname = dentry.path()
+            if dname == "":
+                break
+
+            ret_path.insert(0, dname.strip('/'))
+            if dentry == vfsmnt.get_mnt_root() or dentry == dentry.d_parent:
+                if vfsmnt.get_mnt_parent() == vfsmnt:
+                    break
+
+                dentry = vfsmnt.get_mnt_mountpoint()
+                vfsmnt = vfsmnt.get_mnt_parent()
+
+                continue
+
+            parent = dentry.d_parent
+            dentry = parent
+
+        if ret_path == []:
+            return ""
+
+        ret_val = '/'.join([str(p) for p in ret_path if p != ""])
+
+        if ret_val.startswith(("socket:", "pipe:")):
+            if ret_val.find("]") == -1:
+                try:
+                    inode = dentry.d_inode
+                    ino = inode.i_ino
+                except exceptions.InvalidAddressException:
+                    ino = 0
+
+                ret_val = ret_val[:-1] + ":[{0}]".format(ino)
+            else:
+                ret_val = ret_val.replace("/", "")
+
+        elif ret_val != "inotify":
+            ret_val = '/' + ret_val
+
+        return ret_val
+         
+    # method used by 'older' kernels
+    # TODO: lookup when dentry_operations->d_name was merged into the mainline kernel for exact version
+    @classmethod
+    def _get_path_file(cls, task, filp) -> str:
+        rdentry = task.fs.get_root_dentry()
+        rmnt    = task.fs.get_root_mnt()
+        dentry  = filp.get_dentry()
+        vfsmnt  = filp.get_vfsmnt()
+    
+        return LinuxUtilities._do_get_path(rdentry, rmnt, dentry, vfsmnt)
+
+    @classmethod
+    def _get_new_sock_pipe_path(cls, task, filp) -> str:
+        dentry = filp.get_dentry()
+
+        sym_addr = dentry.d_op.d_dname
+
+        # IKELOS: _contet.symbol_space has already been masked  (including ASLR) by the run() function of the calling plugin. This makes the code super clean
+        symbols = list(dentry._context.symbol_space.get_symbols_by_location(sym_addr))
+        
+        if len(symbols) == 1:
+            sym = symbols[0].split("!")[1]
+            
+            if sym == "sockfs_dname":
+                pre_name = "socket"    
+        
+            elif sym == "anon_inodefs_dname":
+                pre_name = "anon_inode"
+
+            elif sym == "pipefs_dname":
+                pre_name = "pipe"
+
+            elif sym == "simple_dname":
+                pre_name = self._get_path_file(filp)
+
+            else:
+                pre_name = "<unsupported d_op symbol: {0}>".format(sym)
+
+            ret = "{0}:[{1:d}]".format(pre_name, dentry.d_inode.i_ino)
+
+        else:
+            ret = "<invalid d_dname pointer> {0:x}".format(sym_addr)
+
+        return ret
+
+    # a 'file' structure doesn't have enough information to properly restore its full path
+    # we need the root mount information from task_struct to determine this
+    @classmethod
+    def path_for_file(cls, task, filp) -> str:
+        try:
+            dentry = filp.get_dentry()
+        except exceptions.InvalidAddressException:
+            return ""
+
+        if dentry == 0:
+            return ""
+
+        dname_is_valid = False
+
+        # TODO COMPARE THIS IN LSOF OUTPUT TO VOL2
+        try:
+            if dentry.d_op and hasattr(dentry.d_op, "d_dname") and dentry.d_op.d_dname:
+                dname_is_valid = True
+
+        except exceptions.InvalidAddressException:
+            dname_is_valid = False
+
+        if dname_is_valid:
+            ret = LinuxUtilities._get_new_sock_pipe_path(task, filp)
+        else:
+            ret = LinuxUtilities._get_path_file(task, filp)
+
+        return ret
+   
+    # IKELOS: 'task' will always be a task_struct as defined in the profile json. Do I type this in the parameter list? If so, how?
+    # IKELOS: what should the type of 'config' be? 
+    @classmethod
+    def files_descriptors_for_process(cls,
+                                      config,
+                                      context: interfaces.context.ContextInterface,
+                                      task):
+
+        fd_table = task.files.get_fds()
+        if fd_table == 0:
+            return
+
+        max_fds  = task.files.get_max_fds()
+        
+        # corruption check
+        if max_fds > 500000:
+            return
+
+        file_type = config["vmlinux"] + constants.BANG + 'file'
+        
+        fds = utility.array_of_pointers(fd_table, count = max_fds, subtype = file_type, context = context)
+
+        for (fd_num, filp) in enumerate(fds):
+            if filp != 0:
+                full_path = LinuxUtilities.path_for_file(task, filp)
+
+                yield fd_num, filp, full_path
+
+    @classmethod
+    def aslr_mask_symbol_table(cls,
+                               config, 
+                               context: interfaces.context.ContextInterface):
+
+        aslr_layer    = config['primary.memory_layer']
+        _, aslr_shift = LinuxUtilities.find_aslr(context, config["vmlinux"], aslr_layer)
+
+        sym_table_name = config["vmlinux"]
+        sym_layer_name = config["primary"]
+        symbols_utility.mask_symbol_table(context.symbol_space[sym_table_name], context.memory[sym_layer_name].address_mask, aslr_shift)
 
     @classmethod
     def find_aslr(cls,

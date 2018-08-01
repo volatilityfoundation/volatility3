@@ -3,11 +3,31 @@ import typing
 
 from volatility.framework import constants
 from volatility.framework import exceptions, objects, interfaces
-from volatility.framework.objects import utility
-from volatility.framework.symbols import generic
+from volatility.framework.objects import utility as objects_utility
+from volatility.framework.automagic import linux
 
+from volatility.framework.symbols import generic, utility
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
+
+class module(generic.GenericIntelProcess):
+    def get_init_size(self):
+        if hasattr(self, "init_layout"):
+            return self.init_layout.size
+
+        elif hasattr(self, "init_size"):
+            return self.init_size
+
+        raise AttributeError("module -> get_init_size: Unable to determine .init section size of module")
+    
+    def get_core_size(self):
+        if hasattr(self, "core_layout"):
+            return self.core_layout.size
+        
+        elif hasattr(self, "core_size"):
+            return self.core_size
+
+        raise AttributeError("module -> get_core_size: Unable to determine initial size of module")
 
 class task_struct(generic.GenericIntelProcess):
     def add_process_layer(self,
@@ -18,8 +38,9 @@ class task_struct(generic.GenericIntelProcess):
         """
 
         parent_layer = self._context.memory[self.vol.layer_name]
-        pgd = self.mm.pgd
-        if not pgd:
+        try:
+            pgd = self.mm.pgd
+        except exceptions.PagedInvalidAddressException:
             return None
 
         if not isinstance(parent_layer, interfaces.layers.TranslationLayerInterface):
@@ -32,133 +53,6 @@ class task_struct(generic.GenericIntelProcess):
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
-    # based on __d_path from the Linux kernel
-    def _do_get_path(self, rdentry, rmnt, dentry, vfsmnt) -> str:
-        try:
-            rdentry.validate()
-            dentry.validate()
-        except InvalidDataException:
-            return ""
-
-        ret_path = [] # type: typing.List[str]
-
-        try:
-            inode = dentry.d_inode
-            ino = inode.i_ino
-        except exceptions.InvalidAddressException:
-            ino = 0
-
-        while dentry != rdentry or vfsmnt != rmnt: 
-            dname = dentry.path()
-            if dname == "":
-                break
-
-            ret_path.insert(0, dname.strip('/'))
-            if dentry == vfsmnt.get_mnt_root() or dentry == dentry.d_parent:
-                if vfsmnt.get_mnt_parent() == vfsmnt:
-                    break
-
-                dentry = vfsmnt.get_mnt_mountpoint()
-                vfsmnt = vfsmnt.get_mnt_parent()
-
-                continue
-
-            parent = dentry.d_parent
-            dentry = parent
-
-        if ret_path == []:
-            return ""
-
-        ret_val = '/'.join([str(p) for p in ret_path if p != ""])
-
-        if ret_val.startswith(("socket:", "pipe:")):
-            if ret_val.find("]") == -1:
-                ret_val = ret_val[:-1] + ":[{0}]".format(ino)
-            else:
-                ret_val = ret_val.replace("/", "")
-
-        elif ret_val != "inotify":
-            ret_val = '/' + ret_val
-
-        return ret_val
-         
-    # old method
-    def _get_path_file(self, filp) -> str:
-        rdentry = self.fs.get_root_dentry()
-        rmnt    = self.fs.get_root_mnt()
-        dentry  = filp.dentry
-        vfsmnt  = filp.vfsmnt
-    
-        return self._do_get_path(rdentry, rmnt, dentry, vfsmnt)
-
-    def _get_new_sock_pipe_path(self, filp, layer_name) -> str:
-        dentry = filp.dentry
-
-        sym_addr = dentry.d_op.d_dname
-
-        # BUG  - ikelos please read 
-        # layer.address_mask is currently a @propery so the code is awkward, such as:
-        # sym_addr = sym_addr | self._context.memory[layer_name].address_mask
-        # is there a reason it couldn't just be a normal function so address_mask(sym_addr) would work?
-        # the second issue is that the mask I am getting is 0x1ffffffff, when I really need it OR'd with 0xffffffff00000000 in order to get the correct value
-        # third - having to pass in 'layer_name' way from the plugin is pretty ugly, is there a better way to get access to the mask?
-        
-        # TODO - this is currently not ASLR aware, which makes the lookups fail, after the masking issue is fixed, test for ASLR handling
-
-        symbols = list(self._context.symbol_space.get_symbols_by_location(sym_addr))
-        if len(symbols) == 1:
-            sym = symbols[0].split("!")[1]
-            
-            if sym == "sockfs_dname":
-                pre_name = "socket"    
-        
-            elif sym == "anon_inodefs_dname":
-                pre_name = "anon_inode"
-
-            elif sym == "pipefs_dname":
-                pre_name = "pipe"
-
-            elif sym == "simple_dname":
-                pre_name = self._get_path_file(filp)
-
-            else:
-                pre_name = "<unsupported d_op symbol: {0}>".format(sym)
-
-            ret = "{0}:[{1:d}]".format(pre_name, dentry.d_inode.i_ino)
-
-        else:
-            ret = "<invalid d_dname pointer> {0:d}".format(sym_addr)
-
-        return ret
-
-    # a 'file' structure doesn't have enough information to properly restore its full path
-    # we need the root mount information from task_struct to determine this
-    def path_for_file(self, filp, layer_name) -> str:
-        try:
-            dentry = filp.dentry
-        except exceptions.InvalidAddressException:
-            return ""
-
-        if dentry == 0:
-            return ""
-
-        dname_is_valid = False
-
-        # TODO COMPARE THIS IN LSOF OUTPUT TO VOL2
-        try:
-            if dentry.d_op and hasattr(dentry.d_op, "d_dname") and dentry.d_op.d_dname:
-                dname_is_valid = True
-
-        except exceptions.InvalidAddressException:
-            dname_is_valid = False
-
-        if dname_is_valid:
-            ret = self._get_new_sock_pipe_path(filp, layer_name)
-        else:
-            ret = self._get_path_file(filp)
-
-        return ret
-
 class fs_struct(objects.Struct):
     def get_root_dentry(self):
         # < 2.6.26
@@ -167,13 +61,11 @@ class fs_struct(objects.Struct):
         else:
             return self.root.dentry
         
-        raise AttributeError("Unable to find the root dentry")
-
     def get_root_mnt(self):
         # < 2.6.26
         if hasattr(self, "rootmnt"):
             return self.rootmnt
-        else:
+        elif hasattr(self.root, "mnt"):
             return self.root.mnt
         
         raise AttributeError("Unable to find the root mount")
@@ -264,18 +156,46 @@ class vm_area_struct(objects.Struct):
         return retval
 
     # only parse the rwx bits
-    def protection(self) -> str:
+    def get_protection(self) -> str:
         return self._parse_flags(self.vm_flags & 0b1111, vm_area_struct.perm_flags)
 
     # used by malfind
-    def flags(self) -> str:
+    def get_flags(self) -> str:
         return self._parse_flags(self.vm_flags, extended_flags)
 
-    def page_offset(self) -> int:
+    def get_page_offset(self) -> int:
         if self.vm_file == 0:
             return 0
 
         return self.vm_pgoff << constants.linux.PAGE_SHIFT
+
+    def get_name(self, task):
+        if self.vm_file != 0:
+            fname = linux.LinuxUtilities.path_for_file(task, self.vm_file)
+        elif self.vm_start <= task.mm.start_brk and self.vm_end >= task.mm.brk:
+            fname = "[heap]"
+        elif self.vm_start <= task.mm.start_stack and self.vm_end >= task.mm.start_stack:
+            fname = "[stack]"
+        elif hasattr(self.vm_mm.context, "vdso") and self.vm_start == self.vm_mm.context.vdso:
+            fname = "[vdso]"
+        else:
+            fname = "Anonymous Mapping"
+
+        return fname
+
+    # used by malfind
+    def is_suspicious(self):
+        ret = True
+
+        flags_str  = self.get_protection()
+      
+        if flags_str.find("VM_READ|VM_WRITE|VM_EXEC") != -1:
+            ret = True 
+            
+        elif flags_str == "VM_READ|VM_EXEC" and self.vm_file != 0:
+            ret = True
+
+        return ret
 
 class qstr(objects.Struct):
     def name_as_str(self) -> str:
@@ -285,7 +205,7 @@ class qstr(objects.Struct):
             str_length = 255
 
         try:
-            ret = utility.pointer_to_string(self.name, str_length)
+            ret = objects_utility.pointer_to_string(self.name, str_length)
         except exceptions.InvalidAddressException:
             ret = ""
 
@@ -296,23 +216,21 @@ class dentry(objects.Struct):
         return self.d_name.name_as_str()
 
 class struct_file(objects.Struct):
-    @property
-    def dentry(self) -> interfaces.objects.ObjectInterface:
+    def get_dentry(self) -> interfaces.objects.ObjectInterface:
         if hasattr(self, "f_dentry"):
             return self.f_dentry
-        else:
+        elif hasattr(self, "f_path"):
             return self.f_path.dentry
-    
-        raise AttributeError("Unable to find file -> dentry")
+        else:
+            raise AttributeError("Unable to find file -> dentry")
 
-    @property
-    def vfsmnt(self) -> interfaces.objects.ObjectInterface:
+    def get_vfsmnt(self) -> interfaces.objects.ObjectInterface:
         if hasattr(self, "f_vfsmnt"):
             return self.f_vfsmnt
-        else:
+        elif hasattr(self, "f_path"):
             return self.f_path.mnt
-
-        raise AttributeError("Unable to find file -> vfs mount")
+        else:
+            raise AttributeError("Unable to find file -> vfs mount")
 
 class list_head(objects.Struct, collections.abc.Iterable):
     def to_list(self,
@@ -350,44 +268,44 @@ class files_struct(objects.Struct):
     def get_fds(self) -> interfaces.objects.ObjectInterface:
         if hasattr(self, "fdt"):
             return self.fdt.fd.dereference()
-        else:
+        elif hasattr(self, "fd"):
             return self.fd.dereference()
-
-        raise AttributeError("Unable to find files -> file descriptors")
+        else:
+            raise AttributeError("Unable to find files -> file descriptors")
 
     def get_max_fds(self) -> interfaces.objects.ObjectInterface:
         if hasattr(self, "fdt"):
             return self.fdt.max_fds
-        else:
+        elif hasattr(self, "max_fds"):
             return self.max_fds
-
-        raise AttributeError("Unable to find files -> maximum file descriptors")
+        else:
+            raise AttributeError("Unable to find files -> maximum file descriptors")
 
 class mount(objects.Struct):
 
     def get_mnt_sb(self):
         if hasattr(self, "mnt"):
             return self.mnt.mnt_sb
-        else:
+        elif hasattr(self, "mnt_sb"):
             return self.mnt_sb
-
-        raise AttributeError("Unable to find mount -> super block")
+        else:
+            raise AttributeError("Unable to find mount -> super block")
 
     def get_mnt_root(self):
         if hasattr(self, "mnt"):
             return self.mnt.mnt_root
-        else:
+        elif hasattr(self, "mnt_root"):
             return self.mnt_root
-
-        raise AttributeError("Unable to find mount -> mount root")
+        else:
+            raise AttributeError("Unable to find mount -> mount root")
 
     def get_mnt_flags(self):
         if hasattr(self, "mnt"):
             return self.mnt.mnt_flags
-        else:
+        elif hasattr(self, "mnt_flags"):
             return self.mnt_flags
-
-        raise AttributeError("Unable to find mount -> mount flags")
+        else:
+            raise AttributeError("Unable to find mount -> mount flags")
 
     def get_mnt_parent(self):
         return self.mnt_parent
@@ -402,11 +320,9 @@ class vfsmount(objects.Struct):
                self.get_mnt_parent() != 0
 
     def _get_real_mnt(self):
-        table_name = self.vol.type_name.split(constants.BANG)[0]
-
+        table_name   = self.vol.type_name.split(constants.BANG)[0]
         mount_struct = "{0}{1}mount".format(table_name, constants.BANG)
-
-        offset = self._context.symbol_space.get_type(mount_struct).relative_child_offset("mnt")
+        offset       = self._context.symbol_space.get_type(mount_struct).relative_child_offset("mnt")
         
         return self._context.object(mount_struct, self.vol.layer_name, offset = self.vol.offset - offset)
 

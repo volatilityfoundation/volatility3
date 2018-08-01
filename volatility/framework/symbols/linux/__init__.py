@@ -29,6 +29,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('files_struct', extensions.files_struct)
         self.set_type_class('vfsmount', extensions.vfsmount)
         self.set_type_class('mount', extensions.mount)
+        self.set_type_class('module', extensions.module)
 
     @classmethod
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
