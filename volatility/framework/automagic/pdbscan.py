@@ -10,7 +10,7 @@ import os
 import struct
 import typing
 
-from volatility.framework import exceptions, layers, validity
+from volatility.framework import exceptions, layers, validity, constants
 from volatility.framework.layers import scanners, intel
 from volatility.framework.symbols import intermed, native
 
@@ -80,12 +80,7 @@ def scan(ctx: interfaces.context.ContextInterface,
        appropriate types and PDB values themselves
     """
     min_pfn = 0
-    pdb_names = [
-        b"ntkrnlmp.pdb",
-        b"ntkrnlpa.pdb",
-        b"ntkrpamp.pdb",
-        b"ntoskrnl.pdb",
-    ]
+    pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
 
     for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(ctx, PdbSignatureScanner(pdb_names),
                                                                                progress_callback = progress_callback,
