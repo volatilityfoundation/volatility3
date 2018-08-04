@@ -49,7 +49,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                 object_info: interfaces.objects.ObjectInformation,
                 struct_format: str,
                 new_value: typing.Union[int, float, bool, bytes, str] = None,
-                **kwargs) -> typing.Type:
+                **kwargs) -> 'PrimitiveObject':
         """Creates the appropriate class and returns it so that the native type is inherited
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -143,7 +143,7 @@ class Bytes(PrimitiveObject, bytes):
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
                 length: int = 1,
-                **kwargs) -> typing.Type['Bytes']:
+                **kwargs) -> 'Bytes':
         """Creates the appropriate class and returns it so that the native type is inherritted
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -187,7 +187,7 @@ class String(PrimitiveObject, str):
                 max_length: int = 1,
                 encoding: str = "utf-8",
                 errors: str = "strict",
-                **kwargs) -> typing.Type['String']:
+                **kwargs) -> 'String':
         """Creates the appropriate class and returns it so that the native type is inherited
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -296,7 +296,7 @@ class BitField(interfaces.objects.ObjectInterface, int):
                  context: interfaces.context.ContextInterface,
                  type_name: str,
                  object_info: interfaces.objects.ObjectInformation,
-                 base_type: typing.Type = int,
+                 base_type: interfaces.objects.Template,
                  start_bit: int = 0,
                  end_bit: int = 0) -> None:
         super().__init__(context, type_name, object_info)
@@ -308,11 +308,10 @@ class BitField(interfaces.objects.ObjectInterface, int):
                 context: interfaces.context.ContextInterface,
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
-                base_type: typing.Type = int,
+                base_type: interfaces.objects.Template,
                 start_bit: int = 0,
                 end_bit: int = 0,
-                **kwargs) -> typing.Type:
-        cls._check_class(base_type.vol.object_class, Integer)
+                **kwargs) -> 'BitField':
         value = base_type(context = context,
                           object_info = object_info)
         return int.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))  # type: ignore
