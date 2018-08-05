@@ -28,7 +28,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         config = self.config
         layer_name = self.config['primary']
         kvo = context.memory[layer_name].config.get('kernel_virtual_offset')
-        members = lambda x: list(sorted(x.vol.members.keys()))
+        members = lambda x: list(sorted(x.vol.members))
 
         # Determine locals
         curframe = inspect.currentframe()

@@ -109,7 +109,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
           changes have been made) than the consumer (in this case, the file reader).
         """
         supported, age, revision = [int(x) for x in version.split(".")]
-        supported_versions = [x for x in versions.keys() if x[0] == supported and x[1] >= age]
+        supported_versions = [x for x in versions if x[0] == supported and x[1] >= age]
         if not supported_versions:
             raise ValueError(
                 "No Intermediate Format interface versions support file interface version: {}".format(version))
@@ -258,17 +258,17 @@ class Version1Format(ISFormatTable):
     @property
     def symbols(self) -> typing.Iterable[str]:
         """Returns an iterator of the symbol names"""
-        return self._json_object.get('symbols', {}).keys()
+        return list(self._json_object.get('symbols', {}))
 
     @property
     def enumerations(self) -> typing.Iterable[str]:
         """Returns an iterator of the available enumerations"""
-        return self._json_object.get('enums', {}).keys()
+        return list(self._json_object.get('enums', {}))
 
     @property
     def types(self) -> typing.Iterable[str]:
         """Returns an iterator of the symbol type names"""
-        return list(self._json_object.get('user_types', {}).keys()) + list(self.natives.types)
+        return list(self._json_object.get('user_types', {})) + list(self.natives.types)
 
     def get_type_class(self, name: str) -> typing.Type[interfaces.objects.ObjectInterface]:
         return self._overrides.get(name, objects.Struct)
