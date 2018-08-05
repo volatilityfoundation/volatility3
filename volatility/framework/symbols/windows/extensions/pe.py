@@ -1,15 +1,19 @@
 import struct
-from volatility.framework import objects
+import typing
+
 from volatility.framework import constants
+from volatility.framework import objects, interfaces
 from volatility.framework.objects import utility
+
 
 class _IMAGE_DOS_HEADER(objects.Struct):
 
-    def get_nt_header(self):
+    def get_nt_header(self) -> interfaces.objects.ObjectInterface:
         """Carve out the NT header from this DOS header. This reflects on the
         PE file's Machine type to create a 32- or 64-bit NT header structure.
 
-        :return: <_IMAGE_NT_HEADERS> or <_IMAGE_NT_HEADERS64> instance
+        Returns:
+            <_IMAGE_NT_HEADERS> or <_IMAGE_NT_HEADERS64> instance
         """
 
         if self.e_magic != 0x5a4d:
@@ -19,8 +23,8 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         symbol_table_name = self.get_symbol_table().name
 
         nt_header = self._context.object(symbol_table_name + constants.BANG + "_IMAGE_NT_HEADERS",
-                                         layer_name=layer_name,
-                                         offset=self.vol.offset + self.e_lfanew)
+                                         layer_name = layer_name,
+                                         offset = self.vol.offset + self.e_lfanew)
 
         if nt_header.Signature != 0x4550:
             raise ValueError("NT header signature {0:04X} is not a valid".format(nt_header.Signature))
@@ -31,15 +35,21 @@ class _IMAGE_DOS_HEADER(objects.Struct):
 
         return nt_header
 
-    def replace_header_field(self, sect, header, item, value):
+    def replace_header_field(self,
+                             sect: interfaces.objects.ObjectInterface,
+                             header: bytes,
+                             item: interfaces.objects.ObjectInterface,
+                             value: int) -> bytes:
         """Replaces a member in an _IMAGE_SECTION_HEADER structure.
 
-        :param sect: <_IMAGE_SECTION_HEADER> the section instance
-        :param header: <bytes> raw data for the section
-        :param item: <objects.Struct> the member of the section to replace
-        :param value: <int> new value for the member
+        Args:
+            sect: the section instance
+            header: raw data for the section
+            item: the member of the section to replace
+            value: new value for the member
 
-        :return: <bytes> raw data with the replaced header field
+        Returns:
+            The raw data with the replaced header field
         """
 
         member_size = self._context.symbol_space.get_type(item.vol.type_name).size
@@ -48,15 +58,17 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         result = header[:start] + newval + header[start + member_size:]
         return result
 
-    def fix_image_base(self, raw_data, nt_header):
+    def fix_image_base(self, raw_data: bytes, nt_header: interfaces.objects.ObjectInterface) -> bytes:
         """Fix the _OPTIONAL_HEADER.ImageBase value (which is either an unsigned long
         for 32-bit PE's or unsigned long long for 64-bit PE's) to match the address
         where the PE file was carved out of memory.
 
-        :param raw_data: <bytes> a bytes object of the PE's data
-        :param nt_header: <_IMAGE_NT_HEADERS> or <_IMAGE_NT_HEADERS64> instance
+        Args:
+            raw_data: a bytes object of the PE's data
+            nt_header: <_IMAGE_NT_HEADERS> or <_IMAGE_NT_HEADERS64> instance
 
-        :return: <bytes> patched with the correct address
+        Returns:
+             <bytes> patched with the correct address
         """
 
         image_base_offset = nt_header.OptionalHeader.ImageBase.vol.offset - self.vol.offset
@@ -65,12 +77,13 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         newval = struct.pack(nt_header.OptionalHeader.ImageBase.vol.struct_format, int(self.vol.offset))
         return raw_data[:image_base_offset] + newval + raw_data[image_base_offset + member_size:]
 
-    def reconstruct(self):
+    def reconstruct(self) -> typing.Tuple[int, bytes]:
         """This method generates the content necessary to reconstruct a PE
         file from memory. It preserves slack space (similar to the old --memory)
         and automatically fixes the ImageBase in the output PE file.
 
-        :return: <tuple> of (<int> offset, <bytes> data)
+        Returns:
+            <tuple> of (<int> offset, <bytes> data)
         """
 
         nt_header = self.get_nt_header()
@@ -90,8 +103,8 @@ class _IMAGE_DOS_HEADER(objects.Struct):
             raise ValueError("The claimed SizeOfImage is too large: {}".format(size_of_image))
 
         raw_data = self._context.memory[layer_name].read(self.vol.offset,
-                                                          nt_header.OptionalHeader.SizeOfImage,
-                                                          pad=True)
+                                                         nt_header.OptionalHeader.SizeOfImage,
+                                                         pad = True)
 
         # fix the PE image base before yielding the initial view of the data
         fixed_data = self.fix_image_base(raw_data, nt_header)
@@ -114,7 +127,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
                 sect_sizes.append(sect.VirtualAddress - prevsect.VirtualAddress)
             prevsect = sect
         if prevsect is not None:
-            sect_sizes.append(utility.round(prevsect.Misc.VirtualSize, section_alignment, up=True))
+            sect_sizes.append(utility.round(prevsect.Misc.VirtualSize, section_alignment, up = True))
 
         counter = 0
         start_addr = nt_header.FileHeader.SizeOfOptionalHeader + \
@@ -131,12 +144,14 @@ class _IMAGE_DOS_HEADER(objects.Struct):
             yield offset, sectheader
             counter += 1
 
+
 class _IMAGE_NT_HEADERS(objects.Struct):
 
-    def get_sections(self):
+    def get_sections(self) -> typing.Generator[interfaces.objects.ObjectInterface, None, None]:
         """Iterate through the section headers for this PE file.
 
-        :return: generator of _IMAGE_SECTION_HEADER
+        Returns:
+            generator of _IMAGE_SECTION_HEADER
         """
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table().name
@@ -148,5 +163,5 @@ class _IMAGE_NT_HEADERS(objects.Struct):
         for i in range(self.FileHeader.NumberOfSections):
             sect_addr = start_addr + (i * sect_header_size)
             yield self._context.object(symbol_table_name + constants.BANG + "_IMAGE_SECTION_HEADER",
-                                           offset=sect_addr,
-                                           layer_name=layer_name)
+                                       offset = sect_addr,
+                                       layer_name = layer_name)

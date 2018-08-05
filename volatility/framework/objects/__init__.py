@@ -158,9 +158,9 @@ class Bytes(PrimitiveObject, bytes):
 class String(PrimitiveObject, str):
     """Primitive Object that handles string values
 
-    :param max_length: specifies the maximum possible length that the string could hold within memory
-        (for multibyte characters, this will not be the maximum length of the string)
-    :type max_length: int
+    Args:
+        max_length: specifies the maximum possible length that the string could hold within memory
+            (for multibyte characters, this will not be the maximum length of the string)
 
     """
     _struct_type = str  # type: typing.ClassVar[typing.Type]

@@ -38,8 +38,8 @@ def available(context: interfaces.context.ContextInterface) \
     The order is based on the priority attributes of the subclasses, in order to ensure the automagics are listed in
     an appropriate order.
 
-    :param context: The context that will contain any automagic configuration values.
-    :type context: volatility.framework.interfaces.context.ContextInterface
+    Args:
+        context: The context that will contain any automagic configuration values.
     """
     import_files(sys.modules[__name__])
     config_path = constants.AUTOMAGIC_CONFIG_PATH
@@ -74,11 +74,12 @@ def run(automagics: typing.List[interfaces.automagic.AutomagicInterface],
         progress_callback: validity.ProgressCallback = None) -> typing.List[traceback.TracebackException]:
     """Runs through the list of `automagics` in order, allowing them to make changes to the context
 
-    :param automagics: A list of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` objects
-    :param context: The context (that inherits from :class:`~volatility.framework.interfaces.context.ContextInterface`) for modification
-    :param configurable: An object that inherits from :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`
-    :param config_path: The path within the `context.config` for options required by the `configurable`
-    :param progress_callback: A function that takes a percentage (and an optional description) that will be called periodically
+    Args:
+        automagics: A list of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` objects
+        context: The context (that inherits from :class:`~volatility.framework.interfaces.context.ContextInterface`) for modification
+        configurable: An object that inherits from :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`
+        config_path: The path within the `context.config` for options required by the `configurable`
+        progress_callback: A function that takes a percentage (and an optional description) that will be called periodically
 
     This is where any automagic is allowed to run, and alter the context in order to satisfy/improve all requirements
 

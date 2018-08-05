@@ -1,4 +1,5 @@
 import logging
+import typing
 
 import volatility.framework.constants as constants
 import volatility.framework.exceptions as exceptions
@@ -20,12 +21,13 @@ class ModDump(interfaces_plugins.PluginInterface):
         # Reuse the requirements from the plugins we use
         return modules.Modules.get_requirements()
 
-    def get_session_layers(self):
+    def get_session_layers(self) -> typing.List[str]:
         """Build a cache of possible virtual layers, in priority starting with
         the primary/kernel layer. Then keep one layer per session by cycling
         through the process list.
 
-        :return: <list> of layer names
+        Returns:
+            <list> of layer names
         """
 
         # the primary layer should be first
@@ -61,14 +63,16 @@ class ModDump(interfaces_plugins.PluginInterface):
 
         return layers
 
-    def find_session_layer(self, session_layers, base_address):
+    def find_session_layer(self, session_layers: typing.List[str], base_address: int) -> typing.Optional[str]:
         """Given a base address and a list of layer names, find a
         layer that can access the specified address.
 
-        :param session_layers: <list> of layer names
-        :param base_address: <int> the base address
+        Args:
+            session_layers: <list> of layer names
+            base_address: <int> the base address
 
-        :return: <str> layer name (or None)
+        Returns:
+            layer name (or None)
         """
 
         for layer_name in session_layers:

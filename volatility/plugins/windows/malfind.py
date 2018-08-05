@@ -24,8 +24,9 @@ class Malfind(interfaces_plugins.PluginInterface):
         whose VAD flags match task._injection_filter requirements
         but there's no data and thus not worth reporting it.
 
-        :param proc_layer: the process layer
-        :param vad: the MMVAD structure to test
+        Args:
+            proc_layer: the process layer
+            vad: the MMVAD structure to test
         """
 
         CHUNK_SIZE = 0x1000
@@ -46,8 +47,9 @@ class Malfind(interfaces_plugins.PluginInterface):
         """Generate memory regions for a process that may contain
         injected code.
 
-        :param vadinfo_plugin: an instance of the plugins.vadinfo.VadInfo plugin
-        :param proc: an _EPROCESS instance
+        Args:
+            vadinfo_plugin: an instance of the plugins.vadinfo.VadInfo plugin
+            proc: an _EPROCESS instance
         """
 
         proc_layer_name = proc.add_process_layer()

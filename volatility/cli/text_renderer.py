@@ -18,7 +18,14 @@ from volatility.framework import interfaces, renderers
 
 
 def hex_bytes_as_text(value: bytes) -> str:
-    """Renders HexBytes as text"""
+    """Renders HexBytes as text
+
+    Args:
+        value: A series of bytes to convert to text
+
+    Returns:
+        A text representation of the hexadecimal bytes plus their ascii equivalents, separated by newline characters
+    """
     if not isinstance(value, bytes):
         raise TypeError("hex_bytes_as_text takes bytes not: {}".format(type(value)))
     ascii = []
@@ -51,6 +58,16 @@ class Optional(object):
 
 
 def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
+    """Renders a disassembly renderer type into string format
+
+    Args:
+        disasm: Input disassembly objects
+
+    Returns:
+        A string as rendererd by capstone where available, otherwise output as if it were just bytes
+
+    """
+
     if CAPSTONE_PRESENT:
         disasm_types = {'intel': capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32),
                         'intel64': capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64),
@@ -80,6 +97,15 @@ class QuickTextRenderer(interfaces.renderers.Renderer):
         pass
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
+        """
+        Renders each column immediately to stdout.
+
+        This does not format each line's width appropriately, it merely tab separates each field
+
+        Args:
+            grid: The TreeGrid object to render
+
+        """
         # TODO: Docstrings
         # TODO: Improve text output
         outfd = sys.stdout

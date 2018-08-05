@@ -64,12 +64,13 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
         done.
 
-        :param context:
-        :param config_path:
-        :param name:
-        :param isf_url:
-        :param native_types:
-        :param validate: Determines whether the ISF file will be validated against the appropriate schema
+        Args:
+            context: The volatility context for the symbol table
+            config_path: The configuration path for the symbol table
+            name: The name for the symbol table (this is used in symbols e.g. table!symbol )
+            isf_url: The URL pointing to the ISF file location
+            native_types: The NativeSymbolTable that contains the native types for this symbol table
+            validate: Determines whether the ISF file will be validated against the appropriate schema
         """
         # Check there are no obvious errors
         # Open the file and test the version

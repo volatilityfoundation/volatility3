@@ -17,14 +17,12 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
 
     These classes are callable with the following parameters:
 
-    :param context: The context in which to store configuration data that the automagic might populate
-    :type context: ~volatility.framework.interfaces.context.ContextInterface
-    :param config_path: Configuration path where the configurable's data under the context's config lives
-    :type config_path: str
-    :param configurable: The top level configurable whose requirements may need statisfying
-    :type configurable: ~volatility.framework.interfaces.configuration.ConfigurableInterface
-    :param progress_callback: An optional function accepting a percentage and optional description to indicate
-        progress during long calculations
+    Args:
+        context: The context in which to store configuration data that the automagic might populate
+        config_path: Configuration path where the configurable's data under the context's config lives
+        configurable: The top level configurable whose requirements may need statisfying
+        progress_callback: An optional function accepting a percentage and optional description to indicate
+            progress during long calculations
 
     .. note::
 
@@ -69,12 +67,15 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
 
         This ensures we do not carry out an expensive search when there is no requirement for a particular requirement
 
-        :param context: Context on which to operate
-        :param config_path: Configuration path of the top-level requirement
-        :param requirement_root: Top-level requirement whose subrequirements will all be searched
-        :param requirement_type: Type of requirement to find
-        :param shortcut: Only returns requirements that live under unsatisfied requirements
-        :return: A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
+        Args:
+            context: Context on which to operate
+            config_path: Configuration path of the top-level requirement
+            requirement_root: Top-level requirement whose subrequirements will all be searched
+            requirement_type: Type of requirement to find
+            shortcut: Only returns requirements that live under unsatisfied requirements
+
+        Returns:
+            A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
         """
         sub_config_path = interfaces_configuration.path_join(config_path, requirement_root.name)
         results = []  # type: typing.List[typing.Tuple[str, str, R]]
@@ -105,16 +106,17 @@ class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
               layer_name: str,
               progress_callback: validity.ProgressCallback = None) \
             -> typing.Optional[interfaces.layers.DataLayerInterface]:
-        """Method to determine whether this builder can operate on the named layer,
-           If so, modify the context appropriately.
+        """
+        Method to determine whether this builder can operate on the named layer.  If so, modify the context appropriately.
 
-           Returns the name of any new_layer stacked on top of this layer or None
-           The stacking is therefore strictly linear rather than tree driven.
+        Returns the name of any new_layer stacked on top of this layer or None.  The stacking is therefore strictly
+        linear rather than tree driven.
 
-           Configuration options provided by the context are ignored, and defaults
-           are to be used by this method to build a space where possible
+        Configuration options provided by the context are ignored, and defaults are to be used by this method
+        to build a space where possible.
 
-           :param context: Context in which to construct the higher layer
-           :param layer_name: Name of the layer to stack on top of
-           :param progress_callback: A callback function to indicate progress through a scan (if one is necessary)
+        Args:
+           context: Context in which to construct the higher layer
+           layer_name: Name of the layer to stack on top of
+           progress_callback: A callback function to indicate progress through a scan (if one is necessary)
         """

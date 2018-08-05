@@ -89,11 +89,11 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
         return []
 
     @abstractmethod
-    def run(self) -> 'renderers.TreeGrid':
+    def run(self) -> 'interfaces.renderers.TreeGrid':
         """Executes the functionality of the code
 
         .. note:: This method expects `self.validate` to have been called to ensure all necessary options have been provided
 
-        :return: a TreeGrid object that can then be passed to a Renderer.
-        :rtype: interfaces.renderers.TreeGrid
+        Returns:
+            A TreeGrid object that can then be passed to a Renderer.
         """

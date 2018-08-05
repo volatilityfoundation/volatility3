@@ -40,9 +40,10 @@ class VerInfo(interfaces_plugins.PluginInterface):
                             base_address: int) -> dict:
         """Get File and Product version information from PE files
 
-        :param pe_table_name: <str> name of the PE table
-        :param layer_name: <str> name of the layer containing the PE file
-        :param base_address: <int> base address of the PE (where MZ is found)
+        Args:
+            pe_table_name: name of the PE table
+            layer_name: name of the layer containing the PE file
+            base_address: base address of the PE (where MZ is found)
         """
 
         pe_data = io.BytesIO()
@@ -85,12 +86,16 @@ class VerInfo(interfaces_plugins.PluginInterface):
 
         return entries
 
-    def _generator(self, procs: typing.Generator, mods: typing.Generator, moddump_plugin: moddump.ModDump):
+    def _generator(self,
+                   procs: typing.Generator[interfaces.objects.ObjectInterface, None, None],
+                   mods: typing.Generator[interfaces.context.Module, None, None],
+                   moddump_plugin: moddump.ModDump):
         """Generates a list of PE file version info for processes, dlls, and modules.
 
-        :param procs: <generator> of processes
-        :param mods: <generator> of modules
-        :param moddump_plugin: <moddump.ModDump>
+        Args:
+            procs: <generator> of processes
+            mods: <generator> of modules
+            moddump_plugin: <moddump.ModDump>
         """
 
         pe_table_name = PEIntermedSymbols.create(self.context,

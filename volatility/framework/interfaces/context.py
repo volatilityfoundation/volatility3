@@ -48,8 +48,8 @@ class ContextInterface(object, metaclass = ABCMeta):
     def add_layer(self, layer: 'interfaces.layers.DataLayerInterface'):
         """Adds a named translation layer to the context memory
 
-        :param layer: Layer object to be added to the context memory
-        :type layer: ~volatility.framework.interfaces.layers.DataLayerInterface
+        Args:
+            layer: Layer object to be added to the context memory
         """
         self.memory.add_layer(layer)
 

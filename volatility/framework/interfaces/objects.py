@@ -186,13 +186,12 @@ class Template(validity.ValidityRoutines):
     This is effectively a class for currying object calls.  It creates a callable that can be called with the following
     parameters:
 
-    :type context: ~volatility.framework.interfaces.context.ContextInterface
-    :type object_info: ObjectInformation
-    :param context: The context containing the memory layers and symbols required to construct the object
-    :param object_info: Basic information about the object, see the ObjectInformation class for more information
+    Args:
+        context: The context containing the memory layers and symbols required to construct the object
+        object_info: Basic information about the object, see the ObjectInformation class for more information
 
-    :return: The constructed object
-    :rtype: ObjectInterface
+    Returns:
+        The constructed object
 
     The keyword arguments handed to the constructor, along with the type_name are stored for later retrieval.
     These will be access as `object.vol.<keyword>` or `template.vol.<keyword>` for each object and should contain

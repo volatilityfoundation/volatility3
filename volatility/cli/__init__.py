@@ -38,16 +38,18 @@ vollog.addHandler(console)
 
 
 class PrintedProgress(object):
+    """A progress handler that prints the progress value and the description onto the command line"""
+
     def __init__(self):
         self._max_message_len = 0
 
-    def __call__(self, progress, description = None):
-        """ A sinmple function for providing text-based feedback
+    def __call__(self, progress: typing.Union[int, float], description: str = None):
+        """ A simple function for providing text-based feedback
 
         .. warning:: Only for development use.
 
-        :param progress: Percentage of progress of the current procedure
-        :type progress: int or float
+        Args:
+            progress: Percentage of progress of the current procedure
         """
         message = "\rProgress: {0: 7.2f}\t\t{1:}".format(round(progress, 2), description or '')
         message_len = len(message)
@@ -56,7 +58,9 @@ class PrintedProgress(object):
 
 
 class MuteProgress(PrintedProgress):
-    def __call__(self, progress, description = None):
+    """A dummy progress handler that produces no output when called"""
+
+    def __call__(self, progress: typing.Union[int, float], description: str = None):
         pass
 
 
@@ -207,10 +211,21 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                    plugin: typing.Type[interfaces.plugins.PluginInterface],
                    plugin_config_path: str,
                    write_config: bool = False,
-                   quiet: bool = False):
-        """Run the actual plugin based on the parameters
+                   quiet: bool = False) -> interfaces.plugins.PluginInterface:
+        """Constructs a plugin object based on the parameters
 
         Clever magic figures out how to fulfill each requirement that might not be fulfilled
+
+        Args:
+            context: The volatility context to operate on
+            automagics: A list of automagic modules to run to augment the context
+            plugin: The plugin to run
+            plugin_config_path: The path within the context's config containing the plugin's configuration
+            write_config: Whether to record the configuration options after processing the automagic but before running
+            quiet: Whether or not to output progress information
+
+        Returns:
+            The constructed plugin object
         """
         progress_callback = PrintedProgress()
         if quiet:
@@ -240,9 +255,17 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                         context: interfaces.context.ContextInterface,
                         configurables_list: typing.Dict[str, interfaces.configuration.ConfigurableInterface],
                         args: argparse.Namespace,
-                        plugin_config_path: str):
+                        plugin_config_path: str) -> None:
         """Populate the context config based on the returned args
-        We have already determined these elements must be descended from ConfigurableInterface"""
+
+        We have already determined these elements must be descended from ConfigurableInterface
+
+        Args:
+            context: The volatility context to operate on
+            configurables_list: A dictionary of configurable items that can be configured on the plugin
+            args: An object containing the arguments necessary
+            plugin_config_path: The path within the context's config containing the plugin's configuration
+        """
         vargs = vars(args)
         for configurable in configurables_list:
             for requirement in configurables_list[configurable].get_requirements():
@@ -288,10 +311,9 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                                        configurable: typing.Type[interfaces.configuration.ConfigurableInterface]):
         """Adds the plugin's simple requirements to the provided parser
 
-        :param parser: The parser to add the plugin's (simple) requirements to
-        :type parser: argparse.ArgumentParser
-        :param configurable: The plugin object to pull the requirements from
-        :type configurable: volatility.framework.interfaces.plugins.PluginInterface
+        Args:
+            parser: The parser to add the plugin's (simple) requirements to
+            configurable: The plugin object to pull the requirements from
         """
         if not issubclass(configurable, interfaces.configuration.ConfigurableInterface):
             raise TypeError("Expected ConfigurableInterface type, not: {}".format(type(configurable)))
@@ -326,7 +348,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
 class HelpfulSubparserAction(argparse._SubParsersAction):
-    """Class to either select a unique plugin based on a substring, or identity the alternatives"""
+    """Class to either select a unique plugin based on a substring, or identify the alternatives"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -369,7 +391,7 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
 
 
 class UnsatisfiedException(exceptions.VolatilityException):
-    def __init__(self, unsatisfied):
+    def __init__(self, unsatisfied: typing.List[str]) -> None:
         super().__init__()
         self.unsatisfied = unsatisfied
 

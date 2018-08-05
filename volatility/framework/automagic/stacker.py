@@ -71,11 +71,12 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
               progress_callback: validity.ProgressCallback) -> None:
         """Stacks the various layers and attaches these to a specific requirement
 
-        :param context: Context on which to operate
-        :param config_path: Configuration path under which to store stacking data
-        :param location: File URL for the underlying physical layer
-        :param requirements: List of requirements, each of which has the stack built on the first suitable (sub-)requirement
-        :param progress_callback: Function to provide callback progress
+        Args:
+            context: Context on which to operate
+            config_path: Configuration path under which to store stacking data
+            location: File URL for the underlying physical layer
+            requirements: List of requirements, each of which has the stack built on the first suitable (sub-)requirement
+            progress_callback: Function to provide callback progress
         """
         # If we're cached, find Now we need to find where to apply the stack configuration
         if self._cached:
@@ -158,8 +159,10 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         """Looks for translation layer requirements and attempts to apply the stacked layers to it.  If it succeeds
         it returns the configuration path and layer name where the stacked nodes were spliced into the tree.
 
-        :return: A tuple of a configuration path and layer name for the top of the stacked layers
-        :rtype: (str, str)"""
+        Returns:
+            A tuple of a configuration path and layer name for the top of the stacked layers
+                or None if suitable requirements are not found
+        """
         child_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
             if requirement.unsatisfied(context, config_path):

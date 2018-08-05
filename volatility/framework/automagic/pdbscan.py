@@ -27,8 +27,8 @@ vollog = logging.getLogger(__name__)
 class PdbSignatureScanner(interfaces.layers.ScannerInterface):
     """A :class:`~volatility.framework.interfaces.layers.ScannerInterface` based scanner use to identify Windows PDB records
 
-    :param pdb_names: A list of bytestrings, used to match pdb signatures against the pdb names within the records.
-    :type pdb_names: A list of :class:`bytestring` objects
+    Args:
+        pdb_names: A list of bytestrings, used to match pdb signatures against the pdb names within the records.
 
     .. note:: The pdb_names must be a list of byte strings, unicode strs will not match against the data scanned
     """
@@ -144,13 +144,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
         Returns a list of possible kernel locations in the physical memory
 
-        :param context: The context in which the `requirement` lives
-        :type context: ~volatility.framework.interfaces.context.ContextInterface
-        :param config_path: The path within the `context` for the `requirement`'s configuration variables
-        :type config_path: str
-        :param requirement: The root of the requirement tree to search for :class:~`volatility.framework.interfaces.layers.TranslationLayerRequirement` objects to scan
-        :type requirement: ~volatility.framework.interfaces.configuration.RequirementInterface
-        :return: A list of (layer_name, scan_results)
+        Args:
+            context: The context in which the `requirement` lives
+            config_path: The path within the `context` for the `requirement`'s configuration variables
+            requirement: The root of the requirement tree to search for :class:~`volatility.framework.interfaces.layers.TranslationLayerRequirement` objects to scan
+
+        Returns:
+            A list of (layer_name, scan_results)
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         results = {}  # type: typing.Dict[str, typing.Iterable]
@@ -178,7 +178,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
         This pass will construct any requirements that may need it in the context it was passed
 
-        :param context: Context on which to operate
+        Args:
+            context: Context on which to operate
         """
         join = interfaces.configuration.path_join
         for config_path, sub_config_path, requirement in self._symbol_requirements:
@@ -215,8 +216,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting and sets
         it based on the previously identified `valid_kernels`.
 
-        :param context: Context on which to operate and provide the kernel virtual offset
-        :type context: ~volatility.framework.interfaces.context.ContextInterface
+        Args:
+            context: Context on which to operate and provide the kernel virtual offset
         """
         for virtual_layer in self.valid_kernels:
             # Sit the virtual offset under the TranslationLayer it applies to
@@ -238,13 +239,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         there is a fixed mapping between the physical and virtual addresses of the kernel.  On more recent versions
         a search is conducted for a structure that will identify the kernel's virtual offset.
 
-        :param context: Context on which to operate
-        :type context: ~volatility.framework.interfaces.context.ContextInterface
-        :param potential_kernels: Dictionary containing `GUID`, `age`, `pdb_name` and `mz_offset` keys
-        :type potential_kernels: dict
-        :param progress_callback: Function taking a percentage and optional description to be called during expensive computations to indicate progress
-        :type progress_callback: function
-        :return: A dictionary of valid kernels
+        Args:
+            context: Context on which to operate
+            potential_kernels: Dictionary containing `GUID`, `age`, `pdb_name` and `mz_offset` keys
+            progress_callback: Function taking a percentage and optional description to be called during expensive computations to indicate progress
+
+        Returns:
+            A dictionary of valid kernels
         """
         valid_kernels = {}
         for virtual_layer_name in potential_kernels:

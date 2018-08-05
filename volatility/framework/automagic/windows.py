@@ -61,13 +61,13 @@ class DtbTest(validity.ValidityRoutines):
                  page_offset: int) -> typing.Optional[typing.Tuple[int, typing.Any]]:
         """Tests a specific page in a chunk of data to see if it contains a self-referential pointer.
 
-        :param data: The chunk of data that contains the page to be scanned
-        :type data: bytes
-        :param data_offset: Where, within the layer, the chunk of data lives
-        :type data_offset: int
-        :param page_offset: Where, within the data, the page to be scanned starts
-        :type page_offset: int
-        :return: A valid DTB within this page (and an additional parameter for data)
+        Args:
+            data: The chunk of data that contains the page to be scanned
+            data_offset: Where, within the layer, the chunk of data lives
+            page_offset: Where, within the data, the page to be scanned starts
+
+        Returns:
+            A valid DTB within this page (and an additional parameter for data)
         """
         value = data[page_offset + (self.ptr_reference * self.ptr_size):page_offset + (
                 (self.ptr_reference + 1) * self.ptr_size)]
@@ -88,13 +88,13 @@ class DtbTest(validity.ValidityRoutines):
     def second_pass(self, dtb: int, data: bytes, data_offset: int) -> typing.Optional[typing.Tuple[int, typing.Any]]:
         """Re-reads over the whole page to validate other records based on the number of pages marked user vs super
 
-        :param dtb: The identified dtb that needs validating
-        :type dtb: int
-        :param data: The chunk of data that contains the dtb to be validated
-        :type data: bytes
-        :param data_offset: Where, within the layer, the chunk of data lives
-        :type data_offset: int
-        :return: A valid DTB within this page
+        Args:
+            dtb: The identified dtb that needs validating
+            data: The chunk of data that contains the dtb to be validated
+            data_offset: Where, within the layer, the chunk of data lives
+
+        Returns:
+            A valid DTB within this page
         """
         page = data[dtb - data_offset:dtb - data_offset + self.page_size]
         usr_count, sup_count = 0, 0
@@ -141,14 +141,13 @@ class DtbTestPae(DtbTest):
         directly after the real dtb.  The value for the real DTB is therefore four page earlier (and the fourth entry
         should point back to the `dtb` parameter this function was originally passed.
 
-        :param dtb: The identified self-referential pointer that needs validating
-        :type dtb: int
-        :param data: The chunk of data that contains the dtb to be validated
-        :type data: bytes
-        :param data_offset: Where, within the layer, the chunk of data lives
-        :type data_offset: int
-        :return: Returns the actual DTB of the PAE space
-        :rtype: int
+        Args:
+            dtb: The identified self-referential pointer that needs validating
+            data: The chunk of data that contains the dtb to be validated
+            data_offset: Where, within the layer, the chunk of data lives
+
+        Returns:
+            Returns the actual DTB of the PAE space
         """
         dtb -= 0x4000
         # If we're not in something that the overlap would pick up

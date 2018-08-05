@@ -58,10 +58,12 @@ class Context(interfaces.context.ContextInterface):
     def add_layer(self, layer: interfaces.layers.DataLayerInterface) -> None:
         """Adds a named translation layer to the context
 
-        :param layer: The layer to be added to the memory
-        :type layer: volatility.framework.interfaces.layers.DataLayerInterface
-        :raises volatility.framework.exceptions.LayerException: if the layer is already present, or has
-          unmet dependencies
+        Args:
+            layer: The layer to be added to the memory
+
+        Raises:
+            volatility.framework.exceptions.LayerException: if the layer is already present, or has
+                unmet dependencies
         """
         self._memory.add_layer(layer)
 
@@ -77,14 +79,14 @@ class Context(interfaces.context.ContextInterface):
         Looks up the layername in the context, finds the object template based on the symbol,
         and constructs an object using the object template on the layer at the offset.
 
-        :param symbol: The name (or template) of the symbol type on which to construct the object.  If this is a name, it should contain an explicit table name.
-        :type symbol: str
-        :param layer_name: The name of the layer on which to construct the object
-        :type layer_name: str
-        :param offset: The offset within the layer at which the data used to create the object lives
-        :type offset: int
-        :return: A fully constructed object
-        :rtype: :py:class:`volatility.framework.interfaces.objects.ObjectInterface`
+        Args:
+            symbol: The name (or template) of the symbol type on which to construct the object.  If this is a name, it should contain an explicit table name.
+            layer_name: The name of the layer on which to construct the object
+            offset: The offset within the layer at which the data used to create the object lives
+
+
+        Returns:
+            A fully constructed object
         """
         if not isinstance(symbol, interfaces.objects.Template):
             object_template = self._symbol_space.get_type(symbol)

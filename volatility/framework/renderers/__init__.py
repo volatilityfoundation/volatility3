@@ -135,8 +135,9 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         The TreeGrid does *not* contain any information about formatting,
         these are up to the renderers and plugins.
 
-        :param columns: A list of column tuples made up of (name, type).
-        :param generator: A generator that populates the tree/grid structure
+        Args:
+            columns: A list of column tuples made up of (name, type).
+            generator: A generator that populates the tree/grid structure
         """
         self._populated = False
         self._row_count = 0

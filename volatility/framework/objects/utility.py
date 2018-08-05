@@ -55,14 +55,16 @@ def wintime_to_datetime(wintime: int) -> typing.Union[
         return renderers.UnparsableValue()
 
 
-def round(addr, align, up = False):
+def round(addr: int, align: int, up: bool = False) -> int:
     """Round an address up or down based on an alignment.
 
-    :param addr: <int> the address
-    :param align: <int> the alignment value
-    :param up: <bool> true to round up
+    Args:
+        addr: the address
+        align: the alignment value
+        up: Whether to round up or not
 
-    :return: <int> the aligned address
+    Returns:
+        The aligned address
     """
 
     if addr % align == 0:

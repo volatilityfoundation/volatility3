@@ -73,9 +73,10 @@ class ListRequirement(interfaces_configuration.RequirementInterface):
                  min_elements: typing.Optional[int] = None, *args, **kwargs) -> None:
         """Constructs the object
 
-        :param element_type: The (requirement) type of each element within the list
-        :param max_elements; The maximum number of acceptable elements this list can contain
-        :param min_elements: The minimum number of acceptable elements this list can contain
+        Args:
+            element_type: The (requirement) type of each element within the list
+            max_elements; The maximum number of acceptable elements this list can contain
+            min_elements: The minimum number of acceptable elements this list can contain
         """
         super().__init__(*args, **kwargs)
         if not issubclass(element_type, interfaces_configuration.BasicTypes):
@@ -117,7 +118,8 @@ class ChoiceRequirement(interfaces_configuration.RequirementInterface):
     def __init__(self, choices: typing.List[str], *args, **kwargs) -> None:
         """Constructs the object
 
-        :param choices: A list of possible string options that can be chosen from
+        Args:
+            choices: A list of possible string options that can be chosen from
         """
         super().__init__(*args, **kwargs)
         if not isinstance(choices, list) or any([not isinstance(choice, str) for choice in choices]):

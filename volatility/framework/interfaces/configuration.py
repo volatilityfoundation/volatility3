@@ -567,9 +567,9 @@ class TranslationLayerRequirement(ConstructableRequirementInterface, Configurabl
 
         The configuration option's value will be the name of the layer once it exists in the store
 
-        :param name: Name of the configuration requirement
-        :param layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
-        :return:
+        Args:
+            name: Name of the configuration requirement
+            layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
         """
         if oses is None:
             oses = []

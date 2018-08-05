@@ -24,7 +24,10 @@ vollog.addHandler(console)
 
 
 class VolShell(cli.CommandLine):
-    """Program to allow interactive """
+    """Program to allow interactive interaction with a memory image
+
+    This allows a memory image to be examined through an interactive python terminal with all the volatility support
+    calls available."""
 
     def run(self):
         sys.stdout.write("Volshell (Volatility Framework) {}\n".format(constants.PACKAGE_VERSION))

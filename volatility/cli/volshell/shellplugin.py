@@ -15,7 +15,13 @@ class Volshell(interfaces.plugins.PluginInterface):
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"])]
 
-    def run(self, additional_locals = None):
+    def run(self, additional_locals: typing.Dict[str, typing.Any] = None) -> interfaces.renderers.TreeGrid:
+        """Runs the interactive volshell plugin
+
+        Returns:
+            Return a TreeGrid but this is always empty since the point of this plugin is to run interactively
+
+        """
 
         # Provide some OS-agnostic convenience elements for ease
         context = self.context
@@ -26,8 +32,10 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         # Determine locals
         curframe = inspect.currentframe()
-        vars = curframe.f_globals.copy()
-        vars.update(curframe.f_locals)
+        vars = {}  # type: typing.Dict[str, typing.Any]
+        if curframe:
+            vars = curframe.f_globals.copy()
+            vars.update(curframe.f_locals)
         if additional_locals is not None:
             vars.update(additional_locals)
 
@@ -49,7 +57,7 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         code.interact(local = vars)
 
-        return renderers.TreeGrid([], lambda: [])
+        return renderers.TreeGrid([], None)
 
     def load_functions(self) -> typing.Dict[str, typing.Callable]:
         """Returns a dictionary listing the functions to be added to the environment"""
