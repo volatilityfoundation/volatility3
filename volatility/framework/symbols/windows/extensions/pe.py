@@ -150,8 +150,8 @@ class _IMAGE_NT_HEADERS(objects.Struct):
     def get_sections(self) -> typing.Generator[interfaces.objects.ObjectInterface, None, None]:
         """Iterate through the section headers for this PE file.
 
-        Returns:
-            generator of _IMAGE_SECTION_HEADER
+        Yields:
+            <_IMAGE_SECTION_HEADER> objects
         """
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table().name
