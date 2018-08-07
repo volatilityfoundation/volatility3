@@ -8,6 +8,7 @@ Volatility 3 is Open Source.
 .. toctree::
 
     basics
+    simple-plugin
 
 
 Python Packages
