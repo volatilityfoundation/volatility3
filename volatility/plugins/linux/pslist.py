@@ -1,3 +1,5 @@
+import typing
+
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers, interfaces
 from volatility.framework.automagic import linux
