@@ -79,3 +79,7 @@ class LayerException(VolatilityException):
 
 class StructureException(VolatilityException):
     """Thrown when an error occurs dealing with an expected structure type"""
+
+
+class MissingStructureException(VolatilityException):
+    """Thrown when an error occurs due to an expected structure not being present"""
