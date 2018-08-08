@@ -1,7 +1,7 @@
 import logging
 import typing
 
-from volatility.framework import constants, interfaces, validity
+from volatility.framework import interfaces, constants, validity, exceptions
 from volatility.framework.automagic import linux_symbol_cache
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
@@ -343,7 +343,7 @@ class LinuxUtilities(object):
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'
         table_dtb = context.symbol_space.get_symbol(init_task_symbol).address
-        swapper_signature = b"swapper/0\x00\x00\x00\x00\x00\x00"
+        swapper_signature = b"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
         module = context.module(symbol_table, layer_name, 0)
 
         for offset in context.memory[layer_name].scan(scanner = scanners.RegExScanner(swapper_signature),
