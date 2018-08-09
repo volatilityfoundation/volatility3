@@ -4,6 +4,7 @@ This has been made an object to allow quick swapping and changing of contexts, t
 to act on multiple different contexts without them interfering eith each other.
 """
 import functools
+import hashlib
 import typing
 
 from volatility.framework import constants, interfaces, symbols, validity
@@ -166,6 +167,37 @@ class Module(interfaces.context.ModuleInterface):
     has_type = get_module_wrapper('has_type')
     has_enum = get_module_wrapper('has_enum')
 
+
+class SizedModule(Module):
+
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 module_name: str,
+                 layer_name: str,
+                 offset: int,
+                 size: int,
+                 symbol_table_name: typing.Optional[str] = None) -> None:
+        super().__init__(context, module_name, layer_name, offset, symbol_table_name = symbol_table_name)
+        self._size = self._check_type(size, int)
+
+    @property
+    def size(self) -> int:
+        """Returns the size of the module (0 for unknown size)"""
+        return self._size
+
+    @property  # type: ignore # FIXME: mypy #5107
+    @functools.lru_cache()
+    def hash(self) -> str:
+        """Hashes the module for equality checks
+
+        The mapping should be sorted and should be quicker than reading the data
+        We turn it into JSON to make a common string and use a quick hash, because collissions are unlikely"""
+        layer = self._context.memory[self.layer_name]
+        if not isinstance(layer, interfaces.layers.TranslationLayerInterface):
+            raise TypeError("Hashing modules on non-TranslationLayers is not allowed")
+        return hashlib.md5(
+            bytes(str(list(layer.mapping(self.offset, self.size, ignore_errors = True))), 'utf-8')).hexdigest()
+
     def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> typing.List[str]:
         """Returns the symbols within this module that live at the specified absolute offset provided"""
         if size < 0:
@@ -177,11 +209,11 @@ class Module(interfaces.context.ModuleInterface):
 
 
 class ModuleCollection(validity.ValidityRoutines):
-    """Class to contain a collection of modules and reason about their contents"""
+    """Class to contain a collection of SizedModules and reason about their contents"""
 
-    def __init__(self, modules: typing.List[Module]) -> None:
+    def __init__(self, modules: typing.List[SizedModule]) -> None:
         for module in modules:
-            self._check_type(module, Module)
+            self._check_type(module, SizedModule)
         self._modules = modules
 
     def deduplicate(self) -> 'ModuleCollection':
@@ -198,13 +230,13 @@ class ModuleCollection(validity.ValidityRoutines):
         return ModuleCollection(new_modules)
 
     @property
-    def modules(self) -> typing.Dict[str, typing.List[Module]]:
+    def modules(self) -> typing.Dict[str, typing.List[SizedModule]]:
         """A name indexed dictionary of modules using that name in this collection"""
         return self._generate_module_dict(self._modules)
 
     @classmethod
-    def _generate_module_dict(cls, modules: typing.List[Module]) -> typing.Dict[str, typing.List[Module]]:
-        result = {}  # type: typing.Dict[str, typing.List[Module]]
+    def _generate_module_dict(cls, modules: typing.List[SizedModule]) -> typing.Dict[str, typing.List[SizedModule]]:
+        result = {}  # type: typing.Dict[str, typing.List[SizedModule]]
         for module in modules:
             modlist = result.get(module.name, [])
             modlist.append(module)

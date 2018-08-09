@@ -94,34 +94,17 @@ class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                  module_name: str,
                  layer_name: str,
                  offset: int,
-                 size: typing.Optional[int] = 0,
                  symbol_table_name: typing.Optional[str] = None) -> None:
         self._context = self._check_type(context, ContextInterface)
         self._module_name = self._check_type(module_name, str)
         self._layer_name = self._check_type(layer_name, str)
         self._offset = self._check_type(offset, int)
-
-        # Size defaults to 0 (ie, we care about it), but will only calculate it on demand
-        # If it's explicitly set to None, then we know we don't care about it
-        if size is None:
-            self._size = 0
-        self._size_unimportant = (size is None)
-        self._size = self._check_type(size, int)
         self.symbol_table_name = symbol_table_name or self._module_name
         super().__init__()
 
     @property
     def name(self) -> str:
         return self._module_name
-
-    @property
-    def size(self) -> int:
-        """Returns the size of the module (0 for unknown size)"""
-        if self._size <= 0 and not self._size_unimportant:
-            symbol_table = self._context.symbol_space[self.symbol_table_name]
-            self._size = max([0] + [symbol_table.get_symbol(s).address for s in symbol_table.symbols])
-            self._size_unimportant = self._size_unimportant or self._size <= 0
-        return self._size
 
     @property
     def offset(self) -> int:
@@ -132,19 +115,6 @@ class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def layer_name(self) -> str:
         """Layer name in which the Module resides"""
         return self._layer_name
-
-    @property  # type: ignore # FIXME: mypy #5107
-    @functools.lru_cache()
-    def hash(self) -> str:
-        """Hashes the module for equality checks
-
-        The mapping should be sorted and should be quicker than reading the data
-        We turn it into JSON to make a common string and use a quick hash, because collissions are unlikely"""
-        layer = self._context.memory[self.layer_name]
-        if not isinstance(layer, interfaces.layers.TranslationLayerInterface):
-            raise TypeError("Hashing modules on non-TranslationLayers is not allowed")
-        return hashlib.md5(
-            bytes(str(list(layer.mapping(self.offset, self.size, ignore_errors = True))), 'utf-8')).hexdigest()
 
     @abstractmethod
     def object(self,
