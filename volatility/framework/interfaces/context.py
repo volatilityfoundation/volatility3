@@ -5,8 +5,6 @@ of symbols that can be used to interpret data in a layer.  The context also prov
 notably the object constructor function, `object`, which will construct a symbol on a layer at a particular offset.
 """
 import copy
-import functools
-import hashlib
 import typing
 from abc import ABCMeta, abstractmethod
 
@@ -79,7 +77,8 @@ class ContextInterface(object, metaclass = ABCMeta):
     def module(self,
                module_name: str,
                layer_name: str,
-               offset: int) -> 'ModuleInterface':
+               offset: int,
+               size: typing.Optional[int] = None) -> 'ModuleInterface':
         """Create a module object """
 
 
