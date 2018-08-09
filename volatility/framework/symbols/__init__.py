@@ -18,7 +18,7 @@ class SymbolType(enum.Enum):
 
 SymbolSpaceReturnType = typing.TypeVar("SymbolSpaceReturnType",
                                        interfaces.objects.Template,
-                                       interfaces.symbols.Symbol,
+                                       interfaces.symbols.SymbolInterface,
                                        typing.Dict[str, typing.Any])
 
 
@@ -172,7 +172,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
             raise exceptions.SymbolError("Unresolvable symbol requested: {}".format(type_name))
         return self._resolved[type_name]
 
-    def get_symbol(self, symbol_name: str) -> interfaces.symbols.Symbol:
+    def get_symbol(self, symbol_name: str) -> interfaces.symbols.SymbolInterface:
         """Look-up a symbol name across all the contained symbol spaces"""
         retval = self._weak_resolve(SymbolType.SYMBOL, symbol_name)
         if symbol_name not in self._resolved_symbols and retval.type is not None:
@@ -185,7 +185,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
             finally:
                 if old_resolved is not None:
                     self._resolved[symbol_name] = old_resolved
-        if not isinstance(retval, interfaces.symbols.Symbol):
+        if not isinstance(retval, interfaces.symbols.SymbolInterface):
             raise exceptions.SymbolError("Unresolvable Symbol: {}".format(symbol_name))
         return retval
 

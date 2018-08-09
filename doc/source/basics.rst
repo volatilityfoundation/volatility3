@@ -61,9 +61,8 @@ Symbol Tables
 -------------
 
 Most compiled programs know of their own templates, and define the structure (and location within the program) of these
-templates as a :py:class:`~volatility.framework.interfaces.symbols.Symbol`.  A
-:py:class:`~volatility.framework.interfaces.symbols.Symbol` is often an
-address and a template and can be used to refer to either independently.
+templates as a `Symbol` (:py:class:`~volatility.framework.interfaces.symbols.SymbolInterface`).  A
+`Symbol` is often an address and a template and can be used to refer to either independently.
 Lookup tables of these symbols are often produced as debugging information alongside the compilation of the program.
 Volatility 3 provides access to these through a :py:class:`~volatility.framework.symbols.SymbolTable`
 (:py:class:`~volatility.framework.interfaces.symbols.SymbolTableInterface`)
@@ -76,7 +75,7 @@ can store as many :py:class:`~volatility.framework.symbols.SymbolTable` items as
 Volatility 3 uses the defacto naming convention for symbols of module!symbol to refer to them.  It reads them from its
 own JSON formatted file, which acts as a common intermediary between windows PDB files, linux DWARF files, other symbol
 formats and the internal python format thet volatility 3 uses to represent
-a :py:class:`~volatility.framework.interfaces.objects.Template` or a :py:class:`~volatility.framework.interfaces.symbols.Symbol`.
+a :py:class:`~volatility.framework.interfaces.objects.Template` or a `Symbol`.
 
 .. note:: Volatility 2's name for a :py:class:`~volatility.framework.symbols.SymbolSpace` was a profile, but it could
     not differentiate between symbols from different modules, required special handling for 32-bit programs that

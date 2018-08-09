@@ -157,5 +157,5 @@ class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def get_type(self, name: str) -> 'interfaces.objects.Template':
         """Returns a type from the module"""
 
-    def get_symbol(self, name: str) -> 'interfaces.symbols.Symbol':
+    def get_symbol(self, name: str) -> 'interfaces.symbols.SymbolInterface':
         """Returns a symbol from the module"""

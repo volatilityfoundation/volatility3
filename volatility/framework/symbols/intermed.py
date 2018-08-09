@@ -205,7 +205,7 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
         nt.name = name + "_natives"
         super().__init__(context, config_path, name, nt, table_mapping = table_mapping)
         self._overrides = {}  # type: typing.Dict[str, typing.Type[interfaces.objects.ObjectInterface]]
-        self._symbol_cache = {}  # type: typing.Dict[str, interfaces.symbols.Symbol]
+        self._symbol_cache = {}  # type: typing.Dict[str, interfaces.symbols.SymbolInterface]
 
     def _get_natives(self) -> typing.Optional[interfaces.symbols.NativeTableInterface]:
         """Determines the appropriate native_types to use from the JSON data"""
@@ -243,7 +243,7 @@ class Version1Format(ISFormatTable):
     age = 1
     version = (current - age, age, revision)
 
-    def get_symbol(self, name: str) -> interfaces.symbols.Symbol:
+    def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the location offset given by the symbol name"""
         # TODO: Add the ability to add/remove/change symbols after creation
         # note that this should invalidate/update the cache
@@ -252,7 +252,7 @@ class Version1Format(ISFormatTable):
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
             raise exceptions.SymbolError("Unknown symbol: {}".format(name))
-        self._symbol_cache[name] = interfaces.symbols.Symbol(name = name, address = symbol['address'])
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = symbol['address'])
         return self._symbol_cache[name]
 
     @property
@@ -424,7 +424,7 @@ class Version3Format(Version2Format):
     age = 1
     version = (current - age, age, revision)
 
-    def get_symbol(self, name: str) -> interfaces.symbols.Symbol:
+    def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the symbol given by the symbol name"""
         if self._symbol_cache.get(name, None):
             return self._symbol_cache[name]
@@ -434,8 +434,8 @@ class Version3Format(Version2Format):
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
-        self._symbol_cache[name] = interfaces.symbols.Symbol(name = name, address = symbol['address'],
-                                                             type = symbol_type)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = symbol['address'],
+                                                                      type = symbol_type)
         return self._symbol_cache[name]
 
 
@@ -485,7 +485,7 @@ class Version5Format(Version4Format):
     age = 1
     version = (current - age, age, revision)
 
-    def get_symbol(self, name: str) -> interfaces.symbols.Symbol:
+    def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the symbol given by the symbol name"""
         if self._symbol_cache.get(name, None):
             return self._symbol_cache[name]
@@ -498,7 +498,7 @@ class Version5Format(Version4Format):
         symbol_constant_data = None
         if 'constant_data' in symbol:
             symbol_constant_data = base64.b64decode(symbol.get('constant_data'))
-        self._symbol_cache[name] = interfaces.symbols.Symbol(name = name, address = symbol['address'],
-                                                             type = symbol_type,
-                                                             constant_data = symbol_constant_data)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = symbol['address'],
+                                                                      type = symbol_type,
+                                                                      constant_data = symbol_constant_data)
         return self._symbol_cache[name]

@@ -9,7 +9,7 @@ from volatility.framework import constants, exceptions, validity
 from volatility.framework.interfaces import configuration, objects, context as interfaces_context
 
 
-class Symbol(validity.ValidityRoutines):
+class SymbolInterface(validity.ValidityRoutines):
     """Contains information about a named location in a program's memory"""
 
     def __init__(self,
@@ -82,7 +82,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     # ## Required Symbol functions
 
-    def get_symbol(self, name: str) -> Symbol:
+    def get_symbol(self, name: str) -> SymbolInterface:
         """Resolves a symbol name into a symbol object
 
            If the symbol isn't found, it raises a SymbolError exception
@@ -201,7 +201,7 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Look-up a type name across all the contained symbol tables"""
 
     @abstractmethod
-    def get_symbol(self, symbol_name: str) -> Symbol:
+    def get_symbol(self, symbol_name: str) -> SymbolInterface:
         """Look-up a symbol name across all the contained symbol tables"""
 
     @abstractmethod
