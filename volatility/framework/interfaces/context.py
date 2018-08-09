@@ -94,17 +94,20 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
                  module_name: str,
                  layer_name: str,
                  offset: int,
-                 size: int = 0,
+                 size: typing.Optional[int] = 0,
                  symbol_table_name: typing.Optional[str] = None) -> None:
         self._context = self._check_type(context, ContextInterface)
         self._module_name = self._check_type(module_name, str)
         self._layer_name = self._check_type(layer_name, str)
         self._offset = self._check_type(offset, int)
+
+        # Size defaults to 0 (ie, we care about it), but will only calculate it on demand
+        # If it's explicitly set to None, then we know we don't care about it
+        if size is None:
+            self._size = 0
+        self._size_unimportant = (size is None)
         self._size = self._check_type(size, int)
         self.symbol_table_name = symbol_table_name or self._module_name
-        if self._size <= 0:
-            symbol_table = self._context.symbol_space[self.symbol_table_name]
-            self._size = max([0] + [symbol_table.get_symbol(s).address for s in symbol_table.symbols])
         super().__init__()
 
     @property
@@ -114,6 +117,10 @@ class Module(validity.ValidityRoutines, metaclass = ABCMeta):
     @property
     def size(self) -> int:
         """Returns the size of the module (0 for unknown size)"""
+        if self._size <= 0 and not self._size_unimportant:
+            symbol_table = self._context.symbol_space[self.symbol_table_name]
+            self._size = max([0] + [symbol_table.get_symbol(s).address for s in symbol_table.symbols])
+            self._size_unimportant = self._size_unimportant or self._size <= 0
         return self._size
 
     @property
