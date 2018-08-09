@@ -33,7 +33,8 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
     def get_type(self, type_name: str) -> interfaces.objects.Template:
         """Resolves a symbol name into an object template
 
-           symbol_space is used to resolve any subtype symbols if they don't exist in this list
+           This always construct a new python object, rather than using a cached value otherwise changes made later may
+           affect the cached copy.  Calling clone after every native type construction was extremely slow.
         """
         # NOTE: These need updating whenever the object init signatures change
         prefix = ""
