@@ -104,7 +104,7 @@ class Context(interfaces.context.ContextInterface):
     def module(self,  # type: ignore # FIXME: mypy #5107
                module_name: str,
                layer_name: str,
-               offset: int) -> interfaces.context.Module:
+               offset: int) -> interfaces.context.ModuleInterface:
         """Creates a module object"""
         return Module(self, module_name, layer_name, offset)
 
@@ -121,7 +121,7 @@ def get_module_wrapper(method: str) -> typing.Callable:
     return wrapper
 
 
-class Module(interfaces.context.Module):
+class Module(interfaces.context.ModuleInterface):
     def object(self,
                symbol_name: typing.Optional[str] = None,
                type_name: typing.Optional[str] = None,

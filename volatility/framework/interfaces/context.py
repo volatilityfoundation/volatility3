@@ -79,11 +79,11 @@ class ContextInterface(object, metaclass = ABCMeta):
     def module(self,
                module_name: str,
                layer_name: str,
-               offset: int) -> 'Module':
+               offset: int) -> 'ModuleInterface':
         """Create a module object """
 
 
-class Module(validity.ValidityRoutines, metaclass = ABCMeta):
+class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Maintains state concerning a particular loaded module in memory
 
     This object is OS-independent.
