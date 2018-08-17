@@ -108,10 +108,6 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         Raises InvalidDataException on failure to validate the data correctly.
         """
 
-    def __getattr__(self, attr: str) -> typing.Any:
-        """Method for ensuring volatility members can be returned"""
-        pass
-
     def get_symbol_table(self) -> typing.Optional['interfaces.symbols.SymbolTableInterface']:
         """Returns the symbol table for this particular object
 
