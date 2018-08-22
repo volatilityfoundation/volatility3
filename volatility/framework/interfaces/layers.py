@@ -423,9 +423,9 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
            This will throw an exception if the required dependencies are not met
         """
         self._check_type(layer, DataLayerInterface)
+        if layer.name in self._layers:
+            raise exceptions.LayerException("Layer already exists: {}".format(layer.name))
         if isinstance(layer, TranslationLayerInterface):
-            if layer.name in self._layers:
-                raise exceptions.LayerException("Layer already exists: {}".format(layer.name))
             missing_list = [sublayer for sublayer in layer.dependencies if sublayer not in self._layers]
             if missing_list:
                 raise exceptions.LayerException(
