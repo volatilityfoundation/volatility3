@@ -147,6 +147,67 @@
       "kind": "struct",
       "size": 12
     },
+    "_VOL_USERASSIST_TYPES_XP": {
+      "fields": {
+        "ID": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "CountStartingAtFive": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "LastUpdated": {
+          "offset": 8,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 16
+    },
+    "_VOL_USERASSIST_TYPES_7": {
+      "fields": {
+        "Count": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "FocusCount": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "FocusTime": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "LastUpdated": {
+          "offset": 60,
+          "type": {
+            "kind": "union",
+            "name": "_LARGE_INTEGER"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 72
+    },
     "_LARGE_INTEGER": {
       "fields": {
         "HighPart": {
