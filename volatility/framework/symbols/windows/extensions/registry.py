@@ -31,6 +31,12 @@ class RegValueTypes(enum.Enum):
     # def _missing_(cls, value):
     #     return cls(RegValueTypes.REG_UNKNOWN)
 
+    @classmethod
+    def get(cls, value):
+        try:
+            return cls(value)
+        except ValueError:
+            return cls(RegValueTypes.REG_UNKNOWN)
 
 class _HMAP_ENTRY(objects.Struct):
     def get_block_offset(self) -> int:
@@ -171,7 +177,7 @@ class _CM_KEY_VALUE(objects.Struct):
             # but the length at the start could be negative so just adding 4 to jump past it
             data = layer.read(self.Data + 4, datalen)
 
-        self_type = RegValueTypes(self.Type)
+        self_type = RegValueTypes.get(self.Type)
         if self_type == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):
                 raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))

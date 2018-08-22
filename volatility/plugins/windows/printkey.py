@@ -65,7 +65,7 @@ class PrintKey(plugins.PluginInterface):
             result = (key_path.count("\\"),
                       (last_write_time,
                        renderers.format_hints.Hex(hive.hive_offset),
-                       RegValueTypes(value_node.Type).name,
+                       RegValueTypes.get(value_node.Type).name,
                        key_path,
                        value_node.get_name(),
                        str(value_node.decode_data()),
