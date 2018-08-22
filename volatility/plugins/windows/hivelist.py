@@ -12,7 +12,11 @@ class HiveList(plugins.PluginInterface):
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+                requirements.StringRequirement(name = 'filter',
+                                               description = "String to filter hive names returned",
+                                               optional = True,
+                                               default = None)]
 
     def _generator(self):
         for hive in self.list_hives():
@@ -35,7 +39,8 @@ class HiveList(plugins.PluginInterface):
         cmhive = ntkrnlmp.object(type_name = "_CMHIVE", offset = list_entry.vol.offset - reloff)
 
         for hive in cmhive.HiveList:
-            yield hive
+            if self.config.get("filter", None) is None or self.config["filter"].lower() in str(hive.get_name() or "").lower():
+                yield hive
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex),
