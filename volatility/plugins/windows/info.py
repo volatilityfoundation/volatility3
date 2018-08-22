@@ -29,7 +29,7 @@ class Info(plugins.PluginInterface):
         yield index, layer
         try:
             for depends in layer.dependencies:
-                for j, dep in self.get_depends(depends, i + 1):
+                for j, dep in self.get_depends(depends, index + 1):
                     yield j, self.context.memory[dep.name]
         except AttributeError:
             # FileLayer won't have dependencies
