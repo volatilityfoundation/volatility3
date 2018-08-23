@@ -79,6 +79,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
             table_mapping = {}
         self.table_mapping = self._check_type(table_mapping, dict)
         self._native_types = self._check_type(native_types, NativeTableInterface)
+        self._sort_symbols = []
 
     # ## Required Symbol functions
 
@@ -171,7 +172,9 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         """Returns the name of all symbols in this table that live at a particular offset"""
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
-        sort_symbols = sorted([(self.get_symbol(sn).address, sn) for sn in self.symbols])
+        if not self._sort_symbols:
+            self._sort_symbols = sorted([(self.get_symbol(sn).address, sn) for sn in self.symbols])
+        sort_symbols = self._sort_symbols
         result = bisect.bisect_left(sort_symbols, (offset, ""))
         while result < len(sort_symbols) and \
                 (sort_symbols[result][0] >= offset and sort_symbols[result][0] <= offset + size):
