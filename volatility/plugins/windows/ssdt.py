@@ -64,8 +64,10 @@ class SSDT(plugins.PluginInterface):
         is_kernel_64 = ntkrnlmp.get_type("pointer").size == 8
         if is_kernel_64:
             array_subtype = "long"
+            find_address = lambda func: kvo + service_table_address + (func >> 4)
         else:
             array_subtype = "unsigned long"
+            find_address = lambda func: func
 
         functions = ntkrnlmp.object(type_name="array", offset=kvo + service_table_address,
                                subtype=ntkrnlmp.get_type(array_subtype),
@@ -73,9 +75,7 @@ class SSDT(plugins.PluginInterface):
 
         for idx, function in enumerate(functions):
 
-            if is_kernel_64:
-                function = kvo + service_table_address + (function >> 4)
-
+            function = find_address(function)
             module_symbols = collection.get_module_symbols_by_absolute_location(function)
 
             for module_name, symbol_generator in module_symbols:
