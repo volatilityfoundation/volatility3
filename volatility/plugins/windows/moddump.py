@@ -7,6 +7,7 @@ import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.framework.renderers as renderers
 import volatility.plugins.windows.modules as modules
 import volatility.plugins.windows.pslist as pslist
+from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 
@@ -19,7 +20,10 @@ class ModDump(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         # Reuse the requirements from the plugins we use
-        return modules.Modules.get_requirements()
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
     def get_session_layers(self) -> typing.List[str]:
         """Build a cache of possible virtual layers, in priority starting with

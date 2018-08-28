@@ -7,6 +7,7 @@ import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
 from volatility.framework import interfaces
 from volatility.framework import renderers
+from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 
@@ -19,7 +20,16 @@ class DllDump(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return vadinfo.VadInfo.get_requirements()
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+                # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
+                requirements.IntRequirement(name = 'address',
+                                            description = "Process virtual memory address to include " \
+                                                          "(all other address ranges are excluded). This must be " \
+                                                          "a base address, not an address within the desired range.",
+                                            optional = True)]
 
     def _generator(self, procs):
         pe_table_name = PEIntermedSymbols.create(self.context,

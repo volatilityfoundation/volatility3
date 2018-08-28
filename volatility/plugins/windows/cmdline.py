@@ -1,8 +1,10 @@
+import volatility.framework.constants as constants
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import exceptions, renderers
-from volatility.plugins.windows import pslist
+from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
-import volatility.framework.constants as constants
+from volatility.plugins.windows import pslist
+
 
 class CmdLine(interfaces_plugins.PluginInterface):
     """Lists process command line arguments"""
@@ -10,7 +12,10 @@ class CmdLine(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return pslist.PsList.get_requirements() + []
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
     def _generator(self, procs):
 

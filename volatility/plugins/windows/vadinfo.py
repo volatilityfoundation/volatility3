@@ -37,13 +37,16 @@ class VadInfo(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return pslist.PsList.get_requirements() + [
-            # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
-            requirements.IntRequirement(name = 'address',
-                                        description = "Process virtual memory address to include " \
-                                                      "(all other address ranges are excluded). This must be " \
-                                                      "a base address, not an address within the desired range.",
-                                        optional = True)]
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+                # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
+                requirements.IntRequirement(name = 'address',
+                                            description = "Process virtual memory address to include " \
+                                                          "(all other address ranges are excluded). This must be " \
+                                                          "a base address, not an address within the desired range.",
+                                            optional = True)]
 
     @classmethod
     def protect_values(cls,

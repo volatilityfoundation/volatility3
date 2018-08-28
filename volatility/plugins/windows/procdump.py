@@ -5,6 +5,7 @@ import volatility.framework.exceptions as exceptions
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.framework.renderers as renderers
 import volatility.plugins.windows.pslist as pslist
+from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
 
@@ -17,7 +18,10 @@ class ProcDump(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return pslist.PsList.get_requirements()
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
     def _generator(self, procs):
 

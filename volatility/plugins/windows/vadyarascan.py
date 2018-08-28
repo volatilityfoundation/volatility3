@@ -2,6 +2,7 @@ import logging
 import typing
 
 from volatility.framework import interfaces, layers, renderers
+from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols.windows import extensions
 from volatility.plugins import yarascan
@@ -19,7 +20,37 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return yarascan.YaraScan.get_requirements() + pslist.PsList.get_requirements()
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = "Primary kernel address space",
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+                requirements.BooleanRequirement(name = "all",
+                                                description = "Scan both process and kernel memory",
+                                                default = False,
+                                                optional = True),
+                requirements.BooleanRequirement(name = "insensitive",
+                                                description = "Makes the search case insensitive",
+                                                default = False,
+                                                optional = True),
+                requirements.BooleanRequirement(name = "kernel",
+                                                description = "Scan kernel modules",
+                                                default = False,
+                                                optional = True),
+                requirements.BooleanRequirement(name = "wide",
+                                                description = "Match wide (unicode) strings",
+                                                default = False,
+                                                optional = True),
+                requirements.StringRequirement(name = "yara_rules",
+                                               description = "Yara rules (as a string)",
+                                               optional = True),
+                requirements.URIRequirement(name = "yara_file",
+                                            description = "Yara rules (as a file)",
+                                            optional = True),
+                requirements.IntRequirement(name = "max_size",
+                                            default = 0x40000000,
+                                            description = "Set the maximum size (default is 1GB)",
+                                            optional = True)
+                ]
 
     def _generator(self):
 
