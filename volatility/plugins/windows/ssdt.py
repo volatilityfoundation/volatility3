@@ -1,10 +1,10 @@
 import os
-import volatility.framework.interfaces.plugins as plugins
-import volatility.plugins.windows.modules as modules
-import volatility.framework.exceptions as exceptions
-import volatility.framework.contexts as contexts
-import volatility.framework.constants as constants
-import volatility.framework.constants.windows as windows_constants
+from volatility.framework.interfaces import plugins
+from volatility.plugins.windows import modules
+from volatility.framework import exceptions
+from volatility.framework import contexts
+from volatility.framework import constants
+from volatility.framework.constants import windows as windows_constants
 from volatility.framework import renderers
 from volatility.framework.renderers import format_hints
 
