@@ -79,14 +79,16 @@ class SSDT(plugins.PluginInterface):
             module_symbols = collection.get_module_symbols_by_absolute_location(function)
 
             for module_name, symbol_generator in module_symbols:
-                symbols = list(symbol_generator)
-                if len(symbols) > 0:
-                    for symbol in symbols:
-                        yield (0, (idx,
-                                   format_hints.Hex(function),
-                                   module_name,
-                                   symbol.split(constants.BANG)[1]))
-                else:
+                symbols_found = False
+
+                for symbol in symbol_generator:
+                    symbols_found = True
+                    yield (0, (idx,
+                               format_hints.Hex(function),
+                               module_name,
+                               symbol.split(constants.BANG)[1]))
+
+                if not symbols_found:
                     yield (0, (idx,
                                format_hints.Hex(function),
                                module_name,
