@@ -7,6 +7,7 @@ from volatility.framework import constants
 from volatility.framework.constants import windows as windows_constants
 from volatility.framework import renderers
 from volatility.framework.renderers import format_hints
+from volatility.framework.configuration import requirements
 
 class SSDT(plugins.PluginInterface):
     """Lists the system call table"""
@@ -14,7 +15,7 @@ class SSDT(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return modules.Modules.get_requirements() + []
+        return modules.Modules.get_requirements() + [requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
     def _generator(self, modules):
 
