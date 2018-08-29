@@ -224,7 +224,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
         if self._win7 is None:
             self._win7 = self._win7_or_later()
 
-        userassist_node_path = hive.get_key("software\\microsoft\\windows\\currentversion\\explorer\\userassist",
+        userassist_node_path = hive.get_key("software\\microsoft\\windows\\currentversion\\explorer\\userassict",
                                              return_list=True)
 
         if not userassist_node_path:
@@ -324,32 +324,34 @@ class UserAssist(interfaces_plugins.PluginInterface):
             reg_config_path = self.make_subconfig(hive_offset=hive_offset,
                                                   base_layer=self.config['primary'],
                                                   nt_symbols=self.config['nt_symbols'])
+
+            hive_name = None
             try:
                 hive = RegistryHive(self.context, reg_config_path, name='hive' + hex(hive_offset))
                 hive_name = hive.hive.cast(self.config["nt_symbols"] + constants.BANG + "_CMHIVE").get_name()
                 self.context.memory.add_layer(hive)
                 yield from self.list_userassist(hive)
+                break
+            except exceptions.PagedInvalidAddressException as excp:
+                vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
+            except KeyError:
+                vollog.debug("Key '{}' not found in Hive at offset {}.".format("software\\microsoft\\windows\\currentversion\\explorer\\userassist", hex(hive_offset)))
 
-            except (exceptions.PagedInvalidAddressException, KeyError) as excp:
-                if type(excp) == KeyError:
-                    vollog.debug(
-                        "Key '{}' not found in Hive at offset {}.".format("software\\microsoft\\windows\\currentversion\\explorer\\userassist", hex(hive_offset)))
-                else:
-                    vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
-                result = (0,
-                          (renderers.format_hints.Hex(hive.hive_offset),
-                           hive_name,
-                           renderers.UnreadableValue(),
-                           renderers.UnreadableValue(),
-                           renderers.UnreadableValue(),
-                           renderers.UnreadableValue(),
-                           renderers.UnreadableValue(),
-                           renderers.UnreadableValue(),
-                           renderers.UnreadableValue(),
-                           renderers.UnreadableValue(),
-                           renderers.UnreadableValue(),
-                           renderers.UnreadableValue()))
-                yield result
+            # yield UnreadableValues when an exception occurs for a given hive_offset
+            result = (0,
+                      (renderers.format_hints.Hex(hive_offset),
+                       hive_name if hive_name else renderers.UnreadableValue(),
+                       renderers.UnreadableValue(),
+                       renderers.UnreadableValue(),
+                       renderers.UnreadableValue(),
+                       renderers.UnreadableValue(),
+                       renderers.UnreadableValue(),
+                       renderers.UnreadableValue(),
+                       renderers.UnreadableValue(),
+                       renderers.UnreadableValue(),
+                       renderers.UnreadableValue(),
+                       renderers.UnreadableValue()))
+            yield result
 
     def run(self):
 
