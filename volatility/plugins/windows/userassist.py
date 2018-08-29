@@ -311,7 +311,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
                                                                                          self.config['primary'],
                                                                                          self.config['nt_symbols'],
                                                                                          filter = "ntuser.dat")]
-            except:
+            except ImportError:
                 vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")
                 raise ValueError("Unable to import windows.hivelist plugin, please provide a hive offset")
         else:

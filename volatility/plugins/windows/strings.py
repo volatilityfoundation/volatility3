@@ -40,7 +40,7 @@ class Strings(interfaces.plugins.PluginInterface):
                 offset, string = self._parse_line(line)
                 try:
                     revmap_list = [name + ":" + hex(offset) for (name, offset) in revmap[offset >> 12]]
-                except:
+                except (IndexError, KeyError):
                     revmap_list = ["FREE MEMORY"]
                 yield (0, (str(string, 'latin-1'), format_hints.Hex(offset), ", ".join(revmap_list)))
             except ValueError:
