@@ -275,9 +275,9 @@ class UserAssist(interfaces_plugins.PluginInterface):
                 yield result
 
                 # output any subkeys under Count
-                for s in countkey.get_subkeys():
+                for subkey in countkey.get_subkeys():
 
-                    subkey_name = s.get_name()
+                    subkey_name = subkey.get_name()
                     result = (1, (renderers.format_hints.Hex(hive.hive_offset),
                                   hive_name,
                                   countkey_path,
@@ -293,9 +293,9 @@ class UserAssist(interfaces_plugins.PluginInterface):
                     yield result
 
                 # output any values under Count
-                for v in countkey.get_values():
+                for value in countkey.get_values():
 
-                    value_name = v.get_name()
+                    value_name = value.get_name()
                     try:
                         value_name = codecs.encode(value_name, "rot_13")
                     except UnicodeDecodeError:
@@ -306,7 +306,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
                         if guid in folder_guids:
                             value_name = value_name.replace(guid, folder_guids[guid])
 
-                    userassist_data_dict = self.parse_userassist_data(v)
+                    userassist_data_dict = self.parse_userassist_data(value)
                     result = (1, (renderers.format_hints.Hex(hive.hive_offset),
                                   hive_name,
                                   countkey_path,
