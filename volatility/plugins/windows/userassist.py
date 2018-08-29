@@ -140,10 +140,6 @@ class UserAssist(interfaces_plugins.PluginInterface):
 
     def parse_userassist_data(self, reg_val):
         """Reads the raw data of a _CM_KEY_VALUE and returns a dict of userassist fields"""
-        reg_table_name = intermed.IntermediateSymbolTable.create(self.context,
-                                                                 self._config_path,
-                                                                 'windows',
-                                                                 'registry')
 
         item = {
             "id": renderers.UnparsableValue(),
@@ -165,21 +161,12 @@ class UserAssist(interfaces_plugins.PluginInterface):
             # if OS is still unknown at this point, return the default item which just has the rawdata
             return item
 
-        if self._win7:
-            userassist_type_name = "_VOL_USERASSIST_TYPES_7"
-        else:
-            userassist_type_name = "_VOL_USERASSIST_TYPES_XP"
-
-
-        userassist_layer_name = self.context.memory.free_layer_name("userassist_buffer")
-        userassist_module = self.context.module(reg_table_name, userassist_layer_name, 0)
-        userassist_type = userassist_module.get_type(userassist_type_name)
-        if len(userassist_data) < userassist_type.size:
+        if len(userassist_data) < self._userassist_module.get_type(self._userassist_type_name).size:
             return item
 
-        buffer = BufferDataLayer(self.context, self._config_path, userassist_layer_name, userassist_data)
+        buffer = BufferDataLayer(self.context, self._config_path, self._userassist_layer_name, userassist_data)
         self.context.add_layer(buffer)
-        userassist_obj = self.context.object(userassist_type, userassist_layer_name, 0)
+        userassist_obj = self._userassist_module.object(type_name = self._userassist_type_name, offset = 0)
 
         if self._win7:
             item["id"] = renderers.NotApplicableValue()
@@ -202,6 +189,20 @@ class UserAssist(interfaces_plugins.PluginInterface):
 
         return item
 
+    def _determine_userassist_type(self):
+        """Determine the userassist type and generate a context.Module depending on the OS version"""
+
+        if self._win7 is True:
+            self._userassist_type_name = "_VOL_USERASSIST_TYPES_7"
+        elif self._win7 is False:
+            self._userassist_type_name = "_VOL_USERASSIST_TYPES_XP"
+        else:
+            return
+
+        self._userassist_layer_name = self.context.memory.free_layer_name("userassist_buffer")
+        self._userassist_module = self.context.module(self._reg_table_name, self._userassist_layer_name, 0)
+        self._userassist_size = self._userassist_module.get_type(self._userassist_type_name).size
+
     def _win7_or_later(self):
         # TODO: change this if there is a better way of determining the OS version
         # _KUSER_SHARED_DATA.CookiePad is in Windows 6.1 (Win7) and later
@@ -212,6 +213,11 @@ class UserAssist(interfaces_plugins.PluginInterface):
             return True
         except IndexError:
             return False
+        except:
+            pass
+
+        # any other errors, then don't set OS
+        return None
 
     def list_userassist(self, hive: RegistryHive) -> typing.Generator:
         """Generate userassist data for a registry hive."""
@@ -220,6 +226,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
 
         if self._win7 is None:
             self._win7 = self._win7_or_later()
+            self._determine_userassist_type()
 
         userassist_node_path = hive.get_key("software\\microsoft\\windows\\currentversion\\explorer\\userassist",
                                              return_list=True)
@@ -315,6 +322,11 @@ class UserAssist(interfaces_plugins.PluginInterface):
                 raise ValueError("Unable to import windows.hivelist plugin, please provide a hive offset")
         else:
             hive_offsets = [self.config['offset']]
+
+        self._reg_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                       self._config_path,
+                                                                       'windows',
+                                                                       'registry')
 
         for hive_offset in hive_offsets:
             # Construct the hive
