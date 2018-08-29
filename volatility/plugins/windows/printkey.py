@@ -85,8 +85,10 @@ class PrintKey(plugins.PluginInterface):
                 plugin_config_path = self.make_subconfig(primary = self.config['primary'],
                                                          nt_symbols = self.config['nt_symbols'])
                 plugin = hivelist.HiveList(self.context, plugin_config_path)
-                hive_offsets = [hive.vol.offset for hive in plugin.list_hives()]
-            except:
+                hive_offsets = [hive.vol.offset for hive in plugin.list_hives(self.context,
+                                                                              self.config['primary'],
+                                                                              self.config['nt_symbols'])]
+            except ImportError:
                 vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")
                 raise ValueError("Unable to import windows.hivelist plugin, please provide a hive offset")
         else:
@@ -103,14 +105,15 @@ class PrintKey(plugins.PluginInterface):
 
                 # Walk it
                 if 'key' in self.config:
-                    node_path = hive.get_key(self.config['key'], return_list=True)
+                    node_path = hive.get_key(self.config['key'], return_list = True)
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
                 yield from self.hive_walker(hive, node_path)
 
             except (exceptions.PagedInvalidAddressException, KeyError) as excp:
                 if type(excp) == KeyError:
-                    vollog.debug("Key '{}' not found in Hive at offset {}.".format(self.config['key'], hex(hive_offset)))
+                    vollog.debug(
+                        "Key '{}' not found in Hive at offset {}.".format(self.config['key'], hex(hive_offset)))
                 else:
                     vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
                 result = (0,
