@@ -127,6 +127,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
         super().__init__(*args, **kwargs)
         self._userassist_size = 0
         self._userassist_type_name = "_VOL_USERASSIST_TYPES_7"
+        self._reg_table_name = None
         self._win7 = None
 
     @classmethod

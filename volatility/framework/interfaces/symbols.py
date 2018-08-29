@@ -79,7 +79,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
             table_mapping = {}
         self.table_mapping = self._check_type(table_mapping, dict)
         self._native_types = self._check_type(native_types, NativeTableInterface)
-        self._sort_symbols = []
+        self._sort_symbols = []  # type: typing.List[typing.Tuple[int, str]]
 
     # ## Required Symbol functions
 

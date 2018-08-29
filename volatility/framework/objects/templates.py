@@ -90,6 +90,7 @@ class ReferenceTemplate(interfaces.objects.Template):
     size = property(_unresolved)  # type: typing.ClassVar[typing.Any]
     replace_child = _unresolved  # type: typing.ClassVar[typing.Any]
     relative_child_offset = _unresolved  # type: typing.ClassVar[typing.Any]
+    has_member = _unresolved  # type: typing.ClassVar[typing.Any]
 
     def __call__(self,
                  context: interfaces.context.ContextInterface,
