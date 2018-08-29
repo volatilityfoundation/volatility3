@@ -142,6 +142,10 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return object_template(context = self._context,
                                object_info = object_info)
 
+    def has_member(self, member_name: str) -> bool:
+        """Returns whether the object would contain a member called member_name"""
+        return False
+
     class VolTemplateProxy(object):
         """A container for proxied methods that the ObjectTemplate of this object will call.  This primarily to keep
         methods together for easy organization/management, there is no significant need for it to be a separate class.
@@ -174,6 +178,13 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                                   child: str) -> int:
             """Returns the relative offset from the head of the parent data to the child member"""
             raise KeyError("Template does not contain any children: {}".format(template.vol.type_name))
+
+        @classmethod
+        def has_member(cls,
+                       template: 'Template',
+                       member_name: str) -> bool:
+            """Returns whether the object would contain a member called member_name"""
+            return False
 
 
 class Template(validity.ValidityRoutines):
@@ -230,6 +241,10 @@ class Template(validity.ValidityRoutines):
     @abstractmethod
     def replace_child(self, old_child: 'Template', new_child: 'Template') -> None:
         """Replaces `old_child` with `new_child` in the list of children"""
+
+    @abstractmethod
+    def has_member(self, member_name: str) -> bool:
+        """Returns whether the object would contain a member called member_name"""
 
     def clone(self) -> 'Template':
         """Returns a copy of the original Template as constructed (without `update_vol` additions having been made)"""

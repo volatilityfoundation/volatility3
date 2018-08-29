@@ -266,6 +266,10 @@ class Pointer(Integer):
         """Convenience function to access unknown attributes by getting them from the subtype object"""
         return getattr(self.dereference(), attr)
 
+    def has_member(self, member_name: str) -> bool:
+        """Returns whether the dereferenced type has this member"""
+        return self._vol['subtype'].has_member(member_name)
+
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
@@ -287,6 +291,12 @@ class Pointer(Integer):
             if 'subtype' in template.vol:
                 if template.vol.subtype == old_child:
                     template.update_vol(subtype = new_child)
+
+        @classmethod
+        def has_member(cls,
+                       template: interfaces.objects.Template,
+                       member_name: str) -> bool:
+            return template.vol['subtype'].has_member(member_name)
 
 
 class BitField(interfaces.objects.ObjectInterface, int):
@@ -543,6 +553,10 @@ class Struct(interfaces.objects.ObjectInterface):
         self._check_members(members)
         self._concrete_members = {}  # type: typing.Dict[str, typing.Dict]
 
+    def has_member(self, member_name: str) -> bool:
+        """Returns whether the object would contain a member called member_name"""
+        return member_name in self.vol.members
+
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
@@ -583,6 +597,13 @@ class Struct(interfaces.objects.ObjectInterface):
             if retlist is None:
                 raise IndexError("Member not present in template: {}".format(child))
             return retlist[0]
+
+        @classmethod
+        def has_member(cls,
+                       template: interfaces.objects.Template,
+                       member_name: str) -> bool:
+            """Returns whether the object would contain a member called member_name"""
+            return member_name in template.vol.members
 
     @classmethod
     def _check_members(cls,

@@ -48,6 +48,11 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         """
         return self.vol.object_class.VolTemplateProxy.replace_child(self, old_child, new_child)
 
+    def has_member(self, member_name: str) -> bool:
+        """Returns whether the object would contain a member called member_name
+        """
+        return self.vol.object_class.VolTemplateProxy.has_member(self, member_name)
+
     def __call__(self,
                  context: interfaces.context.ContextInterface,
                  object_info: interfaces.objects.ObjectInformation) -> interfaces.objects.ObjectInterface:

@@ -94,10 +94,10 @@ class _MMVAD_SHORT(objects.Struct):
     def get_right_child(self):
         """Get the right child member"""
 
-        if hasattr(self, "RightChild"):
+        if self.has_member("RightChild"):
             return self.RightChild
 
-        elif hasattr(self, "Right"):
+        elif self.has_member("Right"):
             return self.Right
 
         raise AttributeError("Unable to find the right child member")
@@ -105,10 +105,10 @@ class _MMVAD_SHORT(objects.Struct):
     def get_left_child(self):
         """Get the left child member"""
 
-        if hasattr(self, "LeftChild"):
+        if self.has_member("LeftChild"):
             return self.LeftChild
 
-        elif hasattr(self, "Left"):
+        elif self.has_member("Left"):
             return self.Left
 
         raise AttributeError("Unable to find the left child member")
@@ -117,29 +117,29 @@ class _MMVAD_SHORT(objects.Struct):
         """Get the VAD's parent member"""
 
         # this is for xp and 2003
-        if hasattr(self, "Parent"):
+        if self.has_member("Parent"):
             return self.Parent
 
         # this is for vista through windows 7
-        elif hasattr(self, "u1") and hasattr(self.u1, "Parent"):
+        elif self.has_member("u1") and self.u1.has_member("Parent"):
             return self.u1.Parent & ~0x3
 
         # this is for windows 8 and 10
-        elif hasattr(self, "VadNode"):
+        elif self.has_member("VadNode"):
 
-            if hasattr(self.VadNode, "u1"):
+            if self.VadNode.has_member("u1"):
                 return self.VadNode.u1.Parent & ~0x3
 
-            elif hasattr(self.VadNode, "ParentValue"):
+            elif self.VadNode.has_member("ParentValue"):
                 return self.VadNode.ParentValue & ~0x3
 
         # also for windows 8 and 10
-        elif hasattr(self, "Core"):
+        elif self.has_member("Core"):
 
-            if hasattr(self.Core.VadNode, "u1"):
+            if self.Core.VadNode.has_member("u1"):
                 return self.Core.VadNode.u1.Parent & ~0x3
 
-            elif hasattr(self.Core.VadNode, "ParentValue"):
+            elif self.Core.VadNode.has_member("ParentValue"):
                 return self.Core.VadNode.ParentValue & ~0x3
 
         raise AttributeError("Unable to find the parent member")
@@ -147,16 +147,16 @@ class _MMVAD_SHORT(objects.Struct):
     def get_start(self):
         """Get the VAD's starting virtual address"""
 
-        if hasattr(self, "StartingVpn"):
+        if self.has_member("StartingVpn"):
 
-            if hasattr(self, "StartingVpnHigh"):
+            if self.has_member("StartingVpnHigh"):
                 return (self.StartingVpn << 12) | (self.StartingVpnHigh << 44)
             else:
                 return self.StartingVpn << 12
 
-        elif hasattr(self, "Core"):
+        elif self.has_member("Core"):
 
-            if hasattr(self.Core, "StartingVpnHigh"):
+            if self.Core.has_member("StartingVpnHigh"):
                 return (self.Core.StartingVpn << 12) | (self.Core.StartingVpnHigh << 44)
             else:
                 return self.Core.StartingVpn << 12
@@ -166,16 +166,16 @@ class _MMVAD_SHORT(objects.Struct):
     def get_end(self):
         """Get the VAD's ending virtual address"""
 
-        if hasattr(self, "EndingVpn"):
+        if self.has_member("EndingVpn"):
 
-            if hasattr(self, "EndingVpnHigh"):
+            if self.has_member("EndingVpnHigh"):
                 return (self.EndingVpn << 12) | (self.EndingVpnHigh << 44)
             else:
                 return ((self.EndingVpn + 1) << 12) - 1
 
-        elif hasattr(self, "Core"):
+        elif self.has_member("Core"):
 
-            if hasattr(self.Core, "EndingVpnHigh"):
+            if self.Core.has_member("EndingVpnHigh"):
                 return (self.Core.EndingVpn << 12) | (self.Core.EndingVpnHigh << 44)
             else:
                 return ((self.Core.EndingVpn + 1) << 12) - 1
@@ -185,13 +185,13 @@ class _MMVAD_SHORT(objects.Struct):
     def get_commit_charge(self):
         """Get the VAD's commit charge (number of committed pages)"""
 
-        if hasattr(self, "u1") and hasattr(self.u1, "VadFlags1"):
+        if self.has_member("u1") and self.u1.has_member("VadFlags1"):
             return self.u1.VadFlags1.CommitCharge
 
-        elif hasattr(self, "u") and hasattr(self.u, "VadFlags"):
+        elif self.has_member("u") and self.u.has_member("VadFlags"):
             return self.u.VadFlags.CommitCharge
 
-        elif hasattr(self, "Core"):
+        elif self.has_member("Core"):
             return self.Core.u1.VadFlags1.CommitCharge
 
         raise AttributeError("Unable to find the commit charge member")
@@ -199,19 +199,19 @@ class _MMVAD_SHORT(objects.Struct):
     def get_private_memory(self):
         """Get the VAD's private memory setting"""
 
-        if hasattr(self, "u1") and hasattr(self.u1, "VadFlags1") and hasattr(self.u1.VadFlags1, "PrivateMemory"):
+        if self.has_member("u1") and self.u1.has_member("VadFlags1") and self.u1.VadFlags1.has_member("PrivateMemory"):
             return self.u1.VadFlags1.PrivateMemory
 
-        elif hasattr(self, "u") and hasattr(self.u, "VadFlags") and hasattr(self.u.VadFlags, "PrivateMemory"):
+        elif self.has_member("u") and self.u.has_member("VadFlags") and self.u.VadFlags.has_member("PrivateMemory"):
             return self.u.VadFlags.PrivateMemory
 
-        elif hasattr(self, "Core"):
-            if hasattr(self.Core, "u1") and hasattr(self.Core.u1, "VadFlags1") and hasattr(self.Core.u1.VadFlags1,
-                                                                                           "PrivateMemory"):
+        elif self.has_member("Core"):
+            if (self.Core.has_member("u1") and self.Core.u1.has_member(
+                    "VadFlags1") and self.Core.u1.VadFlags1.has_member("PrivateMemory")):
                 return self.Core.u1.VadFlags1.PrivateMemory
 
-            elif hasattr(self.Core, "u") and hasattr(self.Core.u, "VadFlags") and hasattr(self.Core.u.VadFlags,
-                                                                                          "PrivateMemory"):
+            elif (self.Core.has_member("u") and self.Core.u.has_member("VadFlags") and self.Core.u.VadFlags.has_member(
+                    "PrivateMemory")):
                 return self.Core.u.VadFlags.PrivateMemory
 
         raise AttributeError("Unable to find the private memory member")
@@ -221,10 +221,10 @@ class _MMVAD_SHORT(objects.Struct):
 
         protect = None
 
-        if hasattr(self, "u"):
+        if self.has_member("u"):
             protect = self.u.VadFlags.Protection
 
-        elif hasattr(self, "Core"):
+        elif self.has_member("Core"):
             protect = self.Core.u.VadFlags.Protection
 
         try:
@@ -254,7 +254,7 @@ class _MMVAD(_MMVAD_SHORT):
 
         try:
             # this is for xp and 2003
-            if hasattr(self, "ControlArea"):
+            if self.has_member("ControlArea"):
                 file_name = self.ControlArea.FilePointer.FileName.get_string()
 
             # this is for vista through windows 7
@@ -437,8 +437,8 @@ class _EPROCESS(generic.GenericIntelProcess):
 
     def get_handle_count(self):
         try:
-            if hasattr(self, "ObjectTable"):
-                if hasattr(self.ObjectTable, "HandleCount"):
+            if self.has_member("ObjectTable"):
+                if self.ObjectTable.has_member("HandleCount"):
                     return self.ObjectTable.HandleCount
 
         except exceptions.PagedInvalidAddressException:
@@ -449,7 +449,7 @@ class _EPROCESS(generic.GenericIntelProcess):
 
     def get_session_id(self):
         try:
-            if hasattr(self, "Session"):
+            if self.has_member("Session"):
                 if self.Session == 0:
                     return renderers.NotApplicableValue()
 
@@ -459,7 +459,7 @@ class _EPROCESS(generic.GenericIntelProcess):
                 ntkrnlmp = self._context.module(symbol_table_name, layer_name = layer_name, offset = kvo)
                 session = ntkrnlmp.object(type_name = "_MM_SESSION_SPACE", offset = self.Session)
 
-                if hasattr(session, "SessionId"):
+                if session.has_member("SessionId"):
                     return session.SessionId
 
         except exceptions.PagedInvalidAddressException:
@@ -475,10 +475,10 @@ class _EPROCESS(generic.GenericIntelProcess):
         return utility.wintime_to_datetime(self.ExitTime.QuadPart)
 
     def get_wow_64_process(self):
-        if hasattr(self, "Wow64Process"):
+        if self.has_member("Wow64Process"):
             return self.Wow64Process
 
-        elif hasattr(self, "WoW64Process"):
+        elif self.has_member("WoW64Process"):
             return self.WoW64Process
 
         raise AttributeError("Unable to find Wow64Process")
@@ -494,11 +494,11 @@ class _EPROCESS(generic.GenericIntelProcess):
     def get_vad_root(self):
 
         # windows 8 and 2012 (_MM_AVL_TABLE)
-        if hasattr(self.VadRoot, "BalancedRoot"):
+        if self.VadRoot.has_member("BalancedRoot"):
             return self.VadRoot.BalancedRoot
 
         # windows 8.1 and windows 10 (_RTL_AVL_TREE)
-        elif hasattr(self.VadRoot, "Root"):
+        elif self.VadRoot.has_member("Root"):
             return self.VadRoot.Root.dereference()  # .cast("_MMVAD")
 
         else:

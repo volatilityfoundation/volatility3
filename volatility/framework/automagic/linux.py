@@ -181,9 +181,9 @@ class LinuxUtilities(object):
             init_task = module.object(type_name = 'task_struct', offset = image_dtb)
             if init_task.pid != 0:
                 continue
-            if hasattr(init_task, 'thread_info') and init_task.thread_info.cast('unsigned int') != 0:
+            if init_task.has_member('thread_info') and init_task.thread_info.cast('unsigned int') != 0:
                 continue
-            elif (hasattr(init_task, 'state') and init_task.state.cast('unsigned int') != 0):
+            elif (init_task.has_member('state') and init_task.state.cast('unsigned int') != 0):
                 continue
             # This we get for free
             aslr_shift = init_task.files.cast('long long unsigned int') - module.get_symbol('init_files').address
