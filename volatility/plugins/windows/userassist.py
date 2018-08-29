@@ -125,6 +125,8 @@ class UserAssist(interfaces_plugins.PluginInterface):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._userassist_size = 0
+        self._userassist_type_name = "_VOL_USERASSIST_TYPES_7"
         self._win7 = None
 
     @classmethod
@@ -162,12 +164,16 @@ class UserAssist(interfaces_plugins.PluginInterface):
             # if OS is still unknown at this point, return the default item which just has the rawdata
             return item
 
-        if len(userassist_data) < self._userassist_module.get_type(self._userassist_type_name).size:
+        if len(userassist_data) < self._userassist_size:
             return item
 
-        buffer = BufferDataLayer(self.context, self._config_path, self._userassist_layer_name, userassist_data)
+        userassist_layer_name = self.context.memory.free_layer_name("userassist_buffer")
+        buffer = BufferDataLayer(self.context, self._config_path, userassist_layer_name, userassist_data)
         self.context.add_layer(buffer)
-        userassist_obj = self._userassist_module.object(type_name = self._userassist_type_name, offset = 0)
+        userassist_obj = self.context.object(
+            symbol = self._reg_table_name + constants.BANG + self._userassist_type_name,
+            layer_name = userassist_layer_name,
+            offset = 0)
 
         if self._win7:
             item["id"] = renderers.NotApplicableValue()
@@ -190,35 +196,22 @@ class UserAssist(interfaces_plugins.PluginInterface):
 
         return item
 
-    def _determine_userassist_type(self):
+    def _determine_userassist_type(self) -> None:
         """Determine the userassist type and generate a context.Module depending on the OS version"""
 
         if self._win7 is True:
             self._userassist_type_name = "_VOL_USERASSIST_TYPES_7"
         elif self._win7 is False:
             self._userassist_type_name = "_VOL_USERASSIST_TYPES_XP"
-        else:
-            return
 
-        self._userassist_layer_name = self.context.memory.free_layer_name("userassist_buffer")
-        self._userassist_module = self.context.module(self._reg_table_name, self._userassist_layer_name, 0)
-        self._userassist_size = self._userassist_module.get_type(self._userassist_type_name).size
+        self._userassist_size = self.context.symbol_space.get_type(
+            self._reg_table_name + constants.BANG + self._userassist_type_name).size
 
-    def _win7_or_later(self):
+    def _win7_or_later(self) -> bool:
         # TODO: change this if there is a better way of determining the OS version
         # _KUSER_SHARED_DATA.CookiePad is in Windows 6.1 (Win7) and later
-        try:
-            # FIXME: ditch the try/except clause once there's a template method for determining whether a member exists
-            self.context.symbol_space.get_type(
-                self.config['nt_symbols'] + constants.BANG + "_KUSER_SHARED_DATA").has_member('CookiePad')
-            return True
-        except IndexError:
-            return False
-        except:
-            pass
-
-        # any other errors, then don't set OS
-        return None
+        return self.context.symbol_space.get_type(
+            self.config['nt_symbols'] + constants.BANG + "_KUSER_SHARED_DATA").has_member('CookiePad')
 
     def list_userassist(self, hive: RegistryHive) -> typing.Generator:
         """Generate userassist data for a registry hive."""
