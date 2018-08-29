@@ -178,24 +178,20 @@ class UserAssist(interfaces_plugins.PluginInterface):
         self.context.add_layer(buffer)
         userassist_obj = self.context.object(userassist_symbol, userassist_layer_name, 0)
 
-        if hasattr(userassist_obj, "ID"):
-            item["id"] = int(userassist_obj.ID)
-        else:
+        if self._win7:
             item["id"] = renderers.NotApplicableValue()
-
-        if hasattr(userassist_obj, "Count"):
             item["count"] = int(userassist_obj.Count)
-        else:
-            item["count"] = int(userassist_obj.CountStartingAtFive
-                                if userassist_obj.CountStartingAtFive < 5
-                                else userassist_obj.CountStartingAtFive - 5)
 
-        if hasattr(userassist_obj, "FocusCount"):
             seconds = (userassist_obj.FocusTime + 500) / 1000.0
             time = datetime.timedelta(seconds = seconds) if seconds > 0 else userassist_obj.FocusTime
             item["focus"] = int(userassist_obj.FocusCount)
             item["time"] = str(time)
+
         else:
+            item["id"] = int(userassist_obj.ID)
+            item["count"] = int(userassist_obj.CountStartingAtFive
+                                if userassist_obj.CountStartingAtFive < 5
+                                else userassist_obj.CountStartingAtFive - 5)
             item["focus"] = renderers.NotApplicableValue()
             item["time"] = renderers.NotApplicableValue()
 
