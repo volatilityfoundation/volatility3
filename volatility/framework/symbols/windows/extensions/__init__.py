@@ -307,12 +307,30 @@ class _CM_KEY_BODY(objects.Struct):
     """This represents an open handle to a registry key and
     is not tied to the registry hive file format on disk."""
 
+    def _skip_key_hive_entry_path(self, kcb_flags):
+        # Win10 14393 introduced an extra path element that it skips
+        # over by checking for Flags that contain KEY_HIVE_ENTRY
+
+        from volatility.framework.symbols.windows.extensions.registry import RegKeyFlags
+
+        # _CM_KEY_BODY.Trans introduced in Win10 14393
+        if hasattr(self, "Trans") and RegKeyFlags.KEY_HIVE_ENTRY & kcb_flags == RegKeyFlags.KEY_HIVE_ENTRY:
+            return True
+
+        return False
+
     def get_full_key_name(self) -> str:
         output = []
         kcb = self.KeyControlBlock
         while kcb.ParentKcb:
             if kcb.NameBlock.Name == None:
                 break
+
+            if self._skip_key_hive_entry_path(kcb.Flags):
+                kcb = kcb.ParentKcb
+                if not kcb:
+                    break
+
             output.append(kcb.NameBlock.Name.cast("string",
                                                   encoding = "utf8",
                                                   max_length = kcb.NameBlock.NameLength,
