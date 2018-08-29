@@ -246,7 +246,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
         userassist_node_path = hive.get_key("software\\microsoft\\windows\\currentversion\\explorer\\userassist",
                                              return_list=True)
 
-        if not isinstance(userassist_node_path, list) or len(userassist_node_path) < 1:
+        if not userassist_node_path:
             vollog.warning("list_userassist did not find a valid node_path (or None)")
             raise StopIteration
 
