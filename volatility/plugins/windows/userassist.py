@@ -205,35 +205,20 @@ class UserAssist(interfaces_plugins.PluginInterface):
 
     def _win7_or_later(self):
         # TODO: change this when there is a better way of determining the OS version
+        virtual_layer_name = self.config["primary"]
+        virtual_layer = self.context.memory[virtual_layer_name]
+
+        kvo = virtual_layer.config["kernel_virtual_offset"]
+
+        ntkrnlmp = self.context.module(self.config["nt_symbols"],
+                                       layer_name=virtual_layer_name, offset=kvo)
+
+        # _KUSER_SHARED_DATA.CookiePad is in Windows 6.1 (Win7) and later
         try:
-            virtual_layer_name = self.config["primary"]
-            virtual_layer = self.context.memory[virtual_layer_name]
-
-            kvo = virtual_layer.config["kernel_virtual_offset"]
-
-            ntkrnlmp = self.context.module(self.config["nt_symbols"],
-                                           layer_name=virtual_layer_name, offset=kvo)
-
-            # this is a hard-coded address in the Windows OS
-            if virtual_layer.bits_per_register == 32:
-                kuser_addr = 0xFFDF0000
-            else:
-                kuser_addr = 0xFFFFF78000000000
-
-            kuser = ntkrnlmp.object(type_name="_KUSER_SHARED_DATA",
-                                    layer_name=virtual_layer_name,
-                                    offset=kuser_addr)
-
-            if not kuser or not kuser.NtMajorVersion >= 0 or not kuser.NtMinorVersion >= 0:
-                raise
-
-        except:
-            vollog.warning("list_userassist could not determine OS level")
-            raise StopIteration
-
-        if kuser.NtMajorVersion < 6 or (kuser.NtMajorVersion == 6 and kuser.NtMinorVersion < 1):
+            _ = ntkrnlmp.get_type("_KUSER_SHARED_DATA").relative_child_offset("CookiePad")
+            return True
+        except IndexError:
             return False
-        return True
 
     def list_userassist(self, hive: RegistryHive) -> typing.Generator:
         """Generate userassist data for a registry hive."""
