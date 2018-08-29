@@ -203,18 +203,12 @@ class UserAssist(interfaces_plugins.PluginInterface):
         return item
 
     def _win7_or_later(self):
-        # TODO: change this when there is a better way of determining the OS version
-        virtual_layer_name = self.config["primary"]
-        virtual_layer = self.context.memory[virtual_layer_name]
-
-        kvo = virtual_layer.config["kernel_virtual_offset"]
-
-        ntkrnlmp = self.context.module(self.config["nt_symbols"],
-                                       layer_name=virtual_layer_name, offset=kvo)
-
+        # TODO: change this if there is a better way of determining the OS version
         # _KUSER_SHARED_DATA.CookiePad is in Windows 6.1 (Win7) and later
         try:
-            _ = ntkrnlmp.get_type("_KUSER_SHARED_DATA").relative_child_offset("CookiePad")
+            # FIXME: ditch the try/except clause once there's a template method for determining whether a member exists
+            self.context.symbol_space.get_type(
+                self.config['nt_symbols'] + constants.BANG + "_KUSER_SHARED_DATA").relative_child_offset('CookiePad')
             return True
         except IndexError:
             return False
