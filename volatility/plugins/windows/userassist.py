@@ -166,17 +166,20 @@ class UserAssist(interfaces_plugins.PluginInterface):
             return item
 
         if self._win7:
-            userassist_symbol = reg_table_name + constants.BANG + "_VOL_USERASSIST_TYPES_7"
+            userassist_type_name = "_VOL_USERASSIST_TYPES_7"
         else:
-            userassist_symbol = reg_table_name + constants.BANG + "_VOL_USERASSIST_TYPES_XP"
+            userassist_type_name = "_VOL_USERASSIST_TYPES_XP"
 
-        if len(userassist_data) < self.context.symbol_space.get_type(userassist_symbol).size:
-            return item
 
         userassist_layer_name = self.context.memory.free_layer_name("userassist_buffer")
+        userassist_module = self.context.module(reg_table_name, userassist_layer_name, 0)
+        userassist_type = userassist_module.get_type(userassist_type_name)
+        if len(userassist_data) < userassist_type.size:
+            return item
+
         buffer = BufferDataLayer(self.context, self._config_path, userassist_layer_name, userassist_data)
         self.context.add_layer(buffer)
-        userassist_obj = self.context.object(userassist_symbol, userassist_layer_name, 0)
+        userassist_obj = self.context.object(userassist_type, userassist_layer_name, 0)
 
         if self._win7:
             item["id"] = renderers.NotApplicableValue()
@@ -224,7 +227,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
         if self._win7 is None:
             self._win7 = self._win7_or_later()
 
-        userassist_node_path = hive.get_key("software\\microsoft\\windows\\currentversion\\explorer\\userassict",
+        userassist_node_path = hive.get_key("software\\microsoft\\windows\\currentversion\\explorer\\userassist",
                                              return_list=True)
 
         if not userassist_node_path:
