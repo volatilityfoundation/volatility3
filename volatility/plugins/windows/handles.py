@@ -308,7 +308,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
     def run(self):
 
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
@@ -319,4 +319,4 @@ class Handles(interfaces_plugins.PluginInterface):
                                   self._generator(pslist.PsList.list_processes(self.context,
                                                                                self.config['primary'],
                                                                                self.config['nt_symbols'],
-                                                                               filter = filter)))
+                                                                               filter_func = filter_func)))

@@ -211,10 +211,11 @@ class UserAssist(interfaces_plugins.PluginInterface):
         if self.config.get('offset', None) is None:
             try:
                 import volatility.plugins.windows.hivelist as hivelist
-                hive_offsets = [hive.vol.offset for hive in hivelist.HiveList.list_hives(self.context,
-                                                                                         self.config['primary'],
-                                                                                         self.config['nt_symbols'],
-                                                                                         filter = "ntuser.dat")]
+                hive_offsets = [hive.vol.offset for hive in
+                                hivelist.HiveList.list_hives(context = self.context,
+                                                             layer_name = self.config['primary'],
+                                                             symbol_table = self.config['nt_symbols'],
+                                                             filter_string = "ntuser.dat")]
             except ImportError:
                 vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")
                 raise ValueError("Unable to import windows.hivelist plugin, please provide a hive offset")

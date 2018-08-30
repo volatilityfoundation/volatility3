@@ -109,7 +109,7 @@ that will be output as part of the `TreeGrid`.
                                       self._generator(pslist.PsList.list_processes(self.context,
                                                                                    self.config['primary'],
                                                                                    self.config['nt_symbols'],
-                                                                                   filter = filter)))
+                                                                                   filter_func = filter_func)))
 
 In this instance, the plugin constructs a filter (using the PsList plugin's `classmethod` for creating filters).
 It passes checks the plugin's configuration for the `pid` value, and passes it in as a list if it finds it, or None if

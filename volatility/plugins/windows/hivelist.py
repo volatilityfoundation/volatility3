@@ -19,16 +19,16 @@ class HiveList(plugins.PluginInterface):
                                                default = None)]
 
     def _generator(self):
-        for hive in self.list_hives(self.context,
-                                    self.config["primary"],
-                                    self.config["nt_symbols"],
-                                    self.config.get('filter', None)):
+        for hive in self.list_hives(context = self.context,
+                                    layer_name = self.config["primary"],
+                                    symbol_table = self.config["nt_symbols"],
+                                    filter_string = self.config.get('filter', None)):
 
             yield (0, (format_hints.Hex(hive.vol.offset),
                        hive.get_name() or ""))
 
     @classmethod
-    def list_hives(cls, context, layer_name, symbol_table, filter = None):
+    def list_hives(cls, context, layer_name, symbol_table, filter_string = None):
         """Lists all the hives in the primary layer"""
 
         # We only use the object factory to demonstrate how to use one
@@ -41,7 +41,7 @@ class HiveList(plugins.PluginInterface):
         cmhive = ntkrnlmp.object(type_name = "_CMHIVE", offset = list_entry.vol.offset - reloff)
 
         for hive in cmhive.HiveList:
-            if filter is None or filter.lower() in str(hive.get_name() or "").lower():
+            if filter_string is None or filter_string.lower() in str(hive.get_name() or "").lower():
                 yield hive
 
     def run(self):

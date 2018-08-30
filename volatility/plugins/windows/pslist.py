@@ -30,26 +30,26 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def create_filter(cls, pid_list: typing.List[int] = None) -> typing.Callable[[int], bool]:
-        filter = lambda _: False
+        filter_func = lambda _: False
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
         if filter_list:
-            filter = lambda x: x not in filter_list
-        return filter
+            filter_func = lambda x: x not in filter_list
+        return filter_func
 
     @classmethod
     def list_processes(cls,
                        context: interfaces.context.ContextInterface,
                        layer_name: str,
-                       nt_symbols: str,
-                       filter: typing.Callable[[int], bool] = lambda _: False) -> \
+                       symbol_table: str,
+                       filter_func: typing.Callable[[int], bool] = lambda _: False) -> \
             typing.Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the processes in the primary layer that are in the pid config option"""
 
         # We only use the object factory to demonstrate how to use one
         kvo = context.memory[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = context.module(nt_symbols, layer_name = layer_name, offset = kvo)
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
         list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
@@ -69,7 +69,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
         eproc = ntkrnlmp.object(type_name = "_EPROCESS", offset = list_entry.vol.offset - reloff)
 
         for proc in eproc.ActiveProcessLinks:
-            if not filter(proc):
+            if not filter_func(proc):
                 yield proc
 
     def _generator(self):
@@ -77,7 +77,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
         for proc in self.list_processes(self.context,
                                         self.config['primary'],
                                         self.config['nt_symbols'],
-                                        filter = self.create_filter([self.config.get('pid', None)])):
+                                        filter_func = self.create_filter([self.config.get('pid', None)])):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset

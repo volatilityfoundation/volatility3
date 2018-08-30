@@ -37,16 +37,16 @@ class DllDump(interfaces_plugins.PluginInterface):
                                                  "windows",
                                                  "pe")
 
-        filter = lambda _: False
+        filter_func = lambda _: False
         if self.config.get('address', None) is not None:
-            filter = lambda x: x.get_start() not in [self.config['address']]
+            filter_func = lambda x: x.get_start() not in [self.config['address']]
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
             # TODO: what kind of exceptions could this raise and what should we do?
             proc_layer_name = proc.add_process_layer()
 
-            for vad in vadinfo.VadInfo.list_vads(proc, filter = filter):
+            for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):
 
                 # this parameter is inherited from the VadInfo plugin. if a user specifies
                 # an address, then it bypasses the DLL identification heuristics
@@ -92,12 +92,12 @@ class DllDump(interfaces_plugins.PluginInterface):
                            result_text))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
                                    ("Result", str)],
-                                  self._generator(pslist.PsList.list_processes(self.context,
-                                                                               self.config['primary'],
-                                                                               self.config['nt_symbols'],
-                                                                               filter = filter)))
+                                  self._generator(pslist.PsList.list_processes(context = self.context,
+                                                                               layer_name = self.config['primary'],
+                                                                               symbol_table = self.config['nt_symbols'],
+                                                                               filter_func = filter_func)))

@@ -191,14 +191,14 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 kernel = None
                 for virtual_layer in self.valid_kernels:
                     _kvo, kernel = self.valid_kernels[virtual_layer]
-                    filter = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
+                    filter_string = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
                     # Take the first result of search for the intermediate file
                     try:
-                        isf_path = intermed.IntermediateSymbolTable.file_symbol_url("windows", filter).__next__()
+                        isf_path = intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string).__next__()
                     except StopIteration:
                         isf_path = ''
                     if isf_path:
-                        vollog.debug("Using symbol library: {}".format(filter))
+                        vollog.debug("Using symbol library: {}".format(filter_string))
                         clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
                         # Set the discovered options
                         context.config[join(sub_config_path, "class")] = clazz
@@ -207,7 +207,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         requirement.construct(context, config_path)
                         break
                     else:
-                        vollog.debug("Required symbol library path not found: {}".format(filter))
+                        vollog.debug("Required symbol library path not found: {}".format(filter_string))
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
 

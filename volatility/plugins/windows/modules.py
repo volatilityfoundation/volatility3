@@ -40,11 +40,11 @@ class Modules(plugins.PluginInterface):
     def list_modules(cls,
                      context: interfaces.context.ContextInterface,
                      layer_name: str,
-                     nt_symbols: str):
+                     symbol_table: str):
         """Lists all the modules in the primary layer"""
 
         kvo = context.memory[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = context.module(nt_symbols, layer_name = layer_name, offset = kvo)
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
         try:
             # use this type if its available (starting with windows 10)

@@ -116,7 +116,7 @@ class Malfind(interfaces_plugins.PluginInterface):
                            disasm))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
@@ -128,7 +128,7 @@ class Malfind(interfaces_plugins.PluginInterface):
                                    ("PrivateMemory", int),
                                    ("Hexdump", format_hints.HexBytes),
                                    ("Disasm", interfaces_renderers.Disassembly)],
-                                  self._generator(pslist.PsList.list_processes(self.context,
-                                                                               self.config['primary'],
-                                                                               self.config['nt_symbols'],
-                                                                               filter = filter)))
+                                  self._generator(pslist.PsList.list_processes(context = self.context,
+                                                                               layer_name = self.config['primary'],
+                                                                               symbol_table = self.config['nt_symbols'],
+                                                                               filter_func = filter_func)))

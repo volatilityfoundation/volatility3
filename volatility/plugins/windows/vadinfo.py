@@ -67,23 +67,23 @@ class VadInfo(interfaces_plugins.PluginInterface):
 
     @classmethod
     def list_vads(cls, proc: interfaces.objects.ObjectInterface,
-                  filter: typing.Callable[[int], bool] = lambda _: False) -> \
+                  filter_func: typing.Callable[[int], bool] = lambda _: False) -> \
             typing.Generator[interfaces.objects.ObjectInterface, None, None]:
 
         for vad in proc.get_vad_root().traverse():
-            if not filter(vad):
+            if not filter_func(vad):
                 yield vad
 
     def _generator(self, procs):
 
-        filter = lambda _: False
+        filter_func = lambda _: False
         if self.config.get('address', None) is not None:
-            filter = lambda x: x.get_start() not in [self.config['address']]
+            filter_func = lambda x: x.get_start() not in [self.config['address']]
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
 
-            for vad in self.list_vads(proc, filter = filter):
+            for vad in self.list_vads(proc, filter_func = filter_func):
                 yield (0, (proc.UniqueProcessId,
                            process_name,
                            format_hints.Hex(vad.vol.offset),
@@ -100,7 +100,7 @@ class VadInfo(interfaces_plugins.PluginInterface):
 
     def run(self):
 
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
@@ -113,7 +113,7 @@ class VadInfo(interfaces_plugins.PluginInterface):
                                    ("PrivateMemory", int),
                                    ("Parent", format_hints.Hex),
                                    ("File", str)],
-                                  self._generator(pslist.PsList.list_processes(self.context,
-                                                                               self.config['primary'],
-                                                                               self.config['nt_symbols'],
-                                                                               filter = filter)))
+                                  self._generator(pslist.PsList.list_processes(context = self.context,
+                                                                               layer_name = self.config['primary'],
+                                                                               symbol_table = self.config['nt_symbols'],
+                                                                               filter_func = filter_func)))

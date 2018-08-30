@@ -29,9 +29,9 @@ class VadDump(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        filter = lambda _: False
+        filter_func = lambda _: False
         if self.config.get('address', None) is not None:
-            filter = lambda x: x.get_start() not in [self.config['address']]
+            filter_func = lambda x: x.get_start() not in [self.config['address']]
 
         chunk_size = 1024 * 1024 * 10
 
@@ -42,7 +42,7 @@ class VadDump(interfaces_plugins.PluginInterface):
             proc_layer_name = proc.add_process_layer()
             proc_layer = self.context.memory[proc_layer_name]
 
-            for vad in vadinfo.VadInfo.list_vads(proc, filter = filter):
+            for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):
                 try:
                     filedata = interfaces_plugins.FileInterface(
                         "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc.UniqueProcessId,
@@ -69,12 +69,12 @@ class VadDump(interfaces_plugins.PluginInterface):
                            result_text))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
                                    ("Result", str)],
-                                  self._generator(pslist.PsList.list_processes(self.context,
-                                                                               self.config['primary'],
-                                                                               self.config['nt_symbols'],
-                                                                               filter = filter)))
+                                  self._generator(pslist.PsList.list_processes(context = self.context,
+                                                                               layer_name = self.config['primary'],
+                                                                               symbol_table = self.config['nt_symbols'],
+                                                                               filter_func = filter_func)))

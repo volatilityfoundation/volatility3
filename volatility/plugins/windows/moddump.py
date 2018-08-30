@@ -39,11 +39,12 @@ class ModDump(interfaces_plugins.PluginInterface):
         layers = [layer_name]
 
         seen_ids = []
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        for proc in pslist.PsList.list_processes(self.context,
-                                                 self.config['primary'],
-                                                 self.config['nt_symbols']):
+        for proc in pslist.PsList.list_processes(context = self.context,
+                                                 layer_name = self.config['primary'],
+                                                 symbol_table = self.config['nt_symbols'],
+                                                 filter_func = filter_func):
             proc_layer_name = proc.add_process_layer()
 
             try:
@@ -136,6 +137,7 @@ class ModDump(interfaces_plugins.PluginInterface):
         return renderers.TreeGrid([("Base", format_hints.Hex),
                                    ("Name", str),
                                    ("Result", str)],
-                                  self._generator(modules.Modules.list_modules(self.context,
-                                                                               self.config['primary'],
-                                                                               self.config['nt_symbols'])))
+                                  self._generator(
+                                      modules.Modules.list_modules(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'])))

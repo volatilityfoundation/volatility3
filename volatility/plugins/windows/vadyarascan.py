@@ -58,12 +58,12 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
 
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        for task in pslist.PsList.list_processes(self.context,
-                                                 self.config['primary'],
-                                                 self.config['nt_symbols'],
-                                                 filter = filter):
+        for task in pslist.PsList.list_processes(context = self.context,
+                                                 layer_name = self.config['primary'],
+                                                 symbol_table = self.config['nt_symbols'],
+                                                 filter_func = filter_func):
             for offset, name in layer.scan(context = self.context,
                                            scanner = yarascan.YaraScanner(rules = rules),
                                            max_address = self.config['max_size'],

@@ -68,12 +68,12 @@ class ProcDump(interfaces_plugins.PluginInterface):
                        result_text))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
                                    ("Result", str)],
-                                  self._generator(pslist.PsList.list_processes(self.context,
-                                                                               self.config['primary'],
-                                                                               self.config['nt_symbols'],
-                                                                               filter = filter)))
+                                  self._generator(pslist.PsList.list_processes(context = self.context,
+                                                                               layer_name = self.config['primary'],
+                                                                               symbol_table = self.config['nt_symbols'],
+                                                                               filter_func = filter_func)))
