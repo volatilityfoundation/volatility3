@@ -97,7 +97,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
         return item
 
     def _determine_userassist_type(self) -> None:
-        """Determine the userassist type and generate a context.Module depending on the OS version"""
+        """Determine the userassist type and size depending on the OS version"""
 
         if self._win7 is True:
             self._userassist_type_name = "_VOL_USERASSIST_TYPES_7"
@@ -119,8 +119,13 @@ class UserAssist(interfaces_plugins.PluginInterface):
         hive_name = hive.hive.cast(self.config["nt_symbols"] + constants.BANG + "_CMHIVE").get_name()
 
         if self._win7 is None:
-            self._win7 = self._win7_or_later()
-            self._determine_userassist_type()
+            try:
+                self._win7 = self._win7_or_later()
+            except:
+                # self._win7 will be None and only registry value rawdata will be output
+                pass
+
+        self._determine_userassist_type()
 
         userassist_node_path = hive.get_key("software\\microsoft\\windows\\currentversion\\explorer\\userassist",
                                             return_list = True)
@@ -233,7 +238,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
                 hive_name = hive.hive.cast(self.config["nt_symbols"] + constants.BANG + "_CMHIVE").get_name()
                 self.context.memory.add_layer(hive)
                 yield from self.list_userassist(hive)
-                break
+                continue
             except exceptions.PagedInvalidAddressException as excp:
                 vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
             except KeyError:
