@@ -121,7 +121,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
         if self._win7 is None:
             try:
                 self._win7 = self._win7_or_later()
-            except:
+            except exceptions.SymbolError:
                 # self._win7 will be None and only registry value rawdata will be output
                 pass
 
