@@ -7,6 +7,7 @@ from volatility.framework import constants, exceptions, interfaces, objects, ren
 from volatility.framework.layers import intel
 from volatility.framework.objects import utility
 from volatility.framework.symbols import generic
+from volatility.framework.symbols.windows.extensions.registry import RegKeyFlags
 
 vollog = logging.getLogger(__name__)
 
@@ -310,8 +311,6 @@ class _CM_KEY_BODY(objects.Struct):
     def _skip_key_hive_entry_path(self, kcb_flags):
         """Win10 14393 introduced an extra path element that it skips
         over by checking for Flags that contain KEY_HIVE_ENTRY"""
-
-        from volatility.framework.symbols.windows.extensions.registry import RegKeyFlags
 
         # _CM_KEY_BODY.Trans introduced in Win10 14393
         if hasattr(self, "Trans") and RegKeyFlags.KEY_HIVE_ENTRY & kcb_flags == RegKeyFlags.KEY_HIVE_ENTRY:
