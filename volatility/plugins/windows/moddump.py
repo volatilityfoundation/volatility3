@@ -31,7 +31,7 @@ class ModDump(interfaces_plugins.PluginInterface):
                            context: interfaces.context.ContextInterface,
                            layer_name: str,
                            symbol_table: str,
-                           pids: typing.List[int] = None) -> typing.List[str]:
+                           pids: typing.List[int] = None) -> typing.Generator[str, None, None]:
         """Build a cache of possible virtual layers, in priority starting with
         the primary/kernel layer. Then keep one layer per session by cycling
         through the process list.
@@ -43,7 +43,7 @@ class ModDump(interfaces_plugins.PluginInterface):
         # the primary layer should be first
         layers = [layer_name]
 
-        seen_ids = []
+        seen_ids = []  # type: typing.List[interfaces.objects.ObjectInterface]
         filter_func = pslist.PsList.create_filter(pids or [])
 
         for proc in pslist.PsList.list_processes(context = context,
@@ -69,9 +69,7 @@ class ModDump(interfaces_plugins.PluginInterface):
 
             # save the layer if we haven't seen the session yet
             seen_ids.append(session_space.SessionId)
-            layers.append(proc_layer_name)
-
-        return layers
+            yield proc_layer_name
 
     @classmethod
     def find_session_layer(cls,
