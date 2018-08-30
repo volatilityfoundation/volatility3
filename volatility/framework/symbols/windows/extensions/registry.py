@@ -41,7 +41,7 @@ class RegValueTypes(enum.Enum):
         except ValueError:
             return cls(RegValueTypes.REG_UNKNOWN)
 
-class RegKeyFlags(enum.Enum):
+class RegKeyFlags(enum.IntEnum):
     KEY_IS_VOLATILE = 0x01
     KEY_HIVE_EXIT = 0x02
     KEY_HIVE_ENTRY = 0x04
@@ -52,20 +52,6 @@ class RegKeyFlags(enum.Enum):
     KEY_VIRT_MIRRORED = 0x80
     KEY_VIRT_TARGET = 0x100
     KEY_VIRTUAL_STORE= 0x200
-
-    def __and__(self, other):
-        if self.__class__ is other.__class__:
-            return self.value & other.value
-        elif issubclass(other.__class__, int):
-            return self.value & other
-        return NotImplemented
-
-    def __eq__(self, other):
-        if self.__class__ is other.__class__:
-            return self.value == other.value
-        elif issubclass(other.__class__, int):
-            return self.value == other
-        return NotImplemented
 
 class _HMAP_ENTRY(objects.Struct):
     def get_block_offset(self) -> int:
