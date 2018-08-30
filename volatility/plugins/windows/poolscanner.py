@@ -58,7 +58,11 @@ class PoolScanner(plugins.PluginInterface):
                                      self.config['nt_symbols'],
                                      constraints,
                                      alignment = 8):
-            print(repr(header))
+            yield (0, (header.PoolTag.cast("string", max_length = 4, encoding = "latin-1"),
+                       format_hints.Hex(header.vol.offset),
+                       header.vol.layer_name,
+                       "Name",
+                       "Path"))
 
     @classmethod
     def pool_scan(cls,
@@ -74,7 +78,7 @@ class PoolScanner(plugins.PluginInterface):
         for constraint in pool_constraints:
             constraint_lookup[constraint.tag] = constraint
         # Setup the pool header and offset differential
-        module = context.module(symbol_table, layer_name, offset=0)
+        module = context.module(symbol_table, layer_name, offset = 0)
         header_type = module.get_type('_POOL_HEADER')
         header_offset = header_type.relative_child_offset('PoolTag')
 
@@ -120,7 +124,7 @@ class PoolScanner(plugins.PluginInterface):
             yield header
 
     def run(self) -> renderers.TreeGrid:
-        return renderers.TreeGrid([("Tag", format_hints.Hex),
+        return renderers.TreeGrid([("Tag", str),
                                    ("Offset", format_hints.Hex),
                                    ("Layer", str),
                                    ("Name", str),
