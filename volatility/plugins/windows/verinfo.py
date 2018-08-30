@@ -89,7 +89,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
     def _generator(self,
                    procs: typing.Generator[interfaces.objects.ObjectInterface, None, None],
                    mods: typing.Generator[interfaces.context.ModuleInterface, None, None],
-                   moddump_plugin: moddump.ModDump):
+                   session_layers: typing.Generator[str, None, None]):
         """Generates a list of PE file version info for processes, dlls, and modules.
 
         Args:
@@ -103,16 +103,13 @@ class VerInfo(interfaces_plugins.PluginInterface):
                                                  "windows",
                                                  "pe")
 
-        # populate the session layers for kernel modules
-        session_layers = moddump_plugin.get_session_layers()
-
         for mod in mods:
             try:
                 BaseDllName = mod.BaseDllName.get_string()
             except exceptions.InvalidAddressException:
                 BaseDllName = renderers.UnreadableValue()
 
-            session_layer_name = moddump_plugin.find_session_layer(session_layers, mod.DllBase)
+            session_layer_name = moddump.ModDump.find_session_layer(self.context, session_layers, mod.DllBase)
             if session_layer_name is None:
                 file_version = renderers.UnreadableValue()
                 product_version = renderers.UnreadableValue()
@@ -183,7 +180,10 @@ class VerInfo(interfaces_plugins.PluginInterface):
                                             self.config["primary"],
                                             self.config["nt_symbols"])
 
-        moddump_plugin = moddump.ModDump(self.context, self.config_path)
+        # populate the session layers for kernel modules
+        session_layers = moddump.ModDump.get_session_layers(self.context,
+                                                            self.config['primary'],
+                                                            self.config['nt_symbols'])
 
         return renderers.TreeGrid([("PID", int),
                                    ("Process", str),
@@ -191,4 +191,4 @@ class VerInfo(interfaces_plugins.PluginInterface):
                                    ("Name", str),
                                    ("File", str),
                                    ("Product", str)],
-                                  self._generator(procs, mods, moddump_plugin))
+                                  self._generator(procs, mods, session_layers))
