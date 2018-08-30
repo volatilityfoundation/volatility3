@@ -308,8 +308,8 @@ class _CM_KEY_BODY(objects.Struct):
     is not tied to the registry hive file format on disk."""
 
     def _skip_key_hive_entry_path(self, kcb_flags):
-        # Win10 14393 introduced an extra path element that it skips
-        # over by checking for Flags that contain KEY_HIVE_ENTRY
+        """Win10 14393 introduced an extra path element that it skips
+        over by checking for Flags that contain KEY_HIVE_ENTRY"""
 
         from volatility.framework.symbols.windows.extensions.registry import RegKeyFlags
 
