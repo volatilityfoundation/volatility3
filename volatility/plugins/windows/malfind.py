@@ -1,15 +1,13 @@
-import volatility.framework.interfaces.plugins as interfaces_plugins
-import volatility.framework.interfaces.renderers as interfaces_renderers
 import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
-from volatility.framework import constants
+from volatility.framework import constants, interfaces
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 
 
-class Malfind(interfaces_plugins.PluginInterface):
+class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code"""
 
     @classmethod
@@ -48,12 +46,14 @@ class Malfind(interfaces_plugins.PluginInterface):
         return True
 
     @classmethod
-    def list_injections(cls, context, symbol_table, vadinfo_plugin, proc):
+    def list_injections(cls,
+                        context: interfaces.context.ContextInterface,
+                        symbol_table: str,
+                        proc: interfaces.objects.ObjectInterface):
         """Generate memory regions for a process that may contain
         injected code.
 
         Args:
-            vadinfo_plugin: an instance of the plugins.vadinfo.VadInfo plugin
             proc: an _EPROCESS instance
         """
 
@@ -61,9 +61,9 @@ class Malfind(interfaces_plugins.PluginInterface):
         proc_layer = context.memory[proc_layer_name]
 
         for vad in proc.get_vad_root().traverse():
-            protection_string = vad.get_protection(vadinfo_plugin.protect_values(context,
-                                                                                 proc_layer_name,
-                                                                                 symbol_table),
+            protection_string = vad.get_protection(vadinfo.VadInfo.protect_values(context,
+                                                                                  proc_layer_name,
+                                                                                  symbol_table),
                                                    vadinfo.winnt_protections)
             write_exec = "EXECUTE" in protection_string and "WRITE" in protection_string
 
@@ -80,8 +80,6 @@ class Malfind(interfaces_plugins.PluginInterface):
                 yield vad, data
 
     def _generator(self, procs):
-        vadinfo_plugin = vadinfo.VadInfo(self.context, self.config_path)
-
         # determine if we're on a 32 or 64 bit kernel
         if self.context.symbol_space.get_type(self.config["nt_symbols"] + constants.BANG + "pointer").size == 4:
             is_32bit_arch = True
@@ -91,7 +89,7 @@ class Malfind(interfaces_plugins.PluginInterface):
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
 
-            for vad, data in self.list_injections(self.context, self.config["nt_symbols"], vadinfo_plugin, proc):
+            for vad, data in self.list_injections(self.context, self.config["nt_symbols"], proc):
 
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
                 if is_32bit_arch or proc.get_is_wow64():
@@ -99,16 +97,16 @@ class Malfind(interfaces_plugins.PluginInterface):
                 else:
                     architecture = "intel64"
 
-                disasm = interfaces_renderers.Disassembly(data, vad.get_start(), architecture)
+                disasm = interfaces.renderers.Disassembly(data, vad.get_start(), architecture)
 
                 yield (0, (proc.UniqueProcessId,
                            process_name,
                            format_hints.Hex(vad.get_start()),
                            format_hints.Hex(vad.get_end()),
                            vad.get_tag(),
-                           vad.get_protection(vadinfo_plugin.protect_values(self.context,
-                                                                            proc.vol.layer_name,
-                                                                            self.config["nt_symbols"]),
+                           vad.get_protection(vadinfo.VadInfo.protect_values(self.context,
+                                                                             proc.vol.layer_name,
+                                                                             self.config["nt_symbols"]),
                                               vadinfo.winnt_protections),
                            vad.get_commit_charge(),
                            vad.get_private_memory(),
@@ -127,7 +125,7 @@ class Malfind(interfaces_plugins.PluginInterface):
                                    ("CommitCharge", int),
                                    ("PrivateMemory", int),
                                    ("Hexdump", format_hints.HexBytes),
-                                   ("Disasm", interfaces_renderers.Disassembly)],
+                                   ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(pslist.PsList.list_processes(context = self.context,
                                                                                layer_name = self.config['primary'],
                                                                                symbol_table = self.config['nt_symbols'],
