@@ -46,6 +46,7 @@ class ModDump(interfaces_plugins.PluginInterface):
         seen_ids = []  # type: typing.List[interfaces.objects.ObjectInterface]
         filter_func = pslist.PsList.create_filter(pids or [])
 
+        result = []
         for proc in pslist.PsList.list_processes(context = context,
                                                  layer_name = layer_name,
                                                  symbol_table = symbol_table,
@@ -95,9 +96,9 @@ class ModDump(interfaces_plugins.PluginInterface):
 
     def _generator(self, mods):
 
-        session_layers = self.get_session_layers(self.context,
-                                                 self.config['primary'],
-                                                 self.config['nt_symbols'])
+        session_layers = list(self.get_session_layers(self.context,
+                                                      self.config['primary'],
+                                                      self.config['nt_symbols']))
         pe_table_name = PEIntermedSymbols.create(self.context,
                                                  self.config_path,
                                                  "windows",
@@ -109,7 +110,7 @@ class ModDump(interfaces_plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 BaseDllName = renderers.UnreadableValue()
 
-            session_layer_name = self.find_session_layer(session_layers, mod.DllBase)
+            session_layer_name = self.find_session_layer(self.context, session_layers, mod.DllBase)
             if session_layer_name is None:
                 result_text = "Cannot find a viable session layer for {0:#x}".format(mod.DllBase)
             else:
