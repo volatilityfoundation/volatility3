@@ -37,7 +37,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
                             context: interfaces.context.ContextInterface,
                             pe_table_name: str,
                             layer_name: str,
-                            base_address: int) -> dict:
+                            base_address: int) -> typing.Dict[str, typing.Any]:
         """Get File and Product version information from PE files
 
         Args:
