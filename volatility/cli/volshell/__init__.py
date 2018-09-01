@@ -29,7 +29,11 @@ class VolShell(cli.CommandLine):
     This allows a memory image to be examined through an interactive python terminal with all the volatility support
     calls available."""
 
+    def __init__(self):
+        self.output_dir = None
+
     def run(self):
+        """Executes the command line module, taking the system arguments, determining the plugin to run and then running it"""
         sys.stdout.write("Volshell (Volatility Framework) {}\n".format(constants.PACKAGE_VERSION))
 
         volatility.framework.require_interface_version(0, 0, 0)
@@ -39,15 +43,23 @@ class VolShell(cli.CommandLine):
         parser.add_argument("-c", "--config", help = "Load the configuration from a json file", default = None,
                             type = str)
         parser.add_argument("-e", "--extend", help = "Extend the configuration with a new (or changed) setting",
-                            default = None, action = 'append')
-        parser.add_argument("-p", "--plugins", help = "Semi-colon separated list of paths to find plugins",
+                            default = None,
+                            action = 'append')
+        parser.add_argument("-p", "--plugin-dirs", help = "Semi-colon separated list of paths to find plugins",
+                            default = "", type = str)
+        parser.add_argument("-s", "--symbol-dirs", help = "Semi-colon separated list of paths to find symbols",
                             default = "", type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
         parser.add_argument("-o", "--output-dir", help = "Directory in which to output any generated files",
                             default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')), type = str)
-        parser.add_argument("--log", help = "Log output to a file as well as the console", default = None, type = str)
-        parser.add_argument("-f", metavar = "FILE", default = None, type = str,
-                            help = "Shorthand for --single-location=file://FILE if single-location is not defined")
+        parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
+        parser.add_argument("--log", help = "Log output to a file as well as the console", default = None,
+                            type = str)
+        parser.add_argument("-f", "--file", metavar = 'FILE', default = None, type = str,
+                            help = "Shorthand for --single-location=file:// if single-location is not defined")
+        parser.add_argument("--write-config", help = "Write configuration JSON file out to config.json",
+                            default = False,
+                            action = 'store_true')
 
         # Volshell specific flags
         parser.add_argument("-w", "--windows", default = False, action = "store_true", help = "Run a Windows volshell")
@@ -57,8 +69,11 @@ class VolShell(cli.CommandLine):
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != '--help' and arg != '-h']
         partial_args, _ = parser.parse_known_args(known_args)
-        if partial_args.plugins:
-            volatility.plugins.__path__ = partial_args.plugins.split(";") + constants.PLUGINS_PATH
+        if partial_args.plugin_dirs:
+            volatility.plugins.__path__ = partial_args.plugin_dirs.split(";") + constants.PLUGINS_PATH
+
+        if partial_args.symbol_dirs:
+            volatility.symbols.__path__ = partial_args.symbol_dirs.split(";") + constants.SYMBOL_BASEPATHS
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
@@ -68,10 +83,16 @@ class VolShell(cli.CommandLine):
             file_logger.setFormatter(file_formatter)
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
+        if partial_args.verbosity < 3:
+            console.setLevel(30 - (partial_args.verbosity * 10))
+        else:
+            console.setLevel(10 - (partial_args.verbosity - 2))
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
-        framework.import_files(volatility.plugins)  # Will not log as console's default level is WARNING
+        failures = framework.import_files(volatility.plugins,
+                                          True)  # Will not log as console's default level is WARNING
+        vollog.info("Plugins could not be loaded: " + ", ".join(failures))
         automagics = automagic.available(ctx)
 
         # Initialize the list of plugins in case volshell needs it
@@ -97,12 +118,13 @@ class VolShell(cli.CommandLine):
             self.populate_requirements_argparse(subparser, volshell_plugin_list[plugin])
             configurables_list[plugin] = volshell_plugin_list[plugin]
 
+        ###
+        # PASS TO UI
+        ###
+        # Hand the plugin requirements over to the CLI (us) and let it construct the config tree
+
         # Run the argparser
         args = parser.parse_args()
-        if args.verbosity < 3:
-            console.setLevel(30 - (args.verbosity * 10))
-        else:
-            console.setLevel(10 - (args.verbosity - 2))
 
         vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
 
@@ -116,8 +138,8 @@ class VolShell(cli.CommandLine):
         # It has to go here so it can be overridden by single-location if it's defined
         # NOTE: This will *BREAK* if LayerStacker, or the automagic configuration system, changes at all
         ###
-        if args.f:
-            file_name = os.path.abspath(args.f)
+        if args.file:
+            file_name = os.path.abspath(args.file)
             if not os.path.exists(file_name):
                 vollog.log(logging.INFO, "File does not exist: {}".format(file_name))
             else:
@@ -151,7 +173,9 @@ class VolShell(cli.CommandLine):
             constructed = self.run_plugin(ctx,
                                           automagics,
                                           plugin,
-                                          plugin_config_path)
+                                          plugin_config_path,
+                                          quiet = args.quiet,
+                                          write_config = args.write_config)
 
             # Construct and run the plugin
             text_renderer.QuickTextRenderer().render(constructed.run())
