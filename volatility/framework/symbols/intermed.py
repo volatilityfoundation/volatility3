@@ -134,10 +134,14 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         Filter reduces the number of results returned to only those URLs containing that string
         """
+
         # Check user-modifiable files first, then compressed ones
         extensions = ['.json', '.json.xz', '.json.gz', '.json.bz2']
         if filename is None:
             filename = "*"
+        # For zipfiles, the path separator is always "/", so we need to ch
+        zip_match = "/".join(os.path.split(filename))
+
         # Check user symbol directory first, then fallback to the framework's library to allow for overloading
         for path in volatility.symbols.__path__:
             if not os.path.isabs(path):
@@ -150,6 +154,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                 except FileNotFoundError:
                     # If there's no linux symbols, don't cry about it
                     pass
+
             # Finally try looking in zip files
             zip_path = os.path.join(path, sub_path + ".zip")
             if os.path.exists(zip_path):
@@ -158,7 +163,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                     for name in zfile.namelist():
                         for extension in extensions:
                             # By ending with an extension (and therefore, not /), we should not return any directories
-                            if name.endswith(filename + extension) or (filename == "*" and name.endswith(extension)):
+                            if name.endswith(zip_match + extension) or (zip_match == "*" and name.endswith(extension)):
                                 yield "jar:file:" + str(pathlib.Path(zip_path)) + "!" + name
 
     @classmethod
