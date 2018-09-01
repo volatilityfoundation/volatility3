@@ -85,6 +85,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                             action = 'append')
         parser.add_argument("-p", "--plugin-dirs", help = "Semi-colon separated list of paths to find plugins",
                             default = "", type = str)
+        parser.add_argument("-s", "--symbol-dirs", help = "Semi-colon separated list of paths to find symbols",
+                            default = "", type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
         parser.add_argument("-o", "--output-dir", help = "Directory in which to output any generated files",
                             default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')), type = str)
@@ -103,6 +105,9 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         partial_args, _ = parser.parse_known_args(known_args)
         if partial_args.plugin_dirs:
             volatility.plugins.__path__ = partial_args.plugin_dirs.split(";") + constants.PLUGINS_PATH
+
+        if partial_args.symbol_dirs:
+            volatility.symbols.__path__ = partial_args.symbol_dirs.split(";") + constants.SYMBOL_BASEPATHS
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)

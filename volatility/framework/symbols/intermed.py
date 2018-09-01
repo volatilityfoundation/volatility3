@@ -9,7 +9,8 @@ import typing
 import zipfile
 from abc import ABCMeta
 
-from volatility import schemas
+import volatility
+from volatility import schemas, symbols
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects, layers
 from volatility.framework.symbols import native
 
@@ -138,7 +139,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         if filename is None:
             filename = "*"
         # Check user symbol directory first, then fallback to the framework's library to allow for overloading
-        for path in constants.SYMBOL_BASEPATHS:
+        for path in volatility.symbols.__path__:
             if not os.path.isabs(path):
                 path = os.path.abspath(os.path.join(__file__, path))
             for extension in extensions:
@@ -170,7 +171,16 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> str:
         """Takes a context and loads an intermediate symbol table based on a filename.
 
-        Returns the name of the added symbol table"""
+        Args:
+            context: The context that the current plugin is being run within
+            config_path: The configuration path for reading/storing configuration information this symbol table may use
+            sub_path: The path under a suitable symbol path (defaults to volatility/symbols and volatility/framework/symbols) to check
+            filename: Basename of the file to find under the sub_path
+            native_types: Set of native types, defaults to native types read from the intermediate symbol format file
+            table_mapping: a dictionary of table names mentioned within the ISF file, and the tables within the context which they map to
+
+        Returns:
+             the name of the added symbol table"""
         urls = list(cls.file_symbol_url(sub_path, filename))
         if not urls:
             raise ValueError("No symbol files found at provided filename: {}", filename)
