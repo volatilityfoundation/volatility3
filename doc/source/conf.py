@@ -15,6 +15,14 @@
 import os
 import sys
 
+import sphinx.apidoc
+
+
+def setup(app):
+    sphinx.apidoc.main(argv = ['-e', '-M', '-f', '-T', '-o', 'doc/source',
+                               os.path.join(os.path.dirname(__file__), '..', '..', 'volatility')])
+
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
