@@ -31,6 +31,7 @@ class VolShell(cli.CommandLine):
     calls available."""
 
     def __init__(self):
+        super().__init__()
         self.output_dir = None
 
     def run(self):
