@@ -113,6 +113,11 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
         layer = context.memory[layer_name]
         join = interfaces.configuration.path_join
 
+        # Never stack on top of an intel layer
+        # FIXME: Find a way to improve this check
+        if isinstance(layer, intel.Intel):
+            return None
+
         linux_banners = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
