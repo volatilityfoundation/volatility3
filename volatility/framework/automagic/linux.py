@@ -113,12 +113,12 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
         layer = context.memory[layer_name]
         join = interfaces.configuration.path_join
 
-        dtb = None
-
         linux_banners = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
+            dtb = None
             vollog.debug("Identified banner: {}".format(repr(banner)))
+
             symbol_files = linux_banners.get(banner, None)
             if symbol_files:
                 isf_path = symbol_files[0]
