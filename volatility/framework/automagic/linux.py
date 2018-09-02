@@ -109,13 +109,9 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
               progress_callback: validity.ProgressCallback = None) \
             -> typing.Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify linux within this layer"""
-        layer = context.memory[layer_name]
+        # Bail out by default unless we can stack properly
+        layer = None
         join = interfaces.configuration.path_join
-
-        # Bail out if we're not a physical layer
-        # TODO: We need a better way of doing this
-        if isinstance(layer, intel.Intel):
-            return None
 
         dtb = None
 
