@@ -110,7 +110,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
             -> typing.Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify linux within this layer"""
         # Bail out by default unless we can stack properly
-        layer = None
+        layer = context.memory[layer_name]
         join = interfaces.configuration.path_join
 
         dtb = None
@@ -148,10 +148,10 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
 
                 layer = layer_class(context, config_path = config_path, name = new_layer_name)
 
-            if layer:
+            if layer and dtb:
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
-                break
-        return layer
+                return layer
+        return None
 
 
 class LinuxUtilities(object):
