@@ -168,7 +168,7 @@ class LinuxUtilities(object):
                   symbol_table: str,
                   layer_name: str,
                   progress_callback: validity.ProgressCallback = None) \
-            -> typing.Tuple[typing.Optional[int], typing.Optional[int]]:
+            -> typing.Tuple[int, int]:
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'
         table_dtb = context.symbol_space.get_symbol(init_task_symbol).address
@@ -195,7 +195,10 @@ class LinuxUtilities(object):
             vollog.debug(
                 "Linux ASLR shift values determined: physical {:0x} virtual {:0x}".format(kaslr_shift, aslr_shift))
             return kaslr_shift, aslr_shift
-        return None, None
+
+        # We don't throw an exception, because we may legitimately not have an ASLR shift, but we report it
+        vollog.debug("Scanners could not determine any ASLR shifts, using 0 for both")
+        return 0, 0
 
     @classmethod
     def virtual_to_physical_address(cls, addr: int) -> int:
