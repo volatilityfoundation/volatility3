@@ -23,26 +23,32 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
 
     @classmethod
     def load_linux_banners(cls) -> LinuxBanners:
-        linuxbanners = {}  # type: LinuxBanners
+        linux_banners = {}  # type: LinuxBanners
         if os.path.exists(constants.LINUX_BANNERS_PATH):
             with open(constants.LINUX_BANNERS_PATH, "rb") as f:
                 # We use pickle over JSON because we're dealing with bytes objects
-                linuxbanners.update(pickle.load(f))
+                linux_banners.update(pickle.load(f))
 
         # Remove possibilities that can't exist locally.
-        for banner in linuxbanners:
-            for path in linuxbanners[banner]:
+        remove_banners = []
+        for banner in linux_banners:
+            for path in linux_banners[banner]:
                 url = urllib.parse.urlparse(path)
                 if url.scheme == 'file' and not os.path.exists(urllib.request.url2pathname(url.path)):
                     vollog.log(constants.LOGLEVEL_V,
                                "Removing cached path {} for banner {}: file does not exist".format(path, banner))
-                    linuxbanners[banner].remove(path)
-        return linuxbanners
+                    linux_banners[banner].remove(path)
+            if not linux_banners[banner]:
+                remove_banners.append(banner)
+        for remove_banner in remove_banners:
+            del linux_banners[remove_banner]
+        return linux_banners
 
     @classmethod
-    def save_linux_banners(cls, linuxbanners):
+    def save_linux_banners(cls, linux_banners):
+
         with open(constants.LINUX_BANNERS_PATH, "wb") as f:
-            pickle.dump(linuxbanners, f)
+            pickle.dump(linux_banners, f)
 
     def __call__(self, context, config_path, configurable, progress_callback = None):
         """Runs the automagic over the configurable"""

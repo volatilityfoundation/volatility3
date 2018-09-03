@@ -139,8 +139,10 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         extensions = ['.json', '.json.xz', '.json.gz', '.json.bz2']
         if filename is None:
             filename = "*"
-        # For zipfiles, the path separator is always "/", so we need to ch
-        zip_match = "/".join(os.path.split(filename))
+            zip_match = filename
+        else:
+            # For zipfiles, the path separator is always "/", so we need to change the path
+            zip_match = "/".join(os.path.split(filename))
 
         # Check user symbol directory first, then fallback to the framework's library to allow for overloading
         for path in volatility.symbols.__path__:
