@@ -38,6 +38,15 @@ class LinuxSymbolCache(interfaces.automagic.AutomagicInterface):
                     vollog.log(constants.LOGLEVEL_V,
                                "Removing cached path {} for banner {}: file does not exist".format(path, banner))
                     linux_banners[banner].remove(path)
+                # This is probably excessive, but it's here if we need it
+                # if url.scheme == 'jar':
+                #     zip_file, zip_path = url.path.split("!")
+                #     zip_file = urllib.parse.urlparse(zip_file).path
+                #     if ((not os.path.exists(zip_file)) or (zip_path not in zipfile.ZipFile(zip_file).namelist())):
+                #         vollog.log(constants.LOGLEVEL_V,
+                #                    "Removing cached path {} for banner {}: file does not exist".format(path, banner))
+                #         linux_banners[banner].remove(path)
+
             if not linux_banners[banner]:
                 remove_banners.append(banner)
         for remove_banner in remove_banners:
