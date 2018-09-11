@@ -18,13 +18,42 @@ class _POOL_HEADER(objects.Struct):
 
     def get_object(self, type_name, object_type):
 
+        symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
+        pool_header_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_POOL_HEADER").size
+
         # if there is no object type, then just instantiate a structure
         if object_type is None:
-            pass
+            mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
+                                              layer_name = self.vol.layer_name,
+                                              offset = self.vol.offset + pool_header_size)
+
+            return mem_object
 
         # otherwise we have an executive object in the pool
         else:
-            pass
+            # this used to be a vol magic but its basically the size of a pool header
+            alignment = pool_header_size
+            type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
+            rounded_size = utility.round(type_size, alignment, up = True)
+
+            mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
+                                              layer_name = self.vol.layer_name,
+                                              offset = self.vol.offset + self.BlockSize * alignment - rounded_size)
+
+            object_header = mem_object.object_header()
+
+            ## FIXME: this will raise even though we know a valid object exists at this address
+            #if mem_object.vol.offset == 0x0000000002013ad0:
+            #    print(object_header.NameInfo.Name.String)
+
+            try:
+                object_type_string = object_header.NameInfo.Name.String
+                if object_type_string == object_type:
+                    return mem_object
+                else:
+                    return None
+            except (TypeError, exceptions.InvalidAddressException):
+                return None
 
 class _KSYSTEM_TIME(objects.Struct):
 
@@ -422,7 +451,7 @@ class _UNICODE_STRING(objects.Struct):
     String = property(get_string)
 
 
-class _EPROCESS(generic.GenericIntelProcess):
+class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
     def add_process_layer(self,
                           config_prefix: str = None,
                           preferred_name: str = None):
