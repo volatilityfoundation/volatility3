@@ -1,12 +1,14 @@
 import enum
 import typing
+import logging
 
-from volatility.framework import interfaces, validity, objects, renderers
+from volatility.framework import interfaces, validity, objects, renderers, constants
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 
+vollog = logging.getLogger(__name__)
 
 class PoolType(enum.IntEnum):
     """Class to maintain the different possible PoolTypes
@@ -37,7 +39,7 @@ class PoolConstraint(validity.ValidityRoutines):
 
 
 class PoolScanner(plugins.PluginInterface):
-    """Lists the processes present in a particular windows memory image"""
+    """A generic pool scanner plugin"""
 
     @classmethod
     def get_requirements(cls):
@@ -48,17 +50,56 @@ class PoolScanner(plugins.PluginInterface):
 
     def _generator(self):
         constraints = [
+            # atom tables
             PoolConstraint(b'AtmT',
                            size = (200, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE)
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # processes on windows before windows 8
+            PoolConstraint(b'Pro\xe3',
+                           size = (600, None),
+                           page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # processes on windows starting with windows 8
+            PoolConstraint(b'Proc',
+                           size = (600, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
+        # a lookup table that associates pool tags with structures and object types
+        tag_type_map = {
+            b'AtmT': [
+                "_RTL_ATOM_TABLE", # structure name
+                None,              # _OBJECT_TYPE name (if any)
+                ],
+            b'Pro\xe3': [
+                "_EPROCESS",
+                "Process",
+                ],
+            b'Proc': [
+                "_EPROCESS",
+                "Process",
+            ],
+        }
         base_layer = self.context.memory[self.config['primary']].config['memory_layer']
         for header in self.pool_scan(self._context,
                                      base_layer,
                                      self.config['nt_symbols'],
                                      constraints,
                                      alignment = 8):
-            yield (0, (header.PoolTag.cast("string", max_length = 4, encoding = "latin-1"),
+
+            tag_string = header.PoolTag.cast("string", max_length = 4, encoding = "latin-1")
+            type_entry = tag_type_map.get(tag_string, None)
+
+            if type_entry is None:
+                vollog.log(constants.LOGLEVEL_VVV, "There are no types configured for tag {}".format(tag_string))
+                continue
+
+            mem_object = header.get_object(type_name = type_entry[0],
+                                           object_type = type_entry[1])
+
+            if mem_object is None:
+                vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(type_entry[0]))
+                continue
+
+            yield (0, (tag_string,
                        format_hints.Hex(header.vol.offset),
                        header.vol.layer_name,
                        "Name",
