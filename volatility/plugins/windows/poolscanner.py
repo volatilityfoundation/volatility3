@@ -65,15 +65,15 @@ class PoolScanner(plugins.PluginInterface):
         ]
         # a lookup table that associates pool tags with structures and object types
         tag_type_map = {
-            b'AtmT': [
+            "AtmT": [
                 "_RTL_ATOM_TABLE", # structure name
                 None,              # _OBJECT_TYPE name (if any)
                 ],
-            b'Pro\xe3': [
+            "Pro\xe3": [
                 "_EPROCESS",
                 "Process",
                 ],
-            b'Proc': [
+            "Proc": [
                 "_EPROCESS",
                 "Process",
             ],
@@ -99,10 +99,18 @@ class PoolScanner(plugins.PluginInterface):
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(type_entry[0]))
                 continue
 
+            # generate some type-specific info for sanity checking
+            if type_entry[1] == "Process":
+                name = mem_object.ImageFileName.cast("string",
+                                                     max_length = mem_object.ImageFileName.vol.count,
+                                                     errors = "replace")
+            else:
+                name = ""
+
             yield (0, (tag_string,
                        format_hints.Hex(header.vol.offset),
                        header.vol.layer_name,
-                       "Name",
+                       name,
                        "Path"))
 
     @classmethod
