@@ -14,6 +14,18 @@ vollog = logging.getLogger(__name__)
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
+class _POOL_HEADER(objects.Struct):
+
+    def get_object(self, type_name, object_type):
+
+        # if there is no object type, then just instantiate a structure
+        if object_type is None:
+            pass
+
+        # otherwise we have an executive object in the pool
+        else:
+            pass
+
 class _KSYSTEM_TIME(objects.Struct):
 
     def get_time(self):
