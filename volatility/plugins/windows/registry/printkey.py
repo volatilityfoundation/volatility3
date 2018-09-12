@@ -81,7 +81,7 @@ class PrintKey(plugins.PluginInterface):
         """Walks through a registry, hive by hive"""
         if self.config.get('offset', None) is None:
             try:
-                import volatility.plugins.windows.hivelist as hivelist
+                import volatility.plugins.windows.registry.hivelist as hivelist
                 hive_offsets = [hive.vol.offset for hive in hivelist.HiveList.list_hives(self.context,
                                                                                          self.config['primary'],
                                                                                          self.config['nt_symbols'])]

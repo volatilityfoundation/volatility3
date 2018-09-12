@@ -210,7 +210,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
         # get all the user hive offsets or use the one specified
         if self.config.get('offset', None) is None:
             try:
-                import volatility.plugins.windows.hivelist as hivelist
+                import volatility.plugins.windows.registry.hivelist as hivelist
                 hive_offsets = [hive.vol.offset for hive in
                                 hivelist.HiveList.list_hives(context = self.context,
                                                              layer_name = self.config['primary'],
