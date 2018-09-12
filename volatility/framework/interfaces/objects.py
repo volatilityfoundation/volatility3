@@ -53,14 +53,15 @@ class ObjectInformation(ReadOnlyMapping):
     in a single place.  These values are based on the :class:`ReadOnlyMapping` class, to prevent their modification.
     """
 
-    def __init__(self, layer_name, offset, member_name = None, parent = None):
+    def __init__(self, layer_name, offset, member_name = None, parent = None, native_layer_name = None):
         self._check_type(offset, int)
         if parent:
             self._check_type(parent, ObjectInterface)
         super().__init__({'layer_name': layer_name,
                           'offset': offset,
                           'member_name': member_name,
-                          'parent': parent})
+                          'parent': parent,
+                          'native_layer_name': native_layer_name or layer_name})
 
 
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
@@ -138,7 +139,8 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         object_info = ObjectInformation(layer_name = self.vol.layer_name,
                                         offset = self.vol.offset,
                                         member_name = self.vol.member_name,
-                                        parent = self.vol.parent)
+                                        parent = self.vol.parent,
+                                        native_layer_name = self.vol.native_layer_name)
         return object_template(context = self._context,
                                object_info = object_info)
 

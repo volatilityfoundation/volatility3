@@ -248,7 +248,7 @@ class Pointer(Integer):
            Layer_name is identifies the appropriate layer within the context that the pointer points to.
            If layer_name is None, it defaults to the same layer that the pointer is currently instantiated in.
         """
-        layer_name = layer_name or self.vol.layer_name
+        layer_name = layer_name or self.vol.native_layer_name
         mask = self._context.memory[layer_name].address_mask
         offset = self & mask
         return self.vol.subtype(context = self._context,
@@ -519,7 +519,8 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
         for index in series:
             object_info = ObjectInformation(layer_name = self.vol.layer_name,
                                             offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
-                                            parent = self)
+                                            parent = self,
+                                            native_layer_name = self.vol.native_layer_name)
             result += [self.vol.subtype(context = self._context, object_info = object_info)]
         if not return_list:
             return result[0]
@@ -631,7 +632,8 @@ class Struct(interfaces.objects.ObjectInterface):
                                                                                offset = mask & (
                                                                                        self.vol.offset + relative_offset),
                                                                                member_name = attr,
-                                                                               parent = self))
+                                                                               parent = self,
+                                                                               native_layer_name = self.vol.native_layer_name))
             self._concrete_members[attr] = member
             return member
         raise AttributeError("Struct has no attribute: {}.{}".format(self.vol.type_name, attr))
