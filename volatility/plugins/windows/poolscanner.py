@@ -27,11 +27,15 @@ class PoolConstraint(validity.ValidityRoutines):
 
     def __init__(self,
                  tag: bytes,
+                 type_name: str,
+                 object_type: typing.Optional[str] = None,
                  page_type: typing.Optional[PoolType] = None,
                  size: typing.Optional[typing.Tuple[typing.Optional[int], typing.Optional[int]]] = None,
                  index: typing.Optional[typing.Tuple[typing.Optional[int], typing.Optional[int]]] = None,
                  alignment: typing.Optional[int] = 1):
         self.tag = self._check_type(tag, bytes)
+        self.type_name = type_name
+        self.object_type = object_type
         self.page_type = page_type
         self.size = size
         self.index = index
@@ -52,62 +56,45 @@ class PoolScanner(plugins.PluginInterface):
         constraints = [
             # atom tables
             PoolConstraint(b'AtmT',
+                           type_name = "_RTL_ATOM_TABLE",
                            size = (200, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows before windows 8
             PoolConstraint(b'Pro\xe3',
+                           type_name = "_EPROCESS",
+                           object_type = "Process",
                            size = (600, None),
-                           page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows starting with windows 8
             PoolConstraint(b'Proc',
+                           type_name = "_EPROCESS",
+                           object_type = "Process",
                            size = (600, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
-        # a lookup table that associates pool tags with structures and object types
-        tag_type_map = {
-            "AtmT": [
-                "_RTL_ATOM_TABLE", # structure name
-                None,              # _OBJECT_TYPE name (if any)
-                ],
-            "Pro\xe3": [
-                "_EPROCESS",
-                "Process",
-                ],
-            "Proc": [
-                "_EPROCESS",
-                "Process",
-            ],
-        }
         base_layer = self.context.memory[self.config['primary']].config['memory_layer']
-        for header in self.pool_scan(self._context,
+        for constraint, header in self.pool_scan(self._context,
                                      base_layer,
                                      self.config['nt_symbols'],
                                      constraints,
                                      alignment = 8):
 
-            tag_string = header.PoolTag.cast("string", max_length = 4, encoding = "latin-1")
-            type_entry = tag_type_map.get(tag_string, None)
-
-            if type_entry is None:
-                vollog.log(constants.LOGLEVEL_VVV, "There are no types configured for tag {}".format(tag_string))
-                continue
-
-            mem_object = header.get_object(type_name = type_entry[0],
-                                           object_type = type_entry[1])
+            mem_object = header.get_object(type_name = constraint.type_name,
+                                           object_type = constraint.object_type)
 
             if mem_object is None:
-                vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(type_entry[0]))
+                vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
                 continue
 
             # generate some type-specific info for sanity checking
-            if type_entry[1] == "Process":
+            if constraint.object_type == "Process":
                 name = mem_object.ImageFileName.cast("string",
                                                      max_length = mem_object.ImageFileName.vol.count,
                                                      errors = "replace")
             else:
                 name = ""
 
-            yield (0, (tag_string,
+            yield (0, (constraint.type_name,
                        format_hints.Hex(header.vol.offset),
                        header.vol.layer_name,
                        name,
@@ -135,42 +122,42 @@ class PoolScanner(plugins.PluginInterface):
         layer = context.memory[layer_name]
         scanner = scanners.MultiStringScanner([c for c in constraint_lookup.keys()])
         for offset, pattern in layer.scan(context, scanner):
-            test = constraint_lookup[pattern]
+            constraint = constraint_lookup[pattern]
             header = module.object(type_name = "_POOL_HEADER", offset = offset - header_offset)
 
             # Size check
-            if test.size is not None:
-                if test.size[0]:
-                    if (alignment * header.BlockSize) < test.size[0]:
+            if constraint.size is not None:
+                if constraint.size[0]:
+                    if (alignment * header.BlockSize) < constraint.size[0]:
                         continue
-                if test.size[1]:
-                    if (alignment * header.BlockSize) > test.size[1]:
+                if constraint.size[1]:
+                    if (alignment * header.BlockSize) > constraint.size[1]:
                         continue
 
             # Type check
-            if test.page_type is not None:
+            if constraint.page_type is not None:
                 checks_pass = False
 
-                if (test.page_type & PoolType.FREE) and header.PoolType == 0:
+                if (constraint.page_type & PoolType.FREE) and header.PoolType == 0:
                     checks_pass = True
-                elif (test.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
+                elif (constraint.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
                     checks_pass = True
-                elif (test.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
+                elif (constraint.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
                     checks_pass = True
 
                 if not checks_pass:
                     continue
 
-            if test.index is not None:
-                if test.index[0]:
-                    if header.index < test.index[0]:
+            if constraint.index is not None:
+                if constraint.index[0]:
+                    if header.index < constraint.index[0]:
                         continue
-                if test.size[1]:
-                    if header.index > test.index[1]:
+                if constraint.size[1]:
+                    if header.index > constraint.index[1]:
                         continue
 
             # We found one that passed!
-            yield header
+            yield (constraint, header)
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Tag", str),
