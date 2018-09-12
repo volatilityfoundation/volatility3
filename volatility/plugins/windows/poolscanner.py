@@ -72,9 +72,20 @@ class PoolScanner(plugins.PluginInterface):
                            size = (600, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
-        base_layer = self.context.memory[self.config['primary']].config['memory_layer']
+
+        # FIXME: replace this lambda with a real function
+        is_windows_10 = lambda : False
+
+        # FIXME: scanning the primary layer seems very slow (10min on 512mb grrcon)
+        # start off with the primary virtual layer
+        scan_layer = self.config['primary']
+
+        # switch to a non-virtual layer if necessary
+        if not is_windows_10():
+           scan_layer = self.context.memory[scan_layer].config['memory_layer']
+
         for constraint, header in self.pool_scan(self._context,
-                                     base_layer,
+                                     scan_layer,
                                      self.config['nt_symbols'],
                                      constraints,
                                      alignment = 8):
