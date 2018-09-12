@@ -1,6 +1,6 @@
 import enum
-import typing
 import logging
+import typing
 
 from volatility.framework import interfaces, validity, objects, renderers, constants
 from volatility.framework.configuration import requirements
@@ -9,6 +9,7 @@ from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
+
 
 class PoolType(enum.IntEnum):
     """Class to maintain the different possible PoolTypes
@@ -74,7 +75,7 @@ class PoolScanner(plugins.PluginInterface):
         ]
 
         # FIXME: replace this lambda with a real function
-        is_windows_10 = lambda : False
+        is_windows_10 = lambda: False
 
         # FIXME: scanning the primary layer seems very slow (10min on 512mb grrcon)
         # start off with the primary virtual layer
@@ -82,13 +83,13 @@ class PoolScanner(plugins.PluginInterface):
 
         # switch to a non-virtual layer if necessary
         if not is_windows_10():
-           scan_layer = self.context.memory[scan_layer].config['memory_layer']
+            scan_layer = self.context.memory[scan_layer].config['memory_layer']
 
         for constraint, header in self.pool_scan(self._context,
-                                     scan_layer,
-                                     self.config['nt_symbols'],
-                                     constraints,
-                                     alignment = 8):
+                                                 scan_layer,
+                                                 self.config['nt_symbols'],
+                                                 constraints,
+                                                 alignment = 8):
 
             mem_object = header.get_object(type_name = constraint.type_name,
                                            object_type = constraint.object_type)
@@ -123,7 +124,9 @@ class PoolScanner(plugins.PluginInterface):
         # Setup the pattern
         constraint_lookup = {}
         for constraint in pool_constraints:
-            constraint_lookup[constraint.tag] = constraint
+            temp_list = constraint_lookup.get(constraint.tag, [])
+            temp_list.append(constraint)
+            constraint_lookup[constraint.tag] = temp_list
         # Setup the pool header and offset differential
         module = context.module(symbol_table, layer_name, offset = 0)
         header_type = module.get_type('_POOL_HEADER')
@@ -133,42 +136,42 @@ class PoolScanner(plugins.PluginInterface):
         layer = context.memory[layer_name]
         scanner = scanners.MultiStringScanner([c for c in constraint_lookup.keys()])
         for offset, pattern in layer.scan(context, scanner):
-            constraint = constraint_lookup[pattern]
-            header = module.object(type_name = "_POOL_HEADER", offset = offset - header_offset)
+            for constraint in constraint_lookup[pattern]:
+                header = module.object(type_name = "_POOL_HEADER", offset = offset - header_offset)
 
-            # Size check
-            if constraint.size is not None:
-                if constraint.size[0]:
-                    if (alignment * header.BlockSize) < constraint.size[0]:
-                        continue
-                if constraint.size[1]:
-                    if (alignment * header.BlockSize) > constraint.size[1]:
-                        continue
+                # Size check
+                if constraint.size is not None:
+                    if constraint.size[0]:
+                        if (alignment * header.BlockSize) < constraint.size[0]:
+                            continue
+                    if constraint.size[1]:
+                        if (alignment * header.BlockSize) > constraint.size[1]:
+                            continue
 
-            # Type check
-            if constraint.page_type is not None:
-                checks_pass = False
+                # Type check
+                if constraint.page_type is not None:
+                    checks_pass = False
 
-                if (constraint.page_type & PoolType.FREE) and header.PoolType == 0:
-                    checks_pass = True
-                elif (constraint.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
-                    checks_pass = True
-                elif (constraint.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
-                    checks_pass = True
+                    if (constraint.page_type & PoolType.FREE) and header.PoolType == 0:
+                        checks_pass = True
+                    elif (constraint.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
+                        checks_pass = True
+                    elif (constraint.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
+                        checks_pass = True
 
-                if not checks_pass:
-                    continue
-
-            if constraint.index is not None:
-                if constraint.index[0]:
-                    if header.index < constraint.index[0]:
-                        continue
-                if constraint.size[1]:
-                    if header.index > constraint.index[1]:
+                    if not checks_pass:
                         continue
 
-            # We found one that passed!
-            yield (constraint, header)
+                if constraint.index is not None:
+                    if constraint.index[0]:
+                        if header.index < constraint.index[0]:
+                            continue
+                    if constraint.size[1]:
+                        if header.index > constraint.index[1]:
+                            continue
+
+                # We found one that passed!
+                yield (constraint, header)
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Tag", str),
