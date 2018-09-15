@@ -39,7 +39,6 @@ class _POOL_HEADER(objects.Struct):
 
         # otherwise we have an executive object in the pool
         else:
-            # this used to be a vol magic but its basically the size of a pool header
             alignment = pool_header_size
             type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
             rounded_size = utility.round(type_size, alignment, up = True)
