@@ -18,10 +18,11 @@ class _POOL_HEADER(objects.Struct):
     """A kernel pool allocation header. Exists at the base of the
     allocation and provides a tag that we can scan for."""
 
-    def get_object(self, type_name: str, object_type: str = None) -> interfaces.objects.ObjectInterface:
+    def get_object(self, type_name: str, native_layer_name: str = None, object_type: str = None) -> interfaces.objects.ObjectInterface:
         """Carve an object or data structure from a kernel pool allocation.
 
         :param type_name: the data structure type name
+        :param native_layer_name: the name of the layer where the data originally lived
         :param object_type: the object type (executive kernel objects only)
         :return:
         """
@@ -33,7 +34,8 @@ class _POOL_HEADER(objects.Struct):
         if object_type is None:
             mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
                                               layer_name = self.vol.layer_name,
-                                              offset = self.vol.offset + pool_header_size)
+                                              offset = self.vol.offset + pool_header_size,
+                                              native_layer_name = native_layer_name)
 
             return mem_object
 
@@ -45,13 +47,10 @@ class _POOL_HEADER(objects.Struct):
 
             mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
                                               layer_name = self.vol.layer_name,
-                                              offset = self.vol.offset + self.BlockSize * alignment - rounded_size)
+                                              offset = self.vol.offset + self.BlockSize * alignment - rounded_size,
+                                              native_layer_name = native_layer_name)
 
             object_header = mem_object.object_header()
-
-            ## FIXME: this will raise even though we know a valid object exists at this address
-            #if mem_object.vol.offset == 0x0000000002013ad0:
-            #    print(object_header.NameInfo.Name.String)
 
             try:
                 object_type_string = object_header.NameInfo.Name.String
