@@ -15,8 +15,16 @@ vollog = logging.getLogger(__name__)
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
 class _POOL_HEADER(objects.Struct):
+    """A kernel pool allocation header. Exists at the base of the
+    allocation and provides a tag that we can scan for."""
 
-    def get_object(self, type_name, object_type):
+    def get_object(self, type_name: str, object_type: str = None) -> interfaces.objects.ObjectInterface:
+        """Carve an object or data structure from a kernel pool allocation.
+
+        :param type_name: the data structure type name
+        :param object_type: the object type (executive kernel objects only)
+        :return:
+        """
 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
         pool_header_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_POOL_HEADER").size
@@ -56,12 +64,15 @@ class _POOL_HEADER(objects.Struct):
                 return None
 
 class _KSYSTEM_TIME(objects.Struct):
+    """A system time structure that stores a high and low part."""
 
     def get_time(self):
         wintime = (self.High1Time << 32) | self.LowPart
         return utility.wintime_to_datetime(wintime)
 
 class _MMVAD_SHORT(objects.Struct):
+    """A class that represents process virtual memory ranges. Each instance
+    is a node in a binary tree structure and is pointed to by VadRoot."""
 
     @functools.lru_cache(maxsize = None)
     def get_tag(self):
@@ -288,6 +299,8 @@ class _MMVAD_SHORT(objects.Struct):
 
 
 class _MMVAD(_MMVAD_SHORT):
+    """A version of the process virtual memory range structure that contains
+    additional fields necessary to map files from disk."""
 
     def get_file_name(self):
         """Get the name of the file mapped into the memory range (if any)"""
@@ -380,6 +393,8 @@ class _CM_KEY_BODY(objects.Struct):
 
 
 class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
+    """A class for kernel device objects."""
+
     def get_device_name(self) -> str:
         header = self.object_header()
         return header.NameInfo.Name.String  # type: ignore
@@ -401,6 +416,9 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
 
 
 class _OBJECT_HEADER(objects.Struct):
+    """A class for the headers for executive kernel objects, which contains
+    quota information, ownership details, naming data, and ACLs."""
+
     @property
     def NameInfo(self) -> interfaces.objects.ObjectInterface:
         if constants.BANG not in self.vol.type_name:
@@ -435,12 +453,16 @@ class _OBJECT_HEADER(objects.Struct):
 
 
 class _ETHREAD(objects.Struct):
+    """A class for executive thread objects."""
+
     def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread"""
         return self.ThreadsProcess.dereference(kernel_layer)
 
 
 class _UNICODE_STRING(objects.Struct):
+    """A class for Windows unicode string structures."""
+
     def get_string(self) -> interfaces.objects.ObjectInterface:
         # We explicitly do *not* catch errors here, we allow an exception to be thrown
         # (otherwise there's no way to determine anything went wrong)
@@ -452,6 +474,8 @@ class _UNICODE_STRING(objects.Struct):
 
 
 class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
+    """A class for executive kernel processes objects."""
+
     def add_process_layer(self,
                           config_prefix: str = None,
                           preferred_name: str = None):
@@ -565,6 +589,8 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
 
 
 class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
+    """A class for double-linked lists on Windows."""
+
     def to_list(self,
                 symbol_type: str,
                 member: str,
