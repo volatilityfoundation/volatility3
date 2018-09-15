@@ -2,7 +2,7 @@ import enum
 import logging
 import typing
 
-from volatility.framework import interfaces, validity, objects, renderers, constants
+from volatility.framework import constants, interfaces, objects, renderers, validity
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.layers import scanners
@@ -13,10 +13,7 @@ vollog = logging.getLogger(__name__)
 
 class PoolType(enum.IntEnum):
     """Class to maintain the different possible PoolTypes
-    The values must be integer powers of 2
-
-    FIXME: This can be removed and replaced with enum.IntFlag after python3.5 is deprecated
-    """
+    The values must be integer powers of 2"""
 
     PAGED = 1
     NONPAGED = 2
