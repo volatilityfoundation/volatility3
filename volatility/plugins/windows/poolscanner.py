@@ -104,7 +104,7 @@ class PoolScanner(plugins.PluginInterface):
                                                      max_length = mem_object.ImageFileName.vol.count,
                                                      errors = "replace")
             else:
-                name = ""
+                name = renderers.NotApplicableValue()
 
             yield (0, (constraint.type_name,
                        format_hints.Hex(header.vol.offset),
