@@ -74,6 +74,7 @@ class Context(interfaces.context.ContextInterface):
                symbol: typing.Union[str, interfaces.objects.Template],
                layer_name: str,
                offset: int,
+               native_layer_name: typing.Optional[str] = None,
                **arguments) -> interfaces.objects.ObjectInterface:
         """Object factory, takes a context, symbol, offset and optional layername
 
@@ -99,7 +100,8 @@ class Context(interfaces.context.ContextInterface):
         object_template.update_vol(**arguments)
         return object_template(context = self,
                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
-                                                                                  offset = offset))
+                                                                                  offset = offset,
+                                                                                  native_layer_name = native_layer_name))
 
     @functools.lru_cache()
     def module(self,  # type: ignore # FIXME: mypy #5107
@@ -130,6 +132,7 @@ class Module(interfaces.context.ModuleInterface):
                symbol_name: typing.Optional[str] = None,
                type_name: typing.Optional[str] = None,
                offset: typing.Optional[int] = None,
+               native_layer_name: typing.Optional[str] = None,
                **kwargs) -> interfaces.objects.ObjectInterface:
         """Returns an object created using the symbol_table_name and layer_name of the Module
 
@@ -161,7 +164,7 @@ class Module(interfaces.context.ModuleInterface):
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
         if 'layer_name' in kwargs:
             del kwargs['layer_name']
-        return self._context.object(type_arg, self._layer_name, offset, **kwargs)
+        return self._context.object(type_arg, self._layer_name, offset, native_layer_name, **kwargs)
 
     get_symbol = get_module_wrapper('get_symbol')
     get_type = get_module_wrapper('get_type')
