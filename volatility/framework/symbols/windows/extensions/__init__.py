@@ -449,9 +449,9 @@ class _OBJECT_HEADER(objects.Struct):
             address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
             calculated_index = ord(self.InfoMask) & (name_info_bit | (name_info_bit - 1))
 
-            header_offset = ord(self._context.object(symbol_table_name + constants.BANG + "unsigned char",
-                                                     layer_name = self.vol.native_layer_name,
-                                                     offset = address + calculated_index))
+            header_offset = self._context.object(symbol_table_name + constants.BANG + "unsigned char",
+                                                 layer_name = self.vol.native_layer_name,
+                                                 offset = address + calculated_index)
 
         header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
                                       layer_name = self.vol.layer_name,
