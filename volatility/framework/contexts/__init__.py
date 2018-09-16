@@ -108,11 +108,21 @@ class Context(interfaces.context.ContextInterface):
                module_name: str,
                layer_name: str,
                offset: int,
+               native_layer_name: typing.Optional[str] = None,
                size: typing.Optional[int] = None) -> interfaces.context.ModuleInterface:
         """Creates a module object"""
         if size:
-            return SizedModule(self, module_name, layer_name, offset, size)
-        return Module(self, module_name, layer_name, offset)
+            return SizedModule(self,
+                               module_name = module_name,
+                               layer_name = layer_name,
+                               offset = offset,
+                               size = size,
+                               native_layer_name = native_layer_name)
+        return Module(self,
+                      module_name = module_name,
+                      layer_name = layer_name,
+                      offset = offset,
+                      native_layer_name = native_layer_name)
 
 
 def get_module_wrapper(method: str) -> typing.Callable:
@@ -182,8 +192,14 @@ class SizedModule(Module):
                  layer_name: str,
                  offset: int,
                  size: int,
-                 symbol_table_name: typing.Optional[str] = None) -> None:
-        super().__init__(context, module_name, layer_name, offset, symbol_table_name = symbol_table_name)
+                 symbol_table_name: typing.Optional[str] = None,
+                 native_layer_name: typing.Optional[str] = None) -> None:
+        super().__init__(context,
+                         module_name = module_name,
+                         layer_name = layer_name,
+                         offset = offset,
+                         native_layer_name = native_layer_name,
+                         symbol_table_name = symbol_table_name)
         self._size = self._check_type(size, int)
 
     @property

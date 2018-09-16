@@ -455,7 +455,8 @@ class _OBJECT_HEADER(objects.Struct):
 
         header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
                                       layer_name = self.vol.layer_name,
-                                      offset = self.vol.offset - header_offset)
+                                      offset = self.vol.offset - header_offset,
+                                      native_layer_name = self.vol.native_layer_name)
         return header
 
 
@@ -517,7 +518,8 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
             raise StopIteration
 
         sym_table = self.vol.type_name.split(constants.BANG)[0]
-        peb = self._context.object("{}{}_PEB".format(sym_table, constants.BANG), layer_name = proc_layer_name,
+        peb = self._context.object("{}{}_PEB".format(sym_table, constants.BANG),
+                                   layer_name = proc_layer_name,
                                    offset = self.Peb)
 
         for entry in peb.Ldr.InLoadOrderModuleList.to_list(
@@ -545,7 +547,10 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                 layer_name = self.vol.layer_name
                 symbol_table_name = self.get_symbol_table().name
                 kvo = self._context.memory[layer_name].config['kernel_virtual_offset']
-                ntkrnlmp = self._context.module(symbol_table_name, layer_name = layer_name, offset = kvo)
+                ntkrnlmp = self._context.module(symbol_table_name,
+                                                layer_name = layer_name,
+                                                offset = kvo,
+                                                native_layer_name = self.vol.native_layer_name)
                 session = ntkrnlmp.object(type_name = "_MM_SESSION_SPACE", offset = self.Session)
 
                 if session.has_member("SessionId"):
@@ -616,12 +621,18 @@ class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
         link = getattr(self, direction).dereference()
 
         if not sentinel:
-            yield self._context.object(symbol_type, layer, offset = self.vol.offset - relative_offset)
+            yield self._context.object(symbol_type,
+                                       layer,
+                                       offset = self.vol.offset - relative_offset,
+                                       native_layer_name = layer or self.vol.native_layer_name)
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
 
-            obj = self._context.object(symbol_type, layer, offset = link.vol.offset - relative_offset)
+            obj = self._context.object(symbol_type,
+                                       layer,
+                                       offset = link.vol.offset - relative_offset,
+                                       native_layer_name = layer or self.vol.native_layer_name)
             yield obj
 
             seen.add(link.vol.offset)

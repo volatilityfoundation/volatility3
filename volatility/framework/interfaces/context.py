@@ -93,11 +93,15 @@ class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                  module_name: str,
                  layer_name: str,
                  offset: int,
-                 symbol_table_name: typing.Optional[str] = None) -> None:
+                 symbol_table_name: typing.Optional[str] = None,
+                 native_layer_name: typing.Optional[str] = None) -> None:
         self._context = self._check_type(context, ContextInterface)
         self._module_name = self._check_type(module_name, str)
         self._layer_name = self._check_type(layer_name, str)
         self._offset = self._check_type(offset, int)
+        self._native_layer_name = None
+        if native_layer_name:
+            self._native_layer_name = self._check_type(native_layer_name, str)
         self.symbol_table_name = symbol_table_name or self._module_name
         super().__init__()
 
