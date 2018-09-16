@@ -89,7 +89,8 @@ class PoolScanner(plugins.PluginInterface):
                                                  alignment = 8):
 
             mem_object = header.get_object(type_name = constraint.type_name,
-                                           object_type = constraint.object_type)
+                                           object_type = constraint.object_type,
+                                           native_layer_name = 'primary')
 
             if mem_object is None:
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))

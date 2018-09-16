@@ -18,7 +18,10 @@ class _POOL_HEADER(objects.Struct):
     """A kernel pool allocation header. Exists at the base of the
     allocation and provides a tag that we can scan for."""
 
-    def get_object(self, type_name: str, native_layer_name: str = None, object_type: str = None) -> interfaces.objects.ObjectInterface:
+    def get_object(self,
+                   type_name: str,
+                   native_layer_name: str = None,
+                   object_type: str = None) -> interfaces.objects.ObjectInterface:
         """Carve an object or data structure from a kernel pool allocation.
 
         :param type_name: the data structure type name
@@ -36,7 +39,6 @@ class _POOL_HEADER(objects.Struct):
                                               layer_name = self.vol.layer_name,
                                               offset = self.vol.offset + pool_header_size,
                                               native_layer_name = native_layer_name)
-
             return mem_object
 
         # otherwise we have an executive object in the pool
@@ -61,12 +63,14 @@ class _POOL_HEADER(objects.Struct):
             except (TypeError, exceptions.InvalidAddressException):
                 return None
 
+
 class _KSYSTEM_TIME(objects.Struct):
     """A system time structure that stores a high and low part."""
 
     def get_time(self):
         wintime = (self.High1Time << 32) | self.LowPart
         return utility.wintime_to_datetime(wintime)
+
 
 class _MMVAD_SHORT(objects.Struct):
     """A class that represents process virtual memory ranges. Each instance
@@ -88,6 +92,7 @@ class _MMVAD_SHORT(objects.Struct):
             bytesobj = self._context.object(symbol_table_name + constants.BANG + "bytes",
                                             layer_name = self.vol.layer_name,
                                             offset = vad_address,
+                                            native_layer_name = self.vol.native_layer_name,
                                             length = 4)
 
             return bytesobj.decode()
@@ -338,8 +343,10 @@ class _EX_FAST_REF(objects.Struct):
         else:
             max_fast_ref = 15
 
-        return self._context.object(symbol_table_name + constants.BANG + "pointer", layer_name = self.vol.layer_name,
-                                    offset = self.Object & ~max_fast_ref)
+        return self._context.object(symbol_table_name + constants.BANG + "pointer",
+                                    layer_name = self.vol.layer_name,
+                                    offset = self.Object & ~max_fast_ref,
+                                    native_layer_name = self.vol.native_layer_name)
 
 
 class ExecutiveObject(interfaces.objects.ObjectInterface):
@@ -353,7 +360,9 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
         body_offset = self._context.symbol_space.get_type(
             symbol_table_name + constants.BANG + "_OBJECT_HEADER").relative_child_offset("Body")
         return self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER",
-                                    layer_name = self.vol.layer_name, offset = self.vol.offset - body_offset)
+                                    layer_name = self.vol.layer_name,
+                                    offset = self.vol.offset - body_offset,
+                                    native_layer_name = self.vol.native_layer_name)
 
 
 class _CM_KEY_BODY(objects.Struct):
@@ -430,7 +439,7 @@ class _OBJECT_HEADER(objects.Struct):
             # http://codemachine.com/article_objectheader.html (Windows 7 and later)
             name_info_bit = 0x2
 
-            layer = self._context.memory[self.vol.layer_name]
+            layer = self._context.memory[self.vol.native_layer_name]
             kvo = layer.config.get("kernel_virtual_offset", None)
 
             if kvo == None:
@@ -441,8 +450,8 @@ class _OBJECT_HEADER(objects.Struct):
             calculated_index = ord(self.InfoMask) & (name_info_bit | (name_info_bit - 1))
 
             header_offset = ord(self._context.object(symbol_table_name + constants.BANG + "unsigned char",
-                                                     layer_name = self.vol.layer_name,
-                                                     offset = kvo + address + calculated_index))
+                                                     layer_name = self.vol.native_layer_name,
+                                                     offset = address + calculated_index))
 
         header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
                                       layer_name = self.vol.layer_name,
