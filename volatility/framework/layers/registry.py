@@ -3,8 +3,7 @@ import typing
 
 from volatility.framework import constants, exceptions, interfaces, objects
 from volatility.framework.configuration import requirements
-from volatility.framework.configuration.requirements import IntRequirement
-from volatility.framework.interfaces.configuration import TranslationLayerRequirement
+from volatility.framework.configuration.requirements import IntRequirement, TranslationLayerRequirement
 from volatility.framework.exceptions import InvalidAddressException
 from volatility.framework.symbols import intermed
 from volatility.plugins.windows import pslist

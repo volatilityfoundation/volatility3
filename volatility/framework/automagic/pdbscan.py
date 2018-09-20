@@ -11,6 +11,7 @@ import struct
 import typing
 
 from volatility.framework import exceptions, layers, validity, constants
+from volatility.framework.configuration import requirements
 from volatility.framework.layers import scanners, intel
 from volatility.framework.symbols import intermed, native
 
@@ -154,7 +155,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         results = {}  # type: typing.Dict[str, typing.Iterable]
-        if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
+        if isinstance(requirement, requirements.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
             # FIXME: Determine the physical layer no matter the virtual layer
@@ -325,8 +326,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             if "pdbscan" not in context.symbol_space:
                 context.symbol_space.append(native.NativeTable("pdbscan", native.std_ctypes))
             # TODO: check if this is a windows symbol requirement, otherwise ignore it
-            self._symbol_requirements = self.find_requirements(context, config_path, requirement,
-                                                               interfaces.configuration.SymbolRequirement)
+            self._symbol_requirements = self.find_requirements(context,
+                                                               config_path,
+                                                               requirement,
+                                                               requirements.SymbolRequirement)
             for symbol_req_config_path, _, symbol_req in self._symbol_requirements:
                 if symbol_req.unsatisfied(context, symbol_req_config_path):
                     potential_kernels = self.recurse_pdb_finder(context, config_path, requirement, progress_callback)

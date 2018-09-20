@@ -5,14 +5,13 @@ Automagic objects attempt to automatically fill configuration values that a user
 import typing
 from abc import ABCMeta
 
-import volatility.framework.configuration.requirements
 from volatility.framework import validity, interfaces
-from volatility.framework.interfaces import configuration as interfaces_configuration
+from volatility.framework.configuration import requirements
 
 R = typing.TypeVar('R', bound = interfaces.configuration.RequirementInterface)
 
 
-class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metaclass = ABCMeta):
+class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metaclass = ABCMeta):
     """Class that defines an automagic component that can help fulfill a Requirement
 
     These classes are callable with the following parameters:
@@ -39,11 +38,11 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
                  config_path: str, *args, **kwargs) -> None:
         super().__init__(context, config_path)
         for requirement in self.get_requirements():
-            if not isinstance(requirement, (interfaces_configuration.SimpleTypeRequirement,
-                                            volatility.framework.configuration.requirements.ChoiceRequirement,
-                                            volatility.framework.configuration.requirements.ListRequirement)):
+            if not isinstance(requirement, (interfaces.configuration.SimpleTypeRequirement,
+                                            requirements.ChoiceRequirement,
+                                            requirements.ListRequirement)):
                 raise ValueError(
-                    "Automagic requirements must be an SimpleTypeRequirement, ChoiceRequirement or ListRequirement")
+                    "Automagic requirements must be a SimpleTypeRequirement, ChoiceRequirement or ListRequirement")
 
     def __call__(self,
                  context: interfaces.context.ContextInterface,
@@ -77,7 +76,7 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
         Returns:
             A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
         """
-        sub_config_path = interfaces_configuration.path_join(config_path, requirement_root.name)
+        sub_config_path = interfaces.configuration.path_join(config_path, requirement_root.name)
         results = []  # type: typing.List[typing.Tuple[str, str, R]]
         recurse = not shortcut
         if isinstance(requirement_root, requirement_type):

@@ -3,6 +3,7 @@ import typing
 
 from volatility.framework import interfaces, constants, validity
 from volatility.framework.automagic import linux_symbol_cache
+from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
 
@@ -34,16 +35,15 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                  progress_callback: validity.ProgressCallback = None) -> None:
         """Searches for LinuxSymbolRequirements and attempt to populate them"""
         self._requirements = self.find_requirements(context, config_path, requirement,
-                                                    (interfaces.configuration.TranslationLayerRequirement,
-                                                     interfaces.configuration.SymbolRequirement),
+                                                    (requirements.TranslationLayerRequirement,
+                                                     requirements.SymbolRequirement),
                                                     shortcut = False)
 
         for (path, sub_path, requirement) in self._requirements:
-            if (isinstance(requirement, interfaces.configuration.SymbolRequirement) and
-                    requirement.unsatisfied(context, path)):
+            if (isinstance(requirement, requirements.SymbolRequirement) and requirement.unsatisfied(context, path)):
                 for (tl_path, tl_sub_path, tl_requirement) in self._requirements:
                     # Find the TranslationLayer sibling to the SymbolRequirement
-                    if (isinstance(tl_requirement, interfaces.configuration.TranslationLayerRequirement) and
+                    if (isinstance(tl_requirement, requirements.TranslationLayerRequirement) and
                             tl_path == path):
                         if context.config.get(tl_sub_path, None):
                             self._banner_scan(context, path, requirement, context.config[tl_sub_path],

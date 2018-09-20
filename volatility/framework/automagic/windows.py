@@ -380,10 +380,10 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
         """Finds translation layers that can have swap layers added"""
         path_join = interfaces.configuration.path_join
         self._translation_requirement = self.find_requirements(context, config_path, requirement,
-                                                               interfaces.configuration.TranslationLayerRequirement,
+                                                               requirements.TranslationLayerRequirement,
                                                                shortcut = False)
         for trans_config, trans_sub_config, trans_req in self._translation_requirement:
-            if not isinstance(trans_req, interfaces.configuration.TranslationLayerRequirement):
+            if not isinstance(trans_req, requirements.TranslationLayerRequirement):
                 # We need this so the type-checker knows we're a TranslationLayerRequirement
                 continue
             swap_config, swap_sub_config, swap_req = self.find_swap_requirement(trans_config, trans_sub_config,
@@ -404,9 +404,9 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                     counter += 1
 
                     # Add the requirement
-                    new_req = interfaces.configuration.TranslationLayerRequirement(name = current_layer_name,
-                                                                                   description = "Swap Layer",
-                                                                                   optional = False)
+                    new_req = requirements.TranslationLayerRequirement(name = current_layer_name,
+                                                                       description = "Swap Layer",
+                                                                       optional = False)
                     swap_req.add_requirement(new_req)
 
                 context.config[path_join(swap_sub_config, 'number_of_elements')] = counter
@@ -417,7 +417,7 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
     def find_swap_requirement(self,
                               config: str,
                               sub_config: str,
-                              requirement: interfaces.configuration.TranslationLayerRequirement) \
+                              requirement: requirements.TranslationLayerRequirement) \
             -> typing.Tuple[str, str, typing.Optional[requirements.LayerListRequirement]]:
         """Takes a Translation layer and returns its swap_layer requirement"""
         swap_req = None

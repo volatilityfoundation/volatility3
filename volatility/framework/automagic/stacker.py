@@ -11,8 +11,8 @@ import logging
 import traceback
 import typing
 
-import volatility
-from volatility.framework import configuration, interfaces, constants, validity
+from volatility import framework
+from volatility.framework import interfaces, constants, validity
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical
@@ -105,7 +105,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
         stacked_layers = [current_layer_name]
-        stack_set = sorted(volatility.framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
+        stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
                            key = lambda x: x.stack_order)
         while stacked:
             stacked = False
@@ -164,7 +164,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 or None if suitable requirements are not found
         """
         child_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        if isinstance(requirement, interfaces.configuration.TranslationLayerRequirement):
+        if isinstance(requirement, requirements.TranslationLayerRequirement):
             if requirement.unsatisfied(context, config_path):
                 original_setting = context.config.get(child_config_path, None)
                 for layer_name in stacked_layers:

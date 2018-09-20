@@ -9,39 +9,34 @@ import logging
 import typing
 
 from volatility.framework import interfaces, constants
-from volatility.framework.interfaces import configuration as interfaces_configuration
+from volatility.framework.interfaces import configuration
 
 vollog = logging.getLogger(__name__)
 
-# Allow these two to be imported directly from requirements
-# This helps prevent import loops since other interfaces need to be able to check instances of this
-TranslationLayerRequirement = interfaces_configuration.TranslationLayerRequirement
-SymbolRequirement = interfaces_configuration.SymbolRequirement
 
-
-class MultiRequirement(interfaces_configuration.RequirementInterface):
+class MultiRequirement(configuration.RequirementInterface):
     """Class to hold multiple requirements.
 
        Technically the Interface could handle this, but it's an interface, so this is a concrete implementation.
     """
 
     def unsatisfied(self,
-                    context: interfaces_configuration.ContextInterface,
+                    context: configuration.ContextInterface,
                     config_path: str) -> typing.List[str]:
         return self.unsatisfied_children(context, config_path)
 
 
-class BooleanRequirement(interfaces_configuration.SimpleTypeRequirement):
+class BooleanRequirement(configuration.SimpleTypeRequirement):
     """A requirement type that contains a boolean value"""
     # Note, this must be a separate class in order to differentiate between Booleans and other instance requirements
 
 
-class IntRequirement(interfaces_configuration.SimpleTypeRequirement):
+class IntRequirement(configuration.SimpleTypeRequirement):
     """A requirement type that contains a single integer"""
     instance_type = int  # type: typing.ClassVar[typing.Type]
 
 
-class StringRequirement(interfaces_configuration.SimpleTypeRequirement):
+class StringRequirement(configuration.SimpleTypeRequirement):
     """A requirement type that contains a single unicode string"""
     # TODO: Maybe add string length limits?
     instance_type = str  # type: typing.ClassVar[typing.Type]
@@ -52,12 +47,12 @@ class URIRequirement(StringRequirement):
     # TODO: Maybe a a check that to unsatisfied that the path really is a URL?
 
 
-class BytesRequirement(interfaces_configuration.SimpleTypeRequirement):
+class BytesRequirement(configuration.SimpleTypeRequirement):
     """A requirement type that contains a byte string"""
     instance_type = bytes  # type: typing.ClassVar[typing.Type]
 
 
-class ListRequirement(interfaces_configuration.RequirementInterface):
+class ListRequirement(configuration.RequirementInterface):
     """Allows for a list of a specific type of requirement (all of which must be met for this requirement to be met) to be specified
 
     This roughly correlates to allowing a number of arguments to follow a command line parameter,
@@ -68,7 +63,7 @@ class ListRequirement(interfaces_configuration.RequirementInterface):
     """
 
     def __init__(self,
-                 element_type: typing.Type[interfaces_configuration.SimpleTypes] = str,
+                 element_type: typing.Type[configuration.SimpleTypes] = str,
                  max_elements: typing.Optional[int] = 0,
                  min_elements: typing.Optional[int] = None, *args, **kwargs) -> None:
         """Constructs the object
@@ -79,7 +74,7 @@ class ListRequirement(interfaces_configuration.RequirementInterface):
             min_elements: The minimum number of acceptable elements this list can contain
         """
         super().__init__(*args, **kwargs)
-        if not issubclass(element_type, interfaces_configuration.BasicTypes):
+        if not issubclass(element_type, configuration.BasicTypes):
             raise TypeError("ListRequirements can only be populated with simple InstanceRequirements")
         self.element_type = element_type  # type: typing.Type
         self.min_elements = min_elements or 0  # type: int
@@ -91,28 +86,28 @@ class ListRequirement(interfaces_configuration.RequirementInterface):
         value = self.config_value(context, config_path, default)
         if not value and self.min_elements > 0:
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - ListRequirement has non-zero min_elements")
-            return [interfaces_configuration.path_join(config_path, self.name)]
+            return [configuration.path_join(config_path, self.name)]
         if value == default:
             # We need to differentiate between no value and an empty list
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - Value was not specified")
-            return [interfaces_configuration.path_join(config_path, self.name)]
+            return [configuration.path_join(config_path, self.name)]
         if not isinstance(value, list):
             # TODO: Check this is the correct response for an error
             raise ValueError("Unexpected config value found: {}".format(repr(value)))
         if not (self.min_elements <= len(value)):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too few values provided to list option.")
-            return [interfaces_configuration.path_join(config_path, self.name)]
+            return [configuration.path_join(config_path, self.name)]
         if self.max_elements and not (len(value) < self.max_elements):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too many values provided to list option.")
-            return [interfaces_configuration.path_join(config_path, self.name)]
+            return [configuration.path_join(config_path, self.name)]
         if not all([self._check_type(element, self.element_type) for element in value]):
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - At least one element in the list is not of the correct type.")
-            return [interfaces_configuration.path_join(config_path, self.name)]
+            return [configuration.path_join(config_path, self.name)]
         return []
 
 
-class ChoiceRequirement(interfaces_configuration.RequirementInterface):
+class ChoiceRequirement(configuration.RequirementInterface):
     """Allows one from a choice of strings"""
 
     def __init__(self, choices: typing.List[str], *args, **kwargs) -> None:
@@ -131,11 +126,11 @@ class ChoiceRequirement(interfaces_configuration.RequirementInterface):
         value = self.config_value(context, config_path)
         if value not in self.choices:
             vollog.log(constants.LOGLEVEL_V, "ValueError - Value is not within the set of available choices")
-            return [interfaces_configuration.path_join(config_path, self.name)]
+            return [configuration.path_join(config_path, self.name)]
         return []
 
 
-class LayerListRequirement(MultiRequirement, interfaces_configuration.ConfigurableRequirementInterface):
+class LayerListRequirement(MultiRequirement, configuration.ConfigurableRequirementInterface):
     """Allows a variable length list of layers that must exist """
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
@@ -144,14 +139,14 @@ class LayerListRequirement(MultiRequirement, interfaces_configuration.Configurab
         if ret_list:
             return ret_list
         if (self.config_value(context, config_path, None) is None or
-                self.config_value(context, interfaces_configuration.path_join(config_path, 'number_of_elements'))):
-            return [interfaces_configuration.path_join(config_path, self.name)]
+                self.config_value(context, configuration.path_join(config_path, 'number_of_elements'))):
+            return [configuration.path_join(config_path, self.name)]
         return []
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Method for constructing within the context any required elements from subrequirements"""
-        new_config_path = interfaces_configuration.path_join(config_path, self.name)
-        num_layers_path = interfaces_configuration.path_join(new_config_path, "number_of_elements")
+        new_config_path = configuration.path_join(config_path, self.name)
+        num_layers_path = configuration.path_join(new_config_path, "number_of_elements")
         number_of_layers = context.config[num_layers_path]
 
         # Build all the layers that can be built
@@ -170,20 +165,171 @@ class LayerListRequirement(MultiRequirement, interfaces_configuration.Configurab
     def build_configuration(self,
                             context: interfaces.context.ContextInterface,
                             config_path: str,
-                            _: typing.Any) -> interfaces_configuration.HierarchicalDict:
-        result = interfaces_configuration.HierarchicalDict()
-        num_elem_config_path = interfaces_configuration.path_join(config_path, self.name, 'number_of_elements')
+                            _: typing.Any) -> configuration.HierarchicalDict:
+        result = configuration.HierarchicalDict()
+        num_elem_config_path = configuration.path_join(config_path, self.name, 'number_of_elements')
         num_elements = context.config.get(num_elem_config_path, None)
         if num_elements is not None:
             result["number_of_elements"] = num_elements
             for i in range(num_elements):
-                req = interfaces_configuration.TranslationLayerRequirement(name = self.name + str(i),
-                                                                           description = "Swap Layer",
-                                                                           optional = False)
+                req = TranslationLayerRequirement(name = self.name + str(i),
+                                                  description = "Swap Layer",
+                                                  optional = False)
                 self.add_requirement(req)
-                value_path = interfaces_configuration.path_join(config_path, self.name, req.name)
+                value_path = configuration.path_join(config_path, self.name, req.name)
                 value = context.config.get(value_path, None)
                 if value is not None:
                     result.splice(req.name, context.memory[value].build_configuration())
                     result[req.name] = value
         return result
+
+
+# Allow these two to be imported directly from requirements
+# This helps prevent import loops since other interfaces need to be able to check instances of this
+class TranslationLayerRequirement(configuration.ConstructableRequirementInterface,
+                                  configuration.ConfigurableRequirementInterface):
+    """Class maintaining the limitations on what sort of translation layers are acceptable"""
+
+    def __init__(self,
+                 name: str,
+                 description: str = None,
+                 default: configuration.ConfigSimpleType = None,
+                 optional: bool = False,
+                 oses: typing.List = None,
+                 architectures: typing.List = None) -> None:
+        """Constructs a Translation Layer Requirement
+
+        The configuration option's value will be the name of the layer once it exists in the store
+
+        Args:
+            name: Name of the configuration requirement
+            layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
+        """
+        if oses is None:
+            oses = []
+        if architectures is None:
+            architectures = []
+        self.oses = oses
+        self.architectures = architectures
+        super().__init__(name, description, default, optional)
+
+    def unsatisfied(self,
+                    context: interfaces.context.ContextInterface,
+                    config_path: str) -> typing.List[str]:
+        """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
+        value = self.config_value(context, config_path, None)
+        if isinstance(value, str):
+            if value not in context.memory:
+                vollog.log(9, "IndexError - Layer not found in memory space: {}".format(value))
+                return [configuration.path_join(config_path, self.name)]
+            if self.oses and context.memory[value].metadata.get('os', None) not in self.oses:
+                vollog.log(9, "TypeError - Layer is not the required OS: {}".format(value))
+                return [configuration.path_join(config_path, self.name)]
+            if (self.architectures and
+                    context.memory[value].metadata.get('architecture', None) not in self.architectures):
+                vollog.log(9, "TypeError - Layer is not the required Architecture: {}".format(value))
+                return [configuration.path_join(config_path, self.name)]
+            return []
+
+        if value is not None:
+            vollog.log(constants.LOGLEVEL_V,
+                       "TypeError - Translation Layer Requirement only accepts string labels: {}".format(value))
+            return [configuration.path_join(config_path, self.name)]
+
+        # TODO: check that the space in the context lives up to the requirements for arch/os etc
+
+        ### NOTE: This validate method has side effects (the dependencies can change)!!!
+
+        self._validate_class(context, config_path)
+        vollog.log(constants.LOGLEVEL_V,
+                   "IndexError - No configuration provided: {}".format(
+                       config_path + configuration.CONFIG_SEPARATOR + self.name))
+        return [configuration.path_join(config_path, self.name)]
+
+    def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
+        """Constructs the appropriate layer and adds it based on the class parameter"""
+        # Determine the layer name
+        name = self.name
+        counter = 2
+        while name in context.memory:
+            name = self.name + str(counter)
+            counter += 1
+
+        config_path = configuration.path_join(config_path, self.name)
+
+        args = {"context": context,
+                "config_path": config_path,
+                "name": name}
+
+        if any([subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                not subreq.optional]):
+            return None
+
+        obj = self._construct_class(context, config_path, args)
+        if obj is not None and isinstance(obj, interfaces.layers.DataLayerInterface):
+            context.add_layer(obj)
+            # This should already be done by the _construct_class method
+            # context.config[config_path] = obj.name
+        return None
+
+    def build_configuration(self,
+                            context: interfaces.context.ContextInterface,
+                            _: str,
+                            value: typing.Any) -> configuration.HierarchicalDict:
+        """Builds the appropriate configuration for the specified requirement"""
+        return context.memory[value].build_configuration()
+
+
+class SymbolRequirement(configuration.ConstructableRequirementInterface,
+                        configuration.ConfigurableRequirementInterface):
+    """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
+
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
+        """Validate that the value is a valid within the symbol space of the provided context"""
+        value = self.config_value(context, config_path, None)
+        if not isinstance(value, str):
+            vollog.log(constants.LOGLEVEL_V,
+                       "TypeError - SymbolRequirement only accepts string labels: {}".format(value))
+            return [configuration.path_join(config_path, self.name)]
+        if value not in context.symbol_space:
+            # This is an expected situation, so return False rather than raise
+            vollog.log(constants.LOGLEVEL_V,
+                       "IndexError - Value not present in the symbol space: {}".format(value or ""))
+            return [configuration.path_join(config_path, self.name)]
+        return []
+
+    def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
+        """Constructs the symbol space within the context based on the subrequirements"""
+        # Determine the space name
+        name = context.symbol_space.free_table_name(self.name)
+
+        config_path = configuration.path_join(config_path, self.name)
+        args = {"context": context,
+                "config_path": config_path,
+                "name": name}
+
+        if any([subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                not subreq.optional]):
+            return None
+
+        # Fill out the parameter for class creation
+        if not isinstance(self.requirements["class"], configuration.ClassRequirement):
+            raise ValueError(
+                "Class requirement is not of type ClassRequirement: {}".format(repr(self.requirements["class"])))
+        cls = self.requirements["class"].cls
+        node_config = context.config.branch(config_path)
+        for req in cls.get_requirements():
+            if req.name in node_config.data and req.name != "class":
+                args[req.name] = node_config.data[req.name]
+
+        obj = self._construct_class(context, config_path, args)
+        if obj is not None and isinstance(obj, interfaces.symbols.SymbolTableInterface):
+            context.symbol_space.append(obj)
+        return None
+
+    def build_configuration(self,
+                            context: interfaces.context.ContextInterface,
+                            _: str,
+                            value: typing.Any) -> configuration.HierarchicalDict:
+        """Builds the appropriate configuration for the specified requirement"""
+        return context.symbol_space[value].build_configuration()
