@@ -330,7 +330,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             if not isinstance(requirement, interfaces.configuration.RequirementInterface):
                 raise TypeError(
                     "Plugin contains requirements that are not RequirementInterfaces: {}".format(configurable.__name__))
-            if isinstance(requirement, interfaces.configuration.InstanceRequirement):
+            if isinstance(requirement, interfaces.configuration.SimpleTypeRequirement):
                 additional["type"] = requirement.instance_type
                 if isinstance(requirement, requirements.IntRequirement):
                     additional["type"] = lambda x: int(x, 0)

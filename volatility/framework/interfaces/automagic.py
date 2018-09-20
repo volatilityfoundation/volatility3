@@ -39,11 +39,11 @@ class AutomagicInterface(interfaces_configuration.ConfigurableInterface, metacla
                  config_path: str, *args, **kwargs) -> None:
         super().__init__(context, config_path)
         for requirement in self.get_requirements():
-            if not isinstance(requirement, (interfaces_configuration.InstanceRequirement,
+            if not isinstance(requirement, (interfaces_configuration.SimpleTypeRequirement,
                                             volatility.framework.configuration.requirements.ChoiceRequirement,
                                             volatility.framework.configuration.requirements.ListRequirement)):
                 raise ValueError(
-                    "Automagic requirements must be an InstanceRequirement, ChoiceRequirement or ListRequirement")
+                    "Automagic requirements must be an SimpleTypeRequirement, ChoiceRequirement or ListRequirement")
 
     def __call__(self,
                  context: interfaces.context.ContextInterface,

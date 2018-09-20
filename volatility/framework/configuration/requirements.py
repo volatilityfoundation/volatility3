@@ -31,17 +31,17 @@ class MultiRequirement(interfaces_configuration.RequirementInterface):
         return self.unsatisfied_children(context, config_path)
 
 
-class BooleanRequirement(interfaces_configuration.InstanceRequirement):
+class BooleanRequirement(interfaces_configuration.SimpleTypeRequirement):
     """A requirement type that contains a boolean value"""
     # Note, this must be a separate class in order to differentiate between Booleans and other instance requirements
 
 
-class IntRequirement(interfaces_configuration.InstanceRequirement):
+class IntRequirement(interfaces_configuration.SimpleTypeRequirement):
     """A requirement type that contains a single integer"""
     instance_type = int  # type: typing.ClassVar[typing.Type]
 
 
-class StringRequirement(interfaces_configuration.InstanceRequirement):
+class StringRequirement(interfaces_configuration.SimpleTypeRequirement):
     """A requirement type that contains a single unicode string"""
     # TODO: Maybe add string length limits?
     instance_type = str  # type: typing.ClassVar[typing.Type]
@@ -52,7 +52,7 @@ class URIRequirement(StringRequirement):
     # TODO: Maybe a a check that to unsatisfied that the path really is a URL?
 
 
-class BytesRequirement(interfaces_configuration.InstanceRequirement):
+class BytesRequirement(interfaces_configuration.SimpleTypeRequirement):
     """A requirement type that contains a byte string"""
     instance_type = bytes  # type: typing.ClassVar[typing.Type]
 

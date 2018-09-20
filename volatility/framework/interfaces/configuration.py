@@ -229,7 +229,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     A requirement is a means for plugins and other framework components to request specific configuration data.
     Requirements can either be simple types (such as
-    :class:`~volatility.framework.configuration.requirements.InstanceRequirement`,
+    :class:`~volatility.framework.configuration.requirements.SimpleTypeRequirement`,
     :class:`~volatility.framework.configuration.requirements.IntRequirement`,
     :class:`~volatility.framework.configuration.requirements.BytesRequirement` and
     :class:`~volatility.framework.configuration.requirements.StringRequirement`) or complex types (such
@@ -325,7 +325,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """
 
 
-class InstanceRequirement(RequirementInterface):
+class SimpleTypeRequirement(RequirementInterface):
     """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
     instance_type = bool  # type: typing.ClassVar[typing.Type]
 
