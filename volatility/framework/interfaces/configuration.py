@@ -444,7 +444,7 @@ class ConstructableRequirementInterface(RequirementInterface):
         return obj
 
 
-class ConfigurableRequirementInterface(object):
+class ConfigurableRequirementInterface(RequirementInterface):
     """Simple Abstract class to provide build_required_config"""
 
     def build_configuration(self,
@@ -486,6 +486,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     @property
     def config(self) -> HierarchicalDict:
+        """The Hierarchical configuration Dictionary for this Configurable object"""
         return self._context.config.branch(self._config_path)
 
     def build_configuration(self) -> HierarchicalDict:
@@ -551,5 +552,3 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             self.context.config[path_join(new_config_path, k)] = v
 
         return new_config_path
-
-
