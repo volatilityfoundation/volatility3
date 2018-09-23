@@ -397,11 +397,13 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                     current_layer_path = path_join(swap_sub_config, current_layer_name)
                     layer_loc_path = path_join(current_layer_path, "location")
                     layer_class_path = path_join(current_layer_path, "class")
+                    counter += 1
 
                     # Fill in the config
-                    context.config[layer_loc_path] = swap_location
-                    context.config[layer_class_path] = 'volatility.framework.layers.physical.FileLayer'
-                    counter += 1
+                    if swap_location:
+                        context.config[current_layer_path] = current_layer_name
+                        context.config[layer_loc_path] = swap_location
+                        context.config[layer_class_path] = 'volatility.framework.layers.physical.FileLayer'
 
                     # Add the requirement
                     new_req = requirements.TranslationLayerRequirement(name = current_layer_name,
