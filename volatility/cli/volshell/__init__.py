@@ -10,7 +10,7 @@ import volatility.symbols
 from volatility import cli, framework
 from volatility.cli import text_renderer
 from volatility.cli.volshell import shellplugin, windows
-from volatility.framework import automagic, constants, contexts, exceptions, interfaces
+from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins
 
 # Make sure we log everything
 vollog = logging.getLogger()
@@ -171,12 +171,21 @@ class VolShell(cli.CommandLine):
         # BACK TO THE FRAMEWORK
         ###
         try:
-            constructed = self.run_plugin(ctx,
-                                          automagics,
-                                          plugin,
-                                          plugin_config_path,
-                                          quiet = args.quiet,
-                                          write_config = args.write_config)
+            progress_callback = cli.PrintedProgress()
+            if args.quiet:
+                progress_callback = cli.MuteProgress()
+
+            constructed = plugins.run_plugin(ctx,
+                                             automagics,
+                                             plugin,
+                                             plugin_config_path,
+                                             progress_callback,
+                                             self)
+
+            if args.write_config:
+                vollog.debug("Writing out configuration data to config.json")
+                with open("config.json", "w") as f:
+                    json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
             # Construct and run the plugin
             text_renderer.QuickTextRenderer().render(constructed.run())

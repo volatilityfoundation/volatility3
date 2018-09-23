@@ -20,7 +20,7 @@ from urllib import parse, request
 import volatility.plugins
 from volatility import framework
 from volatility.cli import text_renderer
-from volatility.framework import automagic, constants, contexts, exceptions, interfaces
+from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins
 from volatility.framework.configuration import requirements
 
 # Make sure we log everything
@@ -196,63 +196,26 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # BACK TO THE FRAMEWORK
         ###
         try:
-            constructed = self.run_plugin(ctx,
-                                          automagics,
-                                          plugin,
-                                          plugin_config_path,
-                                          quiet = args.quiet,
-                                          write_config = args.write_config)
+            progress_callback = PrintedProgress()
+            if args.quiet:
+                progress_callback = MuteProgress()
+
+            constructed = plugins.run_plugin(ctx,
+                                             automagics,
+                                             plugin,
+                                             plugin_config_path,
+                                             progress_callback,
+                                             self)
+
+            if args.write_config:
+                vollog.debug("Writing out configuration data to config.json")
+                with open("config.json", "w") as f:
+                    json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
             # Construct and run the plugin
             text_renderer.QuickTextRenderer().render(constructed.run())
         except exceptions.UnsatisfiedException as excp:
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format(excp.unsatisfied))
-
-    def run_plugin(self,
-                   context: interfaces.context.ContextInterface,
-                   automagics: typing.List[interfaces.automagic.AutomagicInterface],
-                   plugin: typing.Type[interfaces.plugins.PluginInterface],
-                   plugin_config_path: str,
-                   write_config: bool = False,
-                   quiet: bool = False) -> interfaces.plugins.PluginInterface:
-        """Constructs a plugin object based on the parameters
-
-        Clever magic figures out how to fulfill each requirement that might not be fulfilled
-
-        Args:
-            context: The volatility context to operate on
-            automagics: A list of automagic modules to run to augment the context
-            plugin: The plugin to run
-            plugin_config_path: The path within the context's config containing the plugin's configuration
-            write_config: Whether to record the configuration options after processing the automagic but before running
-            quiet: Whether or not to output progress information
-
-        Returns:
-            The constructed plugin object
-        """
-        progress_callback = PrintedProgress()
-        if quiet:
-            progress_callback = MuteProgress()
-        errors = automagic.run(automagics, context, plugin, "plugins", progress_callback = progress_callback)
-
-        # Check all the requirements and/or go back to the automagic step
-        unsatisfied = plugin.unsatisfied(context, plugin_config_path)
-        if unsatisfied:
-            for error in errors:
-                error_string = [x for x in error.format_exception_only()][-1]
-                vollog.warning("Automagic exception occured: {}".format(error_string[:-1]))
-                vollog.log(constants.LOGLEVEL_V, "".join(error.format(chain = True)))
-            raise exceptions.UnsatisfiedException(unsatisfied)
-
-        print("\n\n")
-
-        constructed = plugin(context, plugin_config_path, progress_callback = progress_callback)
-        if write_config:
-            vollog.debug("Writing out configuration data to config.json")
-            with open("config.json", "w") as f:
-                json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
-        constructed.set_file_consumer(self)
-        return constructed
 
     def populate_config(self,
                         context: interfaces.context.ContextInterface,
