@@ -9,7 +9,7 @@ vollog = logging.getLogger(__name__)
 def run_plugin(context: interfaces.context.ContextInterface,
                automagics: typing.List[interfaces.automagic.AutomagicInterface],
                plugin: typing.Type[interfaces.plugins.PluginInterface],
-               plugin_config_path: str,
+               base_config_path: str,
                progress_callback: interfaces.layers.ProgressValue,
                file_consumer: interfaces.plugins.FileConsumerInterface) -> interfaces.plugins.PluginInterface:
     """Constructs a plugin object based on the parameters
@@ -27,7 +27,9 @@ def run_plugin(context: interfaces.context.ContextInterface,
     Returns:
         The constructed plugin object
     """
-    errors = automagic.run(automagics, context, plugin, "plugins", progress_callback = progress_callback)
+    errors = automagic.run(automagics, context, plugin, base_config_path, progress_callback = progress_callback)
+    # Plugins always get their configuration stored under their plugin name
+    plugin_config_path = interfaces.configuration.path_join(base_config_path, plugin.__name__)
 
     # Check all the requirements and/or go back to the automagic step
     unsatisfied = plugin.unsatisfied(context, plugin_config_path)

@@ -133,7 +133,8 @@ class VolShell(cli.CommandLine):
         if args.windows:
             plugin = windows.Volshell
 
-        plugin_config_path = interfaces.configuration.path_join('plugins', plugin.__name__)
+        base_config_path = "plugins"
+        plugin_config_path = interfaces.configuration.path_join(base_config_path, plugin.__name__)
 
         # Special case the -f argument because people use is so frequently
         # It has to go here so it can be overridden by single-location if it's defined
@@ -178,7 +179,7 @@ class VolShell(cli.CommandLine):
             constructed = plugins.run_plugin(ctx,
                                              automagics,
                                              plugin,
-                                             plugin_config_path,
+                                             base_config_path,
                                              progress_callback,
                                              self)
 
