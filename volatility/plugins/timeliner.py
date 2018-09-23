@@ -6,9 +6,9 @@ import traceback
 import typing
 
 from volatility import framework
-from volatility.framework import renderers, automagic
+from volatility.framework import renderers, automagic, interfaces, plugins, exceptions
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import plugins, configuration
+from volatility.framework.interfaces import configuration
 
 vollog = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class TimeLinerInterface(object, metaclass = abc.ABCMeta):
         """
 
 
-class Timeliner(plugins.PluginInterface):
+class Timeliner(interfaces.plugins.PluginInterface):
     """Runs all relevant plugins that provide time related information and orders the results by time"""
 
     def __init__(self, *args, **kwargs):
@@ -104,21 +104,18 @@ class Timeliner(plugins.PluginInterface):
         for plugin_class in self.usable_plugins:
             try:
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
-                automagic_config_path = configuration.path_join(self.config_path,
-                                                                sep.join(plugin_class.__name__.split(sep)[:-1]))
-                errors = automagic.run(automagics,
-                                       self.context,
-                                       plugin_class,
-                                       automagic_config_path,
-                                       progress_callback = self._progress_callback)
-                for error in errors:
-                    vollog.log(logging.DEBUG, "\n".join(error.format(chain = True)))
-                plugin = plugin_class(self.context,
-                                      configuration.path_join(self.config_path, plugin_class.__name__),
-                                      progress_callback = self._progress_callback)
+
+                plugin = plugins.run_plugin(self.context,
+                                            automagics,
+                                            plugin_class,
+                                            self.config_path,
+                                            self._progress_callback,
+                                            self._file_consumer)
+
                 runable_plugins.append(plugin)
-            except Exception:
+            except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue
+                vollog.debug("Unable to satisfy {}: {}".format(plugin_class.__name__, excp.unsatisfied))
                 continue
 
         return renderers.TreeGrid(columns = [("Plugin", str),
