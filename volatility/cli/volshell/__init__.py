@@ -5,13 +5,12 @@ import os
 import sys
 from urllib import request
 
-import volatility.framework
 import volatility.plugins
 import volatility.symbols
 from volatility import cli, framework
 from volatility.cli import text_renderer
 from volatility.cli.volshell import shellplugin, windows
-from volatility.framework import constants, contexts, automagic, interfaces
+from volatility.framework import automagic, constants, contexts, exceptions, interfaces
 
 # Make sure we log everything
 vollog = logging.getLogger()
@@ -38,7 +37,7 @@ class VolShell(cli.CommandLine):
         """Executes the command line module, taking the system arguments, determining the plugin to run and then running it"""
         sys.stdout.write("Volshell (Volatility Framework) {}\n".format(constants.PACKAGE_VERSION))
 
-        volatility.framework.require_interface_version(0, 0, 0)
+        framework.require_interface_version(0, 0, 0)
 
         parser = argparse.ArgumentParser(prog = 'volshell',
                                          description = "A tool for interactivate forensic analysis of memory images")
@@ -181,7 +180,7 @@ class VolShell(cli.CommandLine):
 
             # Construct and run the plugin
             text_renderer.QuickTextRenderer().render(constructed.run())
-        except cli.UnsatisfiedException as excp:
+        except exceptions.UnsatisfiedException as excp:
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format(excp.unsatisfied))
 
 

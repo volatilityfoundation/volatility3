@@ -15,14 +15,12 @@ import logging
 import os
 import sys
 import typing
-from urllib import request, parse
+from urllib import parse, request
 
-import volatility.framework
-import volatility.framework.configuration.requirements
 import volatility.plugins
 from volatility import framework
 from volatility.cli import text_renderer
-from volatility.framework import automagic, constants, contexts, interfaces, exceptions
+from volatility.framework import automagic, constants, contexts, exceptions, interfaces
 from volatility.framework.configuration import requirements
 
 # Make sure we log everything
@@ -207,7 +205,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
             # Construct and run the plugin
             text_renderer.QuickTextRenderer().render(constructed.run())
-        except UnsatisfiedException as excp:
+        except exceptions.UnsatisfiedException as excp:
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format(excp.unsatisfied))
 
     def run_plugin(self,
@@ -244,7 +242,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 error_string = [x for x in error.format_exception_only()][-1]
                 vollog.warning("Automagic exception occured: {}".format(error_string[:-1]))
                 vollog.log(constants.LOGLEVEL_V, "".join(error.format(chain = True)))
-            raise UnsatisfiedException(unsatisfied)
+            raise exceptions.UnsatisfiedException(unsatisfied)
 
         print("\n\n")
 
@@ -393,12 +391,6 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         if arg_strings:
             vars(namespace).setdefault(argparse._UNRECOGNIZED_ARGS_ATTR, [])
             getattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
-
-
-class UnsatisfiedException(exceptions.VolatilityException):
-    def __init__(self, unsatisfied: typing.List[str]) -> None:
-        super().__init__()
-        self.unsatisfied = unsatisfied
 
 
 def main():
