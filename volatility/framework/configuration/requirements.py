@@ -8,7 +8,7 @@ import abc
 import logging
 import typing
 
-from volatility.framework import interfaces, constants
+from volatility.framework import constants, interfaces
 from volatility.framework.interfaces import configuration
 
 vollog = logging.getLogger(__name__)
@@ -82,28 +82,29 @@ class ListRequirement(configuration.RequirementInterface):
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Check the types on each of the returned values and their number and then call the element type's check for each one"""
+        config_path = configuration.path_join(config_path, self.name)
         default = None
         value = self.config_value(context, config_path, default)
         if not value and self.min_elements > 0:
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - ListRequirement has non-zero min_elements")
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
         if value == default:
             # We need to differentiate between no value and an empty list
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - Value was not specified")
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
         if not isinstance(value, list):
             # TODO: Check this is the correct response for an error
             raise ValueError("Unexpected config value found: {}".format(repr(value)))
         if not (self.min_elements <= len(value)):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too few values provided to list option.")
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
         if self.max_elements and not (len(value) < self.max_elements):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too many values provided to list option.")
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
         if not all([self._check_type(element, self.element_type) for element in value]):
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - At least one element in the list is not of the correct type.")
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
         return []
 
 
@@ -123,10 +124,11 @@ class ChoiceRequirement(configuration.RequirementInterface):
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Validates the provided value to ensure it is one of the available choices"""
+        config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path)
         if value not in self.choices:
             vollog.log(constants.LOGLEVEL_V, "ValueError - Value is not within the set of available choices")
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
         return []
 
 
@@ -135,12 +137,13 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Validates the provided value to ensure it is one of the available choices"""
+        config_path = configuration.path_join(config_path, self.name)
         ret_list = super().unsatisfied(context, config_path)
         if ret_list:
             return ret_list
         if (self.config_value(context, config_path, None) is None or
                 self.config_value(context, configuration.path_join(config_path, 'number_of_elements'))):
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
         return []
 
     @classmethod
@@ -231,44 +234,45 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
                     context: interfaces.context.ContextInterface,
                     config_path: str) -> typing.List[str]:
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
+        config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
         if isinstance(value, str):
             if value not in context.memory:
                 vollog.log(9, "IndexError - Layer not found in memory space: {}".format(value))
-                return [configuration.path_join(config_path, self.name)]
+                return [config_path]
             if self.oses and context.memory[value].metadata.get('os', None) not in self.oses:
                 vollog.log(9, "TypeError - Layer is not the required OS: {}".format(value))
-                return [configuration.path_join(config_path, self.name)]
+                return [config_path]
             if (self.architectures and
                     context.memory[value].metadata.get('architecture', None) not in self.architectures):
                 vollog.log(9, "TypeError - Layer is not the required Architecture: {}".format(value))
-                return [configuration.path_join(config_path, self.name)]
+                return [config_path]
             return []
 
         if value is not None:
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - Translation Layer Requirement only accepts string labels: {}".format(value))
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
 
         # TODO: check that the space in the context lives up to the requirements for arch/os etc
 
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
-        self._validate_class(context, config_path)
+        self._validate_class(context, interfaces.configuration.parent_path(config_path))
         vollog.log(constants.LOGLEVEL_V,
-                   "IndexError - No configuration provided: {}".format(configuration.path_join(config_path, self.name)))
-        return [configuration.path_join(config_path, self.name)]
+                   "IndexError - No configuration provided: {}".format(config_path))
+        return [config_path]
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the appropriate layer and adds it based on the class parameter"""
+        config_path = configuration.path_join(config_path, self.name)
+
         # Determine the layer name
         name = self.name
         counter = 2
         while name in context.memory:
             name = self.name + str(counter)
             counter += 1
-
-        config_path = configuration.path_join(config_path, self.name)
 
         args = {"context": context,
                 "config_path": config_path,
@@ -299,24 +303,25 @@ class SymbolRequirement(configuration.ConstructableRequirementInterface,
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Validate that the value is a valid within the symbol space of the provided context"""
+        config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
         if not isinstance(value, str):
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - SymbolRequirement only accepts string labels: {}".format(value))
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
         if value not in context.symbol_space:
             # This is an expected situation, so return False rather than raise
             vollog.log(constants.LOGLEVEL_V,
                        "IndexError - Value not present in the symbol space: {}".format(value or ""))
-            return [configuration.path_join(config_path, self.name)]
+            return [config_path]
         return []
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the symbol space within the context based on the subrequirements"""
+        config_path = configuration.path_join(config_path, self.name)
         # Determine the space name
         name = context.symbol_space.free_table_name(self.name)
 
-        config_path = configuration.path_join(config_path, self.name)
         args = {"context": context,
                 "config_path": config_path,
                 "name": name}

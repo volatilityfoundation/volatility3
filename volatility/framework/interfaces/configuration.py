@@ -288,7 +288,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                      config_path: str,
                      default: ConfigSimpleType = None) -> ConfigSimpleType:
         """Returns the value for this Requirement from its config path"""
-        return context.config.get(path_join(config_path, self.name), default)
+        return context.config.get(config_path, default)
 
     # Child operations
     @property
@@ -343,13 +343,15 @@ class SimpleTypeRequirement(RequirementInterface):
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Validates the instance requirement based upon its `instance_type`."""
+        config_path = path_join(config_path, self.name)
+
         value = self.config_value(context, config_path, None)
         if not isinstance(value, self.instance_type):
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - {} requirements only accept {} type: {}".format(self.name,
                                                                                     self.instance_type.__name__,
                                                                                     value))
-            return [path_join(config_path, self.name)]
+            return [config_path]
         return []
 
 
@@ -367,6 +369,8 @@ class ClassRequirement(RequirementInterface):
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Checks to see if a class can be recovered"""
+        config_path = path_join(config_path, self.name)
+
         value = self.config_value(context, config_path, None)
         self._cls = None
         if value is not None and isinstance(value, str):
@@ -380,7 +384,7 @@ class ClassRequirement(RequirementInterface):
                 if value in globals():
                     self._cls = globals()[value]
         if self._cls is None:
-            return [path_join(config_path, self.name)]
+            return [config_path]
         return []
 
 
