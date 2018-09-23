@@ -156,7 +156,7 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
 
     @abc.abstractmethod
     def new_requirement(self, index) -> interfaces.configuration.RequirementInterface:
-        """Constructs a new requirement based on the specified index"""
+        """Builds a new requirement based on the specified index"""
 
     def build_configuration(self,
                             context: interfaces.context.ContextInterface,
@@ -256,8 +256,7 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
 
         self._validate_class(context, config_path)
         vollog.log(constants.LOGLEVEL_V,
-                   "IndexError - No configuration provided: {}".format(
-                       config_path + configuration.CONFIG_SEPARATOR + self.name))
+                   "IndexError - No configuration provided: {}".format(configuration.path_join(config_path, self.name)))
         return [configuration.path_join(config_path, self.name)]
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:

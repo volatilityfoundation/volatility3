@@ -423,6 +423,9 @@ class ConstructableRequirementInterface(RequirementInterface):
                          requirement_dict: typing.Dict[str, object] = None) \
             -> typing.Optional['interfaces.objects.ObjectInterface']:
         """Constructs the class, handing args and the subrequirements as parameters to __init__"""
+        if self.requirements["class"].unsatisfied(context, config_path):
+            return None
+
         if not isinstance(self.requirements["class"], ClassRequirement):
             return None
         cls = self.requirements["class"].cls
