@@ -4,7 +4,7 @@ These requirement types allow plugins to request simple information types (such 
 etc) as well as indicating what they expect to be in the context (such as particular layers or symboltables).
 
 """
-
+import abc
 import logging
 import typing
 
@@ -130,8 +130,8 @@ class ChoiceRequirement(configuration.RequirementInterface):
         return []
 
 
-class LayerListRequirement(MultiRequirement, configuration.ConfigurableRequirementInterface):
-    """Allows a variable length list of layers that must exist """
+class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequirementInterface, metaclass = abc.ABCMeta):
+    """Allows a variable length list of requirements"""
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
         """Validates the provided value to ensure it is one of the available choices"""
@@ -142,6 +142,44 @@ class LayerListRequirement(MultiRequirement, configuration.ConfigurableRequireme
                 self.config_value(context, configuration.path_join(config_path, 'number_of_elements'))):
             return [configuration.path_join(config_path, self.name)]
         return []
+
+    @classmethod
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+        # This is not optional for the stacker to run, so optional must be marked as False
+        return [IntRequirement("number_of_elements",
+                               description = "Determines how many layers are in this list",
+                               optional = False)]
+
+    @abc.abstractmethod
+    def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
+        """Method for constructing within the context any required elements from subrequirements"""
+
+    @abc.abstractmethod
+    def new_requirement(self, index) -> interfaces.configuration.RequirementInterface:
+        """Constructs a new requirement based on the specified index"""
+
+    def build_configuration(self,
+                            context: interfaces.context.ContextInterface,
+                            config_path: str,
+                            _: typing.Any) -> configuration.HierarchicalDict:
+        result = configuration.HierarchicalDict()
+        num_elem_config_path = configuration.path_join(config_path, self.name, 'number_of_elements')
+        num_elements = context.config.get(num_elem_config_path, None)
+        if num_elements is not None:
+            result["number_of_elements"] = num_elements
+            for i in range(num_elements):
+                req = self.new_requirement(i)
+                self.add_requirement(req)
+                value_path = configuration.path_join(config_path, self.name, req.name)
+                value = context.config.get(value_path, None)
+                if value is not None:
+                    result.splice(req.name, context.memory[value].build_configuration())
+                    result[req.name] = value
+        return result
+
+
+class LayerListRequirement(ComplexListRequirement):
+    """Allows a variable length list of layers that must exist """
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Method for constructing within the context any required elements from subrequirements"""
@@ -155,37 +193,13 @@ class LayerListRequirement(MultiRequirement, configuration.ConfigurableRequireme
             if layer_req is not None and isinstance(layer_req, TranslationLayerRequirement):
                 layer_req.construct(context, new_config_path)
 
-    @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
-        # This is not optional for the stacker to run, so optional must be marked as False
-        return [IntRequirement("number_of_elements",
-                               description = "Determines how many layers are in this list",
-                               optional = False)]
-
-    def build_configuration(self,
-                            context: interfaces.context.ContextInterface,
-                            config_path: str,
-                            _: typing.Any) -> configuration.HierarchicalDict:
-        result = configuration.HierarchicalDict()
-        num_elem_config_path = configuration.path_join(config_path, self.name, 'number_of_elements')
-        num_elements = context.config.get(num_elem_config_path, None)
-        if num_elements is not None:
-            result["number_of_elements"] = num_elements
-            for i in range(num_elements):
-                req = TranslationLayerRequirement(name = self.name + str(i),
-                                                  description = "Swap Layer",
-                                                  optional = False)
-                self.add_requirement(req)
-                value_path = configuration.path_join(config_path, self.name, req.name)
-                value = context.config.get(value_path, None)
-                if value is not None:
-                    result.splice(req.name, context.memory[value].build_configuration())
-                    result[req.name] = value
-        return result
+    def new_requirement(self, index) -> interfaces.configuration.RequirementInterface:
+        """Constructs a new requirement based on the specified index"""
+        return TranslationLayerRequirement(name = self.name + str(index),
+                                           description = "Swap Layer",
+                                           optional = False)
 
 
-# Allow these two to be imported directly from requirements
-# This helps prevent import loops since other interfaces need to be able to check instances of this
 class TranslationLayerRequirement(configuration.ConstructableRequirementInterface,
                                   configuration.ConfigurableRequirementInterface):
     """Class maintaining the limitations on what sort of translation layers are acceptable"""
