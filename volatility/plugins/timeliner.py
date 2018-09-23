@@ -38,6 +38,21 @@ class Timeliner(plugins.PluginInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.timeline = {}
+        self.usable_plugins = None
+        self.automagics = None
+
+    @classmethod
+    def get_usable_plugins(cls, selected_list: typing.List[str] = None) \
+            -> typing.List[typing.Type[TimeLinerInterface]]:
+        # Initialize for the run
+        plugin_list = list(framework.class_subclasses(TimeLinerInterface))
+
+        # Get the filter from the configuration
+        filter_func = lambda _n, _s: True
+        if selected_list:
+            filter_func = lambda name, selected: any([s in name for s in selected])
+
+        return [plugin_class for plugin_class in plugin_list if filter_func(plugin_class.__name__, selected_list)]
 
     @classmethod
     def get_requirements(cls):
@@ -46,10 +61,11 @@ class Timeliner(plugins.PluginInterface):
                                                optional = True,
                                                default = None)]
 
-    def _generator(self) -> typing.Optional[typing.Iterable[typing.Tuple[int, typing.Tuple]]]:
+    def _generator(self, runable_plugins: typing.List[TimeLinerInterface]) \
+            -> typing.Optional[typing.Iterable[typing.Tuple[int, typing.Tuple]]]:
         """Takes a timeline, sorts it and output the data from each relevant row from each plugin"""
         # Generate the results for each plugin
-        for plugin in self.runable_plugins:
+        for plugin in runable_plugins:
             plugin_name = plugin.__class__.__name__
             try:
                 vollog.log(logging.INFO, "Running {}".format(plugin_name))
@@ -78,46 +94,32 @@ class Timeliner(plugins.PluginInterface):
     def run(self):
         """Isolate each plugin and run it"""
 
-        # Initialize for the run
+        # Use all the plugins if there's no filter
+        self.usable_plugins = self.usable_plugins or self.get_usable_plugins()
+        self.automagics = self.automagics or automagic.available(self._context)
         sep = configuration.CONFIG_SEPARATOR
-        plugin_list = list(framework.class_subclasses(TimeLinerInterface))
-        automagics = automagic.available(self._context)
-        self.runable_plugins = []
-
-        # Get the filter from the configuration
-        selected_list = self.config.get('plugins', None)
-        if selected_list is not None:
-            selected_list = selected_list.split(",")
-        else:
-            # Use all the plugins if there's no filter
-            selected_list = [plugin.__name__ for plugin in plugin_list]
+        runable_plugins = []
 
         # Identify plugins that we can run which output datetimes
-        for plugin_class in plugin_list:
-            usable = False
-            plugin_name = plugin_class.__name__
-            for selected in selected_list:
-                if selected in plugin_name:
-                    usable = True
-            if usable:
-                try:
-                    automagics = automagic.choose_automagic(automagics, plugin_class)
-                    automagic_config_path = configuration.path_join(self.config_path,
-                                                                    sep.join(plugin_name.split(sep)[:-1]))
-                    errors = automagic.run(automagics,
-                                           self.context,
-                                           plugin_class,
-                                           automagic_config_path,
-                                           progress_callback = self._progress_callback)
-                    for error in errors:
-                        vollog.log(logging.DEBUG, "\n".join(error.format(chain = True)))
-                    plugin = plugin_class(self.context,
-                                          configuration.path_join(self.config_path, plugin_name),
-                                          progress_callback = self._progress_callback)
-                    self.runable_plugins.append(plugin)
-                except Exception:
-                    # Remove the failed plugin from the list and continue
-                    continue
+        for plugin_class in self.usable_plugins:
+            try:
+                automagics = automagic.choose_automagic(self.automagics, plugin_class)
+                automagic_config_path = configuration.path_join(self.config_path,
+                                                                sep.join(plugin_class.__name__.split(sep)[:-1]))
+                errors = automagic.run(automagics,
+                                       self.context,
+                                       plugin_class,
+                                       automagic_config_path,
+                                       progress_callback = self._progress_callback)
+                for error in errors:
+                    vollog.log(logging.DEBUG, "\n".join(error.format(chain = True)))
+                plugin = plugin_class(self.context,
+                                      configuration.path_join(self.config_path, plugin_class.__name__),
+                                      progress_callback = self._progress_callback)
+                runable_plugins.append(plugin)
+            except Exception:
+                # Remove the failed plugin from the list and continue
+                continue
 
         return renderers.TreeGrid(columns = [("Plugin", str),
                                              ("Description", str),
@@ -125,4 +127,9 @@ class Timeliner(plugins.PluginInterface):
                                              ("Modified Date", datetime.datetime),
                                              ("Accessed Date", datetime.datetime),
                                              ("Changed Date", datetime.datetime)],
-                                  generator = self._generator())
+                                  generator = self._generator(runable_plugins))
+
+    def build_configuration(self):
+        """Builds the configuration to save for the plugin such that it can be reconstructed"""
+        vollog.warning("Unable to record configuration data for the timeliner plugin")
+        return []
