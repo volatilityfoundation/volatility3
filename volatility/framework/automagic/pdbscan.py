@@ -10,9 +10,10 @@ import os
 import struct
 import typing
 
-from volatility.framework import exceptions, layers, validity, constants
+from volatility.framework import constants, exceptions, layers, validity
 from volatility.framework.configuration import requirements
-from volatility.framework.layers import scanners, intel
+from volatility.framework.interfaces import configuration
+from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import intermed, native
 
 if __name__ == "__main__":
@@ -183,7 +184,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             context: Context on which to operate
         """
         join = interfaces.configuration.path_join
-        for config_path, sub_config_path, requirement in self._symbol_requirements:
+        for sub_config_path, requirement in self._symbol_requirements:
             # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
             # TODO: Consider whether a single found kernel can fulfill multiple requirements
             suffix = ".json"
@@ -205,6 +206,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         context.config[join(sub_config_path, "class")] = clazz
                         context.config[join(sub_config_path, "isf_url")] = isf_path
                         # Construct the appropriate symbol table
+                        config_path = interfaces.configuration.parent_path(sub_config_path)
                         requirement.construct(context, config_path)
                         break
                     else:
@@ -330,8 +332,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                                                                config_path,
                                                                requirement,
                                                                requirements.SymbolRequirement)
-            for symbol_req_config_path, _, symbol_req in self._symbol_requirements:
-                if symbol_req.unsatisfied(context, symbol_req_config_path):
+            for sub_config_path, symbol_req in self._symbol_requirements:
+                parent_path = configuration.parent_path(sub_config_path)
+                if symbol_req.unsatisfied(context, parent_path):
                     potential_kernels = self.recurse_pdb_finder(context, config_path, requirement, progress_callback)
                     self.valid_kernels = self.determine_valid_kernels(context, potential_kernels, progress_callback)
                     if self.valid_kernels:

@@ -18,8 +18,7 @@ import sys
 import typing
 from abc import ABCMeta, abstractmethod
 
-from volatility.framework import constants, interfaces
-from volatility.framework import validity
+from volatility.framework import constants, interfaces, validity
 from volatility.framework.interfaces.context import ContextInterface
 
 CONFIG_SEPARATOR = "."
@@ -37,6 +36,11 @@ def path_join(*args) -> str:
     # If a path element (particularly the first) is empty, then remove it from the list
     args = tuple([arg for arg in args if arg])
     return CONFIG_SEPARATOR.join(args)
+
+
+def parent_path(value: str) -> str:
+    """Returns the parent configuration path from a configuration path"""
+    return CONFIG_SEPARATOR.join(value.split(CONFIG_SEPARATOR)[:-1])
 
 
 def path_depth(path: str, depth: int = 1) -> str:

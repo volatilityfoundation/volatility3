@@ -382,13 +382,14 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
         self._translation_requirement = self.find_requirements(context, config_path, requirement,
                                                                requirements.TranslationLayerRequirement,
                                                                shortcut = False)
-        for trans_config, trans_sub_config, trans_req in self._translation_requirement:
+        for trans_sub_config, trans_req in self._translation_requirement:
             if not isinstance(trans_req, requirements.TranslationLayerRequirement):
                 # We need this so the type-checker knows we're a TranslationLayerRequirement
                 continue
-            swap_config, swap_sub_config, swap_req = self.find_swap_requirement(trans_config, trans_sub_config,
-                                                                                trans_req)
+            swap_sub_config, swap_req = self.find_swap_requirement(trans_sub_config, trans_req)
             counter = 0
+            swap_config = interfaces.configuration.parent_path(swap_sub_config)
+
             if swap_req and swap_req.unsatisfied(context, swap_config):
                 # See if any of them need constructing
                 for swap_location in self.config.get('single_swap_locations', []):
@@ -418,9 +419,8 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
 
     def find_swap_requirement(self,
                               config: str,
-                              sub_config: str,
                               requirement: requirements.TranslationLayerRequirement) \
-            -> typing.Tuple[str, str, typing.Optional[requirements.LayerListRequirement]]:
+            -> typing.Tuple[str, typing.Optional[requirements.LayerListRequirement]]:
         """Takes a Translation layer and returns its swap_layer requirement"""
         swap_req = None
         for req_name in requirement.requirements:
@@ -429,8 +429,8 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                 swap_req = req
                 continue
 
-        swap_config = interfaces.configuration.path_join(sub_config, 'swap_layers')
-        return sub_config, swap_config, swap_req
+        swap_config = interfaces.configuration.path_join(config, 'swap_layers')
+        return swap_config, swap_req
 
     @classmethod
     def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:

@@ -5,7 +5,7 @@ Automagic objects attempt to automatically fill configuration values that a user
 import typing
 from abc import ABCMeta
 
-from volatility.framework import validity, interfaces
+from volatility.framework import interfaces, validity
 from volatility.framework.configuration import requirements
 
 R = typing.TypeVar('R', bound = interfaces.configuration.RequirementInterface)
@@ -61,7 +61,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
                           requirement_root: interfaces.configuration.RequirementInterface,
                           requirement_type: typing.Union[typing.Tuple[typing.Type[R], ...], typing.Type[R]],
                           shortcut: bool = True) \
-            -> typing.List[typing.Tuple[str, str, R]]:
+            -> typing.List[typing.Tuple[str, R]]:
         """Determines if there is actually an unfulfilled requirement waiting
 
         This ensures we do not carry out an expensive search when there is no requirement for a particular requirement
@@ -77,11 +77,11 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
             A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement_root.name)
-        results = []  # type: typing.List[typing.Tuple[str, str, R]]
+        results = []  # type: typing.List[typing.Tuple[str, R]]
         recurse = not shortcut
         if isinstance(requirement_root, requirement_type):
             if recurse or requirement_root.unsatisfied(context, config_path):
-                results.append((config_path, sub_config_path, requirement_root))
+                results.append((sub_config_path, requirement_root))
         else:
             recurse = True
         if recurse:

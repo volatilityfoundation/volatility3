@@ -1,7 +1,7 @@
 import logging
 import typing
 
-from volatility.framework import interfaces, constants, validity
+from volatility.framework import constants, interfaces, validity
 from volatility.framework.automagic import linux_symbol_cache
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
@@ -39,12 +39,15 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                                                      requirements.SymbolRequirement),
                                                     shortcut = False)
 
-        for (path, sub_path, requirement) in self._requirements:
+        for (sub_path, requirement) in self._requirements:
+            parent_path = interfaces.configuration.parent_path(sub_path)
+
             if (isinstance(requirement, requirements.SymbolRequirement) and requirement.unsatisfied(context, path)):
-                for (tl_path, tl_sub_path, tl_requirement) in self._requirements:
+                for (tl_sub_path, tl_requirement) in self._requirements:
+                    tl_parent_path = interfaces.configuration.parent_path(tl_sub_path)
                     # Find the TranslationLayer sibling to the SymbolRequirement
                     if (isinstance(tl_requirement, requirements.TranslationLayerRequirement) and
-                            tl_path == path):
+                            tl_parent_path == parent_path):
                         if context.config.get(tl_sub_path, None):
                             self._banner_scan(context, path, requirement, context.config[tl_sub_path],
                                               progress_callback)
