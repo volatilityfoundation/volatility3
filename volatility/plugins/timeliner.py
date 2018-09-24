@@ -1,6 +1,7 @@
 import abc
 import datetime
 import enum
+import json
 import logging
 import traceback
 import typing
@@ -59,7 +60,11 @@ class Timeliner(interfaces.plugins.PluginInterface):
         return [requirements.StringRequirement(name = 'plugins',
                                                description = "Comma separated list of plugins to run",
                                                optional = True,
-                                               default = None)]
+                                               default = None),
+                requirements.BooleanRequirement(name = 'record-config',
+                                                description = "Whether to record the state of all the plugins once complete",
+                                                optional = True,
+                                                default = False)]
 
     def _generator(self, runable_plugins: typing.List[TimeLinerInterface]) \
             -> typing.Optional[typing.Iterable[typing.Tuple[int, typing.Tuple]]]:
@@ -117,6 +122,17 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 # Remove the failed plugin from the list and continue
                 vollog.debug("Unable to satisfy {}: {}".format(plugin_class.__name__, excp.unsatisfied))
                 continue
+
+        if self.config['record-config']:
+            total_config = {}
+            for plugin in runable_plugins:
+                old_dict = dict(plugin.build_configuration())
+                for entry in old_dict:
+                    total_config[interfaces.configuration.path_join(plugin.__class__.__name__, entry)] = old_dict[entry]
+
+            with open('config.json', "w") as fp:
+                vollog.debug("Writing configuration data for timeliner plugin")
+                json.dump(total_config, fp, sort_keys = True, indent = 2)
 
         return renderers.TreeGrid(columns = [("Plugin", str),
                                              ("Description", str),
