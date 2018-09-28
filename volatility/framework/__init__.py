@@ -1,4 +1,5 @@
 """Volatility 3 framework"""
+import importlib
 import inspect
 import logging
 import os
@@ -99,7 +100,7 @@ def import_files(base_module, ignore_errors = False) -> typing.List[str]:
                     if module not in sys.modules:
                         try:
                             vollog.debug("Importing module: {}.{}".format(base_module.__name__, module))
-                            __import__(base_module.__name__ + "." + module)
+                            importlib.import_module(base_module.__name__ + "." + module)
                         except ImportError as e:
                             vollog.debug(str(e))
                             vollog.debug("Failed to import module {} based on file: {}".format(module, modpath))
