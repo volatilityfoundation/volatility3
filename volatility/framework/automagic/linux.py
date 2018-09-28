@@ -42,14 +42,15 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
         for (sub_path, requirement) in self._requirements:
             parent_path = interfaces.configuration.parent_path(sub_path)
 
-            if (isinstance(requirement, requirements.SymbolRequirement) and requirement.unsatisfied(context, path)):
+            if (isinstance(requirement, requirements.SymbolRequirement) and requirement.unsatisfied(context,
+                                                                                                    parent_path)):
                 for (tl_sub_path, tl_requirement) in self._requirements:
                     tl_parent_path = interfaces.configuration.parent_path(tl_sub_path)
                     # Find the TranslationLayer sibling to the SymbolRequirement
                     if (isinstance(tl_requirement, requirements.TranslationLayerRequirement) and
                             tl_parent_path == parent_path):
                         if context.config.get(tl_sub_path, None):
-                            self._banner_scan(context, path, requirement, context.config[tl_sub_path],
+                            self._banner_scan(context, parent_path, requirement, context.config[tl_sub_path],
                                               progress_callback)
                             break
 
