@@ -155,9 +155,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
                     raise
-                raise StopIteration
+                return
             yield (offset, mapped_offset, length, layer_name)
-            raise StopIteration
+            return
         while length > 0:
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)

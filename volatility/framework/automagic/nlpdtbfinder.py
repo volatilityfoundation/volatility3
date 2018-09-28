@@ -118,7 +118,7 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
 
             entry_num = 0
             if len(validity_tests[self._layer_class]) < 1:
-                raise StopIteration
+                return
             validity_mask, validity_success = validity_tests[self._layer_class][0]
             for entry in entries:
                 if (entry & validity_mask) == validity_success:

@@ -206,7 +206,7 @@ class Handles(interfaces_plugins.PluginInterface):
             count = 0x1000 / subtype.size
 
         if not self.context.memory[virtual].is_valid(offset):
-            raise StopIteration
+            return
 
         table = ntkrnlmp.object(type_name = "array", offset = offset,
                                 subtype = subtype, count = int(count))
@@ -248,7 +248,7 @@ class Handles(interfaces_plugins.PluginInterface):
             table_levels = handle_table.TableCode & self._level_mask
         except exceptions.PagedInvalidAddressException:
             vollog.log(constants.LOGLEVEL_VVV, "Handle table parsing was aborted due to an invalid address exception")
-            raise StopIteration
+            return
 
         for handle_table_entry in self._make_handle_array(TableCode, table_levels):
             yield handle_table_entry

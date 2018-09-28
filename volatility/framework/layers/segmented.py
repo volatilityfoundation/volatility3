@@ -88,9 +88,9 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
                     current_offset = logical_offset
                     # If it starts too late then we're done
                     if logical_offset > offset + length:
-                        raise StopIteration
+                        return
                 except exceptions.InvalidAddressException:
-                    raise StopIteration
+                    return
             # Crop it to the amount we need left
             chunk_size = min(size, length + offset - logical_offset)
             yield (logical_offset, mapped_offset, chunk_size, self._base_layer)

@@ -132,7 +132,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
 
         if not userassist_node_path:
             vollog.warning("list_userassist did not find a valid node_path (or None)")
-            raise StopIteration
+            return
 
         userassist_node = userassist_node_path[-1]
         # iterate through the GUIDs under the userassist key

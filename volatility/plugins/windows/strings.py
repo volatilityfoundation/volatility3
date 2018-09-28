@@ -45,7 +45,7 @@ class Strings(interfaces.plugins.PluginInterface):
                 yield (0, (str(string, 'latin-1'), format_hints.Hex(offset), ", ".join(revmap_list)))
             except ValueError:
                 vollog.error("Strings file is in the wrong format")
-                raise StopIteration
+                return
 
     def _parse_line(self, line: bytes) -> typing.Tuple[int, bytes]:
         """Parses a single line from a strings file"""

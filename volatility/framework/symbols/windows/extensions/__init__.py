@@ -515,7 +515,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
 
         proc_layer = self._context.memory[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
-            raise StopIteration
+            return
 
         sym_table = self.vol.type_name.split(constants.BANG)[0]
         peb = self._context.object("{}{}_PEB".format(sym_table, constants.BANG),

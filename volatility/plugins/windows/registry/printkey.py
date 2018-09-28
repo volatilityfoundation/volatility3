@@ -45,7 +45,7 @@ class PrintKey(plugins.PluginInterface):
             node_path = [hive.get_node(hive.root_cell_offset)]
         if not isinstance(node_path, list) or len(node_path) < 1:
             vollog.warning("Hive walker was not passed a valid node_path (or None)")
-            raise StopIteration
+            return
         node = node_path[-1]
         key_path = key_path or node.get_key_path()
         last_write_time = utility.wintime_to_datetime(node.LastWriteTime.QuadPart)

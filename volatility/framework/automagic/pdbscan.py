@@ -195,9 +195,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     _kvo, kernel = self.valid_kernels[virtual_layer]
                     filter_string = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
                     # Take the first result of search for the intermediate file
-                    try:
-                        isf_path = intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string).__next__()
-                    except StopIteration:
+                    for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
+                        isf_path = value
+                        break
+                    else:
                         isf_path = ''
                     if isf_path:
                         vollog.debug("Using symbol library: {}".format(filter_string))
