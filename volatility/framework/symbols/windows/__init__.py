@@ -33,7 +33,12 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_MMVAD_SHORT', extensions._MMVAD_SHORT)
         self.set_type_class('_MMVAD', extensions._MMVAD)
         self.set_type_class('_KSYSTEM_TIME', extensions._KSYSTEM_TIME)
-        self.set_type_class('_POOL_HEADER', extensions._POOL_HEADER)
+
+        # This doesn't exist in very specific versions of windows
+        try:
+            self.set_type_class('_POOL_HEADER', extensions._POOL_HEADER)
+        except ValueError:
+            pass
 
         # these don't exist in windows XP
         try:

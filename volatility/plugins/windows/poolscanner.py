@@ -2,7 +2,7 @@ import enum
 import logging
 import typing
 
-from volatility.framework import constants, interfaces, objects, renderers, validity
+from volatility.framework import constants, interfaces, objects, renderers, validity, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.layers import scanners
@@ -127,7 +127,10 @@ class PoolScanner(plugins.PluginInterface):
             constraint_lookup[constraint.tag] = temp_list
         # Setup the pool header and offset differential
         module = context.module(symbol_table, layer_name, offset = 0)
-        header_type = module.get_type('_POOL_HEADER')
+        try:
+            header_type = module.get_type('_POOL_HEADER')
+        except exceptions.SymbolError:
+            raise exceptions.SymbolError("_POOL_HEADER is not defined for this version of windows")
         header_offset = header_type.relative_child_offset('PoolTag')
 
         # Run the scan locating the offsets of a particular tag
