@@ -1,6 +1,7 @@
 import abc
 import datetime
 import enum
+import io
 import json
 import logging
 import traceback
@@ -130,9 +131,10 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 for entry in old_dict:
                     total_config[interfaces.configuration.path_join(plugin.__class__.__name__, entry)] = old_dict[entry]
 
-            with open('config.json', "w") as fp:
-                vollog.debug("Writing configuration data for timeliner plugin")
+            filedata = interfaces.plugins.FileInterface("config.json")
+            with io.TextIOWrapper(filedata.data, write_through = True) as fp:
                 json.dump(total_config, fp, sort_keys = True, indent = 2)
+                self.produce_file(filedata)
 
         return renderers.TreeGrid(columns = [("Plugin", str),
                                              ("Description", str),
