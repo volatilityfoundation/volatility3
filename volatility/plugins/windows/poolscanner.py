@@ -7,7 +7,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins, configuration
 from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
-from volatility.framework.symbols import intermed
+from volatility.framework.symbols import intermed, utility
 from volatility.framework.symbols.windows import extensions
 
 vollog = logging.getLogger(__name__)
@@ -144,9 +144,9 @@ class PoolScanner(plugins.PluginInterface):
         except exceptions.SymbolError:
             # We have to manually load a symbol table
 
-            # FIXME: Do proper tests for is_64_bit and is_win_7
-            is_64_bit = is_win_7 = False
-            if is_64_bit:
+            if utility.symbol_table_is_64bit(context, symbol_table):
+                # FIXME: Do proper test for is_win_7
+                is_win_7 = False
                 if is_win_7:
                     pool_header_json_filename = "poolheader-x64-win7"
                 else:
