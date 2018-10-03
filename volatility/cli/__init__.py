@@ -124,7 +124,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         ctx = contexts.Context()  # Construct a blank context
         failures = framework.import_files(volatility.plugins,
                                           True)  # Will not log as console's default level is WARNING
-        vollog.info("Plugins could not be loaded: " + ", ".join(failures))
+        parser.epilog = "The following plugins could not be loaded (use -vv to see why): " + ", ".join(failures)
+        vollog.info(parser.epilog)
         automagics = automagic.available(ctx)
 
         plugin_list = framework.list_plugins()
