@@ -4,9 +4,11 @@ import typing
 
 from volatility.framework import constants, interfaces, objects, renderers, validity, exceptions
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import plugins
+from volatility.framework.interfaces import plugins, configuration
 from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import extensions
 
 vollog = logging.getLogger(__name__)
 
@@ -18,6 +20,16 @@ class PoolType(enum.IntEnum):
     PAGED = 1
     NONPAGED = 2
     FREE = 4
+
+
+class PoolHeaderSymbolTable(intermed.IntermediateSymbolTable):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 config_path: str,
+                 name: str,
+                 isf_url: str) -> None:
+        super().__init__(context = context, config_path = config_path, name = name, isf_url = isf_url)
+        self.set_type_class('_POOL_HEADER', extensions._POOL_HEADER)
 
 
 class PoolConstraint(validity.ValidityRoutines):
@@ -126,11 +138,33 @@ class PoolScanner(plugins.PluginInterface):
             temp_list.append(constraint)
             constraint_lookup[constraint.tag] = temp_list
         # Setup the pool header and offset differential
-        module = context.module(symbol_table, layer_name, offset = 0)
         try:
+            module = context.module(symbol_table, layer_name, offset = 0)
             header_type = module.get_type('_POOL_HEADER')
         except exceptions.SymbolError:
-            raise exceptions.SymbolError("_POOL_HEADER is not defined for this version of windows")
+            # We have to manually load a symbol table
+
+            # FIXME: Do proper tests for is_64_bit and is_win_7
+            is_64_bit = is_win_7 = False
+            if is_64_bit:
+                if is_win_7:
+                    pool_header_json_filename = "poolheader-x64-win7"
+                else:
+                    pool_header_json_filename = "poolheader-x64"
+            else:
+                pool_header_json_filename = "poolheader-x86"
+
+            new_table_name = PoolHeaderSymbolTable.create(context = context,
+                                                          config_path = configuration.path_join(
+                                                              context.symbol_space[symbol_table].config_path,
+                                                              "poolheader"
+                                                          ),
+                                                          sub_path = "windows",
+                                                          filename = pool_header_json_filename,
+                                                          table_mapping = {'nt_symbols': symbol_table})
+            module = context.module(new_table_name, layer_name, offset = 0)
+            header_type = module.get_type('_POOL_HEADER')
+
         header_offset = header_type.relative_child_offset('PoolTag')
 
         # Run the scan locating the offsets of a particular tag
