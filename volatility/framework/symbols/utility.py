@@ -1,6 +1,6 @@
 import typing
 
-from volatility.framework import interfaces
+from volatility.framework import interfaces, constants
 
 
 def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
@@ -24,3 +24,9 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
     original_get_symbol = symbol_table.get_symbol
     symbol_table.get_symbol = address_masked_get_symbol
     return symbol_table
+
+
+def symbol_table_is_64bit(context: interfaces.context.ContextInterface,
+                          symbol_table_name: str) -> bool:
+    """Returns a boolean as to whether a particular symbol table within a context is 64-bit or not"""
+    return context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer").size == 8

@@ -1,6 +1,6 @@
 import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
-from volatility.framework import constants, interfaces
+from volatility.framework import interfaces, symbols
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -81,10 +81,7 @@ class Malfind(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs):
         # determine if we're on a 32 or 64 bit kernel
-        if self.context.symbol_space.get_type(self.config["nt_symbols"] + constants.BANG + "pointer").size == 4:
-            is_32bit_arch = True
-        else:
-            is_32bit_arch = False
+        is_32bit_arch = not symbols.utility.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)

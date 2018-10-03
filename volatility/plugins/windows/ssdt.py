@@ -1,23 +1,25 @@
 import os
-from volatility.framework.interfaces import plugins
-from volatility.plugins.windows import modules
-from volatility.framework import exceptions
-from volatility.framework import contexts
+
 from volatility.framework import constants
-from volatility.framework.constants import windows as windows_constants
+from volatility.framework import contexts
+from volatility.framework import exceptions, symbols
 from volatility.framework import renderers
-from volatility.framework.renderers import format_hints
 from volatility.framework.configuration import requirements
+from volatility.framework.constants import windows as windows_constants
+from volatility.framework.interfaces import plugins
+from volatility.framework.renderers import format_hints
+from volatility.plugins.windows import modules
+
 
 class SSDT(plugins.PluginInterface):
     """Lists the system call table"""
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name='primary',
-                                                         description='Kernel Address Space',
-                                                         architectures=["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name="nt_symbols", description="Windows OS")]
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
     def _generator(self, modules):
 
@@ -51,19 +53,19 @@ class SSDT(plugins.PluginInterface):
         collection = contexts.ModuleCollection(context_modules)
 
         kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name=layer_name, offset=kvo)
+        ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = layer_name, offset = kvo)
 
         # this is just one way to enumerate the native (NT) service table.
         # to do the same thing for the Win32K service table, we would need Win32K.sys symbol support
         ## we could also find nt!KeServiceDescriptorTable (NT) and KeServiceDescriptorTableShadow (NT, Win32K)
         service_table_address = ntkrnlmp.get_symbol("KiServiceTable").address
         service_limit_address = ntkrnlmp.get_symbol("KiServiceLimit").address
-        service_limit = ntkrnlmp.object(type_name="int", offset=kvo + service_limit_address)
+        service_limit = ntkrnlmp.object(type_name = "int", offset = kvo + service_limit_address)
 
         # on 32-bit systems the table indexes are 32-bits and contain pointers (unsigned)
         # on 64-bit systems the indexes are also 32-bits but they're offsets from the
         # base address of the table and can be negative, so we need a signed data type
-        is_kernel_64 = ntkrnlmp.get_type("pointer").size == 8
+        is_kernel_64 = symbols.utility.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
         if is_kernel_64:
             array_subtype = "long"
             find_address = lambda func: kvo + service_table_address + (func >> 4)
@@ -71,9 +73,9 @@ class SSDT(plugins.PluginInterface):
             array_subtype = "unsigned long"
             find_address = lambda func: func
 
-        functions = ntkrnlmp.object(type_name="array", offset=kvo + service_table_address,
-                               subtype=ntkrnlmp.get_type(array_subtype),
-                               count=service_limit)
+        functions = ntkrnlmp.object(type_name = "array", offset = kvo + service_table_address,
+                                    subtype = ntkrnlmp.get_type(array_subtype),
+                                    count = service_limit)
 
         for idx, function in enumerate(functions):
 
