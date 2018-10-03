@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "producer": {
+      "version": "0.1.5", 
+      "name": "mhl-by-hand", 
+      "datetime": "2018-10-03T16:53:00.478000"
+    }, 
+    "format": "4.0.0"
+  }, 
+  "user_types": {
+    "_POOL_HEADER": {
+      "fields": {
+        "BlockSize": {
+          "offset": 2, 
+          "type": {
+            "bit_length": 9, 
+            "bit_position": 0, 
+            "kind": "bitfield", 
+            "type": {
+              "kind": "base", 
+              "name": "unsigned short"
+            }
+          }
+        }, 
+        "PoolIndex": {
+          "offset": 0, 
+          "type": {
+            "bit_length": 7, 
+            "bit_position": 9, 
+            "kind": "bitfield", 
+            "type": {
+              "kind": "base", 
+              "name": "unsigned short"
+            }
+          }
+        }, 
+        "PoolTag": {
+          "offset": 4, 
+          "type": {
+            "kind": "base", 
+            "name": "unsigned long"
+          }
+        }, 
+        "PoolType": {
+          "offset": 2, 
+          "type": {
+            "bit_length": 7, 
+            "bit_position": 9, 
+            "kind": "bitfield", 
+            "type": {
+              "kind": "base", 
+              "name": "unsigned short"
+            }
+          }
+        }
+      }, 
+      "kind": "struct", 
+      "size": 16
+    }
+  },
+  "symbols": {
+  }, 
+  "enums": {
+  }, 
+  "base_types": {
+    "unsigned long": {
+      "endian": "little", 
+      "kind": "int", 
+      "signed": false, 
+      "size": 4
+    }
+  }
+}
