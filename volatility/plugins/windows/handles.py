@@ -24,6 +24,8 @@ class Handles(interfaces_plugins.PluginInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._sar_value = None
+        self._type_map = None
+        self._cookie = None
         self._level_mask = 7
 
     @classmethod
