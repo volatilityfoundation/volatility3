@@ -60,8 +60,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         if new_value is None:
             value = cls._struct_value(context,
                                       struct_format,
-                                      object_info.layer_name,
-                                      object_info.offset)
+                                      object_info)
         else:
             value = new_value
         result = cls._struct_type.__new__(cls, value)
@@ -86,10 +85,9 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     def _struct_value(cls,
                       context: interfaces.context.ContextInterface,
                       struct_format: str,
-                      layer_name: str,
-                      offset: int) -> typing.Union[int, float, bool, bytes, str]:
+                      object_info: ObjectInformation) -> typing.Union[int, float, bool, bytes, str]:
         length = struct.calcsize(struct_format)
-        data = context.memory.read(layer_name, offset, length)
+        data = context.memory.read(object_info.layer_name, object_info.offset, length)
         (value,) = struct.unpack(struct_format, data)
         return value
 
@@ -151,8 +149,7 @@ class Bytes(PrimitiveObject, bytes):
         return cls._struct_type.__new__(cls,
                                         cls._struct_value(context,
                                                           struct_format = str(length) + "s",
-                                                          layer_name = object_info.layer_name,
-                                                          offset = object_info.offset))
+                                                          object_info = object_info))
 
 
 class String(PrimitiveObject, str):
@@ -201,8 +198,7 @@ class String(PrimitiveObject, str):
         value = cls._struct_type.__new__(cls,  # type: ignore
                                          cls._struct_value(context,
                                                            struct_format = str(max_length) + "s",
-                                                           layer_name = object_info.layer_name,
-                                                           offset = object_info.offset),
+                                                           object_info = object_info),
                                          **params)
         if value.find('\x00') >= 0:
             value = value[:value.find('\x00')]
@@ -229,16 +225,15 @@ class Pointer(Integer):
     def _struct_value(cls,
                       context: interfaces.context.ContextInterface,
                       struct_format: str,
-                      layer_name: str,
-                      offset: int) -> typing.Any:
+                      object_info: ObjectInformation) -> typing.Any:
         """Ensure that pointer values always fall within the address space of the layer they're constructed on
 
            If there's a need for all the data within the address, the pointer should be recast.  The "pointer"
            must always live within the space (even if the data provided is invalid).
         """
         length = struct.calcsize(struct_format)
-        mask = context.memory[layer_name].address_mask
-        data = context.memory.read(layer_name, offset, length)
+        mask = context.memory[object_info.native_layer_name].address_mask
+        data = context.memory.read(object_info.layer_name, object_info.offset, length)
         (value,) = struct.unpack(struct_format, data)
         return value & mask
 
