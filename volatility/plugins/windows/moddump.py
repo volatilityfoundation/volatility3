@@ -46,7 +46,6 @@ class ModDump(interfaces_plugins.PluginInterface):
         seen_ids = []  # type: typing.List[interfaces.objects.ObjectInterface]
         filter_func = pslist.PsList.create_filter(pids or [])
 
-        result = []
         for proc in pslist.PsList.list_processes(context = context,
                                                  layer_name = layer_name,
                                                  symbol_table = symbol_table,

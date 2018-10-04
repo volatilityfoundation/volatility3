@@ -37,7 +37,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
                                 context: interfaces.context.ContextInterface,
                                 pe_table_name: str,
                                 layer_name: str,
-                                base_address: int) -> typing.Optional[typing.Tuple[int]]:
+                                base_address: int) -> typing.Tuple[int, int, int, int]:
         """Get File and Product version information from PE files
 
         Args:
@@ -95,7 +95,8 @@ class VerInfo(interfaces_plugins.PluginInterface):
                 BaseDllName = renderers.UnreadableValue()
 
             session_layer_name = moddump.ModDump.find_session_layer(self.context, session_layers, mod.DllBase)
-            (major, minor, product, build) = [renderers.NotAvailableValue()] * 4
+            (major, minor, product, build) = [
+                                                 renderers.NotAvailableValue()] * 4  # type: typing.Tuple[typing.Union[int, interfaces.renderers.BaseAbsentValue],typing.Union[int, interfaces.renderers.BaseAbsentValue],typing.Union[int, interfaces.renderers.BaseAbsentValue],typing.Union[int, interfaces.renderers.BaseAbsentValue]]
             try:
                 (major, minor, product, build) = self.get_version_information(self._context,
                                                                               pe_table_name,

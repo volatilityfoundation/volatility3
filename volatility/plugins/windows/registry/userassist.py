@@ -113,7 +113,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
         return self.context.symbol_space.get_type(
             self.config['nt_symbols'] + constants.BANG + "_KUSER_SHARED_DATA").has_member('CookiePad')
 
-    def list_userassist(self, hive: RegistryHive) -> typing.Generator:
+    def list_userassist(self, hive: RegistryHive):
         """Generate userassist data for a registry hive."""
 
         hive_name = hive.hive.cast(self.config["nt_symbols"] + constants.BANG + "_CMHIVE").get_name()
@@ -155,7 +155,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
                            renderers.NotApplicableValue(),
                            renderers.NotApplicableValue(),
                            renderers.NotApplicableValue(),
-                           renderers.NotApplicableValue()))
+                           renderers.NotApplicableValue()))  # type: typing.Tuple[int, typing.Tuple[format_hints.Hex, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any]]
                 yield result
 
                 # output any subkeys under Count

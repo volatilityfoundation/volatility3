@@ -77,7 +77,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         newval = struct.pack(nt_header.OptionalHeader.ImageBase.vol.struct_format, int(self.vol.offset))
         return raw_data[:image_base_offset] + newval + raw_data[image_base_offset + member_size:]
 
-    def reconstruct(self) -> typing.Tuple[int, bytes]:
+    def reconstruct(self) -> typing.Generator[typing.Tuple[int, bytes], None, None]:
         """This method generates the content necessary to reconstruct a PE
         file from memory. It preserves slack space (similar to the old --memory)
         and automatically fixes the ImageBase in the output PE file.

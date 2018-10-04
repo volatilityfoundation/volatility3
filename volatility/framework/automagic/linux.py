@@ -18,7 +18,7 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str) -> None:
         super().__init__(context, config_path)
-        self._requirements = []  # type: typing.List[typing.Tuple[str, str, interfaces.configuration.ConstructableRequirementInterface]]
+        self._requirements = []  # type: typing.List[typing.Tuple[str, interfaces.configuration.ConstructableRequirementInterface]]
         self._linux_banners_ = {}  # type: linux_symbol_cache.LinuxBanners
 
     @property

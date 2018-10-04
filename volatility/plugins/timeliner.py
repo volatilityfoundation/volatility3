@@ -27,7 +27,7 @@ class TimeLinerInterface(object, metaclass = abc.ABCMeta):
 
     @abc.abstractmethod
     def generate_timeline(self) -> typing.Generator[
-        typing.Tuple[str, TimeLinerType, datetime.datetime, TimeLinerType], None, None]:
+        typing.Tuple[str, TimeLinerType, datetime.datetime], None, None]:
         """Method generates Tuples of (description, timestamp_type, timestamp)
 
         These need not be generated in any particular order, sorting will be done later
@@ -45,7 +45,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_usable_plugins(cls, selected_list: typing.List[str] = None) \
-            -> typing.List[typing.Type[TimeLinerInterface]]:
+            -> typing.List[typing.Type]:
         # Initialize for the run
         plugin_list = list(framework.class_subclasses(TimeLinerInterface))
 

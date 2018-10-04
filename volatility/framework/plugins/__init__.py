@@ -1,7 +1,7 @@
 import logging
 import typing
 
-from volatility.framework import interfaces, automagic, exceptions, constants
+from volatility.framework import interfaces, automagic, exceptions, constants, validity
 
 vollog = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ def run_plugin(context: interfaces.context.ContextInterface,
                automagics: typing.List[interfaces.automagic.AutomagicInterface],
                plugin: typing.Type[interfaces.plugins.PluginInterface],
                base_config_path: str,
-               progress_callback: interfaces.layers.ProgressValue,
+               progress_callback: validity.ProgressCallback,
                file_consumer: interfaces.plugins.FileConsumerInterface) -> interfaces.plugins.PluginInterface:
     """Constructs a plugin object based on the parameters
 
