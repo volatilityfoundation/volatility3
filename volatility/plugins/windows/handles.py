@@ -98,7 +98,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
             try:
                 func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
-            except AttributeError:
+            except exceptions.SymbolError:
                 return None
 
             data = self.context.memory.read(virtual_layer_name, kvo + func_addr, 0x200)
