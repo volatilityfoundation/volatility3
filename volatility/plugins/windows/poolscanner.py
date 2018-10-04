@@ -2,7 +2,7 @@ import enum
 import logging
 import typing
 
-from volatility.framework import constants, interfaces, objects, renderers, validity, exceptions
+from volatility.framework import constants, interfaces, renderers, validity, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins, configuration
 from volatility.framework.layers import scanners
@@ -42,7 +42,7 @@ class PoolConstraint(validity.ValidityRoutines):
                  page_type: typing.Optional[PoolType] = None,
                  size: typing.Optional[typing.Tuple[typing.Optional[int], typing.Optional[int]]] = None,
                  index: typing.Optional[typing.Tuple[typing.Optional[int], typing.Optional[int]]] = None,
-                 alignment: typing.Optional[int] = 1):
+                 alignment: typing.Optional[int] = 1) -> None:
         self.tag = self._check_type(tag, bytes)
         self.type_name = type_name
         self.object_type = object_type
@@ -128,11 +128,12 @@ class PoolScanner(plugins.PluginInterface):
                   layer_name: str,
                   symbol_table: str,
                   pool_constraints: typing.List[PoolConstraint],
-                  alignment: int = 8) -> typing.Generator[objects.Struct, None, None]:
+                  alignment: int = 8) -> typing.Generator[typing.Tuple[PoolConstraint,
+                                                                       interfaces.objects.ObjectInterface], None, None]:
         """Returns the _POOL_HEADER object (based on the symbol_table template) after scanning through layer_name
         returning all headers that match any of the constraints provided.  Only one constraint can be provided per tag"""
         # Setup the pattern
-        constraint_lookup = {}
+        constraint_lookup = {}  # type: typing.Dict[bytes, typing.List[PoolConstraint]]
         for constraint in pool_constraints:
             temp_list = constraint_lookup.get(constraint.tag, [])
             temp_list.append(constraint)
