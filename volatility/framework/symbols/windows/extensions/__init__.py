@@ -426,6 +426,24 @@ class _OBJECT_HEADER(objects.Struct):
     """A class for the headers for executive kernel objects, which contains
     quota information, ownership details, naming data, and ACLs."""
 
+    def get_object_type(self, type_map: dict, cookie: int = None) -> str:
+        """Across all Windows versions, the _OBJECT_HEADER embeds details on the type of
+        object (i.e. process, file) but the way its embedded differs between versions.
+        This API abstracts away those details."""
+
+        try:
+            # vista and earlier have a Type member
+            return self.Type.Name.String
+        except AttributeError:
+            # windows 7 and later have a TypeIndex, but windows 10
+            # further encodes the index value with nt1!ObHeaderCookie
+            try:
+                type_index = ((self.vol.offset >> 8) ^ cookie ^ ord(self.TypeIndex)) & 0xFF
+            except AttributeError:
+                type_index = ord(self.TypeIndex)
+
+            return type_map.get(type_index)
+
     @property
     def NameInfo(self) -> interfaces.objects.ObjectInterface:
         if constants.BANG not in self.vol.type_name:

@@ -1,8 +1,9 @@
 import logging
+import typing
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
-from volatility.framework import constants, exceptions, renderers
+from volatility.framework import constants, exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
@@ -24,7 +25,6 @@ class Handles(interfaces_plugins.PluginInterface):
         super().__init__(*args, **kwargs)
         self._sar_value = None
         self._type_map = None
-        self._cookie = None
         self._level_mask = 7
 
     @classmethod
@@ -162,31 +162,20 @@ class Handles(interfaces_plugins.PluginInterface):
 
         return self._type_map
 
-    def object_type(self, object_header, type_map):
-        """Across all Windows versions, the _OBJECT_HEADER embeds details on the type of
-        object (i.e. process, file) but the way its embedded differs between versions.
-        This API abstracts away those details."""
+    def find_cookie(self) -> typing.Optional[interfaces.objects.ObjectInterface]:
+        """Find the ObHeaderCookie value (if it exists)"""
+
+        virtual = self.config["primary"]
 
         try:
-            # vista and earlier have a Type member
-            return object_header.Type.Name.String
-        except AttributeError:
-            # windows 7 and later have a TypeIndex, but windows 10
-            # further encodes the index value with nt1!ObHeaderCookie
-            virtual = self.config["primary"]
-            try:
-                if self._cookie is None:
-                    offset = self.context.symbol_space.get_symbol(
-                        self.config["nt_symbols"] + constants.BANG + "ObHeaderCookie").address
-                    kvo = self.context.memory[virtual].config['kernel_virtual_offset']
-                    self._cookie = self.context.object(self.config["nt_symbols"] + constants.BANG + "unsigned int",
-                                                       virtual, offset = kvo + offset)
+            offset = self.context.symbol_space.get_symbol(
+                self.config["nt_symbols"] + constants.BANG + "ObHeaderCookie").address
+        except exceptions.SymbolError:
+            return None
 
-                type_index = ((object_header.vol.offset >> 8) ^ self._cookie ^ ord(object_header.TypeIndex)) & 0xFF
-            except AttributeError:
-                type_index = ord(object_header.TypeIndex)
-
-            return type_map.get(type_index)
+        kvo = self.context.memory[virtual].config['kernel_virtual_offset']
+        return self.context.object(self.config["nt_symbols"] + constants.BANG + "unsigned int",
+                                           virtual, offset = kvo + offset)
 
     def _make_handle_array(self, offset, level, depth = 0):
         """Parse a process' handle table and yield valid handle table
@@ -255,6 +244,7 @@ class Handles(interfaces_plugins.PluginInterface):
     def _generator(self, procs):
 
         type_map = self.list_objects()
+        cookie = self.find_cookie()
 
         for proc in procs:
 
@@ -269,7 +259,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
             for entry in self.handles(object_table):
                 try:
-                    obj_type = self.object_type(entry, type_map)
+                    obj_type = entry.get_object_type(type_map, cookie)
 
                     if obj_type == None:
                         continue
