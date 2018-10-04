@@ -338,7 +338,7 @@ class _EX_FAST_REF(objects.Struct):
 
         # the mask value is different on 32 and 64 bits
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-        if not symbols_utility.symbol_table_is_64bit(self.context, symbol_table_name):
+        if not symbols_utility.symbol_table_is_64bit(self._context, symbol_table_name):
             max_fast_ref = 7
         else:
             max_fast_ref = 15

@@ -2,8 +2,7 @@ import logging
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
-from volatility.framework import constants
-from volatility.framework import exceptions, renderers
+from volatility.framework import constants, exceptions, renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
@@ -138,7 +137,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
             try:
                 table_addr = ntkrnlmp.get_symbol("ObTypeIndexTable").address
-            except AttributeError:
+            except exceptions.SymbolError:
                 table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
 
             ptrs = ntkrnlmp.object(type_name = "array", offset = kvo + table_addr,
