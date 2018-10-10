@@ -202,7 +202,7 @@ class PoolScanner(plugins.PluginInterface):
                     if constraint.index[0]:
                         if header.index < constraint.index[0]:
                             continue
-                    if constraint.size[1]:
+                    if constraint.index[1]:
                         if header.index > constraint.index[1]:
                             continue
 
