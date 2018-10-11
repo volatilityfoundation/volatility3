@@ -96,7 +96,7 @@ class NlpDtbScanner(interfaces.layers.ScannerInterface):
 
     def __call__(self, data: bytes, data_offset: int) \
             -> typing.Generator[typing.Tuple[int, typing.List[typing.Tuple[int, int]]], None, None]:
-        structure = self._layer_class.structure
+        structure = self._layer_class.structure  # type: typing.List[typing.Tuple[str, int, bool]]
         name, size, large_page = structure[0]
 
         # Somewhat hacky means of determining which format string to use

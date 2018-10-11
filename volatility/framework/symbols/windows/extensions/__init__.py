@@ -496,6 +496,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
             raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
 
         # Presumably for 64-bit systems, the DTB is defined as an array, rather than an unsigned long long
+        dtb = 0  # type: int
         if isinstance(self.Pcb.DirectoryTableBase, objects.Array):
             dtb = self.Pcb.DirectoryTableBase.cast("unsigned long long")
         else:

@@ -165,7 +165,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             if layer_name and virtual_layer_name:
                 memlayer = context.memory[virtual_layer_name]
                 if isinstance(memlayer, intel.Intel):
-                    page_size = memlayer.page_size
+                    page_size = memlayer.page_size  # type: int
                     results = {virtual_layer_name: scan(context,
                                                         layer_name,
                                                         page_size,
