@@ -109,17 +109,16 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         Raises InvalidDataException on failure to validate the data correctly.
         """
 
-    def get_symbol_table(self) -> typing.Optional['interfaces.symbols.SymbolTableInterface']:
+    def get_symbol_table(self) -> 'interfaces.symbols.SymbolTableInterface':
         """Returns the symbol table for this particular object
 
         Returns none if the symbol table cannot be identified.
         """
         if constants.BANG not in self.vol.type_name:
-            vollog.debug("Unable to determine table for symbol: {}".format(self.vol.type_name))
-            return None
+            raise ValueError("Unable to determine table for symbol: {}".format(self.vol.type_name))
         table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
         if table_name not in self._context.symbol_space:
-            vollog.debug("Symbol table not found in context's symbol_space for symbol: {}".format(self.vol.type_name))
+            raise KeyError("Symbol table not found in context's symbol_space for symbol: {}".format(self.vol.type_name))
         return self._context.symbol_space[table_name]
 
     def cast(self,
