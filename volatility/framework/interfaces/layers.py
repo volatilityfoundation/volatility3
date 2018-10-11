@@ -208,7 +208,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
             scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
             if scanner.thread_safe and not constants.DISABLE_MULTITHREADED_SCANNING:
                 progress = multiprocessing.Manager().Value("Q", 0)
-                scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
+                scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
                 with multiprocessing.Pool() as pool:
                     result = pool.map_async(scan_chunk, scan_iterator())
                     while not result.ready():
@@ -223,7 +223,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                         yield from result_value
             else:
                 progress = DummyProgress()
-                scan_chunk = functools.partial(self._scan_chunk, scanner, min_address, max_address, progress)
+                scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
                 for value in scan_iterator():
                     if progress_callback:
                         progress_callback(scan_metric(progress.value),
@@ -260,8 +260,6 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     # We ignore the type due to the iterator_value, actually it only needs to match the output from _scan_iterator
     def _scan_chunk(self,
                     scanner: 'ScannerInterface',
-                    min_address: int,
-                    max_address: int,
                     progress: 'ProgressValue',
                     iterator_value: IteratorValue) -> typing.List[typing.Any]:
         data_to_scan, chunk_end = iterator_value
