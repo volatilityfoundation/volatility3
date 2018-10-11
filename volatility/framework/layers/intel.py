@@ -9,16 +9,19 @@ from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
+_T = typing.TypeVar("_T")
+_S = typing.TypeVar("_S")
+
 
 class classproperty(object):
     """Class property decorator
 
     Note this will change the return type """
 
-    def __init__(self, func: typing.Callable[[typing.Any], typing.Any]) -> None:
+    def __init__(self, func: typing.Callable[[_S], _T]) -> None:
         self._func = func
 
-    def __get__(self, _owner_self, owner_cls: typing.Type) -> typing.Any:
+    def __get__(self, _owner_self, owner_cls: _S) -> _T:
         return self._func(owner_cls)
 
 
@@ -65,11 +68,11 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         return cls._bits_per_register
 
     @classproperty
-    def minimum_address(cls) -> int:  # type: ignore
+    def minimum_address(cls) -> int:
         return 0
 
     @classproperty
-    def maximum_address(cls) -> int:  # type: ignore
+    def maximum_address(cls) -> int:
         return (1 << cls._maxvirtaddr) - 1
 
     @classproperty

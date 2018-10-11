@@ -50,7 +50,7 @@ class DtbTest(validity.ValidityRoutines):
         self.ptr_size = struct.calcsize(ptr_struct)
         self.ptr_reference = self._check_type(ptr_reference, int)
         self.mask = self._check_type(mask, int)
-        self.page_size = layer_type.page_size
+        self.page_size = layer_type.page_size  # type: int
 
     def _unpack(self, value: bytes) -> int:
         return struct.unpack("<" + self.ptr_struct, value)[0]
