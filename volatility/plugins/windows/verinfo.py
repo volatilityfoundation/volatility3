@@ -73,7 +73,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
 
     def _generator(self,
                    procs: typing.Generator[interfaces.objects.ObjectInterface, None, None],
-                   mods: typing.Generator[interfaces.context.ModuleInterface, None, None],
+                   mods: typing.Generator[interfaces.objects.ObjectInterface, None, None],
                    session_layers: typing.Generator[str, None, None]):
         """Generates a list of PE file version info for processes, dlls, and modules.
 
