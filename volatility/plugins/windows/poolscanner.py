@@ -63,30 +63,30 @@ class PoolScanner(plugins.PluginInterface):
         constraints = [
             # atom tables
             PoolConstraint(b'AtmT',
-                           type_name = "_RTL_ATOM_TABLE",
+                           type_name = self.config["nt_symbols"] + constants.BANG + "_RTL_ATOM_TABLE",
                            size = (200, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows before windows 8
             PoolConstraint(b'Pro\xe3',
-                           type_name = "_EPROCESS",
+                           type_name = self.config["nt_symbols"] + constants.BANG + "_EPROCESS",
                            object_type = "Process",
                            size = (600, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows starting with windows 8
             PoolConstraint(b'Proc',
-                           type_name = "_EPROCESS",
+                           type_name = self.config["nt_symbols"] + constants.BANG + "_EPROCESS",
                            object_type = "Process",
                            size = (600, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # files on windows before windows 8
             PoolConstraint(b'Fil\xe5',
-                           type_name = "_FILE_OBJECT",
+                           type_name = self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
                            object_type = "File",
                            size = (150, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # files on windows starting with windows 8
             PoolConstraint(b'File',
-                           type_name = "_FILE_OBJECT",
+                           type_name = self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
                            object_type = "File",
                            size = (150, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
@@ -122,8 +122,7 @@ class PoolScanner(plugins.PluginInterface):
                                            type_map = type_map,
                                            object_type = constraint.object_type,
                                            native_layer_name = 'primary',
-                                           cookie = cookie,
-                                           symbol_table_name = self.config['nt_symbols'])
+                                           cookie = cookie)
 
             if mem_object is None:
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))

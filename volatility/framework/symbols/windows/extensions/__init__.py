@@ -23,8 +23,7 @@ class _POOL_HEADER(objects.Struct):
                    type_map: dict,
                    native_layer_name: typing.Optional[str] = None,
                    object_type: typing.Optional[str] = None,
-                   cookie: typing.Optional[int] = None,
-                   symbol_table_name: typing.Optional[str] = None) \
+                   cookie: typing.Optional[int] = None) \
             -> typing.Optional[interfaces.objects.ObjectInterface]:
         """Carve an object or data structure from a kernel pool allocation.
 
@@ -34,7 +33,10 @@ class _POOL_HEADER(objects.Struct):
         :return:
         """
 
-        symbol_table_name = symbol_table_name or self.vol.type_name.split(constants.BANG)[0]
+        symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
+        if constants.BANG in type_name:
+            symbol_table_name, type_name = type_name.split(constants.BANG)[0:2]
+
         pool_header_size = self.vol.size
 
         # if there is no object type, then just instantiate a structure
