@@ -24,7 +24,6 @@ class Handles(interfaces_plugins.PluginInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._sar_value = None
-        self._type_map = None
         self._level_mask = 7
 
     @classmethod
@@ -118,7 +117,8 @@ class Handles(interfaces_plugins.PluginInterface):
 
         return self._sar_value
 
-    def list_objects(self):
+    @classmethod
+    def list_objects(cls, context, layer_name, symbol_table):
         """List the executive object types (_OBJECT_TYPE) using the
         ObTypeIndexTable or ObpObjectTypes symbol (differs per OS).
         This method will be necessary for determining what type of
@@ -127,40 +127,37 @@ class Handles(interfaces_plugins.PluginInterface):
         Note: The object type index map was hard coded into profiles
         in vol2, but we generate it dynamically now."""
 
-        if self._type_map is None:
+        type_map = {}
 
-            self._type_map = {}
+        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
-            virtual_layer = self.config['primary']
-            kvo = self.context.memory[virtual_layer].config['kernel_virtual_offset']
-            ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual_layer, offset = kvo)
+        try:
+            table_addr = ntkrnlmp.get_symbol("ObTypeIndexTable").address
+        except exceptions.SymbolError:
+            table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
+
+        ptrs = ntkrnlmp.object(type_name = "array", offset = kvo + table_addr,
+                               subtype = ntkrnlmp.get_type("pointer"),
+                               count = 100)
+
+        for i, ptr in enumerate(ptrs):
+            # the first entry in the table is always null. break the
+            # loop when we encounter the first null entry after that
+            if i > 0 and ptr == 0:
+                break
+            objt = ptr.dereference().cast(symbol_table + constants.BANG + "_OBJECT_TYPE")
 
             try:
-                table_addr = ntkrnlmp.get_symbol("ObTypeIndexTable").address
-            except exceptions.SymbolError:
-                table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
+                type_name = objt.Name.String
+            except exceptions.PagedInvalidAddressException:
+                vollog.log(constants.LOGLEVEL_VVV,
+                           "Cannot access _OBJECT_HEADER.Name at {0:#x}".format(objt.Name.vol.offset))
+                continue
 
-            ptrs = ntkrnlmp.object(type_name = "array", offset = kvo + table_addr,
-                                   subtype = ntkrnlmp.get_type("pointer"),
-                                   count = 100)
+            type_map[i] = type_name
 
-            for i, ptr in enumerate(ptrs):
-                # the first entry in the table is always null. break the
-                # loop when we encounter the first null entry after that
-                if i > 0 and ptr == 0:
-                    break
-                objt = ptr.dereference().cast(self.config["nt_symbols"] + constants.BANG + "_OBJECT_TYPE")
-
-                try:
-                    type_name = objt.Name.String
-                except exceptions.PagedInvalidAddressException:
-                    vollog.log(constants.LOGLEVEL_VVV,
-                               "Cannot access _OBJECT_HEADER.Name at {0:#x}".format(objt.Name.vol.offset))
-                    continue
-
-                self._type_map[i] = type_name
-
-        return self._type_map
+        return type_map
 
     def find_cookie(self) -> typing.Optional[interfaces.objects.ObjectInterface]:
         """Find the ObHeaderCookie value (if it exists)"""
@@ -243,7 +240,9 @@ class Handles(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        type_map = self.list_objects()
+        type_map = self.list_objects(context = self.context,
+                                     layer_name = self.config["primary"],
+                                     symbol_table = self.config["nt_symbols"])
         cookie = self.find_cookie()
 
         for proc in procs:
