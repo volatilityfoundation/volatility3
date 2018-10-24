@@ -23,12 +23,8 @@ class PoolType(enum.IntEnum):
 
 
 class PoolHeaderSymbolTable(intermed.IntermediateSymbolTable):
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 name: str,
-                 isf_url: str) -> None:
-        super().__init__(context = context, config_path = config_path, name = name, isf_url = isf_url)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.set_type_class('_POOL_HEADER', extensions._POOL_HEADER)
 
 
