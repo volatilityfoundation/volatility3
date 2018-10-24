@@ -85,6 +85,10 @@ class PoolScanner(plugins.PluginInterface):
                                                 layer_name = self.config["primary"],
                                                 symbol_table = self.config["nt_symbols"])
 
+        cookie = handles.Handles.find_cookie(context = self.context,
+                                             layer_name = self.config["primary"],
+                                             symbol_table = self.config["nt_symbols"])
+
         # FIXME: replace this lambda with a real function
         is_windows_10 = lambda: False
 
@@ -105,7 +109,8 @@ class PoolScanner(plugins.PluginInterface):
             mem_object = header.get_object(type_name = constraint.type_name,
                                            type_map = type_map,
                                            object_type = constraint.object_type,
-                                           native_layer_name = 'primary')
+                                           native_layer_name = 'primary',
+                                           cookie = cookie)
 
             if mem_object is None:
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
