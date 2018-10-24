@@ -21,9 +21,11 @@ class _POOL_HEADER(objects.Struct):
     def get_object(self,
                    type_name: str,
                    type_map: dict,
-                   native_layer_name: str = None,
-                   object_type: str = None,
-                   cookie: int = None) -> typing.Optional[interfaces.objects.ObjectInterface]:
+                   native_layer_name: typing.Optional[str] = None,
+                   object_type: typing.Optional[str] = None,
+                   cookie: typing.Optional[int] = None,
+                   symbol_table_name: typing.Optional[str] = None) \
+            -> typing.Optional[interfaces.objects.ObjectInterface]:
         """Carve an object or data structure from a kernel pool allocation.
 
         :param type_name: the data structure type name
@@ -32,8 +34,8 @@ class _POOL_HEADER(objects.Struct):
         :return:
         """
 
-        symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-        pool_header_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_POOL_HEADER").size
+        symbol_table_name = symbol_table_name or self.vol.type_name.split(constants.BANG)[0]
+        pool_header_size = self.vol.size
 
         # if there is no object type, then just instantiate a structure
         if object_type is None:

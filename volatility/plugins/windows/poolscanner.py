@@ -122,7 +122,8 @@ class PoolScanner(plugins.PluginInterface):
                                            type_map = type_map,
                                            object_type = constraint.object_type,
                                            native_layer_name = 'primary',
-                                           cookie = cookie)
+                                           cookie = cookie,
+                                           symbol_table_name = self.config['nt_symbols'])
 
             if mem_object is None:
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
