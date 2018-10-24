@@ -78,6 +78,18 @@ class PoolScanner(plugins.PluginInterface):
                            object_type = "Process",
                            size = (600, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # files on windows before windows 8
+            PoolConstraint(b'Fil\xe5',
+                           type_name = "_FILE_OBJECT",
+                           object_type = "File",
+                           size = (150, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # files on windows starting with windows 8
+            PoolConstraint(b'File',
+                           type_name = "_FILE_OBJECT",
+                           object_type = "File",
+                           size = (150, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         # get the object type map
@@ -121,14 +133,19 @@ class PoolScanner(plugins.PluginInterface):
                 name = mem_object.ImageFileName.cast("string",
                                                      max_length = mem_object.ImageFileName.vol.count,
                                                      errors = "replace")
+            elif constraint.object_type == "File":
+                try:
+                    name = mem_object.FileName.String
+                except exceptions.PagedInvalidAddressException:
+                    vollog.log(constants.LOGLEVEL_VVV, "Skipping file at {0:#x}".format(mem_object.vol.offset))
+                    continue
             else:
                 name = renderers.NotApplicableValue()
 
             yield (0, (constraint.type_name,
                        format_hints.Hex(header.vol.offset),
                        header.vol.layer_name,
-                       name,
-                       "Path"))
+                       name))
 
     @classmethod
     def pool_scan(cls,
@@ -221,6 +238,5 @@ class PoolScanner(plugins.PluginInterface):
         return renderers.TreeGrid([("Tag", str),
                                    ("Offset", format_hints.Hex),
                                    ("Layer", str),
-                                   ("Name", str),
-                                   ("Path", str)],
+                                   ("Name", str)],
                                   self._generator())
