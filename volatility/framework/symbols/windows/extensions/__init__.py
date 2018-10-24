@@ -22,7 +22,8 @@ class _POOL_HEADER(objects.Struct):
                    type_name: str,
                    type_map: dict,
                    native_layer_name: str = None,
-                   object_type: str = None) -> typing.Optional[interfaces.objects.ObjectInterface]:
+                   object_type: str = None,
+                   cookie: int = None) -> typing.Optional[interfaces.objects.ObjectInterface]:
         """Carve an object or data structure from a kernel pool allocation.
 
         :param type_name: the data structure type name
@@ -56,7 +57,7 @@ class _POOL_HEADER(objects.Struct):
             object_header = mem_object.object_header()
 
             try:
-                object_type_string = object_header.get_object_type(type_map) # FIXME: pass in the cookie
+                object_type_string = object_header.get_object_type(type_map, cookie)
                 if object_type_string == object_type:
                     return mem_object
                 else:

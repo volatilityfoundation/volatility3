@@ -118,7 +118,10 @@ class Handles(interfaces_plugins.PluginInterface):
         return self._sar_value
 
     @classmethod
-    def list_objects(cls, context, layer_name, symbol_table):
+    def list_objects(cls,
+                     context: interfaces.context.ContextInterface,
+                     layer_name: str,
+                     symbol_table: str) -> dict:
         """List the executive object types (_OBJECT_TYPE) using the
         ObTypeIndexTable or ObpObjectTypes symbol (differs per OS).
         This method will be necessary for determining what type of
@@ -159,20 +162,22 @@ class Handles(interfaces_plugins.PluginInterface):
 
         return type_map
 
-    def find_cookie(self) -> typing.Optional[interfaces.objects.ObjectInterface]:
+    @classmethod
+    def find_cookie(cls,
+                    context: interfaces.context.ContextInterface,
+                    layer_name: str,
+                    symbol_table: str) -> typing.Optional[interfaces.objects.ObjectInterface]:
         """Find the ObHeaderCookie value (if it exists)"""
 
-        virtual = self.config["primary"]
-
         try:
-            offset = self.context.symbol_space.get_symbol(
-                self.config["nt_symbols"] + constants.BANG + "ObHeaderCookie").address
+            offset = context.symbol_space.get_symbol(
+                symbol_table + constants.BANG + "ObHeaderCookie").address
         except exceptions.SymbolError:
             return None
 
-        kvo = self.context.memory[virtual].config['kernel_virtual_offset']
-        return self.context.object(self.config["nt_symbols"] + constants.BANG + "unsigned int",
-                                           virtual, offset = kvo + offset)
+        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        return context.object(symbol_table + constants.BANG + "unsigned int",
+                              layer_name, offset = kvo + offset)
 
     def _make_handle_array(self, offset, level, depth = 0):
         """Parse a process' handle table and yield valid handle table
@@ -243,7 +248,9 @@ class Handles(interfaces_plugins.PluginInterface):
         type_map = self.list_objects(context = self.context,
                                      layer_name = self.config["primary"],
                                      symbol_table = self.config["nt_symbols"])
-        cookie = self.find_cookie()
+        cookie = self.find_cookie(context = self.context,
+                                     layer_name = self.config["primary"],
+                                     symbol_table = self.config["nt_symbols"])
 
         for proc in procs:
 
