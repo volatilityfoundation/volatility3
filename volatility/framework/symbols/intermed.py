@@ -519,3 +519,12 @@ class Version5Format(Version4Format):
                                                                       type = symbol_type,
                                                                       constant_data = symbol_constant_data)
         return self._symbol_cache[name]
+
+
+class Version6Format(Version5Format):
+    """Class for storing intermediate debugging data as objects and classes"""
+    current = 6
+    revision = 0
+    age = 0
+    version = (current - age, age, revision)
+
