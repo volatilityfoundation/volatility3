@@ -9,6 +9,7 @@ from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
+import volatility.plugins.windows.handles as handles
 
 vollog = logging.getLogger(__name__)
 
@@ -79,6 +80,11 @@ class PoolScanner(plugins.PluginInterface):
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
+        # get the object type map
+        type_map = handles.Handles.list_objects(context = self.context,
+                                                layer_name = self.config["primary"],
+                                                symbol_table = self.config["nt_symbols"])
+
         # FIXME: replace this lambda with a real function
         is_windows_10 = lambda: False
 
@@ -97,6 +103,7 @@ class PoolScanner(plugins.PluginInterface):
                                                  alignment = 8):
 
             mem_object = header.get_object(type_name = constraint.type_name,
+                                           type_map = type_map,
                                            object_type = constraint.object_type,
                                            native_layer_name = 'primary')
 
