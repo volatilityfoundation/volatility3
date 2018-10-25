@@ -25,6 +25,9 @@ from volatility.framework import interfaces
 
 vollog = logging.getLogger(__name__)
 
+ValidKernelsType = typing.Dict[str, typing.Tuple[int, typing.Dict]]
+KernelsType = typing.List[typing.Dict[str, typing.Any]]
+
 
 class PdbSignatureScanner(interfaces.layers.ScannerInterface):
     """A :class:`~volatility.framework.interfaces.layers.ScannerInterface` based scanner use to identify Windows PDB records
@@ -130,12 +133,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     suffixes = ['.json', '.json.xz']
     """Provides a list of supported suffixes for Intermediate Format data files"""
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str) -> None:
-        super().__init__(context, config_path)
-        self.valid_kernels = {}  # type: typing.Dict[str, typing.Tuple[int, typing.Dict]]
-
     def recurse_pdb_finder(self,
                            context: interfaces.context.ContextInterface,
                            config_path: str,
@@ -175,7 +172,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 results.update(self.recurse_pdb_finder(context, sub_config_path, subreq))
         return results
 
-    def recurse_symbol_fulfiller(self, context: interfaces.context.ContextInterface) -> None:
+    def recurse_symbol_fulfiller(self,
+                                 context: interfaces.context.ContextInterface,
+                                 valid_kernels: ValidKernelsType) -> None:
         """Fulfills the SymbolRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
 
         This pass will construct any requirements that may need it in the context it was passed
@@ -188,11 +187,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
             # TODO: Consider whether a single found kernel can fulfill multiple requirements
             suffix = ".json"
-            if self.valid_kernels:
+            if valid_kernels:
                 # TODO: Check that the symbols for this kernel will fulfill the requirement
                 kernel = None
-                for virtual_layer in self.valid_kernels:
-                    _kvo, kernel = self.valid_kernels[virtual_layer]
+                for virtual_layer in valid_kernels:
+                    _kvo, kernel = valid_kernels[virtual_layer]
                     filter_string = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
                     # Take the first result of search for the intermediate file
                     for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
@@ -216,26 +215,107 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     vollog.debug("No suitable kernel pdb signature found")
 
     def set_kernel_virtual_offset(self,
-                                  context: interfaces.context.ContextInterface) -> None:
+                                  context: interfaces.context.ContextInterface,
+                                  valid_kernels: ValidKernelsType) -> None:
         """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting and sets
         it based on the previously identified `valid_kernels`.
 
         Args:
             context: Context on which to operate and provide the kernel virtual offset
         """
-        for virtual_layer in self.valid_kernels:
+        for virtual_layer in valid_kernels:
             # Sit the virtual offset under the TranslationLayer it applies to
             kvo_path = interfaces.configuration.path_join(context.memory[virtual_layer].config_path,
                                                           'kernel_virtual_offset')
-            kvo, kernel = self.valid_kernels[virtual_layer]
+            kvo, kernel = valid_kernels[virtual_layer]
             context.config[kvo_path] = kvo
             vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
 
+    def get_physical_layer_name(self, context, vlayer):
+        return context.config.get(interfaces.configuration.path_join(vlayer.config_path, 'memory_layer'), None)
+
+    def method_fixed_mapping(self,
+                             context: interfaces.context.ContextInterface,
+                             virtual_layer_name: str,
+                             kernels: KernelsType,
+                             progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
+        # TODO: Verify this is a windows image
+        valid_kernels = {}
+        vlayer = context.memory[virtual_layer_name]  # type: layers.intel.Intel
+        physical_layer_name = self.get_physical_layer_name(context, vlayer)
+        kvo_path = interfaces.configuration.path_join(vlayer.config_path, 'kernel_virtual_offset')
+        for kernel in kernels:
+            # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
+            if kernel['mz_offset'] is None:
+                # Rule out kernels that couldn't find a suitable MZ header
+                continue
+            if vlayer.bits_per_register == 64:
+                kvo = kernel['mz_offset'] + (31 << int(math.ceil(math.log2(vlayer.maximum_address + 1)) - 5))
+            else:
+                kvo = kernel['mz_offset'] + (1 << (vlayer.bits_per_register - 1))
+            try:
+                kvp = vlayer.mapping(kvo, 0)
+                if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in
+                         kvp])):
+                    valid_kernels[virtual_layer_name] = (kvo, kernel)
+                    # Sit the virtual offset under the TranslationLayer it applies to
+                    context.config[kvo_path] = kvo
+                    vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
+                    break
+                else:
+                    vollog.debug(
+                        "Potential kernel_virtual_offset did not map to expected location: {}".format(hex(kvo)))
+            except exceptions.InvalidAddressException:
+                vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
+        return valid_kernels
+
+    def method_module_offset(self,
+                             context: interfaces.context.ContextInterface,
+                             virtual_layer_name: str,
+                             _kernels: KernelsType,
+                             progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
+        """Method for finding a suitable kernel offset based on a module table"""
+        valid_kernels = {}
+        vollog.debug("Kernel base randomized, searching layer for base address offset")
+        # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
+        vlayer = context.memory[virtual_layer_name]  # type: layers.intel.Intel
+        physical_layer_name = self.get_physical_layer_name(context, vlayer)
+        physical_layer = context.memory[physical_layer_name]
+        # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
+        results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
+                                      progress_callback = progress_callback)
+        seen = set()  # type: typing.Set[int]
+        # Because this will launch a scan of the virtual layer, we want to be careful
+        for result in results:
+            # TODO: Identify the specific structure we're finding and document this a bit better
+            pointer = context.object("pdbscan!unsigned long long",
+                                     offset = (result - 16 - int(vlayer.bits_per_register / 8)),
+                                     layer_name = physical_layer_name)
+            address = pointer & vlayer.address_mask
+            if address in seen:
+                continue
+            seen.add(address)
+            try:
+                potential_mz = vlayer.read(offset = address, length = 2)
+                if potential_mz == b"MZ":
+                    subscan = scan(context, virtual_layer_name, start = address, end = address + (1 << 26),
+                                   page_size = vlayer.page_size, progress_callback = progress_callback)
+                    for subresult in subscan:
+                        valid_kernels[virtual_layer_name] = (address, subresult)
+                        break
+            except exceptions.InvalidAddressException:
+                # We don't care if we're mapping an address to 0, it's not what we're looking for
+                pass
+        return valid_kernels
+
+    # List of methods to be run, in order, to determine the valid kernels
+    methods = [method_fixed_mapping,
+               method_module_offset]
+
     def determine_valid_kernels(self,
                                 context: interfaces.context.ContextInterface,
-                                potential_kernels: typing.Dict[str, typing.Any],
-                                progress_callback: validity.ProgressCallback = None) \
-            -> typing.Dict[str, typing.Tuple[int, typing.Any]]:
+                                potential_kernels: typing.Dict[str, KernelsType],
+                                progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
         """Runs through the identified potential kernels and verifies their suitability
 
         This carries out a scan using the pdb_signature scanner on a physical layer.  It uses the
@@ -254,68 +334,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         valid_kernels = {}
         for virtual_layer_name in potential_kernels:
             kernels = potential_kernels[virtual_layer_name]
-            virtual_config_path = context.memory[virtual_layer_name].config_path
             vlayer = context.memory[virtual_layer_name]
             if virtual_layer_name and isinstance(vlayer, layers.intel.Intel):
-                # TODO: Verify this is a windows image
-                join = interfaces.configuration.path_join
-                physical_layer_name = context.config.get(join(vlayer.config_path, 'memory_layer'), None)
-                kvo_path = join(virtual_config_path, 'kernel_virtual_offset')
-                for kernel in kernels:
-                    # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
-                    if kernel['mz_offset'] is None:
-                        # Rule out kernels that couldn't find a suitable MZ header
-                        continue
-                    if vlayer.bits_per_register == 64:
-                        kvo = kernel['mz_offset'] + (31 << int(math.ceil(math.log2(vlayer.maximum_address + 1)) - 5))
-                    else:
-                        kvo = kernel['mz_offset'] + (1 << (vlayer.bits_per_register - 1))
-                    try:
-                        kvp = vlayer.mapping(kvo, 0)
-                        if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in
-                                 kvp])):
-                            valid_kernels[virtual_layer_name] = (kvo, kernel)
-                            # Sit the virtual offset under the TranslationLayer it applies to
-                            context.config[kvo_path] = kvo
-                            vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
-                            break
-                        else:
-                            vollog.debug(
-                                "Potential kernel_virtual_offset did not map to expected location: {}".format(
-                                    hex(kvo)))
-                    except exceptions.InvalidAddressException:
-                        vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
-                else:
-                    vollog.debug("Kernel base randomized, searching layer for base address offset")
-                    # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
-                    physical_layer = context.memory[physical_layer_name]
-                    # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
-                    results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
-                                                  progress_callback = progress_callback)
-                    seen = set()  # type: typing.Set[int]
-                    # Because this will launch a scan of the virtual layer, we want to be careful
-                    for result in results:
-                        # TODO: Identify the specific structure we're finding and document this a bit better
-                        pointer = context.object("pdbscan!unsigned long long",
-                                                 offset = (result - 16 - int(vlayer.bits_per_register / 8)),
-                                                 layer_name = physical_layer_name)
-                        address = pointer & vlayer.address_mask
-                        if address in seen:
-                            continue
-                        seen.add(address)
-                        try:
-                            potential_mz = vlayer.read(offset = address, length = 2)
-                            if potential_mz == b"MZ":
-                                subscan = scan(context, virtual_layer_name, start = address, end = address + (1 << 26),
-                                               page_size = vlayer.page_size, progress_callback = progress_callback)
-                                for subresult in subscan:
-                                    valid_kernels[virtual_layer_name] = (address, subresult)
-                                    break
-                        except exceptions.InvalidAddressException:
-                            # We don't care if we're mapping an address to 0, it's not what we're looking for
-                            pass
-            if not valid_kernels:
-                vollog.info("No suitable kernel found for layer: {}".format(virtual_layer_name))
+                for method in self.methods:
+                    valid_kernels = method(self, context, virtual_layer_name, kernels, progress_callback)
+                    if valid_kernels:
+                        break
         if not valid_kernels:
             vollog.info("No suitable kernels found during pdbscan")
         return valid_kernels
@@ -337,7 +361,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 parent_path = configuration.parent_path(sub_config_path)
                 if symbol_req.unsatisfied(context, parent_path):
                     potential_kernels = self.recurse_pdb_finder(context, config_path, requirement, progress_callback)
-                    self.valid_kernels = self.determine_valid_kernels(context, potential_kernels, progress_callback)
-                    if self.valid_kernels:
-                        self.recurse_symbol_fulfiller(context)
-                        self.set_kernel_virtual_offset(context)
+                    valid_kernels = self.determine_valid_kernels(context, potential_kernels, progress_callback)
+                    if valid_kernels:
+                        self.recurse_symbol_fulfiller(context, valid_kernels)
+                        self.set_kernel_virtual_offset(context, valid_kernels)
