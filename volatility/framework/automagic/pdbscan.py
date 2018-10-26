@@ -272,7 +272,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     def method_module_offset(self,
                              context: interfaces.context.ContextInterface,
                              virtual_layer_name: str,
-                             _kernels: KernelsType,
+                             kernels: KernelsType,
                              progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
         """Method for finding a suitable kernel offset based on a module table"""
         valid_kernels = {}
@@ -295,17 +295,14 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             if address in seen:
                 continue
             seen.add(address)
-            try:
-                potential_mz = vlayer.read(offset = address, length = 2)
-                if potential_mz == b"MZ":
-                    subscan = scan(context, virtual_layer_name, start = address, end = address + (1 << 26),
-                                   page_size = vlayer.page_size, progress_callback = progress_callback)
-                    for subresult in subscan:
-                        valid_kernels[virtual_layer_name] = (address, subresult)
-                        break
-            except exceptions.InvalidAddressException:
-                # We don't care if we're mapping an address to 0, it's not what we're looking for
-                pass
+            for kernel in kernels:
+                try:
+                    if vlayer.translate(address)[0] == kernel['mz_offset']:
+                        valid_kernels[virtual_layer_name] = (address, kernel)
+                except exceptions.InvalidAddressException:
+                    pass
+            if valid_kernels:
+                break
         return valid_kernels
 
     def method_kdbg_offset(self,
@@ -332,8 +329,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             seen.add(address)
             for kernel in kernels:
                 try:
-                    if vlayer.translate(pointer)[0] == kernel['mz_offset']:
-                        valid_kernels[virtual_layer_name] = (pointer, kernel)
+                    if vlayer.translate(address)[0] == kernel['mz_offset']:
+                        valid_kernels[virtual_layer_name] = (address, kernel)
                 except exceptions.InvalidAddressException:
                     pass
             if valid_kernels:
