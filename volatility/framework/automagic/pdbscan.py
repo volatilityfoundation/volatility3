@@ -138,7 +138,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                            config_path: str,
                            requirement: interfaces.configuration.RequirementInterface,
                            progress_callback: validity.ProgressCallback = None) \
-            -> typing.Dict[str, typing.Iterable]:
+            -> typing.Dict[str, KernelsType]:
         """Traverses the requirement tree, rooted at `requirement` looking for virtual layers that might contain a windows PDB.
 
         Returns a list of possible kernel locations in the physical memory
@@ -152,7 +152,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             A list of (layer_name, scan_results)
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        results = {}  # type: typing.Dict[str, typing.Iterable]
+        results = {}  # type: typing.Dict[str, KernelsType]
         if isinstance(requirement, requirements.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
@@ -308,8 +308,42 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 pass
         return valid_kernels
 
+    def method_kdbg_offset(self,
+                           context: interfaces.context.ContextInterface,
+                           virtual_layer_name: str,
+                           kernels: KernelsType,
+                           progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
+        valid_kernels = {}
+        vollog.debug("Kernel base randomized, using KDBG structure for kernel offset")
+        vlayer = context.memory[virtual_layer_name]  # type: layers.intel.Intel
+        physical_layer_name = self.get_physical_layer_name(context, vlayer)
+        physical_layer = context.memory[physical_layer_name]
+        results = physical_layer.scan(context, scanners.BytesScanner(b"KDBG"), progress_callback = progress_callback)
+
+        seen = set()  # type: typing.Set[int]
+        for result in results:
+            # TODO: Identify the specific structure we're finding and document this a bit better
+            pointer = context.object("pdbscan!unsigned long long",
+                                     offset = result + 8,
+                                     layer_name = physical_layer_name)
+            address = pointer & vlayer.address_mask
+            if address in seen:
+                continue
+            seen.add(address)
+            for kernel in kernels:
+                try:
+                    if vlayer.translate(pointer)[0] == kernel['mz_offset']:
+                        valid_kernels[virtual_layer_name] = (pointer, kernel)
+                except exceptions.InvalidAddressException:
+                    pass
+            if valid_kernels:
+                break
+
+        return valid_kernels
+
     # List of methods to be run, in order, to determine the valid kernels
     methods = [method_fixed_mapping,
+               method_kdbg_offset,
                method_module_offset]
 
     def determine_valid_kernels(self,
@@ -333,7 +367,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         """
         valid_kernels = {}
         for virtual_layer_name in potential_kernels:
-            kernels = potential_kernels[virtual_layer_name]
+            kernels = list(potential_kernels[virtual_layer_name])
             vlayer = context.memory[virtual_layer_name]
             if virtual_layer_name and isinstance(vlayer, layers.intel.Intel):
                 for method in self.methods:
