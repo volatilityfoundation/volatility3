@@ -22,3 +22,7 @@ volatility/symbols/windows*
 
 # Volatility's config 
 config*.json
+
+# Pyinstaller files
+build
+dist

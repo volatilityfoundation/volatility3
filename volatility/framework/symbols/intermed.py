@@ -146,6 +146,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             zip_match = "/".join(os.path.split(filename))
 
         # Check user symbol directory first, then fallback to the framework's library to allow for overloading
+        vollog.log(constants.LOGLEVEL_VVVV,
+                   "Searching for symbols in {}".format(", ".join(volatility.symbols.__path__)))
         for path in volatility.symbols.__path__:
             if not os.path.isabs(path):
                 path = os.path.abspath(os.path.join(__file__, path))

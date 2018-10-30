@@ -102,10 +102,12 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         known_args = [arg for arg in sys.argv if arg != '--help' and arg != '-h']
         partial_args, _ = parser.parse_known_args(known_args)
         if partial_args.plugin_dirs:
-            volatility.plugins.__path__ = partial_args.plugin_dirs.split(";") + constants.PLUGINS_PATH
+            volatility.plugins.__path__ = [os.path.abspath(p) for p in
+                                           partial_args.plugin_dirs.split(";")] + constants.PLUGINS_PATH
 
         if partial_args.symbol_dirs:
-            volatility.symbols.__path__ = partial_args.symbol_dirs.split(";") + constants.SYMBOL_BASEPATHS
+            volatility.symbols.__path__ = [os.path.abspath(p) for p in
+                                           partial_args.symbol_dirs.split(";")] + constants.SYMBOL_BASEPATHS
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)

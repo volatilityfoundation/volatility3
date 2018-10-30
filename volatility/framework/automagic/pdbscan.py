@@ -10,6 +10,7 @@ import os
 import struct
 import typing
 
+from volatility import symbols
 from volatility.framework import constants, exceptions, layers, validity
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import configuration
