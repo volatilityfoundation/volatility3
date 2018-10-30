@@ -12,7 +12,7 @@ from abc import ABCMeta
 import volatility
 from volatility import schemas, symbols
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects, layers
-from volatility.framework.symbols import native
+from volatility.framework.symbols import native, metadata
 
 vollog = logging.getLogger(__name__)
 
@@ -119,6 +119,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     symbols = _construct_delegate_function('symbols', True)
     types = _construct_delegate_function('types', True)
     enumerations = _construct_delegate_function('enumerations', True)
+    metadata = _construct_delegate_function('metadata', True)
     get_type = _construct_delegate_function('get_type')
     get_symbol = _construct_delegate_function('get_symbol')
     get_enumeration = _construct_delegate_function('get_enumeration')
@@ -251,6 +252,10 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
                 not 'symbols' in self._json_object or
                 not 'enums' in self._json_object):
             raise exceptions.SymbolSpaceError("Malformed JSON file provided")
+
+    def metadata(self) -> typing.Optional[interfaces.symbols.MetadataInterface]:
+        """Returns a metadata object containing information about the symbol table"""
+        return None
 
 
 class Version1Format(ISFormatTable):
@@ -528,3 +533,11 @@ class Version6Format(Version5Format):
     age = 0
     version = (current - age, age, revision)
 
+    @property
+    def metadata(self) -> typing.Optional[interfaces.symbols.MetadataInterface]:
+        """Returns a MetadataInterface object"""
+        if self._json_object.get('metadata', {}).get('windows'):
+            return metadata.WindowsMetadata(self._json_object['metadata']['windows'])
+        if self._json_object.get('metadata', {}).get('linux'):
+            return metadata.LinuxMetadata(self._json_object['metadata']['linux'])
+        return None

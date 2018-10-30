@@ -265,3 +265,11 @@ class NativeTableInterface(BaseSymbolTableInterface):
     @property
     def enumerations(self) -> typing.Iterable[str]:
         return []
+
+
+class MetadataInterface(object):
+    """Interface for accessing metadata stored within a symbol table"""
+
+    def __init__(self, json_data: typing.Dict) -> None:
+        """Constructor that accepts json_data"""
+        self._json_data = json_data

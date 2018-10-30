@@ -28,10 +28,10 @@
         "minor": {
           "type": "integer"
         },
-        "build": {
+        "revision": {
           "type": "integer"
         },
-        "release": {
+        "build": {
           "type": "integer"
         }
       },
@@ -39,7 +39,7 @@
       "required": [
         "major",
         "minor",
-        "build"
+        "revision"
       ]
     },
     "metadata_windows_pdb": {
