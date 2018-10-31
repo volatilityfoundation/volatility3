@@ -1,13 +1,19 @@
 # -*- mode: python -*-
 
+import sys
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+
 block_cipher = None
 
+sys.path.append('/home/mike/workspace/volatility3')
 
 a = Analysis(['vol.py'],
              pathex=[],
              binaries=[],
-             datas=[('volatility/schemas', 'volatility/schemas')],
-             hiddenimports=[],
+             datas=collect_data_files('volatility.framework') + \
+              collect_data_files('volatility.schemas') + \
+              [('volatility/plugins', 'volatility/plugins')],
+             hiddenimports=collect_submodules('volatility.plugins'),
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
