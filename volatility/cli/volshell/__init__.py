@@ -95,7 +95,9 @@ class VolShell(cli.CommandLine):
         ctx = contexts.Context()  # Construct a blank context
         failures = framework.import_files(volatility.plugins,
                                           True)  # Will not log as console's default level is WARNING
-        vollog.info("Plugins could not be loaded: " + ", ".join(failures))
+        if failures:
+            parser.epilog = "The following plugins could not be loaded (use -vv to see why): " + ", ".join(failures)
+            vollog.info(parser.epilog)
         automagics = automagic.available(ctx)
 
         # Initialize the list of plugins in case volshell needs it
