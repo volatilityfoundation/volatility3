@@ -6,7 +6,7 @@ import os
 import sys
 import typing
 
-from volatility.framework import interfaces
+from volatility.framework import interfaces, constants
 
 # ##
 #
@@ -88,6 +88,8 @@ def import_files(base_module, ignore_errors = False) -> typing.List[str]:
     failures = []
     if not isinstance(base_module.__path__, list):
         raise TypeError("[base_module].__path__ must be a list of paths")
+    vollog.log(constants.LOGLEVEL_VVVV,
+               "Importing from the following paths: {}".format(", ".join(base_module.__path__)))
     for path in base_module.__path__:
         for root, _, files in os.walk(path, followlinks = True):
             # TODO: Figure out how to import pycache files
