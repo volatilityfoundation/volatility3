@@ -10,7 +10,6 @@ import os
 import struct
 import typing
 
-from volatility import symbols
 from volatility.framework import constants, exceptions, layers, validity
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import configuration
@@ -27,7 +26,7 @@ from volatility.framework import interfaces
 vollog = logging.getLogger(__name__)
 
 ValidKernelsType = typing.Dict[str, typing.Tuple[int, typing.Dict]]
-KernelsType = typing.List[typing.Dict[str, typing.Any]]
+KernelsType = typing.Iterable[typing.Dict[str, typing.Any]]
 
 
 class PdbSignatureScanner(interfaces.layers.ScannerInterface):
@@ -237,12 +236,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def method_fixed_mapping(self,
                              context: interfaces.context.ContextInterface,
-                             virtual_layer_name: str,
+                             vlayer: layers.intel.Intel,
                              kernels: KernelsType,
                              progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
         # TODO: Verify this is a windows image
         valid_kernels = {}
-        vlayer = context.memory[virtual_layer_name]  # type: layers.intel.Intel
+        virtual_layer_name = vlayer.name
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         kvo_path = interfaces.configuration.path_join(vlayer.config_path, 'kernel_virtual_offset')
         for kernel in kernels:
@@ -272,14 +271,14 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def method_module_offset(self,
                              context: interfaces.context.ContextInterface,
-                             virtual_layer_name: str,
+                             vlayer: layers.intel.Intel,
                              kernels: KernelsType,
                              progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
         """Method for finding a suitable kernel offset based on a module table"""
         valid_kernels = {}
         vollog.debug("Kernel base randomized, searching layer for base address offset")
         # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
-        vlayer = context.memory[virtual_layer_name]  # type: layers.intel.Intel
+        virtual_layer_name = vlayer.name
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         physical_layer = context.memory[physical_layer_name]
         # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
@@ -308,12 +307,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def method_kdbg_offset(self,
                            context: interfaces.context.ContextInterface,
-                           virtual_layer_name: str,
+                           vlayer: layers.intel.Intel,
                            kernels: KernelsType,
                            progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
         valid_kernels = {}
         vollog.debug("Kernel base randomized, using KDBG structure for kernel offset")
-        vlayer = context.memory[virtual_layer_name]  # type: layers.intel.Intel
+        virtual_layer_name = vlayer.name
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         physical_layer = context.memory[physical_layer_name]
         results = physical_layer.scan(context, scanners.BytesScanner(b"KDBG"), progress_callback = progress_callback)
@@ -363,13 +362,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         Returns:
             A dictionary of valid kernels
         """
-        valid_kernels = {}
+        valid_kernels = {}  # type: ValidKernelsType
         for virtual_layer_name in potential_kernels:
             kernels = list(potential_kernels[virtual_layer_name])
-            vlayer = context.memory[virtual_layer_name]
-            if virtual_layer_name and isinstance(vlayer, layers.intel.Intel):
+            vlayer = context.memory.get(virtual_layer_name, None)
+            if isinstance(vlayer, layers.intel.Intel):
                 for method in self.methods:
-                    valid_kernels = method(self, context, virtual_layer_name, kernels, progress_callback)
+                    valid_kernels = method(self, context, vlayer, kernels, progress_callback)
                     if valid_kernels:
                         break
         if not valid_kernels:
