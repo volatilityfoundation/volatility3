@@ -18,7 +18,7 @@ vollog = logging.getLogger(__name__)
 
 
 class UserAssist(interfaces_plugins.PluginInterface):
-    """"Print userassist registry keys and information"""
+    """Print userassist registry keys and information"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
