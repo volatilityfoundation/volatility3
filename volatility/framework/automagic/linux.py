@@ -327,10 +327,12 @@ class LinuxUtilities(object):
     @classmethod
     def aslr_mask_symbol_table(cls,
                                config, 
-                               context: interfaces.context.ContextInterface):
+                               context: interfaces.context.ContextInterface,
+                               aslr_shift: int = 0):
 
-        aslr_layer    = config['primary.memory_layer']
-        _, aslr_shift = LinuxUtilities.find_aslr(context, config["vmlinux"], aslr_layer)
+        if alsr_shift == 0:
+            aslr_layer    = config['primary.memory_layer']
+            _, aslr_shift = LinuxUtilities.find_aslr(context, config["vmlinux"], aslr_layer)
 
         sym_table_name = config["vmlinux"]
         sym_layer_name = config["primary"]
@@ -345,24 +347,23 @@ class LinuxUtilities(object):
             -> typing.Tuple[int, int]:
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'
-        table_dtb = context.symbol_space.get_symbol(init_task_symbol).address
+        init_task_json_address = context.symbol_space.get_symbol(init_task_symbol).address
         swapper_signature = b"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
         module = context.module(symbol_table, layer_name, 0)
 
         for offset in context.memory[layer_name].scan(scanner = scanners.RegExScanner(swapper_signature),
                                                       context = context, progress_callback = progress_callback):
             task_symbol = module.get_type('task_struct')
-            image_dtb = offset - task_symbol.relative_child_offset('comm')
-            init_task = module.object(type_name = 'task_struct', offset = image_dtb)
+            init_task_address = offset - task_symbol.relative_child_offset('comm')
+            init_task = module.object(type_name = 'task_struct', offset = init_task_address)
             if init_task.pid != 0:
-                continue
-            if init_task.has_member('thread_info') and init_task.thread_info.cast('unsigned int') != 0:
                 continue
             elif (init_task.has_member('state') and init_task.state.cast('unsigned int') != 0):
                 continue
+
             # This we get for free
-            aslr_shift = init_task.files.cast('long long unsigned int') - module.get_symbol('init_files').address
-            kaslr_shift = image_dtb - cls.virtual_to_physical_address(table_dtb)
+            aslr_shift = init_task.files.cast('long unsigned int') - module.get_symbol('init_files').address
+            kaslr_shift = init_task_address - cls.virtual_to_physical_address(init_task_json_address)
 
             if aslr_shift & 0xfff != 0 or kaslr_shift & 0xfff != 0:
                 continue
