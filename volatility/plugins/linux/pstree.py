@@ -1,6 +1,6 @@
-from volatility.framework.renderers import format_hints
 from volatility.framework.objects import utility
 from volatility.plugins.linux import pslist
+
 
 class PsTree(pslist.PsList):
     """Plugin for listing processes in a tree based on their parent process ID """
@@ -49,4 +49,3 @@ class PsTree(pslist.PsList):
         for pid in self._levels:
             if self._levels[pid] == 1:
                 yield from yield_processes(pid)
-

@@ -1,15 +1,14 @@
 """A module containing a collection of plugins that produce data
 typically found in Linux's /proc file system.
 """
-import datetime, os
 
 from volatility.framework import renderers, constants, interfaces
+from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
-from volatility.framework.automagic import linux
-from volatility.plugins.linux import pslist
+
 
 class Lsmod(plugins.PluginInterface):
     """Lists loaded kernel modules"""
@@ -28,7 +27,7 @@ class Lsmod(plugins.PluginInterface):
                      layer_name: str,
                      vmlinux_symbols: str):
         """Lists all the modules in the primary layer"""
-        
+
         _, aslr_shift = linux.LinuxUtilities.find_aslr(context, vmlinux_symbols, layer_name)
         vmlinux = context.module(vmlinux_symbols, layer_name, aslr_shift)
 
@@ -43,11 +42,11 @@ class Lsmod(plugins.PluginInterface):
 
     def _generator(self):
         for module in self.list_modules(self.context,
-                             self.config['primary'],
-                             self.config['vmlinux']):
+                                        self.config['primary'],
+                                        self.config['vmlinux']):
 
             mod_size = module.get_init_size() + module.get_core_size()
-            
+
             mod_name = utility.array_to_string(module.name)
 
             yield 0, (format_hints.Hex(module.vol.offset), mod_name, mod_size)

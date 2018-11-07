@@ -30,9 +30,9 @@ class PsList(interfaces_plugins.PluginInterface):
 
     def _generator(self):
         for task in self.list_tasks(self.context,
-				    self.config['primary'],
-				    self.config['vmlinux'],
-				    filter = self.create_filter([self.config.get('pid', None)])):
+                                    self.config['primary'],
+                                    self.config['vmlinux'],
+                                    filter = self.create_filter([self.config.get('pid', None)])):
             pid = task.pid
             ppid = 0
             if task.parent:
@@ -42,14 +42,13 @@ class PsList(interfaces_plugins.PluginInterface):
 
     @classmethod
     def list_tasks(cls,
-                  context: interfaces.context.ContextInterface,
-                  layer_name: str,
-                  vmlinux_symbols: str,
-                  filter: typing.Callable[[int], bool] = lambda _: False) -> \
-            typing.Iterable[interfaces.objects.ObjectInterface]:  
-                  
-        """Lists all the tasks in the primary layer"""
+                   context: interfaces.context.ContextInterface,
+                   layer_name: str,
+                   vmlinux_symbols: str,
+                   filter: typing.Callable[[int], bool] = lambda _: False) -> \
+            typing.Iterable[interfaces.objects.ObjectInterface]:
 
+        """Lists all the tasks in the primary layer"""
 
         _, aslr_shift = linux.LinuxUtilities.find_aslr(context, vmlinux_symbols, layer_name)
         vmlinux = context.module(vmlinux_symbols, layer_name, aslr_shift)

@@ -2,12 +2,11 @@ import logging
 import typing
 
 from volatility.framework import interfaces, constants, validity, exceptions
+from volatility.framework import symbols, objects
 from volatility.framework.automagic import linux_symbol_cache
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
-
-from volatility.framework import symbols, objects
 
 vollog = logging.getLogger(__name__)
 
@@ -179,7 +178,7 @@ class LinuxUtilities(object):
 
         ret_path = [] # type: typing.List[str]
 
-        while dentry != rdentry or vfsmnt != rmnt: 
+        while dentry != rdentry or vfsmnt != rmnt:
             dname = dentry.path()
             if dname == "":
                 break
@@ -222,16 +221,16 @@ class LinuxUtilities(object):
             ret_val = '/' + ret_val
 
         return ret_val
-         
+
     # method used by 'older' kernels
     # TODO: lookup when dentry_operations->d_name was merged into the mainline kernel for exact version
     @classmethod
     def _get_path_file(cls, task, filp) -> str:
         rdentry = task.fs.get_root_dentry()
-        rmnt    = task.fs.get_root_mnt()
-        dentry  = filp.get_dentry()
-        vfsmnt  = filp.get_vfsmnt()
-    
+        rmnt = task.fs.get_root_mnt()
+        dentry = filp.get_dentry()
+        vfsmnt = filp.get_vfsmnt()
+
         return LinuxUtilities._do_get_path(rdentry, rmnt, dentry, vfsmnt)
 
     @classmethod
@@ -241,13 +240,13 @@ class LinuxUtilities(object):
         sym_addr = dentry.d_op.d_dname
 
         symbols = list(dentry.context.symbol_space.get_symbols_by_location(sym_addr))
-        
+
         if len(symbols) == 1:
             sym = symbols[0].split(constants.BANG)[1]
-            
+
             if sym == "sockfs_dname":
-                pre_name = "socket"    
-        
+                pre_name = "socket"
+
             elif sym == "anon_inodefs_dname":
                 pre_name = "anon_inode"
 
@@ -295,9 +294,9 @@ class LinuxUtilities(object):
             ret = LinuxUtilities._get_path_file(task, filp)
 
         return ret
-   
+
     # IKELOS: 'task' will always be a task_struct as defined in the profile json. Do I type this in the parameter list? If so, how?
-    # IKELOS: what should the type of 'config' be? 
+    # IKELOS: what should the type of 'config' be?
     @classmethod
     def files_descriptors_for_process(cls,
                                       config,
@@ -308,14 +307,14 @@ class LinuxUtilities(object):
         if fd_table == 0:
             return
 
-        max_fds  = task.files.get_max_fds()
-        
+        max_fds = task.files.get_max_fds()
+
         # corruption check
         if max_fds > 500000:
             return
 
         file_type = config["vmlinux"] + constants.BANG + 'file'
-        
+
         fds = objects.utility.array_of_pointers(fd_table, count = max_fds, subtype = file_type, context = context)
 
         for (fd_num, filp) in enumerate(fds):
@@ -326,17 +325,18 @@ class LinuxUtilities(object):
 
     @classmethod
     def aslr_mask_symbol_table(cls,
-                               config, 
+                               config,
                                context: interfaces.context.ContextInterface,
-                               aslr_shift: int = 0):
+                               aslr_shift = 0):
 
-        if alsr_shift == 0:
-            aslr_layer    = config['primary.memory_layer']
+        if aslr_shift == 0:
+            aslr_layer = config['primary.memory_layer']
             _, aslr_shift = LinuxUtilities.find_aslr(context, config["vmlinux"], aslr_layer)
 
         sym_table_name = config["vmlinux"]
         sym_layer_name = config["primary"]
-        symbols.utility.mask_symbol_table(context.symbol_space[sym_table_name], context.memory[sym_layer_name].address_mask, aslr_shift)
+        symbols.utility.mask_symbol_table(context.symbol_space[sym_table_name],
+                                          context.memory[sym_layer_name].address_mask, aslr_shift)
 
     @classmethod
     def find_aslr(cls,
