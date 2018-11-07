@@ -283,7 +283,7 @@ class LinuxUtilities(object):
 
         # TODO COMPARE THIS IN LSOF OUTPUT TO VOL2
         try:
-            if dentry.d_op and hasattr(dentry.d_op, "d_dname") and dentry.d_op.d_dname:
+            if dentry.d_op and dentry.d_op.has_member("d_dname") and dentry.d_op.d_dname:
                 dname_is_valid = True
 
         except exceptions.InvalidAddressException:
