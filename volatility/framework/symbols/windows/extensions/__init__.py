@@ -21,6 +21,7 @@ class _POOL_HEADER(objects.Struct):
     def get_object(self,
                    type_name: str,
                    type_map: dict,
+                   use_top_down: bool,
                    native_layer_name: typing.Optional[str] = None,
                    object_type: typing.Optional[str] = None,
                    cookie: typing.Optional[int] = None) \
@@ -50,24 +51,58 @@ class _POOL_HEADER(objects.Struct):
         # otherwise we have an executive object in the pool
         else:
             alignment = pool_header_size
-            type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
-            rounded_size = conversion.round(type_size, alignment, up = True)
 
-            mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
-                                              layer_name = self.vol.layer_name,
-                                              offset = self.vol.offset + self.BlockSize * alignment - rounded_size,
-                                              native_layer_name = native_layer_name)
+            # FIXME: calculate and cache this
+            max_optional_headers_length = 0x60
 
-            object_header = mem_object.object_header()
+            # use the top down approach for windows 8 and later
+            if use_top_down:
+                # define the starting and ending bounds for the scan
+                start_offset = self.vol.offset + pool_header_size
+                end_offset = start_offset + min(max_optional_headers_length, self.BlockSize * alignment)
 
-            try:
-                object_type_string = object_header.get_object_type(type_map, cookie)
-                if object_type_string == object_type:
-                    return mem_object
-                else:
+                for addr in range(start_offset, end_offset, alignment):
+                    object_header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER",
+                                                         layer_name = self.vol.layer_name,
+                                                         offset = addr,
+                                                         native_layer_name = native_layer_name)
+
+                    if not object_header.is_valid():
+                        continue
+
+                    try:
+                        object_type_string = object_header.get_object_type(type_map, cookie)
+                        if object_type_string == object_type:
+
+                            mem_object = object_header.Body.cast(symbol_table_name + constants.BANG + type_name)
+                            if mem_object.is_valid():
+                                return mem_object
+
+                        else:
+                            return None
+                    except (TypeError, exceptions.InvalidAddressException):
+                        return None
+
+            # use the bottom up approach for windows 7 and earlier
+            else:
+                type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
+                rounded_size = objects_utility.round(type_size, alignment, up = True)
+
+                mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
+                                                  layer_name = self.vol.layer_name,
+                                                  offset = self.vol.offset + self.BlockSize * alignment - rounded_size,
+                                                  native_layer_name = native_layer_name)
+
+                object_header = mem_object.object_header()
+
+                try:
+                    object_type_string = object_header.get_object_type(type_map, cookie)
+                    if object_type_string == object_type:
+                        return mem_object
+                    else:
+                        return None
+                except (TypeError, exceptions.InvalidAddressException):
                     return None
-            except (TypeError, exceptions.InvalidAddressException):
-                return None
 
 
 class _KSYSTEM_TIME(objects.Struct):
@@ -431,6 +466,17 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
 class _OBJECT_HEADER(objects.Struct):
     """A class for the headers for executive kernel objects, which contains
     quota information, ownership details, naming data, and ACLs."""
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid"""
+
+        #if self.InfoMask > 0x48:
+        #    return False
+
+        if self.PointerCount > 0x1000000 or self.PointerCount < 0:
+            return False
+
+        return True
 
     def get_object_type(self, type_map: dict, cookie: int = None) -> str:
         """Across all Windows versions, the _OBJECT_HEADER embeds details on the type of
