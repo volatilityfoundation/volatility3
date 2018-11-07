@@ -101,8 +101,9 @@ class PoolScanner(plugins.PluginInterface):
                                              layer_name = self.config["primary"],
                                              symbol_table = self.config["nt_symbols"])
 
-        # FIXME: replace this lambda with a real function
+        # FIXME: replace these lambdas with real functions
         is_windows_10 = lambda: False
+        is_windows_8_or_later = lambda: False
 
         # FIXME: scanning the primary layer seems very slow (10min on 512mb grrcon)
         # start off with the primary virtual layer
@@ -120,6 +121,7 @@ class PoolScanner(plugins.PluginInterface):
 
             mem_object = header.get_object(type_name = constraint.type_name,
                                            type_map = type_map,
+                                           use_top_down = is_windows_8_or_later(),
                                            object_type = constraint.object_type,
                                            native_layer_name = 'primary',
                                            cookie = cookie)
