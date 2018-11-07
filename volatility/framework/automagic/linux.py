@@ -295,13 +295,11 @@ class LinuxUtilities(object):
 
         return ret
 
-    # IKELOS: 'task' will always be a task_struct as defined in the profile json. Do I type this in the parameter list? If so, how?
-    # IKELOS: what should the type of 'config' be?
     @classmethod
     def files_descriptors_for_process(cls,
-                                      config,
+                                      config: interfaces.configuration.HierarchicalDict,
                                       context: interfaces.context.ContextInterface,
-                                      task):
+                                      task: interfaces.objects.ObjectInterface):
 
         fd_table = task.files.get_fds()
         if fd_table == 0:

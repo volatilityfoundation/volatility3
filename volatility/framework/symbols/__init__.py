@@ -5,7 +5,7 @@ import logging
 import typing
 
 from volatility.framework import constants, exceptions, interfaces, objects, validity
-from volatility.framework.symbols import native, windows, linux
+from volatility.framework.symbols import native, windows, linux, utility
 
 vollog = logging.getLogger(__name__)
 
