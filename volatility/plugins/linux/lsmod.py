@@ -32,7 +32,7 @@ class Lsmod(plugins.PluginInterface):
         _, aslr_shift = linux.LinuxUtilities.find_aslr(context, vmlinux_symbols, layer_name)
         vmlinux = context.module(vmlinux_symbols, layer_name, aslr_shift)
 
-        module_head_addr = vmlinux.object(symbol_name = "modules").vol.offset
+        module_head_addr = vmlinux.get_symbol("modules").address
 
         modules = vmlinux.object(type_name = "list_head", offset = module_head_addr)
 
