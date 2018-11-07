@@ -255,7 +255,7 @@ class LinuxUtilities(object):
                 pre_name = "pipe"
 
             elif sym == "simple_dname":
-                pre_name = self._get_path_file(filp)
+                pre_name = cls._get_path_file(task, filp)
 
             else:
                 pre_name = "<unsupported d_op symbol: {0}>".format(sym)
