@@ -6,8 +6,8 @@ from volatility.framework import renderers
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
-from volatility.framework.automagic import linux
 from volatility.plugins.linux import pslist
+
 
 class Elfs(plugins.PluginInterface):
     """Lists all memory mapped ELF files for all processes"""
@@ -29,10 +29,10 @@ class Elfs(plugins.PluginInterface):
 
             for vma in task.mm.mmap_iter:
                 hdr = proc_layer.read(vma.vm_start, 4, pad = True)
-                if not (hdr[0] == 0x7f and hdr[1] == 0x45 and hdr[2] == 0x4c and hdr[3] == 0x46):    
+                if not (hdr[0] == 0x7f and hdr[1] == 0x45 and hdr[2] == 0x4c and hdr[3] == 0x46):
                     continue
 
-                path  = vma.get_name(task)
+                path = vma.get_name(task)
 
                 yield (
                     0,
@@ -54,8 +54,7 @@ class Elfs(plugins.PluginInterface):
              ("Start", format_hints.Hex),
              ("End", format_hints.Hex),
              ("File Path", str)],
-            self._generator(plugin(self.context, 
+            self._generator(plugin(self.context,
                                    self.config['primary'],
                                    self.config['vmlinux'],
                                    filter = filter)))
-

@@ -5,7 +5,7 @@ from collections import abc
 
 from volatility.framework import interfaces
 from volatility.framework.interfaces.objects import ObjectInformation
-from volatility.framework.objects import templates
+from volatility.framework.objects import templates, utility
 
 vollog = logging.getLogger(__name__)
 

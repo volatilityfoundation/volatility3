@@ -6,6 +6,7 @@ from volatility.framework import renderers
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 
+
 class Malfind(interfaces_plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code"""
 
@@ -26,8 +27,8 @@ class Malfind(interfaces_plugins.PluginInterface):
         proc_layer = self.context.memory[proc_layer_name]
 
         for vma in task.mm.mmap_iter:
-            if vma.is_suspicious() and vma.get_name(task) != "[vdso]":    
-                data = proc_layer.read(vma.vm_start, 64, pad = True) 
+            if vma.is_suspicious() and vma.get_name(task) != "[vdso]":
+                data = proc_layer.read(vma.vm_start, 64, pad = True)
                 yield vma, data
 
     def _generator(self, tasks):
@@ -68,8 +69,7 @@ class Malfind(interfaces_plugins.PluginInterface):
                                    ("Protection", str),
                                    ("Hexdump", format_hints.HexBytes),
                                    ("Disasm", interfaces_renderers.Disassembly)],
-                                   self._generator(plugin(self.context, 
-                                       self.config['primary'],
-                                       self.config['vmlinux'],
-                                       filter = filter)))
-
+                                  self._generator(plugin(self.context,
+                                                         self.config['primary'],
+                                                         self.config['vmlinux'],
+                                                         filter = filter)))

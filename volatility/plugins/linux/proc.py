@@ -7,8 +7,8 @@ from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
-from volatility.framework.automagic import linux
 from volatility.plugins.linux import pslist
+
 
 class Maps(plugins.PluginInterface):
     """Lists all memory maps for all processes"""
@@ -35,7 +35,6 @@ class Maps(plugins.PluginInterface):
                 major = 0
                 minor = 0
                 inode = 0
-                path = ""
 
                 if vma.vm_file != 0:
                     dentry = vma.vm_file.get_dentry()
@@ -44,8 +43,8 @@ class Maps(plugins.PluginInterface):
                         major = inode_object.i_sb.major
                         minor = inode_object.i_sb.minor
                         inode = inode_object.i_ino
-                        
-                path  = vma.get_name(task)
+
+                path = vma.get_name(task)
 
                 yield (
                     0,
@@ -77,8 +76,7 @@ class Maps(plugins.PluginInterface):
              ("Minor", int),
              ("Inode", int),
              ("File Path", str)],
-            self._generator(plugin(self.context, 
+            self._generator(plugin(self.context,
                                    self.config['primary'],
                                    self.config['vmlinux'],
                                    filter = filter)))
-
