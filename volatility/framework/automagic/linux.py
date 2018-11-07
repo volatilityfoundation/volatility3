@@ -6,8 +6,8 @@ from volatility.framework.automagic import linux_symbol_cache
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
-from volatility.framework.symbols import utility as symbols_utility 
-from volatility.framework.objects import utility
+
+from volatility.framework import symbols, objects
 
 vollog = logging.getLogger(__name__)
 
@@ -197,6 +197,10 @@ class LinuxUtilities(object):
             parent = dentry.d_parent
             dentry = parent
 
+        # if we did not gather any valid dentrys in the path, then the entire file is
+        # either 1) smeared out of memory or 2) de-allocated and corresponding structures overwritten
+        # we return an empty string in this case to avoid confusion with something like a handle to the root
+        # directory (e.g., "/")
         if ret_path == []:
             return ""
 
@@ -236,11 +240,10 @@ class LinuxUtilities(object):
 
         sym_addr = dentry.d_op.d_dname
 
-        # IKELOS: _contet.symbol_space has already been masked  (including ASLR) by the run() function of the calling plugin. This makes the code super clean
-        symbols = list(dentry._context.symbol_space.get_symbols_by_location(sym_addr))
+        symbols = list(dentry.context.symbol_space.get_symbols_by_location(sym_addr))
         
         if len(symbols) == 1:
-            sym = symbols[0].split("!")[1]
+            sym = symbols[0].split(constants.BANG)[1]
             
             if sym == "sockfs_dname":
                 pre_name = "socket"    
@@ -313,7 +316,7 @@ class LinuxUtilities(object):
 
         file_type = config["vmlinux"] + constants.BANG + 'file'
         
-        fds = utility.array_of_pointers(fd_table, count = max_fds, subtype = file_type, context = context)
+        fds = objects.utility.array_of_pointers(fd_table, count = max_fds, subtype = file_type, context = context)
 
         for (fd_num, filp) in enumerate(fds):
             if filp != 0:
@@ -331,7 +334,7 @@ class LinuxUtilities(object):
 
         sym_table_name = config["vmlinux"]
         sym_layer_name = config["primary"]
-        symbols_utility.mask_symbol_table(context.symbol_space[sym_table_name], context.memory[sym_layer_name].address_mask, aslr_shift)
+        symbols.utility.mask_symbol_table(context.symbol_space[sym_table_name], context.memory[sym_layer_name].address_mask, aslr_shift)
 
     @classmethod
     def find_aslr(cls,
