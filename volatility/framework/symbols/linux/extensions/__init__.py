@@ -12,19 +12,19 @@ from volatility.framework.symbols import generic, utility
 
 class module(generic.GenericIntelProcess):
     def get_init_size(self):
-        if hasattr(self, "init_layout"):
+        if self.has_member("init_layout"):
             return self.init_layout.size
 
-        elif hasattr(self, "init_size"):
+        elif self.has_member("init_size"):
             return self.init_size
 
         raise AttributeError("module -> get_init_size: Unable to determine .init section size of module")
     
     def get_core_size(self):
-        if hasattr(self, "core_layout"):
+        if self.has_member("core_layout"):
             return self.core_layout.size
         
-        elif hasattr(self, "core_size"):
+        elif self.has_member("core_size"):
             return self.core_size
 
         raise AttributeError("module -> get_core_size: Unable to determine initial size of module")
@@ -56,16 +56,18 @@ class task_struct(generic.GenericIntelProcess):
 class fs_struct(objects.Struct):
     def get_root_dentry(self):
         # < 2.6.26
-        if hasattr(self, "rootmnt"):
+        if self.has_member("rootmnt"):
             return self.root
-        else:
+        elif self.root.has_member("dentry"):
             return self.root.dentry
+
+        raise AttributeError("Unable to find the root dentry")
         
     def get_root_mnt(self):
         # < 2.6.26
-        if hasattr(self, "rootmnt"):
+        if self.has_member("rootmnt"):
             return self.rootmnt
-        elif hasattr(self.root, "mnt"):
+        elif self.root.has_member("mnt"):
             return self.root.mnt
         
         raise AttributeError("Unable to find the root mount")
@@ -176,7 +178,7 @@ class vm_area_struct(objects.Struct):
             fname = "[heap]"
         elif self.vm_start <= task.mm.start_stack and self.vm_end >= task.mm.start_stack:
             fname = "[stack]"
-        elif hasattr(self.vm_mm.context, "vdso") and self.vm_start == self.vm_mm.context.vdso:
+        elif self.vm_mm.context.has_member("vdso") and self.vm_start == self.vm_mm.context.vdso:
             fname = "[vdso]"
         else:
             fname = "Anonymous Mapping"
@@ -199,7 +201,7 @@ class vm_area_struct(objects.Struct):
 
 class qstr(objects.Struct):
     def name_as_str(self) -> str:
-        if hasattr(self, "len"):
+        if self.has_member("len"):
             str_length = self.len
         else:
             str_length = 255
@@ -217,17 +219,17 @@ class dentry(objects.Struct):
 
 class struct_file(objects.Struct):
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
-        if hasattr(self, "f_dentry"):
+        if self.has_member("f_dentry"):
             return self.f_dentry
-        elif hasattr(self, "f_path"):
+        elif self.has_member("f_path"):
             return self.f_path.dentry
         else:
             raise AttributeError("Unable to find file -> dentry")
 
     def get_vfsmnt(self) -> interfaces.objects.ObjectInterface:
-        if hasattr(self, "f_vfsmnt"):
+        if self.has_member("f_vfsmnt"):
             return self.f_vfsmnt
-        elif hasattr(self, "f_path"):
+        elif self.has_member("f_path"):
             return self.f_path.mnt
         else:
             raise AttributeError("Unable to find file -> vfs mount")
@@ -266,17 +268,17 @@ class list_head(objects.Struct, collections.abc.Iterable):
 
 class files_struct(objects.Struct):
     def get_fds(self) -> interfaces.objects.ObjectInterface:
-        if hasattr(self, "fdt"):
+        if self.has_member("fdt"):
             return self.fdt.fd.dereference()
-        elif hasattr(self, "fd"):
+        elif self.has_member("fd"):
             return self.fd.dereference()
         else:
             raise AttributeError("Unable to find files -> file descriptors")
 
     def get_max_fds(self) -> interfaces.objects.ObjectInterface:
-        if hasattr(self, "fdt"):
+        if self.has_member("fdt"):
             return self.fdt.max_fds
-        elif hasattr(self, "max_fds"):
+        elif self.has_member("max_fds"):
             return self.max_fds
         else:
             raise AttributeError("Unable to find files -> maximum file descriptors")
@@ -284,25 +286,25 @@ class files_struct(objects.Struct):
 class mount(objects.Struct):
 
     def get_mnt_sb(self):
-        if hasattr(self, "mnt"):
+        if self.has_member("mnt"):
             return self.mnt.mnt_sb
-        elif hasattr(self, "mnt_sb"):
+        elif self.has_member("mnt_sb"):
             return self.mnt_sb
         else:
             raise AttributeError("Unable to find mount -> super block")
 
     def get_mnt_root(self):
-        if hasattr(self, "mnt"):
+        if self.has_member("mnt"):
             return self.mnt.mnt_root
-        elif hasattr(self, "mnt_root"):
+        elif self.has_member("mnt_root"):
             return self.mnt_root
         else:
             raise AttributeError("Unable to find mount -> mount root")
 
     def get_mnt_flags(self):
-        if hasattr(self, "mnt"):
+        if self.has_member("mnt"):
             return self.mnt.mnt_flags
-        elif hasattr(self, "mnt_flags"):
+        elif self.has_member("mnt_flags"):
             return self.mnt_flags
         else:
             raise AttributeError("Unable to find mount -> mount flags")
@@ -327,21 +329,17 @@ class vfsmount(objects.Struct):
         return self._context.object(mount_struct, self.vol.layer_name, offset = self.vol.offset - offset)
 
     def get_mnt_parent(self):
-        if hasattr(self, "mnt_parent"):
+        if self.has_member("mnt_parent"):
             return self.mnt_parent
         else:
             return self._get_real_mnt().mnt_parent
-        
-        raise AttributeError("Unable to find vfs mount -> mount parent")
 
     def get_mnt_mountpoint(self):
-        if hasattr(self, "mnt_mountpoint"):
+        if self.has_member("mnt_mountpoint"):
             return self.mnt_mountpoint
         else:
             return self._get_real_mnt().mnt_mountpoint
         
-        raise AttributeError("Unable to find vfs mount -> mount point")
-
     def get_mnt_root(self):
         return self.mnt_root 
 
