@@ -174,7 +174,7 @@ class LinuxUtilities(object):
         try:
             rdentry.validate()
             dentry.validate()
-        except InvalidDataException:
+        except exceptions.InvalidDataException:
             return ""
 
         ret_path = [] # type: typing.List[str]
