@@ -1,10 +1,10 @@
 import collections.abc
 import typing
 
+import volatility.framework.objects.utility
 from volatility.framework import constants
 from volatility.framework import exceptions, objects, interfaces
 from volatility.framework.automagic import linux
-from volatility.framework.objects import utility as objects_utility
 from volatility.framework.symbols import generic
 
 
@@ -213,7 +213,7 @@ class qstr(objects.Struct):
             str_length = 255
 
         try:
-            ret = objects_utility.pointer_to_string(self.name, str_length)
+            ret = objects.utility.pointer_to_string(self.name, str_length)
         except exceptions.InvalidAddressException:
             ret = ""
 

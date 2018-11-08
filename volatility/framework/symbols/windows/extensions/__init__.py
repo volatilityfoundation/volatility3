@@ -3,10 +3,10 @@ import functools
 import logging
 import typing
 
-from volatility.framework import constants, exceptions, interfaces, objects, renderers
+import volatility.framework.objects.utility
+from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
-from volatility.framework.objects import utility as objects_utility
-from volatility.framework.symbols import generic, utility as symbols_utility
+from volatility.framework.symbols import generic
 from volatility.framework.symbols.windows.extensions.registry import RegKeyFlags
 
 vollog = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class _POOL_HEADER(objects.Struct):
         else:
             alignment = pool_header_size
             type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
-            rounded_size = objects_utility.round(type_size, alignment, up = True)
+            rounded_size = objects.utility.round(type_size, alignment, up = True)
 
             mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
                                               layer_name = self.vol.layer_name,
@@ -69,7 +69,7 @@ class _KSYSTEM_TIME(objects.Struct):
 
     def get_time(self):
         wintime = (self.High1Time << 32) | self.LowPart
-        return objects_utility.wintime_to_datetime(wintime)
+        return objects.utility.wintime_to_datetime(wintime)
 
 
 class _MMVAD_SHORT(objects.Struct):
@@ -82,7 +82,7 @@ class _MMVAD_SHORT(objects.Struct):
 
         # the offset is different on 32 and 64 bits
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-        if not symbols_utility.symbol_table_is_64bit(self.context, symbol_table_name):
+        if not symbols.utility.symbol_table_is_64bit(self.context, symbol_table_name):
             vad_address -= 4
         else:
             vad_address -= 12
@@ -338,7 +338,7 @@ class _EX_FAST_REF(objects.Struct):
 
         # the mask value is different on 32 and 64 bits
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-        if not symbols_utility.symbol_table_is_64bit(self._context, symbol_table_name):
+        if not symbols.utility.symbol_table_is_64bit(self._context, symbol_table_name):
             max_fast_ref = 7
         else:
             max_fast_ref = 15
@@ -564,10 +564,10 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
         return renderers.UnreadableValue()
 
     def get_create_time(self):
-        return objects_utility.wintime_to_datetime(self.CreateTime.QuadPart)
+        return objects.utility.wintime_to_datetime(self.CreateTime.QuadPart)
 
     def get_exit_time(self):
-        return objects_utility.wintime_to_datetime(self.ExitTime.QuadPart)
+        return objects.utility.wintime_to_datetime(self.ExitTime.QuadPart)
 
     def get_wow_64_process(self):
         if self.has_member("Wow64Process"):

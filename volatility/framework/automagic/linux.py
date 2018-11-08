@@ -1,6 +1,7 @@
 import logging
 import typing
 
+import volatility.framework.objects.utility
 from volatility.framework import interfaces, constants, validity, exceptions
 from volatility.framework import symbols, objects
 from volatility.framework.automagic import linux_symbol_cache
@@ -176,7 +177,7 @@ class LinuxUtilities(object):
         except exceptions.InvalidDataException:
             return ""
 
-        ret_path = [] # type: typing.List[str]
+        ret_path = []  # type: typing.List[str]
 
         while dentry != rdentry or vfsmnt != rmnt:
             dname = dentry.path()
