@@ -155,8 +155,9 @@ class PoolScanner(plugins.PluginInterface):
                   layer_name: str,
                   symbol_table: str,
                   pool_constraints: typing.List[PoolConstraint],
-                  alignment: int = 8) -> typing.Generator[typing.Tuple[PoolConstraint,
-                                                                       interfaces.objects.ObjectInterface], None, None]:
+                  alignment: int = 8,
+                  progress_callback: typing.Optional[validity.ProgressCallback] = None) \
+            -> typing.Generator[typing.Tuple[PoolConstraint, interfaces.objects.ObjectInterface], None, None]:
         """Returns the _POOL_HEADER object (based on the symbol_table template) after scanning through layer_name
         returning all headers that match any of the constraints provided.  Only one constraint can be provided per tag"""
         # Setup the pattern
@@ -198,7 +199,7 @@ class PoolScanner(plugins.PluginInterface):
         # Run the scan locating the offsets of a particular tag
         layer = context.memory[layer_name]
         scanner = scanners.MultiStringScanner([c for c in constraint_lookup.keys()])
-        for offset, pattern in layer.scan(context, scanner):
+        for offset, pattern in layer.scan(context, scanner, progress_callback = progress_callback):
             for constraint in constraint_lookup[pattern]:
                 header = module.object(type_name = "_POOL_HEADER", offset = offset - header_offset)
 

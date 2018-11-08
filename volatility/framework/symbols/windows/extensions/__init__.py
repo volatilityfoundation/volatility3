@@ -470,10 +470,13 @@ class _OBJECT_HEADER(objects.Struct):
     def is_valid(self) -> bool:
         """Determine if the object is valid"""
 
-        #if self.InfoMask > 0x48:
+        # if self.InfoMask > 0x48:
         #    return False
 
-        if self.PointerCount > 0x1000000 or self.PointerCount < 0:
+        try:
+            if self.PointerCount > 0x1000000 or self.PointerCount < 0:
+                return False
+        except exceptions.InvalidAddressException:
             return False
 
         return True
