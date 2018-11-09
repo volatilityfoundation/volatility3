@@ -204,35 +204,40 @@ class PoolScanner(plugins.PluginInterface):
                 header = module.object(type_name = "_POOL_HEADER", offset = offset - header_offset)
 
                 # Size check
-                if constraint.size is not None:
-                    if constraint.size[0]:
-                        if (alignment * header.BlockSize) < constraint.size[0]:
-                            continue
-                    if constraint.size[1]:
-                        if (alignment * header.BlockSize) > constraint.size[1]:
+                try:
+                    if constraint.size is not None:
+                        if constraint.size[0]:
+                            if (alignment * header.BlockSize) < constraint.size[0]:
+                                continue
+                        if constraint.size[1]:
+                            if (alignment * header.BlockSize) > constraint.size[1]:
+                                continue
+
+                    # Type check
+                    if constraint.page_type is not None:
+                        checks_pass = False
+
+                        if (constraint.page_type & PoolType.FREE) and header.PoolType == 0:
+                            checks_pass = True
+                        elif (
+                                constraint.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
+                            checks_pass = True
+                        elif (constraint.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
+                            checks_pass = True
+
+                        if not checks_pass:
                             continue
 
-                # Type check
-                if constraint.page_type is not None:
-                    checks_pass = False
-
-                    if (constraint.page_type & PoolType.FREE) and header.PoolType == 0:
-                        checks_pass = True
-                    elif (constraint.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
-                        checks_pass = True
-                    elif (constraint.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
-                        checks_pass = True
-
-                    if not checks_pass:
-                        continue
-
-                if constraint.index is not None:
-                    if constraint.index[0]:
-                        if header.index < constraint.index[0]:
-                            continue
-                    if constraint.index[1]:
-                        if header.index > constraint.index[1]:
-                            continue
+                    if constraint.index is not None:
+                        if constraint.index[0]:
+                            if header.index < constraint.index[0]:
+                                continue
+                        if constraint.index[1]:
+                            if header.index > constraint.index[1]:
+                                continue
+                except exceptions.InvalidAddressException:
+                    # The tested object's header doesn't point to valid addresses, ignore it
+                    continue
 
                 # We found one that passed!
                 yield (constraint, header)
