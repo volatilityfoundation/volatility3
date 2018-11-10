@@ -50,7 +50,6 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         self._swap_layers = []  # type: typing.List[str]
         self._check_type(self.config.get("swap_layers", False), bool)
         self._page_map_offset = self._check_type(self.config["page_map_offset"], int)
-        self._optimize_scan = False
 
         # These can vary depending on the type of space
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
@@ -98,6 +97,21 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
            Returns the translated offset, the contiguous pagesize that the translated address lives in and the layer_name that the address lives in
         """
+        entry, position = self._translate_entry(offset)
+
+        # Now we're done
+        if not self._page_is_valid(entry):
+            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
+                                                          "Page Fault at entry {} in page entry".format(hex(entry)))
+        page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
+
+        return page, 1 << (position + 1), self._base_layer
+
+    def _translate_entry(self, offset):
+        """Translates a specific offset based on paging tables
+
+           Returns the translated entry value
+        """
         # Setup the entry and how far we are through the offset
         # Position maintains the number of bits left to process
         # We or with 0x1 to ensure our page_map_offset is always valid
@@ -127,13 +141,11 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             # Read out the new entry from memory
             entry, = struct.unpack(self._entry_format, self._context.memory.read(self._base_layer, table_offset,
                                                                                  struct.calcsize(self._entry_format)))
+        return entry, position
 
-        # Now we're done
-        if not self._page_is_valid(entry):
-            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                          "Page Fault at entry {} in page entry".format(hex(entry)))
-        page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
-        return page, 1 << (position + 1), self._base_layer
+    def _process_table(self, entry: int, page: int, layer_name: str) -> None:
+        """Hook for processing a table if necessary"""
+        pass
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the address offset can be translated to a valid address"""
@@ -236,8 +248,12 @@ class Intel32e(Intel):
 
 class WindowsMixin(Intel):
 
-    @staticmethod
-    def _page_is_valid(entry: int) -> bool:
+    def __init__(self, *args, **kwargs):
+        self._bad_pages = set()
+        self._checked_entries = set()
+        super().__init__(*args, **kwargs)
+
+    def _page_is_valid(self, entry: int) -> bool:
         """Returns whether a particular page is valid based on its entry
 
            Windows uses additional "available" bits to store flags
@@ -247,11 +263,31 @@ class WindowsMixin(Intel):
 
            For more information, see Windows Internals (6th Ed, Part 2, pages 268-269)
         """
+        if entry in self._bad_pages:
+            return False
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
     def _translate_swap(self, layer: Intel, offset: int, bit_offset: int):
         try:
-            return super()._translate(offset)
+            entry, position = self._translate_entry(offset)
+
+            page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
+
+            # Now we're done
+            if not self._page_is_valid(entry):
+                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
+                                                              "Page Fault at entry {} in page entry".format(hex(entry)))
+
+            if entry not in self._checked_entries and (entry & 0xffff << 48 == 0x1 << 63) and (entry & 0xfff == 0x121):
+                self._checked_entries.add(entry)
+                data = self.context.memory.read(self._base_layer, page, 1 << (position + 1))
+                if data == b"\xff" * (1 << (position + 1)) or data == b"\x00" * (1 << (position + 1)):
+                    self._bad_pages.add(entry)
+                    raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
+                                                                  "Page Fault at entry {} in page entry".format(
+                                                                      hex(entry)))
+
+            return page, 1 << (position + 1), self._base_layer
         except exceptions.PagedInvalidAddressException as excp:
             entry = excp.entry
             tbit = bool(entry & (1 << 11))
