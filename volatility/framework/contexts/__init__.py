@@ -128,6 +128,7 @@ class Context(interfaces.context.ContextInterface):
 def get_module_wrapper(method: str) -> typing.Callable:
     """Returns a symbol using the symbol_table_name of the Module"""
 
+    @functools.wraps
     def wrapper(self, name: str) -> typing.Callable:
         self._check_type(name, str)
         if constants.BANG in name:
