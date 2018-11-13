@@ -18,9 +18,11 @@ setuptools.setup(
     },
 
     include_package_data = True,
-    exclude_package_data = {'': ['development', 'development.*'],
+    exclude_package_data = {'': ['development',
+                                 'development.*'],
                             'development': ['*']},
-    packages = setuptools.find_packages(exclude = ["developement", "development.*"]),
+    packages = setuptools.find_packages(exclude = ["developement",
+                                                   "development.*"]),
     entry_points = {
         'console_scripts': [
             'vol = volatility.cli:main',
@@ -32,6 +34,9 @@ setuptools.setup(
     ],
     extras_require = {
         'yara': ["yara-python>=3.8.0"],
-        'disasm': ["capstone;platform_system=='Linux'", "capstone-windows;platform_system=='Windows'"],
+        'disasm': ["capstone;platform_system=='Linux'",
+                   "capstone-windows;platform_system=='Windows'"],
+        'doc': ["sphinx>=1.8.2",
+                "sphinx_autodoc_typehints>=1.4.0"]
     }
 )

@@ -46,6 +46,12 @@ extensions = [
     'sphinx.ext.viewcode'
 ]
 
+try:
+    import sphinx_autodoc_typehints
+    extensions.append('sphinx_autodoc_typehints')
+except ImportError:
+    pass
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['tools/templates']
 
