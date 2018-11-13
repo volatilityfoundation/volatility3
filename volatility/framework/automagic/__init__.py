@@ -20,7 +20,6 @@ vollog = logging.getLogger(__name__)
 
 windows_automagic = ['ConstructionMagic',
                      'LayerStacker',
-                     'NlpDtbfinder',
                      'WintelHelper',
                      'KernelPDBScanner',
                      'WinSwapLayers']
