@@ -84,7 +84,7 @@ def class_subclasses(cls: T) -> typing.Generator[T, None, None]:
 
 
 def import_files(base_module, ignore_errors = False) -> typing.List[str]:
-    """Imports all plugins present under plugins path"""
+    """Imports all plugins present under plugins module namespace"""
     failures = []
     if not isinstance(base_module.__path__, list):
         raise TypeError("[base_module].__path__ must be a list of paths")
