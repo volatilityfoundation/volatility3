@@ -2,6 +2,7 @@ import collections.abc
 import functools
 import logging
 import typing
+import datetime
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
@@ -78,10 +79,8 @@ class _POOL_HEADER(objects.Struct):
                             if mem_object.is_valid():
                                 return mem_object
 
-                        else:
-                            return None
                     except (TypeError, exceptions.InvalidAddressException):
-                        return None
+                        pass
 
             # use the bottom up approach for windows 7 and earlier
             else:
@@ -449,6 +448,12 @@ class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
 
 
 class _FILE_OBJECT(objects.Struct, ExecutiveObject):
+    """A class for windows file objects"""
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid"""
+        return self.FileName.Length > 0 and self._context.memory[self.vol.layer_name].is_valid(self.FileName.Buffer)
+
     def file_name_with_device(self) -> typing.Union[str, interfaces.renderers.BaseAbsentValue]:
         name = renderers.UnreadableValue()  # type: typing.Union[str, interfaces.renderers.BaseAbsentValue]
 
@@ -556,6 +561,44 @@ class _UNICODE_STRING(objects.Struct):
 
 class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
     """A class for executive kernel processes objects."""
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid"""
+
+        try:
+            name = objects_utility.array_to_string(self.ImageFileName)
+            if not name or len(name) == 0 or name[0] == "\x00":
+                return False
+
+            # The System/PID 4 process has no create time
+            if not (str(name) == "System" and self.UniqueProcessId == 4):
+                if self.CreateTime.QuadPart == 0:
+                    return False
+
+                ctime = self.get_create_time()
+                if not isinstance(ctime, datetime.datetime):
+                    return False
+
+                if not (1998 < ctime.year < 2030):
+                    return False
+
+            # NT pids are divisible by 4
+            if self.UniqueProcessId % 4 != 0:
+                return False
+
+            if self.Pcb.DirectoryTableBase == 0:
+                return False
+
+            # check for all 0s besides the PCID entries
+            if self.Pcb.DirectoryTableBase & ~0xfff == 0:
+                return False
+
+            ## TODO: we can also add the thread Flink and Blink tests if necessary
+
+        except exceptions.InvalidAddressException:
+            return False
+
+        return True
 
     def add_process_layer(self,
                           config_prefix: str = None,
