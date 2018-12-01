@@ -83,7 +83,7 @@ class YaraScan(plugins.PluginInterface):
             vollog.error("No yara rules, nor yara rules file were specified")
 
         for offset, name in layer.scan(YaraScanner(rules = rules), max_address = self.config['max_size']):
-            yield format_hints.Hex(offset), name
+            yield (0, (format_hints.Hex(offset), name))
 
     def run(self):
         return renderers.TreeGrid([('Offset', format_hints.Hex),
