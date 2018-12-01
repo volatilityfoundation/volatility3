@@ -171,8 +171,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
              context: interfaces.context.ContextInterface,
              scanner: ScannerInterface,
              progress_callback: validity.ProgressCallback = None,
-             min_address: typing.Optional[int] = None,
-             max_address: typing.Optional[int] = None,
+             sections: typing.Iterable[typing.Tuple[int, int]] = None,
              scan_iterator: typing.Optional[typing.Callable[['ScannerInterface', int, int],
                                                             typing.Iterable[IteratorValue]]] = None) -> \
             typing.Iterable[typing.Any]:
@@ -190,22 +189,15 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         scanner.context = context
         scanner.layer_name = self.name
 
-        if min_address is None:
-            min_address = self.minimum_address
-        if min_address > self.maximum_address:
-            raise ValueError("Minimum address cannot be larger than the maximum address of the space")
-        if max_address is None:
-            max_address = self.maximum_address
-        if max_address < self.minimum_address:
-            raise ValueError("Maximum address cannot be smaller than the minimum address of the space")
+        if sections is None:
+            sections = [(self.minimum_address, self.maximum_address - self.minimum_address)]
 
-        min_address = max(self.minimum_address, min_address)
-        max_address = min(self.maximum_address, max_address)
+        sections = list(self._coalesce_sections(sections))
 
         try:
             progress = DummyProgress()  # type: ProgressValue
-            scan_iterator = functools.partial(scan_iterator, scanner, min_address, max_address)
-            scan_metric = functools.partial(self._scan_metric, scanner, min_address, max_address)
+            scan_iterator = functools.partial(scan_iterator, scanner, sections)
+            scan_metric = self._scan_metric(scanner, sections)
             if scanner.thread_safe and not constants.DISABLE_MULTITHREADED_SCANNING:
                 progress = multiprocessing.Manager().Value("Q", 0)
                 scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
@@ -231,14 +223,42 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                     yield from scan_chunk(value)
         except Exception as e:
             # We don't care the kind of exception, so catch and report on everything, yielding nothing further
+            import pdb
+            pdb.set_trace()
             vollog.debug("Scan Failure: {}".format(str(e)))
             vollog.log(constants.LOGLEVEL_VVV,
                        "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
 
+    def _coalesce_sections(self,
+                           sections: typing.Iterable[typing.Tuple[int, int]]) -> typing.Iterable[
+        typing.Tuple[int, int]]:
+        result = []
+        position = 0
+        for (start, length) in sorted(sections):
+            if not result:
+                result.append((start, length))
+            if start < position:
+                initial_start, _ = result.pop()
+                result.append((initial_start, (start + length) - initial_start))
+            position = start + length
+
+        while result and result[0] < (self.minimum_address, 0):
+            first_start, first_length = result[0]
+            if first_start + first_length < self.minimum_address:
+                result = result[1:]
+            elif first_start < self.minimum_address:
+                result[0] = (self.minimum_address, (first_start + first_length) - self.minimum_address)
+        while result and result[-1] > (self.maximum_address, 0):
+            last_start, last_length = result[-1]
+            if last_start > self.maximum_address:
+                result.pop()
+            elif last_start + last_length > self.maximum_address:
+                result[1] = (last_start, self.maximum_address - last_start)
+        return result
+
     def _scan_iterator(self,
                        scanner: 'ScannerInterface',
-                       min_address: int,
-                       max_address: int) \
+                       sections: typing.Iterable[typing.Tuple[int, int]]) \
             -> typing.Iterable[IteratorValue]:
         """Iterator that indicates which blocks in the layer are to be read by for the scanning
 
@@ -246,16 +266,17 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         Chunks can be no bigger than scanner.chunk_size + scanner.overlap
         DataLayers by default are assumed to have no holes
         """
-        offset, mapped_offset, length, layer_name = min_address, min_address, max_address - min_address, self.name
-        while length > 0:
-            chunk_size = min(length, scanner.chunk_size + scanner.overlap)
-            yield [(layer_name, mapped_offset, chunk_size)], offset + chunk_size
-            # It we've got more than the scanner's chunk_size, only move up by the chunk_size
-            if chunk_size > scanner.chunk_size:
-                chunk_size -= scanner.overlap
-            length -= chunk_size
-            mapped_offset += chunk_size
-            offset += chunk_size
+        for section_start, section_length in sections:
+            offset, mapped_offset, length, layer_name = section_start, section_start, section_length, self.name
+            while length > 0:
+                chunk_size = min(length, scanner.chunk_size + scanner.overlap)
+                yield [(layer_name, mapped_offset, chunk_size)], offset + chunk_size
+                # It we've got more than the scanner's chunk_size, only move up by the chunk_size
+                if chunk_size > scanner.chunk_size:
+                    chunk_size -= scanner.overlap
+                length -= chunk_size
+                mapped_offset += chunk_size
+                offset += chunk_size
 
     # We ignore the type due to the iterator_value, actually it only needs to match the output from _scan_iterator
     def _scan_chunk(self,
@@ -277,10 +298,18 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
     def _scan_metric(self,
                      _scanner: 'ScannerInterface',
-                     min_address: int,
-                     max_address: int,
-                     value: int) -> float:
-        return max(0, ((value - min_address) * 100) / (max_address - min_address))
+                     sections: typing.Iterable[typing.Tuple[int, int]]) -> typing.Callable[[int], float]:
+
+        if not sections:
+            raise ValueError("Sections have no size, nothing to scan")
+        last_section, last_length = sections[-1]
+        min_address, _ = sections[0]
+        max_address = last_section + last_length
+
+        def _actual_scan_metric(self, value: int) -> float:
+            return max(0, ((value - min_address) * 100) / (max_address - min_address))
+
+        return _actual_scan_metric
 
     def build_configuration(self) -> interfaces.configuration.HierarchicalDict:
         config = super().build_configuration()
@@ -375,20 +404,20 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     def _scan_iterator(self,
                        scanner: 'ScannerInterface',
-                       min_address: int,
-                       max_address: int) \
+                       sections: typing.Iterable[typing.Tuple[int, int]]) \
             -> typing.Iterable[IteratorValue]:
-        for mapped in self.mapping(min_address, max_address - min_address, ignore_errors = True):
-            offset, mapped_offset, length, layer_name = mapped
-            while length > 0:
-                chunk_size = min(length, scanner.chunk_size + scanner.overlap)
-                yield [(layer_name, mapped_offset, chunk_size)], offset + chunk_size
-                # It we've got more than the scanner's chunk_size, only move up by the chunk_size
-                if chunk_size > scanner.chunk_size:
-                    chunk_size -= scanner.overlap
-                length -= chunk_size
-                mapped_offset += chunk_size
-                offset += chunk_size
+        for (section_start, section_length) in sections:
+            for mapped in self.mapping(section_start, section_length, ignore_errors = True):
+                offset, mapped_offset, length, layer_name = mapped
+                while length > 0:
+                    chunk_size = min(length, scanner.chunk_size + scanner.overlap)
+                    yield [(layer_name, mapped_offset, chunk_size)], offset + chunk_size
+                    # It we've got more than the scanner's chunk_size, only move up by the chunk_size
+                    if chunk_size > scanner.chunk_size:
+                        chunk_size -= scanner.overlap
+                    length -= chunk_size
+                    mapped_offset += chunk_size
+                    offset += chunk_size
 
 
 class Memory(validity.ValidityRoutines, collections.abc.Mapping):

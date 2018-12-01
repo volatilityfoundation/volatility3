@@ -87,10 +87,14 @@ def scan(ctx: interfaces.context.ContextInterface,
     min_pfn = 0
     pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
 
+    if start is None:
+        start = ctx.memory[layer_name].minimum_address
+    if end is None:
+        end = ctx.memory[layer_name].maximum_address
+
     for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(ctx, PdbSignatureScanner(pdb_names),
                                                                                progress_callback = progress_callback,
-                                                                               min_address = start,
-                                                                               max_address = end):
+                                                                               sections = [(start, end - start)]):
         mz_offset = None
         sig_pfn = signature_offset // page_size
 

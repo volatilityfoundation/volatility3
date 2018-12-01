@@ -66,34 +66,18 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                                                  filter_func = filter_func):
             for offset, name in layer.scan(context = self.context,
                                            scanner = yarascan.YaraScanner(rules = rules),
-                                           max_address = self.config['max_size'],
-                                           scan_iterator = self.vad_iterator_factory(task)):
+                                           sections = self.get_vad_maps(task)):
                 yield format_hints.Hex(offset), name
 
-    def vad_iterator_factory(self,
-                             task: typing.Any) -> typing.Callable[[interfaces.layers.ScannerInterface,
-                                                                   int,
-                                                                   int],
-                                                                  typing.Iterable[interfaces.layers.IteratorValue]]:
+    def get_vad_maps(self, task: typing.Any) -> typing.Iterable[typing.Tuple[int, int]]:
 
         task = self._check_type(task, extensions._EPROCESS)
-        layer_name = task.add_process_layer()
 
-        def scan_iterator(scanner: interfaces.layers.ScannerInterface,
-                          min_address: int,
-                          max_address: int) \
-                -> typing.Iterable[interfaces.layers.IteratorValue]:
-            vad_root = task.get_vad_root()
-            for vad in vad_root.traverse():
-                end = vad.get_end()
-                start = vad.get_start()
-                while end - start > scanner.chunk_size + scanner.overlap:
-                    yield [(layer_name, start, scanner.chunk_size + scanner.overlap)], \
-                          start + scanner.chunk_size + scanner.overlap
-                    start += scanner.chunk_size
-                yield [(layer_name, start, end - start)], end
-
-        return scan_iterator
+        vad_root = task.get_vad_root()
+        for vad in vad_root.traverse():
+            end = vad.get_end()
+            start = vad.get_start()
+            yield (start, end - start)
 
     def run(self):
         return renderers.TreeGrid([('Offset', format_hints.Hex),
