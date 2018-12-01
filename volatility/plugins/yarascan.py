@@ -82,7 +82,8 @@ class YaraScan(plugins.PluginInterface):
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
 
-        for offset, name in layer.scan(YaraScanner(rules = rules), max_address = self.config['max_size']):
+        for offset, name in layer.scan(context = self.context,
+                                       scanner = YaraScanner(rules = rules)):
             yield (0, (format_hints.Hex(offset), name))
 
     def run(self):
