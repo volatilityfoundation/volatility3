@@ -218,8 +218,6 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                     yield from scan_chunk(value)
         except Exception as e:
             # We don't care the kind of exception, so catch and report on everything, yielding nothing further
-            import pdb
-            pdb.set_trace()
             vollog.debug("Scan Failure: {}".format(str(e)))
             vollog.log(constants.LOGLEVEL_VVV,
                        "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
