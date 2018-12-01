@@ -171,9 +171,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
              context: interfaces.context.ContextInterface,
              scanner: ScannerInterface,
              progress_callback: validity.ProgressCallback = None,
-             sections: typing.Iterable[typing.Tuple[int, int]] = None,
-             scan_iterator: typing.Optional[typing.Callable[['ScannerInterface', int, int],
-                                                            typing.Iterable[IteratorValue]]] = None) -> \
+             sections: typing.Iterable[typing.Tuple[int, int]] = None) -> \
             typing.Iterable[typing.Any]:
         """Scans a Translation layer by chunk
 
@@ -181,9 +179,6 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         """
         if progress_callback is not None and not callable(progress_callback):
             raise TypeError("Progress_callback is not callable")
-
-        if scan_iterator is None:
-            scan_iterator = self._scan_iterator
 
         scanner = self._check_type(scanner, ScannerInterface)
         scanner.context = context
@@ -196,7 +191,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
         try:
             progress = DummyProgress()  # type: ProgressValue
-            scan_iterator = functools.partial(scan_iterator, scanner, sections)
+            scan_iterator = functools.partial(self._scan_iterator, scanner, sections)
             scan_metric = self._scan_metric(scanner, sections)
             if scanner.thread_safe and not constants.DISABLE_MULTITHREADED_SCANNING:
                 progress = multiprocessing.Manager().Value("Q", 0)
@@ -232,7 +227,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     def _coalesce_sections(self,
                            sections: typing.Iterable[typing.Tuple[int, int]]) -> typing.Iterable[
         typing.Tuple[int, int]]:
-        result = []
+        result = []  # type: typing.List[typing.Tuple[int, int]]
         position = 0
         for (start, length) in sorted(sections):
             if not result:
@@ -298,7 +293,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
     def _scan_metric(self,
                      _scanner: 'ScannerInterface',
-                     sections: typing.Iterable[typing.Tuple[int, int]]) -> typing.Callable[[int], float]:
+                     sections: typing.List[typing.Tuple[int, int]]) -> typing.Callable[[int], float]:
 
         if not sections:
             raise ValueError("Sections have no size, nothing to scan")
@@ -306,7 +301,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         min_address, _ = sections[0]
         max_address = last_section + last_length
 
-        def _actual_scan_metric(self, value: int) -> float:
+        def _actual_scan_metric(value: int) -> float:
             return max(0, ((value - min_address) * 100) / (max_address - min_address))
 
         return _actual_scan_metric
