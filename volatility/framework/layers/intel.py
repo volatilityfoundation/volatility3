@@ -155,6 +155,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         if length == 0:
             try:
                 mapped_offset, _, layer_name = self._translate(offset)
+                if not self._context.memory[layer_name].is_valid(mapped_offset):
+                    raise exceptions.InvalidAddressException(layer_name = layer_name,
+                                                             invalid_address = mapped_offset)
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
                     raise
@@ -164,6 +167,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         while length > 0:
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)
+                chunk_size = min(page_size - (chunk_offset % page_size), length)
+                if not self._context.memory[layer_name].is_valid(chunk_offset, chunk_size):
+                    raise exceptions.InvalidAddressException(layer_name = layer_name, invalid_address = chunk_offset)
             except (exceptions.PagedInvalidAddressException, exceptions.InvalidAddressException) as excp:
                 if not ignore_errors:
                     raise
@@ -176,7 +182,6 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 length -= length_diff
                 offset += length_diff
             else:
-                chunk_size = min(page_size - (chunk_offset % page_size), length)
                 yield (offset, chunk_offset, chunk_size, layer_name)
                 length -= chunk_size
                 offset += chunk_size
