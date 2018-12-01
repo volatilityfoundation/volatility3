@@ -23,7 +23,7 @@ class YaraScanner(interfaces.layers.ScannerInterface):
         self._rules = rules
 
     def __call__(self, data: bytes, data_offset: int) -> typing.Iterable[typing.Tuple[int, str]]:
-        for match in self._rules.match(data):
+        for match in self._rules.match(data = data):
             for offset, name, value in match.strings:
                 yield (offset + data_offset, name)
 
