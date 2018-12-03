@@ -13,6 +13,7 @@ def array_to_string(array: objects.Array,
         count = array.vol.count
     if not isinstance(array, objects.Array):
         raise TypeError("Array_to_string takes an Array of char")
+
     return array.cast("string", max_length = count, errors = errors)
 
 
@@ -54,6 +55,18 @@ def wintime_to_datetime(wintime: int) -> typing.Union[
     except ValueError:
         return renderers.UnparsableValue()
 
+def unixtime_to_datetime(unixtime: int) -> typing.Union[
+    interfaces.renderers.BaseAbsentValue, datetime.datetime]:
+
+    ret = renderers.NotApplicableValue()
+    
+    if unixtime > 0:
+        try:
+            ret = datetime.datetime.utcfromtimestamp(unixtime)
+        except ValueError:
+            pass
+
+    return ret
 
 def round(addr: int, align: int, up: bool = False) -> int:
     """Round an address up or down based on an alignment.

@@ -1,0 +1,72 @@
+{
+    "symbols": {}, 
+    "enums": {}, 
+    "base_types": {
+        "unsigned char": {
+            "kind": "char", 
+            "size": 1, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "pointer": {
+            "kind": "int", 
+            "size": 8, 
+            "signed": false, 
+            "endian": "little"
+        }
+    }, 
+    "user_types": {
+        "_hist_entry": {
+            "fields": {
+                "timestamp": {
+                    "type": {
+                        "subtype": {
+                            "count": 1024, 
+                            "subtype": {
+                                "kind": "base", 
+                                "name": "unsigned char"
+                            }, 
+                            "kind": "array"
+                        }, 
+                        "kind": "pointer"
+                    }, 
+                    "offset": 8
+                }, 
+                "line": {
+                    "type": {
+                        "subtype": {
+                            "count": 1024, 
+                            "subtype": {
+                                "kind": "base", 
+                                "name": "unsigned char"
+                            }, 
+                            "kind": "array"
+                        }, 
+                        "kind": "pointer"
+                    }, 
+                    "offset": 0
+                }, 
+                "data": {
+                    "type": {
+                        "subtype": {
+                            "kind": "struct", 
+                            "name": "void"
+                        }, 
+                        "kind": "pointer"
+                    }, 
+                    "offset": 16
+                }
+            }, 
+            "kind": "struct", 
+            "size": 24
+        }
+    }, 
+    "metadata": {
+        "producer": {
+            "version": "0.0.1", 
+            "name": "/mnt/hgfs/volshared/vtypes_to_json.py", 
+            "datetime": "2018-12-03T09:55:34.880766"
+        }, 
+        "format": "4.1.0"
+    }
+}
