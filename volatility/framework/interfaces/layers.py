@@ -223,16 +223,17 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                        "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
 
     def _coalesce_sections(self,
-                           sections: typing.Iterable[typing.Tuple[int, int]]) -> typing.Iterable[
-        typing.Tuple[int, int]]:
+                           sections: typing.Iterable[typing.Tuple[int, int]]) \
+            -> typing.Iterable[typing.Tuple[int, int]]:
+        """Take a list of (start, length) sections and coalesce any adjacent sections"""
         result = []  # type: typing.List[typing.Tuple[int, int]]
         position = 0
         for (start, length) in sorted(sections):
-            if not result:
-                result.append((start, length))
-            if start < position:
+            if result and start <= position:
                 initial_start, _ = result.pop()
                 result.append((initial_start, (start + length) - initial_start))
+            else:
+                result.append((start, length))
             position = start + length
 
         while result and result[0] < (self.minimum_address, 0):
