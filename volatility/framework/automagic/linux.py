@@ -327,6 +327,7 @@ class LinuxUtilities(object):
                                config,
                                context: interfaces.context.ContextInterface,
                                aslr_shift = 0):
+        # FIXME: Change signature not to use config, but explicitly ask for symbol/layer names
 
         if aslr_shift == 0:
             aslr_layer = config['primary.memory_layer']
