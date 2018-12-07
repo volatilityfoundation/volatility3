@@ -36,11 +36,10 @@ class check_afinfo(plugins.PluginInterface):
             if check.startswith("__UNIQUE_ID_rh_kabi_hide"):
                  continue
 
-            # FIXME - this conflicts with a built-in vol name, but we need to be able to check it
             if check == "write":
-                continue
-
-            addr = getattr(var_ops, check)
+                addr = var_ops.member(attr = 'write')
+            else:
+                addr = getattr(var_ops, check)
 
             if addr and addr != 0 and self._is_known_address(addr) == False:
                 yield check, addr
