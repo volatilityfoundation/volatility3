@@ -5,10 +5,11 @@ import logging
 
 from volatility.framework import renderers, constants
 from volatility.framework.automagic import linux
+from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import format_hints
 from volatility.framework.objects import utility
 from volatility.framework import exceptions
-from volatility.plugins.linux import lsmod
+from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
@@ -19,8 +20,16 @@ try:
 except ImportError:
     has_capstone = False
 
-class Check_syscall(lsmod.Lsmod):
+class Check_syscall(plugins.PluginInterface):
     """Check system call table for hooks"""
+
+    @classmethod
+    def get_requirements(cls):
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "vmlinux",
+                                               description = "Linux Kernel")]
 
     def _get_table_size_next_symbol(self, table_addr, ptr_sz, vmlinux):
         """
@@ -157,7 +166,7 @@ class Check_syscall(lsmod.Lsmod):
                 symbols = list(self.context.symbol_space.get_symbols_by_location(call_addr))
 
                 if len(symbols) > 0:
-                    sym_name = str(symbols[0])
+                    sym_name = str(symbols[0].split("!")[1])
                 else:
                     sym_name = "UNKNOWN"
 
