@@ -4,7 +4,7 @@ from volatility.framework import constants, exceptions
 from volatility.framework import objects, interfaces
 from volatility.framework.objects import utility
 
-class _hist_entry(objects.Struct):
+class hist_entry(objects.Struct):
     def is_valid(self):
         try:
             cmd = self.get_command()

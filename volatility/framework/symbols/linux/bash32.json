@@ -16,7 +16,7 @@
         }
     }, 
     "user_types": {
-        "_hist_entry": {
+        "hist_entry": {
             "fields": {
                 "timestamp": {
                     "type": {
