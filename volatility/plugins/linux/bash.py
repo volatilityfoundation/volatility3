@@ -68,7 +68,7 @@ class Bash(plugins.PluginInterface):
                     history_entries.append(hist)
                 
             for hist in sorted(history_entries, key = attrgetter('time_as_integer')):
-                yield (0, (task.pid, task_name, hist.time_object(), hist.get_command()))
+                yield (0, (task.pid, task_name, hist.get_time_object(), hist.get_command()))
 
     def run(self):
         filter = pslist.PsList.create_filter([self.config.get('pid', None)])
