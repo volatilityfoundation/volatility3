@@ -40,7 +40,7 @@ class hist_entry(objects.Struct):
         # Convert the string into an integer (number of seconds)
         return int(time_string)
 
-    def time_object(self):
+    def get_time_object(self):
         nsecs = self.time_as_integer
         # Build a timestamp object from the integer 
         return utility.unixtime_to_datetime(nsecs)
