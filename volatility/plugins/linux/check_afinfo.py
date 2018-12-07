@@ -5,16 +5,25 @@ import logging
 
 from volatility.framework import renderers, constants
 from volatility.framework.automagic import linux
+from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import format_hints
 from volatility.framework.objects import utility
 from volatility.framework import exceptions
-from volatility.plugins.linux import lsmod
+from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
-class check_afinfo(lsmod.Lsmod):
+class check_afinfo(plugins.PluginInterface):
     """Verifies the operation function pointers of network protocols"""
-    
+ 
+    @classmethod
+    def get_requirements(cls):
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "vmlinux",
+                                               description = "Linux Kernel")]
+
     # returns whether the symbol is found within the kernel (system.map) or not
     def _is_known_address(self, handler_addr):
         symbols = list(self.context.symbol_space.get_symbols_by_location(handler_addr))
