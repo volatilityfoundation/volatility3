@@ -58,7 +58,7 @@ def wintime_to_datetime(wintime: int) -> typing.Union[
 def unixtime_to_datetime(unixtime: int) -> typing.Union[
     interfaces.renderers.BaseAbsentValue, datetime.datetime]:
 
-    ret = renderers.NotApplicableValue()
+    ret = renderers.UnparsableValue()
     
     if unixtime > 0:
         try:
