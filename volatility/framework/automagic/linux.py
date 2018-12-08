@@ -2,7 +2,7 @@ import logging
 import typing
 
 import volatility.framework.objects.utility
-from volatility.framework import interfaces, constants, validity, exceptions
+from volatility.framework import interfaces, constants, validity, exceptions, layers
 from volatility.framework import symbols, objects
 from volatility.framework.automagic import linux_symbol_cache
 from volatility.framework.configuration import requirements
@@ -324,19 +324,21 @@ class LinuxUtilities(object):
 
     @classmethod
     def aslr_mask_symbol_table(cls,
-                               config,
                                context: interfaces.context.ContextInterface,
+                               symbol_table: str,
+                               layer_name: str,
                                aslr_shift = 0):
-        # FIXME: Change signature not to use config, but explicitly ask for symbol/layer names
+
+        sym_table = context.symbol_space[symbol_table]
+        sym_layer = context.memory[layer_name]
 
         if aslr_shift == 0:
-            aslr_layer = config['primary.memory_layer']
-            _, aslr_shift = LinuxUtilities.find_aslr(context, config["vmlinux"], aslr_layer)
+            if not isinstance(sym_layer, layers.intel.Intel):
+                raise TypeError("Layer name {} is not an intel space")
+            aslr_layer = sym_layer.config['memory_layer']
+            _, aslr_shift = LinuxUtilities.find_aslr(context, symbol_table, aslr_layer)
 
-        sym_table_name = config["vmlinux"]
-        sym_layer_name = config["primary"]
-        symbols.utility.mask_symbol_table(context.symbol_space[sym_table_name],
-                                          context.memory[sym_layer_name].address_mask, aslr_shift)
+        symbols.utility.mask_symbol_table(sym_table, sym_layer.address_mask, aslr_shift)
 
     @classmethod
     def find_aslr(cls,

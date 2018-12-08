@@ -126,15 +126,16 @@ class Check_syscall(plugins.PluginInterface):
         _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config['vmlinux'], self.config['primary'])
         vmlinux = self.context.module(self.config['vmlinux'], self.config['primary'], aslr_shift)
 
-        linux.LinuxUtilities.aslr_mask_symbol_table(self.config, self.context, aslr_shift)
+        linux.LinuxUtilities.aslr_mask_symbol_table(self.context,
+                                                    self.config['vmlinux'],
+                                                    self.config['primary'],
+                                                    aslr_shift)
 
         ptr_sz = vmlinux.get_type("pointer").size
         if ptr_sz == 4:
             table_name = "32bit"
-            array_type = "long unsigned int"
         else:
             table_name = "64bit"
-            array_type = "long long unsigned int"
 
         try:
             table_info = self._get_table_info(vmlinux, "sys_call_table", ptr_sz)
