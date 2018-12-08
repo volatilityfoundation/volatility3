@@ -3,6 +3,7 @@ typically found in Linux's /proc file system.
 """
 
 from volatility.framework import renderers
+from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
@@ -14,8 +15,11 @@ class Elfs(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        # Since we're calling the plugin, make sure we have the plugin's requirements
-        return pslist.PsList.get_requirements() + []
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "vmlinux",
+                                               description = "Linux Kernel")]
 
     def _generator(self, tasks):
         for task in tasks:

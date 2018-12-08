@@ -5,6 +5,7 @@ import logging
 
 from volatility.framework import renderers
 from volatility.framework.automagic import linux
+from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.plugins.linux import pslist
@@ -17,8 +18,11 @@ class Lsof(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        # Since we're calling the plugin, make sure we have the plugin's requirements
-        return pslist.PsList.get_requirements() + []
+        return [requirements.TranslationLayerRequirement(name = 'primary',
+                                                         description = 'Kernel Address Space',
+                                                         architectures = ["Intel32", "Intel64"]),
+                requirements.SymbolRequirement(name = "vmlinux",
+                                               description = "Linux Kernel")]
 
     def _generator(self, tasks):
         for task in tasks:
