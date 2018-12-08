@@ -11,10 +11,11 @@ from volatility.framework.interfaces import plugins
 from volatility.framework.layers import scanners
 from volatility.framework.objects import utility
 from volatility.framework.symbols.linux.bash import BashIntermedSymbols
+from volatility.plugins import timeliner
 from volatility.plugins.linux import pslist
 
 
-class Bash(plugins.PluginInterface):
+class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Recovers bash command history from memory"""
 
     @classmethod
@@ -90,3 +91,16 @@ class Bash(plugins.PluginInterface):
                                    self.config['primary'],
                                    self.config['vmlinux'],
                                    filter = filter)))
+
+    def generate_timeline(self):
+        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+
+        plugin = pslist.PsList.list_tasks
+
+        for row in self._generator(plugin(self.context,
+                                          self.config['primary'],
+                                          self.config['vmlinux'],
+                                          filter = filter)):
+            _depth, row_data = row
+            description = "{} ({}): \"{}\"".format(row_data[0], row_data[1], row_data[3])
+            yield (description, timeliner.TimeLinerType.CREATED, row_data[2])
