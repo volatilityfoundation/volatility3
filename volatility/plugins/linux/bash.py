@@ -8,6 +8,7 @@ import struct
 from volatility.framework import constants, renderers, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
+from volatility.framework.layers import scanners
 from volatility.framework.objects import utility
 from volatility.framework.symbols.linux.bash import BashIntermedSymbols
 from volatility.plugins.linux import pslist
@@ -55,14 +56,16 @@ class Bash(plugins.PluginInterface):
             bang_addrs = []
 
             # find '#' values on the heap
-            for address, _ in task.search_process_memory(self.context, self.config, proc_layer, proc_layer_name,
-                                                         [str.encode("#")], heap_only = True):
+            for address in proc_layer.scan(self.context,
+                                           scanners.BytesScanner(b"#"),
+                                           sections = task.get_process_memory_sections(heap_only = True)):
                 bang_addrs.append(struct.pack(pack_format, address))
 
             history_entries = []
 
-            for address, _ in task.search_process_memory(self.context, self.config, proc_layer, proc_layer_name,
-                                                         bang_addrs, heap_only = True):
+            for address, _ in proc_layer.scan(self.context,
+                                              scanners.MultiStringScanner(bang_addrs),
+                                              sections = task.get_process_memory_sections(heap_only = True)):
                 hist = self.context.object(bash_table_name + constants.BANG + "hist_entry",
                                            offset = address - ts_offset,
                                            layer_name = proc_layer_name)

@@ -1,4 +1,5 @@
 import collections.abc
+import logging
 import typing
 
 import volatility.framework.objects.utility
@@ -6,6 +7,9 @@ from volatility.framework import constants
 from volatility.framework import exceptions, objects, interfaces
 from volatility.framework.automagic import linux
 from volatility.framework.symbols import generic
+
+vollog = logging.getLogger(__name__)
+
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
@@ -53,35 +57,21 @@ class task_struct(generic.GenericIntelProcess):
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
-    # TODO - replace with layer scanner once merged into master
-    # right now is a placeholder used to power & test the bash plugin
-    def search_process_memory(self, context, config, proc_layer, layer_name, s, heap_only = False):       
-        pagesize = 0x1000
-
-        for vma in self.mm.mmap_iter: 
+    def get_process_memory_sections(self, heap_only: bool = False) -> \
+            typing.Generator[typing.Tuple[int, int], None, None]:
+        """Returns a list of sections based on the memory manager's view of this task's virtual memory"""
+        for vma in self.mm.mmap_iter:
             start = int(vma.vm_start)
-            end   = int(vma.vm_end)
-             
+            end = int(vma.vm_end)
+
             if heap_only and not (start <= self.mm.brk and end >= self.mm.start_brk):
                 continue
             else:
-                print("adding vma: {:x} {:x} | {:x} {:x}".format(start, self.mm.brk, end, self.mm.start_brk))
-        
-            while start < end:
-                try:
-                    data = proc_layer.read(start, pagesize)
-                except exceptions.InvalidAddressException:
-                    start = start + 4096
-                    continue
+                # FIXME: Check if this actually needs to be printed out or not
+                vollog.info("adding vma: {:x} {:x} | {:x} {:x}".format(start, self.mm.brk, end, self.mm.start_brk))
 
-                # util.iterfind from vol2
-                for x in s:
-                    offset = data.find(x, 0)
-                    while offset >= 0:
-                        yield start + offset, ""
-                        offset = data.find(x, offset + len(x))
-   
-                start = start + pagesize
+            yield (start, end - start)
+
 
 class fs_struct(objects.Struct):
     def get_root_dentry(self):
