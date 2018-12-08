@@ -4,7 +4,6 @@ typically found in Linux's /proc file system.
 
 import datetime
 import struct
-from operator import attrgetter
 
 from volatility.framework import constants, renderers, symbols
 from volatility.framework.configuration import requirements
@@ -71,7 +70,7 @@ class Bash(plugins.PluginInterface):
                 if hist.is_valid():
                     history_entries.append(hist)
 
-            for hist in sorted(history_entries, key = attrgetter('time_as_integer')):
+            for hist in sorted(history_entries, key = lambda x: x.get_time_as_integer()):
                 yield (0, (task.pid, task_name, hist.get_time_object(), hist.get_command()))
 
     def run(self):
