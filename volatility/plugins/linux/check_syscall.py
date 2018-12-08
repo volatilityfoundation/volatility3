@@ -3,13 +3,12 @@ typically found in Linux's /proc file system.
 """
 import logging
 
+from volatility.framework import exceptions
 from volatility.framework import renderers, constants
 from volatility.framework.automagic import linux
+from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import format_hints
-from volatility.framework.objects import utility
-from volatility.framework import exceptions
-from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
@@ -19,6 +18,7 @@ try:
     has_capstone = True
 except ImportError:
     has_capstone = False
+
 
 class Check_syscall(plugins.PluginInterface):
     """Check system call table for hooks"""
@@ -59,7 +59,8 @@ class Check_syscall(plugins.PluginInterface):
         this is a fast way to determine the number of system calls, but not the most accurate
         """
 
-        return len([sym for sym in self.context.symbol_space[vmlinux.name].symbols if sym.startswith("__syscall_meta__")])
+        return len(
+            [sym for sym in self.context.symbol_space[vmlinux.name].symbols if sym.startswith("__syscall_meta__")])
 
     def _get_table_info_other(self, table_addr, ptr_sz, vmlinux):
         table_size_meta = self._get_table_size_meta(vmlinux)
@@ -96,10 +97,10 @@ class Check_syscall(plugins.PluginInterface):
         except exceptions.SymbolError as e:
             # if we can't find the disassemble function then bail and rely on a different method
             return 0
-    
+
         data = self.context.memory.read(self.config['primary'], func_addr, 6)
 
-        for (address, size, mnemonic, op_str) in md.disasm_lite( data, func_addr):
+        for (address, size, mnemonic, op_str) in md.disasm_lite(data, func_addr):
             if mnemonic == 'CMP':
                 table_size = int(op_str.split(",")[1].strip()) & 0xffff
                 break
@@ -113,7 +114,7 @@ class Check_syscall(plugins.PluginInterface):
 
         if table_size == 0:
             table_size = self._get_table_info_other(table_sym.address, ptr_sz, vmlinux)
-            
+
             if table_size == 0:
                 vollog.error("Unable to get system call table size")
                 return 0, 0
@@ -121,10 +122,10 @@ class Check_syscall(plugins.PluginInterface):
         return table_sym.address, table_size
 
     # TODO - add finding and parsing unistd.h once cached file enumeration is added
-    def _generator(self):    
+    def _generator(self):
         _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config['vmlinux'], self.config['primary'])
         vmlinux = self.context.module(self.config['vmlinux'], self.config['primary'], aslr_shift)
-        
+
         linux.LinuxUtilities.aslr_mask_symbol_table(self.config, self.context, aslr_shift)
 
         ptr_sz = vmlinux.get_type("pointer").size
@@ -138,12 +139,12 @@ class Check_syscall(plugins.PluginInterface):
         try:
             table_info = self._get_table_info(vmlinux, "sys_call_table", ptr_sz)
         except exceptions.SymbolError:
-            vollog.error("Unable to find the system call table. Exiting.")      
+            vollog.error("Unable to find the system call table. Exiting.")
             return
 
         tables = [(table_name, table_info)]
 
-        # this table is only present on 64 bit systems with 32 bit emulation 
+        # this table is only present on 64 bit systems with 32 bit emulation
         # enabled in order to support 32 bit programs and libraries
         # if the symbol isn't there then the support isn't in the kernel and so we skip it
         try:
@@ -155,18 +156,19 @@ class Check_syscall(plugins.PluginInterface):
             ia32_info = self._get_table_info(vmlinux, "ia32_sys_call_table", ptr_sz)
             tables.append(("32bit", ia32_info))
 
-        for (table_name, (tableaddr, tblsz)) in tables: 
-            table = vmlinux.object(type_name = "array", subtype = vmlinux.get_type("pointer"), 
-                                   offset = tableaddr, count = tblsz) 
+        for (table_name, (tableaddr, tblsz)) in tables:
+            table = vmlinux.object(type_name = "array", subtype = vmlinux.get_type("pointer"),
+                                   offset = tableaddr, count = tblsz)
 
             for (i, call_addr) in enumerate(table):
                 if not call_addr:
                     continue
-            
+
                 symbols = list(self.context.symbol_space.get_symbols_by_location(call_addr))
 
                 if len(symbols) > 0:
-                    sym_name = str(symbols[0].split("!")[1])
+                    sym_name = str(symbols[0].split(constants.BANG)[1]) if constants.BANG in symbols[0] else \
+                        str(symbols[0])
                 else:
                     sym_name = "UNKNOWN"
 
@@ -175,11 +177,9 @@ class Check_syscall(plugins.PluginInterface):
     def run(self):
 
         return renderers.TreeGrid(
-                [("Table Address", format_hints.Hex),
-                 ("Table Name", str),
-                 ("Index", int),
-                 ("Handler Address", format_hints.Hex),
-                 ("Handler Symbol",  str)],
-                self._generator())
-
-
+            [("Table Address", format_hints.Hex),
+             ("Table Name", str),
+             ("Index", int),
+             ("Handler Address", format_hints.Hex),
+             ("Handler Symbol", str)],
+            self._generator())
