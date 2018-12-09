@@ -3,6 +3,8 @@
 import os
 import sys
 
+from PyInstaller.building.api import PYZ, EXE
+from PyInstaller.building.build_main import Analysis
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 block_cipher = None
@@ -15,9 +17,11 @@ a = Analysis(['vol.py'],
              pathex = [],
              binaries = [],
              datas = collect_data_files('volatility.framework') + \
+                     collect_data_files('volatility.framework.plugins', include_py_files = True) + \
                      collect_data_files('volatility.schemas') + \
                      collect_data_files('volatility.plugins', include_py_files = True),
-             hiddenimports = collect_submodules('volatility.plugins'),
+             hiddenimports = collect_submodules('volatility.framework.plugins') + \
+                             collect_submodules('volatility.plugins'),
              hookspath = [],
              runtime_hooks = [],
              excludes = [],
