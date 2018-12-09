@@ -127,7 +127,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         failures = framework.import_files(volatility.plugins,
                                           True)  # Will not log as console's default level is WARNING
         if failures:
-            parser.epilog = "The following plugins could not be loaded (use -vv to see why): " + ", ".join(failures)
+            parser.epilog = "The following plugins could not be loaded (use -vv to see why): " + \
+                            ", ".join(sorted(failures))
             vollog.info(parser.epilog)
         automagics = automagic.available(ctx)
 
@@ -144,7 +145,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 configurables_list[amagic.__class__.__name__] = amagic
 
         subparser = parser.add_subparsers(title = "Plugins", dest = "plugin", action = HelpfulSubparserAction)
-        for plugin in plugin_list:
+        for plugin in sorted(plugin_list):
             plugin_parser = subparser.add_parser(plugin, help = plugin_list[plugin].__doc__)
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
             configurables_list[plugin] = plugin_list[plugin]
