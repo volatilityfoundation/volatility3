@@ -29,3 +29,5 @@ else:
 os.makedirs(CACHE_PATH, exist_ok = True)
 
 LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
+MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
+

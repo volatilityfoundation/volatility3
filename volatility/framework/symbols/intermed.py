@@ -95,10 +95,10 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                                                                                                 json_object,
                                                                                                 native_types,
                                                                                                 table_mapping)
-
         # Inherit
         super().__init__(context, config_path, name, native_types or self._delegate.natives,
                          table_mapping = table_mapping)
+
 
     def _closest_version(self,
                          version: str,
@@ -493,6 +493,13 @@ class Version4Format(Version3Format):
         base_types = self._json_object['base_types']
         for base_type in base_types:
             # Void are ignored because voids are not a volatility primitive, they are a specific Volatility object
+            
+            #### ikelos: this is an ugly hack as Mac declares 128bit ints, but our base types do not support them
+            #### we whad to do a similar ugly hack in vol2, but I assume you will know a nicer way to do it in vol3 :)
+            #### also - vol2/vol3 do not reference any 128 bit int values so for now we just need them to get ignored
+            if base_type.find("__int128") != -1:
+                continue
+
             if base_type != 'void':
                 current = base_types[base_type]
                 # TODO: Fix up the typing of this, it bugs out because of the tuple assignment
