@@ -4,105 +4,23 @@ import typing
 import volatility.framework.objects.utility
 from volatility.framework import interfaces, constants, validity, exceptions, layers
 from volatility.framework import symbols, objects
-from volatility.framework.automagic import symbol_cache
-from volatility.framework.configuration import requirements
+from volatility.framework.automagic import symbol_cache, symbol_finder
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
 
 vollog = logging.getLogger(__name__)
 
 
-class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
-    """Linux symbol loader based on uname signature strings"""
-    priority = 40
+class LinuxSymbolCache(symbol_cache.SymbolCache):
+    os = "linux"
+    symbol_name = "linux_banner"
+    banner_path = constants.LINUX_BANNERS_PATH
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str) -> None:
-        super().__init__(context, config_path)
-        self._requirements = []  # type: typing.List[typing.Tuple[str, interfaces.configuration.ConstructableRequirementInterface]]
-        self._linux_banners_ = {}  # type: symbol_cache.BannersType
 
-    @property
-    def _linux_banners(self) -> symbol_cache.BannersType:
-        """Creates a cached copy of the results, but only it's been requested"""
-        if not self._linux_banners_:
-            self._linux_banners_ = symbol_cache.LinuxSymbolCache.load_banners()
-        return self._linux_banners_
-
-    def __call__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) -> None:
-        """Searches for LinuxSymbolRequirements and attempt to populate them"""
-        self._requirements = self.find_requirements(context, config_path, requirement,
-                                                    (requirements.TranslationLayerRequirement,
-                                                     requirements.SymbolRequirement),
-                                                    shortcut = False)
-
-        for (sub_path, requirement) in self._requirements:
-            parent_path = interfaces.configuration.parent_path(sub_path)
-
-            if (isinstance(requirement, requirements.SymbolRequirement) and requirement.unsatisfied(context,
-                                                                                                    parent_path)):
-                for (tl_sub_path, tl_requirement) in self._requirements:
-                    tl_parent_path = interfaces.configuration.parent_path(tl_sub_path)
-                    # Find the TranslationLayer sibling to the SymbolRequirement
-                    if (isinstance(tl_requirement, requirements.TranslationLayerRequirement) and
-                            tl_parent_path == parent_path):
-                        if context.config.get(tl_sub_path, None):
-                            self._banner_scan(context, parent_path, requirement, context.config[tl_sub_path],
-                                              progress_callback)
-                            break
-
-    def _banner_scan(self,
-                     context: interfaces.context.ContextInterface,
-                     config_path: str,
-                     requirement: interfaces.configuration.ConstructableRequirementInterface,
-                     layer_name: str,
-                     progress_callback: validity.ProgressCallback = None) -> None:
-        """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
-        and scans the layer for linux banners"""
-
-        # Bomb out early if there's no banners
-        if not self._linux_banners:
-            return
-
-        mss = scanners.MultiStringScanner([x for x in self._linux_banners if x is not None])
-
-        layer = context.memory[layer_name]
-
-        # Check if the Stacker has already found what we're looking for
-        if layer.config.get('linux_banner', None):
-            banner_list = [(0, bytes(layer.config['linux_banner'], 'latin-1'))]  # type: typing.Iterable[typing.Any]
-        else:
-            # Swap to the physical layer for scanning
-            # TODO: Fix this so it works for layers other than just Intel
-            layer = context.memory[layer.config['memory_layer']]
-            banner_list = layer.scan(context = context, scanner = mss, progress_callback = progress_callback)
-
-        for _, banner in banner_list:
-            vollog.debug("Identified banner: {}".format(repr(banner)))
-            symbol_files = self._linux_banners.get(banner, None)
-            if symbol_files:
-                isf_path = symbol_files[0]
-                vollog.debug("Using symbol library: {}".format(symbol_files[0]))
-                clazz = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
-                # Set the discovered options
-                path_join = interfaces.configuration.path_join
-                context.config[path_join(config_path, requirement.name, "class")] = clazz
-                context.config[path_join(config_path, requirement.name, "isf_url")] = isf_path
-                # Construct the appropriate symbol table
-                requirement.construct(context, config_path)
-                break
-            else:
-                if symbol_files:
-                    vollog.debug("Symbol library path not found: {}".format(symbol_files[0]))
-                    # print("Kernel", banner, hex(banner_offset))
-        else:
-            vollog.debug("No existing linux banners found")
-            # TODO: Fallback to generic regex search?
+class LinuxSymbolFinder(symbol_finder.SymbolFinder):
+    banner_config_key = "linux_banner"
+    symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
+    cache = LinuxSymbolCache
 
 
 class LintelStacker(interfaces.automagic.StackerLayerInterface):
@@ -124,7 +42,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        linux_banners = symbol_cache.LinuxSymbolCache.load_banners()
+        linux_banners = LinuxSymbolCache.load_banners()
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             dtb = None
@@ -155,7 +73,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                 config_path = join("IntelHelper", new_layer_name)
                 context.config[join(config_path, "memory_layer")] = layer_name
                 context.config[join(config_path, "page_map_offset")] = dtb
-                context.config[join(config_path, "linux_banner")] = str(banner, 'latin-1')
+                context.config[join(config_path, LinuxSymbolFinder.banner_config_key)] = str(banner, 'latin-1')
 
                 layer = layer_class(context, config_path = config_path, name = new_layer_name)
 
