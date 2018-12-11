@@ -20,6 +20,8 @@ class SymbolCache(interfaces.automagic.AutomagicInterface):
     # Since this is necessary for ConstructionMagic, we set a lower priority
     # The user would run it eventually either way, but running it first means it can be used that run
     priority = 0
+
+    # Default to Linux values, but no OS so we bomb out early when necessary
     os = None
     symbol_name = "linux_banner"
     banner_path = constants.LINUX_BANNERS_PATH
@@ -64,6 +66,8 @@ class SymbolCache(interfaces.automagic.AutomagicInterface):
 
     def __call__(self, context, config_path, configurable, progress_callback = None):
         """Runs the automagic over the configurable"""
+
+        # Bomb out if we're just the generic interface
         if self.os is None:
             return
 
@@ -101,15 +105,3 @@ class SymbolCache(interfaces.automagic.AutomagicInterface):
 
             # Rewrite the cached banners each run, since writing is faster than the cache validation portion
             self.save_banners(banners)
-
-
-class LinuxSymbolCache(SymbolCache):
-    os = "linux"
-    symbol_name = "linux_banner"
-    banner_path = constants.LINUX_BANNERS_PATH
-
-
-class MacSymbolCache(SymbolCache):
-    os = "mac"
-    symbol_name = "version"
-    banner_path = constants.MAC_BANNERS_PATH
