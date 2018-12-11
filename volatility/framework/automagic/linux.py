@@ -4,7 +4,7 @@ import typing
 import volatility.framework.objects.utility
 from volatility.framework import interfaces, constants, validity, exceptions, layers
 from volatility.framework import symbols, objects
-from volatility.framework.automagic import linux_symbol_cache
+from volatility.framework.automagic import symbol_cache
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
@@ -21,13 +21,13 @@ class LinuxSymbolFinder(interfaces.automagic.AutomagicInterface):
                  config_path: str) -> None:
         super().__init__(context, config_path)
         self._requirements = []  # type: typing.List[typing.Tuple[str, interfaces.configuration.ConstructableRequirementInterface]]
-        self._linux_banners_ = {}  # type: linux_symbol_cache.LinuxBanners
+        self._linux_banners_ = {}  # type: symbol_cache.BannersType
 
     @property
-    def _linux_banners(self) -> linux_symbol_cache.LinuxBanners:
+    def _linux_banners(self) -> symbol_cache.BannersType:
         """Creates a cached copy of the results, but only it's been requested"""
         if not self._linux_banners_:
-            self._linux_banners_ = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
+            self._linux_banners_ = symbol_cache.LinuxSymbolCache.load_banners()
         return self._linux_banners_
 
     def __call__(self,
@@ -124,7 +124,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        linux_banners = linux_symbol_cache.LinuxSymbolCache.load_linux_banners()
+        linux_banners = symbol_cache.LinuxSymbolCache.load_banners()
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             dtb = None

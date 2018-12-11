@@ -1,16 +1,16 @@
-import sys, struct
 import logging
+import struct
 import typing
 
-import volatility.framework.objects.utility
-from volatility.framework import layers, interfaces, constants, validity, exceptions
-from volatility.framework import symbols, objects
-from volatility.framework.automagic import mac_symbol_cache
+from volatility.framework import interfaces, constants, validity
+from volatility.framework import symbols
+from volatility.framework.automagic import symbol_cache
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import mac
 
 vollog = logging.getLogger(__name__)
+
 
 class MacSymbolFinder(interfaces.automagic.AutomagicInterface):
     """Mac symbol loader based on uname signature strings"""
@@ -24,11 +24,11 @@ class MacSymbolFinder(interfaces.automagic.AutomagicInterface):
         self._mac_banners_ = {}  # type: mac_symbol_cache.MacBanners
 
     @property
-    def _mac_banners(self) -> mac_symbol_cache.MacBanners:
+    def _mac_banners(self) -> symbol_cache.BannersType:
         """Creates a cached copy of the results, but only it's been requested"""
         if not self._mac_banners_:
-            self._mac_banners_ = mac_symbol_cache.MacSymbolCache.load_mac_banners()
-        
+            self._mac_banners_ = symbol_cache.MacSymbolCache.load_mac_banners()
+
         return self._mac_banners_
 
     def __call__(self,
@@ -37,7 +37,7 @@ class MacSymbolFinder(interfaces.automagic.AutomagicInterface):
                  requirement: interfaces.configuration.RequirementInterface,
                  progress_callback: validity.ProgressCallback = None) -> None:
         """Searches for MacSymbolRequirements and attempt to populate them"""
-        
+
         self._requirements = self.find_requirements(context, config_path, requirement,
                                                     (requirements.TranslationLayerRequirement,
                                                      requirements.SymbolRequirement),
@@ -66,7 +66,7 @@ class MacSymbolFinder(interfaces.automagic.AutomagicInterface):
                      progress_callback: validity.ProgressCallback = None) -> None:
         """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
         and scans the layer for mac banners"""
-        
+
         # Bomb out early if there's no banners
         if not self._mac_banners:
             return
@@ -83,7 +83,7 @@ class MacSymbolFinder(interfaces.automagic.AutomagicInterface):
             # TODO: Fix this so it works for layers other than just Intel
             layer = context.memory[layer.config['memory_layer']]
             banner_list = layer.scan(context = context, scanner = mss, progress_callback = progress_callback)
-                
+
         for _, banner in banner_list:
             vollog.debug("Identified banner: {}".format(repr(banner)))
             symbol_files = self._mac_banners.get(banner, None)
@@ -126,10 +126,11 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        mac_banners = mac_symbol_cache.MacSymbolCache.load_mac_banners()
+        mac_banners = symbol_cache.MacSymbolCache.load_mac_banners()
         mss = scanners.MultiStringScanner([x for x in mac_banners if x is not None])
-        
-        for banner_offset, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
+
+        for banner_offset, banner in layer.scan(context = context, scanner = mss,
+                                                progress_callback = progress_callback):
             dtb = None
             vollog.debug("Identified banner: {}".format(repr(banner)))
 
@@ -138,15 +139,15 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('MacintelStacker')
                 table = mac.MacKernelIntermedSymbols(context, 'temporary.' + table_name, name = table_name,
-                                                         isf_url = isf_path)
+                                                     isf_url = isf_path)
                 context.symbol_space.append(table)
                 kaslr_shift = MacUtilities.find_aslr(context, table_name, layer_name,
-                                                          banner, banner_offset, progress_callback = progress_callback)
+                                                     banner, banner_offset, progress_callback = progress_callback)
 
                 ######################
                 # ikelos: The following is what I tried to get the dtb, but couldn't figure out how to do
                 # as you will see after the commented block of code is just a hardcoding of the DTB to my test sample's value
-                ####################### 
+                #######################
                 '''
                 bootpml4_addr = table.get_symbol("BootPML4").address + kaslr_shift
                 
@@ -168,7 +169,7 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
                 print("new dtb / idlepml4_addr = {:x".format(idlepml4_addr))
                 sys.exit(1)
                 '''
-            
+
                 dtb = 0x1ef6e000
 
                 # Build the new layer
@@ -206,10 +207,10 @@ class MacUtilities(object):
 
     def _scan_generator(self, context, layer_name, progress_callback):
         darwin_signature = b"Darwin Kernel Version \d{1,3}\.\d{1,3}\.\d{1,3}: [^\x00]+\x00"
-        
+
         for offset in context.memory[layer_name].scan(scanner = scanners.RegExScanner(darwin_signature),
                                                       context = context, progress_callback = progress_callback):
-     
+
             banner = context.memory[layer_name].read(offset, 128)
 
             idx = banner.find(b"\x00")
@@ -228,17 +229,17 @@ class MacUtilities(object):
                   progress_callback: validity.ProgressCallback = None) \
             -> typing.Tuple[int, int]:
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
-        version_symbol       = symbol_table + constants.BANG + 'version'
+        version_symbol = symbol_table + constants.BANG + 'version'
         version_json_address = context.symbol_space.get_symbol(version_symbol).address
-        version_phys_offset  = MacUtilities.virtual_to_physical_address(version_json_address)
-        
-        version_major_symbol       = symbol_table + constants.BANG + 'version_major'
-        version_major_json_address = context.symbol_space.get_symbol(version_major_symbol).address
-        version_major_phys_offset  = MacUtilities.virtual_to_physical_address(version_major_json_address)
+        version_phys_offset = MacUtilities.virtual_to_physical_address(version_json_address)
 
-        version_minor_symbol       = symbol_table + constants.BANG + 'version_minor'
+        version_major_symbol = symbol_table + constants.BANG + 'version_major'
+        version_major_json_address = context.symbol_space.get_symbol(version_major_symbol).address
+        version_major_phys_offset = MacUtilities.virtual_to_physical_address(version_major_json_address)
+
+        version_minor_symbol = symbol_table + constants.BANG + 'version_minor'
         version_minor_json_address = context.symbol_space.get_symbol(version_minor_symbol).address
-        version_minor_phys_offset  = MacUtilities.virtual_to_physical_address(version_minor_json_address)
+        version_minor_phys_offset = MacUtilities.virtual_to_physical_address(version_minor_json_address)
 
         module = context.module(symbol_table, layer_name, 0)
 
@@ -264,20 +265,19 @@ class MacUtilities(object):
             minor = struct.unpack("<I", minor_string)[0]
 
             if minor != banner_minor:
-                conitnue
+                continue
 
             if aslr_shift & 0xfff != 0:
                 continue
-           
+
             aslr_shift = tmp_aslr_shift & 0xffffffff
             break
 
-        vollog.debug("Mac ASLR shift value determined: {:0x}".format(aslr_shift)) 
-        
+        vollog.debug("Mac ASLR shift value determined: {:0x}".format(aslr_shift))
+
         return aslr_shift
 
     @classmethod
     def virtual_to_physical_address(cls, addr: int) -> int:
         """Converts a virtual mac address to a physical one (does not account of ASLR)"""
         return addr - 0xffffff8000000000
-

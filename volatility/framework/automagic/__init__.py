@@ -29,6 +29,11 @@ linux_automagic = ['ConstructionMagic',
                    'LinuxSymbolCache',
                    'LinuxSymbolFinder']
 
+mac_automagic = ['ConstructionMagic',
+                 'LayerStacker',
+                 'MacSymbolCache',
+                 'MacSymbolFinder']
+
 
 def available(context: interfaces.context.ContextInterface) \
         -> typing.List[interfaces.automagic.AutomagicInterface]:
@@ -58,6 +63,9 @@ def choose_automagic(automagics, plugin):
                 output += [amagic]
         elif plugin_category == 'linux':
             if amagic.__class__.__name__ in linux_automagic:
+                output += [amagic]
+        elif plugin_category == 'mac':
+            if amagic.__class__.__name__ in mac_automagic:
                 output += [amagic]
         else:
             return automagics
