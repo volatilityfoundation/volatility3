@@ -11,16 +11,20 @@ from volatility.framework.symbols import linux
 vollog = logging.getLogger(__name__)
 
 
-class LinuxSymbolCache(symbol_cache.SymbolCache):
+class LinuxBannerCache(symbol_cache.SymbolBannerCache):
+    """Caches the banners found in the Linux symbol files"""
+
     os = "linux"
     symbol_name = "linux_banner"
     banner_path = constants.LINUX_BANNERS_PATH
 
 
 class LinuxSymbolFinder(symbol_finder.SymbolFinder):
+    """Linux symbol loader based on uname signature strings"""
+
     banner_config_key = "linux_banner"
+    banner_cache = LinuxBannerCache
     symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
-    cache = LinuxSymbolCache
 
 
 class LintelStacker(interfaces.automagic.StackerLayerInterface):
@@ -42,7 +46,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        linux_banners = LinuxSymbolCache.load_banners()
+        linux_banners = LinuxBannerCache.load_banners()
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             dtb = None

@@ -14,17 +14,16 @@ vollog = logging.getLogger(__name__)
 BannersType = typing.Dict[bytes, typing.List[str]]
 
 
-class SymbolCache(interfaces.automagic.AutomagicInterface):
+class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
     """Runs through all symbols tables and caches their banners"""
 
     # Since this is necessary for ConstructionMagic, we set a lower priority
     # The user would run it eventually either way, but running it first means it can be used that run
     priority = 0
 
-    # Default to Linux values, but no OS so we bomb out early when necessary
     os = None
-    symbol_name = "linux_banner"
-    banner_path = constants.LINUX_BANNERS_PATH
+    symbol_name = "banner_name"
+    banner_path = None
 
     @classmethod
     def load_banners(cls) -> BannersType:
@@ -103,5 +102,5 @@ class SymbolCache(interfaces.automagic.AutomagicInterface):
             except exceptions.SymbolError:
                 pass
 
-            # Rewrite the cached banners each run, since writing is faster than the cache validation portion
+            # Rewrite the cached banners each run, since writing is faster than the banner_cache validation portion
             self.save_banners(banners)

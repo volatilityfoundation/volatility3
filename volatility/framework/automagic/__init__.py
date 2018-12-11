@@ -26,12 +26,12 @@ windows_automagic = ['ConstructionMagic',
 
 linux_automagic = ['ConstructionMagic',
                    'LayerStacker',
-                   'LinuxSymbolCache',
+                   'LinuxBannerCache',
                    'LinuxSymbolFinder']
 
 mac_automagic = ['ConstructionMagic',
                  'LayerStacker',
-                 'MacSymbolCache',
+                 'MacBannerCache',
                  'MacSymbolFinder']
 
 

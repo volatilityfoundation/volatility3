@@ -11,7 +11,8 @@ from volatility.framework.symbols import mac
 vollog = logging.getLogger(__name__)
 
 
-class MacSymbolCache(symbol_cache.SymbolCache):
+class MacBannerCache(symbol_cache.SymbolBannerCache):
+    """Caches the banners found in the Mac symbol files"""
     os = "mac"
     symbol_name = "version"
     banner_path = constants.MAC_BANNERS_PATH
@@ -21,8 +22,8 @@ class MacSymbolFinder(symbol_finder.SymbolFinder):
     """Mac symbol loader based on uname signature strings"""
 
     banner_config_key = 'mac_banner'
+    banner_cache = MacBannerCache
     symbol_class = "volatility.framework.symbols.mac.MacKernelIntermedSymbols"
-    cache = MacSymbolCache
 
 
 class MacintelStacker(interfaces.automagic.StackerLayerInterface):
@@ -44,7 +45,7 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
         if isinstance(layer, intel.Intel):
             return None
 
-        mac_banners = MacSymbolCache.load_banners()
+        mac_banners = MacBannerCache.load_banners()
         mss = scanners.MultiStringScanner([x for x in mac_banners if x is not None])
 
         for banner_offset, banner in layer.scan(context = context, scanner = mss,

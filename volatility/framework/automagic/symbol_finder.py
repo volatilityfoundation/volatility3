@@ -14,8 +14,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
     priority = 40
 
     banner_config_key = "banner"
+    banner_cache = None
     symbol_class = None
-    cache = None
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -28,9 +28,9 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
     def banners(self) -> symbol_cache.BannersType:
         """Creates a cached copy of the results, but only it's been requested"""
         if not self._banners:
-            if not self.cache:
+            if not self.banner_cache:
                 raise RuntimeError("Cache has not been properly defined for {}".format(self.__class__.__name__))
-            self._banners = self.cache.load_banners()
+            self._banners = self.banner_cache.load_banners()
         return self._banners
 
     def __call__(self,
