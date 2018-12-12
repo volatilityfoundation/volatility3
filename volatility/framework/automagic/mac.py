@@ -2,7 +2,7 @@ import logging
 import struct
 import typing
 
-from volatility.framework import interfaces, constants, validity
+from volatility.framework import interfaces, constants, validity, layers
 from volatility.framework import symbols
 from volatility.framework.automagic import symbol_cache, symbol_finder
 from volatility.framework.layers import intel, scanners
@@ -38,6 +38,7 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
         """Attempts to identify mac within this layer"""
         # Bail out by default unless we can stack properly
         layer = context.memory[layer_name]
+        new_layer = None
         join = interfaces.configuration.path_join
 
         # Never stack on top of an intel layer
@@ -46,9 +47,9 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
             return None
 
         mac_banners = MacBannerCache.load_banners()
-        mss = scanners.MultiStringScanner([x for x in mac_banners if x is not None])
 
-        for banner_offset, banner in layer.scan(context = context, scanner = mss,
+        for banner_offset, banner in layer.scan(context = context,
+                                                scanner = scanners.MultiStringScanner([x for x in mac_banners if x]),
                                                 progress_callback = progress_callback):
             dtb = None
             vollog.debug("Identified banner: {}".format(repr(banner)))
@@ -57,11 +58,17 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
             if symbol_files:
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('MacintelStacker')
-                table = mac.MacKernelIntermedSymbols(context, 'temporary.' + table_name, name = table_name,
+                table = mac.MacKernelIntermedSymbols(context = context,
+                                                     config_path = join('temporary', table_name),
+                                                     name = table_name,
                                                      isf_url = isf_path)
                 context.symbol_space.append(table)
-                kaslr_shift = MacUtilities.find_aslr(context, table_name, layer_name,
-                                                     banner, banner_offset, progress_callback = progress_callback)
+                kaslr_shift = MacUtilities.find_aslr(context = context,
+                                                     symbol_table = table_name,
+                                                     layer_name = layer_name,
+                                                     compare_banner = banner,
+                                                     compare_banner_offset = banner_offset,
+                                                     progress_callback = progress_callback)
 
                 ######################
                 # ikelos: The following is what I tried to get the dtb, but couldn't figure out how to do
@@ -98,11 +105,11 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[join(config_path, "page_map_offset")] = dtb
                 context.config[join(config_path, MacSymbolFinder.banner_config_key)] = str(banner, 'latin-1')
 
-                layer = intel.Intel32e(context, config_path = config_path, name = new_layer_name)
+                new_layer = intel.Intel32e(context, config_path = config_path, name = new_layer_name)
 
-            if layer and dtb:
+            if new_layer and dtb:
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
-                return layer
+                return new_layer
         return None
 
 
@@ -124,7 +131,8 @@ class MacUtilities(object):
         symbols.utility.mask_symbol_table(context.symbol_space[sym_table_name],
                                           context.memory[sym_layer_name].address_mask, aslr_shift)
 
-    def _scan_generator(self, context, layer_name, progress_callback):
+    @classmethod
+    def _scan_generator(cls, context, layer_name, progress_callback):
         darwin_signature = b"Darwin Kernel Version \d{1,3}\.\d{1,3}\.\d{1,3}: [^\x00]+\x00"
 
         for offset in context.memory[layer_name].scan(scanner = scanners.RegExScanner(darwin_signature),
@@ -150,7 +158,6 @@ class MacUtilities(object):
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         version_symbol = symbol_table + constants.BANG + 'version'
         version_json_address = context.symbol_space.get_symbol(version_symbol).address
-        version_phys_offset = MacUtilities.virtual_to_physical_address(version_json_address)
 
         version_major_symbol = symbol_table + constants.BANG + 'version_major'
         version_major_json_address = context.symbol_space.get_symbol(version_major_symbol).address
@@ -160,10 +167,8 @@ class MacUtilities(object):
         version_minor_json_address = context.symbol_space.get_symbol(version_minor_symbol).address
         version_minor_phys_offset = MacUtilities.virtual_to_physical_address(version_minor_json_address)
 
-        module = context.module(symbol_table, layer_name, 0)
-
         if compare_banner_offset == 0 or compare_banner == "":
-            offset_generator = cls._scan_generator(cls, context, layer_name, progress_callback)
+            offset_generator = cls._scan_generator(context, layer_name, progress_callback)
         else:
             offset_generator = [(compare_banner_offset, compare_banner)]
 
