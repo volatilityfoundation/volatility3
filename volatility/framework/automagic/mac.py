@@ -70,37 +70,26 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
                                                      compare_banner_offset = banner_offset,
                                                      progress_callback = progress_callback)
 
-                ######################
-                # ikelos: The following is what I tried to get the dtb, but couldn't figure out how to do
-                # as you will see after the commented block of code is just a hardcoding of the DTB to my test sample's value
-                #######################
-                '''
                 bootpml4_addr = table.get_symbol("BootPML4").address + kaslr_shift
-                
-                new_layer_name = context.memory.free_layer_name("MacDTBTempLayer")
-                config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
-                context.config[interfaces.configuration.path_join(config_path, "memory_layer")]    = layer_name
-                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = bootpml4_addr
-                 
-                layer = layers.intel.Intel32e(context, config_path = config_path,
-                                                     name = new_layer_name, metadata = {'os': 'Mac'}) 
-                
-                print("KEYS: {}".format("\n".join([k for k in layer.context.memory.keys()])))
-                print("DIR: {}".format(dir(layer)))
+                bootpml4_addr = (layer.address_mask & bootpml4_addr)
 
-                idlepml4_ptr  = table.get_symbol("IdlePML4").address + kaslr_shift
-                idlepml4_str  = layer.read(idlepml4_ptr, 4)
+                new_layer_name = context.memory.free_layer_name("MacDTBTempLayer")
+                config_path = join("automagic", "MacIntelHelper", new_layer_name)
+                context.config[join(config_path, "memory_layer")] = layer_name
+                context.config[join(config_path, "page_map_offset")] = bootpml4_addr
+
+                layer = layers.intel.Intel32e(context, config_path = config_path,
+                                              name = new_layer_name, metadata = {'os': 'Mac'})
+
+                idlepml4_ptr = table.get_symbol("IdlePML4").address + kaslr_shift
+                idlepml4_str = layer.read(idlepml4_ptr, 4)
                 idlepml4_addr = struct.unpack("<I", idlepml4_str)[0]
 
-                print("new dtb / idlepml4_addr = {:x".format(idlepml4_addr))
-                sys.exit(1)
-                '''
-
-                dtb = 0x1ef6e000
+                dtb = idlepml4_addr
 
                 # Build the new layer
                 new_layer_name = context.memory.free_layer_name("IntelLayer")
-                config_path = join("IntelHelper", new_layer_name)
+                config_path = join("automagic", "MacIntelHelper", new_layer_name)
                 context.config[join(config_path, "memory_layer")] = layer_name
                 context.config[join(config_path, "page_map_offset")] = dtb
                 context.config[join(config_path, MacSymbolFinder.banner_config_key)] = str(banner, 'latin-1')
