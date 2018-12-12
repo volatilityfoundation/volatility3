@@ -70,8 +70,8 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
                                                      compare_banner_offset = banner_offset,
                                                      progress_callback = progress_callback)
 
-                bootpml4_addr = table.get_symbol("BootPML4").address + kaslr_shift
-                bootpml4_addr = (layer.address_mask & bootpml4_addr)
+                bootpml4_addr = MacUtilities.virtual_to_physical_address(table.get_symbol("BootPML4").address +
+                                                                         kaslr_shift)
 
                 new_layer_name = context.memory.free_layer_name("MacDTBTempLayer")
                 config_path = join("automagic", "MacIntelHelper", new_layer_name)
@@ -166,7 +166,7 @@ class MacUtilities(object):
         for offset, banner in offset_generator:
             banner_major, banner_minor = [int(x) for x in banner[22:].split(b".")[0:2]]
 
-            tmp_aslr_shift = offset - (version_json_address - 0xffffff8000000000)
+            tmp_aslr_shift = offset - cls.virtual_to_physical_address(version_json_address)
 
             major_string = context.memory[layer_name].read(version_major_phys_offset + tmp_aslr_shift, 4)
             major = struct.unpack("<I", major_string)[0]
