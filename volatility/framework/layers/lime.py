@@ -67,7 +67,10 @@ class LimeLayer(segmented.SegmentedLayer):
     def _check_header(cls,
                       base_layer: interfaces.layers.DataLayerInterface,
                       offset: int = 0) -> typing.Tuple[int, int]:
-        header_data = base_layer.read(offset, cls._header_struct.size)
+        try:
+            header_data = base_layer.read(offset, cls._header_struct.size)
+        except exceptions.InvalidAddressException:
+            raise LimeFormatException("Offset 0x{:0x} does not exist within the base layer".format(offset))
         (magic, version, start, end, reserved) = cls._header_struct.unpack(header_data)
         if magic != cls.MAGIC:
             raise LimeFormatException("bad magic 0x{:x} at file offset 0x{:x}".format(magic, offset))
