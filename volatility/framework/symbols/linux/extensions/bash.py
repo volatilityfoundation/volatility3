@@ -1,6 +1,7 @@
 from volatility.framework import exceptions
 from volatility.framework import objects
 from volatility.framework.objects import utility
+from volatility.framework.renderers import conversion
 
 
 class hist_entry(objects.Struct):
@@ -41,7 +42,7 @@ class hist_entry(objects.Struct):
     def get_time_object(self):
         nsecs = self.get_time_as_integer()
         # Build a timestamp object from the integer
-        return utility.unixtime_to_datetime(nsecs)
+        return conversion.unixtime_to_datetime(nsecs)
 
     def get_command(self):
         return utility.array_to_string(self.line.dereference())

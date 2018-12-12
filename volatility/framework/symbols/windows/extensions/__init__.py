@@ -3,9 +3,9 @@ import functools
 import logging
 import typing
 
-import volatility.framework.objects.utility
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
+from volatility.framework.renderers import conversion
 from volatility.framework.symbols import generic
 from volatility.framework.symbols.windows.extensions.registry import RegKeyFlags
 
@@ -45,7 +45,7 @@ class _POOL_HEADER(objects.Struct):
         else:
             alignment = pool_header_size
             type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
-            rounded_size = objects.utility.round(type_size, alignment, up = True)
+            rounded_size = conversion.round(type_size, alignment, up = True)
 
             mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
                                               layer_name = self.vol.layer_name,
@@ -69,7 +69,7 @@ class _KSYSTEM_TIME(objects.Struct):
 
     def get_time(self):
         wintime = (self.High1Time << 32) | self.LowPart
-        return objects.utility.wintime_to_datetime(wintime)
+        return conversion.wintime_to_datetime(wintime)
 
 
 class _MMVAD_SHORT(objects.Struct):
@@ -564,10 +564,10 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
         return renderers.UnreadableValue()
 
     def get_create_time(self):
-        return objects.utility.wintime_to_datetime(self.CreateTime.QuadPart)
+        return conversion.wintime_to_datetime(self.CreateTime.QuadPart)
 
     def get_exit_time(self):
-        return objects.utility.wintime_to_datetime(self.ExitTime.QuadPart)
+        return conversion.wintime_to_datetime(self.ExitTime.QuadPart)
 
     def get_wow_64_process(self):
         if self.has_member("Wow64Process"):

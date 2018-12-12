@@ -3,7 +3,7 @@ import typing
 
 from volatility.framework import constants
 from volatility.framework import objects, interfaces
-from volatility.framework.objects import utility
+from volatility.framework.renderers import conversion
 
 
 class _IMAGE_DOS_HEADER(objects.Struct):
@@ -127,7 +127,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
                 sect_sizes.append(sect.VirtualAddress - prevsect.VirtualAddress)
             prevsect = sect
         if prevsect is not None:
-            sect_sizes.append(utility.round(prevsect.Misc.VirtualSize, section_alignment, up = True))
+            sect_sizes.append(conversion.round(prevsect.Misc.VirtualSize, section_alignment, up = True))
 
         counter = 0
         start_addr = nt_header.FileHeader.SizeOfOptionalHeader + \

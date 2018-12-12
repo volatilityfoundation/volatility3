@@ -5,19 +5,17 @@ import logging
 import os
 import typing
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import exceptions, renderers, constants
+from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.physical import BufferDataLayer
 from volatility.framework.layers.registry import RegistryHive
-from volatility.framework.objects import utility
-from volatility.framework.renderers import format_hints
+from volatility.framework.renderers import format_hints, conversion
 from volatility.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
 
 
-class UserAssist(interfaces_plugins.PluginInterface):
+class UserAssist(interfaces.plugins.PluginInterface):
     """Print userassist registry keys and information"""
 
     def __init__(self, *args, **kwargs):
@@ -92,7 +90,7 @@ class UserAssist(interfaces_plugins.PluginInterface):
             item["focus"] = renderers.NotApplicableValue()
             item["time"] = renderers.NotApplicableValue()
 
-        item["lastupdated"] = utility.wintime_to_datetime(userassist_obj.LastUpdated.QuadPart)
+        item["lastupdated"] = conversion.wintime_to_datetime(userassist_obj.LastUpdated.QuadPart)
 
         return item
 
@@ -140,7 +138,8 @@ class UserAssist(interfaces_plugins.PluginInterface):
             # each guid key should have a Count key in it
             for countkey in guidkey.get_subkeys():
                 countkey_path = countkey.get_key_path()
-                countkey_last_write_time = utility.wintime_to_datetime(countkey.LastWriteTime.QuadPart)
+                countkey_last_write_time = volatility.framework.renderers.conversion.wintime_to_datetime(
+                    countkey.LastWriteTime.QuadPart)
 
                 # output the parent Count key
                 result = (0,

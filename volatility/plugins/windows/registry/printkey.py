@@ -6,8 +6,7 @@ import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import objects, renderers, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.registry import RegistryHive
-from volatility.framework.objects import utility
-from volatility.framework.renderers import TreeGrid
+from volatility.framework.renderers import TreeGrid, conversion
 from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
 
 vollog = logging.getLogger(__name__)
@@ -48,7 +47,7 @@ class PrintKey(plugins.PluginInterface):
             return
         node = node_path[-1]
         key_path = key_path or node.get_key_path()
-        last_write_time = utility.wintime_to_datetime(node.LastWriteTime.QuadPart)
+        last_write_time = conversion.wintime_to_datetime(node.LastWriteTime.QuadPart)
 
         for key_node in node.get_subkeys():
             result = (key_path.count("\\"),
