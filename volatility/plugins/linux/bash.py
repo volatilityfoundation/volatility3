@@ -27,7 +27,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                description = "Linux Kernel")]
 
     def _generator(self, tasks):
-        is_32bit = not symbols.utility.symbol_table_is_64bit(self.context, self.config["vmlinux"])
+        is_32bit = not symbols.symbol_table_is_64bit(self.context, self.config["vmlinux"])
         if is_32bit:
             pack_format = "I"
             bash_json_file = "bash32"

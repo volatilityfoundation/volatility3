@@ -65,7 +65,7 @@ class SSDT(plugins.PluginInterface):
         # on 32-bit systems the table indexes are 32-bits and contain pointers (unsigned)
         # on 64-bit systems the indexes are also 32-bits but they're offsets from the
         # base address of the table and can be negative, so we need a signed data type
-        is_kernel_64 = symbols.utility.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
+        is_kernel_64 = symbols.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
         if is_kernel_64:
             array_subtype = "long"
             find_address = lambda func: kvo + service_table_address + (func >> 4)
