@@ -16,6 +16,7 @@ workspace.xml
 stubs
 volatility/symbols/linux*
 volatility/symbols/windows*
+volatility/symbols/mac*
 
 # Mac metadata files
 .DS_Store
