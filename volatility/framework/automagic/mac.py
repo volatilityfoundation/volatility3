@@ -117,8 +117,8 @@ class MacUtilities(object):
 
         sym_table_name = config["darwin"]
         sym_layer_name = config["primary"]
-        symbols.utility.mask_symbol_table(context.symbol_space[sym_table_name],
-                                          context.memory[sym_layer_name].address_mask, aslr_shift)
+        symbols.mask_symbol_table(context.symbol_space[sym_table_name],
+                                  context.memory[sym_layer_name].address_mask, aslr_shift)
 
     @classmethod
     def _scan_generator(cls, context, layer_name, progress_callback):
