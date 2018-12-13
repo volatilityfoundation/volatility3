@@ -479,7 +479,8 @@ class Version4Format(Version3Format):
     format_str_mapping = {'int': ({1: 'b',
                                    2: 'h',
                                    4: 'i',
-                                   8: 'q'}, objects.Integer),
+                                   8: 'q',
+                                   16: 'qq'}, objects.Integer),
                           'float': ({2: 'e',
                                      4: 'f',
                                      8: 'd'}, objects.Float),
@@ -493,13 +494,6 @@ class Version4Format(Version3Format):
         base_types = self._json_object['base_types']
         for base_type in base_types:
             # Void are ignored because voids are not a volatility primitive, they are a specific Volatility object
-            
-            #### ikelos: this is an ugly hack as Mac declares 128bit ints, but our base types do not support them
-            #### we whad to do a similar ugly hack in vol2, but I assume you will know a nicer way to do it in vol3 :)
-            #### also - vol2/vol3 do not reference any 128 bit int values so for now we just need them to get ignored
-            if base_type.find("__int128") != -1:
-                continue
-
             if base_type != 'void':
                 current = base_types[base_type]
                 # TODO: Fix up the typing of this, it bugs out because of the tuple assignment
