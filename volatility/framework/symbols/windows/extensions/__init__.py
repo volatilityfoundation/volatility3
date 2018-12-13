@@ -1,8 +1,8 @@
 import collections.abc
+import datetime
 import functools
 import logging
 import typing
-import datetime
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
@@ -85,7 +85,7 @@ class _POOL_HEADER(objects.Struct):
             # use the bottom up approach for windows 7 and earlier
             else:
                 type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
-                rounded_size = objects_utility.round(type_size, alignment, up = True)
+                rounded_size = conversion.round(type_size, alignment, up = True)
 
                 mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
                                                   layer_name = self.vol.layer_name,
@@ -566,7 +566,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
         """Determine if the object is valid"""
 
         try:
-            name = objects_utility.array_to_string(self.ImageFileName)
+            name = objects.utility.array_to_string(self.ImageFileName)
             if not name or len(name) == 0 or name[0] == "\x00":
                 return False
 
