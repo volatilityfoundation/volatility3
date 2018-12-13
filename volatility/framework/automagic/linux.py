@@ -258,7 +258,7 @@ class LinuxUtilities(object):
             if not isinstance(sym_layer, layers.intel.Intel):
                 raise TypeError("Layer name {} is not an intel space")
             aslr_layer = sym_layer.config['memory_layer']
-            _, aslr_shift = LinuxUtilities.find_aslr(context, symbol_table, aslr_layer)
+            _, aslr_shift = cls.find_aslr(context, symbol_table, aslr_layer)
 
         symbols.mask_symbol_table(sym_table, sym_layer.address_mask, aslr_shift)
 
