@@ -138,8 +138,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
             # each guid key should have a Count key in it
             for countkey in guidkey.get_subkeys():
                 countkey_path = countkey.get_key_path()
-                countkey_last_write_time = volatility.framework.renderers.conversion.wintime_to_datetime(
-                    countkey.LastWriteTime.QuadPart)
+                countkey_last_write_time = conversion.wintime_to_datetime(countkey.LastWriteTime.QuadPart)
 
                 # output the parent Count key
                 result = (0,
