@@ -9,6 +9,49 @@ from volatility.framework.objects import templates
 
 vollog = logging.getLogger(__name__)
 
+StructFormatType = typing.Tuple[int, str, bool]
+
+
+def convert_data_to_value(data, struct_type, length, byteorder, signed):
+    """Converts a series of bytes to a particular type of value"""
+    if struct_type == int:
+        return int.from_bytes(data, byteorder = byteorder, signed = signed)
+    if struct_type == bool:
+        struct_format = "?"
+    elif struct_type == float:
+        float_vals = "zzezfzzzd"
+        if length > len(float_vals) or float_vals[length] not in "efd":
+            raise TypeError("Invalid float size")
+        struct_format = ("<" if byteorder == 'little' else ">") + float_vals[length]
+    elif struct_type in [bytes, str]:
+        struct_format = str(length) + "s"
+    else:
+        raise TypeError("Cannot construct struct format for type {}".format(type(struct_type)))
+
+    return struct.unpack(struct_format, data)[0]
+
+
+def convert_value_to_data(value, struct_type, length, byteorder, signed):
+    """Converts a particular value to a series of bytes"""
+    if not isinstance(value, struct_type):
+        raise TypeError("Written value is not of the correct type for {}".format(self.__class__.__name__))
+
+    if struct_type == int:
+        return int.to_bytes(value, length = length, byteorder = byteorder, signed = signed)
+    if struct_type == bool:
+        struct_format = "?"
+    elif struct_type == float:
+        float_vals = "zzezfzzzd"
+        if length > len(float_vals) or float_vals[length] not in "efd":
+            raise TypeError("Invalid float size")
+        struct_format = ("<" if byteorder == 'little' else ">") + float_vals[length]
+    elif struct_type in [bytes, str]:
+        struct_format = str(length) + "s"
+    else:
+        raise TypeError("Cannot construct struct format for type {}".format(type(struct_type)))
+
+    return struct.pack(struct_format, value)
+
 
 class Void(interfaces.objects.ObjectInterface):
     """Returns an object to represent void/unknown types"""
@@ -36,7 +79,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                  context: interfaces.context.ContextInterface,
                  type_name: str,
                  object_info: interfaces.objects.ObjectInformation,
-                 struct_format: str) -> None:
+                 struct_format: StructFormatType) -> None:
         super().__init__(context = context,
                          type_name = type_name,
                          object_info = object_info,
@@ -47,7 +90,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                 context: interfaces.context.ContextInterface,
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
-                struct_format: str,
+                struct_format: StructFormatType,
                 new_value: typing.Union[int, float, bool, bytes, str] = None,
                 **kwargs) -> typing.Type['PrimitiveObject']:
         """Creates the appropriate class and returns it so that the native type is inherited
@@ -84,41 +127,28 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     @classmethod
     def _struct_value(cls,
                       context: interfaces.context.ContextInterface,
-                      struct_format: str,
+                      struct_format: StructFormatType,
                       object_info: ObjectInformation) -> typing.Union[int, float, bool, bytes, str]:
-
-        length = struct.calcsize(struct_format)
+        length, byteorder, signed = struct_format
         data = context.memory.read(object_info.layer_name, object_info.offset, length)
-
-        if cls._struct_type == int:
-            value = int.from_bytes(data,
-                                   byteorder = "little" if "<" in struct_format else "big",
-                                   signed = (struct_format.lower() == struct_format))
-        else:
-            (value,) = struct.unpack(struct_format, data)
-
-        return value
+        return convert_data_to_value(data, cls._struct_type, length, byteorder, signed)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
             """Returns the size of the templated object"""
-            return struct.calcsize(template.vol.struct_format)
+            return template.vol.struct_format[0]
 
     def write(self, value: typing.Union[int, float, bool, bytes, str]) -> None:
         """Writes the object into the layer of the context at the current offset"""
-        if isinstance(value, self._struct_type):
-            if self._struct_type == int:
-                data = int.to_bytes(value,
-                                    length = struct.calcsize(self._struct_format),
-                                    byteorder = "little" if "<" in self._struct_format else "big",
-                                    signed = (self._struct_format.lower() == self._struct_format))
-            else:
-                data = struct.pack(self.vol.struct_format, value)
-            return self._context.memory.write(self.vol.layer_name, self.vol.offset, data)
-        raise TypeError("Object {} requires a valid {} to be written: {}".format(self.__class__.__name__,
-                                                                                 type(self._struct_type),
-                                                                                 type(value)))
+        length, byteorder, signed = self._struct_format
+        data = convert_value_to_data(value, self._struct_type, length, byteorder, signed)
+        return self._context.memory.write(self.vol.layer_name, self.vol.offset, data)
+
+
+class Boolean(PrimitiveObject, int):
+    """Primitive Object that handles boolean types"""
+    _struct_type = bool  # type: typing.ClassVar[typing.Type]
 
 
 class Integer(PrimitiveObject, int):
@@ -147,7 +177,7 @@ class Bytes(PrimitiveObject, bytes):
         super().__init__(context = context,
                          type_name = type_name,
                          object_info = object_info,
-                         struct_format = str(length) + "s")
+                         struct_format = (length, "big", False))
         self._vol['length'] = length
 
     def __new__(cls: typing.Type,
@@ -162,7 +192,7 @@ class Bytes(PrimitiveObject, bytes):
         without needing to override __new__"""
         return cls._struct_type.__new__(cls,
                                         cls._struct_value(context,
-                                                          struct_format = str(length) + "s",
+                                                          struct_format = (length, "big", False),
                                                           object_info = object_info))
 
 
@@ -186,7 +216,7 @@ class String(PrimitiveObject, str):
         super().__init__(context = context,
                          type_name = type_name,
                          object_info = object_info,
-                         struct_format = str(max_length) + 's')
+                         struct_format = (max_length, "big", False))
         self._vol["max_length"] = max_length
         self._vol['encoding'] = encoding
         self._vol['errors'] = errors
@@ -211,7 +241,7 @@ class String(PrimitiveObject, str):
         # Pass the encoding and error parameters to the string constructor to appropriately encode the string
         value = cls._struct_type.__new__(cls,  # type: ignore
                                          cls._struct_value(context,
-                                                           struct_format = str(max_length) + "s",
+                                                           struct_format = (max_length, "big", False),
                                                            object_info = object_info),
                                          **params)
         if value.find('\x00') >= 0:
@@ -226,7 +256,7 @@ class Pointer(Integer):
                  context: interfaces.context.ContextInterface,
                  type_name: str,
                  object_info: interfaces.objects.ObjectInformation,
-                 struct_format: str,
+                 struct_format: StructFormatType,
                  subtype: typing.Optional[templates.ObjectTemplate] = None) -> None:
         self._check_type(subtype, templates.ObjectTemplate)
         super().__init__(context = context,
@@ -238,17 +268,19 @@ class Pointer(Integer):
     @classmethod
     def _struct_value(cls,
                       context: interfaces.context.ContextInterface,
-                      struct_format: str,
+                      struct_format: StructFormatType,
                       object_info: ObjectInformation) -> typing.Any:
         """Ensure that pointer values always fall within the address space of the layer they're constructed on
 
            If there's a need for all the data within the address, the pointer should be recast.  The "pointer"
            must always live within the space (even if the data provided is invalid).
         """
-        length = struct.calcsize(struct_format)
+        length, endian, signed = struct_format
+        if signed:
+            raise TypeError("Pointers cannot have signed values")
         mask = context.memory[object_info.native_layer_name].address_mask
         data = context.memory.read(object_info.layer_name, object_info.offset, length)
-        (value,) = struct.unpack(struct_format, data)
+        value = int.from_bytes(data, byteorder = endian, signed = signed)
         return value & mask
 
     def dereference(self, layer_name: typing.Optional[str] = None) -> interfaces.objects.ObjectInterface:

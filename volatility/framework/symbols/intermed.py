@@ -95,10 +95,10 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                                                                                                 json_object,
                                                                                                 native_types,
                                                                                                 table_mapping)
+
         # Inherit
         super().__init__(context, config_path, name, native_types or self._delegate.natives,
                          table_mapping = table_mapping)
-
 
     def _closest_version(self,
                          version: str,
@@ -476,17 +476,11 @@ class Version4Format(Version3Format):
     age = 0
     version = (current - age, age, revision)
 
-    format_str_mapping = {'int': ({1: 'b',
-                                   2: 'h',
-                                   4: 'i',
-                                   8: 'q',
-                                   16: 'qq'}, objects.Integer),
-                          'float': ({2: 'e',
-                                     4: 'f',
-                                     8: 'd'}, objects.Float),
-                          'void': ({4: 'i'}, objects.Integer),
-                          'bool': ({1: '?'}, objects.Integer),
-                          'char': ({1: 'c'}, objects.Char)}
+    format_mapping = {'int': objects.Integer,
+                      'float': objects.Float,
+                      'void': objects.Integer,
+                      'bool': objects.Boolean,
+                      'char': objects.Char}
 
     def _get_natives(self) -> typing.Optional[interfaces.symbols.NativeTableInterface]:
         """Determines the appropriate native_types to use from the JSON data"""
@@ -497,15 +491,13 @@ class Version4Format(Version3Format):
             if base_type != 'void':
                 current = base_types[base_type]
                 # TODO: Fix up the typing of this, it bugs out because of the tuple assignment
-                size_map, object_type = self.format_str_mapping.get(current['kind'], ({}, None))  # type: ignore
-                format_str = size_map.get(current['size'], None)
-                if format_str is None or object_type is None:
-                    raise ValueError("Unsupported kind/size combination in base_type {}".format(base_type))
-                format_str = format_str.lower() if current['signed'] or current['kind'] != 'int' else format_str.upper()
-                format_str = ('<' if current['endian'] == 'little' else '>') + format_str
+                if current['kind'] not in self.format_mapping:
+                    raise ValueError("Unsupported base kind")
+                format_val = (current['size'], current['endian'], current['signed'])
+                object_type = self.format_mapping[current['kind']]
                 if base_type == 'pointer':
                     object_type = objects.Pointer
-                native_dict[base_type] = (object_type, format_str)
+                native_dict[base_type] = (object_type, format_val)
         return native.NativeTable(name = "native", native_dictionary = native_dict)
 
 
