@@ -19,7 +19,7 @@ class WindowsCrashDump32FormatException(exceptions.LayerException):
 
 
 class WindowsCrashDump32Layer(segmented.SegmentedLayer):
-    """A Windows crash format TranslationLayer. This TranslationLayer supports 
+    """A Windows crash format TranslationLayer. This TranslationLayer supports
     Microsoft complete memory dump files. It currently does not support
     kernel or small memory dump files."""
 
@@ -78,7 +78,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                              x.PageCount * 0x1000))
             # print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
             #                  offset * 0x1000,
-            #                  x.PageCount * 0x1000)) 
+            #                  x.PageCount * 0x1000))
             offset += x.PageCount
 
         if len(segments) == 0:
@@ -92,7 +92,10 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                       offset: int = 0) -> typing.Tuple[int, int]:
 
         # Verify the Window's crash dump file magic
-        header_data = base_layer.read(offset, cls._magic_struct.size)
+        try:
+            header_data = base_layer.read(offset, cls._magic_struct.size)
+        except exceptions.InvalidAddressException:
+            raise WindowsCrashDump32FormatException("Crashdump header not found at offset {}".format(offset))
         (signature, validdump) = cls._magic_struct.unpack(header_data)
 
         if signature != cls.SIGNATURE:
