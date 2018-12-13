@@ -21,7 +21,7 @@ class Psaux(plugins.PluginInterface):
     def _generator(self, tasks):
         for task in tasks:
             proc_layer_name = task.add_process_layer()
-            if proc_layer_name == None:
+            if proc_layer_name is None:
                 continue
 
             proc_layer = self.context.memory[proc_layer_name]
@@ -29,7 +29,7 @@ class Psaux(plugins.PluginInterface):
             argsstart = task.user_stack - task.p_argslen
 
             if (not proc_layer.is_valid(argsstart) or
-                    task.p_argslen == 0 or task.p_argc == 0):
+                    not task.p_argslen or not task.p_argc):
                 continue
 
                 # Add one because the first two are usually duplicates
@@ -50,13 +50,13 @@ class Psaux(plugins.PluginInterface):
                     break
 
                 idx = arg.find(b'\x00')
-                if idx != -1:
+                if idx > -1:
                     arg = arg[:idx]
 
                 argsstart += len(str(arg)) + 1
 
                 # deal with the stupid alignment (leading nulls) and arg duplication
-                if len(args) == 0:
+                if not args:
                     while argsstart < task.user_stack:
                         try:
                             check = proc_layer.read(argsstart, 1)
@@ -74,7 +74,7 @@ class Psaux(plugins.PluginInterface):
                 elif arg != args[0]:
                     args.append(arg)
 
-                argc = argc - 1
+                argc -= 1
 
             args_str = " ".join([s.decode("utf-8") for s in args])
 
