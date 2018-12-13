@@ -72,28 +72,28 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             additional = {'subtype': self.get_type('void')}
         return objects.templates.ObjectTemplate(self.get_type_class(type_name),  # pylint: disable=W0142
                                                 type_name = prefix + type_name,
-                                                struct_format = native_format,
+                                                data_format = objects.DataFormatInfo(*native_format),
                                                 **additional)
 
 
-std_ctypes = {'int': (objects.Integer, '<i'),
-              'long': (objects.Integer, '<i'),
-              'unsigned long': (objects.Integer, '<I'),
-              'unsigned int': (objects.Integer, '<I'),
-              'char': (objects.Integer, '<b'),
-              'byte': (objects.Bytes, '<c'),
-              'unsigned char': (objects.Integer, '<B'),
-              'unsigned short int': (objects.Integer, '<H'),
-              'unsigned short': (objects.Integer, '<H'),
-              'unsigned be short': (objects.Integer, '>H'),
-              'short': (objects.Integer, '<h'),
-              'long long': (objects.Integer, '<q'),
-              'unsigned long long': (objects.Integer, '<Q'),
-              'float': (objects.Float, "<d"),
-              'double': (objects.Float, "<d"),
-              'wchar': (objects.Integer, '<H')}
+std_ctypes = {'int': (objects.Integer, (4, "little", True)),
+              'long': (objects.Integer, (4, "little", True)),
+              'unsigned long': (objects.Integer, (4, "little", False)),
+              'unsigned int': (objects.Integer, (4, "little", False)),
+              'char': (objects.Integer, (1, "little", True)),
+              'byte': (objects.Bytes, (1, "little", True)),
+              'unsigned char': (objects.Integer, (1, "little", False)),
+              'unsigned short int': (objects.Integer, (2, "little", False)),
+              'unsigned short': (objects.Integer, (2, "little", False)),
+              'unsigned be short': (objects.Integer, (2, "big", False)),
+              'short': (objects.Integer, (2, "little", True)),
+              'long long': (objects.Integer, (8, "little", True)),
+              'unsigned long long': (objects.Integer, (8, "little", True)),
+              'float': (objects.Float, (4, "little", True)),
+              'double': (objects.Float, (8, "little", True)),
+              'wchar': (objects.Integer, (2, "little", False))}
 native_types = std_ctypes.copy()
-native_types['pointer'] = (objects.Pointer, "<I")
+native_types['pointer'] = (objects.Pointer, (4, "little", False))
 x86NativeTable = NativeTable("native", native_types)
-native_types['pointer'] = (objects.Pointer, '<Q')
+native_types['pointer'] = (objects.Pointer, (8, "little", False))
 x64NativeTable = NativeTable("native", native_types)
