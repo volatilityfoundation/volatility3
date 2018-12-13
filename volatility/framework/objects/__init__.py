@@ -34,7 +34,7 @@ def convert_data_to_value(data, struct_type, length, byteorder, signed):
 def convert_value_to_data(value, struct_type, length, byteorder, signed):
     """Converts a particular value to a series of bytes"""
     if not isinstance(value, struct_type):
-        raise TypeError("Written value is not of the correct type for {}".format(self.__class__.__name__))
+        raise TypeError("Written value is not of the correct type for {}".format(struct_type.__class__.__name__))
 
     if struct_type == int:
         return int.to_bytes(value, length = length, byteorder = byteorder, signed = signed)
