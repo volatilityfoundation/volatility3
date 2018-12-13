@@ -12,6 +12,7 @@ from abc import ABCMeta
 import volatility
 from volatility import schemas, symbols
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects, layers
+from volatility.framework.configuration import requirements
 from volatility.framework.symbols import native, metadata
 
 vollog = logging.getLogger(__name__)
@@ -203,6 +204,11 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                     table_mapping = table_mapping)
         context.symbol_space.append(table)
         return table_name
+
+    @classmethod
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+        return [requirements.StringRequirement("isf_url",
+                                               description = "JSON file containing the symbols encoded in the Intermediate Symbol Format")]
 
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta):

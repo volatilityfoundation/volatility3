@@ -57,8 +57,3 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
             self.set_type_class('_RTL_BALANCED_NODE', extensions._MMVAD_SHORT)
         except ValueError:
             pass
-
-    @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
-        return [requirements.StringRequirement("isf_url",
-                                               description = "JSON file containing the symbols encoded in the Intermediate Symbol Format")]

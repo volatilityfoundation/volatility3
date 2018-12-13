@@ -32,8 +32,3 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 
         if 'mount' in self.types:
             self.set_type_class('mount', extensions.mount)
-
-    @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
-        return [requirements.StringRequirement("isf_url",
-                                               description = "JSON file containing the symbols encoded in the Intermediate Symbol Format")]
