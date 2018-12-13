@@ -86,9 +86,17 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                       context: interfaces.context.ContextInterface,
                       struct_format: str,
                       object_info: ObjectInformation) -> typing.Union[int, float, bool, bytes, str]:
+
         length = struct.calcsize(struct_format)
         data = context.memory.read(object_info.layer_name, object_info.offset, length)
-        (value,) = struct.unpack(struct_format, data)
+
+        if cls._struct_type == int:
+            value = int.from_bytes(data,
+                                   byteorder = "little" if "<" in struct_format else "big",
+                                   signed = (struct_format.lower() == struct_format))
+        else:
+            (value,) = struct.unpack(struct_format, data)
+
         return value
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
@@ -97,10 +105,16 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             """Returns the size of the templated object"""
             return struct.calcsize(template.vol.struct_format)
 
-    def write(self, value: bytes) -> None:
+    def write(self, value: typing.Union[int, float, bool, bytes, str]) -> None:
         """Writes the object into the layer of the context at the current offset"""
         if isinstance(value, self._struct_type):
-            data = struct.pack(self.vol.struct_format, value)
+            if self._struct_type == int:
+                data = int.to_bytes(value,
+                                    length = struct.calcsize(self._struct_format),
+                                    byteorder = "little" if "<" in self._struct_format else "big",
+                                    signed = (self._struct_format.lower() == self._struct_format))
+            else:
+                data = struct.pack(self.vol.struct_format, value)
             return self._context.memory.write(self.vol.layer_name, self.vol.offset, data)
         raise TypeError("Object {} requires a valid {} to be written: {}".format(self.__class__.__name__,
                                                                                  type(self._struct_type),
