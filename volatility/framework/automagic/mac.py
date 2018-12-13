@@ -107,18 +107,21 @@ class MacUtilities(object):
 
     @classmethod
     def aslr_mask_symbol_table(cls,
-                               config,
                                context: interfaces.context.ContextInterface,
+                               symbol_table: str,
+                               layer_name: str,
                                aslr_shift = 0):
 
-        if aslr_shift == 0:
-            aslr_layer = config['primary.memory_layer']
-            aslr_shift = MacUtilities.find_aslr(context, config["darwin"], aslr_layer)
+        sym_table = context.symbol_space[symbol_table]
+        sym_layer = context.memory[layer_name]
 
-        sym_table_name = config["darwin"]
-        sym_layer_name = config["primary"]
-        symbols.mask_symbol_table(context.symbol_space[sym_table_name],
-                                  context.memory[sym_layer_name].address_mask, aslr_shift)
+        if aslr_shift == 0:
+            if not isinstance(sym_layer, layers.intel.Intel):
+                raise TypeError("Layer name {} is not an intel space")
+            aslr_layer = sym_layer.config['memory_layer']
+            _, aslr_shift = cls.find_aslr(context, symbol_table, aslr_layer)
+
+        symbols.mask_symbol_table(sym_table, sym_layer.address_mask, aslr_shift)
 
     @classmethod
     def _scan_generator(cls, context, layer_name, progress_callback):
