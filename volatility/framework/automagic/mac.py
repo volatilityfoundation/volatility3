@@ -21,7 +21,7 @@ class MacBannerCache(symbol_cache.SymbolBannerCache):
 class MacSymbolFinder(symbol_finder.SymbolFinder):
     """Mac symbol loader based on uname signature strings"""
 
-    banner_config_key = 'mac_banner'
+    banner_config_key = 'kernel_banner'
     banner_cache = MacBannerCache
     symbol_class = "volatility.framework.symbols.mac.MacKernelIntermedSymbols"
 
@@ -159,7 +159,7 @@ class MacUtilities(object):
         version_minor_json_address = context.symbol_space.get_symbol(version_minor_symbol).address
         version_minor_phys_offset = MacUtilities.virtual_to_physical_address(version_minor_json_address)
 
-        if compare_banner_offset == 0 or compare_banner == "":
+        if not compare_banner_offset or not compare_banner:
             offset_generator = cls._scan_generator(context, layer_name, progress_callback)
         else:
             offset_generator = [(compare_banner_offset, compare_banner)]

@@ -22,7 +22,7 @@ class LinuxBannerCache(symbol_cache.SymbolBannerCache):
 class LinuxSymbolFinder(symbol_finder.SymbolFinder):
     """Linux symbol loader based on uname signature strings"""
 
-    banner_config_key = "linux_banner"
+    banner_config_key = "kernel_banner"
     banner_cache = LinuxBannerCache
     symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
 

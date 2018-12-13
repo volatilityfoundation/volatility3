@@ -220,7 +220,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                                             optional = False),
                 requirements.IntRequirement(name = 'kernel_virtual_offset',
                                             optional = True),
-                requirements.StringRequirement(name = 'linux_banner',
+                requirements.StringRequirement(name = 'kernel_banner',
                                                optional = True)]
 
 
