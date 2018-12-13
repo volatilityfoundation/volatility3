@@ -50,7 +50,7 @@ def create_json_hash(input: typing.Dict[str, typing.Any], schema: typing.Dict[st
     return hashlib.sha1(bytes(json.dumps((input, schema), sort_keys = True), 'utf-8')).hexdigest()
 
 
-def valid(input: Dict[str, Any], schema: Dict[str, Any], use_cache: bool = True) -> bool:
+def valid(input: typing.Dict[str, typing.Any], schema: typing.Dict[str, typing.Any], use_cache: bool = True) -> bool:
     """Validates a json schema"""
     input_hash = create_json_hash(input, schema)
     if input_hash in cached_validations and use_cache:

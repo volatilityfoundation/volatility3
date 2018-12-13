@@ -1,4 +1,4 @@
-from volatility.framework.interfaces import objects
+from volatility.framework import objects
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
 
