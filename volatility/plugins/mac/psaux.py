@@ -1,15 +1,11 @@
 """In-memory artifacts from OSX systems"""
 
-import datetime
-import struct
-from operator import attrgetter
-
-from volatility.framework import exceptions, constants, renderers, symbols
+from volatility.framework import exceptions, renderers
+from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
-from volatility.framework.configuration import requirements
-from volatility.framework.renderers import format_hints
 from volatility.plugins.mac import pslist
+
 
 class Psaux(plugins.PluginInterface):
     """Recovers program command line arguments"""
@@ -21,7 +17,7 @@ class Psaux(plugins.PluginInterface):
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "darwin",
                                                description = "Mac Kernel")]
-    
+
     def _generator(self, tasks):
         for task in tasks:
             proc_layer_name = task.add_process_layer()
@@ -29,25 +25,25 @@ class Psaux(plugins.PluginInterface):
                 continue
 
             proc_layer = self.context.memory[proc_layer_name]
-            
-            argsstart = task.user_stack - task.p_argslen               
 
-            if (not proc_layer.is_valid(argsstart) or 
+            argsstart = task.user_stack - task.p_argslen
+
+            if (not proc_layer.is_valid(argsstart) or
                     task.p_argslen == 0 or task.p_argc == 0):
-                continue 
-            
-            # Add one because the first two are usually duplicates
+                continue
+
+                # Add one because the first two are usually duplicates
             argc = task.p_argc + 1
-            
+
             # smear protection
             if argc > 1024:
                 continue
-            
+
             task_name = utility.array_to_string(task.p_comm)
 
             args = []
-           
-            while argc > 0: 
+
+            while argc > 0:
                 try:
                     arg = proc_layer.read(argsstart, 256)
                 except exceptions.PagedInvalidAddressException:
@@ -71,13 +67,13 @@ class Psaux(plugins.PluginInterface):
                             break
 
                         argsstart = argsstart + 1
-                    
+
                     args.append(arg)
 
                 # also check for initial duplicates since OS X is painful
                 elif arg != args[0]:
                     args.append(arg)
-                    
+
                 argc = argc - 1
 
             args_str = " ".join([s.decode("utf-8") for s in args])
