@@ -153,10 +153,6 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
         return entry, position
 
-    def _process_table(self, entry: int, page: int, layer_name: str) -> None:
-        """Hook for processing a table if necessary"""
-        pass
-
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the address offset can be translated to a valid address"""
         try:
