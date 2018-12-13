@@ -28,7 +28,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
         self._folder_guids = json.load(open(os.path.join(os.path.dirname(__file__), "userassist.json"), "rb"))
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

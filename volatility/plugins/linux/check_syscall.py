@@ -2,8 +2,9 @@
 typically found in Linux's /proc file system.
 """
 import logging
+import typing
 
-from volatility.framework import exceptions
+from volatility.framework import exceptions, interfaces
 from volatility.framework import renderers, constants
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
@@ -24,7 +25,7 @@ class Check_syscall(plugins.PluginInterface):
     """Check system call table for hooks"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

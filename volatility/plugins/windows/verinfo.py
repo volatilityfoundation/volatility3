@@ -24,7 +24,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
     """Lists version information from PE files"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [requirements.TranslationLayerRequirement(name = 'primary',

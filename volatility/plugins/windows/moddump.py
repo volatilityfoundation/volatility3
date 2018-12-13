@@ -19,7 +19,7 @@ class ModDump(interfaces_plugins.PluginInterface):
     """Dumps kernel modules"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         # Reuse the requirements from the plugins we use
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',

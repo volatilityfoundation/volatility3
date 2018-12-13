@@ -1,5 +1,7 @@
+import typing
+
 import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import renderers
+from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 
@@ -8,7 +10,7 @@ class HiveList(plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
@@ -18,7 +20,7 @@ class HiveList(plugins.PluginInterface):
                                                optional = True,
                                                default = None)]
 
-    def _generator(self):
+    def _generator(self) -> typing.Iterator[typing.Tuple[int, typing.Tuple[int, str]]]:
         for hive in self.list_hives(context = self.context,
                                     layer_name = self.config["primary"],
                                     symbol_table = self.config["nt_symbols"],
@@ -28,7 +30,11 @@ class HiveList(plugins.PluginInterface):
                        hive.get_name() or ""))
 
     @classmethod
-    def list_hives(cls, context, layer_name, symbol_table, filter_string = None):
+    def list_hives(cls,
+                   context: interfaces.context.ContextInterface,
+                   layer_name: str,
+                   symbol_table: str,
+                   filter_string: None = None) -> typing.Iterator[interfaces.objects.ObjectInterface]:
         """Lists all the hives in the primary layer"""
 
         # We only use the object factory to demonstrate how to use one
@@ -44,7 +50,7 @@ class HiveList(plugins.PluginInterface):
             if filter_string is None or filter_string.lower() in str(hive.get_name() or "").lower():
                 yield hive
 
-    def run(self):
+    def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Offset", format_hints.Hex),
                                    ("FileFullPath", str)],
                                   self._generator())

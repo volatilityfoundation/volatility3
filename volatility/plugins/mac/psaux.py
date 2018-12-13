@@ -1,6 +1,7 @@
 """In-memory artifacts from OSX systems"""
+import typing
 
-from volatility.framework import exceptions, renderers
+from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
@@ -11,14 +12,15 @@ class Psaux(plugins.PluginInterface):
     """Recovers program command line arguments"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "darwin",
                                                description = "Mac Kernel")]
 
-    def _generator(self, tasks):
+    def _generator(self, tasks: typing.Iterator[typing.Any]) -> \
+            typing.Iterator[typing.Tuple[int, typing.Tuple[int, str, int, str]]]:
         for task in tasks:
             proc_layer_name = task.add_process_layer()
             if proc_layer_name is None:
@@ -80,7 +82,7 @@ class Psaux(plugins.PluginInterface):
 
             yield (0, (task.p_pid, task_name, task.p_argc, args_str))
 
-    def run(self):
+    def run(self) -> renderers.TreeGrid:
         filter = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks

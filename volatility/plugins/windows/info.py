@@ -1,7 +1,8 @@
 import time
+import typing
 
 import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import constants
+from volatility.framework import constants, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
 from volatility.framework.symbols.windows.kdbg import KdbgIntermedSymbols
@@ -12,7 +13,7 @@ class Info(plugins.PluginInterface):
     """Show OS & kernel details of the memory sample being analyzed"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

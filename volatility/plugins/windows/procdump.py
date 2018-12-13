@@ -1,10 +1,12 @@
 import logging
+import typing
 
 import volatility.framework.constants as constants
 import volatility.framework.exceptions as exceptions
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.framework.renderers as renderers
 import volatility.plugins.windows.pslist as pslist
+from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.symbols.windows.pe import PEIntermedSymbols
@@ -16,7 +18,7 @@ class ProcDump(interfaces_plugins.PluginInterface):
     """Dumps process executable images"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',

@@ -1,7 +1,8 @@
 import json
 import logging
+import typing
 
-from volatility.framework import renderers
+from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 
@@ -12,7 +13,7 @@ class ConfigWriter(plugins.PluginInterface):
     """Runs the automagics and both prints and outputs configuration in the output directory"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

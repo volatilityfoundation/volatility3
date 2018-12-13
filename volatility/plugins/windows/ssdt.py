@@ -1,6 +1,7 @@
 import os
+import typing
 
-from volatility.framework import constants
+from volatility.framework import constants, interfaces
 from volatility.framework import contexts
 from volatility.framework import exceptions, symbols
 from volatility.framework import renderers
@@ -15,13 +16,14 @@ class SSDT(plugins.PluginInterface):
     """Lists the system call table"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
-    def _generator(self, modules):
+    def _generator(self, modules: typing.Iterator[typing.Any]) -> \
+            typing.Iterator[typing.Tuple[int, typing.Tuple[int, int, str, str]]]:
 
         layer_name = self.config['primary']
         context_modules = []
@@ -98,7 +100,7 @@ class SSDT(plugins.PluginInterface):
                                module_name,
                                renderers.NotAvailableValue()))
 
-    def run(self):
+    def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Index", int),
                                    ("Address", format_hints.Hex),
                                    ("Module", str),

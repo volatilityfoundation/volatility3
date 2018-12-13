@@ -1,5 +1,7 @@
+import typing
+
 import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import exceptions, renderers
+from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
@@ -9,7 +11,7 @@ class DllList(interfaces_plugins.PluginInterface):
     """Lists the loaded modules in a particular windows memory image"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',

@@ -1,8 +1,9 @@
 """A module containing a collection of plugins that produce data
 typically found in Linux's /proc file system.
 """
+import typing
 
-from volatility.framework import renderers
+from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
@@ -14,7 +15,7 @@ class Elfs(plugins.PluginInterface):
     """Lists all memory mapped ELF files for all processes"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

@@ -19,7 +19,7 @@ except ImportError:
 class VadYaraScan(interfaces.plugins.PluginInterface):
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = "Primary kernel address space",
                                                          architectures = ["Intel32", "Intel64"]),

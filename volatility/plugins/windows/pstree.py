@@ -1,3 +1,4 @@
+from volatility.framework.interfaces import objects
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
 
@@ -5,13 +6,13 @@ from volatility.plugins.windows import pslist
 class PsTree(pslist.PsList):
     """Plugin for listing processes in a tree based on their parent process ID """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._processes = {}
         self._levels = {}
         self._children = {}
 
-    def find_level(self, pid):
+    def find_level(self, pid: objects.Pointer) -> None:
         """Finds how deep the pid is in the processes list"""
         seen = set([])
         seen.add(pid)
@@ -26,7 +27,7 @@ class PsTree(pslist.PsList):
         self._levels[pid] = level
 
     def _generator(self):
-        """Generates the """
+        """Generates the Tree of processes"""
         for proc in self.list_processes(self.context, self.config['primary'], self.config['nt_symbols']):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):

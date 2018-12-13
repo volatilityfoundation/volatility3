@@ -22,7 +22,7 @@ class SymbolError(VolatilityException):
 class InvalidAddressException(VolatilityException):
     """Thrown when an address is not valid in the space it was requested"""
 
-    def __init__(self, layer_name, invalid_address, *args):
+    def __init__(self, layer_name: str, invalid_address: int, *args) -> None:
         super().__init__(layer_name, invalid_address, *args)
         self.invalid_address = invalid_address
         self.layer_name = layer_name

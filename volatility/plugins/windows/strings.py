@@ -14,7 +14,7 @@ vollog = logging.getLogger(__name__)
 class Strings(interfaces.plugins.PluginInterface):
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
