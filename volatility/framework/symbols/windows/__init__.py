@@ -1,7 +1,4 @@
-import typing
-
 from volatility.framework import interfaces
-from volatility.framework.configuration import requirements
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
 from volatility.framework.symbols.windows.extensions import registry
@@ -25,7 +22,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_OBJECT_HEADER', extensions._OBJECT_HEADER)
         self.set_type_class('_FILE_OBJECT', extensions._FILE_OBJECT)
         self.set_type_class('_DEVICE_OBJECT', extensions._DEVICE_OBJECT)
-        self.set_type_class('_CM_KEY_BODY', extensions._CM_KEY_BODY)
+        self.set_type_class('_CM_KEY_BODY', registry._CM_KEY_BODY)
         self.set_type_class('_CMHIVE', registry._CMHIVE)
         self.set_type_class('_CM_KEY_NODE', registry._CM_KEY_NODE)
         self.set_type_class('_CM_KEY_VALUE', registry._CM_KEY_VALUE)

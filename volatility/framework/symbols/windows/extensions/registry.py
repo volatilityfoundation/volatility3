@@ -41,6 +41,7 @@ class RegValueTypes(enum.Enum):
         except ValueError:
             return cls(RegValueTypes.REG_UNKNOWN)
 
+
 class RegKeyFlags(enum.IntEnum):
     KEY_IS_VOLATILE = 0x01
     KEY_HIVE_EXIT = 0x02
@@ -51,7 +52,8 @@ class RegKeyFlags(enum.IntEnum):
     KEY_PREFEF_HANDLE = 0x40
     KEY_VIRT_MIRRORED = 0x80
     KEY_VIRT_TARGET = 0x100
-    KEY_VIRTUAL_STORE= 0x200
+    KEY_VIRTUAL_STORE = 0x200
+
 
 class _HMAP_ENTRY(objects.Struct):
     def get_block_offset(self) -> int:
@@ -76,6 +78,40 @@ class _CMHIVE(objects.Struct):
         return None
 
     name = property(get_name)
+
+
+class _CM_KEY_BODY(objects.Struct):
+    """This represents an open handle to a registry key and
+    is not tied to the registry hive file format on disk."""
+
+    def _skip_key_hive_entry_path(self, kcb_flags):
+        """Win10 14393 introduced an extra path element that it skips
+        over by checking for Flags that contain KEY_HIVE_ENTRY"""
+
+        # _CM_KEY_BODY.Trans introduced in Win10 14393
+        if hasattr(self, "Trans") and RegKeyFlags.KEY_HIVE_ENTRY & kcb_flags == RegKeyFlags.KEY_HIVE_ENTRY:
+            return True
+
+        return False
+
+    def get_full_key_name(self) -> str:
+        output = []
+        kcb = self.KeyControlBlock
+        while kcb.ParentKcb:
+            if kcb.NameBlock.Name == None:
+                break
+
+            if self._skip_key_hive_entry_path(kcb.Flags):
+                kcb = kcb.ParentKcb
+                if not kcb:
+                    break
+
+            output.append(kcb.NameBlock.Name.cast("string",
+                                                  encoding = "utf8",
+                                                  max_length = kcb.NameBlock.NameLength,
+                                                  errors = "replace"))
+            kcb = kcb.ParentKcb
+        return "\\".join(reversed(output))
 
 
 class _CM_KEY_NODE(objects.Struct):
