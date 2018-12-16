@@ -1,6 +1,6 @@
 import os
 import struct
-import typing
+from typing import Any, Dict, List, Optional
 
 from volatility.framework import interfaces, validity
 from volatility.framework.configuration import requirements
@@ -18,7 +18,7 @@ class VmwareLayer(segmented.SegmentedLayer):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  name: str,
-                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+                 metadata: Optional[Dict[str, Any]] = None) -> None:
         # Construct these so we can use self.config
         self._context = context
         self._config_path = config_path
@@ -90,11 +90,11 @@ class VmwareLayer(segmented.SegmentedLayer):
             self._segments.append((offset, mapped_offset, length))
 
     @property
-    def dependencies(self) -> typing.List[str]:
+    def dependencies(self) -> List[str]:
         return [self._base_layer, self._meta_layer]
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         """This vmware translation layer always requires a separate metadata layer"""
         return [requirements.TranslationLayerRequirement(name = 'base_layer',
                                                          optional = False),
@@ -109,7 +109,7 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: validity.ProgressCallback = None) \
-            -> typing.Optional[interfaces.layers.DataLayerInterface]:
+            -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempt to stack this based on the starting information"""
         memlayer = context.memory[layer_name]
         if not isinstance(memlayer, physical.FileLayer):

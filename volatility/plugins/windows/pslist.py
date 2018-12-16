@@ -1,5 +1,5 @@
 import datetime
-import typing
+from typing import Callable, Iterable, List
 
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces
@@ -29,7 +29,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                 optional = True)]
 
     @classmethod
-    def create_filter(cls, pid_list: typing.List[int] = None) -> typing.Callable[[int], bool]:
+    def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
         filter_func = lambda _: False
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
@@ -43,8 +43,8 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                        context: interfaces.context.ContextInterface,
                        layer_name: str,
                        symbol_table: str,
-                       filter_func: typing.Callable[[int], bool] = lambda _: False) -> \
-            typing.Iterable[interfaces.objects.ObjectInterface]:
+                       filter_func: Callable[[int], bool] = lambda _: False) -> \
+            Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the processes in the primary layer that are in the pid config option"""
 
         # We only use the object factory to demonstrate how to use one

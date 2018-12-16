@@ -4,7 +4,7 @@ import inspect
 import logging
 import os
 import sys
-import typing
+from typing import Any, Dict, Generator, List, Type, TypeVar
 
 from volatility.framework import interfaces, constants
 
@@ -51,11 +51,11 @@ def require_interface_version(*args) -> None:
 
 
 class noninheritable(object):
-    def __init__(self, value: typing.Any, cls: typing.Type) -> None:
+    def __init__(self, value: Any, cls: Type) -> None:
         self.default_value = value
         self.cls = cls
 
-    def __get__(self, obj: typing.Any, type: typing.Type = None) -> typing.Any:
+    def __get__(self, obj: Any, type: Type = None) -> Any:
         if type == self.cls:
             if hasattr(self.default_value, '__get__'):
                 return self.default_value.__get__(obj, type)
@@ -63,15 +63,15 @@ class noninheritable(object):
         raise AttributeError
 
 
-def hide_from_subclasses(cls: typing.Type) -> typing.Type:
+def hide_from_subclasses(cls: Type) -> Type:
     cls.hidden = noninheritable(True, cls)
     return cls
 
 
-T = typing.TypeVar('T', bound = typing.Type)
+T = TypeVar('T', bound = Type)
 
 
-def class_subclasses(cls: T) -> typing.Generator[T, None, None]:
+def class_subclasses(cls: T) -> Generator[T, None, None]:
     """Returns all the (recursive) subclasses of a given class"""
     if not inspect.isclass(cls):
         raise TypeError("class_subclasses parameter not a valid class: {}".format(cls))
@@ -83,7 +83,7 @@ def class_subclasses(cls: T) -> typing.Generator[T, None, None]:
             yield return_value
 
 
-def import_files(base_module, ignore_errors = False) -> typing.List[str]:
+def import_files(base_module, ignore_errors = False) -> List[str]:
     """Imports all plugins present under plugins module namespace"""
     failures = []
     if not isinstance(base_module.__path__, list):
@@ -114,7 +114,7 @@ def import_files(base_module, ignore_errors = False) -> typing.List[str]:
     return failures
 
 
-def list_plugins() -> typing.Dict[str, typing.Type[interfaces.plugins.PluginInterface]]:
+def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
     plugin_list = {}
     for plugin in class_subclasses(interfaces.plugins.PluginInterface):
         plugin_name = plugin.__module__ + "." + plugin.__name__

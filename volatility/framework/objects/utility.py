@@ -1,10 +1,10 @@
-import typing
+from typing import Optional, Union
 
 from volatility.framework import interfaces, objects, constants
 
 
 def array_to_string(array: objects.Array,
-                    count: typing.Optional[int] = None,
+                    count: Optional[int] = None,
                     errors: str = 'replace') -> interfaces.objects.ObjectInterface:
     """Takes a volatility Array of characters and returns a string"""
     # TODO: Consider checking the Array's target is a native char
@@ -30,7 +30,7 @@ def pointer_to_string(pointer: objects.Pointer,
 
 def array_of_pointers(array: interfaces.objects.ObjectInterface,
                       count: int,
-                      subtype: typing.Union[str, interfaces.objects.Template],
+                      subtype: Union[str, interfaces.objects.Template],
                       context: interfaces.context.ContextInterface) -> interfaces.objects.ObjectInterface:
     """Takes an object, and recasts it as an array of pointers to subtype"""
     symbol_table = array.vol.type_name.split(constants.BANG)[0]

@@ -4,25 +4,25 @@ which can interact with a TreeGrid to produce suitable output."""
 
 import collections
 import datetime
-import typing
 from abc import abstractmethod, ABCMeta
+from typing import Any, Callable, ClassVar, Generator, Iterable, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union
 
 from volatility.framework import validity
 
-Column = typing.NamedTuple('Column', [('index', int), ('name', str), ('type', typing.Any)])
+Column = NamedTuple('Column', [('index', int), ('name', str), ('type', Any)])
 
-RenderOption = typing.Any
+RenderOption = Any
 
 
 class Renderer(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class that defines the interface that all output renderers must support"""
 
-    def __init__(self, options: typing.List[RenderOption]) -> None:
+    def __init__(self, options: List[RenderOption]) -> None:
         """Accepts an options object to configure the renderers"""
         # FIXME: Once the config option objects are in place, put the _type_check in place
 
     @abstractmethod
-    def get_render_options(self) -> typing.List[RenderOption]:
+    def get_render_options(self) -> List[RenderOption]:
         """Returns a list of rendering options"""
 
     @abstractmethod
@@ -34,7 +34,7 @@ class ColumnSortKey(metaclass = ABCMeta):
     ascending = True  # type: bool
 
     @abstractmethod
-    def __call__(self, values: typing.List[typing.Any]) -> typing.Any:
+    def __call__(self, values: List[Any]) -> Any:
         """The key function passed as a sort key to the TreeGrid's visit function"""
 
 
@@ -44,7 +44,7 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def values(self) -> typing.Iterable['BaseTypes']:
+    def values(self) -> Iterable['BaseTypes']:
         """Returns the list of values from the particular node, based on column.index"""
 
     @property
@@ -58,7 +58,7 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def parent(self) -> typing.Optional['TreeNode']:
+    def parent(self) -> Optional['TreeNode']:
         """Returns the parent node of this node or None"""
 
     @property
@@ -95,16 +95,16 @@ class Disassembly(object):
 # We don't class these off a shared base, because the BaseTypes must only
 # contain the types that the validator will accept (which would not include the base)
 
-_Type = typing.TypeVar("_Type", bound = typing.Type)
-ColumnsType = typing.List[typing.Tuple[str, typing.Type]]
-BaseTypes = typing.Union[typing.Type[int],
-                         typing.Type[str],
-                         typing.Type[float],
-                         typing.Type[bytes],
-                         typing.Type[datetime.datetime],
-                         typing.Type[BaseAbsentValue],
-                         typing.Type[Disassembly]]
-VisitorSignature = typing.Callable[[TreeNode, _Type], _Type]
+_Type = TypeVar("_Type", bound = Type)
+ColumnsType = List[Tuple[str, Type]]
+BaseTypes = Union[Type[int],
+                  Type[str],
+                  Type[float],
+                  Type[bytes],
+                  Type[datetime.datetime],
+                  Type[BaseAbsentValue],
+                  Type[Disassembly]]
+VisitorSignature = Callable[[TreeNode, _Type], _Type]
 
 
 class TreeGrid(object, metaclass = ABCMeta):
@@ -120,9 +120,9 @@ class TreeGrid(object, metaclass = ABCMeta):
     and to create cycles.
     """
 
-    base_types = (int, str, float, bytes, datetime.datetime, Disassembly)  # type: typing.ClassVar[typing.Tuple]
+    base_types = (int, str, float, bytes, datetime.datetime, Disassembly)  # type: ClassVar[Tuple]
 
-    def __init__(self, columns: ColumnsType, generator: typing.Generator) -> None:
+    def __init__(self, columns: ColumnsType, generator: Generator) -> None:
         """Constructs a TreeGrid object using a specific set of columns
 
         The TreeGrid itself is a root element, that can have children but no values.
@@ -142,7 +142,7 @@ class TreeGrid(object, metaclass = ABCMeta):
     @abstractmethod
     def populate(self,
                  func: VisitorSignature = None,
-                 initial_accumulator: typing.Any = None) -> None:
+                 initial_accumulator: Any = None) -> None:
         """Populates the tree by consuming the TreeGrid's construction generator
            Func is called on every node, so can be used to create output on demand
 
@@ -156,15 +156,15 @@ class TreeGrid(object, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def columns(self) -> typing.List[Column]:
+    def columns(self) -> List[Column]:
         """Returns the available columns and their ordering and types"""
 
     @abstractmethod
-    def children(self, node: TreeNode) -> typing.List[TreeNode]:
+    def children(self, node: TreeNode) -> List[TreeNode]:
         """Returns the subnodes of a particular node in order"""
 
     @abstractmethod
-    def values(self, node: TreeNode) -> typing.Tuple[BaseTypes, ...]:
+    def values(self, node: TreeNode) -> Tuple[BaseTypes, ...]:
         """Returns the values for a particular node
 
            The values returned are mutable,

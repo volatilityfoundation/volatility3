@@ -5,7 +5,7 @@ Created on 6 Apr 2016
 """
 
 import struct
-import typing
+from typing import Optional, Tuple
 
 from volatility.framework import exceptions, interfaces, validity
 from volatility.framework.layers import segmented
@@ -66,7 +66,7 @@ class LimeLayer(segmented.SegmentedLayer):
     @classmethod
     def _check_header(cls,
                       base_layer: interfaces.layers.DataLayerInterface,
-                      offset: int = 0) -> typing.Tuple[int, int]:
+                      offset: int = 0) -> Tuple[int, int]:
         try:
             header_data = base_layer.read(offset, cls._header_struct.size)
         except exceptions.InvalidAddressException:
@@ -87,7 +87,7 @@ class LimeStacker(interfaces.automagic.StackerLayerInterface):
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: validity.ProgressCallback = None) \
-            -> typing.Optional[interfaces.layers.DataLayerInterface]:
+            -> Optional[interfaces.layers.DataLayerInterface]:
         try:
             LimeLayer._check_header(context.memory[layer_name])
         except LimeFormatException:

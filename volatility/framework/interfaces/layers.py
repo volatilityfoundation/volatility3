@@ -6,11 +6,10 @@ import logging
 import math
 import multiprocessing
 import traceback
-import typing
 from abc import ABCMeta, abstractmethod
+from typing import Any, Callable, ChainMap, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 from volatility.framework import constants, exceptions, interfaces, validity
-from volatility.framework.interfaces import configuration, context
 
 vollog = logging.getLogger(__name__)
 
@@ -23,8 +22,8 @@ try:
 except ImportError:
     pass
 
-ProgressValue = typing.Union['DummyProgress', multiprocessing.Value]
-IteratorValue = typing.Tuple[typing.List[typing.Tuple[str, int, int]], int]
+ProgressValue = Union['DummyProgress', multiprocessing.Value]
+IteratorValue = Tuple[List[Tuple[str, int, int]], int]
 
 
 class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
@@ -57,20 +56,20 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def __init__(self) -> None:
         self.chunk_size = 0x1000000  # Default to 16Mb chunks
         self.overlap = 0x1000  # A page of overlap by default
-        self._context = None  # type: typing.Optional[interfaces.context.ContextInterface]
-        self._layer_name = None  # type: typing.Optional[str]
+        self._context = None  # type: Optional[interfaces.context.ContextInterface]
+        self._layer_name = None  # type: Optional[str]
 
     @property
-    def context(self) -> typing.Optional['interfaces.context.ContextInterface']:
+    def context(self) -> Optional['interfaces.context.ContextInterface']:
         return self._context
 
     @context.setter
     def context(self, ctx: 'interfaces.context.ContextInterface') -> None:
         """Stores the context locally in case the scanner needs to access the layer"""
-        self._context = self._check_type(ctx, context.ContextInterface)
+        self._context = self._check_type(ctx, interfaces.context.ContextInterface)
 
     @property
-    def layer_name(self) -> typing.Optional[str]:
+    def layer_name(self) -> Optional[str]:
         return self._layer_name
 
     @layer_name.setter
@@ -79,7 +78,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._layer_name = self._check_type(layer_name, str)
 
     @abstractmethod
-    def __call__(self, data: bytes, data_offset: int) -> typing.Iterable[typing.Any]:
+    def __call__(self, data: bytes, data_offset: int) -> Iterable[Any]:
         """Searches through a chunk of data for a particular value/pattern/etc
            Always returns an iterator of the same type of object (need not be a volatility object)
 
@@ -88,18 +87,19 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """
 
 
-class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
+class DataLayerInterface(interfaces.configuration.ConfigurableInterface, validity.ValidityRoutines,
+                         metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it).  This is effectively a leaf node in a layer tree.
     It directly accesses a data source and exposes it within volatility."""
 
     _direct_metadata = collections.ChainMap({}, {'architecture': 'Unknown',
-                                                 'os': 'Unknown'})  # type: typing.ChainMap[str, str]
+                                                 'os': 'Unknown'})  # type: ChainMap[str, str]
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
                  config_path: str,
                  name: str,
-                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+                 metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context, config_path)
         self._name = self._check_type(name, str)
         if metadata:
@@ -156,12 +156,12 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
         pass
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         """Returns a list of Requirement objects for this type of layer"""
         return []
 
     @property
-    def dependencies(self) -> typing.List[str]:
+    def dependencies(self) -> List[str]:
         """DataLayers must never define on other layers"""
         return []
 
@@ -171,8 +171,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
              context: interfaces.context.ContextInterface,
              scanner: ScannerInterface,
              progress_callback: validity.ProgressCallback = None,
-             sections: typing.Iterable[typing.Tuple[int, int]] = None) -> \
-            typing.Iterable[typing.Any]:
+             sections: Iterable[Tuple[int, int]] = None) -> Iterable[Any]:
         """Scans a Translation layer by chunk
 
            Note: this will skip missing/unmappable chunks of memory
@@ -223,10 +222,9 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
                        "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
 
     def _coalesce_sections(self,
-                           sections: typing.Iterable[typing.Tuple[int, int]]) \
-            -> typing.Iterable[typing.Tuple[int, int]]:
+                           sections: Iterable[Tuple[int, int]]) -> Iterable[Tuple[int, int]]:
         """Take a list of (start, length) sections and coalesce any adjacent sections"""
-        result = []  # type: typing.List[typing.Tuple[int, int]]
+        result = []  # type: List[Tuple[int, int]]
         position = 0
         for (start, length) in sorted(sections):
             if result and start <= position:
@@ -252,8 +250,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
     def _scan_iterator(self,
                        scanner: 'ScannerInterface',
-                       sections: typing.Iterable[typing.Tuple[int, int]]) \
-            -> typing.Iterable[IteratorValue]:
+                       sections: Iterable[Tuple[int, int]]) -> Iterable[IteratorValue]:
         """Iterator that indicates which blocks in the layer are to be read by for the scanning
 
         Returns a list of blocks (potentially in lower layers) that make up this chunk contiguously.
@@ -276,7 +273,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     def _scan_chunk(self,
                     scanner: 'ScannerInterface',
                     progress: 'ProgressValue',
-                    iterator_value: IteratorValue) -> typing.List[typing.Any]:
+                    iterator_value: IteratorValue) -> List[Any]:
         data_to_scan, chunk_end = iterator_value
         data = b''
         for layer_name, address, chunk_size in data_to_scan:
@@ -292,7 +289,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
 
     def _scan_metric(self,
                      _scanner: 'ScannerInterface',
-                     sections: typing.List[typing.Tuple[int, int]]) -> typing.Callable[[int], float]:
+                     sections: List[Tuple[int, int]]) -> Callable[[int], float]:
 
         if not sections:
             raise ValueError("Sections have no size, nothing to scan")
@@ -315,7 +312,7 @@ class DataLayerInterface(configuration.ConfigurableInterface, validity.ValidityR
     # ## Metadata methods
 
     @property
-    def metadata(self) -> typing.Mapping:
+    def metadata(self) -> Mapping:
         """Returns a ReadOnly copy of the metadata published by this layer"""
         maps = [self.context.memory[layer_name].metadata for layer_name in self.dependencies]
         return interfaces.objects.ReadOnlyMapping(collections.ChainMap({}, self._direct_metadata, *maps))
@@ -330,7 +327,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     def mapping(self,
                 offset: int,
                 length: int,
-                ignore_errors: bool = False) -> typing.Iterable[typing.Tuple[int, int, int, str]]:
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
         """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
 
            ignore_errors will provide all available maps with gaps, but their total length may not add up to the requested length
@@ -340,14 +337,13 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def dependencies(self) -> typing.List[str]:
+    def dependencies(self) -> List[str]:
         """Returns a list of layer names that this layer translates onto"""
         return []
 
     ### Translation layer convenience function
 
-    def translate(self, offset: int, ignore_errors: bool = False) \
-            -> typing.Tuple[typing.Optional[int], typing.Optional[str]]:
+    def translate(self, offset: int, ignore_errors: bool = False) -> Tuple[Optional[int], Optional[str]]:
         mapping = self.mapping(offset, 0, ignore_errors)
         if mapping:
             _, mapped_offset, _, layer = list(mapping)[0]
@@ -364,7 +360,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
         current_offset = offset
-        output = []  # type: typing.List[bytes]
+        output = []  # type: List[bytes]
         for (offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
             if not pad and offset > current_offset:
                 raise exceptions.InvalidAddressException(self.name, current_offset,
@@ -398,8 +394,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     def _scan_iterator(self,
                        scanner: 'ScannerInterface',
-                       sections: typing.Iterable[typing.Tuple[int, int]]) \
-            -> typing.Iterable[IteratorValue]:
+                       sections: Iterable[Tuple[int, int]]) -> Iterable[IteratorValue]:
         for (section_start, section_length) in sections:
             for mapped in self.mapping(section_start, section_length, ignore_errors = True):
                 offset, mapped_offset, length, layer_name = mapped
@@ -418,7 +413,7 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
     """Container for multiple layers of data"""
 
     def __init__(self) -> None:
-        self._layers = {}  # type: typing.Dict[str, DataLayerInterface]
+        self._layers = {}  # type: Dict[str, DataLayerInterface]
 
     def read(self,
              layer: str,

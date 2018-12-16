@@ -1,5 +1,5 @@
 import logging
-import typing
+from typing import Any, Iterable, List, Tuple
 
 from volatility.framework import interfaces, layers, renderers
 from volatility.framework.configuration import requirements
@@ -19,7 +19,7 @@ except ImportError:
 class VadYaraScan(interfaces.plugins.PluginInterface):
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = "Primary kernel address space",
                                                          architectures = ["Intel32", "Intel64"]),
@@ -69,7 +69,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                                            sections = self.get_vad_maps(task)):
                 yield format_hints.Hex(offset), name
 
-    def get_vad_maps(self, task: typing.Any) -> typing.Iterable[typing.Tuple[int, int]]:
+    def get_vad_maps(self, task: Any) -> Iterable[Tuple[int, int]]:
 
         task = self._check_type(task, extensions._EPROCESS)
 

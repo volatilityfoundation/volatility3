@@ -2,7 +2,7 @@
 typically found in Linux's /proc file system.
 """
 import logging
-import typing
+from typing import List
 
 from volatility.framework import exceptions, interfaces
 from volatility.framework import renderers
@@ -18,7 +18,7 @@ class Check_afinfo(plugins.PluginInterface):
     """Verifies the operation function pointers of network protocols"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

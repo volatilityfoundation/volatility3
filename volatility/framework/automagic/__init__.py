@@ -10,7 +10,7 @@ loading of file format types) as well as a module to reconstruct layers based on
 import logging
 import sys
 import traceback
-import typing
+from typing import List, Type, Union
 
 from volatility.framework import class_subclasses, import_files, interfaces, validity, constants
 from volatility.framework.automagic import construct_layers, stacker, windows, pdbscan
@@ -35,8 +35,7 @@ mac_automagic = ['ConstructionMagic',
                  'MacSymbolFinder']
 
 
-def available(context: interfaces.context.ContextInterface) \
-        -> typing.List[interfaces.automagic.AutomagicInterface]:
+def available(context: interfaces.context.ContextInterface) -> List[interfaces.automagic.AutomagicInterface]:
     """Returns an ordered list of all subclasses of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface`.
 
     The order is based on the priority attributes of the subclasses, in order to ensure the automagics are listed in
@@ -73,12 +72,12 @@ def choose_automagic(automagics, plugin):
     return output
 
 
-def run(automagics: typing.List[interfaces.automagic.AutomagicInterface],
+def run(automagics: List[interfaces.automagic.AutomagicInterface],
         context: interfaces.context.ContextInterface,
-        configurable: typing.Union[interfaces.configuration.ConfigurableInterface,
-                                   typing.Type[interfaces.configuration.ConfigurableInterface]],
+        configurable: Union[interfaces.configuration.ConfigurableInterface,
+                            Type[interfaces.configuration.ConfigurableInterface]],
         config_path: str,
-        progress_callback: validity.ProgressCallback = None) -> typing.List[traceback.TracebackException]:
+        progress_callback: validity.ProgressCallback = None) -> List[traceback.TracebackException]:
     """Runs through the list of `automagics` in order, allowing them to make changes to the context
 
     Args:
@@ -105,7 +104,7 @@ def run(automagics: typing.List[interfaces.automagic.AutomagicInterface],
 
     # TODO: Fix need for top level config element just because we're using a MultiRequirement to group the
     # configurable's config requirements
-    # configurable_class: typing.Type[interfaces.configuration.ConfigurableInterface]
+    # configurable_class: Type[interfaces.configuration.ConfigurableInterface]
     if isinstance(configurable, interfaces.configuration.ConfigurableInterface):
         configurable_class = configurable.__class__
     else:

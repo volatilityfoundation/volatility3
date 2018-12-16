@@ -1,6 +1,6 @@
 import logging
 import re
-import typing
+from typing import Dict, Generator, List, Set, Tuple
 
 from volatility.framework import interfaces, renderers, layers
 from volatility.framework.configuration import requirements
@@ -14,7 +14,7 @@ vollog = logging.getLogger(__name__)
 class Strings(interfaces.plugins.PluginInterface):
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
@@ -29,7 +29,7 @@ class Strings(interfaces.plugins.PluginInterface):
                                    ("Result", str)],
                                   self._generator())
 
-    def _generator(self) -> typing.Generator[typing.Tuple, None, None]:
+    def _generator(self) -> Generator[Tuple, None, None]:
         """Generates results from a strings file"""
         revmap = self.generate_mapping(self.config['primary'])
 
@@ -47,7 +47,8 @@ class Strings(interfaces.plugins.PluginInterface):
                 vollog.error("Strings file is in the wrong format")
                 return
 
-    def _parse_line(self, line: bytes) -> typing.Tuple[int, bytes]:
+    @staticmethod
+    def _parse_line(line: bytes) -> Tuple[int, bytes]:
         """Parses a single line from a strings file"""
         pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)")
         match = pattern.search(line)
@@ -56,10 +57,10 @@ class Strings(interfaces.plugins.PluginInterface):
         offset, string = match.group(1, 2)
         return int(offset), string
 
-    def generate_mapping(self, layer_name: str) -> typing.Dict[int, typing.Set[typing.Tuple[str, int]]]:
+    def generate_mapping(self, layer_name: str) -> Dict[int, Set[Tuple[str, int]]]:
         """Creates a reverse mapping between virtual addresses and physical addresses"""
         layer = self._context.memory[layer_name]
-        reverse_map = dict()  # type: typing.Dict[int, typing.Set[typing.Tuple[str, int]]]
+        reverse_map = dict()  # type: Dict[int, Set[Tuple[str, int]]]
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors = True):

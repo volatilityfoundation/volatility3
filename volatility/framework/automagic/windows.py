@@ -24,7 +24,7 @@ The self-referential indices for older versions of windows are listed below:
 """
 import logging
 import struct
-import typing
+from typing import Any, Generator, List, Optional, Tuple, Type
 
 from volatility.framework import interfaces, layers, validity
 from volatility.framework.configuration import requirements
@@ -41,7 +41,7 @@ class DtbTest(validity.ValidityRoutines):
     """
 
     def __init__(self,
-                 layer_type: typing.Type[layers.intel.Intel],
+                 layer_type: Type[layers.intel.Intel],
                  ptr_struct: str,
                  ptr_reference: int,
                  mask: int) -> None:
@@ -58,7 +58,7 @@ class DtbTest(validity.ValidityRoutines):
     def __call__(self,
                  data: bytes,
                  data_offset: int,
-                 page_offset: int) -> typing.Optional[typing.Tuple[int, typing.Any]]:
+                 page_offset: int) -> Optional[Tuple[int, Any]]:
         """Tests a specific page in a chunk of data to see if it contains a self-referential pointer.
 
         Args:
@@ -85,7 +85,7 @@ class DtbTest(validity.ValidityRoutines):
             return self.second_pass(dtb, data, data_offset)
         return None
 
-    def second_pass(self, dtb: int, data: bytes, data_offset: int) -> typing.Optional[typing.Tuple[int, typing.Any]]:
+    def second_pass(self, dtb: int, data: bytes, data_offset: int) -> Optional[Tuple[int, Any]]:
         """Re-reads over the whole page to validate other records based on the number of pages marked user vs super
 
         Args:
@@ -134,7 +134,7 @@ class DtbTestPae(DtbTest):
                          ptr_reference = 0x3,
                          mask = 0x3FFFFFFFFFF000)
 
-    def second_pass(self, dtb: int, data: bytes, data_offset: int) -> typing.Optional[typing.Tuple[int, typing.Any]]:
+    def second_pass(self, dtb: int, data: bytes, data_offset: int) -> Optional[Tuple[int, Any]]:
         """PAE top level directory tables contains four entries and the self-referential pointer occurs in the second
         level of tables (so as not to use up a full quarter of the space).  This is very high in the space, and occurs
         in the fourht (last quarter) second-level table.  The second-level tables appear always to come sequentially
@@ -163,7 +163,7 @@ class DtbSelfReferential(DtbTest):
     """A generic DTB test which looks for a self-referential pointer at *any* index within the page."""
 
     def __init__(self,
-                 layer_type: typing.Type[layers.intel.Intel],
+                 layer_type: Type[layers.intel.Intel],
                  ptr_struct: str,
                  ptr_reference: int,
                  mask: int) -> None:
@@ -172,8 +172,7 @@ class DtbSelfReferential(DtbTest):
                          ptr_reference = ptr_reference,
                          mask = mask)
 
-    def __call__(self, data: bytes, data_offset: int, page_offset: int) \
-            -> typing.Optional[typing.Tuple[int, int]]:
+    def __call__(self, data: bytes, data_offset: int, page_offset: int) -> Optional[Tuple[int, int]]:
         page = data[page_offset:page_offset + self.page_size]
         if not page:
             return None
@@ -209,14 +208,13 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
     tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
     """The default tests to run when searching for DTBs"""
 
-    def __init__(self, tests: typing.List[DtbTest]) -> None:
+    def __init__(self, tests: List[DtbTest]) -> None:
         super().__init__()
         for value in tests:
             self._check_type(value, DtbTest)
         self.tests = tests
 
-    def __call__(self, data: bytes, data_offset: int) \
-            -> typing.Generator[typing.Tuple[DtbTest, int], None, None]:
+    def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[DtbTest, int], None, None]:
         for test in self.tests:
             for page_offset in range(0, len(data), 0x1000):
                 result = test(data, data_offset, page_offset)
@@ -240,8 +238,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) \
-            -> None:
+                 progress_callback: validity.ProgressCallback = None) -> None:
         useful = []
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if (isinstance(requirement, requirements.TranslationLayerRequirement) and
@@ -287,8 +284,7 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) \
-            -> typing.Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: validity.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to determine and stack an intel layer on a physical layer where possible
 
         Where the DTB scan fails, it attempts a heuristic of checking for the DTB within a specific range.
@@ -311,7 +307,7 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
             if arch not in ['Intel32', 'Intel64']:
                 return None
             # Set the layer type
-            layer_type = intel.WindowsIntel  # type: typing.Type
+            layer_type = intel.WindowsIntel  # type: Type
             if arch == 'Intel64':
                 layer_type = intel.WindowsIntel32e
             elif base_layer.metadata.get('pae', False):
@@ -377,8 +373,7 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) \
-            -> None:
+                 progress_callback: validity.ProgressCallback = None) -> None:
         """Finds translation layers that can have swap layers added"""
         path_join = interfaces.configuration.path_join
         self._translation_requirement = self.find_requirements(context, config_path, requirement,
@@ -419,10 +414,10 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
 
                 swap_req.construct(context, swap_config)
 
-    def find_swap_requirement(self,
-                              config: str,
+    @staticmethod
+    def find_swap_requirement(config: str,
                               requirement: requirements.TranslationLayerRequirement) \
-            -> typing.Tuple[str, typing.Optional[requirements.LayerListRequirement]]:
+            -> Tuple[str, Optional[requirements.LayerListRequirement]]:
         """Takes a Translation layer and returns its swap_layer requirement"""
         swap_req = None
         for req_name in requirement.requirements:
@@ -435,7 +430,7 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
         return swap_config, swap_req
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         """Returns the requirements of this plugin"""
         return [requirements.ListRequirement(name = "single_swap_locations",
                                              element_type = str,

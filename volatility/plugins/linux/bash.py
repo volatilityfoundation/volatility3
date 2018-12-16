@@ -4,7 +4,7 @@ typically found in Linux's /proc file system.
 
 import datetime
 import struct
-import typing
+from typing import List
 
 from volatility.framework import constants, renderers, symbols, interfaces
 from volatility.framework.configuration import requirements
@@ -20,7 +20,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Recovers bash command history from memory"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

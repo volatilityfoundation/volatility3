@@ -6,7 +6,7 @@ etc) as well as indicating what they expect to be in the context (such as partic
 """
 import abc
 import logging
-import typing
+from typing import Any, ClassVar, List, Optional, Type
 
 from volatility.framework import constants, interfaces
 from volatility.framework.interfaces import configuration
@@ -22,7 +22,7 @@ class MultiRequirement(configuration.RequirementInterface):
 
     def unsatisfied(self,
                     context: configuration.ContextInterface,
-                    config_path: str) -> typing.List[str]:
+                    config_path: str) -> List[str]:
         return self.unsatisfied_children(context, config_path)
 
 
@@ -33,13 +33,13 @@ class BooleanRequirement(configuration.SimpleTypeRequirement):
 
 class IntRequirement(configuration.SimpleTypeRequirement):
     """A requirement type that contains a single integer"""
-    instance_type = int  # type: typing.ClassVar[typing.Type]
+    instance_type = int  # type: ClassVar[Type]
 
 
 class StringRequirement(configuration.SimpleTypeRequirement):
     """A requirement type that contains a single unicode string"""
     # TODO: Maybe add string length limits?
-    instance_type = str  # type: typing.ClassVar[typing.Type]
+    instance_type = str  # type: ClassVar[Type]
 
 
 class URIRequirement(StringRequirement):
@@ -49,7 +49,7 @@ class URIRequirement(StringRequirement):
 
 class BytesRequirement(configuration.SimpleTypeRequirement):
     """A requirement type that contains a byte string"""
-    instance_type = bytes  # type: typing.ClassVar[typing.Type]
+    instance_type = bytes  # type: ClassVar[Type]
 
 
 class ListRequirement(configuration.RequirementInterface):
@@ -63,9 +63,9 @@ class ListRequirement(configuration.RequirementInterface):
     """
 
     def __init__(self,
-                 element_type: typing.Type[configuration.SimpleTypes] = str,
-                 max_elements: typing.Optional[int] = 0,
-                 min_elements: typing.Optional[int] = None, *args, **kwargs) -> None:
+                 element_type: Type[configuration.SimpleTypes] = str,
+                 max_elements: Optional[int] = 0,
+                 min_elements: Optional[int] = None, *args, **kwargs) -> None:
         """Constructs the object
 
         Args:
@@ -76,11 +76,11 @@ class ListRequirement(configuration.RequirementInterface):
         super().__init__(*args, **kwargs)
         if not issubclass(element_type, configuration.BasicTypes):
             raise TypeError("ListRequirements can only be populated with simple InstanceRequirements")
-        self.element_type = element_type  # type: typing.Type
+        self.element_type = element_type  # type: Type
         self.min_elements = min_elements or 0  # type: int
-        self.max_elements = max_elements  # type: typing.Optional[int]
+        self.max_elements = max_elements  # type: Optional[int]
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Check the types on each of the returned values and their number and then call the element type's check for each one"""
         config_path = configuration.path_join(config_path, self.name)
         default = None
@@ -111,7 +111,7 @@ class ListRequirement(configuration.RequirementInterface):
 class ChoiceRequirement(configuration.RequirementInterface):
     """Allows one from a choice of strings"""
 
-    def __init__(self, choices: typing.List[str], *args, **kwargs) -> None:
+    def __init__(self, choices: List[str], *args, **kwargs) -> None:
         """Constructs the object
 
         Args:
@@ -122,7 +122,7 @@ class ChoiceRequirement(configuration.RequirementInterface):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self.choices = choices
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Validates the provided value to ensure it is one of the available choices"""
         config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path)
@@ -135,7 +135,7 @@ class ChoiceRequirement(configuration.RequirementInterface):
 class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequirementInterface, metaclass = abc.ABCMeta):
     """Allows a variable length list of requirements"""
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Validates the provided value to ensure it is one of the available choices"""
         config_path = configuration.path_join(config_path, self.name)
         ret_list = super().unsatisfied(context, config_path)
@@ -147,7 +147,7 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
         return []
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
         return [IntRequirement("number_of_elements",
                                description = "Determines how many layers are in this list",
@@ -164,7 +164,7 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
     def build_configuration(self,
                             context: interfaces.context.ContextInterface,
                             config_path: str,
-                            _: typing.Any) -> configuration.HierarchicalDict:
+                            _: Any) -> configuration.HierarchicalDict:
         result = configuration.HierarchicalDict()
         num_elem_config_path = configuration.path_join(config_path, self.name, 'number_of_elements')
         num_elements = context.config.get(num_elem_config_path, None)
@@ -212,8 +212,8 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
                  description: str = None,
                  default: configuration.ConfigSimpleType = None,
                  optional: bool = False,
-                 oses: typing.List = None,
-                 architectures: typing.List = None) -> None:
+                 oses: List = None,
+                 architectures: List = None) -> None:
         """Constructs a Translation Layer Requirement
 
         The configuration option's value will be the name of the layer once it exists in the store
@@ -232,7 +232,7 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
 
     def unsatisfied(self,
                     context: interfaces.context.ContextInterface,
-                    config_path: str) -> typing.List[str]:
+                    config_path: str) -> List[str]:
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
         config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
@@ -292,7 +292,7 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
     def build_configuration(self,
                             context: interfaces.context.ContextInterface,
                             _: str,
-                            value: typing.Any) -> configuration.HierarchicalDict:
+                            value: Any) -> configuration.HierarchicalDict:
         """Builds the appropriate configuration for the specified requirement"""
         return context.memory[value].build_configuration()
 
@@ -301,7 +301,7 @@ class SymbolRequirement(configuration.ConstructableRequirementInterface,
                         configuration.ConfigurableRequirementInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Validate that the value is a valid within the symbol space of the provided context"""
         config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
@@ -348,6 +348,6 @@ class SymbolRequirement(configuration.ConstructableRequirementInterface,
     def build_configuration(self,
                             context: interfaces.context.ContextInterface,
                             _: str,
-                            value: typing.Any) -> configuration.HierarchicalDict:
+                            value: Any) -> configuration.HierarchicalDict:
         """Builds the appropriate configuration for the specified requirement"""
         return context.symbol_space[value].build_configuration()

@@ -1,7 +1,7 @@
 import enum
 import logging
 import struct
-import typing
+from typing import Optional, Iterable, Union
 
 from volatility.framework import constants, exceptions, objects, interfaces
 from volatility.framework.layers.registry import RegistryHive
@@ -64,7 +64,7 @@ class _HMAP_ENTRY(objects.Struct):
 
 
 class _CMHIVE(objects.Struct):
-    def get_name(self) -> typing.Optional[interfaces.objects.ObjectInterface]:
+    def get_name(self) -> Optional[interfaces.objects.ObjectInterface]:
         """Determine a name for the hive. Note that some attributes are
         unpredictably blank across different OS versions while others are populated,
         so we check all possibilities and take the first one that's not empty"""
@@ -122,7 +122,7 @@ class _CM_KEY_NODE(objects.Struct):
             raise ValueError("Cannot determine volatility of registry key without an offset in a RegistryHive layer")
         return bool(self.vol.offset & 0x80000000)
 
-    def get_subkeys(self) -> typing.Iterable[interfaces.objects.ObjectInterface]:
+    def get_subkeys(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns a list of the key nodes"""
         hive = self._context.memory[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
@@ -161,7 +161,7 @@ class _CM_KEY_NODE(objects.Struct):
                     vollog.log(constants.LOGLEVEL_VVV,
                                "Node found with address outside the valid Hive size: {}".format(key_offset))
 
-    def get_values(self) -> typing.Iterable[interfaces.objects.ObjectInterface]:
+    def get_values(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns a list of the Value nodes for a key"""
         hive = self._context.memory[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
@@ -197,7 +197,7 @@ class _CM_KEY_VALUE(objects.Struct):
         self.Name.count = self.NameLength
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
 
-    def decode_data(self) -> typing.Union[str, bytes]:
+    def decode_data(self) -> Union[str, bytes]:
         """Since this is just a casting convenience, it can be a property"""
         # Determine if the data is stored inline
         datalen = self.DataLength & 0x7fffffff

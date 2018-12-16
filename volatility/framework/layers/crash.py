@@ -7,7 +7,7 @@
 # This file is part of Volatility 3.
 
 import struct
-import typing
+from typing import Tuple, Optional
 
 from volatility.framework import constants, exceptions, interfaces, validity
 from volatility.framework.layers import segmented
@@ -89,7 +89,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     @classmethod
     def _check_header(cls,
                       base_layer: interfaces.layers.DataLayerInterface,
-                      offset: int = 0) -> typing.Tuple[int, int]:
+                      offset: int = 0) -> Tuple[int, int]:
 
         # Verify the Window's crash dump file magic
         try:
@@ -116,7 +116,7 @@ class WindowsCrashDump32Stacker(interfaces.automagic.StackerLayerInterface):
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: validity.ProgressCallback = None) \
-            -> typing.Optional[interfaces.layers.DataLayerInterface]:
+            -> Optional[interfaces.layers.DataLayerInterface]:
         try:
             WindowsCrashDump32Layer._check_header(context.memory[layer_name])
         except WindowsCrashDump32FormatException:

@@ -1,4 +1,4 @@
-import typing
+from typing import List
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.framework.interfaces.renderers as interfaces_renderers
@@ -14,7 +14,7 @@ class Malfind(interfaces_plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

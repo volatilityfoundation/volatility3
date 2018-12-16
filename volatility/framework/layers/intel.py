@@ -2,15 +2,15 @@ import collections
 import logging
 import math
 import struct
-import typing
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
 
 from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
-_T = typing.TypeVar("_T")
-_S = typing.TypeVar("_S")
+_T = TypeVar("_T")
+_S = TypeVar("_S")
 
 
 class classproperty(object):
@@ -18,7 +18,7 @@ class classproperty(object):
 
     Note this will change the return type """
 
-    def __init__(self, func: typing.Callable[[_S], _T]) -> None:
+    def __init__(self, func: Callable[[_S], _T]) -> None:
         self._func = func
 
     def __get__(self, _owner_self, owner_cls: _S) -> _T:
@@ -44,10 +44,10 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  name: str,
-                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+                 metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
         self._base_layer = self._check_type(self.config["memory_layer"], str)
-        self._swap_layers = []  # type: typing.List[str]
+        self._swap_layers = []  # type: List[str]
         self._check_type(self.config.get("swap_layers", False), bool)
         self._page_map_offset = self._check_type(self.config["page_map_offset"], int)
 
@@ -75,7 +75,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         return (1 << cls._maxvirtaddr) - 1
 
     @classproperty
-    def structure(cls) -> typing.List[typing.Tuple[str, int, bool]]:
+    def structure(cls) -> List[Tuple[str, int, bool]]:
         return cls._structure
 
     @staticmethod
@@ -92,7 +92,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         """Returns whether a particular page is valid based on its entry"""
         return bool(entry & 1)
 
-    def _translate(self, offset: int) -> typing.Tuple[int, int, str]:
+    def _translate(self, offset: int) -> Tuple[int, int, str]:
         """Translates a specific offset based on paging tables
 
            Returns the translated offset, the contiguous pagesize that the translated address lives in and the layer_name that the address lives in
@@ -165,7 +165,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     def mapping(self,
                 offset: int,
                 length: int,
-                ignore_errors: bool = False) -> typing.Iterable[typing.Tuple[int, int, int, str]]:
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
         """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
 
            This allows translation layers to provide maps of contiguous regions in one layer
@@ -205,13 +205,13 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                 offset += chunk_size
 
     @property
-    def dependencies(self) -> typing.List[str]:
+    def dependencies(self) -> List[str]:
         """Returns a list of the lower layer names that this layer is dependent upon"""
         # TODO: Add in the whole buffalo
         return [self._base_layer] + self._swap_layers
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'memory_layer',
                                                          optional = False),
                 requirements.LayerListRequirement(name = 'swap_layers',

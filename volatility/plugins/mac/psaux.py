@@ -1,5 +1,5 @@
 """In-memory artifacts from OSX systems"""
-import typing
+from typing import Iterator, Tuple, Any, Generator, List
 
 from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
@@ -12,15 +12,14 @@ class Psaux(plugins.PluginInterface):
     """Recovers program command line arguments"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "darwin",
                                                description = "Mac Kernel")]
 
-    def _generator(self, tasks: typing.Iterator[typing.Any]) -> \
-            typing.Iterator[typing.Tuple[int, typing.Tuple[int, str, int, str]]]:
+    def _generator(self, tasks: Iterator[Any]) -> Generator[Tuple[int, Tuple[int, str, int, str]], None, None]:
         for task in tasks:
             proc_layer_name = task.add_process_layer()
             if proc_layer_name is None:

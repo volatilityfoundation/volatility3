@@ -2,8 +2,8 @@
 """
 import bisect
 import collections.abc
-import typing
-from abc import abstractmethod
+from abc import abstractmethod, ABC
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type
 
 from volatility.framework import constants, exceptions, validity
 from volatility.framework.interfaces import configuration, objects, context as interfaces_context
@@ -15,8 +15,8 @@ class SymbolInterface(validity.ValidityRoutines):
     def __init__(self,
                  name: str,
                  address: int,
-                 type: typing.Optional[objects.Template] = None,
-                 constant_data: typing.Optional[bytes] = None) -> None:
+                 type: Optional[objects.Template] = None,
+                 constant_data: Optional[bytes] = None) -> None:
         self._name = self._check_type(name, str)
         if constants.BANG in self._name:
             raise ValueError("Symbol names cannot contain the symbol differentiator ({})".format(constants.BANG))
@@ -39,7 +39,7 @@ class SymbolInterface(validity.ValidityRoutines):
         return self._name
 
     @property
-    def type_name(self) -> typing.Optional[str]:
+    def type_name(self) -> Optional[str]:
         """Returns the name of the type that the symbol represents"""
         # Objects and ObjectTemplates should *always* get a type_name when they're constructed, so allow the IndexError
         if self.type is None:
@@ -47,7 +47,7 @@ class SymbolInterface(validity.ValidityRoutines):
         return self.type.vol['type_name']
 
     @property
-    def type(self) -> typing.Optional[objects.Template]:
+    def type(self) -> Optional[objects.Template]:
         """Returns the type that the symbol represents"""
         return self._type
 
@@ -57,7 +57,7 @@ class SymbolInterface(validity.ValidityRoutines):
         return self._address
 
     @property
-    def constant_data(self) -> typing.Optional[bytes]:
+    def constant_data(self) -> Optional[bytes]:
         return self._constant_data
 
 
@@ -73,13 +73,13 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
     def __init__(self,
                  name: str,
                  native_types: 'NativeTableInterface',
-                 table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> None:
+                 table_mapping: Optional[Dict[str, str]] = None) -> None:
         self.name = self._check_type(name, str)
         if table_mapping is None:
             table_mapping = {}
         self.table_mapping = self._check_type(table_mapping, dict)
         self._native_types = self._check_type(native_types, NativeTableInterface)
-        self._sort_symbols = []  # type: typing.List[typing.Tuple[int, str]]
+        self._sort_symbols = []  # type: List[Tuple[int, str]]
 
     # ## Required Symbol functions
 
@@ -91,14 +91,14 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
         raise NotImplementedError("Abstract property get_symbol not implemented by subclass.")
 
     @property
-    def symbols(self) -> typing.Iterable[str]:
+    def symbols(self) -> Iterable[str]:
         """Returns an iterator of the Symbol names"""
         raise NotImplementedError("Abstract property symbols not implemented by subclass.")
 
     # ## Required Type functions
 
     @property
-    def types(self) -> typing.Iterable[str]:
+    def types(self) -> Iterable[str]:
         """Returns an iterator of the Symbol type names"""
         raise NotImplementedError("Abstract property types not implemented by subclass.")
 
@@ -112,7 +112,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
     # ## Required Symbol enumeration functions
 
     @property
-    def enumerations(self) -> typing.Iterable[typing.Any]:
+    def enumerations(self) -> Iterable[Any]:
         """Returns an iterator of the Enumeration names"""
         raise NotImplementedError("Abstract property enumerations not implemented by subclass.")
 
@@ -134,14 +134,14 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     # ## Functions for overriding classes
 
-    def set_type_class(self, name: str, clazz: typing.Type[objects.ObjectInterface]) -> None:
+    def set_type_class(self, name: str, clazz: Type[objects.ObjectInterface]) -> None:
         """Overrides the object class for a specific Symbol type
 
            Name *must* be present in self.types
         """
         raise NotImplementedError("Abstract method set_type_class not implemented yet.")
 
-    def get_type_class(self, name: str) -> typing.Type[objects.ObjectInterface]:
+    def get_type_class(self, name: str) -> Type[objects.ObjectInterface]:
         """Returns the class associated with a Symbol type"""
         raise NotImplementedError("Abstract method get_type_class not implemented yet.")
 
@@ -151,14 +151,14 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     # ## Convenience functions for location symbols
 
-    def get_symbol_type(self, name: str) -> typing.Optional[objects.Template]:
+    def get_symbol_type(self, name: str) -> Optional[objects.Template]:
         """Resolves a symbol name into a symbol and then resolves the symbol's type"""
         type_name = self.get_symbol(name).type_name
         if type_name is None:
             return None
         return self.get_type(type_name)
 
-    def get_symbols_by_type(self, type_name: str) -> typing.Iterable[str]:
+    def get_symbols_by_type(self, type_name: str) -> Iterable[str]:
         """Returns the name of all symbols in this table that have type matching type_name"""
         for symbol_name in self.symbols:
             # This allows for searching with and without the table name (in case multiple tables contain
@@ -168,7 +168,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
                     symbol.type_name == type_name or (symbol.type_name.endswith(constants.BANG + type_name))):
                 yield symbol.name
 
-    def get_symbols_by_location(self, offset: int, size: int = 0) -> typing.Iterable[str]:
+    def get_symbols_by_location(self, offset: int, size: int = 0) -> Iterable[str]:
         """Returns the name of all symbols in this table that live at a particular offset"""
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
@@ -189,14 +189,14 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
 
     @abstractmethod
-    def get_symbols_by_type(self, type_name: str) -> typing.Iterable[str]:
+    def get_symbols_by_type(self, type_name: str) -> Iterable[str]:
         """Returns all symbols based on the type of the symbol"""
 
     @abstractmethod
     def get_symbols_by_location(self,
                                 offset: int,
                                 size: int = 0,
-                                table_name: typing.Optional[str] = None) -> typing.Iterable[str]:
+                                table_name: Optional[str] = None) -> Iterable[str]:
         """Returns all symbols that exist at a specific relative address"""
 
     @abstractmethod
@@ -208,7 +208,7 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Look-up a symbol name across all the contained symbol tables"""
 
     @abstractmethod
-    def get_enumeration(self, enum_name: str) -> typing.Dict[str, typing.Any]:
+    def get_enumeration(self, enum_name: str) -> Dict[str, Any]:
         """Look-up an enumeration across all the contained symbol tables"""
 
     @abstractmethod
@@ -228,7 +228,7 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Adds a symbol_list to the end of the space"""
 
 
-class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface):
+class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableInterface, ABC):
     """Handles a table of symbols"""
 
     # FIXME: native_types and table_mapping aren't recorded in the configuration
@@ -237,7 +237,7 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
                  config_path: str,
                  name: str,
                  native_types: 'NativeTableInterface',
-                 table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> None:
+                 table_mapping: Optional[Dict[str, str]] = None) -> None:
         configuration.ConfigurableInterface.__init__(self, context, config_path)
         BaseSymbolTableInterface.__init__(self, name, native_types, table_mapping)
 
@@ -256,20 +256,20 @@ class NativeTableInterface(BaseSymbolTableInterface):
         raise exceptions.SymbolError("NativeTables never hold symbols")
 
     @property
-    def symbols(self) -> typing.Iterable[str]:
+    def symbols(self) -> Iterable[str]:
         return []
 
-    def get_enumeration(self, name: str) -> typing.Dict[str, typing.Any]:
+    def get_enumeration(self, name: str) -> Dict[str, Any]:
         raise exceptions.SymbolError("NativeTables never hold enumerations")
 
     @property
-    def enumerations(self) -> typing.Iterable[str]:
+    def enumerations(self) -> Iterable[str]:
         return []
 
 
 class MetadataInterface(object):
     """Interface for accessing metadata stored within a symbol table"""
 
-    def __init__(self, json_data: typing.Dict) -> None:
+    def __init__(self, json_data: Dict) -> None:
         """Constructor that accepts json_data"""
         self._json_data = json_data

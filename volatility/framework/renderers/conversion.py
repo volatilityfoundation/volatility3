@@ -1,11 +1,10 @@
 import datetime
-import typing
+from typing import Union
 
 from volatility.framework import interfaces, renderers
 
 
-def wintime_to_datetime(wintime: int) -> typing.Union[
-    interfaces.renderers.BaseAbsentValue, datetime.datetime]:
+def wintime_to_datetime(wintime: int) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
     unix_time = wintime // 10000000
     if unix_time == 0:
         return renderers.NotApplicableValue()
@@ -16,8 +15,8 @@ def wintime_to_datetime(wintime: int) -> typing.Union[
         return renderers.UnparsableValue()
 
 
-def unixtime_to_datetime(unixtime: int) -> typing.Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
-    ret = renderers.UnparsableValue()  # type: typing.Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]
+def unixtime_to_datetime(unixtime: int) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
+    ret = renderers.UnparsableValue()  # type: Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]
 
     if unixtime > 0:
         try:

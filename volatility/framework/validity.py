@@ -1,8 +1,8 @@
 """A set of classes providing consistent type checking and error handling for type/class validity
 """
-import typing
+from typing import Callable, Optional, TypeVar, Type
 
-ProgressCallback = typing.Optional[typing.Callable[[float, str], None]]
+ProgressCallback = Optional[Callable[[float, str], None]]
 
 
 class ValidityRoutines(object):
@@ -15,10 +15,10 @@ class ValidityRoutines(object):
     These are currently implemented by assertions that will be optimized out of production code.
     """
 
-    V = typing.TypeVar('V')
+    V = TypeVar('V')
 
     @classmethod
-    def _check_type(cls, value: V, valid_type: typing.Type) -> V:
+    def _check_type(cls, value: V, valid_type: Type) -> V:
         """Checks that value is an instance of valid_type, and returns value if it is, or throws a TypeError otherwise
 
         Args:
@@ -31,7 +31,7 @@ class ValidityRoutines(object):
         return value
 
     @classmethod
-    def _check_class(cls, klass: typing.Type, valid_class: typing.Type) -> typing.Type:
+    def _check_class(cls, klass: Type, valid_class: Type) -> Type:
         """Checks that class is an instance of valid_class, and returns klass if it is, or throws a TypeError otherwise
 
         Args:

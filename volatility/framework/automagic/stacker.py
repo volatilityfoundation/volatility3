@@ -9,7 +9,7 @@ once a layer successfully stacks on top of the existing layers, it is removed fr
 
 import logging
 import traceback
-import typing
+from typing import List, Optional, Tuple
 
 from volatility import framework
 from volatility.framework import interfaces, constants, validity
@@ -42,8 +42,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) \
-            -> typing.Optional[typing.List[str]]:
+                 progress_callback: validity.ProgressCallback = None) -> Optional[List[str]]:
         """Runs the automagic over the configurable"""
 
         # Quick exit if we're not needed
@@ -155,7 +154,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                                    context: interfaces.context.ContextInterface,
                                    config_path: str,
                                    requirement: interfaces.configuration.RequirementInterface,
-                                   stacked_layers: typing.List[str]) -> typing.Optional[typing.Tuple[str, str]]:
+                                   stacked_layers: List[str]) -> Optional[Tuple[str, str]]:
         """Looks for translation layer requirements and attempts to apply the stacked layers to it.  If it succeeds
         it returns the configuration path and layer name where the stacked nodes were spliced into the tree.
 
@@ -186,7 +185,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         return None
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
         return [requirements.URIRequirement("single_location",
                                             description = "Specifies a base location on which to stack",

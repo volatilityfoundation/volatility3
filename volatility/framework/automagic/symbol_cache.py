@@ -1,17 +1,17 @@
 import logging
 import os
 import pickle
-import typing
 import urllib
 import urllib.parse
 import urllib.request
+from typing import Dict, List
 
 from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
 
-BannersType = typing.Dict[bytes, typing.List[str]]
+BannersType = Dict[bytes, List[str]]
 
 
 class SymbolBannerCache(interfaces.automagic.AutomagicInterface):

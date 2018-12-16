@@ -1,6 +1,6 @@
 import datetime
 import logging
-import typing
+from typing import Generator, Sequence
 
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import objects, renderers, exceptions
@@ -35,8 +35,10 @@ class PrintKey(plugins.PluginInterface):
                                                 default = False,
                                                 optional = True)]
 
-    def hive_walker(self, hive: RegistryHive, node_path: typing.Sequence[objects.Struct] = None, key_path: str = None) \
-            -> typing.Generator:
+    def hive_walker(self,
+                    hive: RegistryHive,
+                    node_path: Sequence[objects.Struct] = None,
+                    key_path: str = None) -> Generator:
         """Walks through a set of nodes from a given node (last one in node_path).
         Avoids loops by not traversing into nodes already present in the node_path
         """

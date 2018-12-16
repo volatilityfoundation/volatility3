@@ -3,7 +3,7 @@
 Renderers display the unified output format in some manner (be it text or file or graphical output"""
 import collections
 import datetime
-import typing
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from volatility.framework import interfaces
 
@@ -36,8 +36,8 @@ class TreeNode(interfaces.renderers.TreeNode):
     def __init__(self,
                  path: str,
                  treegrid: 'TreeGrid',
-                 parent: typing.Optional['TreeNode'],
-                 values: typing.List[interfaces.renderers.BaseTypes]) -> None:
+                 parent: Optional['TreeNode'],
+                 values: List[interfaces.renderers.BaseTypes]) -> None:
         if not isinstance(treegrid, TreeGrid):
             raise TypeError("Treegrid must be an instance of TreeGrid")
         self._treegrid = treegrid
@@ -49,13 +49,13 @@ class TreeNode(interfaces.renderers.TreeNode):
     def __repr__(self) -> str:
         return "<TreeNode [{}] - {}>".format(self.path, self._values)
 
-    def __getitem__(self, item: typing.Union[int, slice]) -> typing.Any:
+    def __getitem__(self, item: Union[int, slice]) -> Any:
         return self._treegrid.children(self).__getitem__(item)
 
     def __len__(self) -> int:
         return len(self._treegrid.children(self))
 
-    def _validate_values(self, values: typing.List[interfaces.renderers.BaseTypes]) -> None:
+    def _validate_values(self, values: List[interfaces.renderers.BaseTypes]) -> None:
         """A function for raising exceptions if a given set of values is invalid according to the column properties."""
         if not (isinstance(values, collections.Sequence) and len(values) == len(self._treegrid.columns)):
             raise TypeError(
@@ -75,7 +75,7 @@ class TreeNode(interfaces.renderers.TreeNode):
             #     tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
 
     @property
-    def values(self) -> typing.Iterable[interfaces.renderers.BaseTypes]:
+    def values(self) -> Iterable[interfaces.renderers.BaseTypes]:
         """Returns the list of values from the particular node, based on column.index"""
         return self._values
 
@@ -89,7 +89,7 @@ class TreeNode(interfaces.renderers.TreeNode):
         return self._path
 
     @property
-    def parent(self) -> typing.Optional['TreeNode']:
+    def parent(self) -> Optional['TreeNode']:
         """Returns the parent node of this node or None"""
         return self._parent
 
@@ -127,8 +127,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
     path_sep = "|"
 
     def __init__(self,
-                 columns: typing.List[typing.Tuple[str, interfaces.renderers.BaseTypes]],
-                 generator: typing.Optional[typing.Iterable[typing.Tuple[int, typing.Tuple]]]) -> None:
+                 columns: List[Tuple[str, interfaces.renderers.BaseTypes]],
+                 generator: Optional[Iterable[Tuple[int, Tuple]]]) -> None:
         """Constructs a TreeGrid object using a specific set of columns
 
         The TreeGrid itself is a root element, that can have children but no values.
@@ -141,8 +141,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """
         self._populated = False
         self._row_count = 0
-        self._children = []  # type: typing.List[TreeNode]
-        converted_columns = []  # type: typing.List[interfaces.renderers.Column]
+        self._children = []  # type: List[TreeNode]
+        converted_columns = []  # type: List[interfaces.renderers.Column]
         if len(columns) < 1:
             raise ValueError("Columns must be a list containing at least one column")
         for (name, column_type) in columns:
@@ -170,7 +170,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
     def populate(self,
                  func: interfaces.renderers.VisitorSignature = None,
-                 initial_accumulator: typing.Any = None) -> None:
+                 initial_accumulator: Any = None) -> None:
         """Populates the tree by consuming the TreeGrid's construction generator
            Func is called on every node, so can be used to create output on demand
 
@@ -178,11 +178,11 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """
         accumulator = initial_accumulator
         if func is None:
-            def func(_x: interfaces.renderers.TreeNode, _y: typing.Any) -> typing.Any:
+            def func(_x: interfaces.renderers.TreeNode, _y: Any) -> Any:
                 return None
 
         if not self.populated:
-            prev_nodes = []  # type: typing.List[TreeNode]
+            prev_nodes = []  # type: List[TreeNode]
             for (level, item) in self._generator:
                 parent_index = min(len(prev_nodes), level)
                 parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
@@ -199,7 +199,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         return self._populated
 
     @property
-    def columns(self) -> typing.List[interfaces.renderers.Column]:
+    def columns(self) -> List[interfaces.renderers.Column]:
         """Returns the available columns and their ordering and types"""
         return self._columns
 
@@ -208,7 +208,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """Returns the number of rows populated"""
         return self._row_count
 
-    def children(self, node) -> typing.List[interfaces.renderers.TreeNode]:
+    def children(self, node) -> List[interfaces.renderers.TreeNode]:
         """Returns the subnodes of a particular node in order"""
         return [node for node, _ in self._find_children(node)]
 
@@ -261,13 +261,13 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """Returns the maximum depth of the tree"""
         return self.visit(None, lambda n, a: max(a, self.path_depth(n)), )
 
-    _T = typing.TypeVar("_T")
+    _T = TypeVar("_T")
 
     def visit(self,
-              node: typing.Optional[interfaces.renderers.TreeNode],
-              function: typing.Callable[[interfaces.renderers.TreeNode, _T], _T],
+              node: Optional[interfaces.renderers.TreeNode],
+              function: Callable[[interfaces.renderers.TreeNode, _T], _T],
               initial_accumulator: _T,
-              sort_key: typing.Optional[interfaces.renderers.ColumnSortKey] = None):
+              sort_key: Optional[interfaces.renderers.ColumnSortKey] = None):
         """Visits all the nodes in a tree, calling function on each one.
 
            function should have the signature function(node, accumulator) and return new_accumulator
@@ -292,29 +292,23 @@ class TreeGrid(interfaces.renderers.TreeGrid):
             accumulator = function(node, initial_accumulator)
         if children is not None:
             if sort_key is not None:
-                # FIXME: mypy #4973 or #2608
-                # key_func is only needed as a separate variable to pass mypy's None logic
-                key_func = lambda x: sort_key(x[0].values)
-                children = sorted(children, key = key_func)
+                children = sorted(children, key = lambda x: sort_key(x[0].values))
                 if not sort_key.ascending:
                     children = reversed(children)
             accumulator = self._visit(children, function, accumulator, sort_key)
         return accumulator
 
     def _visit(self,
-               list_of_children: typing.List['TreeNode'],
-               function: typing.Callable,
+               list_of_children: List['TreeNode'],
+               function: Callable,
                accumulator: _T,
-               sort_key: typing.Optional[interfaces.renderers.ColumnSortKey] = None) -> _T:
+               sort_key: Optional[interfaces.renderers.ColumnSortKey] = None) -> _T:
         """Visits all the nodes in a tree, calling function on each one"""
         if list_of_children is not None:
             for n, children in list_of_children:
                 accumulator = function(n, accumulator)
                 if sort_key is not None:
-                    # FIXME: mypy #4973 or #2608
-                    # key_func is only needed as a separate variable to pass mypy's None logic
-                    key_func = lambda x: sort_key(x[0].values)
-                    children = sorted(children, key = key_func)
+                    children = sorted(children, key = lambda x: sort_key(x[0].values))
                     if not sort_key.ascending:
                         children = reversed(children)
                 accumulator = self._visit(children, function, accumulator, sort_key)
@@ -334,7 +328,7 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
             raise ValueError("Column not found in TreeGrid columns: {}".format(column_name))
         self._index = _index
 
-    def __call__(self, values: typing.List[typing.Any]) -> typing.Any:
+    def __call__(self, values: List[Any]) -> Any:
         """The key function passed as the sort key"""
         value = values[self._index]
         if isinstance(value, interfaces.renderers.BaseAbsentValue):

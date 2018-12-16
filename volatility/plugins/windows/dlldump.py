@@ -1,6 +1,6 @@
 import logging
 import ntpath
-import typing
+from typing import List
 
 import volatility.framework.constants as constants
 import volatility.framework.interfaces.plugins as interfaces_plugins
@@ -19,7 +19,7 @@ class DllDump(interfaces_plugins.PluginInterface):
     """Dumps process memory ranges as DLLs"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',

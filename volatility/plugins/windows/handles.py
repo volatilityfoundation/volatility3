@@ -1,5 +1,5 @@
 import logging
-import typing
+from typing import Optional
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
@@ -168,7 +168,7 @@ class Handles(interfaces_plugins.PluginInterface):
     def find_cookie(cls,
                     context: interfaces.context.ContextInterface,
                     layer_name: str,
-                    symbol_table: str) -> typing.Optional[interfaces.objects.ObjectInterface]:
+                    symbol_table: str) -> Optional[interfaces.objects.ObjectInterface]:
         """Find the ObHeaderCookie value (if it exists)"""
 
         try:

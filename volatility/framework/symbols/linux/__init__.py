@@ -1,7 +1,4 @@
-import typing
-
 from volatility.framework import interfaces
-from volatility.framework.configuration import requirements
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.linux import extensions
 

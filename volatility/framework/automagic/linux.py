@@ -1,5 +1,5 @@
 import logging
-import typing
+from typing import List, Optional, Tuple, Type
 
 import volatility.framework.objects.utility
 from volatility.framework import interfaces, constants, validity, exceptions, layers
@@ -34,8 +34,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) \
-            -> typing.Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: validity.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify linux within this layer"""
         # Bail out by default unless we can stack properly
         layer = context.memory[layer_name]
@@ -62,8 +61,8 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                 kaslr_shift, _ = LinuxUtilities.find_aslr(context, table_name, layer_name,
                                                           progress_callback = progress_callback)
 
-                layer_class = intel.Intel  # type: typing.Type
-                if ('init_level4_pgt' in table.symbols):
+                layer_class = intel.Intel  # type: Type
+                if 'init_level4_pgt' in table.symbols:
                     layer_class = intel.Intel32e
                     dtb_symbol_name = 'init_level4_pgt'
                 else:
@@ -99,7 +98,7 @@ class LinuxUtilities(object):
         except exceptions.InvalidDataException:
             return ""
 
-        ret_path = []  # type: typing.List[str]
+        ret_path = []  # type: List[str]
 
         while dentry != rdentry or vfsmnt != rmnt:
             dname = dentry.path()
@@ -268,7 +267,7 @@ class LinuxUtilities(object):
                   symbol_table: str,
                   layer_name: str,
                   progress_callback: validity.ProgressCallback = None) \
-            -> typing.Tuple[int, int]:
+            -> Tuple[int, int]:
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'
         init_task_json_address = context.symbol_space.get_symbol(init_task_symbol).address

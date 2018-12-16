@@ -5,12 +5,11 @@ import io
 import json
 import logging
 import traceback
-import typing
+from typing import Generator, Iterable, List, Optional, Tuple, Type
 
 from volatility import framework
 from volatility.framework import renderers, automagic, interfaces, plugins, exceptions
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import configuration
 
 vollog = logging.getLogger(__name__)
 
@@ -22,12 +21,11 @@ class TimeLinerType(enum.IntEnum):
     CHANGED = 4
 
 
-class TimeLinerInterface(object, metaclass = abc.ABCMeta):
+class TimeLinerInterface(metaclass = abc.ABCMeta):
     """Interface defining methods that timeliner will use to generate a body file"""
 
     @abc.abstractmethod
-    def generate_timeline(self) -> typing.Generator[
-        typing.Tuple[str, TimeLinerType, datetime.datetime], None, None]:
+    def generate_timeline(self) -> Generator[Tuple[str, TimeLinerType, datetime.datetime], None, None]:
         """Method generates Tuples of (description, timestamp_type, timestamp)
 
         These need not be generated in any particular order, sorting will be done later
@@ -44,8 +42,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         self.automagics = None
 
     @classmethod
-    def get_usable_plugins(cls, selected_list: typing.List[str] = None) \
-            -> typing.List[typing.Type]:
+    def get_usable_plugins(cls, selected_list: List[str] = None) -> List[Type]:
         # Initialize for the run
         plugin_list = list(framework.class_subclasses(TimeLinerInterface))
 
@@ -67,8 +64,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                                                 optional = True,
                                                 default = False)]
 
-    def _generator(self, runable_plugins: typing.List[TimeLinerInterface]) \
-            -> typing.Optional[typing.Iterable[typing.Tuple[int, typing.Tuple]]]:
+    def _generator(self, runable_plugins: List[TimeLinerInterface]) -> Optional[Iterable[Tuple[int, Tuple]]]:
         """Takes a timeline, sorts it and output the data from each relevant row from each plugin"""
         # Generate the results for each plugin
         for plugin in runable_plugins:

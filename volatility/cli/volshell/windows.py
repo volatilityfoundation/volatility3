@@ -1,5 +1,5 @@
 import inspect
-import typing
+from typing import Callable, Dict
 
 from volatility.cli.volshell import shellplugin
 from volatility.framework.configuration import requirements
@@ -44,7 +44,7 @@ class Volshell(shellplugin.Volshell):
         for proc in eproc.ActiveProcessLinks:
             yield proc
 
-    def load_functions(self) -> typing.Dict[str, typing.Callable]:
+    def load_functions(self) -> Dict[str, Callable]:
         result = super().load_functions()
         result.update({
             'ps': lambda: list(self.list_processes())

@@ -1,7 +1,7 @@
 import datetime
 import logging
 import sys
-import typing
+from typing import Callable, Any
 
 from volatility.framework.renderers import format_hints
 
@@ -45,10 +45,10 @@ def hex_bytes_as_text(value: bytes) -> str:
 
 
 class Optional(object):
-    def __init__(self, func: typing.Callable[[typing.Any], str]) -> None:
+    def __init__(self, func: Callable[[Any], str]) -> None:
         self._func = func
 
-    def __call__(self, x: typing.Any) -> str:
+    def __call__(self, x: Any) -> str:
         if isinstance(x, interfaces.renderers.BaseAbsentValue):
             if isinstance(x, renderers.NotApplicableValue):
                 return "N/A"

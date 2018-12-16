@@ -4,8 +4,8 @@
 import collections
 import collections.abc
 import logging
-import typing
 from abc import ABCMeta, abstractmethod
+from typing import Any, List, Mapping
 
 from volatility.framework import constants, validity, interfaces
 from volatility.framework.interfaces import context as interfaces_context
@@ -19,10 +19,10 @@ class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
     This ensures that the data stored in the mapping should not be modified, making an immutable mapping.
     """
 
-    def __init__(self, dictionary: typing.Mapping[str, typing.Any]) -> None:
+    def __init__(self, dictionary: Mapping[str, Any]) -> None:
         self._dict = dictionary
 
-    def __getattr__(self, attr: str) -> typing.Any:
+    def __getattr__(self, attr: str) -> Any:
         """Returns the item as an attribute"""
         if attr == '_dict':
             return super().__getattribute__(attr)
@@ -30,7 +30,7 @@ class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
             return self._dict[attr]
         raise AttributeError("Object has no attribute: {}.{}".format(self.__class__.__name__, attr))
 
-    def __getitem__(self, name: str) -> typing.Any:
+    def __getitem__(self, name: str) -> Any:
         """Returns the item requested"""
         return self._dict[name]
 
@@ -100,7 +100,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return ReadOnlyMapping(self._vol)
 
     @abstractmethod
-    def write(self, value: typing.Any):
+    def write(self, value: Any):
         """Writes the new value into the format at the offset the object currently resides at"""
 
     def validate(self) -> bool:
@@ -161,7 +161,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             """Returns the size of the template object"""
 
         @classmethod
-        def children(cls, template: 'Template') -> 'typing.List[Template]':
+        def children(cls, template: 'Template') -> List['Template']:
             """Returns the children of the template"""
             return []
 
@@ -215,7 +215,7 @@ class Template(validity.ValidityRoutines):
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
         self._arguments = arguments
-        empty_dict = {}  # type: typing.Dict[str, typing.Any]
+        empty_dict = {}  # type: Dict[str, Any]
         self._vol = collections.ChainMap(empty_dict, self._arguments, {'type_name': type_name})
 
     @property
@@ -224,7 +224,7 @@ class Template(validity.ValidityRoutines):
         return ReadOnlyMapping(self._vol)
 
     @property
-    def children(self) -> typing.List['Template']:
+    def children(self) -> List['Template']:
         """The children of this template (such as member types, sub-types and base-types where they are relevant).
         Used to traverse the template tree.
         """
@@ -256,7 +256,7 @@ class Template(validity.ValidityRoutines):
         """Updates the keyword arguments with values that will **not** be carried across to clones"""
         self._vol.update(new_arguments)
 
-    def __getattr__(self, attr: str) -> typing.Any:
+    def __getattr__(self, attr: str) -> Any:
         """Exposes any other values stored in ._vol as attributes (for example, enumeration choices)"""
         if attr != '_vol':
             if attr in self._vol:

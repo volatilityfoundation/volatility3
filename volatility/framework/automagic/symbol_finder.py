@@ -1,5 +1,5 @@
 import logging
-import typing
+from typing import Any, Iterable, List, Tuple
 
 from volatility.framework import interfaces, validity
 from volatility.framework.automagic import symbol_cache
@@ -21,7 +21,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str) -> None:
         super().__init__(context, config_path)
-        self._requirements = []  # type: typing.List[typing.Tuple[str, interfaces.configuration.ConstructableRequirementInterface]]
+        self._requirements = []  # type: List[Tuple[str, interfaces.configuration.ConstructableRequirementInterface]]
         self._banners = {}  # type: symbol_cache.BannersType
 
     @property
@@ -84,7 +84,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
         # Check if the Stacker has already found what we're looking for
         if layer.config.get(self.banner_config_key, None):
             banner_list = [
-                (0, bytes(layer.config[self.banner_config_key], 'latin-1'))]  # type: typing.Iterable[typing.Any]
+                (0, bytes(layer.config[self.banner_config_key], 'latin-1'))]  # type: Iterable[Any]
         else:
             # Swap to the physical layer for scanning
             # TODO: Fix this so it works for layers other than just Intel

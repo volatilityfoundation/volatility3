@@ -2,7 +2,7 @@ import collections.abc
 import datetime
 import functools
 import logging
-import typing
+from typing import Iterable, Iterator, Optional, Union
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
@@ -22,10 +22,9 @@ class _POOL_HEADER(objects.Struct):
                    type_name: str,
                    type_map: dict,
                    use_top_down: bool,
-                   native_layer_name: typing.Optional[str] = None,
-                   object_type: typing.Optional[str] = None,
-                   cookie: typing.Optional[int] = None) \
-            -> typing.Optional[interfaces.objects.ObjectInterface]:
+                   native_layer_name: Optional[str] = None,
+                   object_type: Optional[str] = None,
+                   cookie: Optional[int] = None) -> Optional[interfaces.objects.ObjectInterface]:
         """Carve an object or data structure from a kernel pool allocation.
 
         :param type_name: the data structure type name
@@ -419,8 +418,8 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
         """Determine if the object is valid"""
         return self.FileName.Length > 0 and self._context.memory[self.vol.layer_name].is_valid(self.FileName.Buffer)
 
-    def file_name_with_device(self) -> typing.Union[str, interfaces.renderers.BaseAbsentValue]:
-        name = renderers.UnreadableValue()  # type: typing.Union[str, interfaces.renderers.BaseAbsentValue]
+    def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
+        name = renderers.UnreadableValue()  # type: Union[str, interfaces.renderers.BaseAbsentValue]
 
         if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
             name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
@@ -587,7 +586,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
-    def load_order_modules(self) -> typing.Iterable[int]:
+    def load_order_modules(self) -> Iterable[int]:
         """Generator for DLLs in the order that they were loaded"""
 
         if constants.BANG not in self.vol.type_name:
@@ -690,7 +689,7 @@ class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
                 member: str,
                 forward: bool = True,
                 sentinel: bool = True,
-                layer: typing.Optional[str] = None) -> typing.Iterator[interfaces.objects.ObjectInterface]:
+                layer: Optional[str] = None) -> Iterator[interfaces.objects.ObjectInterface]:
         """Returns an iterator of the entries in the list"""
 
         layer = layer or self.vol.layer_name
@@ -720,5 +719,5 @@ class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
             seen.add(link.vol.offset)
             link = getattr(link, direction).dereference()
 
-    def __iter__(self) -> typing.Iterator[interfaces.objects.ObjectInterface]:
+    def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)

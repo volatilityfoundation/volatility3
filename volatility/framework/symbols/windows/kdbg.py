@@ -1,8 +1,6 @@
-import typing
-from volatility.framework import interfaces
-from volatility.framework import exceptions
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows.extensions import kdbg
+
 
 class KdbgIntermedSymbols(intermed.IntermediateSymbolTable):
 

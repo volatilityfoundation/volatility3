@@ -1,5 +1,5 @@
-import typing
 import logging
+from typing import Callable, Generator, List
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers, interfaces
@@ -21,7 +21,7 @@ class PsList(interfaces_plugins.PluginInterface):
                                                description = "Mac Kernel")]
 
     @classmethod
-    def create_filter(cls, pid_list: typing.List[int] = None) -> typing.Callable[[int], bool]:
+    def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
         filter = lambda _: False
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
@@ -45,8 +45,8 @@ class PsList(interfaces_plugins.PluginInterface):
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
                    mac_symbols: str,
-                   filter: typing.Callable[[int], bool] = lambda _: False) -> \
-            typing.Iterable[interfaces.objects.ObjectInterface]:
+                   filter: Callable[[int], bool] = lambda _: False) \
+            -> Generator[interfaces.objects.ObjectInterface, None, None]:
 
         """Lists all the tasks in the primary layer"""
 

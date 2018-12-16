@@ -1,5 +1,5 @@
 import logging
-import typing
+from typing import Iterable, Tuple, List
 
 from volatility.framework import interfaces, renderers, layers
 from volatility.framework.configuration import requirements
@@ -22,7 +22,7 @@ class YaraScanner(interfaces.layers.ScannerInterface):
         super().__init__()
         self._rules = rules
 
-    def __call__(self, data: bytes, data_offset: int) -> typing.Iterable[typing.Tuple[int, str]]:
+    def __call__(self, data: bytes, data_offset: int) -> Iterable[Tuple[int, str]]:
         for match in self._rules.match(data = data):
             for offset, name, value in match.strings:
                 yield (offset + data_offset, name)
@@ -32,7 +32,7 @@ class YaraScan(plugins.PluginInterface):
     """Runs all relevant plugins that provide time related information and orders the results by time"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = "Primary kernel address space",
                                                          architectures = ["Intel32", "Intel64"]),

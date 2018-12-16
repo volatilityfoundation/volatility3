@@ -1,6 +1,6 @@
 import collections.abc
 import logging
-import typing
+from typing import Generator, Iterable, Iterator, Optional, Tuple
 
 import volatility.framework.objects.utility
 from volatility.framework import constants
@@ -36,7 +36,7 @@ class module(generic.GenericIntelProcess):
 class task_struct(generic.GenericIntelProcess):
     def add_process_layer(self,
                           config_prefix: str = None,
-                          preferred_name: str = None) -> typing.Optional[str]:
+                          preferred_name: str = None) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
         Returns the name of the Layer or None.
         """
@@ -57,8 +57,7 @@ class task_struct(generic.GenericIntelProcess):
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
-    def get_process_memory_sections(self, heap_only: bool = False) -> \
-            typing.Generator[typing.Tuple[int, int], None, None]:
+    def get_process_memory_sections(self, heap_only: bool = False) -> Generator[Tuple[int, int], None, None]:
         """Returns a list of sections based on the memory manager's view of this task's virtual memory"""
         for vma in self.mm.mmap_iter:
             start = int(vma.vm_start)
@@ -95,7 +94,7 @@ class fs_struct(objects.Struct):
 
 class mm_struct(objects.Struct):
     @property
-    def mmap_iter(self) -> typing.Iterable[interfaces.objects.ObjectInterface]:
+    def mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct."""
 
         if not self.mmap:
@@ -267,7 +266,7 @@ class list_head(objects.Struct, collections.abc.Iterable):
                 member: str,
                 forward: bool = True,
                 sentinel: bool = True,
-                layer: typing.Optional[str] = None) -> typing.Iterator[interfaces.objects.ObjectInterface]:
+                layer: Optional[str] = None) -> Iterator[interfaces.objects.ObjectInterface]:
         """Returns an iterator of the entries in the list."""
         layer = layer or self.vol.layer_name
 
@@ -290,7 +289,7 @@ class list_head(objects.Struct, collections.abc.Iterable):
             seen.add(link.vol.offset)
             link = getattr(link, direction).dereference()
 
-    def __iter__(self) -> typing.Iterator[interfaces.objects.ObjectInterface]:
+    def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
 
 

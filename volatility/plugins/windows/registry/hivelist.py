@@ -1,4 +1,4 @@
-import typing
+from typing import Iterator, List, Tuple
 
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces
@@ -10,7 +10,7 @@ class HiveList(plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
@@ -20,7 +20,7 @@ class HiveList(plugins.PluginInterface):
                                                optional = True,
                                                default = None)]
 
-    def _generator(self) -> typing.Iterator[typing.Tuple[int, typing.Tuple[int, str]]]:
+    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
         for hive in self.list_hives(context = self.context,
                                     layer_name = self.config["primary"],
                                     symbol_table = self.config["nt_symbols"],
@@ -34,7 +34,7 @@ class HiveList(plugins.PluginInterface):
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
                    symbol_table: str,
-                   filter_string: None = None) -> typing.Iterator[interfaces.objects.ObjectInterface]:
+                   filter_string: None = None) -> Iterator[interfaces.objects.ObjectInterface]:
         """Lists all the hives in the primary layer"""
 
         # We only use the object factory to demonstrate how to use one

@@ -1,6 +1,6 @@
 import code
 import inspect
-import typing
+from typing import Any, Callable, Dict
 
 from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
@@ -15,7 +15,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"])]
 
-    def run(self, additional_locals: typing.Dict[str, typing.Any] = None) -> interfaces.renderers.TreeGrid:
+    def run(self, additional_locals: Dict[str, Any] = None) -> interfaces.renderers.TreeGrid:
         """Runs the interactive volshell plugin
 
         Returns:
@@ -32,7 +32,7 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         # Determine locals
         curframe = inspect.currentframe()
-        vars = {}  # type: typing.Dict[str, typing.Any]
+        vars = {}  # type: Dict[str, Any]
         if curframe:
             vars = curframe.f_globals.copy()
             vars.update(curframe.f_locals)
@@ -59,11 +59,12 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         return renderers.TreeGrid([], None)
 
-    def load_functions(self) -> typing.Dict[str, typing.Callable]:
+    def load_functions(self) -> Dict[str, Callable]:
         """Returns a dictionary listing the functions to be added to the environment"""
         return {"dt": self.display_type}
 
-    def display_type(self, object: interfaces.objects.ObjectInterface):
+    @staticmethod
+    def display_type(object: interfaces.objects.ObjectInterface):
         """Display Type"""
         longest_member = longest_offset = 0
         for member in object.vol.members:

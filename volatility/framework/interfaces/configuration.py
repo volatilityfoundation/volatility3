@@ -15,8 +15,8 @@ import logging
 import random
 import string
 import sys
-import typing
 from abc import ABCMeta, abstractmethod
+from typing import Any, Dict, Generator, List, Optional, Type, Union
 
 from volatility.framework import constants, interfaces, validity
 from volatility.framework.interfaces.context import ContextInterface
@@ -27,8 +27,8 @@ CONFIG_SEPARATOR = "."
 vollog = logging.getLogger(__name__)
 
 BasicTypes = (int, bool, bytes, str)
-SimpleTypes = typing.Union[int, bool, bytes, str]
-ConfigSimpleType = typing.Union[SimpleTypes, typing.List[SimpleTypes]]
+SimpleTypes = Union[int, bool, bytes, str]
+ConfigSimpleType = Union[SimpleTypes, List[SimpleTypes]]
 
 
 def path_join(*args) -> str:
@@ -58,13 +58,13 @@ class HierarchicalDict(collections.abc.Mapping):
     """
 
     def __init__(self,
-                 initial_dict: typing.Dict = None,
+                 initial_dict: Dict = None,
                  separator: str = CONFIG_SEPARATOR) -> None:
         if not (isinstance(separator, str) and len(separator) == 1):
             raise TypeError("Separator must be a one character string: {}".format(separator))
         self._separator = separator
-        self._data = {}  # type: typing.Dict[str, ConfigSimpleType]
-        self._subdict = {}  # type: typing.Dict[str, 'HierarchicalDict']
+        self._data = {}  # type: Dict[str, ConfigSimpleType]
+        self._subdict = {}  # type: Dict[str, 'HierarchicalDict']
         if isinstance(initial_dict, str):
             initial_dict = json.loads(initial_dict)
         if isinstance(initial_dict, dict):
@@ -80,7 +80,7 @@ class HierarchicalDict(collections.abc.Mapping):
         return self._separator
 
     @property
-    def data(self) -> typing.Dict:
+    def data(self) -> Dict:
         """Returns just the data-containing mappings on this level of the Hierarchy"""
         return self._data.copy()
 
@@ -105,7 +105,7 @@ class HierarchicalDict(collections.abc.Mapping):
         """Returns an iterator object that supports the iterator protocol"""
         return self.generator()
 
-    def generator(self) -> typing.Generator[str, None, None]:
+    def generator(self) -> Generator[str, None, None]:
         """A generator for the data in this level and lower levels of this mapping"""
         for key in self._data:
             yield key
@@ -124,11 +124,11 @@ class HierarchicalDict(collections.abc.Mapping):
         except KeyError:
             raise KeyError(key)
 
-    def __setitem__(self, key: str, value: typing.Any) -> None:
+    def __setitem__(self, key: str, value: Any) -> None:
         """Sets an item or creates a subdict and sets the item within that"""
         self._setitem(key, value)
 
-    def _setitem(self, key: str, value: typing.Any, is_data: bool = True) -> None:
+    def _setitem(self, key: str, value: Any, is_data: bool = True) -> None:
         """Set an item or appends a whole subtree at a key location"""
         if self.separator in key:
             subdict = self._subdict.get(self._key_head(key), HierarchicalDict(separator = self.separator))
@@ -155,7 +155,7 @@ class HierarchicalDict(collections.abc.Mapping):
         except KeyError:
             raise KeyError(key)
 
-    def __contains__(self, key: typing.Any) -> bool:
+    def __contains__(self, key: Any) -> bool:
         """Determines whether the key is present in the hierarchy"""
         if self.separator in key:
             try:
@@ -243,7 +243,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def __init__(self,
                  name: str,
                  description: str = None,
-                 default: typing.Optional[ConfigSimpleType] = None,
+                 default: Optional[ConfigSimpleType] = None,
                  optional: bool = False) -> None:
         super().__init__()
         self._check_type(name, str)
@@ -253,7 +253,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._description = description or ""
         self._default = default
         self._optional = optional
-        self._requirements = {}  # type: typing.Dict[str, RequirementInterface]
+        self._requirements = {}  # type: Dict[str, RequirementInterface]
 
     def __repr__(self) -> str:
         return "<" + self.__class__.__name__ + ": " + self.name + ">"
@@ -269,7 +269,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return self._description
 
     @property
-    def default(self) -> typing.Optional[ConfigSimpleType]:
+    def default(self) -> Optional[ConfigSimpleType]:
         """Returns the default value if one is set"""
         return self._default
 
@@ -292,7 +292,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     # Child operations
     @property
-    def requirements(self) -> typing.Dict[str, 'RequirementInterface']:
+    def requirements(self) -> Dict[str, 'RequirementInterface']:
         """Returns a dictionary of all the child requirements, indexed by name"""
         return self._requirements.copy()
 
@@ -308,7 +308,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     def unsatisfied_children(self,
                              context: interfaces.context.ContextInterface,
-                             config_path: str) -> typing.List[str]:
+                             config_path: str) -> List[str]:
         """Method that will validate all child requirements"""
         result = []
         for requirement in self.requirements.values():
@@ -322,7 +322,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     @abstractmethod
     def unsatisfied(self,
                     context: interfaces.context.ContextInterface,
-                    config_path: str) -> typing.List[str]:
+                    config_path: str) -> List[str]:
         """Method to validate the value stored at config_path for the configuration object against a context
 
            Returns a list containing its own name (or multiple unsatisfied requirement names) when invalid
@@ -331,7 +331,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
 class SimpleTypeRequirement(RequirementInterface):
     """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
-    instance_type = bool  # type: typing.ClassVar[typing.Type]
+    instance_type = bool  # type: ClassVar[Type]
 
     def add_requirement(self, requirement: RequirementInterface):
         """Always raises a TypeError as instance requirements cannot have children"""
@@ -341,7 +341,7 @@ class SimpleTypeRequirement(RequirementInterface):
         """Always raises a TypeError as instance requirements cannot have children"""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Validates the instance requirement based upon its `instance_type`."""
         config_path = path_join(config_path, self.name)
 
@@ -364,10 +364,10 @@ class ClassRequirement(RequirementInterface):
         self._cls = None
 
     @property
-    def cls(self) -> typing.Type:
+    def cls(self) -> Type:
         return self._cls
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Checks to see if a class can be recovered"""
         config_path = path_join(config_path, self.name)
 
@@ -428,8 +428,7 @@ class ConstructableRequirementInterface(RequirementInterface):
     def _construct_class(self,
                          context: interfaces.context.ContextInterface,
                          config_path: str,
-                         requirement_dict: typing.Dict[str, object] = None) \
-            -> typing.Optional['interfaces.objects.ObjectInterface']:
+                         requirement_dict: Dict[str, object] = None) -> Optional['interfaces.objects.ObjectInterface']:
         """Constructs the class, handing args and the subrequirements as parameters to __init__"""
         if self.requirements["class"].unsatisfied(context, config_path):
             return None
@@ -461,7 +460,7 @@ class ConfigurableRequirementInterface(RequirementInterface):
     def build_configuration(self,
                             context: interfaces.context.ContextInterface,
                             config_path: str,
-                            value: typing.Any) -> HierarchicalDict:
+                            value: Any) -> HierarchicalDict:
         """Proxies to a ConfigurableInterface if necessary"""
 
 
@@ -520,12 +519,12 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return result
 
     @classmethod
-    def get_requirements(cls) -> typing.List[RequirementInterface]:
+    def get_requirements(cls) -> List[RequirementInterface]:
         """Returns a list of RequirementInterface objects required by this object"""
         return []
 
     @classmethod
-    def unsatisfied(cls, context: interfaces.context.ContextInterface, config_path: str) -> typing.List[str]:
+    def unsatisfied(cls, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Returns a list of the names of all unsatisfied requirements
 
         Since a satisfied set of requirements will return [], it can be used in tests as follows:

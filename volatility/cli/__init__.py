@@ -14,7 +14,7 @@ import json
 import logging
 import os
 import sys
-import typing
+from typing import Union, Type, Dict
 from urllib import parse, request
 
 import volatility.plugins
@@ -41,7 +41,7 @@ class PrintedProgress(object):
     def __init__(self):
         self._max_message_len = 0
 
-    def __call__(self, progress: typing.Union[int, float], description: str = None):
+    def __call__(self, progress: Union[int, float], description: str = None):
         """ A simple function for providing text-based feedback
 
         .. warning:: Only for development use.
@@ -58,7 +58,7 @@ class PrintedProgress(object):
 class MuteProgress(PrintedProgress):
     """A dummy progress handler that produces no output when called"""
 
-    def __call__(self, progress: typing.Union[int, float], description: str = None):
+    def __call__(self, progress: Union[int, float], description: str = None):
         pass
 
 
@@ -225,7 +225,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
     def populate_config(self,
                         context: interfaces.context.ContextInterface,
-                        configurables_list: typing.Dict[str, interfaces.configuration.ConfigurableInterface],
+                        configurables_list: Dict[str, interfaces.configuration.ConfigurableInterface],
                         args: argparse.Namespace,
                         plugin_config_path: str) -> None:
         """Populate the context config based on the returned args
@@ -279,8 +279,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
 
     def populate_requirements_argparse(self,
-                                       parser: typing.Union[argparse.ArgumentParser, argparse._ArgumentGroup],
-                                       configurable: typing.Type[interfaces.configuration.ConfigurableInterface]):
+                                       parser: Union[argparse.ArgumentParser, argparse._ArgumentGroup],
+                                       configurable: Type[interfaces.configuration.ConfigurableInterface]):
         """Adds the plugin's simple requirements to the provided parser
 
         Args:
@@ -293,7 +293,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # Construct an argparse group
 
         for requirement in configurable.get_requirements():
-            additional = {}  # type: typing.Dict[str, typing.Any]
+            additional = {}  # type: Dict[str, Any]
             if not isinstance(requirement, interfaces.configuration.RequirementInterface):
                 raise TypeError(
                     "Plugin contains requirements that are not RequirementInterfaces: {}".format(configurable.__name__))

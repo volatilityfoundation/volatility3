@@ -4,7 +4,7 @@ These include exceptions that can be thrown on errors by the symbol space or sym
 an address is invalid.  The :class:`PagedInvalidAddressException` contains information about the size of the invalid
 page.
 """
-import typing
+from typing import List
 
 
 class VolatilityException(Exception):
@@ -87,6 +87,6 @@ class MissingStructureException(VolatilityException):
 
 
 class UnsatisfiedException(VolatilityException):
-    def __init__(self, unsatisfied: typing.List[str]) -> None:
+    def __init__(self, unsatisfied: List[str]) -> None:
         super().__init__()
         self.unsatisfied = unsatisfied

@@ -6,8 +6,8 @@ They are called and carry out some algorithms on data stored in layers using obj
 # Configuration interfaces must be imported separately, since we're part of interfaces and can't import ourselves
 import io
 import logging
-import typing
 from abc import ABCMeta, abstractmethod
+from typing import TYPE_CHECKING, List
 
 from volatility.framework import exceptions
 from volatility.framework import validity
@@ -15,7 +15,7 @@ from volatility.framework.interfaces import configuration as interfaces_configur
 
 vollog = logging.getLogger(__name__)
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from volatility.framework import interfaces, renderers
 
 
@@ -71,7 +71,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
         if self.unsatisfied(context, config_path):
             vollog.warning("Plugin failed validation")
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
-        self._file_consumer = None  # type: typing.Optional[FileConsumerInterface]
+        self._file_consumer = None  # type: Optional[FileConsumerInterface]
 
     def set_file_consumer(self, consumer: FileConsumerInterface) -> None:
         self._file_consumer = self._check_type(consumer, FileConsumerInterface)
@@ -84,7 +84,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
             vollog.debug("No file consumer specified to consume: {}".format(filedata.preferred_filename))
 
     @classmethod
-    def get_requirements(cls) -> typing.List['interfaces.configuration.RequirementInterface']:
+    def get_requirements(cls) -> List['interfaces.configuration.RequirementInterface']:
         """Returns a list of Requirement objects for this plugin"""
         return []
 

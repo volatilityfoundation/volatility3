@@ -1,4 +1,4 @@
-import typing
+from typing import Generator, Tuple
 
 from volatility.framework import constants
 from volatility.framework import objects, interfaces
@@ -77,7 +77,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
                                                nt_header.OptionalHeader.ImageBase.vol.data_format)
         return raw_data[:image_base_offset] + newval + raw_data[image_base_offset + member_size:]
 
-    def reconstruct(self) -> typing.Generator[typing.Tuple[int, bytes], None, None]:
+    def reconstruct(self) -> Generator[Tuple[int, bytes], None, None]:
         """This method generates the content necessary to reconstruct a PE
         file from memory. It preserves slack space (similar to the old --memory)
         and automatically fixes the ImageBase in the output PE file.
@@ -147,7 +147,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
 
 class _IMAGE_NT_HEADERS(objects.Struct):
 
-    def get_sections(self) -> typing.Generator[interfaces.objects.ObjectInterface, None, None]:
+    def get_sections(self) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Iterate through the section headers for this PE file.
 
         Yields:

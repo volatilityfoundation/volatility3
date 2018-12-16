@@ -1,4 +1,4 @@
-import typing
+from typing import Generator, List, Optional, Set, Tuple, Union
 
 
 class WuManber(object):
@@ -11,9 +11,9 @@ class WuManber(object):
         self._block_size = block_size
         self._maximum_hash = self._hash_function(b"\xff\xff\xff") + 1  # This depends on the hash function used
 
-        self._patterns = []  # type: typing.List[bytes]
-        self._shift = None  # type: typing.Optional[typing.List[int]]
-        self._hashes = [set() for _ in range(self._maximum_hash)]  # type: typing.List[typing.Set[bytes]]
+        self._patterns = []  # type: List[bytes]
+        self._shift = None  # type: Optional[List[int]]
+        self._hashes = [set() for _ in range(self._maximum_hash)]  # type: List[Set[bytes]]
 
     def add_pattern(self, pattern: bytes) -> None:
         if not isinstance(pattern, bytes):
@@ -35,7 +35,7 @@ class WuManber(object):
 
         max_jump = self.minimum_pattern_length - self._block_size + 1
         self._shift = [max_jump] * self._maximum_hash
-        self.hashes = [set() for _ in range(self._maximum_hash)]  # type: typing.List[typing.Set[bytes]]
+        self.hashes = [set() for _ in range(self._maximum_hash)]  # type: List[Set[bytes]]
 
         for pattern in self._patterns:
             for i in range(self._block_size, self.minimum_pattern_length + 1):
@@ -53,7 +53,7 @@ class WuManber(object):
         return (value_bytes[0] << 5) + (value_bytes[1] << 3) + value_bytes[2]
 
     def search(self, haystack: bytes) \
-            -> typing.Generator[typing.Tuple[int, typing.Union[str, bytes]], None, None]:
+            -> Generator[Tuple[int, Union[str, bytes]], None, None]:
         """Search through a large body of data for patterns previously added with add_pattern"""
         if not isinstance(haystack, bytes):
             raise TypeError("Search haystack must be a byte string")

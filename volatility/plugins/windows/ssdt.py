@@ -1,5 +1,5 @@
 import os
-import typing
+from typing import Any, Iterator, List, Tuple
 
 from volatility.framework import constants, interfaces
 from volatility.framework import contexts
@@ -16,19 +16,18 @@ class SSDT(plugins.PluginInterface):
     """Lists the system call table"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
 
-    def _generator(self, modules: typing.Iterator[typing.Any]) -> \
-            typing.Iterator[typing.Tuple[int, typing.Tuple[int, int, str, str]]]:
+    def _generator(self, mods: Iterator[Any]) -> Iterator[Tuple[int, Tuple[int, int, str, str]]]:
 
         layer_name = self.config['primary']
         context_modules = []
 
-        for mod in modules:
+        for mod in mods:
 
             try:
                 module_name_with_ext = mod.BaseDllName.get_string()

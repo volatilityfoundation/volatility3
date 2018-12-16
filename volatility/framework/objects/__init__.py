@@ -1,8 +1,8 @@
 import collections
 import logging
 import struct
-import typing
 from collections import abc
+from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union, overload
 
 from volatility.framework import interfaces
 from volatility.framework.interfaces.objects import ObjectInformation
@@ -14,8 +14,8 @@ DataFormatInfo = collections.namedtuple('DataFormatInfo', ['length', 'byteorder'
 
 
 def convert_data_to_value(data: bytes,
-                          struct_type: typing.Type[typing.Union[int, float, bytes, str, bool]],
-                          data_format: DataFormatInfo) -> typing.Union[int, float, bytes, str, bool]:
+                          struct_type: Type[Union[int, float, bytes, str, bool]],
+                          data_format: DataFormatInfo) -> Union[int, float, bytes, str, bool]:
     """Converts a series of bytes to a particular type of value"""
     if struct_type == int:
         return int.from_bytes(data,
@@ -37,8 +37,8 @@ def convert_data_to_value(data: bytes,
     return struct.unpack(struct_format, data)[0]
 
 
-def convert_value_to_data(value: typing.Union[int, float, bytes, str, bool],
-                          struct_type: typing.Type[typing.Union[int, float, bytes, str, bool]],
+def convert_value_to_data(value: Union[int, float, bytes, str, bool],
+                          struct_type: Type[Union[int, float, bytes, str, bool]],
                           data_format: DataFormatInfo) -> bytes:
     """Converts a particular value to a series of bytes"""
     if not isinstance(value, struct_type):
@@ -74,7 +74,7 @@ class Void(interfaces.objects.ObjectInterface):
             """Dummy size for Void objects"""
             raise TypeError("Void types are incomplete, cannot contain data and do not have a size")
 
-    def write(self, value: typing.Any) -> None:
+    def write(self, value: Any) -> None:
         """Dummy method that does nothing for Void objects"""
         raise TypeError("Cannot write data to a void, recast as another object")
 
@@ -85,7 +85,7 @@ class Function(interfaces.objects.ObjectInterface):
 
 class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
-    _struct_type = int  # type: typing.ClassVar[typing.Type]
+    _struct_type = int  # type: ClassVar[Type]
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -98,13 +98,13 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
                          data_format = data_format)
         self._data_format = data_format
 
-    def __new__(cls: typing.Type,
+    def __new__(cls: 'PrimitiveObject',
                 context: interfaces.context.ContextInterface,
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
                 data_format: DataFormatInfo,
-                new_value: typing.Union[int, float, bool, bytes, str] = None,
-                **kwargs) -> typing.Type['PrimitiveObject']:
+                new_value: Union[int, float, bool, bytes, str] = None,
+                **kwargs) -> 'PrimitiveObject':
         """Creates the appropriate class and returns it so that the native type is inherited
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -140,7 +140,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     def _unmarshall(cls,
                     context: interfaces.context.ContextInterface,
                     data_format: DataFormatInfo,
-                    object_info: ObjectInformation) -> typing.Union[int, float, bool, bytes, str]:
+                    object_info: ObjectInformation) -> Union[int, float, bool, bytes, str]:
         data = context.memory.read(object_info.layer_name, object_info.offset, data_format.length)
         return convert_data_to_value(data, cls._struct_type, data_format)
 
@@ -150,7 +150,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             """Returns the size of the templated object"""
             return template.vol.data_format.length
 
-    def write(self, value: typing.Union[int, float, bool, bytes, str]) -> None:
+    def write(self, value: Union[int, float, bool, bytes, str]) -> None:
         """Writes the object into the layer of the context at the current offset"""
         data = convert_value_to_data(value, self._struct_type, self._data_format)
         return self._context.memory.write(self.vol.layer_name, self.vol.offset, data)
@@ -158,7 +158,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
 
 class Boolean(PrimitiveObject, int):
     """Primitive Object that handles boolean types"""
-    _struct_type = bool  # type: typing.ClassVar[typing.Type]
+    _struct_type = bool  # type: ClassVar[Type]
 
 
 class Integer(PrimitiveObject, int):
@@ -167,17 +167,17 @@ class Integer(PrimitiveObject, int):
 
 class Float(PrimitiveObject, float):
     """Primitive Object that handles double or floating point numbers"""
-    _struct_type = float  # type: typing.ClassVar[typing.Type]
+    _struct_type = float  # type: ClassVar[Type]
 
 
 class Char(PrimitiveObject, bytes):
     """Primitive Object that handles characters"""
-    _struct_type = bytes  # type: typing.ClassVar[typing.Type]
+    _struct_type = bytes  # type: ClassVar[Type]
 
 
 class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes"""
-    _struct_type = bytes  # type: typing.ClassVar[typing.Type]
+    _struct_type = bytes  # type: ClassVar[Type]
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -190,12 +190,12 @@ class Bytes(PrimitiveObject, bytes):
                          data_format = DataFormatInfo(length, "big", False))
         self._vol['length'] = length
 
-    def __new__(cls: typing.Type,
+    def __new__(cls: 'Bytes',
                 context: interfaces.context.ContextInterface,
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
                 length: int = 1,
-                **kwargs) -> typing.Type['Bytes']:
+                **kwargs) -> 'Bytes':
         """Creates the appropriate class and returns it so that the native type is inherritted
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
@@ -214,7 +214,7 @@ class String(PrimitiveObject, str):
             (for multibyte characters, this will not be the maximum length of the string)
 
     """
-    _struct_type = str  # type: typing.ClassVar[typing.Type]
+    _struct_type = str  # type: ClassVar[Type]
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -269,7 +269,7 @@ class Pointer(Integer):
                  type_name: str,
                  object_info: interfaces.objects.ObjectInformation,
                  data_format: DataFormatInfo,
-                 subtype: typing.Optional[templates.ObjectTemplate] = None) -> None:
+                 subtype: Optional[templates.ObjectTemplate] = None) -> None:
         self._check_type(subtype, templates.ObjectTemplate)
         super().__init__(context = context,
                          object_info = object_info,
@@ -281,7 +281,7 @@ class Pointer(Integer):
     def _unmarshall(cls,
                     context: interfaces.context.ContextInterface,
                     data_format: DataFormatInfo,
-                    object_info: ObjectInformation) -> typing.Any:
+                    object_info: ObjectInformation) -> Any:
         """Ensure that pointer values always fall within the address space of the layer they're constructed on
 
            If there's a need for all the data within the address, the pointer should be recast.  The "pointer"
@@ -295,7 +295,7 @@ class Pointer(Integer):
         value = int.from_bytes(data, byteorder = endian, signed = signed)
         return value & mask
 
-    def dereference(self, layer_name: typing.Optional[str] = None) -> interfaces.objects.ObjectInterface:
+    def dereference(self, layer_name: Optional[str] = None) -> interfaces.objects.ObjectInterface:
         """Dereferences the pointer
 
            Layer_name is identifies the appropriate layer within the context that the pointer points to.
@@ -310,12 +310,12 @@ class Pointer(Integer):
                                     offset = offset,
                                     parent = self))
 
-    def is_readable(self, layer_name: typing.Optional[str] = None) -> bool:
+    def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from memory"""
         layer_name = layer_name or self.vol.layer_name
         return self._context.memory[layer_name].is_valid(self)
 
-    def __getattr__(self, attr: str) -> typing.Any:
+    def __getattr__(self, attr: str) -> Any:
         """Convenience function to access unknown attributes by getting them from the subtype object"""
         return getattr(self.dereference(), attr)
 
@@ -329,7 +329,7 @@ class Pointer(Integer):
             return Integer.VolTemplateProxy.size(template)
 
         @classmethod
-        def children(cls, template: interfaces.objects.Template) -> typing.List[interfaces.objects.Template]:
+        def children(cls, template: interfaces.objects.Template) -> List[interfaces.objects.Template]:
             """Returns the children of the template"""
             if 'subtype' in template.vol:
                 return [template.vol.subtype]
@@ -388,7 +388,7 @@ class BitField(interfaces.objects.ObjectInterface, int):
             return Integer.VolTemplateProxy.size(template)
 
         @classmethod
-        def children(cls, template: interfaces.objects.Template) -> typing.List[interfaces.objects.Template]:
+        def children(cls, template: interfaces.objects.Template) -> List[interfaces.objects.Template]:
             """Returns the children of the template"""
             if 'base_type' in template.vol:
                 return [template.vol.base_type]
@@ -413,8 +413,8 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
                 base_type: interfaces.objects.Template,
-                choices: typing.Dict[str, int],
-                **kwargs) -> typing.Type:
+                choices: Dict[str, int],
+                **kwargs) -> 'Enumeration':
         cls._check_class(base_type.vol.object_class, Integer)
         value = base_type(context = context,
                           object_info = object_info)
@@ -425,10 +425,10 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
                  type_name: str,
                  object_info: interfaces.objects.ObjectInformation,
                  base_type: Integer,
-                 choices: typing.Dict[str, int]) -> None:
+                 choices: Dict[str, int]) -> None:
         super().__init__(context, type_name, object_info)
 
-        self._inverse_choices = {}  # type: typing.Dict[int, str]
+        self._inverse_choices = {}  # type: Dict[int, str]
         for k, v in self._check_type(choices, dict).items():
             self._check_type(k, str)
             self._check_type(v, int)
@@ -454,7 +454,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         return self.lookup(self)
 
     @property
-    def choices(self) -> typing.Dict[str, int]:
+    def choices(self) -> Dict[str, int]:
         return self._vol['choices']
 
     def __getattr__(self, attr: str) -> str:
@@ -469,10 +469,10 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
-            return template._vol['base_type'].size
+            return template.vol['base_type'].size
 
         @classmethod
-        def children(cls, template: interfaces.objects.Template) -> typing.List[interfaces.objects.Template]:
+        def children(cls, template: interfaces.objects.Template) -> List[interfaces.objects.Template]:
             """Returns the children of the template"""
             if 'base_type' in template.vol:
                 return [template.vol.base_type]
@@ -526,7 +526,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
             return template.vol.get('subtype', None).size * template.vol.get('count', 0)
 
         @classmethod
-        def children(cls, template: interfaces.objects.Template) -> typing.List[interfaces.objects.Template]:
+        def children(cls, template: interfaces.objects.Template) -> List[interfaces.objects.Template]:
             """Returns the children of the template"""
             if 'subtype' in template.vol:
                 return [template.vol.subtype]
@@ -551,17 +551,17 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
                 return 0
             raise IndexError("Member not present in array template: {}".format(child))
 
-    @typing.overload
+    @overload
     def __getitem__(self, i: int) -> interfaces.objects.Template:
         ...
 
-    @typing.overload
-    def __getitem__(self, s: slice) -> typing.List[interfaces.objects.Template]:
+    @overload
+    def __getitem__(self, s: slice) -> List[interfaces.objects.Template]:
         ...
 
     def __getitem__(self, i):
         """Returns the i-th item from the array"""
-        result = []  # type: typing.List[interfaces.objects.Template]
+        result = []  # type: List[interfaces.objects.Template]
         mask = self._context.memory[self.vol.layer_name].address_mask
         # We use the range function to deal with slices for us
         series = range(self.vol.count)[i]
@@ -598,14 +598,14 @@ class Struct(interfaces.objects.ObjectInterface):
                  type_name: str,
                  object_info: interfaces.objects.ObjectInformation,
                  size: int,
-                 members: typing.Dict[str, typing.Tuple[int, interfaces.objects.Template]]) -> None:
+                 members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
         super().__init__(context = context,
                          type_name = type_name,
                          object_info = object_info,
                          size = size,
                          members = members)
         self._check_members(members)
-        self._concrete_members = {}  # type: typing.Dict[str, typing.Dict]
+        self._concrete_members = {}  # type: Dict[str, Dict]
 
     def has_member(self, member_name: str) -> bool:
         """Returns whether the object would contain a member called member_name"""
@@ -620,7 +620,7 @@ class Struct(interfaces.objects.ObjectInterface):
             return template.vol.size
 
         @classmethod
-        def children(cls, template: interfaces.objects.Template) -> typing.List[interfaces.objects.Template]:
+        def children(cls, template: interfaces.objects.Template) -> List[interfaces.objects.Template]:
             """Method to list children of a template"""
             return [member for _, member in template.vol.members.values()]
 
@@ -661,7 +661,7 @@ class Struct(interfaces.objects.ObjectInterface):
 
     @classmethod
     def _check_members(cls,
-                       members: typing.Dict[str, typing.Tuple[int, interfaces.objects.Template]]) -> None:
+                       members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
         # An object template is a callable that when called with a context, offset, layer_name and type_name
         if not isinstance(members, abc.Mapping):
@@ -673,7 +673,7 @@ class Struct(interfaces.objects.ObjectInterface):
         """Specifically named method for retrieving members."""
         return self.__getattr__(attr)
 
-    def __getattr__(self, attr: str) -> typing.Any:
+    def __getattr__(self, attr: str) -> Any:
         """Method for accessing members of the type"""
         if attr in self._concrete_members:
             return self._concrete_members[attr]
@@ -691,7 +691,7 @@ class Struct(interfaces.objects.ObjectInterface):
             return member
         raise AttributeError("Struct has no attribute: {}.{}".format(self.vol.type_name, attr))
 
-    def __dir__(self) -> typing.Iterable[str]:
+    def __dir__(self) -> Iterable[str]:
         """Returns a complete list of members when dir is called"""
         return list(super().__dir__()) + list(self.vol.members)
 

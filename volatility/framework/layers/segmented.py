@@ -1,6 +1,6 @@
-import typing
 from abc import ABCMeta, abstractmethod
 from bisect import bisect_right
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
@@ -16,13 +16,13 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
                  context: interfaces.configuration.ContextInterface,
                  config_path: str,
                  name: str,
-                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+                 metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
         self._base_layer = self.config["base_layer"]
-        self._segments = []  # type: typing.List[typing.Tuple[int, int, int]]
-        self._minaddr = None  # type: typing.Optional[int]
-        self._maxaddr = None  # type: typing.Optional[int]
+        self._segments = []  # type: List[Tuple[int, int, int]]
+        self._minaddr = None  # type: Optional[int]
+        self._maxaddr = None  # type: Optional[int]
 
         self._load_segments()
 
@@ -41,7 +41,7 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
         except exceptions.InvalidAddressException:
             return False
 
-    def _find_segment(self, offset: int, next: bool = False) -> typing.Tuple[int, int, int]:
+    def _find_segment(self, offset: int, next: bool = False) -> Tuple[int, int, int]:
         """Finds the segment containing a given offset
 
            Returns the segment tuple (offset, mapped_offset, length)
@@ -62,8 +62,7 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
                     return self._segments[i]
         raise exceptions.InvalidAddressException(self.name, offset, "Invalid address at {:0x}".format(offset))
 
-    def mapping(self, offset: int, length: int, ignore_errors: bool = False) \
-            -> typing.Iterable[typing.Tuple[int, int, int, str]]:
+    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
         """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings"""
         done = False
         current_offset = offset
@@ -118,11 +117,11 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
         return self._maxaddr
 
     @property
-    def dependencies(self) -> typing.List[str]:
+    def dependencies(self) -> List[str]:
         """Returns a list of the lower layers that this layer is dependent upon"""
         return [self._base_layer]
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'base_layer',
                                                          optional = False)]

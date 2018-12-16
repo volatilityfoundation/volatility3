@@ -1,5 +1,5 @@
 import logging
-import typing
+from typing import List, Generator, Iterable
 
 import volatility.framework.constants as constants
 import volatility.framework.exceptions as exceptions
@@ -19,7 +19,7 @@ class ModDump(interfaces_plugins.PluginInterface):
     """Dumps kernel modules"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Reuse the requirements from the plugins we use
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
@@ -31,7 +31,7 @@ class ModDump(interfaces_plugins.PluginInterface):
                            context: interfaces.context.ContextInterface,
                            layer_name: str,
                            symbol_table: str,
-                           pids: typing.List[int] = None) -> typing.Generator[str, None, None]:
+                           pids: List[int] = None) -> Generator[str, None, None]:
         """Build a cache of possible virtual layers, in priority starting with
         the primary/kernel layer. Then keep one layer per session by cycling
         through the process list.
@@ -39,11 +39,7 @@ class ModDump(interfaces_plugins.PluginInterface):
         Returns:
             <list> of layer names
         """
-
-        # the primary layer should be first
-        layers = [layer_name]
-
-        seen_ids = []  # type: typing.List[interfaces.objects.ObjectInterface]
+        seen_ids = []  # type: List[interfaces.objects.ObjectInterface]
         filter_func = pslist.PsList.create_filter(pids or [])
 
         for proc in pslist.PsList.list_processes(context = context,
@@ -74,7 +70,7 @@ class ModDump(interfaces_plugins.PluginInterface):
     @classmethod
     def find_session_layer(cls,
                            context: interfaces.context.ContextInterface,
-                           session_layers: typing.Iterable[str],
+                           session_layers: Iterable[str],
                            base_address: int):
         """Given a base address and a list of layer names, find a
         layer that can access the specified address.

@@ -1,5 +1,5 @@
 import logging
-import typing
+from typing import Any, ClassVar, Dict, List, Type
 
 from volatility.framework import interfaces, validity, exceptions
 
@@ -18,7 +18,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
     """
 
     def __init__(self,
-                 object_class: typing.Type[interfaces.objects.ObjectInterface],
+                 object_class: Type[interfaces.objects.ObjectInterface],
                  type_name: str,
                  **arguments) -> None:
         super().__init__(type_name = type_name, **arguments)
@@ -31,7 +31,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         return self.vol.object_class.VolTemplateProxy.size(self)
 
     @property
-    def children(self) -> typing.List[interfaces.objects.Template]:
+    def children(self) -> List[interfaces.objects.Template]:
         """Returns the children of the templated object (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)
         """
         return self.vol.object_class.VolTemplateProxy.children(self)
@@ -60,7 +60,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
            Returns: an object adhereing to the :class:`~volatility.framework.interfaces.objects.ObjectInterface`
         """
-        arguments = {}  # type: typing.Dict[str, typing.Any]
+        arguments = {}  # type: Dict[str, Any]
         for arg in self.vol:
             if arg != 'object_class':
                 arguments[arg] = self.vol[arg]
@@ -77,20 +77,20 @@ class ReferenceTemplate(interfaces.objects.Template):
     """
 
     @property
-    def children(self) -> typing.List[interfaces.objects.Template]:
+    def children(self) -> List[interfaces.objects.Template]:
         return []
 
-    def _unresolved(self, *args, **kwargs) -> typing.Any:
+    def _unresolved(self, *args, **kwargs) -> Any:
         """Referenced symbols must be appropriately resolved before they can provide information such as size
            This is because the size request has no context within which to determine the actual symbol structure.
         """
         raise exceptions.SymbolError(
             "Template contains no information about its structure: {}".format(self.vol.type_name))
 
-    size = property(_unresolved)  # type: typing.ClassVar[typing.Any]
-    replace_child = _unresolved  # type: typing.ClassVar[typing.Any]
-    relative_child_offset = _unresolved  # type: typing.ClassVar[typing.Any]
-    has_member = _unresolved  # type: typing.ClassVar[typing.Any]
+    size = property(_unresolved)  # type: ClassVar[Any]
+    replace_child = _unresolved  # type: ClassVar[Any]
+    relative_child_offset = _unresolved  # type: ClassVar[Any]
+    has_member = _unresolved  # type: ClassVar[Any]
 
     def __call__(self,
                  context: interfaces.context.ContextInterface,

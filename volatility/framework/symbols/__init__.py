@@ -2,7 +2,7 @@ import collections
 import collections.abc
 import enum
 import logging
-import typing
+from typing import Any, Dict, Iterable, Iterator, Set, TypeVar
 
 from volatility.framework import constants, exceptions, interfaces, objects, validity
 
@@ -15,10 +15,10 @@ class SymbolType(enum.Enum):
     ENUM = 3
 
 
-SymbolSpaceReturnType = typing.TypeVar("SymbolSpaceReturnType",
-                                       interfaces.objects.Template,
-                                       interfaces.symbols.SymbolInterface,
-                                       typing.Dict[str, typing.Any])
+SymbolSpaceReturnType = TypeVar("SymbolSpaceReturnType",
+                                interfaces.objects.Template,
+                                interfaces.symbols.SymbolInterface,
+                                Dict[str, Any])
 
 
 class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRoutines):
@@ -30,10 +30,10 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
 
     def __init__(self) -> None:
         super().__init__()
-        self._dict = collections.OrderedDict()  # type: typing.Dict[str, interfaces.symbols.BaseSymbolTableInterface]
+        self._dict = collections.OrderedDict()  # type: Dict[str, interfaces.symbols.BaseSymbolTableInterface]
         # Permanently cache all resolved symbols
-        self._resolved = {}  # type: typing.Dict[str, interfaces.objects.Template]
-        self._resolved_symbols = set()  # type: typing.Set[str]
+        self._resolved = {}  # type: Dict[str, interfaces.objects.Template]
+        self._resolved_symbols = set()  # type: Set[str]
 
     def free_table_name(self, prefix: str = "layer") -> str:
         """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
@@ -46,15 +46,15 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
 
     ### Symbol functions
 
-    def get_symbols_by_type(self, type_name: str) -> typing.Iterable[str]:
+    def get_symbols_by_type(self, type_name: str) -> Iterable[str]:
         """Returns all symbols based on the type of the symbol"""
         for table in self._dict:
             for symbol_name in self._dict[table].get_symbols_by_type(type_name):
                 yield table + constants.BANG + symbol_name
 
-    def get_symbols_by_location(self, offset: int, size: int = 0, table_name: str = None) -> typing.Iterable[str]:
+    def get_symbols_by_location(self, offset: int, size: int = 0, table_name: str = None) -> Iterable[str]:
         """Returns all symbols that exist at a specific relative address"""
-        table_list = self._dict.values()  # type: typing.Iterable[interfaces.symbols.BaseSymbolTableInterface]
+        table_list = self._dict.values()  # type: Iterable[interfaces.symbols.BaseSymbolTableInterface]
         if table_name is not None:
             if table_name in self._dict:
                 table_list = [self._dict[table_name]]
@@ -70,11 +70,11 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
         """Returns the number of tables within the space"""
         return len(self._dict)
 
-    def __getitem__(self, i: str) -> typing.Any:
+    def __getitem__(self, i: str) -> Any:
         """Returns a specific table from the space"""
         return self._dict[i]
 
-    def __iter__(self) -> typing.Iterator[str]:
+    def __iter__(self) -> Iterator[str]:
         """Iterates through all available tables in the symbol space"""
         return iter(self._dict)
 
@@ -188,7 +188,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
             raise exceptions.SymbolError("Unresolvable Symbol: {}".format(symbol_name))
         return retval
 
-    def get_enumeration(self, enum_name: str) -> typing.Dict[str, typing.Any]:
+    def get_enumeration(self, enum_name: str) -> Dict[str, Any]:
         """Look-up a set of enumeration choices from a specific symbol table"""
         retval = self._weak_resolve(SymbolType.ENUM, enum_name)
         if not isinstance(retval, dict):
@@ -232,7 +232,7 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
                       table_aslr_shift: int = 0):
     """Alters a symbol table, such that all symbols returned have their address masked by the address mask"""
     original_get_symbol = symbol_table.get_symbol
-    cached_symbols = {}  # type: typing.Dict[interfaces.symbols.SymbolInterface, interfaces.symbols.SymbolInterface]
+    cached_symbols = {}  # type: Dict[interfaces.symbols.SymbolInterface, interfaces.symbols.SymbolInterface]
 
     def address_masked_get_symbol(*args, **kwargs):
         symbol = original_get_symbol(*args, **kwargs)

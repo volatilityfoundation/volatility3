@@ -1,6 +1,6 @@
 import enum
 import logging
-import typing
+from typing import Optional, Tuple, List, Generator
 
 from volatility.framework import constants, interfaces, renderers, validity, exceptions, symbols
 from volatility.framework.configuration import requirements
@@ -35,11 +35,11 @@ class PoolConstraint(validity.ValidityRoutines):
     def __init__(self,
                  tag: bytes,
                  type_name: str,
-                 object_type: typing.Optional[str] = None,
-                 page_type: typing.Optional[PoolType] = None,
-                 size: typing.Optional[typing.Tuple[typing.Optional[int], typing.Optional[int]]] = None,
-                 index: typing.Optional[typing.Tuple[typing.Optional[int], typing.Optional[int]]] = None,
-                 alignment: typing.Optional[int] = 1) -> None:
+                 object_type: Optional[str] = None,
+                 page_type: Optional[PoolType] = None,
+                 size: Optional[Tuple[Optional[int], Optional[int]]] = None,
+                 index: Optional[Tuple[Optional[int], Optional[int]]] = None,
+                 alignment: Optional[int] = 1) -> None:
         self.tag = self._check_type(tag, bytes)
         self.type_name = type_name
         self.object_type = object_type
@@ -154,14 +154,14 @@ class PoolScanner(plugins.PluginInterface):
                   context: interfaces.context.ContextInterface,
                   layer_name: str,
                   symbol_table: str,
-                  pool_constraints: typing.List[PoolConstraint],
+                  pool_constraints: List[PoolConstraint],
                   alignment: int = 8,
-                  progress_callback: typing.Optional[validity.ProgressCallback] = None) \
-            -> typing.Generator[typing.Tuple[PoolConstraint, interfaces.objects.ObjectInterface], None, None]:
+                  progress_callback: Optional[validity.ProgressCallback] = None) \
+            -> Generator[Tuple[PoolConstraint, interfaces.objects.ObjectInterface], None, None]:
         """Returns the _POOL_HEADER object (based on the symbol_table template) after scanning through layer_name
         returning all headers that match any of the constraints provided.  Only one constraint can be provided per tag"""
         # Setup the pattern
-        constraint_lookup = {}  # type: typing.Dict[bytes, typing.List[PoolConstraint]]
+        constraint_lookup = {}  # type: Dict[bytes, List[PoolConstraint]]
         for constraint in pool_constraints:
             temp_list = constraint_lookup.get(constraint.tag, [])
             temp_list.append(constraint)

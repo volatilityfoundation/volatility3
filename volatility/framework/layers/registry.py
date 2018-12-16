@@ -1,5 +1,5 @@
 import logging
-import typing
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from volatility.framework import constants, exceptions, interfaces, objects
 from volatility.framework.configuration import requirements
@@ -24,7 +24,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  name: str,
-                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+                 metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
         self._base_layer = self.config["base_layer"]
@@ -111,8 +111,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                 "Unknown Signature {} (0x{:x}) at offset {}".format(signature, cell.u.KeyNode.Signature, cell_offset))
             return cell
 
-    def get_key(self, key: str, return_list: bool = False) -> typing.Union[
-        typing.List[objects.Struct], objects.Struct]:
+    def get_key(self, key: str, return_list: bool = False) -> Union[List[objects.Struct], objects.Struct]:
         """Gets a specific registry key by key path
 
         return_list specifies whether the return result will be a single node (default) or a list of nodes from
@@ -122,7 +121,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         if key.endswith("\\"):
             key = key[:-1]
         key_array = key.split('\\')
-        found_key = []  # type: typing.List[str]
+        found_key = []  # type: List[str]
         while key_array and node_key:
             subkeys = node_key[-1].get_subkeys()
             for subkey in subkeys:
@@ -141,8 +140,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         return node_key[-1]
 
     def visit_nodes(self,
-                    visitor: typing.Callable[[objects.Struct], None],
-                    node: typing.Optional[objects.Struct] = None) -> None:
+                    visitor: Callable[[objects.Struct], None],
+                    node: Optional[objects.Struct] = None) -> None:
         """Applies a callable (visitor) to all nodes within the registry tree from a given node"""
         if not node:
             node = self.get_node(self.root_cell_offset)
@@ -160,7 +159,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         return value & mask
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [IntRequirement(name = 'hive_offset', description = '', default = 0, optional = False),
                 requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
                 TranslationLayerRequirement(name = 'base_layer', optional = False)]
@@ -185,7 +184,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     def mapping(self,
                 offset: int,
                 length: int,
-                ignore_errors: bool = False) -> typing.Iterable[typing.Tuple[int, int, int, str]]:
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
 
         # TODO: Check the offset and offset + length are not outside the norms
         if (length < 0):
@@ -216,7 +215,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         return response
 
     @property
-    def dependencies(self) -> typing.List[str]:
+    def dependencies(self) -> List[str]:
         """Returns a list of layer names that this layer translates onto"""
         return [self.config['base_layer']]
 

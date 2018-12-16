@@ -1,5 +1,5 @@
 import logging
-import typing
+from typing import Callable, Generator, Iterable
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
@@ -52,7 +52,7 @@ class VadInfo(interfaces_plugins.PluginInterface):
     def protect_values(cls,
                        context: interfaces.context.ContextInterface,
                        virtual_layer: str,
-                       nt_symbols: str) -> typing.Iterable[int]:
+                       nt_symbols: str) -> Iterable[int]:
         """Look up the array of memory protection constants from the memory sample.
         These don't change often, but if they do in the future, then finding them
         # dynamically versus hard-coding here will ensure we parse them properly."""
@@ -67,8 +67,8 @@ class VadInfo(interfaces_plugins.PluginInterface):
 
     @classmethod
     def list_vads(cls, proc: interfaces.objects.ObjectInterface,
-                  filter_func: typing.Callable[[int], bool] = lambda _: False) -> \
-            typing.Generator[interfaces.objects.ObjectInterface, None, None]:
+                  filter_func: Callable[[int], bool] = lambda _: False) -> \
+            Generator[interfaces.objects.ObjectInterface, None, None]:
 
         for vad in proc.get_vad_root().traverse():
             if not filter_func(vad):

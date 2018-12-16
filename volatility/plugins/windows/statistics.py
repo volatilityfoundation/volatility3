@@ -1,4 +1,4 @@
-import typing
+from typing import List
 
 from volatility.framework import renderers, exceptions, interfaces
 from volatility.framework.configuration import requirements
@@ -9,7 +9,7 @@ from volatility.framework.layers import intel
 class Statistics(plugins.PluginInterface):
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"])]

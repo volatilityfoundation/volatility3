@@ -2,13 +2,13 @@
 
 Automagic objects attempt to automatically fill configuration values that a user has not filled.
 """
-import typing
 from abc import ABCMeta
+from typing import TypeVar, Any, List, Optional, Tuple, Union, Type
 
 from volatility.framework import interfaces, validity
 from volatility.framework.configuration import requirements
 
-R = typing.TypeVar('R', bound = interfaces.configuration.RequirementInterface)
+R = TypeVar('R', bound = interfaces.configuration.RequirementInterface)
 
 
 class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metaclass = ABCMeta):
@@ -48,20 +48,19 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) -> typing.Optional[typing.List[typing.Any]]:
+                 progress_callback: validity.ProgressCallback = None) -> Optional[List[Any]]:
         """Runs the automagic over the configurable"""
         return []
 
-    # TODO: requirement_type can be made typing.Union[typing.Type[T], typing.Tuple[typing.Type[T], ...]]
+    # TODO: requirement_type can be made Union[Type[T], Tuple[Type[T], ...]]
     #       once mypy properly supports Tuples in instance
 
     def find_requirements(self,
                           context: interfaces.context.ContextInterface,
                           config_path: str,
                           requirement_root: interfaces.configuration.RequirementInterface,
-                          requirement_type: typing.Union[typing.Tuple[typing.Type[R], ...], typing.Type[R]],
-                          shortcut: bool = True) \
-            -> typing.List[typing.Tuple[str, R]]:
+                          requirement_type: Union[Tuple[Type[R], ...], Type[R]],
+                          shortcut: bool = True) -> List[Tuple[str, R]]:
         """Determines if there is actually an unfulfilled requirement waiting
 
         This ensures we do not carry out an expensive search when there is no requirement for a particular requirement
@@ -77,7 +76,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
             A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement_root.name)
-        results = []  # type: typing.List[typing.Tuple[str, R]]
+        results = []  # type: List[Tuple[str, R]]
         recurse = not shortcut
         if isinstance(requirement_root, requirement_type):
             if recurse or requirement_root.unsatisfied(context, config_path):
@@ -103,8 +102,7 @@ class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def stack(self,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) \
-            -> typing.Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: validity.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """
         Method to determine whether this builder can operate on the named layer.  If so, modify the context appropriately.
 

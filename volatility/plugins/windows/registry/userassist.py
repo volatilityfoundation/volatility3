@@ -3,7 +3,7 @@ import datetime
 import json
 import logging
 import os
-import typing
+from typing import List
 
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
@@ -28,7 +28,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
         self._folder_guids = json.load(open(os.path.join(os.path.dirname(__file__), "userassist.json"), "rb"))
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
@@ -153,7 +153,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
                            renderers.NotApplicableValue(),
                            renderers.NotApplicableValue(),
                            renderers.NotApplicableValue(),
-                           renderers.NotApplicableValue()))  # type: typing.Tuple[int, typing.Tuple[format_hints.Hex, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any, typing.Any]]
+                           renderers.NotApplicableValue()))  # type: Tuple[int, Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]]
                 yield result
 
                 # output any subkeys under Count

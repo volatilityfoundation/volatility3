@@ -5,7 +5,7 @@ to act on multiple different contexts without them interfering eith each other.
 """
 import functools
 import hashlib
-import typing
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from volatility.framework import constants, interfaces, symbols, validity
 
@@ -71,10 +71,10 @@ class Context(interfaces.context.ContextInterface):
     # ## Object Factory Functions
 
     def object(self,
-               symbol: typing.Union[str, interfaces.objects.Template],
+               symbol: Union[str, interfaces.objects.Template],
                layer_name: str,
                offset: int,
-               native_layer_name: typing.Optional[str] = None,
+               native_layer_name: Optional[str] = None,
                **arguments) -> interfaces.objects.ObjectInterface:
         """Object factory, takes a context, symbol, offset and optional layername
 
@@ -108,8 +108,8 @@ class Context(interfaces.context.ContextInterface):
                module_name: str,
                layer_name: str,
                offset: int,
-               native_layer_name: typing.Optional[str] = None,
-               size: typing.Optional[int] = None) -> interfaces.context.ModuleInterface:
+               native_layer_name: Optional[str] = None,
+               size: Optional[int] = None) -> interfaces.context.ModuleInterface:
         """Creates a module object"""
         if size:
             return SizedModule(self,
@@ -125,10 +125,10 @@ class Context(interfaces.context.ContextInterface):
                       native_layer_name = native_layer_name)
 
 
-def get_module_wrapper(method: str) -> typing.Callable:
+def get_module_wrapper(method: str) -> Callable:
     """Returns a symbol using the symbol_table_name of the Module"""
 
-    def wrapper(self, name: str) -> typing.Callable:
+    def wrapper(self, name: str) -> Callable:
         self._check_type(name, str)
         if constants.BANG in name:
             raise ValueError("Name cannot reference another module")
@@ -139,10 +139,10 @@ def get_module_wrapper(method: str) -> typing.Callable:
 
 class Module(interfaces.context.ModuleInterface):
     def object(self,
-               symbol_name: typing.Optional[str] = None,
-               type_name: typing.Optional[str] = None,
-               offset: typing.Optional[int] = None,
-               native_layer_name: typing.Optional[str] = None,
+               symbol_name: Optional[str] = None,
+               type_name: Optional[str] = None,
+               offset: Optional[int] = None,
+               native_layer_name: Optional[str] = None,
                **kwargs) -> interfaces.objects.ObjectInterface:
         """Returns an object created using the symbol_table_name and layer_name of the Module
 
@@ -153,7 +153,7 @@ class Module(interfaces.context.ModuleInterface):
         @param offset: The location (absolute within memory), type_name must be specified and symbol_name must not
         @type offset: int
         """
-        type_arg = None  # type: typing.Optional[typing.Union[str, interfaces.objects.Template]]
+        type_arg = None  # type: Optional[Union[str, interfaces.objects.Template]]
         if symbol_name is not None:
             self._check_type(symbol_name, str)
             if constants.BANG in symbol_name:
@@ -192,8 +192,8 @@ class SizedModule(Module):
                  layer_name: str,
                  offset: int,
                  size: int,
-                 symbol_table_name: typing.Optional[str] = None,
-                 native_layer_name: typing.Optional[str] = None) -> None:
+                 symbol_table_name: Optional[str] = None,
+                 native_layer_name: Optional[str] = None) -> None:
         super().__init__(context,
                          module_name = module_name,
                          layer_name = layer_name,
@@ -220,7 +220,7 @@ class SizedModule(Module):
         return hashlib.md5(
             bytes(str(list(layer.mapping(self.offset, self.size, ignore_errors = True))), 'utf-8')).hexdigest()
 
-    def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> typing.List[str]:
+    def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
         """Returns the symbols within this module that live at the specified absolute offset provided"""
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
@@ -233,7 +233,7 @@ class SizedModule(Module):
 class ModuleCollection(validity.ValidityRoutines):
     """Class to contain a collection of SizedModules and reason about their contents"""
 
-    def __init__(self, modules: typing.List[SizedModule]) -> None:
+    def __init__(self, modules: List[SizedModule]) -> None:
         for module in modules:
             self._check_type(module, SizedModule)
         self._modules = modules
@@ -244,7 +244,7 @@ class ModuleCollection(validity.ValidityRoutines):
         All 0 sized modules will have identical hashes and are therefore included in the deduplicated version
         """
         new_modules = []
-        seen = set()  # type: typing.Set[str]
+        seen = set()  # type: Set[str]
         for mod in self._modules:
             if mod.hash not in seen or mod.size == 0:
                 new_modules.append(mod)
@@ -252,21 +252,20 @@ class ModuleCollection(validity.ValidityRoutines):
         return ModuleCollection(new_modules)
 
     @property
-    def modules(self) -> typing.Dict[str, typing.List[SizedModule]]:
+    def modules(self) -> Dict[str, List[SizedModule]]:
         """A name indexed dictionary of modules using that name in this collection"""
         return self._generate_module_dict(self._modules)
 
     @classmethod
-    def _generate_module_dict(cls, modules: typing.List[SizedModule]) -> typing.Dict[str, typing.List[SizedModule]]:
-        result = {}  # type: typing.Dict[str, typing.List[SizedModule]]
+    def _generate_module_dict(cls, modules: List[SizedModule]) -> Dict[str, List[SizedModule]]:
+        result = {}  # type: Dict[str, List[SizedModule]]
         for module in modules:
             modlist = result.get(module.name, [])
             modlist.append(module)
             result[module.name] = modlist
         return result
 
-    def get_module_symbols_by_absolute_location(self, offset: int, size: int = 0) -> \
-            typing.Iterable[typing.Tuple[str, typing.List[str]]]:
+    def get_module_symbols_by_absolute_location(self, offset: int, size: int = 0) -> Iterable[Tuple[str, List[str]]]:
         """Returns a tuple of (module_name, list_of_symbol_names) for each module, where symbols live at the absolute offset in memory provided"""
         if size < 0:
             raise ValueError("Size must be strictly non-negative")

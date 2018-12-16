@@ -1,4 +1,4 @@
-import typing
+from typing import Callable, Iterable, List
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers, interfaces
@@ -11,7 +11,7 @@ class PsList(interfaces_plugins.PluginInterface):
     """Lists the processes present in a particular linux memory image"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),
@@ -19,7 +19,7 @@ class PsList(interfaces_plugins.PluginInterface):
                                                description = "Linux Kernel")]
 
     @classmethod
-    def create_filter(cls, pid_list: typing.List[int] = None) -> typing.Callable[[int], bool]:
+    def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
         filter = lambda _: False
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
@@ -45,8 +45,7 @@ class PsList(interfaces_plugins.PluginInterface):
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
                    vmlinux_symbols: str,
-                   filter: typing.Callable[[int], bool] = lambda _: False) -> \
-            typing.Iterable[interfaces.objects.ObjectInterface]:
+                   filter: Callable[[int], bool] = lambda _: False) -> Iterable[interfaces.objects.ObjectInterface]:
 
         """Lists all the tasks in the primary layer"""
 

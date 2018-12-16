@@ -1,5 +1,5 @@
 import copy
-import typing
+from typing import Any, Dict, Iterable, Optional, Type
 
 from volatility.framework import constants, interfaces, objects
 
@@ -7,13 +7,13 @@ from volatility.framework import constants, interfaces, objects
 class NativeTable(interfaces.symbols.NativeTableInterface):
     """Symbol List that handles Native types"""
 
-    # FIXME: typing the native_dictionary as typing.Tuple[interfaces.objects.ObjectInterface, str] throws many errors
+    # FIXME: typing the native_dictionary as Tuple[interfaces.objects.ObjectInterface, str] throws many errors
     def __init__(self,
                  name: str,
-                 native_dictionary: typing.Dict[str, typing.Any]) -> None:
+                 native_dictionary: Dict[str, Any]) -> None:
         super().__init__(name, self)
         self._native_dictionary = copy.deepcopy(native_dictionary)
-        self._overrides = {}  # type: typing.Dict[str, interfaces.objects.ObjectInterface]
+        self._overrides = {}  # type: Dict[str, interfaces.objects.ObjectInterface]
         for native_type in self._native_dictionary:
             native_class, _native_struct = self._native_dictionary[native_type]
             self._overrides[native_type] = native_class
@@ -21,12 +21,12 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         self._types = set(self._native_dictionary).union(
             {'enum', 'array', 'bitfield', 'void', 'string', 'bytes', 'function'})
 
-    def get_type_class(self, name: str) -> typing.Type[interfaces.objects.ObjectInterface]:
+    def get_type_class(self, name: str) -> Type[interfaces.objects.ObjectInterface]:
         ntype, _ = self._native_dictionary.get(name, (objects.Integer, None))
         return ntype
 
     @property
-    def types(self) -> typing.Iterable[str]:
+    def types(self) -> Iterable[str]:
         """Returns an iterator of the symbol type names"""
         return self._types
 
@@ -45,8 +45,8 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             table_name, type_name = name_split
             prefix = table_name + constants.BANG
 
-        additional = {}  # type: typing.Dict[str, typing.Any]
-        obj = None  # type: typing.Optional[typing.Type[interfaces.objects.ObjectInterface]]
+        additional = {}  # type: Dict[str, Any]
+        obj = None  # type: Optional[Type[interfaces.objects.ObjectInterface]]
         if type_name == 'void' or type_name == 'function':
             obj = objects.Void
         elif type_name == 'array':

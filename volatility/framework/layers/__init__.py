@@ -6,10 +6,10 @@ import logging
 import lzma
 import os
 import ssl
-import typing
 import urllib.parse
 import urllib.request
 import zipfile
+from typing import List, Optional
 
 try:
     import magic
@@ -37,15 +37,15 @@ class ResourceAccessor(object):
     """Object for openning URLs as files (downloading locally first if necessary)"""
 
     def __init__(self,
-                 progress_callback: typing.Optional[validity.ProgressCallback] = None,
-                 context: typing.Optional[ssl.SSLContext] = None) -> None:
+                 progress_callback: Optional[validity.ProgressCallback] = None,
+                 context: Optional[ssl.SSLContext] = None) -> None:
         """Creates a resource accessor
 
         Note: context is an SSL context, not a volatility context
         """
         self._progress_callback = progress_callback
         self._context = context
-        self._cached_files = []  # type: typing.List[str]
+        self._cached_files = []  # type: List[str]
         self._handlers = list(framework.class_subclasses(urllib.request.BaseHandler))
         vollog.log(constants.LOGLEVEL_VVV,
                    "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))

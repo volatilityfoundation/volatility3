@@ -1,5 +1,5 @@
 import re
-import typing
+from typing import Generator, List, Tuple, Union
 
 from volatility.framework.interfaces import layers
 from volatility.framework.layers.scanners import multiregexp
@@ -12,7 +12,7 @@ class BytesScanner(layers.ScannerInterface):
         super().__init__()
         self.needle = self._check_type(needle, bytes)
 
-    def __call__(self, data: bytes, data_offset: int) -> typing.Generator[int, None, None]:
+    def __call__(self, data: bytes, data_offset: int) -> Generator[int, None, None]:
         """Runs through the data looking for the needle, and yields all offsets where the needle is found
         """
         find_pos = data.find(self.needle)
@@ -30,7 +30,7 @@ class RegExScanner(layers.ScannerInterface):
         super().__init__()
         self.regex = re.compile(self._check_type(pattern, bytes), self._check_type(flags, int))
 
-    def __call__(self, data: bytes, data_offset: int) -> typing.Generator[int, None, None]:
+    def __call__(self, data: bytes, data_offset: int) -> Generator[int, None, None]:
         """Runs through the data looking for the needle, and yields all offsets where the needle is found
         """
         find_pos = self.regex.finditer(data)
@@ -43,7 +43,7 @@ class RegExScanner(layers.ScannerInterface):
 class MultiStringScanner(layers.ScannerInterface):
     thread_safe = True
 
-    def __init__(self, patterns: typing.List[bytes]) -> None:
+    def __init__(self, patterns: List[bytes]) -> None:
         super().__init__()
         self._check_type(patterns, list)
         self._patterns = multiregexp.MultiRegexp()
@@ -52,8 +52,7 @@ class MultiStringScanner(layers.ScannerInterface):
             self._patterns.add_pattern(pattern)
         self._patterns.preprocess()
 
-    def __call__(self, data: bytes, data_offset: int) \
-            -> typing.Generator[typing.Tuple[int, typing.Union[str, bytes]], None, None]:
+    def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[int, Union[str, bytes]], None, None]:
         """Runs through the data looking for the needles"""
         for offset, pattern in self._patterns.search(data):
             if offset < self.chunk_size:

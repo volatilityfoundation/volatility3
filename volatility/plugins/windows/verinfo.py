@@ -1,6 +1,6 @@
 import io
 import logging
-import typing
+from typing import Generator, List, Tuple
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.moddump as moddump
@@ -24,7 +24,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
     """Lists version information from PE files"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [requirements.TranslationLayerRequirement(name = 'primary',
@@ -37,7 +37,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
                                 context: interfaces.context.ContextInterface,
                                 pe_table_name: str,
                                 layer_name: str,
-                                base_address: int) -> typing.Tuple[int, int, int, int]:
+                                base_address: int) -> Tuple[int, int, int, int]:
         """Get File and Product version information from PE files
 
         Args:
@@ -72,9 +72,9 @@ class VerInfo(interfaces_plugins.PluginInterface):
         return (major, minor, product, build)
 
     def _generator(self,
-                   procs: typing.Generator[interfaces.objects.ObjectInterface, None, None],
-                   mods: typing.Generator[interfaces.objects.ObjectInterface, None, None],
-                   session_layers: typing.Generator[str, None, None]):
+                   procs: Generator[interfaces.objects.ObjectInterface, None, None],
+                   mods: Generator[interfaces.objects.ObjectInterface, None, None],
+                   session_layers: Generator[str, None, None]):
         """Generates a list of PE file version info for processes, dlls, and modules.
 
         Args:
@@ -96,7 +96,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
 
             session_layer_name = moddump.ModDump.find_session_layer(self.context, session_layers, mod.DllBase)
             (major, minor, product, build) = [
-                                                 renderers.NotAvailableValue()] * 4  # type: typing.Tuple[typing.Union[int, interfaces.renderers.BaseAbsentValue],typing.Union[int, interfaces.renderers.BaseAbsentValue],typing.Union[int, interfaces.renderers.BaseAbsentValue],typing.Union[int, interfaces.renderers.BaseAbsentValue]]
+                                                 renderers.NotAvailableValue()] * 4  # type: Tuple[Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue]]
             try:
                 (major, minor, product, build) = self.get_version_information(self._context,
                                                                               pe_table_name,

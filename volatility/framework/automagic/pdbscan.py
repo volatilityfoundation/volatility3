@@ -8,11 +8,10 @@ import logging
 import math
 import os
 import struct
-import typing
+from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Union
 
-from volatility.framework import constants, exceptions, layers, validity
+from volatility.framework import constants, exceptions, interfaces, layers, validity
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import configuration
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import intermed, native
 
@@ -21,12 +20,10 @@ if __name__ == "__main__":
 
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 
-from volatility.framework import interfaces
-
 vollog = logging.getLogger(__name__)
 
-ValidKernelsType = typing.Dict[str, typing.Tuple[int, typing.Dict]]
-KernelsType = typing.Iterable[typing.Dict[str, typing.Any]]
+ValidKernelsType = Dict[str, Tuple[int, Dict]]
+KernelsType = Iterable[Dict[str, Any]]
 
 
 class PdbSignatureScanner(interfaces.layers.ScannerInterface):
@@ -44,12 +41,11 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
 
     _RSDS_format = struct.Struct("<16BI")
 
-    def __init__(self, pdb_names: typing.List[bytes]) -> None:
+    def __init__(self, pdb_names: List[bytes]) -> None:
         super().__init__()
         self._pdb_names = pdb_names
 
-    def __call__(self, data: bytes, data_offset: int) \
-            -> typing.Generator[typing.Tuple[str, typing.Any, bytes, int], None, None]:
+    def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[str, Any, bytes, int], None, None]:
         sig = data.find(b"RSDS")
         while sig >= 0:
             null = data.find(b'\0', sig + 4 + self._RSDS_format.size)
@@ -73,9 +69,8 @@ def scan(ctx: interfaces.context.ContextInterface,
          layer_name: str,
          page_size: int,
          progress_callback: validity.ProgressCallback = None,
-         start: typing.Optional[int] = None,
-         end: typing.Optional[int] = None) \
-        -> typing.Generator[typing.Dict[str, typing.Optional[typing.Union[bytes, str, int]]], None, None]:
+         start: Optional[int] = None,
+         end: Optional[int] = None) -> Generator[Dict[str, Optional[Union[bytes, str, int]]], None, None]:
     """Scans through `layer_name` at `ctx` looking for RSDS headers that indicate one of four common pdb kernel names
        (as listed in `self.pdb_names`) and returns the tuple (GUID, age, pdb_name, signature_offset, mz_offset)
 
@@ -141,8 +136,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                            context: interfaces.context.ContextInterface,
                            config_path: str,
                            requirement: interfaces.configuration.RequirementInterface,
-                           progress_callback: validity.ProgressCallback = None) \
-            -> typing.Dict[str, KernelsType]:
+                           progress_callback: validity.ProgressCallback = None) -> Dict[str, KernelsType]:
         """Traverses the requirement tree, rooted at `requirement` looking for virtual layers that might contain a windows PDB.
 
         Returns a list of possible kernel locations in the physical memory
@@ -156,7 +150,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             A list of (layer_name, scan_results)
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        results = {}  # type: typing.Dict[str, KernelsType]
+        results = {}  # type: Dict[str, KernelsType]
         if isinstance(requirement, requirements.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
@@ -288,7 +282,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
         results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
                                       progress_callback = progress_callback)
-        seen = set()  # type: typing.Set[int]
+        seen = set()  # type: Set[int]
         # Because this will launch a scan of the virtual layer, we want to be careful
         for result in results:
             # TODO: Identify the specific structure we're finding and document this a bit better
@@ -321,7 +315,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         physical_layer = context.memory[physical_layer_name]
         results = physical_layer.scan(context, scanners.BytesScanner(b"KDBG"), progress_callback = progress_callback)
 
-        seen = set()  # type: typing.Set[int]
+        seen = set()  # type: Set[int]
         for result in results:
             # TODO: Identify the specific structure we're finding and document this a bit better
             pointer = context.object("pdbscan!unsigned long long",
@@ -349,7 +343,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def determine_valid_kernels(self,
                                 context: interfaces.context.ContextInterface,
-                                potential_kernels: typing.Dict[str, KernelsType],
+                                potential_kernels: Dict[str, KernelsType],
                                 progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
         """Runs through the identified potential kernels and verifies their suitability
 
@@ -393,7 +387,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                                                                requirement,
                                                                requirements.SymbolRequirement)
             for sub_config_path, symbol_req in self._symbol_requirements:
-                parent_path = configuration.parent_path(sub_config_path)
+                parent_path = interfaces.configuration.parent_path(sub_config_path)
                 if symbol_req.unsatisfied(context, parent_path):
                     potential_kernels = self.recurse_pdb_finder(context, config_path, requirement, progress_callback)
                     valid_kernels = self.determine_valid_kernels(context, potential_kernels, progress_callback)

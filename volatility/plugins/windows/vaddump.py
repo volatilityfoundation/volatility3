@@ -1,10 +1,10 @@
 import logging
-import typing
+from typing import List
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
-from volatility.framework import renderers, interfaces
+from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 
@@ -15,7 +15,7 @@ class VadDump(interfaces_plugins.PluginInterface):
     """Dumps process memory ranges"""
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',

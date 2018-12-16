@@ -1,6 +1,6 @@
 import logging
 import struct
-import typing
+from typing import Optional, Tuple
 
 from volatility.framework import interfaces, constants, validity, layers
 from volatility.framework import symbols
@@ -33,8 +33,7 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) \
-            -> typing.Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: validity.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify mac within this layer"""
         # Bail out by default unless we can stack properly
         layer = context.memory[layer_name]
@@ -146,7 +145,7 @@ class MacUtilities(object):
                   compare_banner: str = "",
                   compare_banner_offset: int = 0,
                   progress_callback: validity.ProgressCallback = None) \
-            -> typing.Tuple[int, int]:
+            -> Tuple[int, int]:
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         version_symbol = symbol_table + constants.BANG + 'version'
         version_json_address = context.symbol_space.get_symbol(version_symbol).address

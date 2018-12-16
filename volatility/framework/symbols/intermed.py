@@ -5,9 +5,9 @@ import json
 import logging
 import os
 import pathlib
-import typing
 import zipfile
 from abc import ABCMeta
+from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Tuple
 
 import volatility
 from volatility import schemas, symbols
@@ -42,7 +42,7 @@ vollog = logging.getLogger(__name__)
 # for container types
 #
 
-def _construct_delegate_function(name: str, is_property: bool = False) -> typing.Any:
+def _construct_delegate_function(name: str, is_property: bool = False) -> Any:
     def _delegate_function(self, *args, **kwargs):
         if is_property:
             return getattr(self._delegate, name)
@@ -60,7 +60,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                  name: str,
                  isf_url: str,
                  native_types: interfaces.symbols.NativeTableInterface = None,
-                 table_mapping: typing.Optional[typing.Dict[str, str]] = None,
+                 table_mapping: Optional[Dict[str, str]] = None,
                  validate: bool = True) -> None:
         """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
@@ -100,10 +100,9 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         super().__init__(context, config_path, name, native_types or self._delegate.natives,
                          table_mapping = table_mapping)
 
-    def _closest_version(self,
-                         version: str,
-                         versions: typing.Dict[typing.Tuple[int, int, int], typing.Type['ISFormatTable']]) \
-            -> typing.Type['ISFormatTable']:
+    @staticmethod
+    def _closest_version(version: str, versions: Dict[Tuple[int, int, int], Type['ISFormatTable']]) \
+            -> Type['ISFormatTable']:
         """Determines the highest suitable handler for specified version format
 
         An interface version such as (Current-Age).Age.Revision means that (Current - Age) of the provider must be equal to that of the
@@ -131,7 +130,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     @classmethod
     def file_symbol_url(cls,
                         sub_path: str,
-                        filename: typing.Optional[str] = None) -> typing.Generator[str, None, None]:
+                        filename: Optional[str] = None) -> Generator[str, None, None]:
         """Returns an iterator of appropriate file-scheme symbol URLs that can be opened by a ResourceAccessor class
 
         Filter reduces the number of results returned to only those URLs containing that string
@@ -178,8 +177,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                config_path: str,
                sub_path: str,
                filename: str,
-               native_types: typing.Optional[interfaces.symbols.NativeTableInterface] = None,
-               table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> str:
+               native_types: Optional[interfaces.symbols.NativeTableInterface] = None,
+               table_mapping: Optional[Dict[str, str]] = None) -> str:
         """Takes a context and loads an intermediate symbol table based on a filename.
 
         Args:
@@ -206,7 +205,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         return table_name
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.StringRequirement("isf_url",
                                                description = "JSON file containing the symbols encoded in the Intermediate Symbol Format")]
 
@@ -219,9 +218,9 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  name: str,
-                 json_object: typing.Any,
+                 json_object: Any,
                  native_types: interfaces.symbols.NativeTableInterface = None,
-                 table_mapping: typing.Optional[typing.Dict[str, str]] = None) -> None:
+                 table_mapping: Optional[Dict[str, str]] = None) -> None:
         self._json_object = json_object
         self._validate_json()
         self.name = self._check_type(name, str)
@@ -230,10 +229,10 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
             raise ValueError("Native table not provided")
         nt.name = name + "_natives"
         super().__init__(context, config_path, name, nt, table_mapping = table_mapping)
-        self._overrides = {}  # type: typing.Dict[str, typing.Type[interfaces.objects.ObjectInterface]]
-        self._symbol_cache = {}  # type: typing.Dict[str, interfaces.symbols.SymbolInterface]
+        self._overrides = {}  # type: Dict[str, Type[interfaces.objects.ObjectInterface]]
+        self._symbol_cache = {}  # type: Dict[str, interfaces.symbols.SymbolInterface]
 
-    def _get_natives(self) -> typing.Optional[interfaces.symbols.NativeTableInterface]:
+    def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
         """Determines the appropriate native_types to use from the JSON data"""
         # TODO: Consider how to generate the natives entirely from the ISF
         classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
@@ -261,7 +260,7 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
                 not 'enums' in self._json_object):
             raise exceptions.SymbolSpaceError("Malformed JSON file provided")
 
-    def metadata(self) -> typing.Optional[interfaces.symbols.MetadataInterface]:
+    def metadata(self) -> Optional[interfaces.symbols.MetadataInterface]:
         """Returns a metadata object containing information about the symbol table"""
         return None
 
@@ -286,24 +285,24 @@ class Version1Format(ISFormatTable):
         return self._symbol_cache[name]
 
     @property
-    def symbols(self) -> typing.Iterable[str]:
+    def symbols(self) -> Iterable[str]:
         """Returns an iterator of the symbol names"""
         return list(self._json_object.get('symbols', {}))
 
     @property
-    def enumerations(self) -> typing.Iterable[str]:
+    def enumerations(self) -> Iterable[str]:
         """Returns an iterator of the available enumerations"""
         return list(self._json_object.get('enums', {}))
 
     @property
-    def types(self) -> typing.Iterable[str]:
+    def types(self) -> Iterable[str]:
         """Returns an iterator of the symbol type names"""
         return list(self._json_object.get('user_types', {})) + list(self.natives.types)
 
-    def get_type_class(self, name: str) -> typing.Type[interfaces.objects.ObjectInterface]:
+    def get_type_class(self, name: str) -> Type[interfaces.objects.ObjectInterface]:
         return self._overrides.get(name, objects.Struct)
 
-    def set_type_class(self, name: str, clazz: typing.Type[interfaces.objects.ObjectInterface]) -> None:
+    def set_type_class(self, name: str, clazz: Type[interfaces.objects.ObjectInterface]) -> None:
         if name not in self.types:
             raise ValueError("Symbol type not in {} SymbolTable: {}".format(self.name, name))
         self._overrides[name] = clazz
@@ -312,7 +311,7 @@ class Version1Format(ISFormatTable):
         if name in self._overrides:
             del self._overrides[name]
 
-    def _interdict_to_template(self, dictionary: typing.Dict[str, typing.Any]) -> interfaces.objects.Template:
+    def _interdict_to_template(self, dictionary: Dict[str, Any]) -> interfaces.objects.Template:
         """Converts an intermediate format dict into an object template"""
         if not dictionary:
             raise exceptions.SymbolSpaceError("Invalid intermediate dictionary: {}".format(dictionary))
@@ -356,7 +355,7 @@ class Version1Format(ISFormatTable):
 
         return objects.templates.ReferenceTemplate(type_name = reference_name)
 
-    def _lookup_enum(self, name: str) -> typing.Dict[str, typing.Any]:
+    def _lookup_enum(self, name: str) -> Dict[str, Any]:
         """Looks up an enumeration and returns a dictionary of __init__ parameters for an Enum"""
         lookup = self._json_object['enums'].get(name, None)
         if not lookup:
@@ -407,7 +406,7 @@ class Version2Format(Version1Format):
     age = 0
     version = (current - age, age, revision)
 
-    def _get_natives(self) -> typing.Optional[interfaces.symbols.NativeTableInterface]:
+    def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
         """Determines the appropriate native_types to use from the JSON data"""
         classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
         for nc in sorted(classes):
@@ -482,7 +481,7 @@ class Version4Format(Version3Format):
                       'bool': objects.Boolean,
                       'char': objects.Char}
 
-    def _get_natives(self) -> typing.Optional[interfaces.symbols.NativeTableInterface]:
+    def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
         """Determines the appropriate native_types to use from the JSON data"""
         native_dict = {}
         base_types = self._json_object['base_types']
@@ -535,7 +534,7 @@ class Version6Format(Version5Format):
     version = (current - age, age, revision)
 
     @property
-    def metadata(self) -> typing.Optional[interfaces.symbols.MetadataInterface]:
+    def metadata(self) -> Optional[interfaces.symbols.MetadataInterface]:
         """Returns a MetadataInterface object"""
         if self._json_object.get('metadata', {}).get('windows'):
             return metadata.WindowsMetadata(self._json_object['metadata']['windows'])

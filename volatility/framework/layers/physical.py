@@ -1,4 +1,4 @@
-import typing
+from typing import Any, Dict, IO, List, Optional
 
 from volatility.framework import exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
@@ -14,7 +14,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
                  config_path: str,
                  name: str,
                  buffer: bytes,
-                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+                 metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
         self._buffer = self._check_type(buffer, bytes)
 
@@ -49,7 +49,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
         self._buffer = self._buffer[:address] + data + self._buffer[address + len(data):]
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # No real requirements (only the buffer).  Need to figure out if there's a better way of representing this
         return [requirements.BytesRequirement(name = 'buffer', description = "The direct bytes to interact with",
                                               optional = False)]
@@ -64,13 +64,13 @@ class FileLayer(interfaces.layers.DataLayerInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  name: str,
-                 metadata: typing.Optional[typing.Dict[str, typing.Any]] = None) -> None:
+                 metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
         self._location = self.config["location"]
         self._accessor = layers.ResourceAccessor()
-        self._file_ = None  # type: typing.Optional[typing.IO[typing.Any]]
-        self._size = None  # type: typing.Optional[int]
+        self._file_ = None  # type: Optional[IO[Any]]
+        self._size = None  # type: Optional[int]
         # Instantiate the file to throw exceptions if the file doesn't open
         _ = self._file
 
@@ -80,7 +80,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         return self._location
 
     @property
-    def _file(self) -> typing.IO[typing.Any]:
+    def _file(self) -> IO[Any]:
         """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
         mode = "rb"
@@ -144,7 +144,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._file.seek(offset)
         self._file.write(data)
 
-    def __getstate__(self) -> typing.Dict[str, typing.Any]:
+    def __getstate__(self) -> Dict[str, Any]:
         """Do not store the open _file_ attribute, our property will ensure the file is open when needed
 
            This is necessary for multi-processing
@@ -157,5 +157,5 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._file.close()
 
     @classmethod
-    def get_requirements(cls) -> typing.List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.StringRequirement(name = 'location', optional = False)]
