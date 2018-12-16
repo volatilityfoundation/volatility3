@@ -1,6 +1,6 @@
 import code
 import inspect
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List
 
 from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
@@ -10,7 +10,7 @@ class Volshell(interfaces.plugins.PluginInterface):
     """Shell environment to directly interact with a memory image"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"])
