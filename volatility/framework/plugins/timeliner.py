@@ -128,7 +128,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 vollog.debug("Unable to satisfy {}: {}".format(plugin_class.__name__, excp.unsatisfied))
                 continue
 
-        if self.config['record-config']:
+        if self.config.get('record-config', False):
             total_config = {}
             for plugin in runable_plugins:
                 old_dict = dict(plugin.build_configuration())
