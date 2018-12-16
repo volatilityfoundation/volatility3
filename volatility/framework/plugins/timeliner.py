@@ -60,7 +60,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         return [plugin_class for plugin_class in plugin_list if filter_func(plugin_class.__name__, selected_list)]
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.StringRequirement(name = 'plugins',
                                                description = "Comma separated list of plugins to run",
                                                optional = True,

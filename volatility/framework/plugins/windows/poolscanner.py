@@ -3,6 +3,7 @@ import logging
 from typing import Optional, Tuple, List, Generator
 
 import volatility.plugins.windows.handles as handles
+
 from volatility.framework import constants, interfaces, renderers, validity, exceptions, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins, configuration
@@ -53,7 +54,7 @@ class PoolScanner(plugins.PluginInterface):
     """A generic pool scanner plugin"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

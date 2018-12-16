@@ -1,9 +1,8 @@
 import datetime
 import logging
-from typing import Generator, Sequence
+from typing import Generator, List, Sequence
 
-import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import objects, renderers, exceptions
+from volatility.framework import objects, renderers, exceptions, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.registry import RegistryHive
 from volatility.framework.renderers import TreeGrid, conversion, format_hints
@@ -12,11 +11,11 @@ from volatility.framework.symbols.windows.extensions.registry import RegValueTyp
 vollog = logging.getLogger(__name__)
 
 
-class PrintKey(plugins.PluginInterface):
+class PrintKey(interfaces.plugins.PluginInterface):
     """Lists the registry keys under a hive or specific key value"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

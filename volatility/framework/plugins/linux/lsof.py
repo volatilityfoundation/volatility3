@@ -2,8 +2,9 @@
 typically found in Linux's /proc file system.
 """
 import logging
+from typing import List
 
-from volatility.framework import renderers
+from volatility.framework import renderers, interfaces
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
@@ -17,7 +18,7 @@ class Lsof(plugins.PluginInterface):
     """Lists all memory maps for all processes"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

@@ -2,6 +2,8 @@
 typically found in Linux's /proc file system.
 """
 
+from typing import List
+
 from volatility.framework import renderers, constants, interfaces
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
@@ -14,7 +16,7 @@ class Lsmod(plugins.PluginInterface):
     """Lists loaded kernel modules"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

@@ -1,4 +1,5 @@
-import volatility.framework.interfaces.plugins as plugins
+from typing import List
+
 from volatility.framework import constants
 from volatility.framework import exceptions, interfaces
 from volatility.framework import renderers
@@ -6,11 +7,11 @@ from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 
 
-class Modules(plugins.PluginInterface):
+class Modules(interfaces.plugins.PluginInterface):
     """Lists the loaded kernel modules"""
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
                                                          architectures = ["Intel32", "Intel64"]),

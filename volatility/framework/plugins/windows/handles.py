@@ -1,8 +1,9 @@
 import logging
-from typing import Optional
+from typing import List, Optional
+
+import volatility.plugins.windows.pslist as pslist
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
-import volatility.plugins.windows.pslist as pslist
 from volatility.framework import constants, exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -29,7 +30,7 @@ class Handles(interfaces_plugins.PluginInterface):
         self._level_mask = 7
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',

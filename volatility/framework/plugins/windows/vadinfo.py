@@ -1,8 +1,8 @@
 import logging
-from typing import Callable, Generator, Iterable
+from typing import Callable, List, Generator, Iterable
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
+
 from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -27,7 +27,7 @@ winnt_protections = {
 }
 
 
-class VadInfo(interfaces_plugins.PluginInterface):
+class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges"""
 
     def __init__(self, *args, **kwargs):
@@ -35,7 +35,7 @@ class VadInfo(interfaces_plugins.PluginInterface):
         self._protect_values = None
 
     @classmethod
-    def get_requirements(cls):
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [requirements.TranslationLayerRequirement(name = 'primary',
                                                          description = 'Kernel Address Space',
