@@ -3,8 +3,7 @@ from typing import Optional, Union
 from volatility.framework import interfaces, objects, constants
 
 
-def array_to_string(array: objects.Array,
-                    count: Optional[int] = None,
+def array_to_string(array: objects.Array, count: Optional[int] = None,
                     errors: str = 'replace') -> interfaces.objects.ObjectInterface:
     """Takes a volatility Array of characters and returns a string"""
     # TODO: Consider checking the Array's target is a native char
@@ -16,9 +15,7 @@ def array_to_string(array: objects.Array,
     return array.cast("string", max_length = count, errors = errors)
 
 
-def pointer_to_string(pointer: objects.Pointer,
-                      count: int,
-                      errors: str = 'replace'):
+def pointer_to_string(pointer: objects.Pointer, count: int, errors: str = 'replace'):
     """Takes a volatility Pointer to characters and returns a string"""
     if not isinstance(pointer, objects.Pointer):
         raise TypeError("pointer_to_string takes a Pointer")
@@ -28,8 +25,7 @@ def pointer_to_string(pointer: objects.Pointer,
     return char.cast("string", max_length = count, errors = errors)
 
 
-def array_of_pointers(array: interfaces.objects.ObjectInterface,
-                      count: int,
+def array_of_pointers(array: interfaces.objects.ObjectInterface, count: int,
                       subtype: Union[str, interfaces.objects.Template],
                       context: interfaces.context.ContextInterface) -> interfaces.objects.ObjectInterface:
     """Takes an object, and recasts it as an array of pointers to subtype"""
@@ -41,5 +37,3 @@ def array_of_pointers(array: interfaces.objects.ObjectInterface,
     subtype_pointer = context.symbol_space.get_type(symbol_table + constants.BANG + "pointer")
     subtype_pointer.update_vol(subtype = subtype)
     return array.cast("array", count = count, subtype = subtype_pointer)
-
-

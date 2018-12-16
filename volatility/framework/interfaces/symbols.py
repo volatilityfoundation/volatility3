@@ -70,9 +70,7 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
     Note: table_mapping is a rarely used feature (since symbol tables are typically self-contained)
     """
 
-    def __init__(self,
-                 name: str,
-                 native_types: 'NativeTableInterface',
+    def __init__(self, name: str, native_types: 'NativeTableInterface',
                  table_mapping: Optional[Dict[str, str]] = None) -> None:
         self.name = self._check_type(name, str)
         if table_mapping is None:
@@ -164,8 +162,8 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
             # This allows for searching with and without the table name (in case multiple tables contain
             # the same symbol name and we've not specifically been told which one)
             symbol = self.get_symbol(symbol_name)
-            if symbol.type_name is not None and (
-                    symbol.type_name == type_name or (symbol.type_name.endswith(constants.BANG + type_name))):
+            if symbol.type_name is not None and (symbol.type_name == type_name or
+                                                 (symbol.type_name.endswith(constants.BANG + type_name))):
                 yield symbol.name
 
     def get_symbols_by_location(self, offset: int, size: int = 0) -> Iterable[str]:
@@ -193,10 +191,7 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Returns all symbols based on the type of the symbol"""
 
     @abstractmethod
-    def get_symbols_by_location(self,
-                                offset: int,
-                                size: int = 0,
-                                table_name: Optional[str] = None) -> Iterable[str]:
+    def get_symbols_by_location(self, offset: int, size: int = 0, table_name: Optional[str] = None) -> Iterable[str]:
         """Returns all symbols that exist at a specific relative address"""
 
     @abstractmethod

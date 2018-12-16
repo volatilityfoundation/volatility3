@@ -11,9 +11,10 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"])]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"])
+        ]
 
     def run(self, additional_locals: Dict[str, Any] = None) -> interfaces.renderers.TreeGrid:
         """Runs the interactive volshell plugin
@@ -76,10 +77,5 @@ class Volshell(interfaces.plugins.PluginInterface):
             relative_offset, member_type = object.vol.members[member]
             len_offset = len(hex(relative_offset))
             len_member = len(member)
-            print(" " * (longest_offset - len_offset),
-                  hex(relative_offset),
-                  "\t\t",
-                  member,
-                  " " * (longest_member - len_member),
-                  "\t\t",
-                  member_type.vol.type_name)
+            print(" " * (longest_offset - len_offset), hex(relative_offset), "\t\t", member,
+                  " " * (longest_member - len_member), "\t\t", member_type.vol.type_name)

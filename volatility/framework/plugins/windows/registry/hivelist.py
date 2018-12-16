@@ -11,23 +11,22 @@ class HiveList(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                requirements.StringRequirement(name = 'filter',
-                                               description = "String to filter hive names returned",
-                                               optional = True,
-                                               default = None)]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+            requirements.StringRequirement(
+                name = 'filter', description = "String to filter hive names returned", optional = True, default = None)
+        ]
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
-        for hive in self.list_hives(context = self.context,
-                                    layer_name = self.config["primary"],
-                                    symbol_table = self.config["nt_symbols"],
-                                    filter_string = self.config.get('filter', None)):
+        for hive in self.list_hives(
+                context = self.context,
+                layer_name = self.config["primary"],
+                symbol_table = self.config["nt_symbols"],
+                filter_string = self.config.get('filter', None)):
 
-            yield (0, (format_hints.Hex(hive.vol.offset),
-                       hive.get_name() or ""))
+            yield (0, (format_hints.Hex(hive.vol.offset), hive.get_name() or ""))
 
     @classmethod
     def list_hives(cls,
@@ -51,6 +50,4 @@ class HiveList(plugins.PluginInterface):
                 yield hive
 
     def run(self) -> renderers.TreeGrid:
-        return renderers.TreeGrid([("Offset", format_hints.Hex),
-                                   ("FileFullPath", str)],
-                                  self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("FileFullPath", str)], self._generator())

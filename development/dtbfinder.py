@@ -13,31 +13,35 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
+    parser.add_argument(
+        "filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
     parser.add_argument("--32bit", action = "store_false", dest = "bit32", help = "Disable 32-bit scanning")
     parser.add_argument("--64bit", action = "store_false", dest = "bit64", help = "Disable 64-bit scanning")
     parser.add_argument("--pae", action = "store_false", dest = "pae", help = "Disable pae scanning")
     parser.add_argument("-l", "--lime", action = "store_true", dest = "lime", help = "All files are LIME format")
-    parser.add_argument("-s", "--selfref", action = "store_true", dest = "selfref",
-                        help = "Run more generic self-referential tests scanner")
-    parser.add_argument("-v", "--verbose", action = "count", default = 0,
-                        help = "Increase the verbosity of the information returned")
+    parser.add_argument(
+        "-s",
+        "--selfref",
+        action = "store_true",
+        dest = "selfref",
+        help = "Run more generic self-referential tests scanner")
+    parser.add_argument(
+        "-v", "--verbose", action = "count", default = 0, help = "Increase the verbosity of the information returned")
 
     args = parser.parse_args()
 
     ctx = contexts.Context()
     for filename in args.filenames:
-        ctx.config[
-            interfaces.configuration.path_join('config' + str(args.filenames.index(filename)), "filename")] = filename
-        data = layers.physical.FileLayer(ctx,
-                                         'config' + str(args.filenames.index(filename)),
+        ctx.config[interfaces.configuration.path_join('config' + str(args.filenames.index(filename)),
+                                                      "filename")] = filename
+        data = layers.physical.FileLayer(ctx, 'config' + str(args.filenames.index(filename)),
                                          'data' + str(args.filenames.index(filename)))
         ctx.memory.add_layer(data)
         if args.lime:
-            ctx.config[interfaces.configuration.path_join('lime-config' + str(args.filenames.index(filename)),
-                                                          "base_layer")] = 'data' + str(args.filenames.index(filename))
-            data = layers.lime.LimeLayer(ctx,
-                                         'lime-config' + str(args.filenames.index(filename)),
+            ctx.config[interfaces.configuration.path_join(
+                'lime-config' + str(args.filenames.index(filename)),
+                "base_layer")] = 'data' + str(args.filenames.index(filename))
+            data = layers.lime.LimeLayer(ctx, 'lime-config' + str(args.filenames.index(filename)),
                                          'lime-data' + str(args.filenames.index(filename)))
             ctx.memory.add_layer(data)
 

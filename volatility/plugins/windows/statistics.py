@@ -10,9 +10,10 @@ class Statistics(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"])]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"])
+        ]
 
     def _generator(self):
         # Do mass mapping and determine the number of different layers and how many pages go to each one
@@ -44,13 +45,10 @@ class Statistics(plugins.PluginInterface):
                 page_addr += page_size
                 self._progress_callback((page_addr * 100) / layer.maximum_address, "Reading memory")
 
-        yield (0, (page_count, large_page_count, swap_count, large_swap_count, invalid_page_count, large_invalid_count))
+        yield (0, (page_count, large_page_count, swap_count, large_swap_count, invalid_page_count,
+                   large_invalid_count))
 
     def run(self):
-        return renderers.TreeGrid([("Valid pages (all)", int),
-                                   ("Valid pages (large)", int),
-                                   ("Swapped Pages (all)", int),
-                                   ("Swapped Pages (large)", int),
-                                   ("Invalid Pages (all)", int),
-                                   ("Invalid Pages (large)", int)],
-                                  self._generator())
+        return renderers.TreeGrid([("Valid pages (all)", int), ("Valid pages (large)", int),
+                                   ("Swapped Pages (all)", int), ("Swapped Pages (large)", int),
+                                   ("Invalid Pages (all)", int), ("Invalid Pages (large)", int)], self._generator())

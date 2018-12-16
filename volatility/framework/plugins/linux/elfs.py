@@ -17,11 +17,11 @@ class Elfs(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "vmlinux",
-                                               description = "Linux Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "vmlinux", description = "Linux Kernel")
+        ]
 
     def _generator(self, tasks):
         for task in tasks:
@@ -40,14 +40,7 @@ class Elfs(plugins.PluginInterface):
 
                 path = vma.get_name(task)
 
-                yield (
-                    0,
-                    (task.pid,
-                     name,
-                     format_hints.Hex(vma.vm_start),
-                     format_hints.Hex(vma.vm_end),
-                     path
-                     ))
+                yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), path))
 
     def run(self):
         filt = pslist.PsList.create_filter([self.config.get('pid', None)])
@@ -55,12 +48,6 @@ class Elfs(plugins.PluginInterface):
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
-            [("PID", int),
-             ("Process", str),
-             ("Start", format_hints.Hex),
-             ("End", format_hints.Hex),
+            [("PID", int), ("Process", str), ("Start", format_hints.Hex), ("End", format_hints.Hex),
              ("File Path", str)],
-            self._generator(plugin(self.context,
-                                   self.config['primary'],
-                                   self.config['vmlinux'],
-                                   filter = filt)))
+            self._generator(plugin(self.context, self.config['primary'], self.config['vmlinux'], filter = filt)))

@@ -2,8 +2,8 @@ def tester(searcher):
     import argparse
 
     parser = argparse.ArgumentParser(usage = "Searches through a haystack for a set of needles")
-    parser.add_argument("-n", "--needles", help = "The filename of the file containing newline separated needles",
-                        required = True)
+    parser.add_argument(
+        "-n", "--needles", help = "The filename of the file containing newline separated needles", required = True)
     parser.add_argument("haystack", help = "The filename of the binary haystack file to search")
     args = parser.parse_args()
 

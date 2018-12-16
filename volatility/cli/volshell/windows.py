@@ -10,11 +10,10 @@ class Volshell(shellplugin.Volshell):
 
     @classmethod
     def get_requirements(cls):
-        return (super().get_requirements() +
-                [requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                 requirements.IntRequirement(name = 'pid',
-                                             description = "Process ID",
-                                             optional = True)])
+        return (super().get_requirements() + [
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+            requirements.IntRequirement(name = 'pid', description = "Process ID", optional = True)
+        ])
 
     def list_processes(self):
         """Lists all the processes in the primary layer"""
@@ -46,9 +45,7 @@ class Volshell(shellplugin.Volshell):
 
     def load_functions(self) -> Dict[str, Callable]:
         result = super().load_functions()
-        result.update({
-            'ps': lambda: list(self.list_processes())
-        })
+        result.update({'ps': lambda: list(self.list_processes())})
         return result
 
     def run(self, additional_locals = None):

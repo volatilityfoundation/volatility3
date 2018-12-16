@@ -29,10 +29,7 @@ class LimeLayer(segmented.SegmentedLayer):
     # XXX move this to a custom SymbolSpace?
     _header_struct = struct.Struct('<IIQQQ')
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 name: str) -> None:
+    def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str) -> None:
         super().__init__(context, config_path, name)
 
         # We must run this on creation in order to get the right min/maxaddr in case scanning is our first action
@@ -50,8 +47,8 @@ class LimeLayer(segmented.SegmentedLayer):
             start, end = self._check_header(base_layer, offset)
 
             if start < maxaddr or end < start:
-                raise LimeFormatException(
-                    "bad start/end 0x{:x}/0x{:x} at file offset 0x{:x}".format(start, end, offset))
+                raise LimeFormatException("bad start/end 0x{:x}/0x{:x} at file offset 0x{:x}".format(
+                    start, end, offset))
 
             segment_length = end - start + 1
             segments.append((start, offset + header_size, segment_length))
@@ -64,9 +61,7 @@ class LimeLayer(segmented.SegmentedLayer):
         self._segments = segments
 
     @classmethod
-    def _check_header(cls,
-                      base_layer: interfaces.layers.DataLayerInterface,
-                      offset: int = 0) -> Tuple[int, int]:
+    def _check_header(cls, base_layer: interfaces.layers.DataLayerInterface, offset: int = 0) -> Tuple[int, int]:
         try:
             header_data = base_layer.read(offset, cls._header_struct.size)
         except exceptions.InvalidAddressException:

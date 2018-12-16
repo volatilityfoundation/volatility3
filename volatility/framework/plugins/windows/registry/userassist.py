@@ -29,15 +29,12 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols",
-                                               description = "Windows OS"),
-                requirements.IntRequirement(name = 'offset',
-                                            description = "Hive Offset",
-                                            default = None,
-                                            optional = True)]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+            requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True)
+        ]
 
     def parse_userassist_data(self, reg_val):
         """Reads the raw data of a _CM_KEY_VALUE and returns a dict of userassist fields"""
@@ -85,8 +82,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
         else:
             item["id"] = int(userassist_obj.ID)
             item["count"] = int(userassist_obj.CountStartingAtFive
-                                if userassist_obj.CountStartingAtFive < 5
-                                else userassist_obj.CountStartingAtFive - 5)
+                                if userassist_obj.CountStartingAtFive < 5 else userassist_obj.CountStartingAtFive - 5)
             item["focus"] = renderers.NotApplicableValue()
             item["time"] = renderers.NotApplicableValue()
 
@@ -102,14 +98,14 @@ class UserAssist(interfaces.plugins.PluginInterface):
         elif self._win7 is False:
             self._userassist_type_name = "_VOL_USERASSIST_TYPES_XP"
 
-        self._userassist_size = self.context.symbol_space.get_type(
-            self._reg_table_name + constants.BANG + self._userassist_type_name).size
+        self._userassist_size = self.context.symbol_space.get_type(self._reg_table_name + constants.BANG +
+                                                                   self._userassist_type_name).size
 
     def _win7_or_later(self) -> bool:
         # TODO: change this if there is a better way of determining the OS version
         # _KUSER_SHARED_DATA.CookiePad is in Windows 6.1 (Win7) and later
-        return self.context.symbol_space.get_type(
-            self.config['nt_symbols'] + constants.BANG + "_KUSER_SHARED_DATA").has_member('CookiePad')
+        return self.context.symbol_space.get_type(self.config['nt_symbols'] + constants.BANG +
+                                                  "_KUSER_SHARED_DATA").has_member('CookiePad')
 
     def list_userassist(self, hive: RegistryHive):
         """Generate userassist data for a registry hive."""
@@ -125,8 +121,8 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
         self._determine_userassist_type()
 
-        userassist_node_path = hive.get_key("software\\microsoft\\windows\\currentversion\\explorer\\userassist",
-                                            return_list = True)
+        userassist_node_path = hive.get_key(
+            "software\\microsoft\\windows\\currentversion\\explorer\\userassist", return_list = True)
 
         if not userassist_node_path:
             vollog.warning("list_userassist did not find a valid node_path (or None)")
@@ -141,37 +137,32 @@ class UserAssist(interfaces.plugins.PluginInterface):
                 countkey_last_write_time = conversion.wintime_to_datetime(countkey.LastWriteTime.QuadPart)
 
                 # output the parent Count key
-                result = (0,
-                          (renderers.format_hints.Hex(hive.hive_offset),
-                           hive_name,
-                           countkey_path,
-                           countkey_last_write_time,
-                           "Key",
-                           renderers.NotApplicableValue(),
-                           renderers.NotApplicableValue(),
-                           renderers.NotApplicableValue(),
-                           renderers.NotApplicableValue(),
-                           renderers.NotApplicableValue(),
-                           renderers.NotApplicableValue(),
-                           renderers.NotApplicableValue()))  # type: Tuple[int, Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]]
+                result = (
+                    0, (renderers.format_hints.Hex(hive.hive_offset), hive_name,
+                        countkey_path, countkey_last_write_time, "Key", renderers.NotApplicableValue(),
+                        renderers.NotApplicableValue(), renderers.NotApplicableValue(), renderers.NotApplicableValue(),
+                        renderers.NotApplicableValue(), renderers.NotApplicableValue(), renderers.NotApplicableValue())
+                )  # type: Tuple[int, Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]]
                 yield result
 
                 # output any subkeys under Count
                 for subkey in countkey.get_subkeys():
 
                     subkey_name = subkey.get_name()
-                    result = (1, (renderers.format_hints.Hex(hive.hive_offset),
-                                  hive_name,
-                                  countkey_path,
-                                  countkey_last_write_time,
-                                  "Subkey",
-                                  subkey_name,
-                                  renderers.NotApplicableValue(),
-                                  renderers.NotApplicableValue(),
-                                  renderers.NotApplicableValue(),
-                                  renderers.NotApplicableValue(),
-                                  renderers.NotApplicableValue(),
-                                  renderers.NotApplicableValue(),))
+                    result = (1, (
+                        renderers.format_hints.Hex(hive.hive_offset),
+                        hive_name,
+                        countkey_path,
+                        countkey_last_write_time,
+                        "Subkey",
+                        subkey_name,
+                        renderers.NotApplicableValue(),
+                        renderers.NotApplicableValue(),
+                        renderers.NotApplicableValue(),
+                        renderers.NotApplicableValue(),
+                        renderers.NotApplicableValue(),
+                        renderers.NotApplicableValue(),
+                    ))
                     yield result
 
                 # output any values under Count
@@ -189,18 +180,20 @@ class UserAssist(interfaces.plugins.PluginInterface):
                             value_name = value_name.replace(guid, self._folder_guids[guid])
 
                     userassist_data_dict = self.parse_userassist_data(value)
-                    result = (1, (renderers.format_hints.Hex(hive.hive_offset),
-                                  hive_name,
-                                  countkey_path,
-                                  countkey_last_write_time,
-                                  "Value",
-                                  value_name,
-                                  userassist_data_dict["id"],
-                                  userassist_data_dict["count"],
-                                  userassist_data_dict["focus"],
-                                  userassist_data_dict["time"],
-                                  userassist_data_dict["lastupdated"],
-                                  format_hints.HexBytes(userassist_data_dict["rawdata"]),))
+                    result = (1, (
+                        renderers.format_hints.Hex(hive.hive_offset),
+                        hive_name,
+                        countkey_path,
+                        countkey_last_write_time,
+                        "Value",
+                        value_name,
+                        userassist_data_dict["id"],
+                        userassist_data_dict["count"],
+                        userassist_data_dict["focus"],
+                        userassist_data_dict["time"],
+                        userassist_data_dict["lastupdated"],
+                        format_hints.HexBytes(userassist_data_dict["rawdata"]),
+                    ))
                     yield result
 
     def _generator(self):
@@ -209,27 +202,26 @@ class UserAssist(interfaces.plugins.PluginInterface):
         if self.config.get('offset', None) is None:
             try:
                 import volatility.plugins.windows.registry.hivelist as hivelist
-                hive_offsets = [hive.vol.offset for hive in
-                                hivelist.HiveList.list_hives(context = self.context,
-                                                             layer_name = self.config['primary'],
-                                                             symbol_table = self.config['nt_symbols'],
-                                                             filter_string = "ntuser.dat")]
+                hive_offsets = [
+                    hive.vol.offset for hive in hivelist.HiveList.list_hives(
+                        context = self.context,
+                        layer_name = self.config['primary'],
+                        symbol_table = self.config['nt_symbols'],
+                        filter_string = "ntuser.dat")
+                ]
             except ImportError:
                 vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")
                 raise ValueError("Unable to import windows.hivelist plugin, please provide a hive offset")
         else:
             hive_offsets = [self.config['offset']]
 
-        self._reg_table_name = intermed.IntermediateSymbolTable.create(self.context,
-                                                                       self._config_path,
-                                                                       'windows',
+        self._reg_table_name = intermed.IntermediateSymbolTable.create(self.context, self._config_path, 'windows',
                                                                        'registry')
 
         for hive_offset in hive_offsets:
             # Construct the hive
-            reg_config_path = self.make_subconfig(hive_offset = hive_offset,
-                                                  base_layer = self.config['primary'],
-                                                  nt_symbols = self.config['nt_symbols'])
+            reg_config_path = self.make_subconfig(
+                hive_offset = hive_offset, base_layer = self.config['primary'], nt_symbols = self.config['nt_symbols'])
 
             hive_name = None
             try:
@@ -245,33 +237,17 @@ class UserAssist(interfaces.plugins.PluginInterface):
                     "software\\microsoft\\windows\\currentversion\\explorer\\userassist", hex(hive_offset)))
 
             # yield UnreadableValues when an exception occurs for a given hive_offset
-            result = (0,
-                      (renderers.format_hints.Hex(hive_offset),
-                       hive_name if hive_name else renderers.UnreadableValue(),
-                       renderers.UnreadableValue(),
-                       renderers.UnreadableValue(),
-                       renderers.UnreadableValue(),
-                       renderers.UnreadableValue(),
-                       renderers.UnreadableValue(),
-                       renderers.UnreadableValue(),
-                       renderers.UnreadableValue(),
-                       renderers.UnreadableValue(),
-                       renderers.UnreadableValue(),
-                       renderers.UnreadableValue()))
+            result = (0, (renderers.format_hints.Hex(hive_offset),
+                          hive_name if hive_name else renderers.UnreadableValue(), renderers.UnreadableValue(),
+                          renderers.UnreadableValue(), renderers.UnreadableValue(), renderers.UnreadableValue(),
+                          renderers.UnreadableValue(), renderers.UnreadableValue(), renderers.UnreadableValue(),
+                          renderers.UnreadableValue(), renderers.UnreadableValue(), renderers.UnreadableValue()))
             yield result
 
     def run(self):
 
-        return renderers.TreeGrid([("Hive Offset", renderers.format_hints.Hex),
-                                   ("Hive Name", str),
-                                   ("Path", str),
-                                   ("Last Write Time", datetime.datetime),
-                                   ("Type", str),
-                                   ("Name", str),
-                                   ("ID", int),
-                                   ("Count", int),
-                                   ("Focus Count", int),
-                                   ("Time Focused", str),
-                                   ("Last Updated", datetime.datetime),
-                                   ("Raw Data", format_hints.HexBytes)],
+        return renderers.TreeGrid([("Hive Offset", renderers.format_hints.Hex), ("Hive Name", str), ("Path", str),
+                                   ("Last Write Time", datetime.datetime), ("Type", str), ("Name", str), ("ID", int),
+                                   ("Count", int), ("Focus Count", int), ("Time Focused", str),
+                                   ("Last Updated", datetime.datetime), ("Raw Data", format_hints.HexBytes)],
                                   self._generator())

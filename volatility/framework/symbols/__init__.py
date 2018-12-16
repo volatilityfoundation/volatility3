@@ -15,10 +15,8 @@ class SymbolType(enum.Enum):
     ENUM = 3
 
 
-SymbolSpaceReturnType = TypeVar("SymbolSpaceReturnType",
-                                interfaces.objects.Template,
-                                interfaces.symbols.SymbolInterface,
-                                Dict[str, Any])
+SymbolSpaceReturnType = TypeVar("SymbolSpaceReturnType", interfaces.objects.Template,
+                                interfaces.symbols.SymbolInterface, Dict[str, Any])
 
 
 class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRoutines):
@@ -146,8 +144,8 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
                         if child.vol.type_name not in self._resolved:
                             traverse_list.append(child.vol.type_name)
                             try:
-                                self._resolved[child.vol.type_name] = self._weak_resolve(SymbolType.TYPE,
-                                                                                         child.vol.type_name)
+                                self._resolved[child.vol.type_name] = self._weak_resolve(
+                                    SymbolType.TYPE, child.vol.type_name)
                             except exceptions.SymbolError:
                                 self._resolved[child.vol.type_name] = self._UnresolvedTemplate(child.vol.type_name)
                         # Stash the replacement
@@ -239,10 +237,11 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
         # This is speedy, but may not be very efficient from a memory perspective
         if symbol in cached_symbols:
             return cached_symbols[symbol]
-        new_symbol = interfaces.symbols.SymbolInterface(name = symbol.name,
-                                                        address = address_mask & (symbol.address + table_aslr_shift),
-                                                        type = symbol.type,
-                                                        constant_data = symbol.constant_data)
+        new_symbol = interfaces.symbols.SymbolInterface(
+            name = symbol.name,
+            address = address_mask & (symbol.address + table_aslr_shift),
+            type = symbol.type,
+            constant_data = symbol.constant_data)
         cached_symbols[symbol] = new_symbol
         return new_symbol
 
@@ -251,7 +250,6 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
     return symbol_table
 
 
-def symbol_table_is_64bit(context: interfaces.context.ContextInterface,
-                          symbol_table_name: str) -> bool:
+def symbol_table_is_64bit(context: interfaces.context.ContextInterface, symbol_table_name: str) -> bool:
     """Returns a boolean as to whether a particular symbol table within a context is 64-bit or not"""
     return context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer").size == 8

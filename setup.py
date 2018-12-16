@@ -16,27 +16,21 @@ setuptools.setup(
         "Documentation": "https://volatilityfoundation.org/volatility/docs/",
         "Source Code": "https://github.com/volatilityfoundation/volatility3",
     },
-
     include_package_data = True,
-    exclude_package_data = {'': ['development',
-                                 'development.*'],
-                            'development': ['*']},
-    packages = setuptools.find_packages(exclude = ["developement",
-                                                   "development.*"]),
+    exclude_package_data = {
+        '': ['development', 'development.*'],
+        'development': ['*']
+    },
+    packages = setuptools.find_packages(exclude = ["developement", "development.*"]),
     entry_points = {
         'console_scripts': [
             'vol = volatility.cli:main',
             'volshell = volatility.cli.volshell:main',
         ],
     },
-    install_requires = [
-        "pefile"
-    ],
+    install_requires = ["pefile"],
     extras_require = {
         'yara': ["yara-python>=3.8.0"],
-        'disasm': ["capstone;platform_system=='Linux'",
-                   "capstone-windows;platform_system=='Windows'"],
-        'doc': ["sphinx>=1.8.2",
-                "sphinx_autodoc_typehints>=1.4.0"]
-    }
-)
+        'disasm': ["capstone;platform_system=='Linux'", "capstone-windows;platform_system=='Windows'"],
+        'doc': ["sphinx>=1.8.2", "sphinx_autodoc_typehints>=1.4.0"]
+    })

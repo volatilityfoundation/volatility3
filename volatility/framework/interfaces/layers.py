@@ -87,13 +87,15 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """
 
 
-class DataLayerInterface(interfaces.configuration.ConfigurableInterface, validity.ValidityRoutines,
-                         metaclass = ABCMeta):
+class DataLayerInterface(
+        interfaces.configuration.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it).  This is effectively a leaf node in a layer tree.
     It directly accesses a data source and exposes it within volatility."""
 
-    _direct_metadata = collections.ChainMap({}, {'architecture': 'Unknown',
-                                                 'os': 'Unknown'})  # type: collections.ChainMap[str, str]
+    _direct_metadata = collections.ChainMap({}, {
+        'architecture': 'Unknown',
+        'os': 'Unknown'
+    })  # type: collections.ChainMap[str, str]
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
@@ -200,8 +202,9 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, validit
                     while not result.ready():
                         if progress_callback:
                             # Run the progress_callback
-                            progress_callback(scan_metric(progress.value),
-                                              "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
+                            progress_callback(
+                                scan_metric(progress.value),
+                                "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
                         # Ensures we don't burn CPU cycles going round in a ready waiting loop
                         # without delaying the user too long between progress updates/results
                         result.wait(0.1)
@@ -212,8 +215,9 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, validit
                 scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
                 for value in scan_iterator():
                     if progress_callback:
-                        progress_callback(scan_metric(progress.value),
-                                          "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
+                        progress_callback(
+                            scan_metric(progress.value),
+                            "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
                     yield from scan_chunk(value)
         except Exception as e:
             # We don't care the kind of exception, so catch and report on everything, yielding nothing further
@@ -221,8 +225,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, validit
             vollog.log(constants.LOGLEVEL_VVV,
                        "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
 
-    def _coalesce_sections(self,
-                           sections: Iterable[Tuple[int, int]]) -> Iterable[Tuple[int, int]]:
+    def _coalesce_sections(self, sections: Iterable[Tuple[int, int]]) -> Iterable[Tuple[int, int]]:
         """Take a list of (start, length) sections and coalesce any adjacent sections"""
         result = []  # type: List[Tuple[int, int]]
         position = 0
@@ -248,8 +251,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, validit
                 result[1] = (last_start, self.maximum_address - last_start)
         return result
 
-    def _scan_iterator(self,
-                       scanner: 'ScannerInterface',
+    def _scan_iterator(self, scanner: 'ScannerInterface',
                        sections: Iterable[Tuple[int, int]]) -> Iterable[IteratorValue]:
         """Iterator that indicates which blocks in the layer are to be read by for the scanning
 
@@ -270,9 +272,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, validit
                 offset += chunk_size
 
     # We ignore the type due to the iterator_value, actually it only needs to match the output from _scan_iterator
-    def _scan_chunk(self,
-                    scanner: 'ScannerInterface',
-                    progress: 'ProgressValue',
+    def _scan_chunk(self, scanner: 'ScannerInterface', progress: 'ProgressValue',
                     iterator_value: IteratorValue) -> List[Any]:
         data_to_scan, chunk_end = iterator_value
         data = b''
@@ -280,16 +280,13 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, validit
             try:
                 data += self.context.memory[layer_name].read(address, chunk_size)
             except exceptions.InvalidAddressException:
-                vollog.debug(
-                    "Invalid address in layer {} found scanning {} at address {:x}".format(layer_name, self.name,
-                                                                                           address))
+                vollog.debug("Invalid address in layer {} found scanning {} at address {:x}".format(
+                    layer_name, self.name, address))
 
         progress.value = chunk_end
         return list(scanner(data, chunk_end - len(data)))
 
-    def _scan_metric(self,
-                     _scanner: 'ScannerInterface',
-                     sections: List[Tuple[int, int]]) -> Callable[[int], float]:
+    def _scan_metric(self, _scanner: 'ScannerInterface', sections: List[Tuple[int, int]]) -> Callable[[int], float]:
 
         if not sections:
             raise ValueError("Sections have no size, nothing to scan")
@@ -324,10 +321,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     """
 
     @abstractmethod
-    def mapping(self,
-                offset: int,
-                length: int,
-                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
+    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
         """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
 
            ignore_errors will provide all available maps with gaps, but their total length may not add up to the requested length
@@ -363,9 +357,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         output = []  # type: List[bytes]
         for (offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
             if not pad and offset > current_offset:
-                raise exceptions.InvalidAddressException(self.name, current_offset,
-                                                         "Layer {} cannot map offset: {}".format(self.name,
-                                                                                                 current_offset))
+                raise exceptions.InvalidAddressException(
+                    self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
             elif offset > current_offset:
                 output += [b"\x00" * (offset - current_offset)]
                 current_offset = offset
@@ -382,9 +375,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         length = len(value)
         for (offset, mapped_offset, length, layer) in self.mapping(offset, length):
             if offset > current_offset:
-                raise exceptions.InvalidAddressException(self.name, current_offset,
-                                                         "Layer {} cannot map offset: {}".format(self.name,
-                                                                                                 current_offset))
+                raise exceptions.InvalidAddressException(
+                    self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
             self._context.memory.write(layer, mapped_offset, value)
@@ -392,8 +384,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     # ## Scan implementation with knowledge of pages
 
-    def _scan_iterator(self,
-                       scanner: 'ScannerInterface',
+    def _scan_iterator(self, scanner: 'ScannerInterface',
                        sections: Iterable[Tuple[int, int]]) -> Iterable[IteratorValue]:
         for (section_start, section_length) in sections:
             for mapped in self.mapping(section_start, section_length, ignore_errors = True):
@@ -415,21 +406,14 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
     def __init__(self) -> None:
         self._layers = {}  # type: Dict[str, DataLayerInterface]
 
-    def read(self,
-             layer: str,
-             offset: int,
-             length: int,
-             pad: bool = False):
+    def read(self, layer: str, offset: int, length: int, pad: bool = False):
         """Reads from a particular layer at offset for length bytes
 
            Returns 'bytes' not 'str'
         """
         return self[layer].read(offset, length, pad)
 
-    def write(self,
-              layer: str,
-              offset: int,
-              data: bytes) -> None:
+    def write(self, layer: str, offset: int, data: bytes) -> None:
         """Writes to a particular layer at offset for length bytes"""
         self[layer].write(offset, data)
 
@@ -444,8 +428,8 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
         if isinstance(layer, TranslationLayerInterface):
             missing_list = [sublayer for sublayer in layer.dependencies if sublayer not in self._layers]
             if missing_list:
-                raise exceptions.LayerException(
-                    "Layer {} has unmet dependencies: {}".format(layer.name, ", ".join(missing_list)))
+                raise exceptions.LayerException("Layer {} has unmet dependencies: {}".format(
+                    layer.name, ", ".join(missing_list)))
         self._layers[layer.name] = layer
 
     def del_layer(self, name: str) -> None:
@@ -456,8 +440,8 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
         for layer in self._layers:
             depend_list = [superlayer for superlayer in self._layers if name in self._layers[layer].dependencies]
             if depend_list:
-                raise exceptions.LayerException(
-                    "Layer {} is depended upon: {}".format(self._layers[layer].name, ", ".join(depend_list)))
+                raise exceptions.LayerException("Layer {} is depended upon: {}".format(
+                    self._layers[layer].name, ", ".join(depend_list)))
         self._layers[name].destroy()
         del self._layers[name]
 
@@ -486,5 +470,6 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
 
 
 class DummyProgress(object):
+
     def __init__(self):
         self.value = 0

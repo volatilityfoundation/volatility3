@@ -14,14 +14,12 @@ class ConfigWriter(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.BooleanRequirement(name = 'extra',
-                                                description = 'Outputs whole configuration tree',
-                                                default = False,
-                                                optional = True)
-                ]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.BooleanRequirement(
+                name = 'extra', description = 'Outputs whole configuration tree', default = False, optional = True)
+        ]
 
     def _generator(self):
         filename = "config.json"
@@ -41,6 +39,4 @@ class ConfigWriter(plugins.PluginInterface):
             yield (0, (k, json.dumps(v)))
 
     def run(self):
-        return renderers.TreeGrid([("Key", str),
-                                   ("Value", str)],
-                                  self._generator())
+        return renderers.TreeGrid([("Key", str), ("Value", str)], self._generator())

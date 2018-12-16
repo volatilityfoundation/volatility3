@@ -33,14 +33,11 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
     priority = 10
     """An ordering to indicate how soon this automagic should be run"""
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str, *args, **kwargs) -> None:
+    def __init__(self, context: interfaces.context.ContextInterface, config_path: str, *args, **kwargs) -> None:
         super().__init__(context, config_path)
         for requirement in self.get_requirements():
             if not isinstance(requirement, (interfaces.configuration.SimpleTypeRequirement,
-                                            requirements.ChoiceRequirement,
-                                            requirements.ListRequirement)):
+                                            requirements.ChoiceRequirement, requirements.ListRequirement)):
                 raise ValueError(
                     "Automagic requirements must be a SimpleTypeRequirement, ChoiceRequirement or ListRequirement")
 

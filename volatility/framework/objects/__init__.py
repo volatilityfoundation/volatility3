@@ -13,14 +13,11 @@ vollog = logging.getLogger(__name__)
 DataFormatInfo = collections.namedtuple('DataFormatInfo', ['length', 'byteorder', 'signed'])
 
 
-def convert_data_to_value(data: bytes,
-                          struct_type: Type[Union[int, float, bytes, str, bool]],
+def convert_data_to_value(data: bytes, struct_type: Type[Union[int, float, bytes, str, bool]],
                           data_format: DataFormatInfo) -> Union[int, float, bytes, str, bool]:
     """Converts a series of bytes to a particular type of value"""
     if struct_type == int:
-        return int.from_bytes(data,
-                              byteorder = data_format.byteorder,
-                              signed = data_format.signed)
+        return int.from_bytes(data, byteorder = data_format.byteorder, signed = data_format.signed)
     if struct_type == bool:
         struct_format = "?"
     elif struct_type == float:
@@ -44,10 +41,8 @@ def convert_value_to_data(value: Union[int, float, bytes, str, bool],
         raise TypeError("Written value is not of the correct type for {}".format(struct_type.__class__.__name__))
 
     if struct_type == int:
-        return int.to_bytes(value,
-                            length = data_format.length,
-                            byteorder = data_format.byteorder,
-                            signed = data_format.signed)
+        return int.to_bytes(
+            value, length = data_format.length, byteorder = data_format.byteorder, signed = data_format.signed)
     if struct_type == bool:
         struct_format = "?"
     elif struct_type == float:
@@ -67,6 +62,7 @@ class Void(interfaces.objects.ObjectInterface):
     """Returns an object to represent void/unknown types"""
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
             """Dummy size for Void objects"""
@@ -85,15 +81,10 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a Python primitive"""
     _struct_type = int  # type: ClassVar[Type]
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 type_name: str,
-                 object_info: interfaces.objects.ObjectInformation,
-                 data_format: DataFormatInfo) -> None:
-        super().__init__(context = context,
-                         type_name = type_name,
-                         object_info = object_info,
-                         data_format = data_format)
+    def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
+                 object_info: interfaces.objects.ObjectInformation, data_format: DataFormatInfo) -> None:
+        super().__init__(
+            context = context, type_name = type_name, object_info = object_info, data_format = data_format)
         self._data_format = data_format
 
     def __new__(cls: 'PrimitiveObject',
@@ -111,9 +102,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         We also sneak in new_value, so that we don't have to do expensive (read: impossible) context reads
         when unpickling."""
         if new_value is None:
-            value = cls._unmarshall(context,
-                                    data_format,
-                                    object_info)
+            value = cls._unmarshall(context, data_format, object_info)
         else:
             value = new_value
         result = cls._struct_type.__new__(cls, value)
@@ -129,20 +118,16 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             if k not in ["context", "data_format", "object_info", "type_name"]:
                 kwargs[k] = v
         kwargs['new_value'] = self.__new_value
-        return (self._context,
-                self._vol.maps[-2]['type_name'],
-                self._vol.maps[-3],
-                self._data_format), kwargs
+        return (self._context, self._vol.maps[-2]['type_name'], self._vol.maps[-3], self._data_format), kwargs
 
     @classmethod
-    def _unmarshall(cls,
-                    context: interfaces.context.ContextInterface,
-                    data_format: DataFormatInfo,
+    def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
                     object_info: ObjectInformation) -> Union[int, float, bool, bytes, str]:
         data = context.memory.read(object_info.layer_name, object_info.offset, data_format.length)
         return convert_data_to_value(data, cls._struct_type, data_format)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
             """Returns the size of the templated object"""
@@ -182,10 +167,11 @@ class Bytes(PrimitiveObject, bytes):
                  type_name: str,
                  object_info: interfaces.objects.ObjectInformation,
                  length: int = 1) -> None:
-        super().__init__(context = context,
-                         type_name = type_name,
-                         object_info = object_info,
-                         data_format = DataFormatInfo(length, "big", False))
+        super().__init__(
+            context = context,
+            type_name = type_name,
+            object_info = object_info,
+            data_format = DataFormatInfo(length, "big", False))
         self._vol['length'] = length
 
     def __new__(cls: 'Bytes',
@@ -198,10 +184,9 @@ class Bytes(PrimitiveObject, bytes):
 
         The only reason the **kwargs is added, is so that the inherriting types can override __init__
         without needing to override __new__"""
-        return cls._struct_type.__new__(cls,
-                                        cls._unmarshall(context,
-                                                        data_format = DataFormatInfo(length, "big", False),
-                                                        object_info = object_info))
+        return cls._struct_type.__new__(
+            cls,
+            cls._unmarshall(context, data_format = DataFormatInfo(length, "big", False), object_info = object_info))
 
 
 class String(PrimitiveObject, str):
@@ -221,10 +206,11 @@ class String(PrimitiveObject, str):
                  max_length: int = 1,
                  encoding: str = "utf-8",
                  errors: str = "strict") -> None:
-        super().__init__(context = context,
-                         type_name = type_name,
-                         object_info = object_info,
-                         data_format = DataFormatInfo(max_length, "big", False))
+        super().__init__(
+            context = context,
+            type_name = type_name,
+            object_info = object_info,
+            data_format = DataFormatInfo(max_length, "big", False))
         self._vol["max_length"] = max_length
         self._vol['encoding'] = encoding
         self._vol['errors'] = errors
@@ -247,13 +233,11 @@ class String(PrimitiveObject, str):
         if errors:
             params['errors'] = errors
         # Pass the encoding and error parameters to the string constructor to appropriately encode the string
-        value = cls._struct_type.__new__(cls,  # type: ignore
-                                         cls._unmarshall(context,
-                                                         data_format = DataFormatInfo(max_length,
-                                                                                      "big",
-                                                                                      False),
-                                                         object_info = object_info),
-                                         **params)
+        value = cls._struct_type.__new__(
+            cls,  # type: ignore
+            cls._unmarshall(
+                context, data_format = DataFormatInfo(max_length, "big", False), object_info = object_info),
+            **params)
         if value.find('\x00') >= 0:
             value = value[:value.find('\x00')]
         return value
@@ -269,16 +253,12 @@ class Pointer(Integer):
                  data_format: DataFormatInfo,
                  subtype: Optional[templates.ObjectTemplate] = None) -> None:
         self._check_type(subtype, templates.ObjectTemplate)
-        super().__init__(context = context,
-                         object_info = object_info,
-                         type_name = type_name,
-                         data_format = data_format)
+        super().__init__(
+            context = context, object_info = object_info, type_name = type_name, data_format = data_format)
         self._vol['subtype'] = subtype
 
     @classmethod
-    def _unmarshall(cls,
-                    context: interfaces.context.ContextInterface,
-                    data_format: DataFormatInfo,
+    def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
                     object_info: ObjectInformation) -> Any:
         """Ensure that pointer values always fall within the address space of the layer they're constructed on
 
@@ -302,11 +282,10 @@ class Pointer(Integer):
         layer_name = layer_name or self.vol.native_layer_name
         mask = self._context.memory[layer_name].address_mask
         offset = self & mask
-        return self.vol.subtype(context = self._context,
-                                object_info = interfaces.objects.ObjectInformation(
-                                    layer_name = layer_name,
-                                    offset = offset,
-                                    parent = self))
+        return self.vol.subtype(
+            context = self._context,
+            object_info = interfaces.objects.ObjectInformation(
+                layer_name = layer_name, offset = offset, parent = self))
 
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from memory"""
@@ -322,6 +301,7 @@ class Pointer(Integer):
         return self._vol['subtype'].has_member(member_name)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
             return Integer.VolTemplateProxy.size(template)
@@ -334,9 +314,7 @@ class Pointer(Integer):
             return []
 
         @classmethod
-        def replace_child(cls,
-                          template: interfaces.objects.Template,
-                          old_child: interfaces.objects.Template,
+        def replace_child(cls, template: interfaces.objects.Template, old_child: interfaces.objects.Template,
                           new_child: interfaces.objects.Template) -> None:
             """Substitutes the old_child for the new_child"""
             if 'subtype' in template.vol:
@@ -344,9 +322,7 @@ class Pointer(Integer):
                     template.update_vol(subtype = new_child)
 
         @classmethod
-        def has_member(cls,
-                       template: interfaces.objects.Template,
-                       member_name: str) -> bool:
+        def has_member(cls, template: interfaces.objects.Template, member_name: str) -> bool:
             return template.vol['subtype'].has_member(member_name)
 
 
@@ -373,14 +349,14 @@ class BitField(interfaces.objects.ObjectInterface, int):
                 start_bit: int = 0,
                 end_bit: int = 0,
                 **kwargs) -> 'BitField':
-        value = base_type(context = context,
-                          object_info = object_info)
+        value = base_type(context = context, object_info = object_info)
         return int.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))  # type: ignore
 
     def write(self, value):
         raise NotImplementedError("Writing to BitFields is not yet implemented")
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
             return Integer.VolTemplateProxy.size(template)
@@ -393,9 +369,7 @@ class BitField(interfaces.objects.ObjectInterface, int):
             return []
 
         @classmethod
-        def replace_child(cls,
-                          template: interfaces.objects.Template,
-                          old_child: interfaces.objects.Template,
+        def replace_child(cls, template: interfaces.objects.Template, old_child: interfaces.objects.Template,
                           new_child: interfaces.objects.Template) -> None:
             """Substitutes the old_child for the new_child"""
             if 'base_type' in template.vol:
@@ -406,23 +380,15 @@ class BitField(interfaces.objects.ObjectInterface, int):
 class Enumeration(interfaces.objects.ObjectInterface, int):
     """Returns an object made up of choices"""
 
-    def __new__(cls,
-                context: interfaces.context.ContextInterface,
-                type_name: str,
-                object_info: interfaces.objects.ObjectInformation,
-                base_type: interfaces.objects.Template,
-                choices: Dict[str, int],
-                **kwargs) -> 'Enumeration':
+    def __new__(cls, context: interfaces.context.ContextInterface, type_name: str,
+                object_info: interfaces.objects.ObjectInformation, base_type: interfaces.objects.Template,
+                choices: Dict[str, int], **kwargs) -> 'Enumeration':
         cls._check_class(base_type.vol.object_class, Integer)
-        value = base_type(context = context,
-                          object_info = object_info)
+        value = base_type(context = context, object_info = object_info)
         return int.__new__(cls, value)  # type: ignore
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 type_name: str,
-                 object_info: interfaces.objects.ObjectInformation,
-                 base_type: Integer,
+    def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
+                 object_info: interfaces.objects.ObjectInformation, base_type: Integer,
                  choices: Dict[str, int]) -> None:
         super().__init__(context, type_name, object_info)
 
@@ -465,6 +431,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         raise NotImplementedError("Writing to Enumerations is not yet implemented")
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
             return template.vol['base_type'].size
@@ -477,9 +444,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
             return []
 
         @classmethod
-        def replace_child(cls,
-                          template: interfaces.objects.Template,
-                          old_child: interfaces.objects.Template,
+        def replace_child(cls, template: interfaces.objects.Template, old_child: interfaces.objects.Template,
                           new_child: interfaces.objects.Template) -> None:
             """Substitutes the old_child for the new_child"""
             if 'base_type' in template.vol:
@@ -497,9 +462,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
                  count: int = 0,
                  subtype: templates.ObjectTemplate = None) -> None:
         self._check_type(subtype, templates.ObjectTemplate)
-        super().__init__(context = context,
-                         type_name = type_name,
-                         object_info = object_info)
+        super().__init__(context = context, type_name = type_name, object_info = object_info)
         self._vol['count'] = self._check_type(count, int)
         self._vol['subtype'] = subtype
 
@@ -516,6 +479,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
         self._vol['count'] = self._check_type(value, int)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
             """Returns the size of the array, based on the count and the subtype"""
@@ -531,9 +495,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
             return []
 
         @classmethod
-        def replace_child(cls,
-                          template: interfaces.objects.Template,
-                          old_child: interfaces.objects.Template,
+        def replace_child(cls, template: interfaces.objects.Template, old_child: interfaces.objects.Template,
                           new_child: interfaces.objects.Template) -> None:
             """Substitutes the old_child for the new_child"""
             if 'subtype' in template.vol:
@@ -541,9 +503,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
                     template.update_vol(subtype = new_child)
 
         @classmethod
-        def relative_child_offset(cls,
-                                  template: interfaces.objects.Template,
-                                  child: str) -> int:
+        def relative_child_offset(cls, template: interfaces.objects.Template, child: str) -> int:
             """Returns the relative offset from the head of the parent data to the child member"""
             if 'subtype' in template.vol and child == 'subtype':
                 return 0
@@ -568,10 +528,11 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
             return_list = False
             series = [series]
         for index in series:
-            object_info = ObjectInformation(layer_name = self.vol.layer_name,
-                                            offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
-                                            parent = self,
-                                            native_layer_name = self.vol.native_layer_name)
+            object_info = ObjectInformation(
+                layer_name = self.vol.layer_name,
+                offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
+                parent = self,
+                native_layer_name = self.vol.native_layer_name)
             result += [self.vol.subtype(context = self._context, object_info = object_info)]
         if not return_list:
             return result[0]
@@ -591,17 +552,11 @@ class Struct(interfaces.objects.ObjectInterface):
        Keep the number of methods in this class low or very specific, since each one could overload a valid member.
     """
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 type_name: str,
-                 object_info: interfaces.objects.ObjectInformation,
-                 size: int,
+    def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
+                 object_info: interfaces.objects.ObjectInformation, size: int,
                  members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
-        super().__init__(context = context,
-                         type_name = type_name,
-                         object_info = object_info,
-                         size = size,
-                         members = members)
+        super().__init__(
+            context = context, type_name = type_name, object_info = object_info, size = size, members = members)
         self._check_members(members)
         self._concrete_members = {}  # type: Dict[str, Dict]
 
@@ -610,6 +565,7 @@ class Struct(interfaces.objects.ObjectInterface):
         return member_name in self.vol.members
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
             """Method to return the size of this type"""
@@ -623,9 +579,7 @@ class Struct(interfaces.objects.ObjectInterface):
             return [member for _, member in template.vol.members.values()]
 
         @classmethod
-        def replace_child(cls,
-                          template: interfaces.objects.Template,
-                          old_child: interfaces.objects.Template,
+        def replace_child(cls, template: interfaces.objects.Template, old_child: interfaces.objects.Template,
                           new_child: interfaces.objects.Template) -> None:
             """Replace a child elements within the arguments handed to the template"""
             for member in template.vol.members.get('members', {}):
@@ -641,9 +595,7 @@ class Struct(interfaces.objects.ObjectInterface):
                     template.update_vol(members = tmp_list)
 
         @classmethod
-        def relative_child_offset(cls,
-                                  template: interfaces.objects.Template,
-                                  child: str) -> int:
+        def relative_child_offset(cls, template: interfaces.objects.Template, child: str) -> int:
             """Returns the relative offset of a child to its parent"""
             retlist = template.vol.members.get(child, None)
             if retlist is None:
@@ -651,15 +603,12 @@ class Struct(interfaces.objects.ObjectInterface):
             return retlist[0]
 
         @classmethod
-        def has_member(cls,
-                       template: interfaces.objects.Template,
-                       member_name: str) -> bool:
+        def has_member(cls, template: interfaces.objects.Template, member_name: str) -> bool:
             """Returns whether the object would contain a member called member_name"""
             return member_name in template.vol.members
 
     @classmethod
-    def _check_members(cls,
-                       members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
+    def _check_members(cls, members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
         # An object template is a callable that when called with a context, offset, layer_name and type_name
         if not isinstance(members, abc.Mapping):
@@ -678,13 +627,14 @@ class Struct(interfaces.objects.ObjectInterface):
         elif attr in self.vol.members:
             mask = self._context.memory[self.vol.layer_name].address_mask
             relative_offset, member = self.vol.members[attr]
-            member = member(context = self._context,
-                            object_info = interfaces.objects.ObjectInformation(layer_name = self.vol.layer_name,
-                                                                               offset = mask & (
-                                                                                       self.vol.offset + relative_offset),
-                                                                               member_name = attr,
-                                                                               parent = self,
-                                                                               native_layer_name = self.vol.native_layer_name))
+            member = member(
+                context = self._context,
+                object_info = interfaces.objects.ObjectInformation(
+                    layer_name = self.vol.layer_name,
+                    offset = mask & (self.vol.offset + relative_offset),
+                    member_name = attr,
+                    parent = self,
+                    native_layer_name = self.vol.native_layer_name))
             self._concrete_members[attr] = member
             return member
         raise AttributeError("Struct has no attribute: {}.{}".format(self.vol.type_name, attr))
@@ -700,6 +650,7 @@ class Struct(interfaces.objects.ObjectInterface):
 # Nice way of duplicating the class, but *could* causes problems with isintance
 class Union(Struct):
     pass
+
 
 # Really nasty way of duplicating the class
 # WILL cause problems with any mutable class/static variables

@@ -6,6 +6,7 @@ from volatility.framework import objects, interfaces
 
 
 class GenericIntelProcess(objects.Struct):
+
     def _add_process_layer(self,
                            context: interfaces.context.ContextInterface,
                            dtb: Union[int, interfaces.objects.ObjectInterface],
@@ -15,14 +16,13 @@ class GenericIntelProcess(objects.Struct):
 
         if config_prefix is None:
             # TODO: Ensure collisions can't happen by verifying the config_prefix is empty
-            random_prefix = ''.join(
-                random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+            random_prefix = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                    for _ in range(8))
             config_prefix = interfaces.configuration.path_join("temporary", "_" + random_prefix)
 
         # Figure out a suitable name we can use for the new layer
         if preferred_name is None:
-            preferred_name = context.memory.free_layer_name(
-                prefix = self.vol.layer_name + "_Process_")
+            preferred_name = context.memory.free_layer_name(prefix = self.vol.layer_name + "_Process_")
         else:
             if preferred_name in context.memory:
                 preferred_name = context.memory.free_layer_name(prefix = preferred_name)

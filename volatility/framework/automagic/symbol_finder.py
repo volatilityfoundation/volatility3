@@ -17,9 +17,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
     banner_cache = None
     symbol_class = None
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str) -> None:
+    def __init__(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         super().__init__(context, config_path)
         self._requirements = []  # type: List[Tuple[str, interfaces.configuration.ConstructableRequirementInterface]]
         self._banners = {}  # type: symbol_cache.BannersType
@@ -44,21 +42,22 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
         if self.symbol_class is None:
             return
 
-        self._requirements = self.find_requirements(context, config_path, requirement,
-                                                    (requirements.TranslationLayerRequirement,
-                                                     requirements.SymbolRequirement),
-                                                    shortcut = False)
+        self._requirements = self.find_requirements(
+            context,
+            config_path,
+            requirement, (requirements.TranslationLayerRequirement, requirements.SymbolRequirement),
+            shortcut = False)
 
         for (sub_path, requirement) in self._requirements:
             parent_path = interfaces.configuration.parent_path(sub_path)
 
-            if (isinstance(requirement, requirements.SymbolRequirement) and requirement.unsatisfied(context,
-                                                                                                    parent_path)):
+            if (isinstance(requirement, requirements.SymbolRequirement)
+                    and requirement.unsatisfied(context, parent_path)):
                 for (tl_sub_path, tl_requirement) in self._requirements:
                     tl_parent_path = interfaces.configuration.parent_path(tl_sub_path)
                     # Find the TranslationLayer sibling to the SymbolRequirement
-                    if (isinstance(tl_requirement, requirements.TranslationLayerRequirement) and
-                            tl_parent_path == parent_path):
+                    if (isinstance(tl_requirement, requirements.TranslationLayerRequirement)
+                            and tl_parent_path == parent_path):
                         if context.config.get(tl_sub_path, None):
                             self._banner_scan(context, parent_path, requirement, context.config[tl_sub_path],
                                               progress_callback)
@@ -83,8 +82,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
 
         # Check if the Stacker has already found what we're looking for
         if layer.config.get(self.banner_config_key, None):
-            banner_list = [
-                (0, bytes(layer.config[self.banner_config_key], 'latin-1'))]  # type: Iterable[Any]
+            banner_list = [(0, bytes(layer.config[self.banner_config_key], 'latin-1'))]  # type: Iterable[Any]
         else:
             # Swap to the physical layer for scanning
             # TODO: Fix this so it works for layers other than just Intel

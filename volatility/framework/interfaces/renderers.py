@@ -39,6 +39,7 @@ class ColumnSortKey(metaclass = ABCMeta):
 
 
 class TreeNode(collections.Sequence, metaclass = ABCMeta):
+
     def __init__(self, path, treegrid, parent, values):
         """Initializes the TreeNode"""
 
@@ -97,12 +98,7 @@ class Disassembly(object):
 
 _Type = TypeVar("_Type", bound = Type)
 ColumnsType = List[Tuple[str, Type]]
-BaseTypes = Union[Type[int],
-                  Type[str],
-                  Type[float],
-                  Type[bytes],
-                  Type[datetime.datetime],
-                  Type[BaseAbsentValue],
+BaseTypes = Union[Type[int], Type[str], Type[float], Type[bytes], Type[datetime.datetime], Type[BaseAbsentValue],
                   Type[Disassembly]]
 VisitorSignature = Callable[[TreeNode, _Type], _Type]
 
@@ -140,9 +136,7 @@ class TreeGrid(object, metaclass = ABCMeta):
         """Method used to sanitize column names for TreeNodes"""
 
     @abstractmethod
-    def populate(self,
-                 func: VisitorSignature = None,
-                 initial_accumulator: Any = None) -> None:
+    def populate(self, func: VisitorSignature = None, initial_accumulator: Any = None) -> None:
         """Populates the tree by consuming the TreeGrid's construction generator
            Func is called on every node, so can be used to create output on demand
 

@@ -16,11 +16,11 @@ class Maps(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "vmlinux",
-                                               description = "Linux Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "vmlinux", description = "Linux Kernel")
+        ]
 
     def _generator(self, tasks):
         for task in tasks:
@@ -46,19 +46,8 @@ class Maps(plugins.PluginInterface):
 
                 path = vma.get_name(task)
 
-                yield (
-                    0,
-                    (task.pid,
-                     name,
-                     format_hints.Hex(vma.vm_start),
-                     format_hints.Hex(vma.vm_end),
-                     flags,
-                     format_hints.Hex(page_offset),
-                     major,
-                     minor,
-                     inode,
-                     path
-                     ))
+                yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), flags,
+                           format_hints.Hex(page_offset), major, minor, inode, path))
 
     def run(self):
         filter = pslist.PsList.create_filter([self.config.get('pid', None)])
@@ -66,17 +55,6 @@ class Maps(plugins.PluginInterface):
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
-            [("PID", int),
-             ("Process", str),
-             ("Start", format_hints.Hex),
-             ("End", format_hints.Hex),
-             ("Flags", str),
-             ("PgOff", format_hints.Hex),
-             ("Major", int),
-             ("Minor", int),
-             ("Inode", int),
-             ("File Path", str)],
-            self._generator(plugin(self.context,
-                                   self.config['primary'],
-                                   self.config['vmlinux'],
-                                   filter = filter)))
+            [("PID", int), ("Process", str), ("Start", format_hints.Hex), ("End", format_hints.Hex), ("Flags", str),
+             ("PgOff", format_hints.Hex), ("Major", int), ("Minor", int), ("Inode", int), ("File Path", str)],
+            self._generator(plugin(self.context, self.config['primary'], self.config['vmlinux'], filter = filter)))

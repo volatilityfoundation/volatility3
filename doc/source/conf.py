@@ -19,8 +19,10 @@ import sphinx.apidoc
 
 
 def setup(app):
-    sphinx.apidoc.main(argv = ['-e', '-M', '-f', '-T', '-o', 'doc/source',
-                               os.path.join(os.path.dirname(__file__), '..', '..', 'volatility')])
+    sphinx.apidoc.main(argv = [
+        '-e', '-M', '-f', '-T', '-o', 'doc/source',
+        os.path.join(os.path.dirname(__file__), '..', '..', 'volatility')
+    ])
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -37,13 +39,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.viewcode'
+    'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.napoleon', 'sphinx.ext.intersphinx', 'sphinx.ext.todo',
+    'sphinx.ext.coverage', 'sphinx.ext.viewcode'
 ]
 
 try:
@@ -114,7 +111,6 @@ pygments_style = 'sphinx'
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 # keep_warnings = False
-
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -220,8 +216,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    ('index', 'Volatility.tex', 'Volatility Documentation',
-     'Volatility Foundation', 'manual'),
+    ('index', 'Volatility.tex', 'Volatility Documentation', 'Volatility Foundation', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -244,19 +239,14 @@ latex_documents = [
 # If false, no module index is generated.
 # latex_domain_indices = True
 
-
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    ('index', 'volatility', 'Volatility Documentation',
-     ['Volatility Foundation'], 1)
-]
+man_pages = [('index', 'volatility', 'Volatility Documentation', ['Volatility Foundation'], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
-
 
 # -- Options for Texinfo output -------------------------------------------
 
@@ -264,9 +254,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    ('index', 'Volatility', 'Volatility Documentation',
-     'Volatility Foundation', 'Volatility', 'Memory forensics framework.',
-     'Miscellaneous'),
+    ('index', 'Volatility', 'Volatility Documentation', 'Volatility Foundation', 'Volatility',
+     'Memory forensics framework.', 'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.
@@ -280,7 +269,6 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 # texinfo_no_detailmenu = False
-
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None}

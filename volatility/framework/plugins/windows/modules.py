@@ -12,10 +12,11 @@ class Modules(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
+        ]
 
     def _generator(self):
         for mod in self.list_modules(self.context, self.config['primary'], self.config['nt_symbols']):
@@ -30,18 +31,16 @@ class Modules(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 FullDllName = ""
 
-            yield (0, (format_hints.Hex(mod.vol.offset),
-                       format_hints.Hex(mod.DllBase),
-                       format_hints.Hex(mod.SizeOfImage),
-                       BaseDllName,
-                       FullDllName,
-                       ))
+            yield (0, (
+                format_hints.Hex(mod.vol.offset),
+                format_hints.Hex(mod.DllBase),
+                format_hints.Hex(mod.SizeOfImage),
+                BaseDllName,
+                FullDllName,
+            ))
 
     @classmethod
-    def list_modules(cls,
-                     context: interfaces.context.ContextInterface,
-                     layer_name: str,
-                     symbol_table: str):
+    def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str):
         """Lists all the modules in the primary layer"""
 
         kvo = context.memory[layer_name].config['kernel_virtual_offset']
@@ -64,9 +63,5 @@ class Modules(interfaces.plugins.PluginInterface):
             yield mod
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex),
-                                   ("Base", format_hints.Hex),
-                                   ("Size", format_hints.Hex),
-                                   ("Name", str),
-                                   ("Path", str)],
-                                  self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Base", format_hints.Hex),
+                                   ("Size", format_hints.Hex), ("Name", str), ("Path", str)], self._generator())

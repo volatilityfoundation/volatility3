@@ -13,11 +13,11 @@ class Psaux(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "darwin",
-                                               description = "Mac Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "darwin", description = "Mac Kernel")
+        ]
 
     def _generator(self, tasks: Iterator[Any]) -> Generator[Tuple[int, Tuple[int, str, int, str]], None, None]:
         for task in tasks:
@@ -29,8 +29,7 @@ class Psaux(plugins.PluginInterface):
 
             argsstart = task.user_stack - task.p_argslen
 
-            if (not proc_layer.is_valid(argsstart) or
-                    not task.p_argslen or not task.p_argc):
+            if (not proc_layer.is_valid(argsstart) or not task.p_argslen or not task.p_argc):
                 continue
 
                 # Add one because the first two are usually duplicates
@@ -87,11 +86,5 @@ class Psaux(plugins.PluginInterface):
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
-            [("PID", int),
-             ("Process", str),
-             ("Argc", int),
-             ("Arguments", str)],
-            self._generator(plugin(self.context,
-                                   self.config['primary'],
-                                   self.config['darwin'],
-                                   filter = filter)))
+            [("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
+            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter)))

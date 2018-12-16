@@ -57,21 +57,20 @@ class ObjectInformation(ReadOnlyMapping):
         self._check_type(offset, int)
         if parent:
             self._check_type(parent, ObjectInterface)
-        super().__init__({'layer_name': layer_name,
-                          'offset': offset,
-                          'member_name': member_name,
-                          'parent': parent,
-                          'native_layer_name': native_layer_name or layer_name})
+        super().__init__({
+            'layer_name': layer_name,
+            'offset': offset,
+            'member_name': member_name,
+            'parent': parent,
+            'native_layer_name': native_layer_name or layer_name
+        })
 
 
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """A base object required to be the ancestor of every object used in volatility"""
 
-    def __init__(self,
-                 context: 'interfaces_context.ContextInterface',
-                 type_name: str,
-                 object_info: 'ObjectInformation',
-                 **kwargs) -> None:
+    def __init__(self, context: 'interfaces_context.ContextInterface', type_name: str,
+                 object_info: 'ObjectInformation', **kwargs) -> None:
         # Since objects are likely to be instantiated often,
         # we're only checking that context, offset and parent
         # Everything else may be wrong, but that will get caught later on
@@ -89,8 +88,10 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         mask = context.memory[object_info.layer_name].address_mask
         normalized_offset = object_info.offset & mask
 
-        self._vol = collections.ChainMap({}, object_info, {'type_name': type_name, 'offset': normalized_offset},
-                                         kwargs)
+        self._vol = collections.ChainMap({}, object_info, {
+            'type_name': type_name,
+            'offset': normalized_offset
+        }, kwargs)
         self._context = context
 
     @property
@@ -118,12 +119,11 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             raise ValueError("Unable to determine table for symbol: {}".format(self.vol.type_name))
         table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
         if table_name not in self._context.symbol_space:
-            raise KeyError("Symbol table not found in context's symbol_space for symbol: {}".format(self.vol.type_name))
+            raise KeyError("Symbol table not found in context's symbol_space for symbol: {}".format(
+                self.vol.type_name))
         return self._context.symbol_space[table_name]
 
-    def cast(self,
-             new_type_name: str,
-             **additional) -> 'ObjectInterface':
+    def cast(self, new_type_name: str, **additional) -> 'ObjectInterface':
         """Returns a new object at the offset and from the layer that the current object inhabits
 
         .. note:: If new type name does not include a symbol table, the symbol table for the current object is used
@@ -135,13 +135,13 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         object_template = self._context.symbol_space.get_type(new_type_name)
         object_template = object_template.clone()
         object_template.update_vol(**additional)
-        object_info = ObjectInformation(layer_name = self.vol.layer_name,
-                                        offset = self.vol.offset,
-                                        member_name = self.vol.member_name,
-                                        parent = self.vol.parent,
-                                        native_layer_name = self.vol.native_layer_name)
-        return object_template(context = self._context,
-                               object_info = object_info)
+        object_info = ObjectInformation(
+            layer_name = self.vol.layer_name,
+            offset = self.vol.offset,
+            member_name = self.vol.member_name,
+            parent = self.vol.parent,
+            native_layer_name = self.vol.native_layer_name)
+        return object_template(context = self._context, object_info = object_info)
 
     def has_member(self, member_name: str) -> bool:
         """Returns whether the object would contain a member called member_name"""
@@ -166,24 +166,17 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             return []
 
         @classmethod
-        def replace_child(cls,
-                          template: 'Template',
-                          old_child: 'Template',
-                          new_child: 'Template') -> None:
+        def replace_child(cls, template: 'Template', old_child: 'Template', new_child: 'Template') -> None:
             """Substitutes the old_child for the new_child"""
             raise KeyError("Template does not contain any children to replace: {}".format(template.vol.type_name))
 
         @classmethod
-        def relative_child_offset(cls,
-                                  template: 'Template',
-                                  child: str) -> int:
+        def relative_child_offset(cls, template: 'Template', child: str) -> int:
             """Returns the relative offset from the head of the parent data to the child member"""
             raise KeyError("Template does not contain any children: {}".format(template.vol.type_name))
 
         @classmethod
-        def has_member(cls,
-                       template: 'Template',
-                       member_name: str) -> bool:
+        def has_member(cls, template: 'Template', member_name: str) -> bool:
             """Returns whether the object would contain a member called member_name"""
             return False
 
@@ -263,7 +256,6 @@ class Template(validity.ValidityRoutines):
                 return self._vol[attr]
         raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, attr))
 
-    def __call__(self,
-                 context: 'interfaces_context.ContextInterface',
+    def __call__(self, context: 'interfaces_context.ContextInterface',
                  object_info: ObjectInformation) -> ObjectInterface:
         """Constructs the object"""

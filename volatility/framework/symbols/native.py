@@ -8,9 +8,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
     """Symbol List that handles Native types"""
 
     # FIXME: typing the native_dictionary as Tuple[interfaces.objects.ObjectInterface, str] throws many errors
-    def __init__(self,
-                 name: str,
-                 native_dictionary: Dict[str, Any]) -> None:
+    def __init__(self, name: str, native_dictionary: Dict[str, Any]) -> None:
         super().__init__(name, self)
         self._native_dictionary = copy.deepcopy(native_dictionary)
         self._overrides = {}  # type: Dict[str, interfaces.objects.ObjectInterface]
@@ -70,28 +68,31 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         _native_type, native_format = self._native_dictionary[type_name]
         if type_name == 'pointer':
             additional = {'subtype': self.get_type('void')}
-        return objects.templates.ObjectTemplate(self.get_type_class(type_name),  # pylint: disable=W0142
-                                                type_name = prefix + type_name,
-                                                data_format = objects.DataFormatInfo(*native_format),
-                                                **additional)
+        return objects.templates.ObjectTemplate(
+            self.get_type_class(type_name),  # pylint: disable=W0142
+            type_name = prefix + type_name,
+            data_format = objects.DataFormatInfo(*native_format),
+            **additional)
 
 
-std_ctypes = {'int': (objects.Integer, (4, "little", True)),
-              'long': (objects.Integer, (4, "little", True)),
-              'unsigned long': (objects.Integer, (4, "little", False)),
-              'unsigned int': (objects.Integer, (4, "little", False)),
-              'char': (objects.Integer, (1, "little", True)),
-              'byte': (objects.Bytes, (1, "little", True)),
-              'unsigned char': (objects.Integer, (1, "little", False)),
-              'unsigned short int': (objects.Integer, (2, "little", False)),
-              'unsigned short': (objects.Integer, (2, "little", False)),
-              'unsigned be short': (objects.Integer, (2, "big", False)),
-              'short': (objects.Integer, (2, "little", True)),
-              'long long': (objects.Integer, (8, "little", True)),
-              'unsigned long long': (objects.Integer, (8, "little", True)),
-              'float': (objects.Float, (4, "little", True)),
-              'double': (objects.Float, (8, "little", True)),
-              'wchar': (objects.Integer, (2, "little", False))}
+std_ctypes = {
+    'int': (objects.Integer, (4, "little", True)),
+    'long': (objects.Integer, (4, "little", True)),
+    'unsigned long': (objects.Integer, (4, "little", False)),
+    'unsigned int': (objects.Integer, (4, "little", False)),
+    'char': (objects.Integer, (1, "little", True)),
+    'byte': (objects.Bytes, (1, "little", True)),
+    'unsigned char': (objects.Integer, (1, "little", False)),
+    'unsigned short int': (objects.Integer, (2, "little", False)),
+    'unsigned short': (objects.Integer, (2, "little", False)),
+    'unsigned be short': (objects.Integer, (2, "big", False)),
+    'short': (objects.Integer, (2, "little", True)),
+    'long long': (objects.Integer, (8, "little", True)),
+    'unsigned long long': (objects.Integer, (8, "little", True)),
+    'float': (objects.Float, (4, "little", True)),
+    'double': (objects.Float, (8, "little", True)),
+    'wchar': (objects.Integer, (2, "little", False))
+}
 native_types = std_ctypes.copy()
 native_types['pointer'] = (objects.Pointer, (4, "little", False))
 x86NativeTable = NativeTable("native", native_types)

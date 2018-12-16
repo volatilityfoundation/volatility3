@@ -17,17 +17,14 @@ class Lsmod(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "vmlinux",
-                                               description = "Linux Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "vmlinux", description = "Linux Kernel")
+        ]
 
     @classmethod
-    def list_modules(cls,
-                     context: interfaces.context.ContextInterface,
-                     layer_name: str,
-                     vmlinux_symbols: str):
+    def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str, vmlinux_symbols: str):
         """Lists all the modules in the primary layer"""
 
         _, aslr_shift = linux.LinuxUtilities.find_aslr(context, vmlinux_symbols, layer_name)
@@ -43,9 +40,7 @@ class Lsmod(plugins.PluginInterface):
             yield module
 
     def _generator(self):
-        for module in self.list_modules(self.context,
-                                        self.config['primary'],
-                                        self.config['vmlinux']):
+        for module in self.list_modules(self.context, self.config['primary'], self.config['vmlinux']):
 
             mod_size = module.get_init_size() + module.get_core_size()
 
@@ -54,8 +49,4 @@ class Lsmod(plugins.PluginInterface):
             yield 0, (format_hints.Hex(module.vol.offset), mod_name, mod_size)
 
     def run(self):
-        return renderers.TreeGrid(
-            [("Offset", format_hints.Hex),
-             ("Name", str),
-             ("Size", int)],
-            self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Name", str), ("Size", int)], self._generator())

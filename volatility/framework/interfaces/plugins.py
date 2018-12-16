@@ -53,6 +53,7 @@ class FileConsumerInterface(object):
 #  The plugin accepts the context and modifies as necessary
 #  The plugin runs and produces a TreeGrid output
 
+
 class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
     """Class that defines the basic interface that all Plugins must maintain.
     The constructor must only take a `context` and `config_path`, so that plugins can be launched automatically.  As

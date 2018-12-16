@@ -26,11 +26,11 @@ class Check_syscall(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "vmlinux",
-                                               description = "Linux Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "vmlinux", description = "Linux Kernel")
+        ]
 
     def _get_table_size_next_symbol(self, table_addr, ptr_sz, vmlinux):
         """
@@ -94,7 +94,8 @@ class Check_syscall(plugins.PluginInterface):
         md = capstone.Cs(capstone.CS_ARCH_X86, mode)
 
         try:
-            func_addr = self.context.symbol_space.get_symbol(vmlinux.name + constants.BANG + syscall_entry_func).address
+            func_addr = self.context.symbol_space.get_symbol(vmlinux.name + constants.BANG +
+                                                             syscall_entry_func).address
         except exceptions.SymbolError as e:
             # if we can't find the disassemble function then bail and rely on a different method
             return 0
@@ -127,9 +128,7 @@ class Check_syscall(plugins.PluginInterface):
         _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config['vmlinux'], self.config['primary'])
         vmlinux = self.context.module(self.config['vmlinux'], self.config['primary'], aslr_shift)
 
-        linux.LinuxUtilities.aslr_mask_symbol_table(self.context,
-                                                    self.config['vmlinux'],
-                                                    self.config['primary'],
+        linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'],
                                                     aslr_shift)
 
         ptr_sz = vmlinux.get_type("pointer").size
@@ -159,8 +158,8 @@ class Check_syscall(plugins.PluginInterface):
             tables.append(("32bit", ia32_info))
 
         for (table_name, (tableaddr, tblsz)) in tables:
-            table = vmlinux.object(type_name = "array", subtype = vmlinux.get_type("pointer"),
-                                   offset = tableaddr, count = tblsz)
+            table = vmlinux.object(
+                type_name = "array", subtype = vmlinux.get_type("pointer"), offset = tableaddr, count = tblsz)
 
             for (i, call_addr) in enumerate(table):
                 if not call_addr:
@@ -178,10 +177,5 @@ class Check_syscall(plugins.PluginInterface):
 
     def run(self):
 
-        return renderers.TreeGrid(
-            [("Table Address", format_hints.Hex),
-             ("Table Name", str),
-             ("Index", int),
-             ("Handler Address", format_hints.Hex),
-             ("Handler Symbol", str)],
-            self._generator())
+        return renderers.TreeGrid([("Table Address", format_hints.Hex), ("Table Name", str), ("Index", int),
+                                   ("Handler Address", format_hints.Hex), ("Handler Symbol", str)], self._generator())

@@ -33,36 +33,30 @@ class YaraScan(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = "Primary kernel address space",
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.BooleanRequirement(name = "all",
-                                                description = "Scan both process and kernel memory",
-                                                default = False,
-                                                optional = True),
-                requirements.BooleanRequirement(name = "insensitive",
-                                                description = "Makes the search case insensitive",
-                                                default = False,
-                                                optional = True),
-                requirements.BooleanRequirement(name = "kernel",
-                                                description = "Scan kernel modules",
-                                                default = False,
-                                                optional = True),
-                requirements.BooleanRequirement(name = "wide",
-                                                description = "Match wide (unicode) strings",
-                                                default = False,
-                                                optional = True),
-                requirements.StringRequirement(name = "yara_rules",
-                                               description = "Yara rules (as a string)",
-                                               optional = True),
-                requirements.URIRequirement(name = "yara_file",
-                                            description = "Yara rules (as a file)",
-                                            optional = True),
-                requirements.IntRequirement(name = "max_size",
-                                            default = 0x40000000,
-                                            description = "Set the maximum size (default is 1GB)",
-                                            optional = True)
-                ]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = "Primary kernel address space", architectures = ["Intel32",
+                                                                                                 "Intel64"]),
+            requirements.BooleanRequirement(
+                name = "all", description = "Scan both process and kernel memory", default = False, optional = True),
+            requirements.BooleanRequirement(
+                name = "insensitive",
+                description = "Makes the search case insensitive",
+                default = False,
+                optional = True),
+            requirements.BooleanRequirement(
+                name = "kernel", description = "Scan kernel modules", default = False, optional = True),
+            requirements.BooleanRequirement(
+                name = "wide", description = "Match wide (unicode) strings", default = False, optional = True),
+            requirements.StringRequirement(
+                name = "yara_rules", description = "Yara rules (as a string)", optional = True),
+            requirements.URIRequirement(name = "yara_file", description = "Yara rules (as a file)", optional = True),
+            requirements.IntRequirement(
+                name = "max_size",
+                default = 0x40000000,
+                description = "Set the maximum size (default is 1GB)",
+                optional = True)
+        ]
 
     def _generator(self):
 
@@ -82,10 +76,8 @@ class YaraScan(plugins.PluginInterface):
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
 
-        for offset, name in layer.scan(context = self.context,
-                                       scanner = YaraScanner(rules = rules)):
+        for offset, name in layer.scan(context = self.context, scanner = YaraScanner(rules = rules)):
             yield (0, (format_hints.Hex(offset), name))
 
     def run(self):
-        return renderers.TreeGrid([('Offset', format_hints.Hex),
-                                   ('Rule', str)], self._generator())
+        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Rule', str)], self._generator())

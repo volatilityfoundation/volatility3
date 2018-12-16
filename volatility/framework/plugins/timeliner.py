@@ -52,6 +52,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
         filter_func = passthrough
         if selected_list:
+
             def filter_plugins(name, selected):
                 return any([s in name for s in selected])
 
@@ -61,14 +62,18 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.StringRequirement(name = 'plugins',
-                                               description = "Comma separated list of plugins to run",
-                                               optional = True,
-                                               default = None),
-                requirements.BooleanRequirement(name = 'record-config',
-                                                description = "Whether to record the state of all the plugins once complete",
-                                                optional = True,
-                                                default = False)]
+        return [
+            requirements.StringRequirement(
+                name = 'plugins',
+                description = "Comma separated list of plugins to run",
+                optional = True,
+                default = None),
+            requirements.BooleanRequirement(
+                name = 'record-config',
+                description = "Whether to record the state of all the plugins once complete",
+                optional = True,
+                default = False)
+        ]
 
     def _generator(self, runable_plugins: List[TimeLinerInterface]) -> Optional[Iterable[Tuple[int, Tuple]]]:
         """Takes a timeline, sorts it and output the data from each relevant row from each plugin"""
@@ -80,9 +85,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 for (item, timestamp_type, timestamp) in plugin.generate_timeline():
                     times = self.timeline.get((plugin_name, item), {})
                     if times.get(timestamp_type, None) is not None:
-                        vollog.debug(
-                            "Multiple timestamps for the same plugin/file combination found: {} {}".format(plugin_name,
-                                                                                                           item))
+                        vollog.debug("Multiple timestamps for the same plugin/file combination found: {} {}".format(
+                            plugin_name, item))
                     times[timestamp_type] = timestamp
                     self.timeline[(plugin_name, item)] = times
             except Exception:
@@ -92,11 +96,13 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
         for (plugin_name, item) in self.timeline:
             times = self.timeline[(plugin_name, item)]
-            data = (0, [plugin_name, item,
-                        times.get(TimeLinerType.CREATED, renderers.NotApplicableValue()),
-                        times.get(TimeLinerType.MODIFIED, renderers.NotApplicableValue()),
-                        times.get(TimeLinerType.ACCESSED, renderers.NotApplicableValue()),
-                        times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())])
+            data = (0, [
+                plugin_name, item,
+                times.get(TimeLinerType.CREATED, renderers.NotApplicableValue()),
+                times.get(TimeLinerType.MODIFIED, renderers.NotApplicableValue()),
+                times.get(TimeLinerType.ACCESSED, renderers.NotApplicableValue()),
+                times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())
+            ])
             yield data
 
     def run(self):
@@ -112,12 +118,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
             try:
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
 
-                plugin = plugins.run_plugin(self.context,
-                                            automagics,
-                                            plugin_class,
-                                            self.config_path,
-                                            self._progress_callback,
-                                            self._file_consumer)
+                plugin = plugins.run_plugin(self.context, automagics, plugin_class, self.config_path,
+                                            self._progress_callback, self._file_consumer)
 
                 if isinstance(plugin, TimeLinerInterface):
                     runable_plugins.append(plugin)
@@ -131,20 +133,19 @@ class Timeliner(interfaces.plugins.PluginInterface):
             for plugin in runable_plugins:
                 old_dict = dict(plugin.build_configuration())
                 for entry in old_dict:
-                    total_config[interfaces.configuration.path_join(plugin.__class__.__name__, entry)] = old_dict[entry]
+                    total_config[interfaces.configuration.path_join(plugin.__class__.__name__,
+                                                                    entry)] = old_dict[entry]
 
             filedata = interfaces.plugins.FileInterface("config.json")
             with io.TextIOWrapper(filedata.data, write_through = True) as fp:
                 json.dump(total_config, fp, sort_keys = True, indent = 2)
                 self.produce_file(filedata)
 
-        return renderers.TreeGrid(columns = [("Plugin", str),
-                                             ("Description", str),
-                                             ("Created Date", datetime.datetime),
-                                             ("Modified Date", datetime.datetime),
-                                             ("Accessed Date", datetime.datetime),
-                                             ("Changed Date", datetime.datetime)],
-                                  generator = self._generator(runable_plugins))
+        return renderers.TreeGrid(
+            columns = [("Plugin", str), ("Description", str), ("Created Date", datetime.datetime),
+                       ("Modified Date", datetime.datetime), ("Accessed Date", datetime.datetime),
+                       ("Changed Date", datetime.datetime)],
+            generator = self._generator(runable_plugins))
 
     def build_configuration(self):
         """Builds the configuration to save for the plugin such that it can be reconstructed"""

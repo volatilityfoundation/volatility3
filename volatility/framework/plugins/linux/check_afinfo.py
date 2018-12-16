@@ -19,11 +19,11 @@ class Check_afinfo(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "vmlinux",
-                                               description = "Linux Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "vmlinux", description = "Linux Kernel")
+        ]
 
     # returns whether the symbol is found within the kernel (system.map) or not
     def _is_known_address(self, handler_addr):
@@ -62,9 +62,7 @@ class Check_afinfo(plugins.PluginInterface):
         _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config['vmlinux'], self.config['primary'])
         vmlinux = self.context.module(self.config['vmlinux'], self.config['primary'], aslr_shift)
 
-        linux.LinuxUtilities.aslr_mask_symbol_table(self.context,
-                                                    self.config['primary'],
-                                                    self.config['vmlinux'],
+        linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['primary'], self.config['vmlinux'],
                                                     aslr_shift)
 
         op_members = vmlinux.get_type('file_operations').members
@@ -89,8 +87,5 @@ class Check_afinfo(plugins.PluginInterface):
 
     def run(self):
 
-        return renderers.TreeGrid(
-            [("Symbol Name", str),
-             ("Member", str),
-             ("Handler Address", format_hints.Hex)],
-            self._generator())
+        return renderers.TreeGrid([("Symbol Name", str), ("Member", str), ("Handler Address", format_hints.Hex)],
+                                  self._generator())

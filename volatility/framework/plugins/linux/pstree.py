@@ -38,9 +38,7 @@ class PsTree(pslist.PsList):
 
         def yield_processes(pid):
             proc = self._processes[pid]
-            row = (proc.pid,
-                   proc.parent.pid,
-                   utility.array_to_string(proc.comm))
+            row = (proc.pid, proc.parent.pid, utility.array_to_string(proc.comm))
 
             yield (self._levels[pid] - 1, row)
             for child_pid in self._children.get(pid, []):

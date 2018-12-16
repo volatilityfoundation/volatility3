@@ -5,6 +5,7 @@ from volatility.framework.renderers import conversion
 
 
 class hist_entry(objects.Struct):
+
     def is_valid(self):
         try:
             cmd = self.get_command()

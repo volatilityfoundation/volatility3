@@ -18,21 +18,11 @@ from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
-windows_automagic = ['ConstructionMagic',
-                     'LayerStacker',
-                     'WintelHelper',
-                     'KernelPDBScanner',
-                     'WinSwapLayers']
+windows_automagic = ['ConstructionMagic', 'LayerStacker', 'WintelHelper', 'KernelPDBScanner', 'WinSwapLayers']
 
-linux_automagic = ['ConstructionMagic',
-                   'LayerStacker',
-                   'LinuxBannerCache',
-                   'LinuxSymbolFinder']
+linux_automagic = ['ConstructionMagic', 'LayerStacker', 'LinuxBannerCache', 'LinuxSymbolFinder']
 
-mac_automagic = ['ConstructionMagic',
-                 'LayerStacker',
-                 'MacBannerCache',
-                 'MacSymbolFinder']
+mac_automagic = ['ConstructionMagic', 'LayerStacker', 'MacBannerCache', 'MacSymbolFinder']
 
 
 def available(context: interfaces.context.ContextInterface) -> List[interfaces.automagic.AutomagicInterface]:
@@ -46,8 +36,10 @@ def available(context: interfaces.context.ContextInterface) -> List[interfaces.a
     """
     import_files(sys.modules[__name__])
     config_path = constants.AUTOMAGIC_CONFIG_PATH
-    return sorted([clazz(context, interfaces.configuration.path_join(config_path, clazz.__name__)) for clazz in
-                   class_subclasses(interfaces.automagic.AutomagicInterface)],
+    return sorted([
+        clazz(context, interfaces.configuration.path_join(config_path, clazz.__name__))
+        for clazz in class_subclasses(interfaces.automagic.AutomagicInterface)
+    ],
                   key = lambda x: x.priority)
 
 
@@ -74,8 +66,8 @@ def choose_automagic(automagics, plugin):
 
 def run(automagics: List[interfaces.automagic.AutomagicInterface],
         context: interfaces.context.ContextInterface,
-        configurable: Union[interfaces.configuration.ConfigurableInterface,
-                            Type[interfaces.configuration.ConfigurableInterface]],
+        configurable: Union[interfaces.configuration.ConfigurableInterface, Type[interfaces.configuration.
+                                                                                 ConfigurableInterface]],
         config_path: str,
         progress_callback: validity.ProgressCallback = None) -> List[traceback.TracebackException]:
     """Runs through the list of `automagics` in order, allowing them to make changes to the context

@@ -74,46 +74,68 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         volatility.framework.require_interface_version(0, 0, 0)
 
-        parser = argparse.ArgumentParser(prog = 'volatility',
-                                         description = "An open-source memory forensics framework")
-        parser.add_argument("-c", "--config", help = "Load the configuration from a json file", default = None,
-                            type = str)
-        parser.add_argument("-e", "--extend", help = "Extend the configuration with a new (or changed) setting",
-                            default = None,
-                            action = 'append')
-        parser.add_argument("-p", "--plugin-dirs", help = "Semi-colon separated list of paths to find plugins",
-                            default = "", type = str)
-        parser.add_argument("-s", "--symbol-dirs", help = "Semi-colon separated list of paths to find symbols",
-                            default = "", type = str)
+        parser = argparse.ArgumentParser(
+            prog = 'volatility', description = "An open-source memory forensics framework")
+        parser.add_argument(
+            "-c", "--config", help = "Load the configuration from a json file", default = None, type = str)
+        parser.add_argument(
+            "-e",
+            "--extend",
+            help = "Extend the configuration with a new (or changed) setting",
+            default = None,
+            action = 'append')
+        parser.add_argument(
+            "-p",
+            "--plugin-dirs",
+            help = "Semi-colon separated list of paths to find plugins",
+            default = "",
+            type = str)
+        parser.add_argument(
+            "-s",
+            "--symbol-dirs",
+            help = "Semi-colon separated list of paths to find symbols",
+            default = "",
+            type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
-        parser.add_argument("-o", "--output-dir", help = "Directory in which to output any generated files",
-                            default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')), type = str)
+        parser.add_argument(
+            "-o",
+            "--output-dir",
+            help = "Directory in which to output any generated files",
+            default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')),
+            type = str)
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
-        parser.add_argument("-l", "--log", help = "Log output to a file as well as the console", default = None,
-                            type = str)
-        parser.add_argument("-f", "--file", metavar = 'FILE', default = None, type = str,
-                            help = "Shorthand for --single-location=file:// if single-location is not defined")
-        parser.add_argument("--write-config", help = "Write configuration JSON file out to config.json",
-                            default = False,
-                            action = 'store_true')
+        parser.add_argument(
+            "-l", "--log", help = "Log output to a file as well as the console", default = None, type = str)
+        parser.add_argument(
+            "-f",
+            "--file",
+            metavar = 'FILE',
+            default = None,
+            type = str,
+            help = "Shorthand for --single-location=file:// if single-location is not defined")
+        parser.add_argument(
+            "--write-config",
+            help = "Write configuration JSON file out to config.json",
+            default = False,
+            action = 'store_true')
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != '--help' and arg != '-h']
         partial_args, _ = parser.parse_known_args(known_args)
         if partial_args.plugin_dirs:
-            volatility.plugins.__path__ = [os.path.abspath(p) for p in
-                                           partial_args.plugin_dirs.split(";")] + constants.PLUGINS_PATH
+            volatility.plugins.__path__ = [os.path.abspath(p)
+                                           for p in partial_args.plugin_dirs.split(";")] + constants.PLUGINS_PATH
 
         if partial_args.symbol_dirs:
-            volatility.symbols.__path__ = [os.path.abspath(p) for p in
-                                           partial_args.symbol_dirs.split(";")] + constants.SYMBOL_BASEPATHS
+            volatility.symbols.__path__ = [os.path.abspath(p)
+                                           for p in partial_args.symbol_dirs.split(";")] + constants.SYMBOL_BASEPATHS
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
             file_logger.setLevel(0)
-            file_formatter = logging.Formatter(datefmt = '%y-%m-%d %H:%M:%S',
-                                               fmt = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+            file_formatter = logging.Formatter(
+                datefmt = '%y-%m-%d %H:%M:%S', fmt = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
             file_logger.setFormatter(file_formatter)
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
@@ -206,12 +228,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             if args.quiet:
                 progress_callback = MuteProgress()
 
-            constructed = plugins.run_plugin(ctx,
-                                             automagics,
-                                             plugin,
-                                             base_config_path,
-                                             progress_callback,
-                                             self)
+            constructed = plugins.run_plugin(ctx, automagics, plugin, base_config_path, progress_callback, self)
 
             if args.write_config:
                 vollog.debug("Writing out configuration data to config.json")
@@ -223,11 +240,9 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         except exceptions.UnsatisfiedException as excp:
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format(excp.unsatisfied))
 
-    def populate_config(self,
-                        context: interfaces.context.ContextInterface,
+    def populate_config(self, context: interfaces.context.ContextInterface,
                         configurables_list: Dict[str, interfaces.configuration.ConfigurableInterface],
-                        args: argparse.Namespace,
-                        plugin_config_path: str) -> None:
+                        args: argparse.Namespace, plugin_config_path: str) -> None:
         """Populate the context config based on the returned args
 
         We have already determined these elements must be descended from ConfigurableInterface
@@ -278,8 +293,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         else:
             vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
 
-    def populate_requirements_argparse(self,
-                                       parser: Union[argparse.ArgumentParser, argparse._ArgumentGroup],
+    def populate_requirements_argparse(self, parser: Union[argparse.ArgumentParser, argparse._ArgumentGroup],
                                        configurable: Type[interfaces.configuration.ConfigurableInterface]):
         """Adds the plugin's simple requirements to the provided parser
 
@@ -295,8 +309,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         for requirement in configurable.get_requirements():
             additional = {}  # type: Dict[str, Any]
             if not isinstance(requirement, interfaces.configuration.RequirementInterface):
-                raise TypeError(
-                    "Plugin contains requirements that are not RequirementInterfaces: {}".format(configurable.__name__))
+                raise TypeError("Plugin contains requirements that are not RequirementInterfaces: {}".format(
+                    configurable.__name__))
             if isinstance(requirement, interfaces.configuration.SimpleTypeRequirement):
                 additional["type"] = requirement.instance_type
                 if isinstance(requirement, requirements.IntRequirement):
@@ -313,9 +327,13 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 additional["choices"] = requirement.choices
             else:
                 continue
-            parser.add_argument("--" + requirement.name.replace('_', '-'), help = requirement.description,
-                                default = requirement.default, dest = requirement.name,
-                                required = not requirement.optional, **additional)
+            parser.add_argument(
+                "--" + requirement.name.replace('_', '-'),
+                help = requirement.description,
+                default = requirement.default,
+                dest = requirement.name,
+                required = not requirement.optional,
+                **additional)
 
 
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code

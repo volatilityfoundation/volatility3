@@ -4,4 +4,3 @@ from volatility.cli import volshell
 
 if __name__ == '__main__':
     volshell.main()
-

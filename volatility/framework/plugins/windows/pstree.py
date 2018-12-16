@@ -45,18 +45,10 @@ class PsTree(pslist.PsList):
 
         def yield_processes(pid):
             proc = self._processes[pid]
-            row = (proc.UniqueProcessId,
-                   proc.InheritedFromUniqueProcessId,
-                   proc.ImageFileName.cast("string",
-                                           max_length = proc.ImageFileName.vol.count,
-                                           errors = 'replace'),
-                   format_hints.Hex(offset),
-                   proc.ActiveThreads,
-                   proc.get_handle_count(),
-                   proc.get_session_id(),
-                   proc.get_is_wow64(),
-                   proc.get_create_time(),
-                   proc.get_exit_time())
+            row = (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
+                   proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
+                   format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
+                   proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time())
 
             yield (self._levels[pid] - 1, row)
             for child_pid in self._children.get(pid, []):

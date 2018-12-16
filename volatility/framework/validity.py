@@ -25,9 +25,8 @@ class ValidityRoutines(object):
             value: The value of which to validate the type
             valid_type: The type against which to validate
         """
-        assert isinstance(value,
-                          valid_type), cls.__name__ + " expected " + valid_type.__name__ + ", not " + type(
-            value).__name__
+        assert isinstance(
+            value, valid_type), cls.__name__ + " expected " + valid_type.__name__ + ", not " + type(value).__name__
         return value
 
     @classmethod

@@ -34,12 +34,7 @@ class PagedInvalidAddressException(InvalidAddressException):
     Includes the invalid address and the number of bits of the address that are invalid
     """
 
-    def __init__(self,
-                 layer_name: str,
-                 invalid_address: int,
-                 invalid_bits: int,
-                 entry: int,
-                 *args) -> None:
+    def __init__(self, layer_name: str, invalid_address: int, invalid_bits: int, entry: int, *args) -> None:
         super().__init__(layer_name, invalid_address, *args)
         self.invalid_bits = invalid_bits
         self.entry = entry
@@ -51,12 +46,7 @@ class SwappedInvalidAddressException(PagedInvalidAddressException):
 
     Includes the swap lookup"""
 
-    def __init__(self,
-                 layer_name: str,
-                 invalid_address: int,
-                 invalid_bits: int,
-                 entry: int,
-                 swap_offset: int,
+    def __init__(self, layer_name: str, invalid_address: int, invalid_bits: int, entry: int, swap_offset: int,
                  *args) -> None:
         super().__init__(layer_name, invalid_address, invalid_bits, entry, *args)
         self.swap_offset = swap_offset
@@ -87,6 +77,7 @@ class MissingStructureException(VolatilityException):
 
 
 class UnsatisfiedException(VolatilityException):
+
     def __init__(self, unsatisfied: List[str]) -> None:
         super().__init__()
         self.unsatisfied = unsatisfied

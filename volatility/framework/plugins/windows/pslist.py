@@ -15,18 +15,21 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                # TODO: Convert this to a ListRequirement so that people can filter on sets of pids
-                requirements.IntRequirement(name = 'pid',
-                                            description = "Process ID to include (all other processes are excluded)",
-                                            optional = True),
-                requirements.BooleanRequirement(name = 'physical',
-                                                description = 'Display physical offsets instead of virtual',
-                                                default = cls.PHYSICAL_DEFAULT,
-                                                optional = True)]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+            # TODO: Convert this to a ListRequirement so that people can filter on sets of pids
+            requirements.IntRequirement(
+                name = 'pid',
+                description = "Process ID to include (all other processes are excluded)",
+                optional = True),
+            requirements.BooleanRequirement(
+                name = 'physical',
+                description = 'Display physical offsets instead of virtual',
+                default = cls.PHYSICAL_DEFAULT,
+                optional = True)
+        ]
 
     @classmethod
     def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
@@ -74,10 +77,11 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def _generator(self):
 
-        for proc in self.list_processes(self.context,
-                                        self.config['primary'],
-                                        self.config['nt_symbols'],
-                                        filter_func = self.create_filter([self.config.get('pid', None)])):
+        for proc in self.list_processes(
+                self.context,
+                self.config['primary'],
+                self.config['nt_symbols'],
+                filter_func = self.create_filter([self.config.get('pid', None)])):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
@@ -88,18 +92,11 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                     raise TypeError("Primary layer is not an intel layer")
                 (_, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
-            yield (0, (proc.UniqueProcessId,
-                       proc.InheritedFromUniqueProcessId,
-                       proc.ImageFileName.cast("string",
-                                               max_length = proc.ImageFileName.vol.count,
-                                               errors = 'replace'),
-                       format_hints.Hex(offset),
-                       proc.ActiveThreads,
-                       proc.get_handle_count(),
-                       proc.get_session_id(),
-                       proc.get_is_wow64(),
-                       proc.get_create_time(),
-                       proc.get_exit_time()))
+            yield (0,
+                   (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
+                    proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
+                    format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
+                    proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time()))
 
     def generate_timeline(self):
         for row in self._generator():
@@ -111,14 +108,8 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
     def run(self):
         offsettype = "(V)" if not self.config.get('physical', self.PHYSICAL_DEFAULT) else "(P)"
 
-        return renderers.TreeGrid([("PID", int),
-                                   ("PPID", int),
-                                   ("ImageFileName", str),
-                                   ("Offset{0}".format(offsettype), format_hints.Hex),
-                                   ("Threads", int),
-                                   ("Handles", int),
-                                   ("SessionId", int),
-                                   ("Wow64", bool),
-                                   ("CreateTime", datetime.datetime),
-                                   ("ExitTime", datetime.datetime)],
+        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str),
+                                   ("Offset{0}".format(offsettype), format_hints.Hex), ("Threads", int),
+                                   ("Handles", int), ("SessionId", int), ("Wow64", bool),
+                                   ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime)],
                                   self._generator())

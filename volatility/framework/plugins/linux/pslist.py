@@ -12,11 +12,11 @@ class PsList(interfaces_plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "vmlinux",
-                                               description = "Linux Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "vmlinux", description = "Linux Kernel")
+        ]
 
     @classmethod
     def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
@@ -24,6 +24,7 @@ class PsList(interfaces_plugins.PluginInterface):
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
         if filter_list:
+
             def filter_func(x):
                 return x not in filter_list
 
@@ -32,10 +33,11 @@ class PsList(interfaces_plugins.PluginInterface):
             return lambda _: False
 
     def _generator(self):
-        for task in self.list_tasks(self.context,
-                                    self.config['primary'],
-                                    self.config['vmlinux'],
-                                    filter = self.create_filter([self.config.get('pid', None)])):
+        for task in self.list_tasks(
+                self.context,
+                self.config['primary'],
+                self.config['vmlinux'],
+                filter = self.create_filter([self.config.get('pid', None)])):
             pid = task.pid
             ppid = 0
             if task.parent:
@@ -49,7 +51,6 @@ class PsList(interfaces_plugins.PluginInterface):
                    layer_name: str,
                    vmlinux_symbols: str,
                    filter: Callable[[int], bool] = lambda _: False) -> Iterable[interfaces.objects.ObjectInterface]:
-
         """Lists all the tasks in the primary layer"""
 
         _, aslr_shift = linux.LinuxUtilities.find_aslr(context, vmlinux_symbols, layer_name)
@@ -61,7 +62,4 @@ class PsList(interfaces_plugins.PluginInterface):
                 yield task
 
     def run(self):
-        return renderers.TreeGrid([("PID", int),
-                                   ("PPID", int),
-                                   ("COMM", str)],
-                                  self._generator())
+        return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())

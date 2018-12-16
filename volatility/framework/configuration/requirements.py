@@ -20,9 +20,7 @@ class MultiRequirement(configuration.RequirementInterface):
        Technically the Interface could handle this, but it's an interface, so this is a concrete implementation.
     """
 
-    def unsatisfied(self,
-                    context: configuration.ContextInterface,
-                    config_path: str) -> List[str]:
+    def unsatisfied(self, context: configuration.ContextInterface, config_path: str) -> List[str]:
         return self.unsatisfied_children(context, config_path)
 
 
@@ -65,7 +63,9 @@ class ListRequirement(configuration.RequirementInterface):
     def __init__(self,
                  element_type: Type[configuration.SimpleTypes] = str,
                  max_elements: Optional[int] = 0,
-                 min_elements: Optional[int] = None, *args, **kwargs) -> None:
+                 min_elements: Optional[int] = None,
+                 *args,
+                 **kwargs) -> None:
         """Constructs the object
 
         Args:
@@ -132,7 +132,8 @@ class ChoiceRequirement(configuration.RequirementInterface):
         return []
 
 
-class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequirementInterface, metaclass = abc.ABCMeta):
+class ComplexListRequirement(
+        MultiRequirement, configuration.ConfigurableRequirementInterface, metaclass = abc.ABCMeta):
     """Allows a variable length list of requirements"""
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
@@ -141,17 +142,18 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
         ret_list = super().unsatisfied(context, config_path)
         if ret_list:
             return ret_list
-        if (self.config_value(context, config_path, None) is None or
-                self.config_value(context, configuration.path_join(config_path, 'number_of_elements'))):
+        if (self.config_value(context, config_path, None) is None
+                or self.config_value(context, configuration.path_join(config_path, 'number_of_elements'))):
             return [config_path]
         return []
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
-        return [IntRequirement("number_of_elements",
-                               description = "Determines how many layers are in this list",
-                               optional = False)]
+        return [
+            IntRequirement(
+                "number_of_elements", description = "Determines how many layers are in this list", optional = False)
+        ]
 
     @abc.abstractmethod
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
@@ -161,9 +163,7 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
     def new_requirement(self, index) -> interfaces.configuration.RequirementInterface:
         """Builds a new requirement based on the specified index"""
 
-    def build_configuration(self,
-                            context: interfaces.context.ContextInterface,
-                            config_path: str,
+    def build_configuration(self, context: interfaces.context.ContextInterface, config_path: str,
                             _: Any) -> configuration.HierarchicalDict:
         result = configuration.HierarchicalDict()
         num_elem_config_path = configuration.path_join(config_path, self.name, 'number_of_elements')
@@ -198,9 +198,7 @@ class LayerListRequirement(ComplexListRequirement):
 
     def new_requirement(self, index) -> interfaces.configuration.RequirementInterface:
         """Constructs a new requirement based on the specified index"""
-        return TranslationLayerRequirement(name = self.name + str(index),
-                                           description = "Swap Layer",
-                                           optional = False)
+        return TranslationLayerRequirement(name = self.name + str(index), description = "Swap Layer", optional = False)
 
 
 class TranslationLayerRequirement(configuration.ConstructableRequirementInterface,
@@ -234,9 +232,7 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
         self.architectures = architectures
         super().__init__(name, description, default, optional)
 
-    def unsatisfied(self,
-                    context: interfaces.context.ContextInterface,
-                    config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
         config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
@@ -247,8 +243,8 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
             if self.oses and context.memory[value].metadata.get('os', None) not in self.oses:
                 vollog.log(9, "TypeError - Layer is not the required OS: {}".format(value))
                 return [config_path]
-            if (self.architectures and
-                    context.memory[value].metadata.get('architecture', None) not in self.architectures):
+            if (self.architectures
+                    and context.memory[value].metadata.get('architecture', None) not in self.architectures):
                 vollog.log(9, "TypeError - Layer is not the required Architecture: {}".format(value))
                 return [config_path]
             return []
@@ -263,8 +259,7 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
         self._validate_class(context, interfaces.configuration.parent_path(config_path))
-        vollog.log(constants.LOGLEVEL_V,
-                   "IndexError - No configuration provided: {}".format(config_path))
+        vollog.log(constants.LOGLEVEL_V, "IndexError - No configuration provided: {}".format(config_path))
         return [config_path]
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
@@ -278,12 +273,12 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
             name = self.name + str(counter)
             counter += 1
 
-        args = {"context": context,
-                "config_path": config_path,
-                "name": name}
+        args = {"context": context, "config_path": config_path, "name": name}
 
-        if any([subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
-                not subreq.optional]):
+        if any(
+            [subreq.unsatisfied(context, config_path)
+             for subreq in self.requirements.values()
+             if not subreq.optional]):
             return None
 
         obj = self._construct_class(context, config_path, args)
@@ -293,9 +288,7 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
             # context.config[config_path] = obj.name
         return None
 
-    def build_configuration(self,
-                            context: interfaces.context.ContextInterface,
-                            _: str,
+    def build_configuration(self, context: interfaces.context.ContextInterface, _: str,
                             value: Any) -> configuration.HierarchicalDict:
         """Builds the appropriate configuration for the specified requirement"""
         return context.memory[value].build_configuration()
@@ -315,8 +308,8 @@ class SymbolRequirement(configuration.ConstructableRequirementInterface,
             return [config_path]
         if value not in context.symbol_space:
             # This is an expected situation, so return False rather than raise
-            vollog.log(constants.LOGLEVEL_V,
-                       "IndexError - Value not present in the symbol space: {}".format(value or ""))
+            vollog.log(constants.LOGLEVEL_V, "IndexError - Value not present in the symbol space: {}".format(value
+                                                                                                             or ""))
             return [config_path]
         return []
 
@@ -326,18 +319,18 @@ class SymbolRequirement(configuration.ConstructableRequirementInterface,
         # Determine the space name
         name = context.symbol_space.free_table_name(self.name)
 
-        args = {"context": context,
-                "config_path": config_path,
-                "name": name}
+        args = {"context": context, "config_path": config_path, "name": name}
 
-        if any([subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
-                not subreq.optional]):
+        if any(
+            [subreq.unsatisfied(context, config_path)
+             for subreq in self.requirements.values()
+             if not subreq.optional]):
             return None
 
         # Fill out the parameter for class creation
         if not isinstance(self.requirements["class"], configuration.ClassRequirement):
-            raise ValueError(
-                "Class requirement is not of type ClassRequirement: {}".format(repr(self.requirements["class"])))
+            raise ValueError("Class requirement is not of type ClassRequirement: {}".format(
+                repr(self.requirements["class"])))
         cls = self.requirements["class"].cls
         node_config = context.config.branch(config_path)
         for req in cls.get_requirements():
@@ -349,9 +342,7 @@ class SymbolRequirement(configuration.ConstructableRequirementInterface,
             context.symbol_space.append(obj)
         return None
 
-    def build_configuration(self,
-                            context: interfaces.context.ContextInterface,
-                            _: str,
+    def build_configuration(self, context: interfaces.context.ContextInterface, _: str,
                             value: Any) -> configuration.HierarchicalDict:
         """Builds the appropriate configuration for the specified requirement"""
         return context.symbol_space[value].build_configuration()

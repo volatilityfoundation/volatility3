@@ -32,10 +32,11 @@ class Handles(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
+        ]
 
     def _decode_pointer(self, value, magic):
         """Windows encodes pointers to objects and decodes them on the fly
@@ -76,8 +77,8 @@ class Handles(interfaces_plugins.PluginInterface):
 
             offset = self._decode_pointer(handle_table_entry.LowValue, magic)
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
-            object_header = self.context.object(self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER", virtual,
-                                                offset = offset)
+            object_header = self.context.object(
+                self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER", virtual, offset = offset)
             object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
 
         object_header.HandleValue = handle_value
@@ -121,10 +122,7 @@ class Handles(interfaces_plugins.PluginInterface):
         return self._sar_value
 
     @classmethod
-    def list_objects(cls,
-                     context: interfaces.context.ContextInterface,
-                     layer_name: str,
-                     symbol_table: str) -> dict:
+    def list_objects(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> dict:
         """List the executive object types (_OBJECT_TYPE) using the
         ObTypeIndexTable or ObpObjectTypes symbol (differs per OS).
         This method will be necessary for determining what type of
@@ -143,9 +141,8 @@ class Handles(interfaces_plugins.PluginInterface):
         except exceptions.SymbolError:
             table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
 
-        ptrs = ntkrnlmp.object(type_name = "array", offset = kvo + table_addr,
-                               subtype = ntkrnlmp.get_type("pointer"),
-                               count = 100)
+        ptrs = ntkrnlmp.object(
+            type_name = "array", offset = kvo + table_addr, subtype = ntkrnlmp.get_type("pointer"), count = 100)
 
         for i, ptr in enumerate(ptrs):
             # the first entry in the table is always null. break the
@@ -166,21 +163,17 @@ class Handles(interfaces_plugins.PluginInterface):
         return type_map
 
     @classmethod
-    def find_cookie(cls,
-                    context: interfaces.context.ContextInterface,
-                    layer_name: str,
+    def find_cookie(cls, context: interfaces.context.ContextInterface, layer_name: str,
                     symbol_table: str) -> Optional[interfaces.objects.ObjectInterface]:
         """Find the ObHeaderCookie value (if it exists)"""
 
         try:
-            offset = context.symbol_space.get_symbol(
-                symbol_table + constants.BANG + "ObHeaderCookie").address
+            offset = context.symbol_space.get_symbol(symbol_table + constants.BANG + "ObHeaderCookie").address
         except exceptions.SymbolError:
             return None
 
         kvo = context.memory[layer_name].config['kernel_virtual_offset']
-        return context.object(symbol_table + constants.BANG + "unsigned int",
-                              layer_name, offset = kvo + offset)
+        return context.object(symbol_table + constants.BANG + "unsigned int", layer_name, offset = kvo + offset)
 
     def _make_handle_array(self, offset, level, depth = 0):
         """Parse a process' handle table and yield valid handle table
@@ -201,8 +194,7 @@ class Handles(interfaces_plugins.PluginInterface):
         if not self.context.memory[virtual].is_valid(offset):
             return
 
-        table = ntkrnlmp.object(type_name = "array", offset = offset,
-                                subtype = subtype, count = int(count))
+        table = ntkrnlmp.object(type_name = "array", offset = offset, subtype = subtype, count = int(count))
 
         layer_object = self.context.memory[virtual]
         masked_offset = (offset & layer_object.maximum_address)
@@ -217,8 +209,8 @@ class Handles(interfaces_plugins.PluginInterface):
                 handle_multiplier = 4
                 handle_level_base = depth * count * handle_multiplier
 
-                handle_value = ((entry.vol.offset - masked_offset) /
-                                (subtype.size / handle_multiplier)) + handle_level_base
+                handle_value = (
+                    (entry.vol.offset - masked_offset) / (subtype.size / handle_multiplier)) + handle_level_base
 
                 item = self._get_item(entry, handle_value)
 
@@ -248,12 +240,10 @@ class Handles(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        type_map = self.list_objects(context = self.context,
-                                     layer_name = self.config["primary"],
-                                     symbol_table = self.config["nt_symbols"])
-        cookie = self.find_cookie(context = self.context,
-                                  layer_name = self.config["primary"],
-                                  symbol_table = self.config["nt_symbols"])
+        type_map = self.list_objects(
+            context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
+        cookie = self.find_cookie(
+            context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
 
         for proc in procs:
 
@@ -278,8 +268,8 @@ class Handles(interfaces_plugins.PluginInterface):
                         obj_name = item.file_name_with_device()
                     elif obj_type == "Process":
                         item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_EPROCESS")
-                        obj_name = "{} Pid {}".format(utility.array_to_string(proc.ImageFileName),
-                                                      item.UniqueProcessId)
+                        obj_name = "{} Pid {}".format(
+                            utility.array_to_string(proc.ImageFileName), item.UniqueProcessId)
                     elif obj_type == "Thread":
                         item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_ETHREAD")
                         obj_name = "Tid {} Pid {}".format(item.Cid.UniqueThread, item.Cid.UniqueProcess)
@@ -297,24 +287,18 @@ class Handles(interfaces_plugins.PluginInterface):
                                "Cannot access _OBJECT_HEADER at {0:#x}".format(entry.vol.offset))
                     continue
 
-                yield (0, (proc.UniqueProcessId,
-                           process_name,
-                           format_hints.Hex(entry.HandleValue),
-                           obj_type,
-                           format_hints.Hex(entry.GrantedAccess),
-                           obj_name))
+                yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(entry.HandleValue), obj_type,
+                           format_hints.Hex(entry.GrantedAccess), obj_name))
 
     def run(self):
 
         filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([("PID", int),
-                                   ("Process", str),
-                                   ("HandleValue", format_hints.Hex),
-                                   ("Type", str),
-                                   ("GrantedAccess", format_hints.Hex),
-                                   ("Name", str)],
-                                  self._generator(pslist.PsList.list_processes(self.context,
-                                                                               self.config['primary'],
-                                                                               self.config['nt_symbols'],
-                                                                               filter_func = filter_func)))
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("HandleValue", format_hints.Hex), ("Type", str),
+                                   ("GrantedAccess", format_hints.Hex), ("Name", str)],
+                                  self._generator(
+                                      pslist.PsList.list_processes(
+                                          self.context,
+                                          self.config['primary'],
+                                          self.config['nt_symbols'],
+                                          filter_func = filter_func)))

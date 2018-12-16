@@ -25,7 +25,8 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback = None, optional = False) -> List[str]:
+                 progress_callback = None,
+                 optional = False) -> List[str]:
         result = []  # type: List[str]
         if requirement.unsatisfied(context, config_path):
             # Having called validate at the top level tells us both that we need to dig deeper

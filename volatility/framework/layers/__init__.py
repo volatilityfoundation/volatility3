@@ -29,9 +29,9 @@ from volatility.framework.layers import intel, lime, physical, segmented, vmware
 
 vollog = logging.getLogger(__name__)
 
-
 # TODO: Type-annotating the ResourceAccessor.open method is difficult because HTTPResponse is not actually an IO[Any] type
 #   fix this
+
 
 class ResourceAccessor(object):
     """Object for openning URLs as files (downloading locally first if necessary)"""

@@ -39,18 +39,17 @@ def require_interface_version(*args) -> None:
     """Checks the required version of a plugin"""
     if len(args):
         if args[0] != interface_version()[0]:
-            raise RuntimeError(
-                "Framework interface version {} is incompatible with required version {}".format(interface_version()[0],
-                                                                                                 args[0]))
+            raise RuntimeError("Framework interface version {} is incompatible with required version {}".format(
+                interface_version()[0], args[0]))
         if len(args) > 1:
             if args[1] > interface_version()[1]:
                 raise RuntimeError(
                     "Framework interface version {} is an older revision than the required version {}".format(
-                        ".".join([str(x) for x in interface_version()[0:1]]),
-                        ".".join([str(x) for x in args[0:2]])))
+                        ".".join([str(x) for x in interface_version()[0:1]]), ".".join([str(x) for x in args[0:2]])))
 
 
 class noninheritable(object):
+
     def __init__(self, value: Any, cls: Type) -> None:
         self.default_value = value
         self.cls = cls
@@ -128,6 +127,6 @@ def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
 # We currently require 3.5.3 since 3.5.1 has no typing.Type and 3.5.2 is broken for ''/delayed encapsulated types
 required_python_version = (3, 5, 3)
 if (sys.version_info.major != required_python_version[0] or sys.version_info.minor < required_python_version[1] or
-        (sys.version_info.minor == required_python_version[1] and sys.version_info.micro < required_python_version[2])):
+    (sys.version_info.minor == required_python_version[1] and sys.version_info.micro < required_python_version[2])):
     raise RuntimeError(
         "Volatility framework requires python version {}.{}.{} or greater".format(*required_python_version))

@@ -37,14 +37,15 @@ def hex_bytes_as_text(value: bytes) -> str:
         ascii.append(chr(byte) if 0x20 < byte <= 0x7E else ".")
         if (count % 8) == 7:
             output += "\n"
-            output += " ".join(hex[count - 7: count + 1])
+            output += " ".join(hex[count - 7:count + 1])
             output += "\t"
-            output += "".join(ascii[count - 7: count + 1])
+            output += "".join(ascii[count - 7:count + 1])
         count += 1
     return output
 
 
 class Optional(object):
+
     def __init__(self, func: Callable[[Any], str]) -> None:
         self._func = func
 
@@ -69,10 +70,12 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
     """
 
     if CAPSTONE_PRESENT:
-        disasm_types = {'intel': capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32),
-                        'intel64': capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64),
-                        'arm': capstone.Cs(capstone.CS_ARCH_ARM, capstone.CS_MODE_ARM),
-                        'arm64': capstone.Cs(capstone.CS_ARCH_ARM64, capstone.CS_MODE_ARM)}
+        disasm_types = {
+            'intel': capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32),
+            'intel64': capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64),
+            'arm': capstone.Cs(capstone.CS_ARCH_ARM, capstone.CS_MODE_ARM),
+            'arm64': capstone.Cs(capstone.CS_ARCH_ARM64, capstone.CS_MODE_ARM)
+        }
         output = ""
         if disasm.architecture is not None:
             for i in disasm_types[disasm.architecture].disasm(disasm.data, disasm.offset):
@@ -82,13 +85,15 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
 
 
 class QuickTextRenderer(interfaces.renderers.Renderer):
-    type_renderers = {format_hints.Bin: Optional(lambda x: "0b{:b}".format(x)),
-                      format_hints.Hex: Optional(lambda x: "0x{:x}".format(x)),
-                      format_hints.HexBytes: Optional(hex_bytes_as_text),
-                      interfaces.renderers.Disassembly: Optional(display_disassembly),
-                      bytes: Optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
-                      datetime.datetime: Optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
-                      'default': Optional(lambda x: "{}".format(x))}
+    type_renderers = {
+        format_hints.Bin: Optional(lambda x: "0b{:b}".format(x)),
+        format_hints.Hex: Optional(lambda x: "0x{:x}".format(x)),
+        format_hints.HexBytes: Optional(hex_bytes_as_text),
+        interfaces.renderers.Disassembly: Optional(display_disassembly),
+        bytes: Optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
+        datetime.datetime: Optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
+        'default': Optional(lambda x: "{}".format(x))
+    }
 
     def __init__(self, options = None) -> None:
         super().__init__(options)

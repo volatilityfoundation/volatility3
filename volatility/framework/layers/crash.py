@@ -31,10 +31,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     _magic_struct = struct.Struct('<II')
     headerpages = 1
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 name: str) -> None:
+    def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str) -> None:
 
         # Construct these so we can use self.config
         self._context = context
@@ -43,9 +40,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self._base_layer = self.config["base_layer"]
 
         # Create a custom SymbolSpace
-        self._crash_table_name = intermed.IntermediateSymbolTable.create(context,
-                                                                         self._config_path,
-                                                                         'windows',
+        self._crash_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
                                                                          'crash')
         # Check Header
         hdr_layer = self._context.memory[self._base_layer]
@@ -53,9 +48,10 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self._check_header(hdr_layer, hdr_offset)
 
         # Need to create a header object
-        self.header = self.context.object(self._crash_table_name + constants.BANG +
-                                          "_DMP_HEADER", offset = hdr_offset,
-                                          layer_name = self._base_layer)
+        self.header = self.context.object(
+            self._crash_table_name + constants.BANG + "_DMP_HEADER",
+            offset = hdr_offset,
+            layer_name = self._base_layer)
 
         # Extract the DTB
         self.dtb = self.header.DirectoryTableBase
@@ -73,9 +69,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         offset = self.headerpages
         for x in self.header.PhysicalMemoryBlockBuffer.Run:
-            segments.append((x.BasePage * 0x1000,
-                             offset * 0x1000,
-                             x.PageCount * 0x1000))
+            segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000))
             # print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
             #                  offset * 0x1000,
             #                  x.PageCount * 0x1000))
@@ -87,9 +81,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self._segments = segments
 
     @classmethod
-    def _check_header(cls,
-                      base_layer: interfaces.layers.DataLayerInterface,
-                      offset: int = 0) -> Tuple[int, int]:
+    def _check_header(cls, base_layer: interfaces.layers.DataLayerInterface, offset: int = 0) -> Tuple[int, int]:
 
         # Verify the Window's crash dump file magic
         try:
@@ -99,11 +91,11 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         (signature, validdump) = cls._magic_struct.unpack(header_data)
 
         if signature != cls.SIGNATURE:
-            raise WindowsCrashDump32FormatException(
-                "bad signature 0x{:x} at file offset 0x{:x}".format(signature, offset))
+            raise WindowsCrashDump32FormatException("bad signature 0x{:x} at file offset 0x{:x}".format(
+                signature, offset))
         if validdump != cls.VALIDDUMP:
-            raise WindowsCrashDump32FormatException(
-                "invalid dump 0x{:x} at file offset 0x{:x}".format(validdump, offset))
+            raise WindowsCrashDump32FormatException("invalid dump 0x{:x} at file offset 0x{:x}".format(
+                validdump, offset))
 
         return (signature, validdump)
 

@@ -27,16 +27,14 @@ class VerInfo(interfaces_plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"), ]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+        ]
 
     @classmethod
-    def get_version_information(cls,
-                                context: interfaces.context.ContextInterface,
-                                pe_table_name: str,
-                                layer_name: str,
+    def get_version_information(cls, context: interfaces.context.ContextInterface, pe_table_name: str, layer_name: str,
                                 base_address: int) -> Tuple[int, int, int, int]:
         """Get File and Product version information from PE files
 
@@ -52,9 +50,8 @@ class VerInfo(interfaces_plugins.PluginInterface):
 
         pe_data = io.BytesIO()
 
-        dos_header = context.object(pe_table_name + constants.BANG +
-                                    "_IMAGE_DOS_HEADER", offset = base_address,
-                                    layer_name = layer_name)
+        dos_header = context.object(
+            pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER", offset = base_address, layer_name = layer_name)
 
         for offset, data in dos_header.reconstruct():
             pe_data.seek(offset)
@@ -72,8 +69,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
 
         return major, minor, product, build
 
-    def _generator(self,
-                   procs: Generator[interfaces.objects.ObjectInterface, None, None],
+    def _generator(self, procs: Generator[interfaces.objects.ObjectInterface, None, None],
                    mods: Generator[interfaces.objects.ObjectInterface, None, None],
                    session_layers: Generator[str, None, None]):
         """Generates a list of PE file version info for processes, dlls, and modules.
@@ -84,10 +80,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
             session_layers: <generator> of layers in the session to be checked
         """
 
-        pe_table_name = PEIntermedSymbols.create(self.context,
-                                                 self.config_path,
-                                                 "windows",
-                                                 "pe")
+        pe_table_name = PEIntermedSymbols.create(self.context, self.config_path, "windows", "pe")
 
         for mod in mods:
             try:
@@ -97,24 +90,17 @@ class VerInfo(interfaces_plugins.PluginInterface):
 
             session_layer_name = moddump.ModDump.find_session_layer(self.context, session_layers, mod.DllBase)
             (major, minor, product, build) = [
-                                                 renderers.NotAvailableValue()] * 4  # type: Tuple[Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue]]
+                renderers.NotAvailableValue()
+            ] * 4  # type: Tuple[Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue]]
             try:
-                (major, minor, product, build) = self.get_version_information(self._context,
-                                                                              pe_table_name,
-                                                                              session_layer_name,
-                                                                              mod.DllBase)
+                (major, minor, product, build) = self.get_version_information(self._context, pe_table_name,
+                                                                              session_layer_name, mod.DllBase)
             except (exceptions.InvalidAddressException, ValueError, AttributeError):
                 (major, minor, product, build) = [renderers.UnreadableValue()] * 4
 
             # the pid and process are not applicable for kernel modules
-            yield (0, (renderers.NotApplicableValue(),
-                       renderers.NotApplicableValue(),
-                       format_hints.Hex(mod.DllBase),
-                       BaseDllName,
-                       major,
-                       minor,
-                       product,
-                       build))
+            yield (0, (renderers.NotApplicableValue(), renderers.NotApplicableValue(), format_hints.Hex(mod.DllBase),
+                       BaseDllName, major, minor, product, build))
 
         # now go through the process and dll lists
         for proc in procs:
@@ -129,44 +115,25 @@ class VerInfo(interfaces_plugins.PluginInterface):
                 session_layer_name = moddump.ModDump.find_session_layer(self.context, session_layers, mod.DllBase)
                 (major, minor, product, build) = [renderers.NotAvailableValue()] * 4
                 try:
-                    (major, minor, product, build) = self.get_version_information(self._context,
-                                                                                  pe_table_name,
-                                                                                  proc_layer_name,
-                                                                                  entry.DllBase)
+                    (major, minor, product, build) = self.get_version_information(self._context, pe_table_name,
+                                                                                  proc_layer_name, entry.DllBase)
                 except (exceptions.InvalidAddressException, ValueError, AttributeError):
                     (major, minor, product, build) = [renderers.UnreadableValue()] * 4
 
                 yield (0, (proc.UniqueProcessId,
-                           proc.ImageFileName.cast("string",
-                                                   max_length = proc.ImageFileName.vol.count,
-                                                   errors = "replace"),
-                           format_hints.Hex(entry.DllBase),
-                           BaseDllName,
-                           major,
-                           minor,
-                           product,
-                           build))
+                           proc.ImageFileName.cast(
+                               "string", max_length = proc.ImageFileName.vol.count, errors = "replace"),
+                           format_hints.Hex(entry.DllBase), BaseDllName, major, minor, product, build))
 
     def run(self):
-        procs = pslist.PsList.list_processes(self.context,
-                                             self.config["primary"],
-                                             self.config["nt_symbols"])
+        procs = pslist.PsList.list_processes(self.context, self.config["primary"], self.config["nt_symbols"])
 
-        mods = modules.Modules.list_modules(self.context,
-                                            self.config["primary"],
-                                            self.config["nt_symbols"])
+        mods = modules.Modules.list_modules(self.context, self.config["primary"], self.config["nt_symbols"])
 
         # populate the session layers for kernel modules
-        session_layers = moddump.ModDump.get_session_layers(self.context,
-                                                            self.config['primary'],
+        session_layers = moddump.ModDump.get_session_layers(self.context, self.config['primary'],
                                                             self.config['nt_symbols'])
 
-        return renderers.TreeGrid([("PID", int),
-                                   ("Process", str),
-                                   ("Base", format_hints.Hex),
-                                   ("Name", str),
-                                   ("Major", int),
-                                   ("Minor", int),
-                                   ("Product", int),
-                                   ("Build", int)],
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex), ("Name", str),
+                                   ("Major", int), ("Minor", int), ("Product", int), ("Build", int)],
                                   self._generator(procs, mods, session_layers))

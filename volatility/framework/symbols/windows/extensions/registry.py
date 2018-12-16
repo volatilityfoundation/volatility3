@@ -56,6 +56,7 @@ class RegKeyFlags(enum.IntEnum):
 
 
 class _HMAP_ENTRY(objects.Struct):
+
     def get_block_offset(self) -> int:
         try:
             return self.PermanentBinAddress ^ (self.PermanentBinAddress & 0xf)
@@ -64,6 +65,7 @@ class _HMAP_ENTRY(objects.Struct):
 
 
 class _CMHIVE(objects.Struct):
+
     def get_name(self) -> Optional[interfaces.objects.ObjectInterface]:
         """Determine a name for the hive. Note that some attributes are
         unpredictably blank across different OS versions while others are populated,
@@ -106,10 +108,9 @@ class _CM_KEY_BODY(objects.Struct):
                 if not kcb:
                     break
 
-            output.append(kcb.NameBlock.Name.cast("string",
-                                                  encoding = "utf8",
-                                                  max_length = kcb.NameBlock.NameLength,
-                                                  errors = "replace"))
+            output.append(
+                kcb.NameBlock.Name.cast(
+                    "string", encoding = "utf8", max_length = kcb.NameBlock.NameLength, errors = "replace"))
             kcb = kcb.ParentKcb
         return "\\".join(reversed(output))
 
@@ -155,8 +156,8 @@ class _CM_KEY_NODE(objects.Struct):
                     elif node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
                         yield node
                     else:
-                        vollog.debug(
-                            "Unexpected node type encountered when traversing subkeys: {}".format(node.vol.type_name))
+                        vollog.debug("Unexpected node type encountered when traversing subkeys: {}".format(
+                            node.vol.type_name))
                 else:
                     vollog.log(constants.LOGLEVEL_VVV,
                                "Node found with address outside the valid Hive size: {}".format(key_offset))

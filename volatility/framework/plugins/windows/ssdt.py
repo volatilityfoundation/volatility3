@@ -17,10 +17,11 @@ class SSDT(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
+        ]
 
     def _generator(self, mods: Iterator[Any]) -> Iterator[Tuple[int, Tuple[int, int, str, str]]]:
 
@@ -42,11 +43,7 @@ class SSDT(plugins.PluginInterface):
             else:
                 symbol_table_name = None
 
-            context_module = contexts.SizedModule(self._context,
-                                                  module_name,
-                                                  layer_name,
-                                                  mod.DllBase,
-                                                  mod.SizeOfImage,
+            context_module = contexts.SizedModule(self._context, module_name, layer_name, mod.DllBase, mod.SizeOfImage,
                                                   symbol_table_name)
 
             context_modules.append(context_module)
@@ -82,9 +79,11 @@ class SSDT(plugins.PluginInterface):
 
             find_address = passthrough
 
-        functions = ntkrnlmp.object(type_name = "array", offset = kvo + service_table_address,
-                                    subtype = ntkrnlmp.get_type(array_subtype),
-                                    count = service_limit)
+        functions = ntkrnlmp.object(
+            type_name = "array",
+            offset = kvo + service_table_address,
+            subtype = ntkrnlmp.get_type(array_subtype),
+            count = service_limit)
 
         for idx, function in enumerate(functions):
 
@@ -96,22 +95,13 @@ class SSDT(plugins.PluginInterface):
 
                 for symbol in symbol_generator:
                     symbols_found = True
-                    yield (0, (idx,
-                               format_hints.Hex(function),
-                               module_name,
-                               symbol.split(constants.BANG)[1]))
+                    yield (0, (idx, format_hints.Hex(function), module_name, symbol.split(constants.BANG)[1]))
 
                 if not symbols_found:
-                    yield (0, (idx,
-                               format_hints.Hex(function),
-                               module_name,
-                               renderers.NotAvailableValue()))
+                    yield (0, (idx, format_hints.Hex(function), module_name, renderers.NotAvailableValue()))
 
     def run(self) -> renderers.TreeGrid:
-        return renderers.TreeGrid([("Index", int),
-                                   ("Address", format_hints.Hex),
-                                   ("Module", str),
-                                   ("Symbol", str)],
-                                  self._generator(modules.Modules.list_modules(self.context,
-                                                                               self.config['primary'],
-                                                                               self.config['nt_symbols'])))
+        return renderers.TreeGrid([("Index", int), ("Address", format_hints.Hex), ("Module", str), ("Symbol", str)],
+                                  self._generator(
+                                      modules.Modules.list_modules(self.context, self.config['primary'],
+                                                                   self.config['nt_symbols'])))

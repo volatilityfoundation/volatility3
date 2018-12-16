@@ -10,10 +10,11 @@ from volatility.framework.symbols import generic
 
 vollog = logging.getLogger(__name__)
 
-
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
+
 class module(generic.GenericIntelProcess):
+
     def get_init_size(self):
         if self.has_member("init_layout"):
             return self.init_layout.size
@@ -34,9 +35,8 @@ class module(generic.GenericIntelProcess):
 
 
 class task_struct(generic.GenericIntelProcess):
-    def add_process_layer(self,
-                          config_prefix: str = None,
-                          preferred_name: str = None) -> Optional[str]:
+
+    def add_process_layer(self, config_prefix: str = None, preferred_name: str = None) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
         Returns the name of the Layer or None.
         """
@@ -73,6 +73,7 @@ class task_struct(generic.GenericIntelProcess):
 
 
 class fs_struct(objects.Struct):
+
     def get_root_dentry(self):
         # < 2.6.26
         if self.has_member("rootmnt"):
@@ -93,6 +94,7 @@ class fs_struct(objects.Struct):
 
 
 class mm_struct(objects.Struct):
+
     @property
     def mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct."""
@@ -223,6 +225,7 @@ class vm_area_struct(objects.Struct):
 
 
 class qstr(objects.Struct):
+
     def name_as_str(self) -> str:
         if self.has_member("len"):
             str_length = self.len
@@ -238,11 +241,13 @@ class qstr(objects.Struct):
 
 
 class dentry(objects.Struct):
+
     def path(self) -> str:
         return self.d_name.name_as_str()
 
 
 class struct_file(objects.Struct):
+
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
         if self.has_member("f_dentry"):
             return self.f_dentry
@@ -261,6 +266,7 @@ class struct_file(objects.Struct):
 
 
 class list_head(objects.Struct, collections.abc.Iterable):
+
     def to_list(self,
                 symbol_type: str,
                 member: str,
@@ -294,6 +300,7 @@ class list_head(objects.Struct, collections.abc.Iterable):
 
 
 class files_struct(objects.Struct):
+
     def get_fds(self) -> interfaces.objects.ObjectInterface:
         if self.has_member("fdt"):
             return self.fdt.fd.dereference()
@@ -345,6 +352,7 @@ class mount(objects.Struct):
 
 
 class vfsmount(objects.Struct):
+
     def is_valid(self):
         return self.get_mnt_sb() != 0 and \
                self.get_mnt_root() != 0 and \

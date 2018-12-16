@@ -33,10 +33,7 @@ class DllDump(interfaces_plugins.PluginInterface):
                                             optional = True)]
 
     def _generator(self, procs):
-        pe_table_name = PEIntermedSymbols.create(self.context,
-                                                 self.config_path,
-                                                 "windows",
-                                                 "pe")
+        pe_table_name = PEIntermedSymbols.create(self.context, self.config_path, "windows", "pe")
 
         filter_func = lambda _: False
         if self.config.get('address', None) is not None:
@@ -56,10 +53,9 @@ class DllDump(interfaces_plugins.PluginInterface):
                     # rather than relying on the PEB for DLLs, which can be swapped,
                     # it requires special handling on wow64 processes, and its
                     # unreliable from an integrity standpoint, let's use the VADs instead
-                    protection_string = vad.get_protection(vadinfo.VadInfo.protect_values(self.context,
-                                                                                          self.config['primary'],
-                                                                                          self.config['nt_symbols']),
-                                                           vadinfo.winnt_protections)
+                    protection_string = vad.get_protection(
+                        vadinfo.VadInfo.protect_values(self.context, self.config['primary'],
+                                                       self.config['nt_symbols']), vadinfo.winnt_protections)
 
                     # DLLs are write copy...
                     if protection_string != "PAGE_EXECUTE_WRITECOPY":
@@ -70,14 +66,13 @@ class DllDump(interfaces_plugins.PluginInterface):
                         continue
 
                 try:
-                    filedata = interfaces_plugins.FileInterface(
-                        "pid.{0}.{1}.{2:#x}.dmp".format(proc.UniqueProcessId,
-                                                        ntpath.basename(vad.get_file_name()),
-                                                        vad.get_start()))
+                    filedata = interfaces_plugins.FileInterface("pid.{0}.{1}.{2:#x}.dmp".format(
+                        proc.UniqueProcessId, ntpath.basename(vad.get_file_name()), vad.get_start()))
 
-                    dos_header = self.context.object(pe_table_name + constants.BANG +
-                                                     "_IMAGE_DOS_HEADER", offset = vad.get_start(),
-                                                     layer_name = proc_layer_name)
+                    dos_header = self.context.object(
+                        pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
+                        offset = vad.get_start(),
+                        layer_name = proc_layer_name)
 
                     for offset, data in dos_header.reconstruct():
                         filedata.data.seek(offset)
@@ -88,17 +83,15 @@ class DllDump(interfaces_plugins.PluginInterface):
                 except Exception:
                     result_text = "Unable to dump PE at {0:#x}".format(vad.get_start())
 
-                yield (0, (proc.UniqueProcessId,
-                           process_name,
-                           result_text))
+                yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):
         filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([("PID", int),
-                                   ("Process", str),
-                                   ("Result", str)],
-                                  self._generator(pslist.PsList.list_processes(context = self.context,
-                                                                               layer_name = self.config['primary'],
-                                                                               symbol_table = self.config['nt_symbols'],
-                                                                               filter_func = filter_func)))
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("Result", str)],
+                                  self._generator(
+                                      pslist.PsList.list_processes(
+                                          context = self.context,
+                                          layer_name = self.config['primary'],
+                                          symbol_table = self.config['nt_symbols'],
+                                          filter_func = filter_func)))

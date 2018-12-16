@@ -20,6 +20,7 @@ class RegistryInvalidIndex(exceptions.LayerException):
 
 
 class RegistryHive(interfaces.layers.TranslationLayerInterface):
+
     def __init__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
@@ -31,9 +32,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._hive_offset = self.config["hive_offset"]
         self._table_name = self.config["nt_symbols"]
 
-        self._reg_table_name = intermed.IntermediateSymbolTable.create(context,
-                                                                       self._config_path,
-                                                                       'windows',
+        self._reg_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
                                                                        'registry')
 
         self.hive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
@@ -41,16 +40,14 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         # TODO: Check the checksum
         if self.hive.Signature != 0xbee0bee0:
-            raise RegistryFormatException(
-                "Registry hive at {} does not have a valid signature".format(self._hive_offset))
+            raise RegistryFormatException("Registry hive at {} does not have a valid signature".format(
+                self._hive_offset))
 
         # Win10 17063 introduced the Registry process to map most hives.  Check
         # if it exists and update RegistryHive._base_layer
-        for proc in pslist.PsList.list_processes(self.context,
-                                                 self.config['base_layer'],
-                                                 self.config['nt_symbols']):
-            proc_name = proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
-                                                errors = 'replace')
+        for proc in pslist.PsList.list_processes(self.context, self.config['base_layer'], self.config['nt_symbols']):
+            proc_name = proc.ImageFileName.cast(
+                "string", max_length = proc.ImageFileName.vol.count, errors = 'replace')
             if proc_name == "Registry" and proc.InheritedFromUniqueProcessId == 4:
                 proc_layer_name = proc.add_process_layer()
                 self._base_layer = proc_layer_name
@@ -85,8 +82,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     def get_cell(self, cell_offset: int) -> 'objects.Struct':
         """Returns the appropriate Cell value for a cell offset"""
         # This would be an _HCELL containing CELL_DATA, but to save time we skip the size of the HCELL
-        cell = self._context.object(symbol = self._table_name + constants.BANG + "_CELL_DATA", offset = cell_offset + 4,
-                                    layer_name = self.name)
+        cell = self._context.object(
+            symbol = self._table_name + constants.BANG + "_CELL_DATA",
+            offset = cell_offset + 4,
+            layer_name = self.name)
         return cell
 
     def get_node(self, cell_offset: int) -> 'objects.Struct':
@@ -107,8 +106,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             return cell.u.KeyIndex
         else:
             # It doesn't matter that we use KeyNode, we're just after the first two bytes
-            vollog.debug(
-                "Unknown Signature {} (0x{:x}) at offset {}".format(signature, cell.u.KeyNode.Signature, cell_offset))
+            vollog.debug("Unknown Signature {} (0x{:x}) at offset {}".format(signature, cell.u.KeyNode.Signature,
+                                                                             cell_offset))
             return cell
 
     def get_key(self, key: str, return_list: bool = False) -> Union[List[objects.Struct], objects.Struct]:
@@ -139,9 +138,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
             return node_key
         return node_key[-1]
 
-    def visit_nodes(self,
-                    visitor: Callable[[objects.Struct], None],
-                    node: Optional[objects.Struct] = None) -> None:
+    def visit_nodes(self, visitor: Callable[[objects.Struct], None], node: Optional[objects.Struct] = None) -> None:
         """Applies a callable (visitor) to all nodes within the registry tree from a given node"""
         if not node:
             node = self.get_node(self.root_cell_offset)
@@ -152,17 +149,19 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     @staticmethod
     def _mask(value: int, high_bit: int, low_bit: int) -> int:
         """Returns the bits of a value between highbit and lowbit inclusive"""
-        high_mask = (2 ** (high_bit + 1)) - 1
-        low_mask = (2 ** low_bit) - 1
+        high_mask = (2**(high_bit + 1)) - 1
+        low_mask = (2**low_bit) - 1
         mask = (high_mask ^ low_mask)
         # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [IntRequirement(name = 'hive_offset', description = '', default = 0, optional = False),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                TranslationLayerRequirement(name = 'base_layer', optional = False)]
+        return [
+            IntRequirement(name = 'hive_offset', description = '', default = 0, optional = False),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+            TranslationLayerRequirement(name = 'base_layer', optional = False)
+        ]
 
     def _translate(self, offset: int) -> int:
         """Translates a single cell index to a cell memory offset and the suboffset within it"""
@@ -181,10 +180,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         entry = table.Table[table_index]
         return entry.get_block_offset() + suboffset
 
-    def mapping(self,
-                offset: int,
-                length: int,
-                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
+    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
 
         # TODO: Check the offset and offset + length are not outside the norms
         if length < 0:
@@ -194,8 +190,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         while length > 0:
             # Try using the symbol first
             hbin_offset = self._translate(self._mask(offset, 31, 12))
-            hbin = self.context.object(self._reg_table_name + constants.BANG + "_HBIN",
-                                       offset = hbin_offset, layer_name = self._base_layer)
+            hbin = self.context.object(
+                self._reg_table_name + constants.BANG + "_HBIN", offset = hbin_offset, layer_name = self._base_layer)
 
             # Now get the cell's offset and figure out if it goes outside the bin
             # We could use some invariants such as whether cells always fit within a bin?
@@ -205,8 +201,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                 # In which case, hunt backwards for the right hbin header and check the size again
                 while hbin.Signature.cast("string", max_length = 4, encoding = "latin-1") != 'hbin':
                     hbin_offset = hbin_offset - 0x1000
-                    hbin = self.context.object(self._reg_table_name + constants.BANG + "_HBIN",
-                                               offset = hbin_offset, layer_name = self._base_layer)
+                    hbin = self.context.object(
+                        self._reg_table_name + constants.BANG + "_HBIN",
+                        offset = hbin_offset,
+                        layer_name = self._base_layer)
                     if translated_offset + length > hbin_offset + hbin.Size and hbin.Size > 0:
                         raise RegistryFormatException("Cell address {} outside expected HBIN limit: {}".format(
                             hex(translated_offset + length), hex(hbin_offset + hbin.Size)))

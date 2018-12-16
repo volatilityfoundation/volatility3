@@ -50,9 +50,8 @@ class VmwareLayer(segmented.SegmentedLayer):
 
         groups = {}
         for group in range(groupCount):
-            name, tag_location, _unknown = struct.unpack(self.group_structure,
-                                                         meta_layer.read(header_size + (group * group_size),
-                                                                         group_size))
+            name, tag_location, _unknown = struct.unpack(
+                self.group_structure, meta_layer.read(header_size + (group * group_size), group_size))
             name = name.rstrip(b"\x00")
             groups[name] = tag_location
         memory = groups[b"memory"]
@@ -66,27 +65,30 @@ class VmwareLayer(segmented.SegmentedLayer):
             name_len = ord(meta_layer.read(offset + 1, 1))
             tags_read = (flags == 0) and (name_len == 0)
             if not tags_read:
-                name = self._context.object("vmware!string", layer_name = self._meta_layer, offset = offset + 2,
-                                            max_length = name_len)
+                name = self._context.object(
+                    "vmware!string", layer_name = self._meta_layer, offset = offset + 2, max_length = name_len)
                 indicies_len = (flags >> 6) & 3
                 indicies = []
                 for index in range(indicies_len):
                     indicies.append(
-                        self._context.object("vmware!unsigned int",
-                                             offset = offset + name_len + 2 + (index * index_len),
-                                             layer_name = self._meta_layer))
-                data = self._context.object("vmware!unsigned int", layer_name = self._meta_layer,
-                                            offset = offset + 2 + name_len + (indicies_len * index_len))
+                        self._context.object(
+                            "vmware!unsigned int",
+                            offset = offset + name_len + 2 + (index * index_len),
+                            layer_name = self._meta_layer))
+                data = self._context.object(
+                    "vmware!unsigned int",
+                    layer_name = self._meta_layer,
+                    offset = offset + 2 + name_len + (indicies_len * index_len))
                 tags[(name, tuple(indicies))] = (flags, data)
-                offset += 2 + name_len + (indicies_len * index_len) + self._context.symbol_space.get_type(
-                    "vmware!unsigned int").size
+                offset += 2 + name_len + (
+                    indicies_len * index_len) + self._context.symbol_space.get_type("vmware!unsigned int").size
 
         if tags[("regionsCount", ())][1] == 0:
             raise ValueError("VMware VMEM is not split into regions")
         for region in range(tags[("regionsCount", ())][1]):
-            offset = tags[("regionPPN", (region,))][1] * self._page_size
-            mapped_offset = tags[("regionPageNum", (region,))][1] * self._page_size
-            length = tags[("regionSize", (region,))][1] * self._page_size
+            offset = tags[("regionPPN", (region, ))][1] * self._page_size
+            mapped_offset = tags[("regionPageNum", (region, ))][1] * self._page_size
+            length = tags[("regionSize", (region, ))][1] * self._page_size
             self._segments.append((offset, mapped_offset, length))
 
     @property
@@ -96,14 +98,14 @@ class VmwareLayer(segmented.SegmentedLayer):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         """This vmware translation layer always requires a separate metadata layer"""
-        return [requirements.TranslationLayerRequirement(name = 'base_layer',
-                                                         optional = False),
-                requirements.TranslationLayerRequirement(name = 'meta_layer',
-                                                         optional = False)
-                ]
+        return [
+            requirements.TranslationLayerRequirement(name = 'base_layer', optional = False),
+            requirements.TranslationLayerRequirement(name = 'meta_layer', optional = False)
+        ]
 
 
 class VmwareStacker(interfaces.automagic.StackerLayerInterface):
+
     @classmethod
     def stack(cls,
               context: interfaces.context.ContextInterface,
@@ -131,8 +133,7 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
                 return None
             new_layer_name = context.memory.free_layer_name("VmwareLayer")
             context.config[interfaces.configuration.path_join(current_config_path, "base_layer")] = layer_name
-            context.config[
-                interfaces.configuration.path_join(current_config_path, "meta_layer")] = current_layer_name
+            context.config[interfaces.configuration.path_join(current_config_path, "meta_layer")] = current_layer_name
             new_layer = VmwareLayer(context, current_config_path, new_layer_name)
             return new_layer
         return None

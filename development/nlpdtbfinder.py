@@ -22,7 +22,7 @@ import struct
 
 PAGE_SIZE = 0x1000
 PHYS_MASK = 0xfffffffffff
-PML4_ENTRY_SIZE = int((2 ** 64) / 512)
+PML4_ENTRY_SIZE = int((2**64) / 512)
 
 
 class PML4EScanner(interfaces.layers.ScannerInterface):
@@ -145,26 +145,26 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
+    parser.add_argument(
+        "filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
     parser.add_argument("-l", "--lime", action = "store_true", dest = "lime", help = "All files are LIME format")
-    parser.add_argument("-v", "--verbose", action = "count", default = 0,
-                        help = "Increase the verbosity of the information returned")
+    parser.add_argument(
+        "-v", "--verbose", action = "count", default = 0, help = "Increase the verbosity of the information returned")
 
     args = parser.parse_args()
 
     ctx = contexts.Context()
     for filename in args.filenames:
-        ctx.config[
-            interfaces.configuration.path_join('config' + str(args.filenames.index(filename)), "filename")] = filename
-        data = layers.physical.FileLayer(ctx,
-                                         'config' + str(args.filenames.index(filename)),
+        ctx.config[interfaces.configuration.path_join('config' + str(args.filenames.index(filename)),
+                                                      "filename")] = filename
+        data = layers.physical.FileLayer(ctx, 'config' + str(args.filenames.index(filename)),
                                          'data' + str(args.filenames.index(filename)))
         ctx.memory.add_layer(data)
         if args.lime:
-            ctx.config[interfaces.configuration.path_join('lime-config' + str(args.filenames.index(filename)),
-                                                          "base_layer")] = 'data' + str(args.filenames.index(filename))
-            data = layers.lime.LimeLayer(ctx,
-                                         'lime-config' + str(args.filenames.index(filename)),
+            ctx.config[interfaces.configuration.path_join(
+                'lime-config' + str(args.filenames.index(filename)),
+                "base_layer")] = 'data' + str(args.filenames.index(filename))
+            data = layers.lime.LimeLayer(ctx, 'lime-config' + str(args.filenames.index(filename)),
                                          'lime-data' + str(args.filenames.index(filename)))
             ctx.memory.add_layer(data)
 

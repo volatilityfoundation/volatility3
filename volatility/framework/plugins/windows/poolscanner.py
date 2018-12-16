@@ -25,6 +25,7 @@ class PoolType(enum.IntEnum):
 
 
 class PoolHeaderSymbolTable(intermed.IntermediateSymbolTable):
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.set_type_class('_POOL_HEADER', extensions._POOL_HEADER)
@@ -55,52 +56,56 @@ class PoolScanner(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
+        ]
 
     def _generator(self):
         constraints = [
             # atom tables
-            PoolConstraint(b'AtmT',
-                           type_name = self.config["nt_symbols"] + constants.BANG + "_RTL_ATOM_TABLE",
-                           size = (200, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(
+                b'AtmT',
+                type_name = self.config["nt_symbols"] + constants.BANG + "_RTL_ATOM_TABLE",
+                size = (200, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows before windows 8
-            PoolConstraint(b'Pro\xe3',
-                           type_name = self.config["nt_symbols"] + constants.BANG + "_EPROCESS",
-                           object_type = "Process",
-                           size = (600, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(
+                b'Pro\xe3',
+                type_name = self.config["nt_symbols"] + constants.BANG + "_EPROCESS",
+                object_type = "Process",
+                size = (600, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows starting with windows 8
-            PoolConstraint(b'Proc',
-                           type_name = self.config["nt_symbols"] + constants.BANG + "_EPROCESS",
-                           object_type = "Process",
-                           size = (600, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(
+                b'Proc',
+                type_name = self.config["nt_symbols"] + constants.BANG + "_EPROCESS",
+                object_type = "Process",
+                size = (600, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # files on windows before windows 8
-            PoolConstraint(b'Fil\xe5',
-                           type_name = self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
-                           object_type = "File",
-                           size = (150, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(
+                b'Fil\xe5',
+                type_name = self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
+                object_type = "File",
+                size = (150, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # files on windows starting with windows 8
-            PoolConstraint(b'File',
-                           type_name = self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
-                           object_type = "File",
-                           size = (150, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(
+                b'File',
+                type_name = self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
+                object_type = "File",
+                size = (150, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         # get the object type map
-        type_map = handles.Handles.list_objects(context = self.context,
-                                                layer_name = self.config["primary"],
-                                                symbol_table = self.config["nt_symbols"])
+        type_map = handles.Handles.list_objects(
+            context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
 
-        cookie = handles.Handles.find_cookie(context = self.context,
-                                             layer_name = self.config["primary"],
-                                             symbol_table = self.config["nt_symbols"])
+        cookie = handles.Handles.find_cookie(
+            context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
 
         # FIXME: replace these lambdas with real functions
         is_windows_10 = lambda: False
@@ -114,18 +119,16 @@ class PoolScanner(plugins.PluginInterface):
         if not is_windows_10():
             scan_layer = self.context.memory[scan_layer].config['memory_layer']
 
-        for constraint, header in self.pool_scan(self._context,
-                                                 scan_layer,
-                                                 self.config['nt_symbols'],
-                                                 constraints,
-                                                 alignment = 8):
+        for constraint, header in self.pool_scan(
+                self._context, scan_layer, self.config['nt_symbols'], constraints, alignment = 8):
 
-            mem_object = header.get_object(type_name = constraint.type_name,
-                                           type_map = type_map,
-                                           use_top_down = is_windows_8_or_later(),
-                                           object_type = constraint.object_type,
-                                           native_layer_name = 'primary',
-                                           cookie = cookie)
+            mem_object = header.get_object(
+                type_name = constraint.type_name,
+                type_map = type_map,
+                use_top_down = is_windows_8_or_later(),
+                object_type = constraint.object_type,
+                native_layer_name = 'primary',
+                cookie = cookie)
 
             if mem_object is None:
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
@@ -133,9 +136,8 @@ class PoolScanner(plugins.PluginInterface):
 
             # generate some type-specific info for sanity checking
             if constraint.object_type == "Process":
-                name = mem_object.ImageFileName.cast("string",
-                                                     max_length = mem_object.ImageFileName.vol.count,
-                                                     errors = "replace")
+                name = mem_object.ImageFileName.cast(
+                    "string", max_length = mem_object.ImageFileName.vol.count, errors = "replace")
             elif constraint.object_type == "File":
                 try:
                     name = mem_object.FileName.String
@@ -145,10 +147,7 @@ class PoolScanner(plugins.PluginInterface):
             else:
                 name = renderers.NotApplicableValue()
 
-            yield (0, (constraint.type_name,
-                       format_hints.Hex(header.vol.offset),
-                       header.vol.layer_name,
-                       name))
+            yield (0, (constraint.type_name, format_hints.Hex(header.vol.offset), header.vol.layer_name, name))
 
     @classmethod
     def pool_scan(cls,
@@ -184,14 +183,12 @@ class PoolScanner(plugins.PluginInterface):
             else:
                 pool_header_json_filename = "poolheader-x86"
 
-            new_table_name = PoolHeaderSymbolTable.create(context = context,
-                                                          config_path = configuration.path_join(
-                                                              context.symbol_space[symbol_table].config_path,
-                                                              "poolheader"
-                                                          ),
-                                                          sub_path = "windows",
-                                                          filename = pool_header_json_filename,
-                                                          table_mapping = {'nt_symbols': symbol_table})
+            new_table_name = PoolHeaderSymbolTable.create(
+                context = context,
+                config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "poolheader"),
+                sub_path = "windows",
+                filename = pool_header_json_filename,
+                table_mapping = {'nt_symbols': symbol_table})
             module = context.module(new_table_name, layer_name, offset = 0)
             header_type = module.get_type('_POOL_HEADER')
 
@@ -220,8 +217,8 @@ class PoolScanner(plugins.PluginInterface):
 
                         if (constraint.page_type & PoolType.FREE) and header.PoolType == 0:
                             checks_pass = True
-                        elif (
-                                constraint.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
+                        elif (constraint.page_type &
+                              PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
                             checks_pass = True
                         elif (constraint.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
                             checks_pass = True
@@ -244,8 +241,5 @@ class PoolScanner(plugins.PluginInterface):
                 yield (constraint, header)
 
     def run(self) -> renderers.TreeGrid:
-        return renderers.TreeGrid([("Tag", str),
-                                   ("Offset", format_hints.Hex),
-                                   ("Layer", str),
-                                   ("Name", str)],
+        return renderers.TreeGrid([("Tag", str), ("Offset", format_hints.Hex), ("Layer", str), ("Name", str)],
                                   self._generator())

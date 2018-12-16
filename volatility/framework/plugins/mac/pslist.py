@@ -15,11 +15,11 @@ class PsList(interfaces_plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "darwin",
-                                               description = "Mac Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "darwin", description = "Mac Kernel")
+        ]
 
     @classmethod
     def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
@@ -32,10 +32,11 @@ class PsList(interfaces_plugins.PluginInterface):
         return filter
 
     def _generator(self):
-        for task in self.list_tasks(self.context,
-                                    self.config['primary'],
-                                    self.config['darwin'],
-                                    filter = self.create_filter([self.config.get('pid', None)])):
+        for task in self.list_tasks(
+                self.context,
+                self.config['primary'],
+                self.config['darwin'],
+                filter = self.create_filter([self.config.get('pid', None)])):
             pid = task.p_pid
             ppid = task.p_ppid
             name = utility.array_to_string(task.p_comm)
@@ -48,7 +49,6 @@ class PsList(interfaces_plugins.PluginInterface):
                    mac_symbols: str,
                    filter: Callable[[int], bool] = lambda _: False) \
             -> Generator[interfaces.objects.ObjectInterface, None, None]:
-
         """Lists all the tasks in the primary layer"""
 
         aslr_shift = mac.MacUtilities.find_aslr(context, mac_symbols, layer_name)
@@ -68,7 +68,4 @@ class PsList(interfaces_plugins.PluginInterface):
             proc = proc.p_list.le_next.dereference()
 
     def run(self):
-        return renderers.TreeGrid([("PID", int),
-                                   ("PPID", int),
-                                   ("COMM", str)],
-                                  self._generator())
+        return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())

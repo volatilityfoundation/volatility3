@@ -33,10 +33,7 @@ class NotAvailableValue(interfaces.renderers.BaseAbsentValue):
 class TreeNode(interfaces.renderers.TreeNode):
     """Class representing a particular node in a tree grid"""
 
-    def __init__(self,
-                 path: str,
-                 treegrid: 'TreeGrid',
-                 parent: Optional['TreeNode'],
+    def __init__(self, path: str, treegrid: 'TreeGrid', parent: Optional['TreeNode'],
                  values: List[interfaces.renderers.BaseTypes]) -> None:
         if not isinstance(treegrid, TreeGrid):
             raise TypeError("Treegrid must be an instance of TreeGrid")
@@ -66,10 +63,7 @@ class TreeNode(interfaces.renderers.TreeNode):
             if not isinstance(val, (column.type, interfaces.renderers.BaseAbsentValue)):
                 raise TypeError(
                     "Values item with index {} is the wrong type for column {} (got {} but expected {})".format(
-                        index,
-                        column.name,
-                        type(val),
-                        column.type))
+                        index, column.name, type(val), column.type))
             # TODO: Consider how to deal with timezone naive/aware datetimes (and alert plugin uses to be precise)
             # if isinstance(val, datetime.datetime):
             #     tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
@@ -126,8 +120,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
     path_sep = "|"
 
-    def __init__(self,
-                 columns: List[Tuple[str, interfaces.renderers.BaseTypes]],
+    def __init__(self, columns: List[Tuple[str, interfaces.renderers.BaseTypes]],
                  generator: Optional[Iterable[Tuple[int, Tuple]]]) -> None:
         """Constructs a TreeGrid object using a specific set of columns
 
@@ -148,8 +141,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         for (name, column_type) in columns:
             is_simple_type = issubclass(column_type, self.base_types)
             if not is_simple_type:
-                raise TypeError(
-                    "Column {}'s type is not a simple type: {}".format(name, column_type.__class__.__name__))
+                raise TypeError("Column {}'s type is not a simple type: {}".format(name,
+                                                                                   column_type.__class__.__name__))
             converted_columns.append(interfaces.renderers.Column(len(converted_columns), name, column_type))
         self.RowStructure = collections.namedtuple("RowStructure",
                                                    [self.sanitize_name(column.name) for column in converted_columns])
@@ -168,9 +161,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 output += (letter if letter in 'abcdefghiljklmnopqrstuvwxyz_0123456789' else '_')
         return output
 
-    def populate(self,
-                 func: interfaces.renderers.VisitorSignature = None,
-                 initial_accumulator: Any = None) -> None:
+    def populate(self, func: interfaces.renderers.VisitorSignature = None, initial_accumulator: Any = None) -> None:
         """Populates the tree by consuming the TreeGrid's construction generator
            Func is called on every node, so can be used to create output on demand
 
@@ -178,6 +169,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """
         accumulator = initial_accumulator
         if func is None:
+
             def func(_x: interfaces.renderers.TreeNode, _y: Any) -> Any:
                 return None
 
@@ -187,7 +179,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 parent_index = min(len(prev_nodes), level)
                 parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
                 treenode = self._append(parent, item)
-                prev_nodes = prev_nodes[0: parent_index] + [treenode]
+                prev_nodes = prev_nodes[0:parent_index] + [treenode]
                 if func is not None:
                     accumulator = func(treenode, accumulator)
                 self._row_count += 1
@@ -316,6 +308,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
 
 class ColumnSortKey(interfaces.renderers.ColumnSortKey):
+
     def __init__(self, treegrid: TreeGrid, column_name: str, ascending: bool = True) -> None:
         _index = None
         self._type = None

@@ -49,9 +49,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                             optional = True)]
 
     @classmethod
-    def protect_values(cls,
-                       context: interfaces.context.ContextInterface,
-                       virtual_layer: str,
+    def protect_values(cls, context: interfaces.context.ContextInterface, virtual_layer: str,
                        nt_symbols: str) -> Iterable[int]:
         """Look up the array of memory protection constants from the memory sample.
         These don't change often, but if they do in the future, then finding them
@@ -60,9 +58,8 @@ class VadInfo(interfaces.plugins.PluginInterface):
         kvo = context.memory[virtual_layer].config["kernel_virtual_offset"]
         ntkrnlmp = context.module(nt_symbols, layer_name = virtual_layer, offset = kvo)
         addr = ntkrnlmp.get_symbol("MmProtectToValue").address
-        values = ntkrnlmp.object(type_name = "array", offset = kvo + addr,
-                                 subtype = ntkrnlmp.get_type("int"),
-                                 count = 32)
+        values = ntkrnlmp.object(
+            type_name = "array", offset = kvo + addr, subtype = ntkrnlmp.get_type("int"), count = 32)
         return values  # type: ignore
 
     @classmethod
@@ -81,6 +78,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         filter_func = passthrough
         if self.config.get('address', None) is not None:
+
             def filter_function(x):
                 return x.get_start() not in [self.config['address']]
 
@@ -90,36 +88,24 @@ class VadInfo(interfaces.plugins.PluginInterface):
             process_name = utility.array_to_string(proc.ImageFileName)
 
             for vad in self.list_vads(proc, filter_func = filter_func):
-                yield (0, (proc.UniqueProcessId,
-                           process_name,
-                           format_hints.Hex(vad.vol.offset),
-                           format_hints.Hex(vad.get_start()),
-                           format_hints.Hex(vad.get_end()),
-                           vad.get_tag(),
-                           vad.get_protection(self.protect_values(self.context,
-                                                                  self.config['primary'],
-                                                                  self.config['nt_symbols']), winnt_protections),
-                           vad.get_commit_charge(),
-                           vad.get_private_memory(),
-                           format_hints.Hex(vad.get_parent()),
-                           vad.get_file_name()))
+                yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.vol.offset),
+                           format_hints.Hex(vad.get_start()), format_hints.Hex(vad.get_end()), vad.get_tag(),
+                           vad.get_protection(
+                               self.protect_values(self.context, self.config['primary'], self.config['nt_symbols']),
+                               winnt_protections), vad.get_commit_charge(), vad.get_private_memory(),
+                           format_hints.Hex(vad.get_parent()), vad.get_file_name()))
 
     def run(self):
 
         filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([("PID", int),
-                                   ("Process", str),
-                                   ("Offset", format_hints.Hex),
-                                   ("Start VPN", format_hints.Hex),
-                                   ("End VPN", format_hints.Hex),
-                                   ("Tag", str),
-                                   ("Protection", str),
-                                   ("CommitCharge", int),
-                                   ("PrivateMemory", int),
-                                   ("Parent", format_hints.Hex),
-                                   ("File", str)],
-                                  self._generator(pslist.PsList.list_processes(context = self.context,
-                                                                               layer_name = self.config['primary'],
-                                                                               symbol_table = self.config['nt_symbols'],
-                                                                               filter_func = filter_func)))
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("Offset", format_hints.Hex),
+                                   ("Start VPN", format_hints.Hex), ("End VPN", format_hints.Hex), ("Tag", str),
+                                   ("Protection", str), ("CommitCharge", int), ("PrivateMemory", int),
+                                   ("Parent", format_hints.Hex), ("File", str)],
+                                  self._generator(
+                                      pslist.PsList.list_processes(
+                                          context = self.context,
+                                          layer_name = self.config['primary'],
+                                          symbol_table = self.config['nt_symbols'],
+                                          filter_func = filter_func)))

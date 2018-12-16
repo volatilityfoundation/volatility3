@@ -8,10 +8,14 @@ import sys
 import volatility.framework.constants.linux
 import volatility.framework.constants.windows
 
-PLUGINS_PATH = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),
-                os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))]
-SYMBOL_BASEPATHS = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "symbols")),
-                    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "symbols"))]
+PLUGINS_PATH = [
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "plugins")),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "plugins"))
+]
+SYMBOL_BASEPATHS = [
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "symbols")),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "symbols"))
+]
 BANG = "!"
 PACKAGE_VERSION = "3.0.0_alpha1"
 DISABLE_MULTITHREADED_SCANNING = False
@@ -30,4 +34,3 @@ os.makedirs(CACHE_PATH, exist_ok = True)
 
 LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
 MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
-

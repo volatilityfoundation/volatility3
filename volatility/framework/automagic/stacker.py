@@ -63,9 +63,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
         return None
 
-    def stack(self,
-              context: interfaces.context.ContextInterface,
-              config_path: str,
+    def stack(self, context: interfaces.context.ContextInterface, config_path: str,
               requirement: interfaces.configuration.RequirementInterface,
               progress_callback: validity.ProgressCallback) -> None:
         """Stacks the various layers and attaches these to a specific requirement
@@ -103,8 +101,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
         stacked_layers = [current_layer_name]
-        stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
-                           key = lambda x: x.stack_order)
+        stack_set = sorted(
+            framework.class_subclasses(interfaces.automagic.StackerLayerInterface), key = lambda x: x.stack_order)
         while stacked:
             stacked = False
             new_layer = None
@@ -138,10 +136,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 context.config.merge(path, new_context.memory[layer].build_configuration())
 
                 # Call the construction magic now we may have new things to construct
-                constructor = construct_layers.ConstructionMagic(context,
-                                                                 interfaces.configuration.path_join(
-                                                                     self.config_path,
-                                                                     "ConstructionMagic"))
+                constructor = construct_layers.ConstructionMagic(
+                    context, interfaces.configuration.path_join(self.config_path, "ConstructionMagic"))
                 constructor(context, config_path, requirement)
 
                 # Stash the changed config items
@@ -149,9 +145,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
         vollog.debug("Stacked layers: {}".format(stacked_layers))
 
-    def find_suitable_requirements(self,
-                                   context: interfaces.context.ContextInterface,
-                                   config_path: str,
+    def find_suitable_requirements(self, context: interfaces.context.ContextInterface, config_path: str,
                                    requirement: interfaces.configuration.RequirementInterface,
                                    stacked_layers: List[str]) -> Optional[Tuple[str, str]]:
         """Looks for translation layer requirements and attempts to apply the stacked layers to it.  If it succeeds
@@ -186,6 +180,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
-        return [requirements.URIRequirement("single_location",
-                                            description = "Specifies a base location on which to stack",
-                                            optional = True)]
+        return [
+            requirements.URIRequirement(
+                "single_location", description = "Specifies a base location on which to stack", optional = True)
+        ]

@@ -45,10 +45,8 @@ class VadDump(interfaces_plugins.PluginInterface):
 
             for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):
                 try:
-                    filedata = interfaces_plugins.FileInterface(
-                        "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc.UniqueProcessId,
-                                                               vad.get_start(),
-                                                               vad.get_end()))
+                    filedata = interfaces_plugins.FileInterface("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
+                        proc.UniqueProcessId, vad.get_start(), vad.get_end()))
 
                     offset = vad.get_start()
                     out_of_range = vad.get_start() + vad.get_end()
@@ -65,17 +63,15 @@ class VadDump(interfaces_plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     result_text = "Unable to dump {0:#x} - {1:#x}".format(vad.get_start(), vad.get_end())
 
-                yield (0, (proc.UniqueProcessId,
-                           process_name,
-                           result_text))
+                yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):
         filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([("PID", int),
-                                   ("Process", str),
-                                   ("Result", str)],
-                                  self._generator(pslist.PsList.list_processes(context = self.context,
-                                                                               layer_name = self.config['primary'],
-                                                                               symbol_table = self.config['nt_symbols'],
-                                                                               filter_func = filter_func)))
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("Result", str)],
+                                  self._generator(
+                                      pslist.PsList.list_processes(
+                                          context = self.context,
+                                          layer_name = self.config['primary'],
+                                          symbol_table = self.config['nt_symbols'],
+                                          filter_func = filter_func)))

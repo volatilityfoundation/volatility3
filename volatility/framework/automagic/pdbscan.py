@@ -87,9 +87,9 @@ def scan(ctx: interfaces.context.ContextInterface,
     if end is None:
         end = ctx.memory[layer_name].maximum_address
 
-    for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(ctx, PdbSignatureScanner(pdb_names),
-                                                                               progress_callback = progress_callback,
-                                                                               sections = [(start, end - start)]):
+    for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(
+            ctx, PdbSignatureScanner(pdb_names), progress_callback = progress_callback, sections = [(start,
+                                                                                                     end - start)]):
         mz_offset = None
         sig_pfn = signature_offset // page_size
 
@@ -103,11 +103,13 @@ def scan(ctx: interfaces.context.ContextInterface,
                 break
         min_pfn = sig_pfn
 
-        yield {'GUID': GUID,
-               'age': age,
-               'pdb_name': str(pdb_name, "utf-8"),
-               'signature_offset': signature_offset,
-               'mz_offset': mz_offset}
+        yield {
+            'GUID': GUID,
+            'age': age,
+            'pdb_name': str(pdb_name, "utf-8"),
+            'signature_offset': signature_offset,
+            'mz_offset': mz_offset
+        }
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
@@ -126,8 +128,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     priority = 30
 
     # Make sure uncompressed/outside-framework takes precedence, so users can overload.
-    prefixes = [os.path.join("..", "..", "..", "symbols", "windows"),
-                os.path.join("..", "..", "symbols", "windows")]
+    prefixes = [os.path.join("..", "..", "..", "symbols", "windows"), os.path.join("..", "..", "symbols", "windows")]
     """Provides a list of prefixes that are searched when locating Intermediate Format data files"""
     suffixes = ['.json', '.json.xz']
     """Provides a list of supported suffixes for Intermediate Format data files"""
@@ -162,17 +163,16 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 memlayer = context.memory[virtual_layer_name]
                 if isinstance(memlayer, intel.Intel):
                     page_size = memlayer.page_size  # type: int
-                    results = {virtual_layer_name: scan(context,
-                                                        layer_name,
-                                                        page_size,
-                                                        progress_callback = progress_callback)}
+                    results = {
+                        virtual_layer_name:
+                        scan(context, layer_name, page_size, progress_callback = progress_callback)
+                    }
         else:
             for subreq in requirement.requirements.values():
                 results.update(self.recurse_pdb_finder(context, sub_config_path, subreq))
         return results
 
-    def recurse_symbol_fulfiller(self,
-                                 context: interfaces.context.ContextInterface,
+    def recurse_symbol_fulfiller(self, context: interfaces.context.ContextInterface,
                                  valid_kernels: ValidKernelsType) -> None:
         """Fulfills the SymbolRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
 
@@ -212,8 +212,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
 
-    def set_kernel_virtual_offset(self,
-                                  context: interfaces.context.ContextInterface,
+    def set_kernel_virtual_offset(self, context: interfaces.context.ContextInterface,
                                   valid_kernels: ValidKernelsType) -> None:
         """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting and sets
         it based on the previously identified `valid_kernels`.
@@ -254,16 +253,16 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 kvo = kernel['mz_offset'] + (1 << (vlayer.bits_per_register - 1))
             try:
                 kvp = vlayer.mapping(kvo, 0)
-                if (any([(p == kernel['mz_offset'] and layer_name == physical_layer_name) for (_, p, _, layer_name) in
-                         kvp])):
+                if (any([(p == kernel['mz_offset'] and layer_name == physical_layer_name)
+                         for (_, p, _, layer_name) in kvp])):
                     valid_kernels[virtual_layer_name] = (kvo, kernel)
                     # Sit the virtual offset under the TranslationLayer it applies to
                     context.config[kvo_path] = kvo
                     vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
                     break
                 else:
-                    vollog.debug(
-                        "Potential kernel_virtual_offset did not map to expected location: {}".format(hex(kvo)))
+                    vollog.debug("Potential kernel_virtual_offset did not map to expected location: {}".format(
+                        hex(kvo)))
             except exceptions.InvalidAddressException:
                 vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
         return valid_kernels
@@ -281,15 +280,16 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         physical_layer = context.memory[physical_layer_name]
         # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
-        results = physical_layer.scan(context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
-                                      progress_callback = progress_callback)
+        results = physical_layer.scan(
+            context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"), progress_callback = progress_callback)
         seen = set()  # type: Set[int]
         # Because this will launch a scan of the virtual layer, we want to be careful
         for result in results:
             # TODO: Identify the specific structure we're finding and document this a bit better
-            pointer = context.object("pdbscan!unsigned long long",
-                                     offset = (result - 16 - int(vlayer.bits_per_register / 8)),
-                                     layer_name = physical_layer_name)
+            pointer = context.object(
+                "pdbscan!unsigned long long",
+                offset = (result - 16 - int(vlayer.bits_per_register / 8)),
+                layer_name = physical_layer_name)
             address = pointer & vlayer.address_mask
             if address in seen:
                 continue
@@ -319,9 +319,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         seen = set()  # type: Set[int]
         for result in results:
             # TODO: Identify the specific structure we're finding and document this a bit better
-            pointer = context.object("pdbscan!unsigned long long",
-                                     offset = result + 8,
-                                     layer_name = physical_layer_name)
+            pointer = context.object(
+                "pdbscan!unsigned long long", offset = result + 8, layer_name = physical_layer_name)
             address = pointer & vlayer.address_mask
             if address in seen:
                 continue
@@ -338,9 +337,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         return valid_kernels
 
     # List of methods to be run, in order, to determine the valid kernels
-    methods = [method_fixed_mapping,
-               method_kdbg_offset,
-               method_module_offset]
+    methods = [method_fixed_mapping, method_kdbg_offset, method_module_offset]
 
     def determine_valid_kernels(self,
                                 context: interfaces.context.ContextInterface,
@@ -383,9 +380,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             if "pdbscan" not in context.symbol_space:
                 context.symbol_space.append(native.NativeTable("pdbscan", native.std_ctypes))
             # TODO: check if this is a windows symbol requirement, otherwise ignore it
-            self._symbol_requirements = self.find_requirements(context,
-                                                               config_path,
-                                                               requirement,
+            self._symbol_requirements = self.find_requirements(context, config_path, requirement,
                                                                requirements.SymbolRequirement)
             for sub_config_path, symbol_req in self._symbol_requirements:
                 parent_path = interfaces.configuration.parent_path(sub_config_path)

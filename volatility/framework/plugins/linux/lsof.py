@@ -19,19 +19,19 @@ class Lsof(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "vmlinux",
-                                               description = "Linux Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "vmlinux", description = "Linux Kernel")
+        ]
 
     def _generator(self, tasks):
         for task in tasks:
             name = utility.array_to_string(task.comm)
             pid = int(task.pid)
 
-            for fd_num, _, full_path in linux.LinuxUtilities.files_descriptors_for_process(self.config, self.context,
-                                                                                           task):
+            for fd_num, _, full_path in linux.LinuxUtilities.files_descriptors_for_process(
+                    self.config, self.context, task):
                 yield (0, (pid, name, fd_num, full_path))
 
     def run(self):
@@ -42,11 +42,5 @@ class Lsof(plugins.PluginInterface):
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
-            [("PID", int),
-             ("Process", str),
-             ("FD", int),
-             ("Path", str)],
-            self._generator(plugin(self.context,
-                                   self.config['primary'],
-                                   self.config['vmlinux'],
-                                   filter = filter)))
+            [("PID", int), ("Process", str), ("FD", int), ("Path", str)],
+            self._generator(plugin(self.context, self.config['primary'], self.config['vmlinux'], filter = filter)))

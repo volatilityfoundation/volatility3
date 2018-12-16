@@ -17,10 +17,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
          * etc
     """
 
-    def __init__(self,
-                 object_class: Type[interfaces.objects.ObjectInterface],
-                 type_name: str,
-                 **arguments) -> None:
+    def __init__(self, object_class: Type[interfaces.objects.ObjectInterface], type_name: str, **arguments) -> None:
         super().__init__(type_name = type_name, **arguments)
         self._check_class(object_class, interfaces.objects.ObjectInterface)
         self._arguments['object_class'] = object_class
@@ -41,9 +38,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         """
         return self.vol.object_class.VolTemplateProxy.relative_child_offset(self, child)
 
-    def replace_child(self,
-                      old_child: interfaces.objects.Template,
-                      new_child: interfaces.objects.Template) -> None:
+    def replace_child(self, old_child: interfaces.objects.Template, new_child: interfaces.objects.Template) -> None:
         """Replaces `old_child` for `new_child` in the templated object's child list (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)
         """
         return self.vol.object_class.VolTemplateProxy.replace_child(self, old_child, new_child)
@@ -53,8 +48,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         """
         return self.vol.object_class.VolTemplateProxy.has_member(self, member_name)
 
-    def __call__(self,
-                 context: interfaces.context.ContextInterface,
+    def __call__(self, context: interfaces.context.ContextInterface,
                  object_info: interfaces.objects.ObjectInformation) -> interfaces.objects.ObjectInterface:
         """Constructs the object
 
@@ -64,9 +58,7 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
         for arg in self.vol:
             if arg != 'object_class':
                 arguments[arg] = self.vol[arg]
-        return self.vol.object_class(context = context,
-                                     object_info = object_info,
-                                     **arguments)
+        return self.vol.object_class(context = context, object_info = object_info, **arguments)
 
 
 class ReferenceTemplate(interfaces.objects.Template):
@@ -84,16 +76,15 @@ class ReferenceTemplate(interfaces.objects.Template):
         """Referenced symbols must be appropriately resolved before they can provide information such as size
            This is because the size request has no context within which to determine the actual symbol structure.
         """
-        raise exceptions.SymbolError(
-            "Template contains no information about its structure: {}".format(self.vol.type_name))
+        raise exceptions.SymbolError("Template contains no information about its structure: {}".format(
+            self.vol.type_name))
 
     size = property(_unresolved)  # type: ClassVar[Any]
     replace_child = _unresolved  # type: ClassVar[Any]
     relative_child_offset = _unresolved  # type: ClassVar[Any]
     has_member = _unresolved  # type: ClassVar[Any]
 
-    def __call__(self,
-                 context: interfaces.context.ContextInterface,
+    def __call__(self, context: interfaces.context.ContextInterface,
                  object_info: interfaces.objects.ObjectInformation):
         template = context.symbol_space.get_type(self.vol.type_name)
         return template(context = context, object_info = object_info)

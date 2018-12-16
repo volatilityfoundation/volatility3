@@ -11,8 +11,8 @@ from volatility.framework.symbols import generic
 
 vollog = logging.getLogger(__name__)
 
-
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
+
 
 class _POOL_HEADER(objects.Struct):
     """A kernel pool allocation header. Exists at the base of the
@@ -41,10 +41,11 @@ class _POOL_HEADER(objects.Struct):
 
         # if there is no object type, then just instantiate a structure
         if object_type is None:
-            mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
-                                              layer_name = self.vol.layer_name,
-                                              offset = self.vol.offset + pool_header_size,
-                                              native_layer_name = native_layer_name)
+            mem_object = self._context.object(
+                symbol_table_name + constants.BANG + type_name,
+                layer_name = self.vol.layer_name,
+                offset = self.vol.offset + pool_header_size,
+                native_layer_name = native_layer_name)
             return mem_object
 
         # otherwise we have an executive object in the pool
@@ -61,10 +62,11 @@ class _POOL_HEADER(objects.Struct):
                 end_offset = start_offset + min(max_optional_headers_length, self.BlockSize * alignment)
 
                 for addr in range(start_offset, end_offset, alignment):
-                    object_header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER",
-                                                         layer_name = self.vol.layer_name,
-                                                         offset = addr,
-                                                         native_layer_name = native_layer_name)
+                    object_header = self._context.object(
+                        symbol_table_name + constants.BANG + "_OBJECT_HEADER",
+                        layer_name = self.vol.layer_name,
+                        offset = addr,
+                        native_layer_name = native_layer_name)
 
                     if not object_header.is_valid():
                         continue
@@ -85,10 +87,11 @@ class _POOL_HEADER(objects.Struct):
                 type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
                 rounded_size = conversion.round(type_size, alignment, up = True)
 
-                mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
-                                                  layer_name = self.vol.layer_name,
-                                                  offset = self.vol.offset + self.BlockSize * alignment - rounded_size,
-                                                  native_layer_name = native_layer_name)
+                mem_object = self._context.object(
+                    symbol_table_name + constants.BANG + type_name,
+                    layer_name = self.vol.layer_name,
+                    offset = self.vol.offset + self.BlockSize * alignment - rounded_size,
+                    native_layer_name = native_layer_name)
 
                 object_header = mem_object.object_header()
 
@@ -127,11 +130,12 @@ class _MMVAD_SHORT(objects.Struct):
 
         try:
             # TODO: instantiate a _POOL_HEADER and return PoolTag
-            bytesobj = self._context.object(symbol_table_name + constants.BANG + "bytes",
-                                            layer_name = self.vol.layer_name,
-                                            offset = vad_address,
-                                            native_layer_name = self.vol.native_layer_name,
-                                            length = 4)
+            bytesobj = self._context.object(
+                symbol_table_name + constants.BANG + "bytes",
+                layer_name = self.vol.layer_name,
+                offset = vad_address,
+                native_layer_name = self.vol.native_layer_name,
+                length = 4)
 
             return bytesobj.decode()
         except exceptions.InvalidAddressException:
@@ -300,12 +304,12 @@ class _MMVAD_SHORT(objects.Struct):
             return self.u.VadFlags.PrivateMemory
 
         elif self.has_member("Core"):
-            if (self.Core.has_member("u1") and self.Core.u1.has_member(
-                    "VadFlags1") and self.Core.u1.VadFlags1.has_member("PrivateMemory")):
+            if (self.Core.has_member("u1") and self.Core.u1.has_member("VadFlags1")
+                    and self.Core.u1.VadFlags1.has_member("PrivateMemory")):
                 return self.Core.u1.VadFlags1.PrivateMemory
 
-            elif (self.Core.has_member("u") and self.Core.u.has_member("VadFlags") and self.Core.u.VadFlags.has_member(
-                    "PrivateMemory")):
+            elif (self.Core.has_member("u") and self.Core.u.has_member("VadFlags")
+                  and self.Core.u.VadFlags.has_member("PrivateMemory")):
                 return self.Core.u.VadFlags.PrivateMemory
 
         raise AttributeError("Unable to find the private memory member")
@@ -381,10 +385,11 @@ class _EX_FAST_REF(objects.Struct):
         else:
             max_fast_ref = 15
 
-        return self._context.object(symbol_table_name + constants.BANG + "pointer",
-                                    layer_name = self.vol.layer_name,
-                                    offset = self.Object & ~max_fast_ref,
-                                    native_layer_name = self.vol.native_layer_name)
+        return self._context.object(
+            symbol_table_name + constants.BANG + "pointer",
+            layer_name = self.vol.layer_name,
+            offset = self.Object & ~max_fast_ref,
+            native_layer_name = self.vol.native_layer_name)
 
 
 class ExecutiveObject(interfaces.objects.ObjectInterface):
@@ -395,12 +400,13 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
-        body_offset = self._context.symbol_space.get_type(
-            symbol_table_name + constants.BANG + "_OBJECT_HEADER").relative_child_offset("Body")
-        return self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER",
-                                    layer_name = self.vol.layer_name,
-                                    offset = self.vol.offset - body_offset,
-                                    native_layer_name = self.vol.native_layer_name)
+        body_offset = self._context.symbol_space.get_type(symbol_table_name + constants.BANG +
+                                                          "_OBJECT_HEADER").relative_child_offset("Body")
+        return self._context.object(
+            symbol_table_name + constants.BANG + "_OBJECT_HEADER",
+            layer_name = self.vol.layer_name,
+            offset = self.vol.offset - body_offset,
+            native_layer_name = self.vol.native_layer_name)
 
 
 class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
@@ -491,14 +497,16 @@ class _OBJECT_HEADER(objects.Struct):
             address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
             calculated_index = ord(self.InfoMask) & (name_info_bit | (name_info_bit - 1))
 
-            header_offset = self._context.object(symbol_table_name + constants.BANG + "unsigned char",
-                                                 layer_name = self.vol.native_layer_name,
-                                                 offset = address + calculated_index)
+            header_offset = self._context.object(
+                symbol_table_name + constants.BANG + "unsigned char",
+                layer_name = self.vol.native_layer_name,
+                offset = address + calculated_index)
 
-        header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
-                                      layer_name = self.vol.layer_name,
-                                      offset = self.vol.offset - header_offset,
-                                      native_layer_name = self.vol.native_layer_name)
+        header = self._context.object(
+            symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
+            layer_name = self.vol.layer_name,
+            offset = self.vol.offset - header_offset,
+            native_layer_name = self.vol.native_layer_name)
         return header
 
 
@@ -517,8 +525,8 @@ class _UNICODE_STRING(objects.Struct):
         # We explicitly do *not* catch errors here, we allow an exception to be thrown
         # (otherwise there's no way to determine anything went wrong)
         # It's up to the user of this method to catch exceptions
-        return self.Buffer.dereference().cast("string", max_length = self.Length, errors = "replace",
-                                              encoding = "utf16")
+        return self.Buffer.dereference().cast(
+            "string", max_length = self.Length, errors = "replace", encoding = "utf16")
 
     String = property(get_string)
 
@@ -564,9 +572,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
 
         return True
 
-    def add_process_layer(self,
-                          config_prefix: str = None,
-                          preferred_name: str = None):
+    def add_process_layer(self, config_prefix: str = None, preferred_name: str = None):
         """Constructs a new layer based on the process's DirectoryTableBase"""
 
         parent_layer = self._context.memory[self.vol.layer_name]
@@ -599,9 +605,8 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
             return
 
         sym_table = self.vol.type_name.split(constants.BANG)[0]
-        peb = self._context.object("{}{}_PEB".format(sym_table, constants.BANG),
-                                   layer_name = proc_layer_name,
-                                   offset = self.Peb)
+        peb = self._context.object(
+            "{}{}_PEB".format(sym_table, constants.BANG), layer_name = proc_layer_name, offset = self.Peb)
 
         for entry in peb.Ldr.InLoadOrderModuleList.to_list(
                 "{}{}_LDR_DATA_TABLE_ENTRY".format(sym_table, constants.BANG), "InLoadOrderLinks"):
@@ -628,10 +633,11 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                 layer_name = self.vol.layer_name
                 symbol_table_name = self.get_symbol_table().name
                 kvo = self._context.memory[layer_name].config['kernel_virtual_offset']
-                ntkrnlmp = self._context.module(symbol_table_name,
-                                                layer_name = layer_name,
-                                                offset = kvo,
-                                                native_layer_name = self.vol.native_layer_name)
+                ntkrnlmp = self._context.module(
+                    symbol_table_name,
+                    layer_name = layer_name,
+                    offset = kvo,
+                    native_layer_name = self.vol.native_layer_name)
                 session = ntkrnlmp.object(type_name = "_MM_SESSION_SPACE", offset = self.Session)
 
                 if session.has_member("SessionId"):
@@ -702,18 +708,20 @@ class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
         link = getattr(self, direction).dereference()
 
         if not sentinel:
-            yield self._context.object(symbol_type,
-                                       layer,
-                                       offset = self.vol.offset - relative_offset,
-                                       native_layer_name = layer or self.vol.native_layer_name)
+            yield self._context.object(
+                symbol_type,
+                layer,
+                offset = self.vol.offset - relative_offset,
+                native_layer_name = layer or self.vol.native_layer_name)
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
 
-            obj = self._context.object(symbol_type,
-                                       layer,
-                                       offset = link.vol.offset - relative_offset,
-                                       native_layer_name = layer or self.vol.native_layer_name)
+            obj = self._context.object(
+                symbol_type,
+                layer,
+                offset = link.vol.offset - relative_offset,
+                native_layer_name = layer or self.vol.native_layer_name)
             yield obj
 
             seen.add(link.vol.offset)

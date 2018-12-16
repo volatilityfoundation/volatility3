@@ -75,11 +75,7 @@ class ContextInterface(object, metaclass = ABCMeta):
            Memory constraints may become an issue for this function depending on how much is actually stored in the context"""
         return copy.deepcopy(self)
 
-    def module(self,
-               module_name: str,
-               layer_name: str,
-               offset: int,
-               size: Optional[int] = None) -> 'ModuleInterface':
+    def module(self, module_name: str, layer_name: str, offset: int, size: Optional[int] = None) -> 'ModuleInterface':
         """Create a module object """
 
 
@@ -121,10 +117,7 @@ class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return self._layer_name
 
     @abstractmethod
-    def object(self,
-               symbol_name: str = None,
-               type_name: str = None,
-               offset: int = None,
+    def object(self, symbol_name: str = None, type_name: str = None, offset: int = None,
                **kwargs) -> 'interfaces.objects.ObjectInterface':
         """Returns an object created using the symbol_table_name and layer_name of the Module"""
 

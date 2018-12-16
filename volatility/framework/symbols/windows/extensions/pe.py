@@ -21,9 +21,10 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table().name
 
-        nt_header = self._context.object(symbol_table_name + constants.BANG + "_IMAGE_NT_HEADERS",
-                                         layer_name = layer_name,
-                                         offset = self.vol.offset + self.e_lfanew)
+        nt_header = self._context.object(
+            symbol_table_name + constants.BANG + "_IMAGE_NT_HEADERS",
+            layer_name = layer_name,
+            offset = self.vol.offset + self.e_lfanew)
 
         if nt_header.Signature != 0x4550:
             raise ValueError("NT header signature {0:04X} is not a valid".format(nt_header.Signature))
@@ -34,11 +35,8 @@ class _IMAGE_DOS_HEADER(objects.Struct):
 
         return nt_header
 
-    def replace_header_field(self,
-                             sect: interfaces.objects.ObjectInterface,
-                             header: bytes,
-                             item: interfaces.objects.ObjectInterface,
-                             value: int) -> bytes:
+    def replace_header_field(self, sect: interfaces.objects.ObjectInterface, header: bytes,
+                             item: interfaces.objects.ObjectInterface, value: int) -> bytes:
         """Replaces a member in an _IMAGE_SECTION_HEADER structure.
 
         Args:
@@ -93,8 +91,8 @@ class _IMAGE_DOS_HEADER(objects.Struct):
 
         section_alignment = nt_header.OptionalHeader.SectionAlignment
 
-        sect_header_size = self._context.symbol_space.get_type(
-            symbol_table_name + constants.BANG + "_IMAGE_SECTION_HEADER").size
+        sect_header_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG +
+                                                               "_IMAGE_SECTION_HEADER").size
 
         size_of_image = nt_header.OptionalHeader.SizeOfImage
 
@@ -102,9 +100,8 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         if size_of_image > (1024 * 1024 * 100):
             raise ValueError("The claimed SizeOfImage is too large: {}".format(size_of_image))
 
-        raw_data = self._context.memory[layer_name].read(self.vol.offset,
-                                                         nt_header.OptionalHeader.SizeOfImage,
-                                                         pad = True)
+        raw_data = self._context.memory[layer_name].read(
+            self.vol.offset, nt_header.OptionalHeader.SizeOfImage, pad = True)
 
         # fix the PE image base before yielding the initial view of the data
         fixed_data = self.fix_image_base(raw_data, nt_header)
@@ -156,12 +153,13 @@ class _IMAGE_NT_HEADERS(objects.Struct):
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table().name
 
-        sect_header_size = self._context.symbol_space.get_type(
-            symbol_table_name + constants.BANG + "_IMAGE_SECTION_HEADER").size
+        sect_header_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG +
+                                                               "_IMAGE_SECTION_HEADER").size
         start_addr = self.FileHeader.SizeOfOptionalHeader + self.OptionalHeader.vol.offset
 
         for i in range(self.FileHeader.NumberOfSections):
             sect_addr = start_addr + (i * sect_header_size)
-            yield self._context.object(symbol_table_name + constants.BANG + "_IMAGE_SECTION_HEADER",
-                                       offset = sect_addr,
-                                       layer_name = layer_name)
+            yield self._context.object(
+                symbol_table_name + constants.BANG + "_IMAGE_SECTION_HEADER",
+                offset = sect_addr,
+                layer_name = layer_name)

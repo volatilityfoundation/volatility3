@@ -98,31 +98,34 @@ class Context(interfaces.context.ContextInterface):
             arguments.update(object_template.vol)
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
-        return object_template(context = self,
-                               object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
-                                                                                  offset = offset,
-                                                                                  native_layer_name = native_layer_name))
+        return object_template(
+            context = self,
+            object_info = interfaces.objects.ObjectInformation(
+                layer_name = layer_name, offset = offset, native_layer_name = native_layer_name))
 
     @functools.lru_cache()
-    def module(self,  # type: ignore # FIXME: mypy #5107
-               module_name: str,
-               layer_name: str,
-               offset: int,
-               native_layer_name: Optional[str] = None,
-               size: Optional[int] = None) -> interfaces.context.ModuleInterface:
+    def module(
+            self,  # type: ignore # FIXME: mypy #5107
+            module_name: str,
+            layer_name: str,
+            offset: int,
+            native_layer_name: Optional[str] = None,
+            size: Optional[int] = None) -> interfaces.context.ModuleInterface:
         """Creates a module object"""
         if size:
-            return SizedModule(self,
-                               module_name = module_name,
-                               layer_name = layer_name,
-                               offset = offset,
-                               size = size,
-                               native_layer_name = native_layer_name)
-        return Module(self,
-                      module_name = module_name,
-                      layer_name = layer_name,
-                      offset = offset,
-                      native_layer_name = native_layer_name)
+            return SizedModule(
+                self,
+                module_name = module_name,
+                layer_name = layer_name,
+                offset = offset,
+                size = size,
+                native_layer_name = native_layer_name)
+        return Module(
+            self,
+            module_name = module_name,
+            layer_name = layer_name,
+            offset = offset,
+            native_layer_name = native_layer_name)
 
 
 def get_module_wrapper(method: str) -> Callable:
@@ -138,6 +141,7 @@ def get_module_wrapper(method: str) -> Callable:
 
 
 class Module(interfaces.context.ModuleInterface):
+
     def object(self,
                symbol_name: Optional[str] = None,
                type_name: Optional[str] = None,
@@ -193,12 +197,13 @@ class SizedModule(Module):
                  size: int,
                  symbol_table_name: Optional[str] = None,
                  native_layer_name: Optional[str] = None) -> None:
-        super().__init__(context,
-                         module_name = module_name,
-                         layer_name = layer_name,
-                         offset = offset,
-                         native_layer_name = native_layer_name,
-                         symbol_table_name = symbol_table_name)
+        super().__init__(
+            context,
+            module_name = module_name,
+            layer_name = layer_name,
+            offset = offset,
+            native_layer_name = native_layer_name,
+            symbol_table_name = symbol_table_name)
         self._size = self._check_type(size, int)
 
     @property
@@ -216,8 +221,8 @@ class SizedModule(Module):
         layer = self._context.memory[self.layer_name]
         if not isinstance(layer, interfaces.layers.TranslationLayerInterface):
             raise TypeError("Hashing modules on non-TranslationLayers is not allowed")
-        return hashlib.md5(
-            bytes(str(list(layer.mapping(self.offset, self.size, ignore_errors = True))), 'utf-8')).hexdigest()
+        return hashlib.md5(bytes(str(list(layer.mapping(self.offset, self.size, ignore_errors = True))),
+                                 'utf-8')).hexdigest()
 
     def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
         """Returns the symbols within this module that live at the specified absolute offset provided"""
@@ -225,8 +230,9 @@ class SizedModule(Module):
             raise ValueError("Size must be strictly non-negative")
         if offset > self._offset + self.size:
             return []
-        return list(self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset, size = size,
-                                                                       table_name = self.symbol_table_name))
+        return list(
+            self._context.symbol_space.get_symbols_by_location(
+                offset = offset - self._offset, size = size, table_name = self.symbol_table_name))
 
 
 class ModuleCollection(validity.ValidityRoutines):

@@ -6,10 +6,7 @@ from volatility.framework.symbols.windows.extensions import registry
 
 class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 name: str,
+    def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str,
                  isf_url: str) -> None:
         super().__init__(context = context, config_path = config_path, name = name, isf_url = isf_url)
 

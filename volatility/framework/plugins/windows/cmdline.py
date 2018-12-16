@@ -14,10 +14,11 @@ class CmdLine(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
+        ]
 
     def _generator(self, procs):
 
@@ -27,9 +28,10 @@ class CmdLine(interfaces_plugins.PluginInterface):
             proc_layer_name = proc.add_process_layer()
 
             try:
-                peb = self._context.object(self.config["nt_symbols"] + constants.BANG + "_PEB",
-                                           layer_name = proc_layer_name,
-                                           offset = proc.Peb)
+                peb = self._context.object(
+                    self.config["nt_symbols"] + constants.BANG + "_PEB",
+                    layer_name = proc_layer_name,
+                    offset = proc.Peb)
 
                 result_text = peb.ProcessParameters.CommandLine.get_string()
 
@@ -39,18 +41,16 @@ class CmdLine(interfaces_plugins.PluginInterface):
             except exceptions.PagedInvalidAddressException as exp:
                 result_text = "Required memory at {0:#x} is not valid (process exited?)".format(exp.invalid_address)
 
-            yield (0, (proc.UniqueProcessId,
-                       process_name,
-                       result_text))
+            yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):
 
         filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([("PID", int),
-                                   ("Process", str),
-                                   ("Args", str)],
-                                  self._generator(pslist.PsList.list_processes(context = self.context,
-                                                                               layer_name = self.config['primary'],
-                                                                               symbol_table = self.config['nt_symbols'],
-                                                                               filter_func = filter_func)))
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("Args", str)],
+                                  self._generator(
+                                      pslist.PsList.list_processes(
+                                          context = self.context,
+                                          layer_name = self.config['primary'],
+                                          symbol_table = self.config['nt_symbols'],
+                                          filter_func = filter_func)))

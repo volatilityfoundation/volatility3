@@ -15,18 +15,17 @@ class Strings(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                requirements.URIRequirement(name = "strings_file", description = "Strings file")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+            requirements.URIRequirement(name = "strings_file", description = "Strings file")
+        ]
         # TODO: Make URLRequirement that can accept a file address which the framework can open
 
     def run(self):
 
-        return renderers.TreeGrid([("String", str),
-                                   ("Physical Address", format_hints.Hex),
-                                   ("Result", str)],
+        return renderers.TreeGrid([("String", str), ("Physical Address", format_hints.Hex), ("Result", str)],
                                   self._generator())
 
     def _generator(self) -> Generator[Tuple, None, None]:
@@ -73,8 +72,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
             # TODO: Include kernel modules
 
-            for process in pslist.PsList.list_processes(self.context,
-                                                        self.config['primary'],
+            for process in pslist.PsList.list_processes(self.context, self.config['primary'],
                                                         self.config['nt_symbols']):
                 proc_layer_name = process.add_process_layer()
                 proc_layer = self.context.memory[proc_layer_name]

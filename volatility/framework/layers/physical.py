@@ -30,8 +30,8 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the offset is valid or not"""
-        return bool(self.minimum_address <= offset <= self.maximum_address and
-                    self.minimum_address <= offset + length - 1 <= self.maximum_address)
+        return bool(self.minimum_address <= offset <= self.maximum_address
+                    and self.minimum_address <= offset + length - 1 <= self.maximum_address)
 
     def read(self, address: int, length: int, pad: bool = False) -> bytes:
         """Reads the data from the buffer"""
@@ -51,8 +51,10 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # No real requirements (only the buffer).  Need to figure out if there's a better way of representing this
-        return [requirements.BytesRequirement(name = 'buffer', description = "The direct bytes to interact with",
-                                              optional = False)]
+        return [
+            requirements.BytesRequirement(
+                name = 'buffer', description = "The direct bytes to interact with", optional = False)
+        ]
 
 
 class FileLayer(interfaces.layers.DataLayerInterface):
@@ -108,8 +110,8 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Returns whether the offset is valid or not"""
         if length <= 0:
             raise TypeError("Length must be positive")
-        return bool(self.minimum_address <= offset <= self.maximum_address and
-                    self.minimum_address <= offset + length - 1 <= self.maximum_address)
+        return bool(self.minimum_address <= offset <= self.maximum_address
+                    and self.minimum_address <= offset + length - 1 <= self.maximum_address)
 
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads from the file at offset for length"""
@@ -125,9 +127,8 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             if pad:
                 data += (b"\x00" * (length - len(data)))
             else:
-                raise exceptions.InvalidAddressException(self.name, offset + len(data),
-                                                         "Could not read sufficient bytes from the " +
-                                                         self.name + " file")
+                raise exceptions.InvalidAddressException(
+                    self.name, offset + len(data), "Could not read sufficient bytes from the " + self.name + " file")
         return data
 
     def write(self, offset: int, data: bytes) -> None:

@@ -20,25 +20,22 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = "Primary kernel address space",
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-                requirements.BooleanRequirement(name = "wide",
-                                                description = "Match wide (unicode) strings",
-                                                default = False,
-                                                optional = True),
-                requirements.StringRequirement(name = "yara_rules",
-                                               description = "Yara rules (as a string)",
-                                               optional = True),
-                requirements.URIRequirement(name = "yara_file",
-                                            description = "Yara rules (as a file)",
-                                            optional = True),
-                requirements.IntRequirement(name = "max_size",
-                                            default = 0x40000000,
-                                            description = "Set the maximum size (default is 1GB)",
-                                            optional = True)
-                ]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = "Primary kernel address space", architectures = ["Intel32",
+                                                                                                 "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+            requirements.BooleanRequirement(
+                name = "wide", description = "Match wide (unicode) strings", default = False, optional = True),
+            requirements.StringRequirement(
+                name = "yara_rules", description = "Yara rules (as a string)", optional = True),
+            requirements.URIRequirement(name = "yara_file", description = "Yara rules (as a file)", optional = True),
+            requirements.IntRequirement(
+                name = "max_size",
+                default = 0x40000000,
+                description = "Set the maximum size (default is 1GB)",
+                optional = True)
+        ]
 
     def _generator(self):
 
@@ -60,13 +57,15 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        for task in pslist.PsList.list_processes(context = self.context,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols'],
-                                                 filter_func = filter_func):
-            for offset, name in layer.scan(context = self.context,
-                                           scanner = yarascan.YaraScanner(rules = rules),
-                                           sections = self.get_vad_maps(task)):
+        for task in pslist.PsList.list_processes(
+                context = self.context,
+                layer_name = self.config['primary'],
+                symbol_table = self.config['nt_symbols'],
+                filter_func = filter_func):
+            for offset, name in layer.scan(
+                    context = self.context,
+                    scanner = yarascan.YaraScanner(rules = rules),
+                    sections = self.get_vad_maps(task)):
                 yield format_hints.Hex(offset), name
 
     def get_vad_maps(self, task: Any) -> Iterable[Tuple[int, int]]:
@@ -80,5 +79,4 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             yield (start, end - start)
 
     def run(self):
-        return renderers.TreeGrid([('Offset', format_hints.Hex),
-                                   ('Rule', str)], self._generator())
+        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Rule', str)], self._generator())

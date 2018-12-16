@@ -55,11 +55,11 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
             if symbol_files:
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('LintelStacker')
-                table = linux.LinuxKernelIntermedSymbols(context, 'temporary.' + table_name, name = table_name,
-                                                         isf_url = isf_path)
+                table = linux.LinuxKernelIntermedSymbols(
+                    context, 'temporary.' + table_name, name = table_name, isf_url = isf_path)
                 context.symbol_space.append(table)
-                kaslr_shift, _ = LinuxUtilities.find_aslr(context, table_name, layer_name,
-                                                          progress_callback = progress_callback)
+                kaslr_shift, _ = LinuxUtilities.find_aslr(
+                    context, table_name, layer_name, progress_callback = progress_callback)
 
                 layer_class = intel.Intel  # type: Type
                 if 'init_level4_pgt' in table.symbols:
@@ -68,8 +68,8 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                 else:
                     dtb_symbol_name = 'swapper_pg_dir'
 
-                dtb = LinuxUtilities.virtual_to_physical_address(table.get_symbol(dtb_symbol_name).address +
-                                                                 kaslr_shift)
+                dtb = LinuxUtilities.virtual_to_physical_address(
+                    table.get_symbol(dtb_symbol_name).address + kaslr_shift)
 
                 # Build the new layer
                 new_layer_name = context.memory.free_layer_name("IntelLayer")
@@ -218,8 +218,7 @@ class LinuxUtilities(object):
         return ret
 
     @classmethod
-    def files_descriptors_for_process(cls,
-                                      config: interfaces.configuration.HierarchicalDict,
+    def files_descriptors_for_process(cls, config: interfaces.configuration.HierarchicalDict,
                                       context: interfaces.context.ContextInterface,
                                       task: interfaces.objects.ObjectInterface):
 
@@ -274,8 +273,10 @@ class LinuxUtilities(object):
         swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
         module = context.module(symbol_table, layer_name, 0)
 
-        for offset in context.memory[layer_name].scan(scanner = scanners.RegExScanner(swapper_signature),
-                                                      context = context, progress_callback = progress_callback):
+        for offset in context.memory[layer_name].scan(
+                scanner = scanners.RegExScanner(swapper_signature),
+                context = context,
+                progress_callback = progress_callback):
             task_symbol = module.get_type('task_struct')
             init_task_address = offset - task_symbol.relative_child_offset('comm')
             init_task = module.object(type_name = 'task_struct', offset = init_task_address)
@@ -290,8 +291,8 @@ class LinuxUtilities(object):
 
             if aslr_shift & 0xfff != 0 or kaslr_shift & 0xfff != 0:
                 continue
-            vollog.debug(
-                "Linux ASLR shift values determined: physical {:0x} virtual {:0x}".format(kaslr_shift, aslr_shift))
+            vollog.debug("Linux ASLR shift values determined: physical {:0x} virtual {:0x}".format(
+                kaslr_shift, aslr_shift))
             return kaslr_shift, aslr_shift
 
         # We don't throw an exception, because we may legitimately not have an ASLR shift, but we report it

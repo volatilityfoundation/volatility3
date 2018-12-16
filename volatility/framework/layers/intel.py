@@ -35,10 +35,10 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     # NOTE: _maxphyaddr is MAXPHYADDR as defined in the Intel specs *NOT* the maximum physical address
     _maxphyaddr = 32
     _maxvirtaddr = _maxphyaddr
-    _structure = [('page directory', 10, False),
-                  ('page table', 10, True)]
-    _direct_metadata = collections.ChainMap({'architecture': 'Intel32'},
-                                            interfaces.layers.TranslationLayerInterface._direct_metadata)
+    _structure = [('page directory', 10, False), ('page table', 10, True)]
+    _direct_metadata = collections.ChainMap({
+        'architecture': 'Intel32'
+    }, interfaces.layers.TranslationLayerInterface._direct_metadata)
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -81,8 +81,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     @staticmethod
     def _mask(value: int, high_bit: int, low_bit: int) -> int:
         """Returns the bits of a value between highbit and lowbit inclusive"""
-        high_mask = (2 ** (high_bit + 1)) - 1
-        low_mask = (2 ** low_bit) - 1
+        high_mask = (2**(high_bit + 1)) - 1
+        low_mask = (2**low_bit) - 1
         mask = (high_mask ^ low_mask)
         # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask
@@ -122,8 +122,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         for (name, size, large_page) in self._structure:
             # Check we're valid
             if not self._page_is_valid(entry):
-                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                              "Page Fault at entry " + hex(entry) + " in table " + name)
+                raise exceptions.PagedInvalidAddressException(
+                    self.name, offset, position + 1, entry, "Page Fault at entry " + hex(entry) + " in table " + name)
             # Check if we're a large page
             if large_page and (entry & (1 << 7)):
                 # We're a large page, the rest is finished below
@@ -141,12 +141,12 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
             # If the table is entirely duplicates, then mark the whole table as bad
             if (table == table[:struct.calcsize(self._entry_format)] *
-                    (self.page_size // struct.calcsize(self._entry_format))):
-                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                              "Page Fault at entry " + hex(entry) + " in table " + name)
+                (self.page_size // struct.calcsize(self._entry_format))):
+                raise exceptions.PagedInvalidAddressException(
+                    self.name, offset, position + 1, entry, "Page Fault at entry " + hex(entry) + " in table " + name)
             # Read the data for the next entry
-            entry_data = table[(index << self._index_shift):
-                               (index << self._index_shift) + struct.calcsize(self._entry_format)]
+            entry_data = table[(
+                index << self._index_shift):(index << self._index_shift) + struct.calcsize(self._entry_format)]
 
             # Read out the new entry from memory
             entry, = struct.unpack(self._entry_format, entry_data)
@@ -157,15 +157,14 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         """Returns whether the address offset can be translated to a valid address"""
         try:
             # TODO: Consider reimplementing this, since calls to mapping can call is_valid
-            return all([self._context.memory[layer].is_valid(mapped_offset) for _, mapped_offset, _, layer in
-                        self.mapping(offset, length)])
+            return all([
+                self._context.memory[layer].is_valid(mapped_offset)
+                for _, mapped_offset, _, layer in self.mapping(offset, length)
+            ])
         except exceptions.InvalidAddressException:
             return False
 
-    def mapping(self,
-                offset: int,
-                length: int,
-                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
+    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
         """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
 
            This allows translation layers to provide maps of contiguous regions in one layer
@@ -174,8 +173,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             try:
                 mapped_offset, _, layer_name = self._translate(offset)
                 if not self._context.memory[layer_name].is_valid(mapped_offset):
-                    raise exceptions.InvalidAddressException(layer_name = layer_name,
-                                                             invalid_address = mapped_offset)
+                    raise exceptions.InvalidAddressException(layer_name = layer_name, invalid_address = mapped_offset)
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
                     raise
@@ -211,16 +209,13 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'memory_layer',
-                                                         optional = False),
-                requirements.LayerListRequirement(name = 'swap_layers',
-                                                  optional = True),
-                requirements.IntRequirement(name = 'page_map_offset',
-                                            optional = False),
-                requirements.IntRequirement(name = 'kernel_virtual_offset',
-                                            optional = True),
-                requirements.StringRequirement(name = 'kernel_banner',
-                                               optional = True)]
+        return [
+            requirements.TranslationLayerRequirement(name = 'memory_layer', optional = False),
+            requirements.LayerListRequirement(name = 'swap_layers', optional = True),
+            requirements.IntRequirement(name = 'page_map_offset', optional = False),
+            requirements.IntRequirement(name = 'kernel_virtual_offset', optional = True),
+            requirements.StringRequirement(name = 'kernel_banner', optional = True)
+        ]
 
 
 class IntelPAE(Intel):
@@ -231,9 +226,7 @@ class IntelPAE(Intel):
     _bits_per_register = 32
     _maxphyaddr = 40
     _maxvirtaddr = 32
-    _structure = [('page directory pointer', 2, False),
-                  ('page directory', 9, True),
-                  ('page table', 9, True)]
+    _structure = [('page directory pointer', 2, False), ('page directory', 9, True), ('page table', 9, True)]
 
 
 class Intel32e(Intel):
@@ -245,9 +238,7 @@ class Intel32e(Intel):
     _bits_per_register = 64
     _maxphyaddr = 52
     _maxvirtaddr = 48
-    _structure = [('page map layer 4', 9, False),
-                  ('page directory pointer', 9, True),
-                  ('page directory', 9, True),
+    _structure = [('page map layer 4', 9, False), ('page directory pointer', 9, True), ('page directory', 9, True),
                   ('page table', 9, True)]
 
 
@@ -276,25 +267,25 @@ class WindowsMixin(Intel):
             unknown_bit = bool(entry & (1 << 7))
             n = (entry >> 1) & 0xF
             vbit = bool(entry & 1)
-            if (not tbit and not pbit and not vbit and unknown_bit) and (
-                    (entry >> bit_offset) != 0):
+            if (not tbit and not pbit and not vbit and unknown_bit) and ((entry >> bit_offset) != 0):
                 swap_offset = entry >> bit_offset << excp.invalid_bits
 
                 if layer.config.get('swap_layers', False):
-                    swap_layer_name = layer.config.get(interfaces.configuration.path_join('swap_layers',
-                                                                                          'swap_layers' + str(n)),
-                                                       None)
+                    swap_layer_name = layer.config.get(
+                        interfaces.configuration.path_join('swap_layers', 'swap_layers' + str(n)), None)
                     if swap_layer_name:
                         return swap_offset, 1 << excp.invalid_bits, swap_layer_name
-                raise exceptions.SwappedInvalidAddressException(layer_name = excp.layer_name,
-                                                                invalid_address = excp.invalid_address,
-                                                                invalid_bits = excp.invalid_bits,
-                                                                entry = excp.entry,
-                                                                swap_offset = swap_offset)
+                raise exceptions.SwappedInvalidAddressException(
+                    layer_name = excp.layer_name,
+                    invalid_address = excp.invalid_address,
+                    invalid_bits = excp.invalid_bits,
+                    entry = excp.entry,
+                    swap_offset = swap_offset)
             raise
 
 
 ### These must be full separate classes so that JSON configs re-create them properly
+
 
 class WindowsIntel(WindowsMixin, Intel):
 

@@ -13,10 +13,11 @@ class Malfind(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
+        ]
 
     @classmethod
     def is_vad_empty(self, proc_layer, vad):
@@ -46,9 +47,7 @@ class Malfind(interfaces.plugins.PluginInterface):
         return True
 
     @classmethod
-    def list_injections(cls,
-                        context: interfaces.context.ContextInterface,
-                        symbol_table: str,
+    def list_injections(cls, context: interfaces.context.ContextInterface, symbol_table: str,
                         proc: interfaces.objects.ObjectInterface):
         """Generate memory regions for a process that may contain
         injected code.
@@ -61,18 +60,17 @@ class Malfind(interfaces.plugins.PluginInterface):
         proc_layer = context.memory[proc_layer_name]
 
         for vad in proc.get_vad_root().traverse():
-            protection_string = vad.get_protection(vadinfo.VadInfo.protect_values(context,
-                                                                                  proc_layer_name,
-                                                                                  symbol_table),
-                                                   vadinfo.winnt_protections)
+            protection_string = vad.get_protection(
+                vadinfo.VadInfo.protect_values(context, proc_layer_name, symbol_table), vadinfo.winnt_protections)
             write_exec = "EXECUTE" in protection_string and "WRITE" in protection_string
 
             # the write/exec check applies to everything
             if not write_exec:
                 continue
 
-            if (vad.get_private_memory() == 1 and vad.get_tag() == "VadS") or (
-                    vad.get_private_memory() == 0 and protection_string != "PAGE_EXECUTE_WRITECOPY"):
+            if (vad.get_private_memory() == 1
+                    and vad.get_tag() == "VadS") or (vad.get_private_memory() == 0
+                                                     and protection_string != "PAGE_EXECUTE_WRITECOPY"):
                 if cls.is_vad_empty(proc_layer, vad):
                     continue
 
@@ -96,34 +94,23 @@ class Malfind(interfaces.plugins.PluginInterface):
 
                 disasm = interfaces.renderers.Disassembly(data, vad.get_start(), architecture)
 
-                yield (0, (proc.UniqueProcessId,
-                           process_name,
-                           format_hints.Hex(vad.get_start()),
-                           format_hints.Hex(vad.get_end()),
-                           vad.get_tag(),
-                           vad.get_protection(vadinfo.VadInfo.protect_values(self.context,
-                                                                             proc.vol.layer_name,
-                                                                             self.config["nt_symbols"]),
-                                              vadinfo.winnt_protections),
-                           vad.get_commit_charge(),
-                           vad.get_private_memory(),
-                           format_hints.HexBytes(data),
-                           disasm))
+                yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.get_start()),
+                           format_hints.Hex(vad.get_end()), vad.get_tag(),
+                           vad.get_protection(
+                               vadinfo.VadInfo.protect_values(self.context, proc.vol.layer_name,
+                                                              self.config["nt_symbols"]), vadinfo.winnt_protections),
+                           vad.get_commit_charge(), vad.get_private_memory(), format_hints.HexBytes(data), disasm))
 
     def run(self):
         filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([("PID", int),
-                                   ("Process", str),
-                                   ("Start VPN", format_hints.Hex),
-                                   ("End VPN", format_hints.Hex),
-                                   ("Tag", str),
-                                   ("Protection", str),
-                                   ("CommitCharge", int),
-                                   ("PrivateMemory", int),
-                                   ("Hexdump", format_hints.HexBytes),
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("Start VPN", format_hints.Hex),
+                                   ("End VPN", format_hints.Hex), ("Tag", str), ("Protection", str),
+                                   ("CommitCharge", int), ("PrivateMemory", int), ("Hexdump", format_hints.HexBytes),
                                    ("Disasm", interfaces.renderers.Disassembly)],
-                                  self._generator(pslist.PsList.list_processes(context = self.context,
-                                                                               layer_name = self.config['primary'],
-                                                                               symbol_table = self.config['nt_symbols'],
-                                                                               filter_func = filter_func)))
+                                  self._generator(
+                                      pslist.PsList.list_processes(
+                                          context = self.context,
+                                          layer_name = self.config['primary'],
+                                          symbol_table = self.config['nt_symbols'],
+                                          filter_func = filter_func)))

@@ -57,9 +57,7 @@ class HierarchicalDict(collections.abc.Mapping):
 
     """
 
-    def __init__(self,
-                 initial_dict: Dict = None,
-                 separator: str = CONFIG_SEPARATOR) -> None:
+    def __init__(self, initial_dict: Dict = None, separator: str = CONFIG_SEPARATOR) -> None:
         if not (isinstance(separator, str) and len(separator) == 1):
             raise TypeError("Separator must be a one character string: {}".format(separator))
         self._separator = separator
@@ -71,8 +69,8 @@ class HierarchicalDict(collections.abc.Mapping):
             for k, v in initial_dict.items():
                 self[k] = v
         elif initial_dict is not None:
-            raise TypeError("Initial_dict must be a dictionary or JSON string containing a dictionary: {}".format(
-                initial_dict))
+            raise TypeError(
+                "Initial_dict must be a dictionary or JSON string containing a dictionary: {}".format(initial_dict))
 
     @property
     def separator(self) -> str:
@@ -306,9 +304,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._check_type(requirement, RequirementInterface)
         del self._requirements[requirement.name]
 
-    def unsatisfied_children(self,
-                             context: interfaces.context.ContextInterface,
-                             config_path: str) -> List[str]:
+    def unsatisfied_children(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Method that will validate all child requirements"""
         result = []
         for requirement in self.requirements.values():
@@ -320,9 +316,7 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
 
     # Validation routines
     @abstractmethod
-    def unsatisfied(self,
-                    context: interfaces.context.ContextInterface,
-                    config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
         """Method to validate the value stored at config_path for the configuration object against a context
 
            Returns a list containing its own name (or multiple unsatisfied requirement names) when invalid
@@ -347,10 +341,10 @@ class SimpleTypeRequirement(RequirementInterface):
 
         value = self.config_value(context, config_path, None)
         if not isinstance(value, self.instance_type):
-            vollog.log(constants.LOGLEVEL_V,
-                       "TypeError - {} requirements only accept {} type: {}".format(self.name,
-                                                                                    self.instance_type.__name__,
-                                                                                    value))
+            vollog.log(
+                constants.LOGLEVEL_V,
+                "TypeError - {} requirements only accept {} type: {}".format(self.name, self.instance_type.__name__,
+                                                                             value))
             return [config_path]
         return []
 
@@ -457,9 +451,7 @@ class ConstructableRequirementInterface(RequirementInterface):
 class ConfigurableRequirementInterface(RequirementInterface):
     """Simple Abstract class to provide build_required_config"""
 
-    def build_configuration(self,
-                            context: interfaces.context.ContextInterface,
-                            config_path: str,
+    def build_configuration(self, context: interfaces.context.ContextInterface, config_path: str,
                             value: Any) -> HierarchicalDict:
         """Proxies to a ConfigurableInterface if necessary"""
 
@@ -467,9 +459,7 @@ class ConfigurableRequirementInterface(RequirementInterface):
 class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """Class to allow objects to have requirements and read configuration data from the context config tree"""
 
-    def __init__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str) -> None:
+    def __init__(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Basic initializer that allows configurables to access their own config settings"""
         super().__init__()
         self._context = self._check_type(context, ContextInterface)
@@ -513,9 +503,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                 result[req.name] = value
             if isinstance(req, ConfigurableRequirementInterface):
                 if value is not None:
-                    result.splice(req.name, req.build_configuration(self.context,
-                                                                    self.config_path,
-                                                                    value))
+                    result.splice(req.name, req.build_configuration(self.context, self.config_path, value))
         return result
 
     @classmethod
@@ -548,8 +536,8 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         if args:
             vollog.debug("Non-keyword arguments to make_subconfig are ignored - this is a bug in the calling code")
 
-        random_config_dict = ''.join(
-            random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+        random_config_dict = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                     for _ in range(8))
         new_config_path = path_join(self.config_path, random_config_dict)
         # TODO: Check that the new_config_path is empty, although it's not critical if it's not since the values are merged in
 

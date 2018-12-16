@@ -5,12 +5,11 @@ from volatility.framework.symbols import generic
 
 
 class proc(generic.GenericIntelProcess):
+
     def get_task(self):
         return self.task.dereference().cast("task")
 
-    def add_process_layer(self,
-                          config_prefix: str = None,
-                          preferred_name: str = None) -> Optional[str]:
+    def add_process_layer(self, config_prefix: str = None, preferred_name: str = None) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
         Returns the name of the Layer or None.
         """
