@@ -124,7 +124,7 @@ class MacUtilities(object):
 
     @classmethod
     def _scan_generator(cls, context, layer_name, progress_callback):
-        darwin_signature = b"Darwin Kernel Version \d{1,3}\.\d{1,3}\.\d{1,3}: [^\x00]+\x00"
+        darwin_signature = rb"Darwin Kernel Version \d{1,3}\.\d{1,3}\.\d{1,3}: [^\x00]+\x00"
 
         for offset in context.memory[layer_name].scan(scanner = scanners.RegExScanner(darwin_signature),
                                                       context = context, progress_callback = progress_callback):

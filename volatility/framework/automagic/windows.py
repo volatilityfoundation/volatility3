@@ -296,7 +296,7 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
         base_layer = context.memory[layer_name]
         if isinstance(base_layer, intel.Intel):
             return None
-        if (base_layer.metadata.get('os', None) not in ['Windows', 'Unknown']):
+        if base_layer.metadata.get('os', None) not in ['Windows', 'Unknown']:
             return None
         layer = config_path = None
 

@@ -59,9 +59,9 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
                         (g3, g2, g1, g0, g5, g4, g7, g6, g8, g9, ga, gb, gc, gd, ge, gf, a) = \
                             self._RSDS_format.unpack(data[sig + 4:name_offset])
 
-                        GUID = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
+                        guid = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
                         if sig < self.chunk_size:
-                            yield (GUID, a, pdb_name, data_offset + sig)
+                            yield (guid, a, pdb_name, data_offset + sig)
             sig = data.find(b"RSDS", sig + 1)
 
 
@@ -145,6 +145,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             context: The context in which the `requirement` lives
             config_path: The path within the `context` for the `requirement`'s configuration variables
             requirement: The root of the requirement tree to search for :class:~`volatility.framework.interfaces.layers.TranslationLayerRequirement` objects to scan
+            progress_callback: Means of providing the user with feedback during long processes
 
         Returns:
             A list of (layer_name, scan_results)
@@ -179,15 +180,14 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
         Args:
             context: Context on which to operate
+            valid_kernels: A list of offsets where valid kernels have been found
         """
         join = interfaces.configuration.path_join
         for sub_config_path, requirement in self._symbol_requirements:
             # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
             # TODO: Consider whether a single found kernel can fulfill multiple requirements
-            suffix = ".json"
             if valid_kernels:
                 # TODO: Check that the symbols for this kernel will fulfill the requirement
-                kernel = None
                 for virtual_layer in valid_kernels:
                     _kvo, kernel = valid_kernels[virtual_layer]
                     filter_string = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
@@ -220,9 +220,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
         Args:
             context: Context on which to operate and provide the kernel virtual offset
+            valid_kernels: List of valid kernels and offsets
         """
         for virtual_layer in valid_kernels:
-            # Sit the virtual offset under the TranslationLayer it applies to
+            # Set the virtual offset under the TranslationLayer it applies to
             kvo_path = interfaces.configuration.path_join(context.memory[virtual_layer].config_path,
                                                           'kernel_virtual_offset')
             kvo, kernel = valid_kernels[virtual_layer]
@@ -253,7 +254,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 kvo = kernel['mz_offset'] + (1 << (vlayer.bits_per_register - 1))
             try:
                 kvp = vlayer.mapping(kvo, 0)
-                if (any([(p == kernel['mz_offset'] and l == physical_layer_name) for (_, p, _, l) in
+                if (any([(p == kernel['mz_offset'] and layer_name == physical_layer_name) for (_, p, _, layer_name) in
                          kvp])):
                     valid_kernels[virtual_layer_name] = (kvo, kernel)
                     # Sit the virtual offset under the TranslationLayer it applies to

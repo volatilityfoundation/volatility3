@@ -67,7 +67,7 @@ class ResourceAccessor(object):
                 temp_filename = os.path.join(constants.CACHE_PATH,
                                              "data_" + hashlib.sha512(bytes(url, 'latin-1')).hexdigest())
 
-                if not temp_filename in self._cached_files or not os.path.exists(temp_filename):
+                if temp_filename not in self._cached_files or not os.path.exists(temp_filename):
                     vollog.info("Caching file at: {}".format(temp_filename))
 
                     try:
@@ -154,7 +154,8 @@ class JarHandler(urllib.request.BaseHandler):
     http://developer.java.sun.com/developer/onlineTraining/protocolhandlers/
     """
 
-    def default_open(self, req):
+    @staticmethod
+    def default_open(req):
         """Handles the request if it's the jar scheme"""
         if req.type == 'jar':
             subscheme, remainder = req.full_url.split(":")[1], ":".join(req.full_url.split(":")[2:])

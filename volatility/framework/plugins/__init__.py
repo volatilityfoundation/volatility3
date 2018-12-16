@@ -25,9 +25,9 @@ def run_plugin(context: interfaces.context.ContextInterface,
         context: The volatility context to operate on
         automagics: A list of automagic modules to run to augment the context
         plugin: The plugin to run
-        plugin_config_path: The path within the context's config containing the plugin's configuration
-        write_config: Whether to record the configuration options after processing the automagic but before running
-        quiet: Whether or not to output progress information
+        base_config_path: The path within the context's config containing the plugin's configuration
+        progress_callback: Callback function to provide feedback for ongoing processes
+        file_consumer: Object to pass any generated files to
 
     Returns:
         The constructed plugin object

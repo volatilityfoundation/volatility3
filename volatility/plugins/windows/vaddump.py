@@ -62,7 +62,7 @@ class VadDump(interfaces_plugins.PluginInterface):
 
                     self.produce_file(filedata)
                     result_text = "Stored {}".format(filedata.preferred_filename)
-                except Exception:
+                except exceptions.InvalidAddressException:
                     result_text = "Unable to dump {0:#x} - {1:#x}".format(vad.get_start(), vad.get_end())
 
                 yield (0, (proc.UniqueProcessId,

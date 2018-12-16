@@ -50,7 +50,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 continue
 
             proc_layer_name = task.add_process_layer()
-            if proc_layer_name == None:
+            if not proc_layer_name:
                 continue
 
             proc_layer = self.context.memory[proc_layer_name]
@@ -79,7 +79,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield (0, (task.pid, task_name, hist.get_time_object(), hist.get_command()))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
@@ -91,17 +91,17 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             self._generator(plugin(self.context,
                                    self.config['primary'],
                                    self.config['vmlinux'],
-                                   filter = filter)))
+                                   filter = filt)))
 
     def generate_timeline(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
         for row in self._generator(plugin(self.context,
                                           self.config['primary'],
                                           self.config['vmlinux'],
-                                          filter = filter)):
+                                          filter = filt)):
             _depth, row_data = row
             description = "{} ({}): \"{}\"".format(row_data[0], row_data[1], row_data[3])
             yield (description, timeliner.TimeLinerType.CREATED, row_data[2])

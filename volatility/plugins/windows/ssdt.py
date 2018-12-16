@@ -69,10 +69,18 @@ class SSDT(plugins.PluginInterface):
         is_kernel_64 = symbols.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
         if is_kernel_64:
             array_subtype = "long"
-            find_address = lambda func: kvo + service_table_address + (func >> 4)
+
+            def kvo_calulator(func):
+                return kvo + service_table_address + (func >> 4)
+
+            find_address = kvo_calulator
         else:
             array_subtype = "unsigned long"
-            find_address = lambda func: func
+
+            def passthrough(func):
+                return func
+
+            find_address = passthrough
 
         functions = ntkrnlmp.object(type_name = "array", offset = kvo + service_table_address,
                                     subtype = ntkrnlmp.get_type(array_subtype),

@@ -168,7 +168,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         """Translates a single cell index to a cell memory offset and the suboffset within it"""
 
         # Ignore the volatile bit when determining maxaddr validity
-        if (offset & 0x7fffffff > self._maxaddr):
+        if offset & 0x7fffffff > self._maxaddr:
             raise RegistryInvalidIndex("Mapping request for value greater than maxaddr")
 
         volatile = self._mask(offset, 31, 31) >> 31
@@ -187,7 +187,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
 
         # TODO: Check the offset and offset + length are not outside the norms
-        if (length < 0):
+        if length < 0:
             raise ValueError("Mapping length of RegistryHive must be positive or zero")
 
         response = []

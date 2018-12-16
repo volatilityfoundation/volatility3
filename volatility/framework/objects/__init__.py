@@ -27,8 +27,7 @@ def convert_data_to_value(data: bytes,
         float_vals = "zzezfzzzd"
         if data_format.length > len(float_vals) or float_vals[data_format.length] not in "efd":
             raise TypeError("Invalid float size")
-        struct_format = ("<" if data_format.byteorder == 'little' else ">") + \
-                        float_vals[data_format.length]
+        struct_format = ("<" if data_format.byteorder == 'little' else ">") + float_vals[data_format.length]
     elif struct_type in [bytes, str]:
         struct_format = str(data_format.length) + "s"
     else:
@@ -55,8 +54,7 @@ def convert_value_to_data(value: Union[int, float, bytes, str, bool],
         float_vals = "zzezfzzzd"
         if data_format.length > len(float_vals) or float_vals[data_format.length] not in "efd":
             raise TypeError("Invalid float size")
-        struct_format = ("<" if data_format.byteorder == 'little' else ">") + \
-                        float_vals[data_format.length]
+        struct_format = ("<" if data_format.byteorder == 'little' else ">") + float_vals[data_format.length]
     elif struct_type in [bytes, str]:
         struct_format = str(data_format.length) + "s"
     else:

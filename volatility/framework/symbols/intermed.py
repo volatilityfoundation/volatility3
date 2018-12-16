@@ -253,11 +253,11 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
     # TODO: Check the format and make use of the other metadata
 
     def _validate_json(self) -> None:
-        if (not 'user_types' in self._json_object or
-                not 'base_types' in self._json_object or
-                not 'metadata' in self._json_object or
-                not 'symbols' in self._json_object or
-                not 'enums' in self._json_object):
+        if ('user_types' not in self._json_object or
+                'base_types' not in self._json_object or
+                'metadata' not in self._json_object or
+                'symbols' not in self._json_object or
+                'enums' not in self._json_object):
             raise exceptions.SymbolSpaceError("Malformed JSON file provided")
 
     def metadata(self) -> Optional[interfaces.symbols.MetadataInterface]:
@@ -334,7 +334,8 @@ class Version1Format(ISFormatTable):
             elif type_name == 'enum':
                 update = self._lookup_enum(dictionary['name'])
             elif type_name == 'bitfield':
-                update = {'start_bit': dictionary['bit_position'], 'end_bit': dictionary['bit_length']}
+                update = {'start_bit': dictionary['bit_position'],
+                          'end_bit': dictionary['bit_length']}
                 update['base_type'] = self._interdict_to_template(dictionary['type'])
             # We do *not* call native_template.clone(), since it slows everything down a lot
             # We require that the native.get_type method always returns a newly constructed python object

@@ -220,7 +220,11 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
 
         Args:
             name: Name of the configuration requirement
-            layer_name: String detailing the expected name of the required layer, this can be None if it is to be randomly generated
+            description: Description of the configuration requirement
+            default: A default value (should not be used for TranslationLayers)
+            optional: Whether the translation layer is required or not
+            oses: A list of valid operating systems which can satisfy this requirement
+            architectures: A list of valid architectures which can satisfy this requirement
         """
         if oses is None:
             oses = []

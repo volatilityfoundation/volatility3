@@ -2,6 +2,7 @@ import enum
 import logging
 from typing import Optional, Tuple, List, Generator
 
+import volatility.plugins.windows.handles as handles
 from volatility.framework import constants, interfaces, renderers, validity, exceptions, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins, configuration
@@ -9,7 +10,6 @@ from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
-import volatility.plugins.windows.handles as handles
 
 vollog = logging.getLogger(__name__)
 

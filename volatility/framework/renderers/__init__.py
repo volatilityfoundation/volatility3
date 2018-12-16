@@ -249,7 +249,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         newpath = parent_path + str(position)
         tree_item = TreeNode(newpath, self, parent, values)
         for node, _ in children[position:]:
-            self.visit(node, lambda child, _: child.path_changed(newpath, True))
+            self.visit(node, lambda child, _: child.path_changed(newpath, True), None)
         children.insert(position, (tree_item, []))
         return tree_item
 
@@ -259,7 +259,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
     def max_depth(self):
         """Returns the maximum depth of the tree"""
-        return self.visit(None, lambda n, a: max(a, self.path_depth(n)), )
+        return self.visit(None, lambda n, a: max(a, self.path_depth(n)), 0)
 
     _T = TypeVar("_T")
 

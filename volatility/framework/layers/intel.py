@@ -207,7 +207,6 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     @property
     def dependencies(self) -> List[str]:
         """Returns a list of the lower layer names that this layer is dependent upon"""
-        # TODO: Add in the whole buffalo
         return [self._base_layer] + self._swap_layers
 
     @classmethod

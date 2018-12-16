@@ -73,8 +73,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         Args:
             context: Context on which to operate
             config_path: Configuration path under which to store stacking data
-            location: File URL for the underlying physical layer
-            requirements: List of requirements, each of which has the stack built on the first suitable (sub-)requirement
+            requirement: Requirement that should have layers stacked on it
             progress_callback: Function to provide callback progress
         """
         # If we're cached, find Now we need to find where to apply the stack configuration

@@ -47,9 +47,15 @@ class Timeliner(interfaces.plugins.PluginInterface):
         plugin_list = list(framework.class_subclasses(TimeLinerInterface))
 
         # Get the filter from the configuration
-        filter_func = lambda _n, _s: True
+        def passthrough(_n, _s):
+            return True
+
+        filter_func = passthrough
         if selected_list:
-            filter_func = lambda name, selected: any([s in name for s in selected])
+            def filter_plugins(name, selected):
+                return any([s in name for s in selected])
+
+            filter_func = filter_plugins
 
         return [plugin_class for plugin_class in plugin_list if filter_func(plugin_class.__name__, selected_list)]
 
@@ -99,7 +105,6 @@ class Timeliner(interfaces.plugins.PluginInterface):
         # Use all the plugins if there's no filter
         self.usable_plugins = self.usable_plugins or self.get_usable_plugins()
         self.automagics = self.automagics or automagic.available(self._context)
-        sep = configuration.CONFIG_SEPARATOR
         runable_plugins = []
 
         # Identify plugins that we can run which output datetimes
@@ -114,7 +119,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
                                             self._progress_callback,
                                             self._file_consumer)
 
-                runable_plugins.append(plugin)
+                if isinstance(plugin, TimeLinerInterface):
+                    runable_plugins.append(plugin)
             except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue
                 vollog.debug("Unable to satisfy {}: {}".format(plugin_class.__name__, excp.unsatisfied))

@@ -76,9 +76,15 @@ class VadInfo(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        filter_func = lambda _: False
+        def passthrough(_):
+            return False
+
+        filter_func = passthrough
         if self.config.get('address', None) is not None:
-            filter_func = lambda x: x.get_start() not in [self.config['address']]
+            def filter_function(x):
+                return x.get_start() not in [self.config['address']]
+
+            filter_func = filter_function
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)

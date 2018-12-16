@@ -9,6 +9,7 @@ from volatility.framework.objects import utility
 
 vollog = logging.getLogger(__name__)
 
+
 class PsList(interfaces_plugins.PluginInterface):
     """Lists the processes present in a particular mac memory image"""
 
@@ -35,7 +36,7 @@ class PsList(interfaces_plugins.PluginInterface):
                                     self.config['primary'],
                                     self.config['darwin'],
                                     filter = self.create_filter([self.config.get('pid', None)])):
-            pid  = task.p_pid
+            pid = task.p_pid
             ppid = task.p_ppid
             name = utility.array_to_string(task.p_comm)
             yield (0, (pid, ppid, name))
@@ -51,7 +52,7 @@ class PsList(interfaces_plugins.PluginInterface):
         """Lists all the tasks in the primary layer"""
 
         aslr_shift = mac.MacUtilities.find_aslr(context, mac_symbols, layer_name)
-        darwin  = context.module(mac_symbols, layer_name, aslr_shift)
+        darwin = context.module(mac_symbols, layer_name, aslr_shift)
         proc = darwin.object(symbol_name = "allproc").lh_first
 
         seen = {}
@@ -61,7 +62,7 @@ class PsList(interfaces_plugins.PluginInterface):
                 break
             else:
                 seen[proc.vol.offset] = 1
-           
+
             yield proc
 
             proc = proc.p_list.le_next.dereference()

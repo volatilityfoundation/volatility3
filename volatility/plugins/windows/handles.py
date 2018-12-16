@@ -204,7 +204,7 @@ class Handles(interfaces_plugins.PluginInterface):
                                 subtype = subtype, count = int(count))
 
         layer_object = self.context.memory[virtual]
-        masked_offset = layer_object._mask(offset, 0, layer_object._maxvirtaddr)
+        masked_offset = (offset & layer_object.maximum_address)
 
         for entry in table:
 
@@ -251,8 +251,8 @@ class Handles(interfaces_plugins.PluginInterface):
                                      layer_name = self.config["primary"],
                                      symbol_table = self.config["nt_symbols"])
         cookie = self.find_cookie(context = self.context,
-                                     layer_name = self.config["primary"],
-                                     symbol_table = self.config["nt_symbols"])
+                                  layer_name = self.config["primary"],
+                                  symbol_table = self.config["nt_symbols"])
 
         for proc in procs:
 

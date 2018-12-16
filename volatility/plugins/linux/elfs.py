@@ -26,7 +26,7 @@ class Elfs(plugins.PluginInterface):
     def _generator(self, tasks):
         for task in tasks:
             proc_layer_name = task.add_process_layer()
-            if proc_layer_name == None:
+            if not proc_layer_name:
                 continue
 
             proc_layer = self.context.memory[proc_layer_name]
@@ -50,7 +50,7 @@ class Elfs(plugins.PluginInterface):
                      ))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
@@ -63,4 +63,4 @@ class Elfs(plugins.PluginInterface):
             self._generator(plugin(self.context,
                                    self.config['primary'],
                                    self.config['vmlinux'],
-                                   filter = filter)))
+                                   filter = filt)))

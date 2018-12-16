@@ -40,6 +40,8 @@ class Info(plugins.PluginInterface):
 
         virtual_layer_name = self.config["primary"]
         virtual_layer = self.context.memory[virtual_layer_name]
+        if not isinstance(virtual_layer, layers.intel.Intel):
+            raise TypeError("Virtual Layer is not an intel layer")
 
         native_types = self.context.symbol_space[self.config["nt_symbols"]].natives
 

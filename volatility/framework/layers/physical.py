@@ -37,7 +37,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
         """Reads the data from the buffer"""
         if not self.is_valid(address, length):
             invalid_address = address
-            if self.minimum_address < address and address <= self.maximum_address:
+            if self.minimum_address < address <= self.maximum_address:
                 invalid_address = self.maximum_address + 1
             raise exceptions.InvalidAddressException(self.name, invalid_address,
                                                      "Offset outside of the buffer boundaries")
@@ -115,7 +115,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Reads from the file at offset for length"""
         if not self.is_valid(offset, length):
             invalid_address = offset
-            if self.minimum_address < offset and offset <= self.maximum_address:
+            if self.minimum_address < offset <= self.maximum_address:
                 invalid_address = self.maximum_address + 1
             raise exceptions.InvalidAddressException(self.name, invalid_address,
                                                      "Offset outside of the buffer boundaries")
@@ -137,7 +137,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """
         if not self.is_valid(offset, len(data)):
             invalid_address = offset
-            if self.minimum_address < offset and offset <= self.maximum_address:
+            if self.minimum_address < offset <= self.maximum_address:
                 invalid_address = self.maximum_address + 1
             raise exceptions.InvalidAddressException(self.name, invalid_address,
                                                      "Data segment outside of the " + self.name + " file boundaries")

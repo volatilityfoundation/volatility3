@@ -2,7 +2,7 @@ import datetime
 from typing import Callable, Iterable, List
 
 import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import renderers, interfaces
+from volatility.framework import renderers, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins import timeliner
@@ -84,6 +84,8 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
             else:
                 layer_name = self.config['primary']
                 memory = self.context.memory[layer_name]
+                if not isinstance(memory, layers.intel.Intel):
+                    raise TypeError("Primary layer is not an intel layer")
                 (_, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
             yield (0, (proc.UniqueProcessId,

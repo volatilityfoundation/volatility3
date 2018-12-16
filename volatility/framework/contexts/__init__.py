@@ -146,12 +146,11 @@ class Module(interfaces.context.ModuleInterface):
                **kwargs) -> interfaces.objects.ObjectInterface:
         """Returns an object created using the symbol_table_name and layer_name of the Module
 
-        @param symbol_name: Name of the symbol (within the module) to construct, type_name and offset must not be specified
-        @type symbol_name: str
-        @param type_name: Name of the type (within the module) to construct, offset must be specified and symbol_name must not
-        @type type_name: str
-        @param offset: The location (absolute within memory), type_name must be specified and symbol_name must not
-        @type offset: int
+        Args:
+            symbol_name: Name of the symbol (within the module) to construct, type_name and offset must not be specified
+            type_name: Name of the type (within the module) to construct, offset must be specified and symbol_name must not
+            offset: The location (absolute within memory), type_name must be specified and symbol_name must not
+            native_layer_name: Name of the layer in which constructed objects are made (for pointers)
         """
         type_arg = None  # type: Optional[Union[str, interfaces.objects.Template]]
         if symbol_name is not None:

@@ -6,7 +6,7 @@ import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import objects, renderers, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.registry import RegistryHive
-from volatility.framework.renderers import TreeGrid, conversion
+from volatility.framework.renderers import TreeGrid, conversion, format_hints
 from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
 
 vollog = logging.getLogger(__name__)
@@ -97,8 +97,8 @@ class PrintKey(plugins.PluginInterface):
             reg_config_path = self.make_subconfig(hive_offset = hive_offset,
                                                   base_layer = self.config['primary'],
                                                   nt_symbols = self.config['nt_symbols'])
+            hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset))
             try:
-                hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset))
                 self.context.memory.add_layer(hive)
 
                 # Walk it
@@ -116,7 +116,7 @@ class PrintKey(plugins.PluginInterface):
                     vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
                 result = (0,
                           (renderers.UnreadableValue(),
-                           renderers.format_hints.Hex(hive.hive_offset),
+                           format_hints.Hex(hive.hive_offset),
                            "Key",
                            self.config.get('key', "ROOT"),
                            renderers.UnreadableValue(),
@@ -127,7 +127,7 @@ class PrintKey(plugins.PluginInterface):
     def run(self):
 
         return TreeGrid(columns = [('Last Write Time', datetime.datetime),
-                                   ('Hive Offset', renderers.format_hints.Hex),
+                                   ('Hive Offset', format_hints.Hex),
                                    ('Type', str),
                                    ('Key', str),
                                    ('Name', str),

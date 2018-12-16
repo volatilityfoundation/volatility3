@@ -20,13 +20,16 @@ class PsList(interfaces_plugins.PluginInterface):
 
     @classmethod
     def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
-        filter = lambda _: False
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
         if filter_list:
-            filter = lambda x: x not in filter_list
-        return filter
+            def filter_func(x):
+                return x not in filter_list
+
+            return filter_func
+        else:
+            return lambda _: False
 
     def _generator(self):
         for task in self.list_tasks(self.context,
@@ -54,7 +57,8 @@ class PsList(interfaces_plugins.PluginInterface):
         init_task = vmlinux.object(symbol_name = "init_task")
 
         for task in init_task.tasks:
-            yield task
+            if not filter(task):
+                yield task
 
     def run(self):
         return renderers.TreeGrid([("PID", int),

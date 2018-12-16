@@ -41,6 +41,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
         """Get File and Product version information from PE files
 
         Args:
+            context: volatility context on which to operate
             pe_table_name: name of the PE table
             layer_name: name of the layer containing the PE file
             base_address: base address of the PE (where MZ is found)
@@ -69,7 +70,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
 
         pe_data.close()
 
-        return (major, minor, product, build)
+        return major, minor, product, build
 
     def _generator(self,
                    procs: Generator[interfaces.objects.ObjectInterface, None, None],
@@ -80,7 +81,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
         Args:
             procs: <generator> of processes
             mods: <generator> of modules
-            moddump_plugin: <moddump.ModDump>
+            session_layers: <generator> of layers in the session to be checked
         """
 
         pe_table_name = PEIntermedSymbols.create(self.context,

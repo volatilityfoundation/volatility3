@@ -122,7 +122,7 @@ class LinuxUtilities(object):
         # either 1) smeared out of memory or 2) de-allocated and corresponding structures overwritten
         # we return an empty string in this case to avoid confusion with something like a handle to the root
         # directory (e.g., "/")
-        if ret_path == []:
+        if not ret_path:
             return ""
 
         ret_val = '/'.join([str(p) for p in ret_path if p != ""])
@@ -161,10 +161,10 @@ class LinuxUtilities(object):
 
         sym_addr = dentry.d_op.d_dname
 
-        symbols = list(dentry.context.symbol_space.get_symbols_by_location(sym_addr))
+        symbs = list(dentry.context.symbol_space.get_symbols_by_location(sym_addr))
 
-        if len(symbols) == 1:
-            sym = symbols[0].split(constants.BANG)[1]
+        if len(symbs) == 1:
+            sym = symbs[0].split(constants.BANG)[1]
 
             if sym == "sockfs_dname":
                 pre_name = "socket"
@@ -271,7 +271,7 @@ class LinuxUtilities(object):
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'
         init_task_json_address = context.symbol_space.get_symbol(init_task_symbol).address
-        swapper_signature = b"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
+        swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
         module = context.module(symbol_table, layer_name, 0)
 
         for offset in context.memory[layer_name].scan(scanner = scanners.RegExScanner(swapper_signature),
@@ -281,7 +281,7 @@ class LinuxUtilities(object):
             init_task = module.object(type_name = 'task_struct', offset = init_task_address)
             if init_task.pid != 0:
                 continue
-            elif (init_task.has_member('state') and init_task.state.cast('unsigned int') != 0):
+            elif init_task.has_member('state') and init_task.state.cast('unsigned int') != 0:
                 continue
 
             # This we get for free

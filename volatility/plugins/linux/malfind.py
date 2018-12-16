@@ -27,7 +27,7 @@ class Malfind(interfaces_plugins.PluginInterface):
         """
 
         proc_layer_name = task.add_process_layer()
-        if proc_layer_name == None:
+        if not proc_layer_name:
             return
 
         proc_layer = self.context.memory[proc_layer_name]
@@ -64,7 +64,7 @@ class Malfind(interfaces_plugins.PluginInterface):
                            disasm))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
@@ -78,4 +78,4 @@ class Malfind(interfaces_plugins.PluginInterface):
                                   self._generator(plugin(self.context,
                                                          self.config['primary'],
                                                          self.config['vmlinux'],
-                                                         filter = filter)))
+                                                         filter = filt)))
