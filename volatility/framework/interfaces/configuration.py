@@ -464,6 +464,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         super().__init__()
         self._context = self._check_type(context, ContextInterface)
         self._config_path = self._check_type(config_path, str)
+        self._config_cache = None
 
     @property
     def context(self) -> 'interfaces.context.ContextInterface':
@@ -476,11 +477,14 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     @config_path.setter
     def config_path(self, value: str) -> None:
         self._config_path = self._check_type(value, str)
+        self._config_cache = None
 
     @property
     def config(self) -> HierarchicalDict:
         """The Hierarchical configuration Dictionary for this Configurable object"""
-        return self._context.config.branch(self._config_path)
+        if self._config_cache is None:
+            self._config_cache = self._context.config.branch(self._config_path)
+        return self._config_cache
 
     def build_configuration(self) -> HierarchicalDict:
         """Constructs a HierarchicalDictionary of all the options required to build this component in the current context.
