@@ -62,6 +62,42 @@ class PoolScanner(plugins.PluginInterface):
             requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
         ]
 
+    @staticmethod
+    def is_windows_10(context: interfaces.context.ContextInterface,
+                      symbol_table: str) -> bool:
+        """Determine if the analyzed sample is Windows 10"""
+
+        try:
+            _symbol = context.symbol_space.get_symbol(symbol_table + constants.BANG + "ObHeaderCookie")
+            return True
+        except exceptions.SymbolError:
+            return False
+
+    @staticmethod
+    def is_windows_8_or_later(context: interfaces.context.ContextInterface,
+                              layer_name: str,
+                              symbol_table: str) -> bool:
+        """Determine if the analyzed sample is Windows 8 or later"""
+
+        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
+        handle_table_type = ntkrnlmp.get_type("_HANDLE_TABLE")
+        return not handle_table_type.has_member("HandleCount")
+
+    @staticmethod
+    def is_windows_7(context: interfaces.context.ContextInterface,
+                    layer_name: str,
+                    symbol_table: str) -> bool:
+        """Determine if the analyzed sample is Windows 7"""
+
+        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
+        handle_table_type = ntkrnlmp.get_type("_OBJECT_HEADER")
+        return (
+                handle_table_type.has_member("TypeIndex") and not
+                PoolScanner.is_windows_8_or_later(context, layer_name, symbol_table)
+        )
+
     def _generator(self):
         constraints = [
             # atom tables
@@ -107,16 +143,17 @@ class PoolScanner(plugins.PluginInterface):
         cookie = handles.Handles.find_cookie(
             context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
 
-        # FIXME: replace these lambdas with real functions
-        is_windows_10 = lambda: False
-        is_windows_8_or_later = lambda: False
+        is_windows_10 = self.is_windows_10(context = self._context,
+                                           symbol_table = self.config["nt_symbols"])
+        is_windows_8_or_later = self.is_windows_8_or_later(context = self._context,
+                                                           layer_name = self.config["primary"],
+                                                           symbol_table = self.config["nt_symbols"])
 
-        # FIXME: scanning the primary layer seems very slow (10min on 512mb grrcon)
         # start off with the primary virtual layer
         scan_layer = self.config['primary']
 
         # switch to a non-virtual layer if necessary
-        if not is_windows_10():
+        if not is_windows_10:
             scan_layer = self.context.memory[scan_layer].config['memory_layer']
 
         for constraint, header in self.pool_scan(
@@ -125,7 +162,7 @@ class PoolScanner(plugins.PluginInterface):
             mem_object = header.get_object(
                 type_name = constraint.type_name,
                 type_map = type_map,
-                use_top_down = is_windows_8_or_later(),
+                use_top_down = is_windows_8_or_later,
                 object_type = constraint.object_type,
                 native_layer_name = 'primary',
                 cookie = cookie)
@@ -174,8 +211,7 @@ class PoolScanner(plugins.PluginInterface):
             # We have to manually load a symbol table
 
             if symbols.symbol_table_is_64bit(context, symbol_table):
-                # FIXME: Do proper test for is_win_7
-                is_win_7 = False
+                is_win_7 = PoolScanner.is_windows_7(context, 'primary', symbol_table)
                 if is_win_7:
                     pool_header_json_filename = "poolheader-x64-win7"
                 else:
