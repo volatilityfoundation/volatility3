@@ -144,7 +144,7 @@ class Handles(interfaces_plugins.PluginInterface):
         ptrs = ntkrnlmp.object(
             type_name = "array", offset = kvo + table_addr, subtype = ntkrnlmp.get_type("pointer"), count = 100)
 
-        for i, ptr in enumerate(ptrs):
+        for i, ptr in enumerate(ptrs):  #type: ignore
             # the first entry in the table is always null. break the
             # loop when we encounter the first null entry after that
             if i > 0 and ptr == 0:

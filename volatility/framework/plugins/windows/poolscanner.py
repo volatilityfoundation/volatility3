@@ -1,6 +1,6 @@
 import enum
 import logging
-from typing import Optional, Tuple, List, Generator
+from typing import Dict, Generator, List, Optional, Tuple
 
 import volatility.plugins.windows.handles as handles
 

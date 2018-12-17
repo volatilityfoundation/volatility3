@@ -7,7 +7,7 @@ They are called and carry out some algorithms on data stored in layers using obj
 import io
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, List
+from typing import List, Optional, TYPE_CHECKING
 
 from volatility.framework import exceptions
 from volatility.framework import validity

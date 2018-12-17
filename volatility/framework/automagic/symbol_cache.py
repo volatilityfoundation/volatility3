@@ -4,7 +4,7 @@ import pickle
 import urllib
 import urllib.parse
 import urllib.request
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.symbols import intermed
@@ -21,12 +21,14 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
     # The user would run it eventually either way, but running it first means it can be used that run
     priority = 0
 
-    os = None
-    symbol_name = "banner_name"
-    banner_path = None
+    os: Optional[str] = None
+    symbol_name: str = "banner_name"
+    banner_path: Optional[str] = None
 
     @classmethod
     def load_banners(cls) -> BannersType:
+        if not cls.banner_path:
+            raise ValueError("Banner_path not appropriately set")
         banners = {}  # type: BannersType
         if os.path.exists(cls.banner_path):
             with open(cls.banner_path, "rb") as f:

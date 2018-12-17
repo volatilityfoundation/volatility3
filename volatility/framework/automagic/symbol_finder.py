@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable, List, Tuple
+from typing import Any, Iterable, List, Tuple, Dict, Type, Optional
 
 from volatility.framework import interfaces, validity
 from volatility.framework.automagic import symbol_cache
@@ -13,13 +13,13 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
     """Symbol loader based on signature strings"""
     priority = 40
 
-    banner_config_key = "banner"
-    banner_cache = None
-    symbol_class = None
+    banner_config_key: str = "banner"
+    banner_cache: Optional[Type[symbol_cache.SymbolBannerCache]] = None
+    symbol_class: Optional[str] = None
 
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         super().__init__(context, config_path)
-        self._requirements = []  # type: List[Tuple[str, interfaces.configuration.ConstructableRequirementInterface]]
+        self._requirements = []  # type: List[Tuple[str, interfaces.configuration.RequirementInterface]]
         self._banners = {}  # type: symbol_cache.BannersType
 
     @property

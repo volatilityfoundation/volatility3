@@ -1,6 +1,6 @@
 import io
 import logging
-from typing import Generator, List, Tuple
+from typing import Generator, List, Tuple, Union
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.moddump as moddump

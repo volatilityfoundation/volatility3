@@ -16,7 +16,7 @@ import random
 import string
 import sys
 from abc import ABCMeta, abstractmethod
-from typing import Any, Dict, Generator, List, Optional, Type, Union
+from typing import Any, ClassVar, Dict, Generator, List, Optional, Type, Union
 
 from volatility.framework import constants, interfaces, validity
 from volatility.framework.interfaces.context import ContextInterface

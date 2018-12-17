@@ -75,7 +75,12 @@ class ContextInterface(object, metaclass = ABCMeta):
            Memory constraints may become an issue for this function depending on how much is actually stored in the context"""
         return copy.deepcopy(self)
 
-    def module(self, module_name: str, layer_name: str, offset: int, size: Optional[int] = None) -> 'ModuleInterface':
+    def module(self,
+               module_name: str,
+               layer_name: str,
+               offset: int,
+               native_layer_name: Optional[str] = None,
+               size: Optional[int] = None) -> 'ModuleInterface':
         """Create a module object """
 
 

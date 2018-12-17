@@ -5,7 +5,7 @@ import collections
 import collections.abc
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import Any, List, Mapping
+from typing import Any, Dict, List, Mapping, Optional
 
 from volatility.framework import constants, validity, interfaces
 from volatility.framework.interfaces import context as interfaces_context
@@ -53,7 +53,12 @@ class ObjectInformation(ReadOnlyMapping):
     in a single place.  These values are based on the :class:`ReadOnlyMapping` class, to prevent their modification.
     """
 
-    def __init__(self, layer_name, offset, member_name = None, parent = None, native_layer_name = None):
+    def __init__(self,
+                 layer_name: str,
+                 offset: int,
+                 member_name: Optional[str] = None,
+                 parent: Optional['ObjectInterface'] = None,
+                 native_layer_name: Optional[str] = None):
         self._check_type(offset, int)
         if parent:
             self._check_type(parent, ObjectInterface)

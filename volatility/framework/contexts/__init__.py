@@ -103,14 +103,12 @@ class Context(interfaces.context.ContextInterface):
             object_info = interfaces.objects.ObjectInformation(
                 layer_name = layer_name, offset = offset, native_layer_name = native_layer_name))
 
-    @functools.lru_cache()
-    def module(
-            self,  # type: ignore # FIXME: mypy #5107
-            module_name: str,
-            layer_name: str,
-            offset: int,
-            native_layer_name: Optional[str] = None,
-            size: Optional[int] = None) -> interfaces.context.ModuleInterface:
+    def module(self,
+               module_name: str,
+               layer_name: str,
+               offset: int,
+               native_layer_name: Optional[str] = None,
+               size: Optional[int] = None) -> interfaces.context.ModuleInterface:
         """Creates a module object"""
         if size:
             return SizedModule(

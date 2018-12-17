@@ -1,4 +1,6 @@
-from volatility.framework import objects
+from typing import Dict, Set
+
+from volatility.framework import objects, interfaces
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
 
@@ -8,9 +10,9 @@ class PsTree(pslist.PsList):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._processes = {}
-        self._levels = {}
-        self._children = {}
+        self._processes = {}  # type: Dict[int, interfaces.objects.ObjectInterface]
+        self._levels = {}  # type: Dict[int, int]
+        self._children = {}  # type: Dict[int, Set[int]]
 
     def find_level(self, pid: objects.Pointer) -> None:
         """Finds how deep the pid is in the processes list"""

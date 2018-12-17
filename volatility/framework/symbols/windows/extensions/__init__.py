@@ -2,7 +2,7 @@ import collections.abc
 import datetime
 import functools
 import logging
-from typing import Iterable, Iterator, Optional, Union
+from typing import Iterable, Iterator, Optional, Union, Dict
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
@@ -103,6 +103,7 @@ class _POOL_HEADER(objects.Struct):
                         return None
                 except (TypeError, exceptions.InvalidAddressException):
                     return None
+        return None
 
 
 class _KSYSTEM_TIME(objects.Struct):
@@ -456,7 +457,7 @@ class _OBJECT_HEADER(objects.Struct):
 
         return True
 
-    def get_object_type(self, type_map: dict, cookie: int = None) -> str:
+    def get_object_type(self, type_map: Dict[int, str], cookie: int = None) -> Optional[str]:
         """Across all Windows versions, the _OBJECT_HEADER embeds details on the type of
         object (i.e. process, file) but the way its embedded differs between versions.
         This API abstracts away those details."""

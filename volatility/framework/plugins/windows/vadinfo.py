@@ -73,13 +73,13 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        def passthrough(_):
+        def passthrough(_: 'interfaces.objects.ObjectInterface') -> bool:
             return False
 
         filter_func = passthrough
         if self.config.get('address', None) is not None:
 
-            def filter_function(x):
+            def filter_function(x: 'interfaces.objects.ObjectInterface') -> bool:
                 return x.get_start() not in [self.config['address']]
 
             filter_func = filter_function

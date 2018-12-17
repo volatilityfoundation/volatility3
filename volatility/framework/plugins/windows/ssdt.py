@@ -23,7 +23,7 @@ class SSDT(plugins.PluginInterface):
             requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
         ]
 
-    def _generator(self, mods: Iterator[Any]) -> Iterator[Tuple[int, Tuple[int, int, str, str]]]:
+    def _generator(self, mods: Iterator[Any]) -> Iterator[Tuple[int, Tuple[int, int, Any, Any]]]:
 
         layer_name = self.config['primary']
         context_modules = []
@@ -67,14 +67,14 @@ class SSDT(plugins.PluginInterface):
         if is_kernel_64:
             array_subtype = "long"
 
-            def kvo_calulator(func):
+            def kvo_calulator(func: int) -> int:
                 return kvo + service_table_address + (func >> 4)
 
             find_address = kvo_calulator
         else:
             array_subtype = "unsigned long"
 
-            def passthrough(func):
+            def passthrough(func: int) -> int:
                 return func
 
             find_address = passthrough

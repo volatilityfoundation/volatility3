@@ -14,7 +14,7 @@ import json
 import logging
 import os
 import sys
-from typing import Union, Type, Dict
+from typing import Any, Dict, Type, Union
 from urllib import parse, request
 
 import volatility.plugins

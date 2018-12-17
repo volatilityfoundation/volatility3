@@ -3,7 +3,7 @@ import datetime
 import json
 import logging
 import os
-from typing import List
+from typing import Any, List, Tuple
 
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements

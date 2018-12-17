@@ -2,7 +2,7 @@ import collections
 import logging
 import struct
 from collections import abc
-from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union, overload
+from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
 
 from volatility.framework import interfaces
 from volatility.framework.interfaces.objects import ObjectInformation
@@ -13,8 +13,8 @@ vollog = logging.getLogger(__name__)
 DataFormatInfo = collections.namedtuple('DataFormatInfo', ['length', 'byteorder', 'signed'])
 
 
-def convert_data_to_value(data: bytes, struct_type: Type[Union[int, float, bytes, str, bool]],
-                          data_format: DataFormatInfo) -> Union[int, float, bytes, str, bool]:
+def convert_data_to_value(data: bytes, struct_type: Type[TUnion[int, float, bytes, str, bool]],
+                          data_format: DataFormatInfo) -> TUnion[int, float, bytes, str, bool]:
     """Converts a series of bytes to a particular type of value"""
     if struct_type == int:
         return int.from_bytes(data, byteorder = data_format.byteorder, signed = data_format.signed)
@@ -33,8 +33,8 @@ def convert_data_to_value(data: bytes, struct_type: Type[Union[int, float, bytes
     return struct.unpack(struct_format, data)[0]
 
 
-def convert_value_to_data(value: Union[int, float, bytes, str, bool],
-                          struct_type: Type[Union[int, float, bytes, str, bool]],
+def convert_value_to_data(value: TUnion[int, float, bytes, str, bool],
+                          struct_type: Type[TUnion[int, float, bytes, str, bool]],
                           data_format: DataFormatInfo) -> bytes:
     """Converts a particular value to a series of bytes"""
     if not isinstance(value, struct_type):
@@ -87,12 +87,12 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             context = context, type_name = type_name, object_info = object_info, data_format = data_format)
         self._data_format = data_format
 
-    def __new__(cls: 'PrimitiveObject',
+    def __new__(cls: Type,
                 context: interfaces.context.ContextInterface,
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
                 data_format: DataFormatInfo,
-                new_value: Union[int, float, bool, bytes, str] = None,
+                new_value: TUnion[int, float, bool, bytes, str] = None,
                 **kwargs) -> 'PrimitiveObject':
         """Creates the appropriate class and returns it so that the native type is inherited
 
@@ -122,7 +122,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
-                    object_info: ObjectInformation) -> Union[int, float, bool, bytes, str]:
+                    object_info: ObjectInformation) -> TUnion[int, float, bool, bytes, str]:
         data = context.memory.read(object_info.layer_name, object_info.offset, data_format.length)
         return convert_data_to_value(data, cls._struct_type, data_format)
 
@@ -133,7 +133,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             """Returns the size of the templated object"""
             return template.vol.data_format.length
 
-    def write(self, value: Union[int, float, bool, bytes, str]) -> None:
+    def write(self, value: TUnion[int, float, bool, bytes, str]) -> None:
         """Writes the object into the layer of the context at the current offset"""
         data = convert_value_to_data(value, self._struct_type, self._data_format)
         return self._context.memory.write(self.vol.layer_name, self.vol.offset, data)
@@ -174,7 +174,7 @@ class Bytes(PrimitiveObject, bytes):
             data_format = DataFormatInfo(length, "big", False))
         self._vol['length'] = length
 
-    def __new__(cls: 'Bytes',
+    def __new__(cls: Type,
                 context: interfaces.context.ContextInterface,
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
@@ -215,7 +215,7 @@ class String(PrimitiveObject, str):
         self._vol['encoding'] = encoding
         self._vol['errors'] = errors
 
-    def __new__(cls,
+    def __new__(cls: Type,
                 context: interfaces.context.ContextInterface,
                 type_name: str,
                 object_info: interfaces.objects.ObjectInformation,
@@ -234,10 +234,9 @@ class String(PrimitiveObject, str):
             params['errors'] = errors
         # Pass the encoding and error parameters to the string constructor to appropriately encode the string
         value = cls._struct_type.__new__(
-            cls,  # type: ignore
+            cls,
             cls._unmarshall(
-                context, data_format = DataFormatInfo(max_length, "big", False), object_info = object_info),
-            **params)
+                context, data_format = DataFormatInfo(max_length, "big", False), object_info = object_info), **params)
         if value.find('\x00') >= 0:
             value = value[:value.find('\x00')]
         return value

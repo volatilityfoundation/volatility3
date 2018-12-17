@@ -121,7 +121,7 @@ class MacUtilities(object):
             if not isinstance(sym_layer, layers.intel.Intel):
                 raise TypeError("Layer name {} is not an intel space")
             aslr_layer = sym_layer.config['memory_layer']
-            _, aslr_shift = cls.find_aslr(context, symbol_table, aslr_layer)
+            aslr_shift = cls.find_aslr(context, symbol_table, aslr_layer)
 
         symbols.mask_symbol_table(sym_table, sym_layer.address_mask, aslr_shift)
 
@@ -149,8 +149,7 @@ class MacUtilities(object):
                   layer_name: str,
                   compare_banner: str = "",
                   compare_banner_offset: int = 0,
-                  progress_callback: validity.ProgressCallback = None) \
-            -> Tuple[int, int]:
+                  progress_callback: validity.ProgressCallback = None) -> int:
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         version_symbol = symbol_table + constants.BANG + 'version'
         version_json_address = context.symbol_space.get_symbol(version_symbol).address

@@ -205,7 +205,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         context.config[join(sub_config_path, "isf_url")] = isf_path
                         # Construct the appropriate symbol table
                         config_path = interfaces.configuration.parent_path(sub_config_path)
-                        requirement.construct(context, config_path)
+                        if isinstance(requirement, interfaces.configuration.ConstructableRequirementInterface):
+                            requirement.construct(context, config_path)
                         break
                     else:
                         vollog.debug("Required symbol library path not found: {}".format(filter_string))

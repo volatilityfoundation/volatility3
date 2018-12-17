@@ -47,16 +47,18 @@ class Timeliner(interfaces.plugins.PluginInterface):
         plugin_list = list(framework.class_subclasses(TimeLinerInterface))
 
         # Get the filter from the configuration
-        def passthrough(_n, _s):
+        def passthrough(name: str, selected: List[str]) -> bool:
             return True
 
         filter_func = passthrough
         if selected_list:
 
-            def filter_plugins(name, selected):
+            def filter_plugins(name: str, selected: List[str]) -> bool:
                 return any([s in name for s in selected])
 
             filter_func = filter_plugins
+        else:
+            selected_list = []
 
         return [plugin_class for plugin_class in plugin_list if filter_func(plugin_class.__name__, selected_list)]
 
