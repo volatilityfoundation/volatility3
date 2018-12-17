@@ -114,6 +114,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                     new_layer = stacker.stack(new_context, current_layer_name, progress_callback)
                     if new_layer:
                         new_context.memory.add_layer(new_layer)
+                        vollog.log(constants.LOGLEVEL_VVVV,
+                                   "Stacked {} using {}".format(new_layer.name, stacker_cls.__name__))
                         break
                 except Exception as excp:
                     # Stacking exceptions are likely only of interest to developers, so the lowest level of logging

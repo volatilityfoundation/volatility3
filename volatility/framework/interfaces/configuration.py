@@ -465,13 +465,6 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._context = self._check_type(context, ContextInterface)
         self._config_path = self._check_type(config_path, str)
 
-        # Store these programmatically, so we don't keep repreating the requirements
-        # This also allows constructed objects to populate a configuration without too much trouble
-        for requirement in self.get_requirements():
-            # Create the (private) properties using the config as backend storage
-            # TODO: Based on the requirement, do proper type checking
-            setattr(self, "_" + requirement.name, self._context.config.get(requirement.name, requirement.default))
-
     @property
     def context(self) -> 'interfaces.context.ContextInterface':
         return self._context
