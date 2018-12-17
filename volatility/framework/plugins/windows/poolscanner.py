@@ -63,8 +63,7 @@ class PoolScanner(plugins.PluginInterface):
         ]
 
     @staticmethod
-    def is_windows_10(context: interfaces.context.ContextInterface,
-                      symbol_table: str) -> bool:
+    def is_windows_10(context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
         """Determine if the analyzed sample is Windows 10"""
 
         try:
@@ -74,9 +73,7 @@ class PoolScanner(plugins.PluginInterface):
             return False
 
     @staticmethod
-    def is_windows_8_or_later(context: interfaces.context.ContextInterface,
-                              layer_name: str,
-                              symbol_table: str) -> bool:
+    def is_windows_8_or_later(context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> bool:
         """Determine if the analyzed sample is Windows 8 or later"""
 
         kvo = context.memory[layer_name].config['kernel_virtual_offset']
@@ -85,18 +82,14 @@ class PoolScanner(plugins.PluginInterface):
         return not handle_table_type.has_member("HandleCount")
 
     @staticmethod
-    def is_windows_7(context: interfaces.context.ContextInterface,
-                    layer_name: str,
-                    symbol_table: str) -> bool:
+    def is_windows_7(context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> bool:
         """Determine if the analyzed sample is Windows 7"""
 
         kvo = context.memory[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
         handle_table_type = ntkrnlmp.get_type("_OBJECT_HEADER")
-        return (
-                handle_table_type.has_member("TypeIndex") and not
-                PoolScanner.is_windows_8_or_later(context, layer_name, symbol_table)
-        )
+        return (handle_table_type.has_member("TypeIndex")
+                and not PoolScanner.is_windows_8_or_later(context, layer_name, symbol_table))
 
     def _generator(self):
         constraints = [
@@ -143,11 +136,9 @@ class PoolScanner(plugins.PluginInterface):
         cookie = handles.Handles.find_cookie(
             context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
 
-        is_windows_10 = self.is_windows_10(context = self._context,
-                                           symbol_table = self.config["nt_symbols"])
-        is_windows_8_or_later = self.is_windows_8_or_later(context = self._context,
-                                                           layer_name = self.config["primary"],
-                                                           symbol_table = self.config["nt_symbols"])
+        is_windows_10 = self.is_windows_10(context = self._context, symbol_table = self.config["nt_symbols"])
+        is_windows_8_or_later = self.is_windows_8_or_later(
+            context = self._context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
 
         # start off with the primary virtual layer
         scan_layer = self.config['primary']
