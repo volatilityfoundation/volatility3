@@ -10,8 +10,10 @@ from abc import ABCMeta
 from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Tuple
 
 import volatility
+import volatility.framework.layers.resources
 from volatility import schemas, symbols
-from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects, layers
+from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
+from volatility.framework.layers import physical
 from volatility.framework.configuration import requirements
 from volatility.framework.symbols import native, metadata
 
@@ -79,7 +81,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         # Check there are no obvious errors
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        fp = layers.ResourceAccessor().open(isf_url)
+        fp = volatility.framework.layers.resources.ResourceAccessor().open(isf_url)
         reader = codecs.getreader("utf-8")
         json_object = json.load(reader(fp))  # type: ignore
         fp.close()

@@ -1,10 +1,9 @@
-import os
 import struct
 from typing import Any, Dict, List, Optional
 
 from volatility.framework import interfaces, validity
 from volatility.framework.configuration import requirements
-from volatility.framework.layers import physical, segmented
+from volatility.framework.layers import physical, segmented, resources
 from volatility.framework.symbols import native
 
 
@@ -123,13 +122,25 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
             current_layer_name = context.memory.free_layer_name("VmwareMetaLayer")
             current_config_path = interfaces.configuration.path_join("automagic", "layer_stacker", "stack",
                                                                      current_layer_name)
-            if os.path.exists(vmss):
+
+            try:
+                _ = resources.ResourceAccessor().open(vmss).read(10)
                 context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
                 context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
-            elif os.path.exists(vmsn):
-                context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmsn
-                context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
-            else:
+                vmss_success = True
+            except IOError:
+                vmss_success = False
+
+            if not vmss_success:
+                try:
+                    _ = resources.ResourceAccessor().open(vmsn).read(10)
+                    context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmsn
+                    context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
+                    vmsn_success = True
+                except IOError:
+                    vmsn_success = False
+
+            if not vmss_success and not vmsn_success:
                 return None
             new_layer_name = context.memory.free_layer_name("VmwareLayer")
             context.config[interfaces.configuration.path_join(current_config_path, "base_layer")] = layer_name

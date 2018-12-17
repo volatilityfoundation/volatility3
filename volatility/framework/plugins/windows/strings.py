@@ -2,9 +2,9 @@ import logging
 import re
 from typing import Dict, Generator, List, Set, Tuple
 
-from volatility.framework import interfaces, renderers, layers
+from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.layers import intel
+from volatility.framework.layers import intel, resources
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
 
@@ -32,7 +32,7 @@ class Strings(interfaces.plugins.PluginInterface):
         """Generates results from a strings file"""
         revmap = self.generate_mapping(self.config['primary'])
 
-        accessor = layers.ResourceAccessor()
+        accessor = resources.ResourceAccessor()
 
         for line in accessor.open(self.config['strings_file'], "rb").readlines():
             try:

@@ -1,8 +1,9 @@
 import logging
 from typing import Any, Iterable, List, Tuple
 
-from volatility.framework import interfaces, layers, renderers
+from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
+from volatility.framework.layers import resources
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols.windows import extensions
 from volatility.plugins import yarascan
@@ -50,7 +51,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 rule += " wide ascii"
             rules = yara.compile(sources = {'n': 'rule r1 {{strings: $a = {} condition: $a}}'.format(rule)})
         elif self.config.get('yara_file', None) is not None:
-            rules = yara.compile(file = layers.ResourceAccessor().open(self.config['yara_file'], "rb"))
+            rules = yara.compile(file = resources.ResourceAccessor().open(self.config['yara_file'], "rb"))
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
 

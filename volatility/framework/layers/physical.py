@@ -1,7 +1,8 @@
 from typing import Any, Dict, IO, List, Optional
 
-from volatility.framework import exceptions, interfaces, layers
+from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
+from volatility.framework.layers import resources
 
 
 class BufferDataLayer(interfaces.layers.DataLayerInterface):
@@ -70,7 +71,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
         self._location = self.config["location"]
-        self._accessor = layers.ResourceAccessor()
+        self._accessor = resources.ResourceAccessor()
         self._file_ = None  # type: Optional[IO[Any]]
         self._size = None  # type: Optional[int]
         # Instantiate the file to throw exceptions if the file doesn't open
