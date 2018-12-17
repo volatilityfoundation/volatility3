@@ -183,8 +183,7 @@ class VolShell(cli.CommandLine):
         if args.extend:
             for extension in args.extend:
                 if '=' not in extension:
-                    raise ValueError(
-                        "Invalid extension (extensions must be of the format \"conf.path.value='value'\")")
+                    raise ValueError("Invalid extension (extensions must be of the format \"conf.path.value='value'\")")
                 address, value = extension[:extension.find('=')], json.loads(extension[extension.find('=') + 1:])
                 ctx.config[address] = value
 

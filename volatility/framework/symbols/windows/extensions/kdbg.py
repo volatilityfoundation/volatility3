@@ -24,8 +24,6 @@ class _KDDEBUGGER_DATA64(objects.Struct):
         symbol_table_name = self.get_symbol_table().name
 
         csdresult = self._context.object(
-            symbol_table_name + constants.BANG + "unsigned long",
-            layer_name = layer_name,
-            offset = self.CmNtCSDVersion)
+            symbol_table_name + constants.BANG + "unsigned long", layer_name = layer_name, offset = self.CmNtCSDVersion)
 
         return (csdresult >> 8) & 0xffffffff

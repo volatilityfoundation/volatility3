@@ -22,8 +22,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = "Primary kernel address space", architectures = ["Intel32",
-                                                                                                 "Intel64"]),
+                name = 'primary', description = "Primary kernel address space", architectures = ["Intel32", "Intel64"]),
             requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
             requirements.BooleanRequirement(
                 name = "wide", description = "Match wide (unicode) strings", default = False, optional = True),

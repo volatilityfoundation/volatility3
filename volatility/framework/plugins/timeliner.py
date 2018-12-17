@@ -135,8 +135,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
             for plugin in runable_plugins:
                 old_dict = dict(plugin.build_configuration())
                 for entry in old_dict:
-                    total_config[interfaces.configuration.path_join(plugin.__class__.__name__,
-                                                                    entry)] = old_dict[entry]
+                    total_config[interfaces.configuration.path_join(plugin.__class__.__name__, entry)] = old_dict[entry]
 
             filedata = interfaces.plugins.FileInterface("config.json")
             with io.TextIOWrapper(filedata.data, write_through = True) as fp:

@@ -45,8 +45,7 @@ class Statistics(plugins.PluginInterface):
                 page_addr += page_size
                 self._progress_callback((page_addr * 100) / layer.maximum_address, "Reading memory")
 
-        yield (0, (page_count, large_page_count, swap_count, large_swap_count, invalid_page_count,
-                   large_invalid_count))
+        yield (0, (page_count, large_page_count, swap_count, large_swap_count, invalid_page_count, large_invalid_count))
 
     def run(self):
         return renderers.TreeGrid([("Valid pages (all)", int), ("Valid pages (large)", int),

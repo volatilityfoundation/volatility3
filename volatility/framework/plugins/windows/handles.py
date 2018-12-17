@@ -268,8 +268,7 @@ class Handles(interfaces_plugins.PluginInterface):
                         obj_name = item.file_name_with_device()
                     elif obj_type == "Process":
                         item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_EPROCESS")
-                        obj_name = "{} Pid {}".format(
-                            utility.array_to_string(proc.ImageFileName), item.UniqueProcessId)
+                        obj_name = "{} Pid {}".format(utility.array_to_string(proc.ImageFileName), item.UniqueProcessId)
                     elif obj_type == "Thread":
                         item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_ETHREAD")
                         obj_name = "Tid {} Pid {}".format(item.Cid.UniqueThread, item.Cid.UniqueProcess)

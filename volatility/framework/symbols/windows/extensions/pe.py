@@ -71,8 +71,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         image_base_offset = nt_header.OptionalHeader.ImageBase.vol.offset - self.vol.offset
         image_base_type = nt_header.OptionalHeader.ImageBase.vol.type_name
         member_size = self._context.symbol_space.get_type(image_base_type).size
-        newval = objects.convert_value_to_data(self.vol.offset, int,
-                                               nt_header.OptionalHeader.ImageBase.vol.data_format)
+        newval = objects.convert_value_to_data(self.vol.offset, int, nt_header.OptionalHeader.ImageBase.vol.data_format)
         return raw_data[:image_base_offset] + newval + raw_data[image_base_offset + member_size:]
 
     def reconstruct(self) -> Generator[Tuple[int, bytes], None, None]:

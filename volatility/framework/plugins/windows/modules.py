@@ -63,5 +63,5 @@ class Modules(interfaces.plugins.PluginInterface):
             yield mod
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Base", format_hints.Hex),
-                                   ("Size", format_hints.Hex), ("Name", str), ("Path", str)], self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Base", format_hints.Hex), ("Size", format_hints.Hex),
+                                   ("Name", str), ("Path", str)], self._generator())

@@ -84,7 +84,6 @@ class ReferenceTemplate(interfaces.objects.Template):
     relative_child_offset = _unresolved  # type: ClassVar[Any]
     has_member = _unresolved  # type: ClassVar[Any]
 
-    def __call__(self, context: interfaces.context.ContextInterface,
-                 object_info: interfaces.objects.ObjectInformation):
+    def __call__(self, context: interfaces.context.ContextInterface, object_info: interfaces.objects.ObjectInformation):
         template = context.symbol_space.get_type(self.vol.type_name)
         return template(context = context, object_info = object_info)

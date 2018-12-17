@@ -46,8 +46,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         # Win10 17063 introduced the Registry process to map most hives.  Check
         # if it exists and update RegistryHive._base_layer
         for proc in pslist.PsList.list_processes(self.context, self.config['base_layer'], self.config['nt_symbols']):
-            proc_name = proc.ImageFileName.cast(
-                "string", max_length = proc.ImageFileName.vol.count, errors = 'replace')
+            proc_name = proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace')
             if proc_name == "Registry" and proc.InheritedFromUniqueProcessId == 4:
                 proc_layer_name = proc.add_process_layer()
                 self._base_layer = proc_layer_name
@@ -83,9 +82,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         """Returns the appropriate Cell value for a cell offset"""
         # This would be an _HCELL containing CELL_DATA, but to save time we skip the size of the HCELL
         cell = self._context.object(
-            symbol = self._table_name + constants.BANG + "_CELL_DATA",
-            offset = cell_offset + 4,
-            layer_name = self.name)
+            symbol = self._table_name + constants.BANG + "_CELL_DATA", offset = cell_offset + 4, layer_name = self.name)
         return cell
 
     def get_node(self, cell_offset: int) -> 'objects.Struct':
@@ -149,8 +146,8 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     @staticmethod
     def _mask(value: int, high_bit: int, low_bit: int) -> int:
         """Returns the bits of a value between highbit and lowbit inclusive"""
-        high_mask = (2**(high_bit + 1)) - 1
-        low_mask = (2**low_bit) - 1
+        high_mask = (2 ** (high_bit + 1)) - 1
+        low_mask = (2 ** low_bit) - 1
         mask = (high_mask ^ low_mask)
         # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask

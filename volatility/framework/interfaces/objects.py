@@ -74,8 +74,8 @@ class ObjectInformation(ReadOnlyMapping):
 class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     """A base object required to be the ancestor of every object used in volatility"""
 
-    def __init__(self, context: 'interfaces_context.ContextInterface', type_name: str,
-                 object_info: 'ObjectInformation', **kwargs) -> None:
+    def __init__(self, context: 'interfaces_context.ContextInterface', type_name: str, object_info: 'ObjectInformation',
+                 **kwargs) -> None:
         # Since objects are likely to be instantiated often,
         # we're only checking that context, offset and parent
         # Everything else may be wrong, but that will get caught later on
@@ -93,10 +93,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         mask = context.memory[object_info.layer_name].address_mask
         normalized_offset = object_info.offset & mask
 
-        self._vol = collections.ChainMap({}, object_info, {
-            'type_name': type_name,
-            'offset': normalized_offset
-        }, kwargs)
+        self._vol = collections.ChainMap({}, object_info, {'type_name': type_name, 'offset': normalized_offset}, kwargs)
         self._context = context
 
     @property
@@ -124,8 +121,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             raise ValueError("Unable to determine table for symbol: {}".format(self.vol.type_name))
         table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
         if table_name not in self._context.symbol_space:
-            raise KeyError("Symbol table not found in context's symbol_space for symbol: {}".format(
-                self.vol.type_name))
+            raise KeyError("Symbol table not found in context's symbol_space for symbol: {}".format(self.vol.type_name))
         return self._context.symbol_space[table_name]
 
     def cast(self, new_type_name: str, **additional) -> 'ObjectInterface':

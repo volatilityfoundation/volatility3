@@ -55,7 +55,7 @@ blank_line_before_nested_class_or_def=True
 coalesce_brackets=False
 
 # The column limit.
-column_limit=119
+column_limit=120
 
 # The style for continuation alignment. Possible values are:
 #
@@ -142,7 +142,7 @@ no_spaces_around_selected_binary_operators=
 spaces_around_default_or_named_assign=True
 
 # Use spaces around the power operator.
-spaces_around_power_operator=False
+spaces_around_power_operator=True
 
 # The number of spaces required before a trailing comment.
 spaces_before_comment=2

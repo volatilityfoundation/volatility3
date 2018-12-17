@@ -74,8 +74,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         volatility.framework.require_interface_version(0, 0, 0)
 
-        parser = argparse.ArgumentParser(
-            prog = 'volatility', description = "An open-source memory forensics framework")
+        parser = argparse.ArgumentParser(prog = 'volatility', description = "An open-source memory forensics framework")
         parser.add_argument(
             "-c", "--config", help = "Load the configuration from a json file", default = None, type = str)
         parser.add_argument(
@@ -211,8 +210,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         if args.extend:
             for extension in args.extend:
                 if '=' not in extension:
-                    raise ValueError(
-                        "Invalid extension (extensions must be of the format \"conf.path.value='value'\")")
+                    raise ValueError("Invalid extension (extensions must be of the format \"conf.path.value='value'\")")
                 address, value = extension[:extension.find('=')], json.loads(extension[extension.find('=') + 1:])
                 ctx.config[address] = value
 

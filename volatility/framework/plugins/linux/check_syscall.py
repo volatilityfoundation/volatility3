@@ -94,8 +94,7 @@ class Check_syscall(plugins.PluginInterface):
         md = capstone.Cs(capstone.CS_ARCH_X86, mode)
 
         try:
-            func_addr = self.context.symbol_space.get_symbol(vmlinux.name + constants.BANG +
-                                                             syscall_entry_func).address
+            func_addr = self.context.symbol_space.get_symbol(vmlinux.name + constants.BANG + syscall_entry_func).address
         except exceptions.SymbolError as e:
             # if we can't find the disassemble function then bail and rely on a different method
             return 0

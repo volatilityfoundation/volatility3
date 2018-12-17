@@ -51,9 +51,7 @@ class ModDump(interfaces_plugins.PluginInterface):
                 # create the session space object in the process' own layer.
                 # not all processes have a valid session pointer.
                 session_space = context.object(
-                    symbol_table + constants.BANG + "_MM_SESSION_SPACE",
-                    layer_name = layer_name,
-                    offset = proc.Session)
+                    symbol_table + constants.BANG + "_MM_SESSION_SPACE", layer_name = layer_name, offset = proc.Session)
 
                 if session_space.SessionId in seen_ids:
                     continue

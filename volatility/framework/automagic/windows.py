@@ -115,10 +115,7 @@ class DtbTest64bit(DtbTest):
 
     def __init__(self):
         super().__init__(
-            layer_type = layers.intel.WindowsIntel32e,
-            ptr_struct = "Q",
-            ptr_reference = 0x1ED,
-            mask = 0x3FFFFFFFFFF000)
+            layer_type = layers.intel.WindowsIntel32e, ptr_struct = "Q", ptr_reference = 0x1ED, mask = 0x3FFFFFFFFFF000)
 
 
 class DtbTestPae(DtbTest):
@@ -186,10 +183,7 @@ class DtbSelfRef64bit(DtbSelfReferential):
 
     def __init__(self):
         super().__init__(
-            layer_type = layers.intel.WindowsIntel32e,
-            ptr_struct = "Q",
-            ptr_reference = 0x1ED,
-            mask = 0x3FFFFFFFFFF000)
+            layer_type = layers.intel.WindowsIntel32e, ptr_struct = "Q", ptr_reference = 0x1ED, mask = 0x3FFFFFFFFFF000)
 
 
 class PageMapScanner(interfaces.layers.ScannerInterface):

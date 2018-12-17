@@ -83,8 +83,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
 
     def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
                  object_info: interfaces.objects.ObjectInformation, data_format: DataFormatInfo) -> None:
-        super().__init__(
-            context = context, type_name = type_name, object_info = object_info, data_format = data_format)
+        super().__init__(context = context, type_name = type_name, object_info = object_info, data_format = data_format)
         self._data_format = data_format
 
     def __new__(cls: Type,
@@ -235,8 +234,8 @@ class String(PrimitiveObject, str):
         # Pass the encoding and error parameters to the string constructor to appropriately encode the string
         value = cls._struct_type.__new__(
             cls,
-            cls._unmarshall(
-                context, data_format = DataFormatInfo(max_length, "big", False), object_info = object_info), **params)
+            cls._unmarshall(context, data_format = DataFormatInfo(max_length, "big", False), object_info = object_info),
+            **params)
         if value.find('\x00') >= 0:
             value = value[:value.find('\x00')]
         return value
@@ -252,8 +251,7 @@ class Pointer(Integer):
                  data_format: DataFormatInfo,
                  subtype: Optional[templates.ObjectTemplate] = None) -> None:
         self._check_type(subtype, templates.ObjectTemplate)
-        super().__init__(
-            context = context, object_info = object_info, type_name = type_name, data_format = data_format)
+        super().__init__(context = context, object_info = object_info, type_name = type_name, data_format = data_format)
         self._vol['subtype'] = subtype
 
     @classmethod
@@ -283,8 +281,7 @@ class Pointer(Integer):
         offset = self & mask
         return self.vol.subtype(
             context = self._context,
-            object_info = interfaces.objects.ObjectInformation(
-                layer_name = layer_name, offset = offset, parent = self))
+            object_info = interfaces.objects.ObjectInformation(layer_name = layer_name, offset = offset, parent = self))
 
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from memory"""

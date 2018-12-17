@@ -54,8 +54,8 @@ class DllDump(interfaces_plugins.PluginInterface):
                     # it requires special handling on wow64 processes, and its
                     # unreliable from an integrity standpoint, let's use the VADs instead
                     protection_string = vad.get_protection(
-                        vadinfo.VadInfo.protect_values(self.context, self.config['primary'],
-                                                       self.config['nt_symbols']), vadinfo.winnt_protections)
+                        vadinfo.VadInfo.protect_values(self.context, self.config['primary'], self.config['nt_symbols']),
+                        vadinfo.winnt_protections)
 
                     # DLLs are write copy...
                     if protection_string != "PAGE_EXECUTE_WRITECOPY":

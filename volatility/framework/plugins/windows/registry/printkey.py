@@ -63,8 +63,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
             try:
                 import volatility.plugins.windows.registry.hivelist as hivelist
                 hive_offsets = [
-                    hive.vol.offset for hive in hivelist.HiveList.list_hives(self.context, self.config['primary'],
-                                                                             self.config['nt_symbols'])
+                    hive.vol.offset for hive in hivelist.HiveList.list_hives(self.context, self.config['primary'], self.
+                                                                             config['nt_symbols'])
                 ]
             except ImportError:
                 vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")

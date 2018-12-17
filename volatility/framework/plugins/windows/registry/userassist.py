@@ -138,10 +138,10 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
                 # output the parent Count key
                 result = (
-                    0, (renderers.format_hints.Hex(hive.hive_offset), hive_name,
-                        countkey_path, countkey_last_write_time, "Key", renderers.NotApplicableValue(),
+                    0, (renderers.format_hints.Hex(hive.hive_offset), hive_name, countkey_path,
+                        countkey_last_write_time, "Key", renderers.NotApplicableValue(), renderers.NotApplicableValue(),
                         renderers.NotApplicableValue(), renderers.NotApplicableValue(), renderers.NotApplicableValue(),
-                        renderers.NotApplicableValue(), renderers.NotApplicableValue(), renderers.NotApplicableValue())
+                        renderers.NotApplicableValue(), renderers.NotApplicableValue())
                 )  # type: Tuple[int, Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]]
                 yield result
 

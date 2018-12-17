@@ -40,8 +40,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self._base_layer = self.config["base_layer"]
 
         # Create a custom SymbolSpace
-        self._crash_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
-                                                                         'crash')
+        self._crash_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'crash')
         # Check Header
         hdr_layer = self._context.memory[self._base_layer]
         hdr_offset = 0
@@ -49,9 +48,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         # Need to create a header object
         self.header = self.context.object(
-            self._crash_table_name + constants.BANG + "_DMP_HEADER",
-            offset = hdr_offset,
-            layer_name = self._base_layer)
+            self._crash_table_name + constants.BANG + "_DMP_HEADER", offset = hdr_offset, layer_name = self._base_layer)
 
         # Extract the DTB
         self.dtb = self.header.DirectoryTableBase

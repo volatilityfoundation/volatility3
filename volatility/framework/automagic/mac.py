@@ -130,8 +130,7 @@ class MacUtilities(object):
         darwin_signature = rb"Darwin Kernel Version \d{1,3}\.\d{1,3}\.\d{1,3}: [^\x00]+\x00"
 
         for offset in context.memory[layer_name].scan(
-                scanner = scanners.RegExScanner(darwin_signature),
-                context = context,
+                scanner = scanners.RegExScanner(darwin_signature), context = context,
                 progress_callback = progress_callback):
 
             banner = context.memory[layer_name].read(offset, 128)

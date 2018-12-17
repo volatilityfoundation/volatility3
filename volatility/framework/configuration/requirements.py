@@ -102,8 +102,7 @@ class ListRequirement(configuration.RequirementInterface):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too many values provided to list option.")
             return [config_path]
         if not all([self._check_type(element, self.element_type) for element in value]):
-            vollog.log(constants.LOGLEVEL_V,
-                       "TypeError - At least one element in the list is not of the correct type.")
+            vollog.log(constants.LOGLEVEL_V, "TypeError - At least one element in the list is not of the correct type.")
             return [config_path]
         return []
 
@@ -132,8 +131,7 @@ class ChoiceRequirement(configuration.RequirementInterface):
         return []
 
 
-class ComplexListRequirement(
-        MultiRequirement, configuration.ConfigurableRequirementInterface, metaclass = abc.ABCMeta):
+class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequirementInterface, metaclass = abc.ABCMeta):
     """Allows a variable length list of requirements"""
 
     def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
@@ -276,9 +274,7 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [subreq.unsatisfied(context, config_path)
-             for subreq in self.requirements.values()
-             if not subreq.optional]):
+            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
             return None
 
         obj = self._construct_class(context, config_path, args)
@@ -322,9 +318,7 @@ class SymbolRequirement(configuration.ConstructableRequirementInterface,
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [subreq.unsatisfied(context, config_path)
-             for subreq in self.requirements.values()
-             if not subreq.optional]):
+            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
             return None
 
         # Fill out the parameter for class creation

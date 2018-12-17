@@ -81,8 +81,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     @staticmethod
     def _mask(value: int, high_bit: int, low_bit: int) -> int:
         """Returns the bits of a value between highbit and lowbit inclusive"""
-        high_mask = (2**(high_bit + 1)) - 1
-        low_mask = (2**low_bit) - 1
+        high_mask = (2 ** (high_bit + 1)) - 1
+        low_mask = (2 ** low_bit) - 1
         mask = (high_mask ^ low_mask)
         # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask
@@ -122,8 +122,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         for (name, size, large_page) in self._structure:
             # Check we're valid
             if not self._page_is_valid(entry):
-                raise exceptions.PagedInvalidAddressException(
-                    self.name, offset, position + 1, entry, "Page Fault at entry " + hex(entry) + " in table " + name)
+                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
+                                                              "Page Fault at entry " + hex(entry) + " in table " + name)
             # Check if we're a large page
             if large_page and (entry & (1 << 7)):
                 # We're a large page, the rest is finished below
@@ -142,8 +142,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             # If the table is entirely duplicates, then mark the whole table as bad
             if (table == table[:struct.calcsize(self._entry_format)] *
                 (self.page_size // struct.calcsize(self._entry_format))):
-                raise exceptions.PagedInvalidAddressException(
-                    self.name, offset, position + 1, entry, "Page Fault at entry " + hex(entry) + " in table " + name)
+                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
+                                                              "Page Fault at entry " + hex(entry) + " in table " + name)
             # Read the data for the next entry
             entry_data = table[(
                 index << self._index_shift):(index << self._index_shift) + struct.calcsize(self._entry_format)]

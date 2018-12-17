@@ -21,8 +21,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
             # TODO: Convert this to a ListRequirement so that people can filter on sets of pids
             requirements.IntRequirement(
-                name = 'pid',
-                description = "Process ID to include (all other processes are excluded)",
+                name = 'pid', description = "Process ID to include (all other processes are excluded)",
                 optional = True),
             requirements.BooleanRequirement(
                 name = 'physical',
@@ -92,11 +91,10 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                     raise TypeError("Primary layer is not an intel layer")
                 (_, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
-            yield (0,
-                   (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
-                    proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
-                    format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
-                    proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time()))
+            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
+                       proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
+                       format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
+                       proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time()))
 
     def generate_timeline(self):
         for row in self._generator():

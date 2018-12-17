@@ -13,8 +13,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
+    parser.add_argument("filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
     parser.add_argument("--32bit", action = "store_false", dest = "bit32", help = "Disable 32-bit scanning")
     parser.add_argument("--64bit", action = "store_false", dest = "bit64", help = "Disable 64-bit scanning")
     parser.add_argument("--pae", action = "store_false", dest = "pae", help = "Disable pae scanning")
@@ -38,9 +37,8 @@ if __name__ == '__main__':
                                          'data' + str(args.filenames.index(filename)))
         ctx.memory.add_layer(data)
         if args.lime:
-            ctx.config[interfaces.configuration.path_join(
-                'lime-config' + str(args.filenames.index(filename)),
-                "base_layer")] = 'data' + str(args.filenames.index(filename))
+            ctx.config[interfaces.configuration.path_join('lime-config' + str(args.filenames.index(filename)),
+                                                          "base_layer")] = 'data' + str(args.filenames.index(filename))
             data = layers.lime.LimeLayer(ctx, 'lime-config' + str(args.filenames.index(filename)),
                                          'lime-data' + str(args.filenames.index(filename)))
             ctx.memory.add_layer(data)

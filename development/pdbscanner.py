@@ -13,8 +13,7 @@ if __name__ == '__main__':
     from volatility.framework import contexts
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
+    parser.add_argument("filenames", metavar = "FILE", nargs = "+", action = "store", help = "FILE to read for testing")
 
     args = parser.parse_args()
 
