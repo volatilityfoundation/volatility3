@@ -21,9 +21,9 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
     # The user would run it eventually either way, but running it first means it can be used that run
     priority = 0
 
-    os: Optional[str] = None
-    symbol_name: str = "banner_name"
-    banner_path: Optional[str] = None
+    os = None  # type: Optional[str]
+    symbol_name = "banner_name"  # type: str
+    banner_path = None  # type: Optional[str]
 
     @classmethod
     def load_banners(cls) -> BannersType:

@@ -13,9 +13,9 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
     """Symbol loader based on signature strings"""
     priority = 40
 
-    banner_config_key: str = "banner"
-    banner_cache: Optional[Type[symbol_cache.SymbolBannerCache]] = None
-    symbol_class: Optional[str] = None
+    banner_config_key = "banner"  # type: str
+    banner_cache = None  # type: Optional[Type[symbol_cache.SymbolBannerCache]]
+    symbol_class = None  # type: Optional[str]
 
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         super().__init__(context, config_path)
