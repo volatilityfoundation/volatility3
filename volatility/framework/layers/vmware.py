@@ -127,7 +127,7 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
                 context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
             elif os.path.exists(vmsn):
-                context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
+                context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmsn
                 context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
             else:
                 return None
