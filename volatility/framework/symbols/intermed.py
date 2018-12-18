@@ -342,7 +342,7 @@ class Version1Format(ISFormatTable):
             return native_template
 
         # Otherwise
-        if dictionary['kind'] not in ['struct', 'union']:
+        if dictionary['kind'] not in ['struct', 'union', 'vol_class']:
             raise exceptions.SymbolSpaceError("Unknown Intermediate format: {}".format(dictionary))
 
         reference_name = dictionary['name']
