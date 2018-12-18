@@ -9,12 +9,8 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str, isf_url: str) -> None:
         super().__init__(context = context, config_path = config_path, name = name, isf_url = isf_url)
 
-        self.set_type_class('proc',          extensions.proc)
-        self.set_type_class('fileglob',      extensions.fileglob)
-        self.set_type_class('vnode',         extensions.vnode)
-        self.set_type_class('vm_map_entry',  extensions.vm_map_entry)
+        self.set_type_class('proc', extensions.proc)
+        self.set_type_class('fileglob', extensions.fileglob)
+        self.set_type_class('vnode', extensions.vnode)
+        self.set_type_class('vm_map_entry', extensions.vm_map_entry)
         self.set_type_class('vm_map_object', extensions.vm_map_object)
-
-
-
-

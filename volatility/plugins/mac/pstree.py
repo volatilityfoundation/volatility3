@@ -4,6 +4,7 @@ from volatility.framework.objects import utility
 from volatility.plugins.mac import pslist
 from volatility.framework.configuration import requirements
 
+
 class PsTree(plugins.PluginInterface):
     """Plugin for listing processes in a tree based on their parent process ID """
 
@@ -15,11 +16,11 @@ class PsTree(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "darwin",
-                                               description = "Mac Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "darwin", description = "Mac Kernel")
+        ]
 
     def find_level(self, pid):
         """Finds how deep the pid is in the processes list"""
@@ -47,9 +48,7 @@ class PsTree(plugins.PluginInterface):
 
         def yield_processes(pid):
             proc = self._processes[pid]
-            row = (proc.p_pid,
-                   proc.p_ppid,
-                   utility.array_to_string(proc.p_comm))
+            row = (proc.p_pid, proc.p_ppid, utility.array_to_string(proc.p_comm))
 
             yield (self._levels[pid] - 1, row)
             for child_pid in self._children.get(pid, []):
@@ -58,14 +57,6 @@ class PsTree(plugins.PluginInterface):
         for pid in self._levels:
             if self._levels[pid] == 1:
                 yield from yield_processes(pid)
-            
 
     def run(self):
-        return renderers.TreeGrid([("PID", int),
-                                   ("PPID", int),
-                                   ("COMM", str)],
-                                  self._generator())
-
-
-
-
+        return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())

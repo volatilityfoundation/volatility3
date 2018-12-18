@@ -9,28 +9,26 @@ from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 
+
 class Lsmod(plugins.PluginInterface):
     """Lists loaded kernel modules"""
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "darwin",
-                                               description = "Linux Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "darwin", description = "Linux Kernel")
+        ]
 
     @classmethod
-    def list_modules(cls,
-                     context: interfaces.context.ContextInterface,
-                     layer_name: str,
-                     darwin_symbols: str):
+    def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str, darwin_symbols: str):
         """Lists all the modules in the primary layer"""
 
         aslr_shift = mac.MacUtilities.find_aslr(context, darwin_symbols, layer_name)
 
         darwin = context.module(darwin_symbols, layer_name, aslr_shift)
-        
+
         kmod_ptr = darwin.object(symbol_name = "kmod")
 
         # TODO - use smear-proof list walking API after dev release
@@ -40,9 +38,7 @@ class Lsmod(plugins.PluginInterface):
             kmod = kmod.next
 
     def _generator(self):
-        for module in self.list_modules(self.context,
-                                        self.config['primary'],
-                                        self.config['darwin']):
+        for module in self.list_modules(self.context, self.config['primary'], self.config['darwin']):
 
             mod_name = utility.array_to_string(module.name)
             mod_size = module.size
@@ -50,8 +46,4 @@ class Lsmod(plugins.PluginInterface):
             yield 0, (format_hints.Hex(module.vol.offset), mod_name, mod_size)
 
     def run(self):
-        return renderers.TreeGrid(
-            [("Offset", format_hints.Hex),
-             ("Name", str),
-             ("Size", int)],
-            self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Name", str), ("Size", int)], self._generator())

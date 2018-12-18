@@ -647,8 +647,10 @@ class Struct(interfaces.objects.ObjectInterface):
 class Union(Struct):
     pass
 
+
 class vol_class(Struct):
     pass
+
 
 # Really nasty way of duplicating the class
 # WILL cause problems with any mutable class/static variables
