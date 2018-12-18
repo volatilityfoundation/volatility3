@@ -115,7 +115,7 @@ class vnode(generic.GenericIntelProcess):
             self._do_calc_path(ret, vnodeobj.v_parent, vnodeobj.v_parent.v_name)
 
     def full_path(self):
-        if int(self.v_flag) & 0x000001 != 0 and int(self.v_mount) != 0 and int(self.v_mount.mnt_flag) & 0x00004000 != 0:
+        if self.v_flag & 0x000001 != 0 and self.v_mount != 0 and self.v_mount.mnt_flag & 0x00004000 != 0:
             ret = "/"
         else:
             elements = []
