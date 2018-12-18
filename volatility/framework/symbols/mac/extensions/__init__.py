@@ -8,18 +8,18 @@ from volatility.framework.automagic import mac
 from volatility.framework.symbols import generic
 from volatility.framework.objects import utility
 
+
 class proc(generic.GenericIntelProcess):
+
     def get_task(self):
         return self.task.dereference().cast("task")
 
-    def add_process_layer(self,
-                          config_prefix: str = None,
-                          preferred_name: str = None) -> typing.Optional[str]:
+    def add_process_layer(self, config_prefix: str = None, preferred_name: str = None) -> typing.Optional[str]:
         """Constructs a new layer based on the process's DTB.
         Returns the name of the Layer or None.
         """
         parent_layer = self._context.memory[self.vol.layer_name]
- 
+
         if not isinstance(parent_layer, interfaces.layers.TranslationLayerInterface):
             raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
 
@@ -31,25 +31,24 @@ class proc(generic.GenericIntelProcess):
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
-    @property
-    def map_iter(self) -> typing.Iterable[interfaces.objects.ObjectInterface]:
+    def get_map_iter(self) -> typing.Iterable[interfaces.objects.ObjectInterface]:
         try:
             task = self.get_task()
         except exceptions.PagedInvalidAddressException:
             return
-        
+
         try:
             map = task.map.hdr.links.next
         except exceptions.PagedInvalidAddressException:
             return
 
         seen = set()
-        
+
         try:
             for i in range(task.map.hdr.nentries):
                 if not map or map.vol.offset in seen:
                     break
-      
+
                 yield map
                 seen.add(map.vol.offset)
                 map = map.links.next
@@ -58,20 +57,19 @@ class proc(generic.GenericIntelProcess):
             print("broke in iter: {}".format(e))
             sys.exit(1)
 
-
     ######
     # ikelos: this breaks with multi threading on, but works with it disabled
     # with multi threading on, it throws that same error about v4 pickle stuff that linux originally did
     # the fix for linux was to call int() so that we were not returning vol objects.
     # I call int() on these and the code works nearly 1-1 with the linux one so I am very confused
     ######
-    def get_process_memory_sections(self, 
+    def get_process_memory_sections(self,
                                     context: interfaces.context.ContextInterface,
-                                    config_prefix: str,     
+                                    config_prefix: str,
                                     rw_no_file: bool = False) -> \
             typing.Generator[typing.Tuple[int, int], None, None]:
         """Returns a list of sections based on the memory manager's view of this task's virtual memory"""
-        for vma in self.map_iter:
+        for vma in self.get_map_iter():
             start = int(vma.links.start)
             end = int(vma.links.end)
 
@@ -79,10 +77,12 @@ class proc(generic.GenericIntelProcess):
                 if (vma.get_perms() != "rw" or vma.get_path(context, config_prefix) != ""):
                     if vma.get_special_path() != "[heap]":
                         continue
-                    
+
             yield (start, end - start)
 
+
 class fileglob(generic.GenericIntelProcess):
+
     def get_fg_type(self):
         ret = "INVALID"
         if self.has_member("fg_type"):
@@ -92,10 +92,12 @@ class fileglob(generic.GenericIntelProcess):
                 ret = self.fg_ops.fo_type
             except exceptions.PagedInvalidAddressException as e:
                 pass
-   
+
         return ret.description
 
+
 class vm_map_object(generic.GenericIntelProcess):
+
     def get_map_object(self):
         if self.has_member("vm_object"):
             return self.vm_object
@@ -104,25 +106,27 @@ class vm_map_object(generic.GenericIntelProcess):
 
         raise AttributeError("vm_map_object -> get_object")
 
+
 class vnode(generic.GenericIntelProcess):
+
     def _do_calc_path(self, ret, vnodeobj, vname):
         if vnodeobj == None:
-            return 
+            return
 
         if vname:
             print("adding: {}".format(utility.array_to_string(vname, 255)))
             ret.append(utility.pointer_to_string(vname))
 
-        if int(vnodeobj.v_flag) & 0x000001 != 0 and int(vnodeobj.v_mount) != 0: 
+        if int(vnodeobj.v_flag) & 0x000001 != 0 and int(vnodeobj.v_mount) != 0:
             if int(vnodeobj.v_mount.mnt_vnodecovered) != 0:
                 self._do_calc_path(ret, vnodeobj.v_mount.mnt_vnodecovered, vnodeobj.v_mount.mnt_vnodecovered.v_name)
-        else:  
+        else:
             self._do_calc_path(ret, vnodeobj.v_parent, vnodeobj.v_parent.v_name)
-                
+
     def full_path(self):
         if int(self.v_flag) & 0x000001 != 0 and int(self.v_mount) != 0 and int(self.v_mount.mnt_flag) & 0x00004000 != 0:
             ret = "/"
-        else: 
+        else:
             elements = []
             files = []
 
@@ -132,11 +136,12 @@ class vnode(generic.GenericIntelProcess):
             for e in elements:
                 files.append(e.decode("utf-8"))
 
-            ret = "/".join(files)                
+            ret = "/".join(files)
             if ret:
                 ret = "/" + ret
 
-        return ret 
+        return ret
+
 
 class vm_map_entry(generic.GenericIntelProcess):
 
@@ -151,7 +156,7 @@ class vm_map_entry(generic.GenericIntelProcess):
                 perms = perms + "-"
 
         return perms
-    
+
     def get_range_alias(self):
         if self.has_member("alias"):
             ret = int(self.alias)
@@ -174,9 +179,9 @@ class vm_map_entry(generic.GenericIntelProcess):
 
     def get_path(self, context, config_prefix):
         vnode = self.get_vnode(context, config_prefix)
-    
+
         if type(vnode) == str and vnode == "sub_map":
-            ret = vnode  
+            ret = vnode
         elif vnode:
             path = []
             while vnode:
@@ -187,10 +192,10 @@ class vm_map_entry(generic.GenericIntelProcess):
             ret = "/" + "/".join(path)
         else:
             ret = ""
-                
+
         return ret
 
-    def get_object(self): 
+    def get_object(self):
         if self.has_member("vme_object"):
             return self.vme_object
         elif self.has_member("object"):
@@ -198,12 +203,12 @@ class vm_map_entry(generic.GenericIntelProcess):
 
         raise AttributeError("vm_map_entry -> get_object: Unable to determine object")
 
-    def get_offset(self): 
+    def get_offset(self):
         if self.has_member("vme_offset"):
             return self.vme_offset
         elif self.has_member("offset"):
             return self.offset
-        
+
         raise AttributeError("vm_map_entry -> get_offset: Unable to determine offset")
 
     def get_vnode(self, context, config_prefix):
@@ -212,14 +217,14 @@ class vm_map_entry(generic.GenericIntelProcess):
 
         print("Getting vnode object")
         # based on find_vnode_object
-        vnode_object = self.get_object().get_map_object() 
+        vnode_object = self.get_object().get_map_object()
 
         while 1:
             try:
                 tmp_vnode_object = vnode_object.shadow.dereference()
             except exceptions.PagedInvalidAddressException:
                 break
-            
+
             if tmp_vnode_object.vol.offset == 0:
                 break
 
@@ -227,9 +232,9 @@ class vm_map_entry(generic.GenericIntelProcess):
 
         try:
             ops = vnode_object.pager.mo_pager_ops.dereference()
-        except Exception as e: #exceptions.PagedInvalidAddressException:
+        except Exception as e:  #exceptions.PagedInvalidAddressException:
             return None
-        
+
         found = False
         for sym in context.symbol_space.get_symbols_by_location(ops.vol.offset):
             if sym.split(constants.BANG)[1] in ["vnode_pager_ops", "_vnode_pager_ops"]:
@@ -237,18 +242,12 @@ class vm_map_entry(generic.GenericIntelProcess):
                 break
 
         if found:
-            vpager = context.object(config_prefix + constants.BANG + "vnode_pager", layer_name = vnode_object.vol.layer_name, offset = vnode_object.pager)
+            vpager = context.object(
+                config_prefix + constants.BANG + "vnode_pager",
+                layer_name = vnode_object.vol.layer_name,
+                offset = vnode_object.pager)
             ret = vpager.vnode_handle
         else:
             ret = None
 
         return ret
- 
-
-
-
-
-
-
-
-
