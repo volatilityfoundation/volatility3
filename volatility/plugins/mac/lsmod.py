@@ -2,7 +2,7 @@
 typically found in Mac's lsmod command.
 """
 
-from volatility.framework import renderers, constants, interfaces
+from volatility.framework import renderers, interfaces
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins

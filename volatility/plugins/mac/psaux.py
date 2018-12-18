@@ -2,14 +2,9 @@
 typically found in Linux's /proc file system.
 """
 
-import datetime
-import struct
-from operator import attrgetter
-
-from volatility.framework import exceptions, constants, renderers, symbols
+from volatility.framework import exceptions, renderers
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
-from volatility.framework.renderers import format_hints
 from volatility.plugins.mac import pslist
 
 
@@ -26,7 +21,7 @@ class Psaux(plugins.PluginInterface):
             task_name = utility.array_to_string(task.p_comm)
 
             proc_layer_name = task.add_process_layer()
-            if proc_layer_name == None:
+            if proc_layer_name is None:
                 print("no proc layer")
                 continue
 
@@ -34,7 +29,7 @@ class Psaux(plugins.PluginInterface):
 
             argsstart = task.user_stack - task.p_argslen
 
-            if (not proc_layer.is_valid(argsstart) or task.p_argslen == 0 or task.p_argc == 0):
+            if not proc_layer.is_valid(argsstart) or task.p_argslen == 0 or task.p_argc == 0:
                 print("bad check")
                 continue
 
@@ -85,10 +80,10 @@ class Psaux(plugins.PluginInterface):
             yield (0, (task.p_pid, task_name, task.p_argc, args_str))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
             [("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
-            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter)))
+            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filt)))

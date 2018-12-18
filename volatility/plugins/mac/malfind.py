@@ -25,7 +25,7 @@ class Malfind(interfaces_plugins.PluginInterface):
         """
 
         proc_layer_name = task.add_process_layer()
-        if proc_layer_name == None:
+        if proc_layer_name is None:
             return
 
         proc_layer = self.context.memory[proc_layer_name]
@@ -57,11 +57,11 @@ class Malfind(interfaces_plugins.PluginInterface):
                            vma.get_perms(), format_hints.HexBytes(data), disasm))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
             [("PID", int), ("Process", str), ("Start", format_hints.Hex), ("End", format_hints.Hex),
              ("Protection", str), ("Hexdump", format_hints.HexBytes), ("Disasm", interfaces_renderers.Disassembly)],
-            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter)))
+            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filt)))
