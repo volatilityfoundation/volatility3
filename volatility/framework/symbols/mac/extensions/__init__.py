@@ -38,7 +38,7 @@ class proc(generic.GenericIntelProcess):
             return
 
         try:
-            map = task.map.hdr.links.next
+            current_map = task.map.hdr.links.next
         except exceptions.PagedInvalidAddressException:
             return
 
@@ -46,16 +46,16 @@ class proc(generic.GenericIntelProcess):
 
         try:
             for i in range(task.map.hdr.nentries):
-                if not map or map.vol.offset in seen:
+                if not current_map or current_map.vol.offset in seen:
                     break
 
-                yield map
-                seen.add(map.vol.offset)
-                map = map.links.next
+                yield current_map
+                seen.add(current_map.vol.offset)
+                current_map = current_map.links.next
 
         except Exception as e:
             print("broke in iter: {}".format(e))
-            sys.exit(1)
+            raise
 
     ######
     # ikelos: this breaks with multi threading on, but works with it disabled
@@ -74,7 +74,7 @@ class proc(generic.GenericIntelProcess):
             end = int(vma.links.end)
 
             if rw_no_file:
-                if (vma.get_perms() != "rw" or vma.get_path(context, config_prefix) != ""):
+                if vma.get_perms() != "rw" or vma.get_path(context, config_prefix) != "":
                     if vma.get_special_path() != "[heap]":
                         continue
 
@@ -90,7 +90,7 @@ class fileglob(generic.GenericIntelProcess):
         elif self.fg_ops != 0:
             try:
                 ret = self.fg_ops.fo_type
-            except exceptions.PagedInvalidAddressException as e:
+            except exceptions.PagedInvalidAddressException:
                 pass
 
         return ret.description
@@ -110,7 +110,7 @@ class vm_map_object(generic.GenericIntelProcess):
 class vnode(generic.GenericIntelProcess):
 
     def _do_calc_path(self, ret, vnodeobj, vname):
-        if vnodeobj == None:
+        if vnodeobj is None:
             return
 
         if vname:
@@ -190,16 +190,16 @@ class vm_map_entry(generic.GenericIntelProcess):
         return ret
 
     def get_path(self, context, config_prefix):
-        vnode = self.get_vnode(context, config_prefix)
+        node = self.get_vnode(context, config_prefix)
 
-        if type(vnode) == str and vnode == "sub_map":
-            ret = vnode
-        elif vnode:
+        if type(node) == str and node == "sub_map":
+            ret = node
+        elif node:
             path = []
-            while vnode:
-                v_name = utility.pointer_to_string(vnode.v_name, 255)
+            while node:
+                v_name = utility.pointer_to_string(node.v_name, 255)
                 path.append(v_name)
-                vnode = vnode.v_parent
+                node = node.v_parent
             path.reverse()
             ret = "/" + "/".join(path)
         else:
