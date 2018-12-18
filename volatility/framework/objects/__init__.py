@@ -648,7 +648,7 @@ class Union(Struct):
     pass
 
 
-class vol_class(Struct):
+class CPPObject(Struct):
     pass
 
 
