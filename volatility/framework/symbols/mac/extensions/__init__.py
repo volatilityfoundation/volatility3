@@ -114,7 +114,6 @@ class vnode(generic.GenericIntelProcess):
             return
 
         if vname:
-            print("adding: {}".format(utility.array_to_string(vname, 255)))
             ret.append(utility.pointer_to_string(vname))
 
         if int(vnodeobj.v_flag) & 0x000001 != 0 and int(vnodeobj.v_mount) != 0:
@@ -144,6 +143,18 @@ class vnode(generic.GenericIntelProcess):
 
 
 class vm_map_entry(generic.GenericIntelProcess):
+    def is_suspicious(self, context, config_prefix):
+        ret = False        
+
+        perms = self.get_perms()
+
+        if perms == "rwx":
+           ret = True 
+
+        elif perms == "r-x" and self.get_path(context, config_prefix) == "":
+            ret = True
+ 
+        return ret
 
     def get_perms(self):
         permask = "rwx"
@@ -215,7 +226,6 @@ class vm_map_entry(generic.GenericIntelProcess):
         if self.is_sub_map == 1:
             return "sub_map"
 
-        print("Getting vnode object")
         # based on find_vnode_object
         vnode_object = self.get_object().get_map_object()
 
