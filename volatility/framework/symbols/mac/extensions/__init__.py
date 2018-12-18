@@ -137,6 +137,7 @@ class vnode(generic.GenericIntelProcess):
 class vm_map_entry(generic.GenericIntelProcess):
 
     def is_suspicious(self, context, config_prefix):
+        """Flags memory regions that are mapped rwx or that map an executable not back from a file on disk"""
         ret = False
 
         perms = self.get_perms()
