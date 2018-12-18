@@ -13,11 +13,11 @@ class Malfind(interfaces_plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "darwin",
-                                               description = "Linux Kernel")]
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "darwin", description = "Linux Kernel")
+        ]
 
     def list_injections(self, task):
         """Generate memory regions for a process that may contain
@@ -53,27 +53,15 @@ class Malfind(interfaces_plugins.PluginInterface):
 
                 disasm = interfaces_renderers.Disassembly(data, vma.links.start, architecture)
 
-                yield (0, (task.p_pid,
-                           process_name,
-                           format_hints.Hex(vma.links.start),
-                           format_hints.Hex(vma.links.end),
-                           vma.get_perms(),
-                           format_hints.HexBytes(data),
-                           disasm))
+                yield (0, (task.p_pid, process_name, format_hints.Hex(vma.links.start), format_hints.Hex(vma.links.end),
+                           vma.get_perms(), format_hints.HexBytes(data), disasm))
 
     def run(self):
         filter = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
-        return renderers.TreeGrid([("PID", int),
-                                   ("Process", str),
-                                   ("Start", format_hints.Hex),
-                                   ("End", format_hints.Hex),
-                                   ("Protection", str),
-                                   ("Hexdump", format_hints.HexBytes),
-                                   ("Disasm", interfaces_renderers.Disassembly)],
-                                  self._generator(plugin(self.context,
-                                                         self.config['primary'],
-                                                         self.config['darwin'],
-                                                         filter = filter)))
+        return renderers.TreeGrid(
+            [("PID", int), ("Process", str), ("Start", format_hints.Hex), ("End", format_hints.Hex),
+             ("Protection", str), ("Hexdump", format_hints.HexBytes), ("Disasm", interfaces_renderers.Disassembly)],
+            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter)))

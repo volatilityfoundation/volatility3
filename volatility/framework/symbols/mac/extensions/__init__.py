@@ -143,17 +143,18 @@ class vnode(generic.GenericIntelProcess):
 
 
 class vm_map_entry(generic.GenericIntelProcess):
+
     def is_suspicious(self, context, config_prefix):
-        ret = False        
+        ret = False
 
         perms = self.get_perms()
 
         if perms == "rwx":
-           ret = True 
+            ret = True
 
         elif perms == "r-x" and self.get_path(context, config_prefix) == "":
             ret = True
- 
+
         return ret
 
     def get_perms(self):
