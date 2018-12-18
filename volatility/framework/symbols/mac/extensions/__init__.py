@@ -223,20 +223,22 @@ class vm_map_entry(generic.GenericIntelProcess):
         # based on find_vnode_object
         vnode_object = self.get_object().get_map_object()
 
-        while 1:
+        found_end = False
+       
+        while not found_end:
             try:
                 tmp_vnode_object = vnode_object.shadow.dereference()
             except exceptions.PagedInvalidAddressException:
                 break
 
             if tmp_vnode_object.vol.offset == 0:
-                break
-
-            vnode_object = tmp_vnode_object
+                found_end = True
+            else:
+                vnode_object = tmp_vnode_object
 
         try:
             ops = vnode_object.pager.mo_pager_ops.dereference()
-        except Exception as e:  #exceptions.PagedInvalidAddressException:
+        except exceptions.PagedInvalidAddressException:
             return None
 
         found = False
