@@ -41,18 +41,13 @@ class proc(generic.GenericIntelProcess):
 
         seen = set()
 
-        try:
-            for i in range(task.map.hdr.nentries):
-                if not current_map or current_map.vol.offset in seen:
-                    break
+        for i in range(task.map.hdr.nentries):
+            if not current_map or current_map.vol.offset in seen:
+                break
 
-                yield current_map
-                seen.add(current_map.vol.offset)
-                current_map = current_map.links.next
-
-        except Exception as e:
-            print("broke in iter: {}".format(e))
-            raise
+            yield current_map
+            seen.add(current_map.vol.offset)
+            current_map = current_map.links.next
 
     ######
     # ikelos: this breaks with multi threading on, but works with it disabled
