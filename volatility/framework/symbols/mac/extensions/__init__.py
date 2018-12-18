@@ -1,10 +1,7 @@
-import collections.abc
-import typing
+from typing import Generator, Iterable, Optional, Tuple
 
-import volatility.framework.objects.utility
 from volatility.framework import constants
-from volatility.framework import exceptions, objects, interfaces
-from volatility.framework.automagic import mac
+from volatility.framework import exceptions, interfaces
 from volatility.framework.symbols import generic
 from volatility.framework.objects import utility
 
@@ -14,7 +11,7 @@ class proc(generic.GenericIntelProcess):
     def get_task(self):
         return self.task.dereference().cast("task")
 
-    def add_process_layer(self, config_prefix: str = None, preferred_name: str = None) -> typing.Optional[str]:
+    def add_process_layer(self, config_prefix: str = None, preferred_name: str = None) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
         Returns the name of the Layer or None.
         """
@@ -31,7 +28,7 @@ class proc(generic.GenericIntelProcess):
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
-    def get_map_iter(self) -> typing.Iterable[interfaces.objects.ObjectInterface]:
+    def get_map_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         try:
             task = self.get_task()
         except exceptions.PagedInvalidAddressException:
@@ -67,7 +64,7 @@ class proc(generic.GenericIntelProcess):
                                     context: interfaces.context.ContextInterface,
                                     config_prefix: str,
                                     rw_no_file: bool = False) -> \
-            typing.Generator[typing.Tuple[int, int], None, None]:
+            Generator[Tuple[int, int], None, None]:
         """Returns a list of sections based on the memory manager's view of this task's virtual memory"""
         for vma in self.get_map_iter():
             start = int(vma.links.start)

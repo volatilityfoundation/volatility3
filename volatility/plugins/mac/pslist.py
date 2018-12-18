@@ -1,5 +1,5 @@
-import typing
 import logging
+from typing import Callable, Iterable, List
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers, interfaces
@@ -22,7 +22,7 @@ class PsList(interfaces_plugins.PluginInterface):
         ]
 
     @classmethod
-    def create_filter(cls, pid_list: typing.List[int] = None) -> typing.Callable[[int], bool]:
+    def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
 
         def nullfilter():
             return False
@@ -55,8 +55,8 @@ class PsList(interfaces_plugins.PluginInterface):
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
                    mac_symbols: str,
-                   filter: typing.Callable[[int], bool] = lambda _: False) -> \
-            typing.Iterable[interfaces.objects.ObjectInterface]:
+                   filter: Callable[[int], bool] = lambda _: False) -> \
+            Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer"""
 
         aslr_shift = mac.MacUtilities.find_aslr(context, mac_symbols, layer_name)
