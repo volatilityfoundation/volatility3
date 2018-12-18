@@ -4,6 +4,7 @@ typically found in Linux's /proc file system.
 
 from volatility.framework import exceptions, renderers
 from volatility.framework.interfaces import plugins
+from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.plugins.mac import pslist
 
@@ -13,8 +14,11 @@ class Psaux(plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        # Since we're calling the plugin, make sure we have the plugin's requirements
-        return pslist.PsList.get_requirements() + []
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "darwin", description = "Mac Kernel")
+        ]
 
     def _generator(self, tasks):
         for task in tasks:
@@ -30,7 +34,6 @@ class Psaux(plugins.PluginInterface):
             argsstart = task.user_stack - task.p_argslen
 
             if not proc_layer.is_valid(argsstart) or task.p_argslen == 0 or task.p_argc == 0:
-                print("bad check")
                 continue
 
             # Add one because the first two are usually duplicates
