@@ -12,6 +12,7 @@ from volatility.plugins.mac import lsmod
 
 vollog = logging.getLogger(__name__)
 
+
 class Check_syscall(plugins.PluginInterface):
     """Check system call table for hooks"""
 
@@ -22,19 +23,18 @@ class Check_syscall(plugins.PluginInterface):
                 name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolRequirement(name = "darwin", description = "OSX Kernel")
         ]
-    
+
     def _generator(self, mods: Iterator[Any]):
         aslr_shift = mac.MacUtilities.find_aslr(self.context, self.config['darwin'], self.config['primary'])
         darwin = self.context.module(self.config['darwin'], self.config['primary'], aslr_shift)
 
-        mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'],
-                                                    aslr_shift)
+        mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'], aslr_shift)
 
         policy_list = darwin.object(symbol_name = "_mac_policy_list").cast("mac_policy_list")
-     
+
         entries = darwin.object(
             type_name = "array",
-            offset = policy_list.entries.dereference().vol.offset,  
+            offset = policy_list.entries.dereference().vol.offset,
             subtype = darwin.get_type('mac_policy_list_element'),
             count = policy_list.staticmax + 1)
 
@@ -51,7 +51,7 @@ class Check_syscall(plugins.PluginInterface):
                 continue
 
             try:
-                ent_name = utility.pointer_to_string(mpc.mpc_name, 255) 
+                ent_name = utility.pointer_to_string(mpc.mpc_name, 255)
             except exceptions.PagedInvalidAddressException:
                 ent_name = "N/A"
 
@@ -72,12 +72,12 @@ class Check_syscall(plugins.PluginInterface):
                     symbol_module = utility.array_to_string(found_module)
                 else:
                     symbol_module = "UNKNOWN"
-                
+
                 yield (0, (check, ent_name, symbol_module, format_hints.Hex(call_addr)))
 
     def run(self):
         return renderers.TreeGrid([("Member", str), ("Policy Name", str), ("Handler Module", str),
-                                   ("Handler Address", format_hints.Hex)], 
-                                    self._generator(
-                                        lsmod.Lsmod.list_modules(self.context, self.config['primary'],
-                                                                     self.config['darwin'])))
+                                   ("Handler Address", format_hints.Hex)],
+                                  self._generator(
+                                      lsmod.Lsmod.list_modules(self.context, self.config['primary'],
+                                                               self.config['darwin'])))
