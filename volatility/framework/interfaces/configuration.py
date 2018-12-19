@@ -134,13 +134,33 @@ class HierarchicalDict(collections.abc.Mapping):
             self._subdict[self._key_head(key)] = subdict
         else:
             if is_data:
-                self._data[key] = value
+                self._data[key] = self._sanitize_value(value)
             else:
                 if not isinstance(value, HierarchicalDict):
                     raise TypeError(
                         "HierarchicalDicts can only store HierarchicalDicts within their structure: {}".format(
                             type(value)))
                 self._subdict[key] = value
+
+    def _sanitize_value(self, value: Any) -> ConfigSimpleType:
+        """Method to ensure all values are standard values and not volatility objects containing contexts"""
+        if isinstance(value, list):
+            new_list = []
+            for element in list:
+                new_list.append(self._sanitize_value(element))
+            return new_list
+        elif isinstance(value, int):
+            return int(value)
+        elif isinstance(value, float):
+            return float(value)
+        elif isinstance(value, str):
+            return str(value)
+        elif isinstance(value, bytes):
+            return bytes(value)
+        elif isinstance(value, bool):
+            return bool(value)
+        else:
+            raise TypeError("Invalid type stored in configuration")
 
     def __delitem__(self, key: str) -> None:
         """Deletes an item from the hierarchical dict"""
