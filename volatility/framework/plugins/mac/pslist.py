@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Generator, List
+from typing import Callable, Iterable, List
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers, interfaces
@@ -23,13 +23,21 @@ class PsList(interfaces_plugins.PluginInterface):
 
     @classmethod
     def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
-        filter = lambda _: False
+
+        def nullfilter():
+            return False
+
+        filt = nullfilter
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
         if filter_list:
-            filter = lambda x: x not in filter_list
-        return filter
+
+            def list_filter(x):
+                return x not in filter_list
+
+            filt = list_filter
+        return filt
 
     def _generator(self):
         for task in self.list_tasks(
@@ -47,8 +55,8 @@ class PsList(interfaces_plugins.PluginInterface):
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
                    mac_symbols: str,
-                   filter: Callable[[int], bool] = lambda _: False) \
-            -> Generator[interfaces.objects.ObjectInterface, None, None]:
+                   filter: Callable[[int], bool] = lambda _: False) -> \
+            Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer"""
 
         aslr_shift = mac.MacUtilities.find_aslr(context, mac_symbols, layer_name)
@@ -56,7 +64,7 @@ class PsList(interfaces_plugins.PluginInterface):
         proc = darwin.object(symbol_name = "allproc").lh_first
 
         seen = {}
-        while proc != None and proc.vol.offset != 0:
+        while proc is not None and proc.vol.offset != 0:
             if proc.vol.offset in seen:
                 vollog.log(logging.INFO, "Recursive process list detected (a result of non-atomic acquisition).")
                 break

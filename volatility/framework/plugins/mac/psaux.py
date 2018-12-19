@@ -29,10 +29,10 @@ class Psaux(plugins.PluginInterface):
 
             argsstart = task.user_stack - task.p_argslen
 
-            if (not proc_layer.is_valid(argsstart) or not task.p_argslen or not task.p_argc):
+            if not proc_layer.is_valid(argsstart) or task.p_argslen == 0 or task.p_argc == 0:
                 continue
 
-                # Add one because the first two are usually duplicates
+            # Add one because the first two are usually duplicates
             argc = task.p_argc + 1
 
             # smear protection
@@ -50,13 +50,13 @@ class Psaux(plugins.PluginInterface):
                     break
 
                 idx = arg.find(b'\x00')
-                if idx > -1:
+                if idx != -1:
                     arg = arg[:idx]
 
                 argsstart += len(str(arg)) + 1
 
                 # deal with the stupid alignment (leading nulls) and arg duplication
-                if not args:
+                if len(args) == 0:
                     while argsstart < task.user_stack:
                         try:
                             check = proc_layer.read(argsstart, 1)
@@ -74,17 +74,17 @@ class Psaux(plugins.PluginInterface):
                 elif arg != args[0]:
                     args.append(arg)
 
-                argc -= 1
+                argc = argc - 1
 
             args_str = " ".join([s.decode("utf-8") for s in args])
 
             yield (0, (task.p_pid, task_name, task.p_argc, args_str))
 
     def run(self) -> renderers.TreeGrid:
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
             [("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
-            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter)))
+            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filt)))

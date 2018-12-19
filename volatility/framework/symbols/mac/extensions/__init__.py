@@ -224,7 +224,7 @@ class vm_map_entry(generic.GenericIntelProcess):
         vnode_object = self.get_object().get_map_object()
 
         found_end = False
-       
+
         while not found_end:
             try:
                 tmp_vnode_object = vnode_object.shadow.dereference()
