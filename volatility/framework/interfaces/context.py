@@ -115,7 +115,8 @@ class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                  layer_name: str,
                  offset: int,
                  symbol_table_name: Optional[str] = None,
-                 native_layer_name: Optional[str] = None) -> None:
+                 native_layer_name: Optional[str] = None,
+                 absolute_symbol_addresses: bool = False) -> None:
         self._context = self._check_type(context, ContextInterface)
         self._module_name = self._check_type(module_name, str)
         self._layer_name = self._check_type(layer_name, str)
@@ -124,6 +125,7 @@ class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         if native_layer_name:
             self._native_layer_name = self._check_type(native_layer_name, str)
         self.symbol_table_name = symbol_table_name or self._module_name
+        self._absolute_symbol_addresses = absolute_symbol_addresses
         super().__init__()
 
     @property
