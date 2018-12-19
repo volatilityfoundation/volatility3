@@ -144,21 +144,19 @@ class HierarchicalDict(collections.abc.Mapping):
 
     def _sanitize_value(self, value: Any) -> ConfigSimpleType:
         """Method to ensure all values are standard values and not volatility objects containing contexts"""
-        if isinstance(value, list):
-            new_list = []
-            for element in list:
-                new_list.append(self._sanitize_value(element))
-            return new_list
+        if isinstance(value, bool):
+            return bool(value)
         elif isinstance(value, int):
             return int(value)
-        elif isinstance(value, float):
-            return float(value)
         elif isinstance(value, str):
             return str(value)
         elif isinstance(value, bytes):
             return bytes(value)
-        elif isinstance(value, bool):
-            return bool(value)
+        elif isinstance(value, list):
+            new_list = []
+            for element in list:
+                new_list.append(self._sanitize_value(element))
+            return new_list
         else:
             raise TypeError("Invalid type stored in configuration")
 
