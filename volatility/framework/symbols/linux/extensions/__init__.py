@@ -59,7 +59,7 @@ class task_struct(generic.GenericIntelProcess):
 
     def get_process_memory_sections(self, heap_only: bool = False) -> Generator[Tuple[int, int], None, None]:
         """Returns a list of sections based on the memory manager's view of this task's virtual memory"""
-        for vma in self.mm.mmap_iter:
+        for vma in self.mm.get_mmap_iter():
             start = int(vma.vm_start)
             end = int(vma.vm_end)
 
@@ -95,8 +95,7 @@ class fs_struct(objects.Struct):
 
 class mm_struct(objects.Struct):
 
-    @property
-    def mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
+    def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct."""
 
         if not self.mmap:
