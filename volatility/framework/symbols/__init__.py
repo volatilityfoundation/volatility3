@@ -31,7 +31,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
         self._dict = collections.OrderedDict()  # type: Dict[str, interfaces.symbols.BaseSymbolTableInterface]
         # Permanently cache all resolved symbols
         self._resolved = {}  # type: Dict[str, interfaces.objects.Template]
-        self._resolved_symbols = set()  # type: Set[str]
+        self._resolved_symbols = {}  # type: Dict[str, interfaces.objects.Template]
 
     def free_table_name(self, prefix: str = "layer") -> str:
         """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
@@ -174,14 +174,17 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
         retval = self._weak_resolve(SymbolType.SYMBOL, symbol_name)
         if symbol_name not in self._resolved_symbols and retval.type is not None:
             # Stash the old resolved type if it exists
-            old_resolved = self._resolved.get(symbol_name, None)
+            old_resolved = self._resolved_symbols.get(symbol_name, None)
             try:
-                self._resolved[symbol_name] = retval.type
-                self._iterative_resolve([symbol_name])
-                self._resolved_symbols.add(symbol_name)
+                self._resolved_symbols[symbol_name] = retval.type
+                for child in retval.type.children:
+                    if isinstance(child, objects.templates.ReferenceTemplate):
+                        # Resolve the child, then replace it
+                        child_resolved = self.get_type(child.vol.type_name)
+                        retval.type.replace_child(child, child_resolved)
             finally:
                 if old_resolved is not None:
-                    self._resolved[symbol_name] = old_resolved
+                    self._resolved_symbols[symbol_name] = old_resolved
         if not isinstance(retval, interfaces.symbols.SymbolInterface):
             raise exceptions.SymbolError("Unresolvable Symbol: {}".format(symbol_name))
         return retval
