@@ -1,0 +1,989 @@
+VOLATILITY CONTRIBUTORS PUBLIC LICENSE Version 1.0 
+
+THE LICENSED WORK IS PROVIDED UNDER THE TERMS OF THIS VOLATILITY CONTRIBUTORS
+PUBLIC LICENSE 1.0 (“LICENSE" or “VCPL 1.0”).  ANY USE, REPRODUCTION OR
+DISTRIBUTION OF THE LICENSED WORK CONSTITUTES DISTRIBUTOR’S AND RECIPIENT'S
+ACCEPTANCE OF THIS LICENSE AND ITS TERMS, WHETHER OR NOT SUCH DISTRIBUTOR OR
+RECIPIENT READS THE TERMS OF THIS LICENSE. "LICENSED WORK”, “DISTRIBUTOR", AND
+"RECIPIENT" ARE DEFINED BELOW. 
+
+IMPORTANT NOTE: This License specifically applies to the release of Volatility
+Framework Software V3.0 (“Licensed Work”) and subsequent releases of the
+Licensed Work, including Modifications,  Modification Documentation,
+Contributions, Derivative Works, Derived Works.” This License is subject to the
+terms of the Volatility Individual Contributor License Agreement V2.0 (“ICLA”)
+contained in Exhibit B of the License.  
+
+You (including each Contributor, Distributor, Licensee of the Licensed Work)
+must read the Volatility Contributors Public License, Volatility Independent
+Contributor License Agreement, and any associated Modification Documentation
+that you receive with the Licensed Work, to determine your obligations,
+permitted uses, and definitions of important terms defined in this License,
+Exhibit A, and the Exhibit B (“ICLA”), particularly as to Subsequent Works,
+Derivative Works, Derived Works, and required Modification Documentation, all of
+which are defined by the Initial Contributor to this License, in Exhibit A, and
+Exhibit B (“ICLA”) of this License.    
+
+See Section 2.2 below, Exhibit A attached, Exhibit B (“ICLA” ) attached and any
+CHANGELOG.txt accompanying this License to determine the specific requirements
+applicable to this License. For example, without limiting the foregoing, (a) for
+selected choice of law and jurisdiction see Part 3 of Exhibit A.
+
+DEFINITIONS.
+
+1.0  “CONTRIBUTOR” means: Any Person or Entity that makes a contribution to the
+Licensed Work under this License, or otherwise contributes to the Licensed Work
+in accordance with the terms of Exhibit A attached and/or under Exhibit B
+(“ICLA”) attached.  1.1. "CONTRIBUTION" means:
+
+(a) In the case of the Initial Contributor, the Initial Work distributed under
+this License by the Initial Contributor; and
+
+(b) In the case of each Subsequent Contributor, the Subsequent Work originating
+from and distributed by such Subsequent Contributor.
+
+1.2. "DESIGNATED WEB SITE" means the web site having the URL identified in Part
+1 of Exhibit A, which URL may be changed by the Initial Contributor by posting
+on the current Designated Web Site the new URL for at least sixty (60) days.
+
+1.3. "DISTRIBUTOR" means any Person that distributes the Licensed Work or any
+portion thereof to at least one Third Party.
+
+1.3.1 “DISTRIBUTE" means any sharing, transfer, dissemination, display, shared
+access, display, illustration, public or private showing, giving, use or
+presentation of the Licensed Work, any Derivative Work or Derived Work,
+including any Modifications or Changes to the Licensed Work under this License,
+to any Person, or to any Third Party, by any means, including by way of example,
+through means of any distributive access system, electronic distribution
+mechanism, sharing platform, shared or accessible network, online conferencing
+system, learning management system, electronic access, or as part of any
+training materials, guide(s), illustrations, or other distribution. 
+
+1.4. "ELECTRONIC DISTRIBUTION MECHANISM" means any mechanism generally accepted
+in the software development community for the electronic transfer of data.
+
+1.5. "EXECUTABLE" means the Licensed Work in any form other than Source Code.
+ 					
+1.6. "GOVERNING JURISDICTION" means the state, province or other legal
+jurisdiction identified in Part 3 of Exhibit A. 
+
+1.7.  INDIVIDUAL CONTRIBUTOR LICENSE AGREEMENT  V2.0 “ICLA” means the Individual
+Contributor License Agreement V2.0 identified in the attached Exhibit B to this
+License. 1.7.1 “INDIVIDUAL” means a person as defined in this License or other
+legal entity, including a corporation, partnership, unincorporated association
+or other body.
+
+1.8.    ”INDEPENDENT MODULE" means a separate module of software and/or data
+that is not a Subsequent Work, Derivative Work of the Licensed Work or Derived
+Work copied from the Licensed Work or any portion thereof. In addition, a module
+does not qualify as an Independent Module but instead forms an essential part of
+the Licensed Work if the module: (a) is embedded in the Licensed Work; (b) is
+included by reference in the Licensed Work other than by a function call or a
+class reference; (c) integrates code or data from the Licensed Work (d) reads or
+includes data files included in the Licensed Work; (e) is designed specifically
+to execute Licensed Work and parse the results of the Licensed Work; or (f) must
+be included or contained, in whole or in part, within a file directory or
+subdirectory actually containing files making up the Licensed Work, including
+Modification Documentation required under this License (for example,
+instructional guides, training materials, visual illustrations of the Subsequent
+Work, etc.) for Subsequent Work Modifications and/or Changes for Distributed
+Derivative Works or Derived Works as set forth in this License.
+
+1.8.1 "INITIAL CONTRIBUTOR" means the Person or entity identified as the Initial
+Contributor in the notice required by Part 1 of Exhibit A. and as set forth in
+Part 1 and Part 2 of Exhibit B Individual Contributor License Agreement V2.0
+(“ICLA”).] “Person” shall also have the meaning set forth in Paragraph 1.14 of
+this License.
+
+1.9. "INITIAL WORK" means the initial Source Code, object code (if any), data
+files and documentation for the computer program identified in Part 2 of Exhibit
+A, as such Source Code, object code, data files and documentation is distributed
+under this License by the Initial Contributor.
+
+1.10. "LARGER WORK" means a work that combines the Licensed Work or portions
+thereof with Code, Data and Documentation contained in the Larger Work that is
+not governed by this License.
+ 						
+1.11. "LICENSED WORK" means the Initial Work and/or any Subsequent Work, any
+Modifications, and any Documentation required under this License, in each case
+including portions thereof.
+
+1.12. "LICENSE NOTICE" has the meaning assigned in Part 4 of Exhibit A and in
+Part 1 and Part 2 of Exhibit B (“ICLA”). 
+
+1.13. "MODIFICATION" or "MODIFICATIONS" means any change to and/or addition to
+the Licensed Work for which the work serves as the foundational basis for the
+Modification and/or change, and for which any separation, removal or isolation
+of the Licensed Work from the Modification(s) or Change(s), would render the
+Modification and/or Changes immaterial to the effective purposes and application
+of the Licensed Work. Modification includes without limitation, a Subsequent
+Work, any related Modification Documentation in any form that describes,
+illustrates, demonstrates, explains, instructs, shows or defines the
+interrelationships of the Modifications to the Licensed Work or a Subsequent
+Work under this License. By way of example, Modification Documentation includes
+training instructions, any visual representations of the source code, use,
+operation, inputs and outputs of the Modifications for the Licensed Work,
+release notes, step by step guides, electronic and written presentation slide
+decks, screenshots and screen capture illustrations, and written, electronic or
+contextual examples of the Modifications presented in any form reduced to a form
+of lab guide or lesson plan of Licensed Work Modifications and Changes. All such
+Modifications and/or Changes of the Licensed Work shall be subject to the terms
+of the Exhibit B (“ICLA”) attached. For greater clarity, an immaterial change or
+modification to the Licensed Work, as referenced in this Section, is and shall
+be determined by the Initial Contributor to the Licensed Work. 
+
+1.14. "PERSON" means an individual or other legal entity, including a
+corporation, partnership, unincorporated association or other body.
+
+1.15. "RECIPIENT" means any Person who receives or obtains the Licensed Work
+under this License (by way of example, without limiting the foregoing, any
+Subsequent Contributor or Distributor).
+
+1.16. "SOURCE CODE" means the source code for a computer program, including the
+source code for all modules and components of the computer program, plus any
+associated interface definition files, and scripts used to control compilation
+and installation of an executable.
+
+1.17. "SUBSEQUENT CONTRIBUTOR" means any Person that makes or contributes to the
+making of any Subsequent Work, or a Modification or Change to the Licensed Work
+and that distributes that Subsequent Work under this License along with required
+Modification Documentation, Exhibit A and Exhibit B (“ICLA”) to at least one
+Third Party. 
+
+1.18. "SUBSEQUENT WORK" means a work that has arises or results from
+modifications, changes to and/or additions to: (a) the Initial Work;  (b) the
+Licensed Work;  (c) Any Derivative Work as defined in this License; (d) Any
+Derived Work as defined in this License; (e ) any other Subsequent Work; or (d)
+any combination of the Initial Work and any such other Subsequent Work, or
+Licensed Work;
+
+where such modifications, changes and/or additions originate from a Subsequent
+Contributor. A Subsequent Work will "originate" from a Subsequent Contributor if
+the Subsequent Work is or was a result of efforts by such Subsequent Contributor
+(or any person as defined in this License, acting on such Subsequent
+Contributor's behalf, or as, a contractor, agent, associate or other entity that
+is engaged in any capacity by or under the direction of the Subsequent
+Contributor). A Subsequent Work of a Subsequent Contributor under this License
+shall contain the required Modification Documentation for the Subsequent Work as
+defined in this License.  For purposes of clarity, A Subsequent Work under this
+License shall also constitute and include a “Derivative Work” or a “Derived
+Work,” for all Modifications and/or changes to the Licensed Work under Paragraph
+1.13 of this License.
+
+1.19. "SUPPLEMENT FILE" means a file, including any Modification Documentation
+required under this License, distributed with the Licensed Work having a file
+name “CHANGELOG.txt” and shall include all Documentation for and associated with
+the Licensed Work, and any Modification Documentation required for any
+Derivative Work or Derived Work as defined and set forth under this License.
+
+1.20. "THIRD PARTY" means any third party. 
+
+2. LICENSE.
+
+2.1. COPYRIGHT LICENSE FROM INITIAL AND SUBSEQUENT CONTRIBUTORS.
+
+(a) Subject to the terms of this License, the Initial Contributor hereby grants
+each Recipient a world-wide, royalty-free, non-exclusive copyright license to:
+
+(i) reproduce, prepare derivative works of the Licensed Work as defined and set
+forth in this License, prepare derived works from the Licensed Work, and
+publicly display, publicly perform, distribute and sublicense the Initial Work
+with all Documentation or Modification Documentation required under this
+License; and
+
+(ii) reproduce, publicly display, publicly perform, and distribute any
+derivative works, and derived works (if any) prepared by Recipient with all
+Modification Documentation required under this License;
+
+in Source Code and Executable form, either with other Subsequent Work
+Modifications, or on an unmodified basis, or as part of a Larger Work.
+
+(b) Subject to the terms of this License, each Subsequent Contributor hereby
+grants each Recipient a world-wide, royalty-free, non-exclusive copyright
+license to:
+
+(i) reproduce, prepare derivative works of, and derived works from (if any,
+publicly display, publicly perform, and distribute the Subsequent Work
+Modifications of such Subsequent Contributor (also defined in this License as
+Derivative Works or Derived Works), with all Modification Documentation required
+under this License; and
+
+(ii) reproduce, publicly display, publicly perform, distribute, and sublicense
+any derivative works, and derived works (if any) prepared by Recipient with all
+Modification Documentation required under this License; in Source Code and
+Executable form, either with other Subsequent Work Modifications, or on an
+unmodified basis, or as part of a Larger Work with all Modification
+Documentation required under this License. 
+
+(iii) For greater Distributor clarity, when a distribution or re-distribution of
+the Licensed Work is made by a Distributor, and where no Subsequent Work
+modifications or changes have been made to the Licensed Work under this License,
+only the Documentation in compliance with this License, received by the
+Distributor, for the Licensed Work is required to be given to a Person or entity
+to whom the Licensed Work is distributed or re-distributed under this License. 
+
+2.2. PATENT LICENSE FROM INITIAL AND SUBSEQUENT CONTRIBUTORS.
+
+(a) This License includes a patent license pursuant to the patent terms in
+paragraphs A, B, C, D and E from Part 6 of Exhibit A.
+
+(b) If any Recipient receives or obtains one or more copies of the Initial Work
+or any other portion of the Licensed Work under the patent license, then all
+licensing of such copies under this License shall include the terms in
+paragraphs A, B, C, D and E from Part 6 of Exhibit A  
+
+2.3. ACKNOWLEDGEMENT AND DISCLAIMER.
+
+Recipient understands and agrees that although Initial Contributor and each
+Subsequent Contributor grants the licenses to its Contributions and Subsequent
+Work Modifications as set forth herein, and no representation, warranty,
+guarantee or assurance is provided by any Initial Contributor, Subsequent
+Contributor, or Distributor that the Licensed Work does not infringe the patent
+or other intellectual property rights of any other entity. Initial Contributor,
+Subsequent Contributor, and each Distributor disclaims any liability to
+Recipient for claims brought by any other Individual or Entity based on
+infringement of intellectual property rights or otherwise, in relation to the
+Licensed Works. As a condition to exercising the rights and licenses granted
+hereunder, each Recipient hereby assumes sole responsibility to secure any other
+intellectual property rights needed, if any. For example, without limiting the
+foregoing disclaimers, if a third party patent license is required to allow
+Recipient to distribute the Licensed Work, it is Recipient's responsibility to
+acquire that license before distributing the Licensed Work.
+
+2.4. RESERVATION.  Nothing in this License shall be deemed to grant any rights
+to trademarks, copyrights, patents, trade secrets or any other intellectual
+property of Initial Contributor, Subsequent Contributor, or Distributor except
+as expressly stated herein and subject to the terms and conditions of the
+attached Exhibit B Individual Contributor License Agreement V2.0 (“ICLA”) which
+are incorporated into this License by reference.
+
+3. DISTRIBUTION OBLIGATIONS.
+
+3.1. DISTRIBUTION GENERALLY.
+
+(a) All Distributors must distribute the Licensed Work in accordance with the
+terms of the License, and must include a copy of this License (including without
+limitation Exhibit A, and for Subsequent Works include Exhibit B (“ICLA”) V2.0,
+all required Modification Documentation for any Derivative Works or Derived
+Works under this License and the accompanying (“Supplement File) with each copy
+of the Licensed Work or Subsequent Work distributed. In particular, this License
+and all required Modification Documentation must be prominently distributed with
+the Licensed Work in a file called "LICENSE.txt." In addition, the License
+Notice in Part 4 of Exhibit A must be included at the beginning of all Source
+Code files, and viewable to a user in any executable such that the License
+Notice is reasonably brought to the attention of any party using the Licensed
+Work.
+
+3.2. EXECUTABLE DISTRIBUTIONS OF THE LICENSED WORK.
+
+A Distributor may choose to distribute the Licensed Work, or any portion
+thereof, including any Subsequent Work in Executable form (an "EXECUTABLE
+DISTRIBUTION") to any third party, under the terms of Section 2 of this License,
+provided the Executable Distribution is made available under and accompanied by
+a copy of this License, (including required Modification Documentation for
+Subsequent Works, Derivative Works or Derived Works under this License), and
+accompanied by a copy of Exhibit B (“ICLA”) V.20, AND provided at least ONE of
+the following conditions is fulfilled:
+
+(a) The Executable Distribution must be accompanied by the Source Code for the
+Licensed Work making up the Executable Distribution, and the Source Code must be
+distributed on the same media as the Executable Distribution or using an
+Electronic Distribution Mechanism; or
+
+(b) The Executable Distribution must be accompanied with a written offer from
+Distributor, valid for at least thirty six (36) months from the date of
+distribution, to give any third party under the terms of this License, for a
+charge no more than the cost of physically performing source distribution, a
+complete machine-readable copy of the Source Code for the Licensed Work making
+up the Executable Distribution, to be available and distributed using an
+Electronic Distribution Mechanism, and such Executable Distribution must remain
+available in Source Code form to any third party via the Electronic Distribution
+Mechanism (or any replacement Electronic Distribution Mechanism the particular
+Distributor may reasonably need to turn to as a substitute) for at least thirty
+six (36) months from the date of Distribution.
+
+For greater certainty, the above-noted requirements apply to any Licensed Work,
+or portion thereof and to any Subsequent Work, Derivative Works and to any
+Derived Works distributed to any third party in Executable form, whether such
+distribution is made alone, in combination with a Larger Work or Independent
+Modules, or in some other combination.
+
+3.3. SOURCE CODE DISTRIBUTIONS.
+
+When a Distributor makes the Licensed Work, or any portion thereof, or including
+a Subsequent Work, available to any Person in Source Code form, it must be made
+available under this License and a copy of this License (including required
+Modification Documentation for Subsequent Works, Derivative Works or Derived
+Works under this License) a copy of Exhibit A and a copy of Exhibit B (“ICLA”)
+V.20 must be included with each copy of the Source Code, situated so that the
+copy of the License, Exhibit A, Exhibit B (‘ICLA”) V2.0 and the Modification
+Documentation (when required under this License), is conspicuously brought to
+the attention of that Person. For greater clarification, this Section 3.3
+applies to all distribution(s) of the Licensed Work and any Subsequent Work,
+Derivative Works or Derived Works in any Source Code form. A Distributor may
+charge a fee for the physical act of transferring a copy, which charge shall be
+no more than the cost of physically performing source distribution.
+
+3.4. REQUIRED NOTICES IN SOURCE CODE. 
+
+Each Subsequent Contributor must ensure that the notice(s) set forth in Part 4
+of Exhibit A is included in each file of the Source Code for each Subsequent
+Work originating from that particular Subsequent Contributor, if such notice is
+not already included in each such file.  If it is not possible to put such
+required Notice(s) in a particular Source Code file due to its structure, then
+the Subsequent Contributor must include the “Required Notice(s)” in a location
+(such as a relevant directory in which the file is stored) where a user would be
+likely to look for the “Required Notice(s).”
+
+3.5. NO DISTRIBUTION REQUIREMENTS FOR INTERNALLY USED MODIFICATIONS.
+
+Notwithstanding Sections 3.2, 3.3 and 3.4 of this License, Recipient may,
+internally within its own corporation or organization use the Licensed Work,
+including the Initial Work and Subsequent Works, and make Modifications for
+internal operational use(s) within Recipient's own corporation or organization
+(collectively, "INTERNAL USE MODIFICATIONS”), subject to Section 1.3.1 of this
+License.  The Recipient shall have no obligation to distribute, in either Source
+Code or Executable form, any such Internal Use Modifications made by Recipient
+in the course of such internal use, except where required below in this Section
+3.5. All Internal Use Modifications distributed to any Person, whether or not a
+Third Party, shall be distributed pursuant to and be accompanied by the terms of
+this License, Exhibit A, Exhibit B (“ICLA”) V2.0 and the  Modification
+Documentation when required under this License,. If the Recipient chooses to
+distribute any such Internal Use Modifications to any Person or Third Party,
+then the Recipient shall be deemed a Subsequent Contributor, and any such
+Internal Use Modifications distributed to any Person or Third Party shall be
+deemed a Subsequent Work, Derivative Work or Derived Work originating from that
+Subsequent Contributor, and shall from the first such instance of receipt,
+control, use, transfer, or distribution, in any manner, become part of the
+Licensed Work that must thereafter be distributed and made available to
+Person(s) and Third Parties in accordance with the terms of Sections 3.1 to 3.4
+inclusive, and in accordances with the terms of Section 1.13 of this License.
+
+3.6. INDEPENDENT MODULES.
+
+This License, subject to the terms of Section 1.8 of this License, shall not
+apply to Independent Modules of any Initial Contributor, Subsequent Contributor,
+Distributor or any Recipient, and such Independent Modules may be licensed or
+made available under one or more separate license agreements, to the extent that
+they are not deemed Subsequent Works, Derivative Works or Derived Works under
+Section 1.8 of this License. 
+
+3.7. LARGER WORKS.
+
+Any Distributor or Recipient may create or contribute to a Larger Work by
+combining any of the Licensed Work with other code not governed by the terms of
+this License, and may distribute the Larger Work as one or more products.
+However, in any such case, Distributor or Recipient (as the case may be) must
+make sure that the notice requirements of this License set forth in Part 4 of
+Exhibit A, Exhibit B (“ICLA”) V2.0 and the required Modification Documentation
+under this License, are fulfilled for the Licensed Work portion of the Larger
+Work.  
+
+3.8. DESCRIPTION OF DISTRIBUTED MODIFICATIONS.
+
+(a) Each Subsequent Contributor (including the Initial Contributor where the
+Initial Contributor also qualifies as a Subsequent Contributor) must cause each
+Subsequent Work created or contributed to by that Subsequent Contributor to
+contain a file documenting the changes, in accordance with the requirements of
+Part 1 of the Supplement File,  that such Subsequent Contributor made in the
+creation or contribution to that Subsequent Work. 
+
+(b) The Initial Contributor may at any time introduce requirements or add to or
+change earlier requirements (in each case, the "EARLIER DESCRIPTION
+REQUIREMENTS") for documenting changes resulting in Subsequent Works by revising
+Part 1 of each copy of the Supplement File distributed by the Initial
+Contributor with future copies of the Licensed Work, any Subsequent Work,
+Derivative Work or Derived Work, so that Part 1 of the Supplement File then
+contains new requirements (the "NEW DESCRIPTION REQUIREMENTS") for documenting
+such changes. For greater certainty, the terms of Section 1.13, 1.18, 1.19 and
+2.1 of this License shall apply to all Subsequent Work, Derivative Work and
+Derived Work changes and modifications under the terms of Section 3 through
+Section 3.8 of this License.
+
+(c) Any Recipient receiving at any time any copy of an Initial Work or any
+Subsequent Work, Derivative Work, or Derived Work under a copy of this License
+(in each case, an "Earlier LICENSED COPY") having the Earlier Description
+Requirements may choose, with respect to each such Earlier Licensed Copy, to
+comply with the Earlier Description Requirements or the New Description
+Requirements. Where a Recipient chooses to comply with the New Description
+Requirements, that Recipient will, when thereafter distributing any copies of
+any such Earlier Licensed Copy, include a Supplement File having a section
+entitled Part 1 that contains a copy of the New Description Requirements,
+Exhibit A, Exhibit B (“ICLA”) and required Modification Documentation under this
+License.
+
+(d) For greater certainty, the intent of Part 1 of the Supplement File is to
+provide a mechanism (if any) by which Subsequent Contributors must document
+changes that they make to the Licensed Work resulting in Subsequent Works. Part
+1 of any Supplement File shall not be used to increase or reduce the scope of
+the license granted in Section 2 of this License or in any other way increase or
+decrease the rights and obligations of any Recipient. Further, the Initial
+Contributor to this License, or its designee can at any time,  require a
+Recipient to correct and change the Recipient’s insufficient or non-compliant
+documentation procedures to comply with Part 1 of the Supplement File. Part 1 of
+any Supplement File is binding on each Recipient of any Licensed Work to the
+extent Part 1 sets out the requirements for documenting changes to the Initial
+Work or any Subsequent Work, Derivative Work or Derived Work, which shall be
+interpreted to include the documentation requirements set forth in Section 1.13,
+1.18, 1.19 and 2.1 of this License. 
+
+(e) An example of a set of requirements for documenting changes and
+contributions made by Subsequent Contributor is set out in Part 5 of Exhibit A
+of this License. Part 5 is a sample only and is not binding on Recipients,
+unless (subject to the earlier paragraphs of this Section 3.8) those are the
+requirements that the Initial Contributor includes in Part 1 of the Supplement
+File with the copies of the Initial Work distributed under this License.
+
+3.9. USE OF DISTRIBUTOR NAME.
+
+The name of a Distributor may not be used by any other Distributor to endorse or
+promote the Licensed Work or products derived from the Licensed Work, without
+prior written permission.
+
+3.10. ATTRIBUTION OF INITIAL CONTRIBUTOR.
+
+(a) The  Initial Contributor's attribution information (the "ATTRIBUTION
+INFORMATION") must be included at the beginning of each Source Code for the
+Initial Work or any Subsequent Work, Derivative Works or Derived Works and must
+include the following information: (a.) a copyright notice including the name of
+the Initial Contributor.
+
+(b) Each Recipient acknowledges that all trademarks, service marks and/or trade
+names contained within Part 2 of the Supplement File distributed with the
+Licensed Work are the exclusive property of the Initial Contributor and may only
+be used with the permission of the Initial Contributor, or under circumstances
+otherwise permitted by law, or as expressly set out in this License.  
+
+3.11. For greater certainty, any description or attribution provisions contained
+within a Supplement File may only be used to specify the nature of the
+description or attribution requirements, as the case may be. Any provision in a
+Supplement File that otherwise purports to modify, vary, nullify or amend any
+right, obligation or representation contained herein shall be deemed void to
+that extent, and shall be of no force or legal effect.
+
+4. VERSIONS OF THE LICENSE.
+
+4.1. NEW VERSIONS.
+
+The Initial Contributor may publish revised and/or new versions of the License
+from time to time. Each version will be given a distinguishing version number.
+
+4.2. EFFECT OF NEW VERSIONS.
+
+Once the Licensed Work, A Subsequent Work, Derivative Works, Derived Work or any
+portion thereof has been published by Initial Contributor under a particular
+version of the License, Recipient may choose to continue to use it under the
+terms of that version. However, if a Recipient chooses to use the Licensed Work
+under the terms of any subsequent version of the License published by the
+Initial Contributor, then from the date of making this choice, the Recipient
+must comply with the terms of that subsequent version with respect to all
+further reproduction, preparation of Subsequent Works, Derivative Works, Derived
+Works, public display of, public performance of, public or private distribution
+of and sub-licensing by the Recipient in connection with the Licensed Work. No
+one other than the Initial Contributor has the right to modify the terms
+applicable to the Licensed Work, a Subsequent Work, and any Derivative Work or
+Derived Works.
+
+5. DISCLAIMER OF WARRANTY.
+
+5.1. GENERAL DISCLAIMER.
+
+EXCEPT AS EXPRESSLY SET FORTH IN THIS LICENSE, THE LICENSED WORK (INCLUDING
+SUBSEQUENT WORK, DERIVATIVE WORK AND DERIVED WORK) IS PROVIDED UNDER THIS
+LICENSE ON AN "AS IS" BASIS, WITHOUT ANY REPRESENTATION, WARRANTY, GUARANTEE,
+ASSURANCE OR CONDITION OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING,
+WITHOUT LIMITATION, WARRANTIES OR CONDITIONS OF TITLE, NON-INFRINGEMENT,
+MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. THE ENTIRE RISK AS TO THE
+QUALITY AND PERFORMANCE OF THE LICENSED WORK IS WITH RECIPIENT. SHOULD ANY
+LICENSED WORK PROVE DEFECTIVE IN ANY RESPECT, RECIPIENT (NOT THE INITIAL
+CONTRIBUTOR OR ANY SUBSEQUENT CONTRIBUTOR) ASSUMES THE COST OF ANY NECESSARY
+SERVICING, REPAIR OR CORRECTION. THIS CLAUSE CONSTITUTES AN ESSENTIAL AND
+MATERIAL PART OF THIS LICENSE. NO USE OF ANY LICENSED WORK, SUBSEQUENT WORK,
+DERIVATIVE WORK OR DERIVED WORK IS AUTHORIZED HEREUNDER EXCEPT UNDER THIS
+LICENSE INCLUDING WITHOUT LIMITATION THIS DISCLAIMER.
+
+5.2. RESPONSIBILITY OF RECIPIENTS.
+
+Each Recipient is solely responsible for determining the appropriateness of
+using and distributing the Licensed Work, a Subsequent Work, any Derivative Work
+or a Derived Work under this License and assumes all risks associated with its
+exercise of rights under this License, including but not limited to the risks
+and costs of program errors, compliance with applicable laws, damage to or loss
+of data, programs or equipment, and unavailability or interruption of
+operations.
+
+6. TERMINATION.  
+
+6.1. This License shall continue until terminated in accordance with the express
+terms herein.
+
+6.2. Recipient may choose to terminate this License automatically at any time.
+
+6.3. This License, including without limitation the rights granted hereunder to
+a particular Recipient, will terminate automatically (without additional notice
+or action) if such Recipient is in material breach of any of the terms of this
+License. Without limiting the foregoing, any material breach by such Recipient
+of any term of any other License under which such Recipient is granted any
+rights to the Licensed Work, a Subsequent Work, Derivative Work or Derived Work
+shall constitute a material breach of this License.
+
+6.4. Upon termination of this License by or with respect to a particular
+Recipient for any reason, all rights granted hereunder and under any other
+License to that Recipient shall terminate.  
+
+6.5. Upon any termination of this License by or with respect to a particular
+Recipient, Sections 1., 2., 3., 4.1, 4.2, 5.1, 5.2,  6., 6.1, 6.2, 6.3, 6.4,
+7.1, 7.2, 8., 8.1, 8.2, 8.3, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7 and 9.8. together
+with all provisions of this License necessary for the interpretation and
+enforcement of same, shall expressly survive such termination. For clarity,
+Recipients who receive sub-licenses to the Licensed Work, a Subsequent Work or
+any Derivative Work or Derived Works can only receive a properly granted License
+constituting an “Other License,” if the Other License complies the terms of this
+License. Otherwise, any sublicense (however received) that does not comply with
+this License shall constitute an “Ineffective Other License.” and shall not be
+valid for any purposes. The purpose of this provision is to prevent the
+intentional or unintentional purported granting of an Ineffective Other License
+to a sublicensee to avoid compliance with the required Modification
+Documentation, Exhibit A, and Exhibit B (“ICLA”) V2.0 requirements of the
+License.”  
+
+7. LIMITATION OF LIABILITY.
+
+7.1. IN NO EVENT SHALL ANY OF INITIAL CONTRIBUTOR, ITS SUBSIDIARIES, OR
+AFFILIATES, OR ANY OF ITS OR THEIR RESPECTIVE OFFICERS, DIRECTORS, EMPLOYEES,
+AND/OR AGENTS (AS THE CASE MAY BE), HAVE ANY LIABILITY FOR ANY DIRECT DAMAGES,
+INDIRECT DAMAGES, PUNITIVE DAMAGES, INCIDENTAL DAMAGES, SPECIAL DAMAGES,
+EXEMPLARY DAMAGES, CONSEQUENTIAL DAMAGES OR ANY OTHER DAMAGES WHATSOEVER
+(INCLUDING WITHOUT LIMITATION LOSS OF USE, DATA OR PROFITS, OR ANY OTHER LOSS
+ARISING OUT OF OR IN ANY WAY RELATED TO THE USE, INABILITY TO USE, UNAUTHORIZED
+USE, EXISTENCE OF ANY MALWARE, PERFORMANCE, OR NON-PERFORMANCE OF THE LICENSED
+WORK OR ANY PART THEREOF OR THE PROVISION OF OR FAILURE TO PROVIDE SUPPORT
+SERVICES, OR THAT RESULT FROM ERRORS, DEFECTS, OMISSIONS, DELAYS IN OPERATION OR
+TRANSMISSION, OR ANY OTHER FAILURE OF PERFORMANCE), HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) IN RELATION TO OR ARISING IN ANY WAY OUT OF THIS
+LICENSE OR THE USE OR DISTRIBUTION OF THE LICENSED WORK OR THE EXERCISE OF ANY
+RIGHTS GRANTED HEREUNDER, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+THIS LIMITATION OF LIABILITY SHALL NOT APPLY TO LIABILITY FOR DEATH OR PERSONAL
+INJURY RESULTING FROM SUCH PARTY'S NEGLIGENCE TO THE EXTENT APPLICABLE LAW
+PROHIBITS SUCH LIMITATION. THIS CLAUSE CONSTITUTES AN ESSENTIAL AND MATERIAL
+PART OF THIS LICENSE. NO USE OF ANY LICENSED WORK, A SUBSEQUENT WORK, DERIVATIVE
+WORK OR DERIVED WORKS IS AUTHORIZED HEREUNDER EXCEPT UNDER THIS LICENSE
+INCLUDING WITHOUT LIMITATION THE LIMITATIONS SET FORTH IN THIS SECTION 7.1.
+
+7.2. EXCEPT AS EXPRESSLY SET FORTH IN THIS LICENSE, EACH RECIPIENT SHALL NOT
+HAVE ANY LIABILITY FOR ANY EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING
+WITHOUT LIMITATION LOST PROFITS), HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OR DISTRIBUTION OF THE LICENSED
+WORK OR THE EXERCISE OF ANY RIGHTS GRANTED HEREUNDER, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGES. THIS LIMITATION OF LIABILITY SHALL NOT APPLY TO
+LIABILITY FOR DEATH OR PERSONAL INJURY RESULTING FROM SUCH PARTY'S NEGLIGENCE TO
+THE EXTENT APPLICABLE LAW PROHIBITS SUCH LIMITATION.
+
+8. GOVERNING LAW AND LEGAL ACTION.
+
+8.1. This License shall be governed by and construed in accordance with the laws
+of the Governing Jurisdiction assigned in Part 3 of Exhibit A, without regard to
+its conflict of law provisions. No party may bring a legal action under this
+License more than one year after the cause of the action arose. Each party
+waives its rights (if any) to a jury trial in any litigation arising under this
+License. Note that if the Governing Jurisdiction is not assigned in Part 3 of
+Exhibit A, then the Governing Jurisdiction shall be the State of Maryland.
+
+8.2. The courts of the Governing Jurisdiction shall have jurisdiction, but not
+exclusive jurisdiction, to entertain and determine all disputes and claims,
+whether for specific performance, injunction, damages or otherwise, both at law
+and in equity, arising out of or in any way relating to this License, including
+without limitation, the legality, validity, existence and enforceability of this
+License. Each party to this License hereby irrevocably attorns to and accepts
+the jurisdiction of the courts of the Governing Jurisdiction for such purposes.
+
+8.3. Except as expressly set forth in this License, in the event of any action
+or proceeding brought by any party against another party under this License, the
+prevailing party shall be entitled to recover all costs and expenses including
+the reasonable fees of its attorneys in such action or proceeding in such amount
+as the court may adjudge reasonable.
+
+9. MISCELLANEOUS.
+
+9.1. The obligations imposed by this License are for the benefit of the Initial
+Contributor and any Recipient, and each Recipient acknowledges and agrees that
+the Initial Contributor and/or any other Recipient may enforce the terms and
+conditions of this License against any Recipient.
+
+9.2. This License represents the complete agreement and understanding concerning
+subject matter hereof, and supersedes and cancels all previous oral and written
+communications, representations, agreements and understandings between the
+parties with respect to the subject matter, terms and conditions of this
+License.
+
+9.3. The application of the United Nations Convention on Contracts for the
+International Sale of Goods is expressly excluded.
+
+9.4. The language in all parts of this License shall be in all cases construed
+simply according to its fair meaning, and not strictly for or against any of the
+parties hereto. Any law or regulation which provides that the language of a
+contract shall be construed against the drafter shall not apply to this License.
+
+9.5. If any provision of this License is invalid or unenforceable under the laws
+of the Governing Jurisdiction, it shall not affect the validity or
+enforceability of the remainder of the terms of this License, and without
+further action by the parties hereto, such provision shall be reformed to the
+minimum extent necessary to make such provision valid and enforceable.
+
+9.6. The paragraph headings of this License are for reference and convenience
+only and are not a part of this License, and they shall have no effect upon the
+construction or interpretation of any part hereof.
+
+9.7. Each of the terms "including", "include" and "includes", when used in this
+License, is not limiting whether or not non-limiting language (such as "without
+limitation" or "but not limited to" or words of similar import) is used with
+reference thereto.
+
+9.8. The parties hereto acknowledge they have expressly required that this
+License and notices relating thereto be drafted in the English language.
+
+THE GENERAL LICENSE TERMS END HERE,  EXCEPT AS OTHERWISE PREVIOUSLY
+INCORPORATING  THE TERMS OF THE ATTACHED EXHIBIT A, EXHIBIT B (“ICLA”) AND ANY
+SUPPLEMENT FILE(S) REFERENCED IN THIS LICENSE, ALL OF WHICH FORM A MATERIAL PART
+OF THIS LICENSE.
+
+ATTACHMENTS: 
+
+EXHIBIT A IS INCORPORATED INTO THIS VOLATILITY CONTRIBUTORS PUBLIC LICENSE V1.0
+BY REFERENCE 
+
+EXHIBIT B (“ICLA”) IS INCORPORATED INTO THIS VOLATILITY CONTRIBUTORS PUBLIC
+LICENSE V1.0 BY REFERENCE
+
+SUPPLEMENT FILE AND ANY RELATED “CHANGELOG.txt” FILE(S) OF INITIAL CONTRIBUTOR
+ARE INCORPORATED INTO THIS VOLATILITY CONTRIBUTORS PUBLIC LICENSE BY REFERENCE
+
+
+VOLATILITY CONTRIBUTORS PUBLIC LICENSE Version 1.0 
+
+EXHIBIT A - (Volatility Contributors Public License V1.0) 
+
+PART 1: INITIAL CONTRIBUTOR AND DESIGNATED WEB SITE
+
+The Initial Contributor is: The Volatility Foundation, Inc.
+
+Address of Initial Contributor: The Volatility Foundation, Inc., 11654 Plaza
+America Dr #774 Reston, VA 20190-4700
+
+The Designated Web Site is: https://www.volatilityfoundation.org/
+
+PART 2: INITIAL WORK
+
+The Initial Work comprises the computer program(s) distributed by the Initial
+Contributor having the following title(s): Volatility Framework Version 3.0. 
+
+The date on which the Initial Work was first available under this License:
+12/19/2018 
+
+PART 3: GOVERNING JURISDICTION
+
+For the purposes of this License, the Governing Jurisdiction is the State of
+Maryland. 
+
+PART 4: NOTICE  
+
+This file was contributed to the Volatility Framework Version 3.    
+Copyright (C) 2018 Volatility Foundation.  
+
+THE LICENSED WORK IS PROVIDED UNDER THE TERMS OF THE Volatility Contributors
+Public License V1.0("LICENSE") AS FIRST COMPLETED BY: Volatility Foundation,
+Inc. ANY USE, PUBLIC DISPLAY, PUBLIC PERFORMANCE, REPRODUCTION OR DISTRIBUTION
+OF, OR PREPARATION OF SUBSEQUENT WORKS, DERIVATIVE WORKS OR DERIVED WORKS BASED
+ON, THE LICENSED WORK CONSTITUTES RECIPIENT'S ACCEPTANCE OF THIS LICENSE AND ITS
+TERMS, WHETHER OR NOT SUCH RECIPIENT READS THE TERMS OF THE LICENSE. "LICENSED
+WORK,” “RECIPIENT" AND “DISTRIBUTOR" ARE DEFINED IN THE LICENSE. A COPY OF THE
+LICENSE IS LOCATED IN THE TEXT FILE ENTITLED "LICENSE.txt" ACCOMPANYING THE
+CONTENTS OF THIS FILE. IF A COPY OF THE LICENSE DOES NOT ACCOMPANY THIS FILE, A
+COPY OF THE LICENSE MAY ALSO BE OBTAINED AT THE FOLLOWING WEB SITE:
+https://www.volatilityfoundation.org/license/vcpl_v1.0
+
+Software distributed under the License is distributed on an "AS IS" basis,
+WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
+specific language governing rights and limitations under the License.    PART 5:
+MINIMUM SAMPLE REQUIREMENTS FOR THE DESCRIPTION OF DISTRIBUTED MODIFICATIONS
+
+Each Subsequent Contributor (including the Initial Contributor where the Initial
+Contributor qualifies as a Subsequent Contributor) is required to cause each
+Modification/Change, Subsequent Work, Derivative Work, or Derived Work created
+or contributed to by that Subsequent Contributor to contain a file documenting
+the changes such Subsequent Contributor made to create that Subsequent Work,
+required Modification Documentation under this License, Exhibit A, Exhibit B
+(“ICLA”) and the date of any change.
+
+PART 6: PATENT LICENSING TERMS
+
+A. For the purposes of the paragraphs in this Part 6 of Exhibit A, "LICENSABLE"
+means having the right to grant, to the maximum extent possible, whether at the
+time of the initial grant or subsequently acquired, any and all of the rights
+granted herein.
+
+B. The Initial Contributor hereby grants all Recipients a world-wide,
+royalty-free, non-exclusive license, subject to third party intellectual
+property claims, under patent claim(s) Licensable by the Initial Contributor
+that are or would be infringed by the making, using, selling, offering for sale,
+having made, importing, exporting, transfer or disposal of such Initial Work or
+any portion thereof. Notwithstanding the foregoing, no patent license is granted
+under this Paragraph B by the Initial Contributor: (1) for any code that the
+Initial Contributor deletes from the Initial Work (or any portion thereof)
+distributed by the Initial Contributor prior to such distribution; (2) for any
+Modifications made to the Initial Work, Subsequent Work, Derivative Work,
+Derived Work (or any portion thereof) by any other Person; or (3) separate from
+the Initial Work (or portions thereof) distributed or made available by the
+Initial Contributor.
+
+C. Effective upon distribution by a Subsequent Contributor to a Third Party of
+any Modifications made by that Subsequent Contributor, such Subsequent
+Contributor hereby grants all Recipients a world-wide, royalty-free,
+non-exclusive license, subject to third party intellectual property claims,
+under patent claim(s) Licensable by such Subsequent Contributor that are or
+would be infringed by the making, using, selling, offering for sale, having
+made, importing, exporting, transfer or disposal of any such Modifications made
+by that Subsequent Contributor alone and/or in combination with its Subsequent
+Work, Derivative Work, Derived Work (or portions of such combination) to make,
+use, sell, offer for sale, have made, import, export, transfer and otherwise
+dispose of:
+
+(1) Modifications made by that Subsequent Contributor (or portions thereof); and
+
+(2) the combination of Modifications, by that Subsequent Contributor with its
+Subsequent Work, Derivative Works, Derived Works (or portions of such
+combination); (collectively and in each case, the "SUBSEQUENT CONTRIBUTOR
+VERSION”).
+
+Notwithstanding the foregoing, no patent license is granted under this Paragraph
+C by such Subsequent Contributor: (1) for any code that such Subsequent
+Contributor deletes from the Subsequent Contributor Version (or any portion
+thereof) distributed by the Subsequent Contributor prior to such distribution;
+(2) for any Modifications made to the Subsequent Contributor Version (or any
+portion thereof) by any other Person; or (3) separate from the Subsequent
+Contributor Version (or portions thereof) distributed or made available by the
+Subsequent Contributor.
+
+D. Effective upon distribution of any Licensed Work, Subsequent Work, Derivative
+Work or Derived Work by a Distributor to a Third Party, such Distributor hereby
+grants all Recipients a world-wide, royalty-free, non-exclusive license, subject
+to third party intellectual property claims, under patent claim(s) Licensable by
+such Distributor that are or would be infringed by the making, using, selling,
+offering for sale, having made, importing, exporting, transfer or disposal of
+any such Licensed Work distributed by such Distributor, to make, use, sell,
+offer for sale, have made, import, export, transfer and otherwise dispose of
+such Licensed Work, Subsequent Work, Derivative Work, Derived Work or portions
+thereof (collectively and in each case, the "DISTRIBUTOR VERSION").
+Notwithstanding the foregoing, no patent license is granted under this Paragraph
+D by such Distributor: (1) for any code that such Distributor deletes from the
+Distributor Version (or any portion thereof) distributed by the Distributor
+prior to such distribution; (2) for any Modifications made to the Distributor
+Version (or any portion thereof) by any other Person; or (3) separate from the
+Distributor Version any Subsequent Work, Derivative Work, Derived Work or
+portions thereof) distributed or made available by the Distributor.
+
+E. If Recipient institutes patent or copyright litigation against another
+Recipient (a "USER") with respect to a copyright or a patent applicable to a
+computer program or software (including a cross-claim or counterclaim in a
+lawsuit, and whether or not any of the patent claims are directed to a system,
+method, process, apparatus, device, product, article of manufacture or any other
+form of patent claim), then any patent or copyright license granted by that User
+to such Recipient under this License or any other copy of this License shall
+terminate. The termination shall be effective as of the date such litigation is
+filed. To be effective, any such notice of license termination must include a
+specific list of applicable patents and/or a copy of the copyrighted work of
+User that User alleges will be infringed by Recipient upon License termination.
+License termination under this Paragraph (E.) is only effective with respect to
+patents and/or copyrights for which proper notice has been given under this
+License.
+
+
+ //***EXHIBIT A ENDS HERE.***//
+
+
+Exhibit B - INDIVIDUAL CONTRIBUTOR LICENSE AGREEMENT 
+The Volatility Foundation Inc.  
+Individual Contributor License Agreement ("Agreement") V2.0
+license@volatilityfoundation.org 
+
+Part 1. 
+
+Please read this document carefully and keep a copy for your records. 
+
+Voluntary Mutual Dual Shared Ownership Property Rights and Intellectual Property
+License Agreement 
+
+You (including each Contributor, Distributor, Licensee of the Licensed Work)
+under the VOLATILITY CONTRIBUTORS PUBLIC LICENSE  1.0 which is incorporated into
+this ICLA by reference, accept and agree to the following terms and conditions
+for Your present and future Contributions submitted to the Foundation. In
+return, the Foundation shall not use Your Contributions in a way that is
+inconsistent with its nonprofit status and bylaws in effect at the time of the
+Contribution. Except for the ownership property rights and license granted
+herein to the Foundation under this ICLA and the terms of the Volatility
+Contributors Public License V1.0, You reserve all right, title, and interest in
+and to Your Contributions as set forth in this Agreement. 
+
+1. Definitions. 
+
+"You" (or "Your") shall mean the Contributor, any copyright owner or legal
+entity authorized by the copyright owner that is making this Agreement with the
+Foundation. For legal entities, the entity making a Contribution and all other
+entities that control, are controlled by, or are under common control with that
+entity are considered to be a single Contributor. For the purposes of this
+definition, "control" means (i) the power, direct or indirect, to cause the
+direction or management of such entity, whether by contract or otherwise, or
+(ii) ownership of fifty percent (50%) or more of the outstanding shares, or
+(iii) beneficial ownership of such entity. 
+
+"Contribution" shall mean any original work of authorship, including any
+modifications, changes, and additions to an existing work, that is voluntarily
+submitted by You to the Foundation for inclusion in, use with, or documentation
+of, any of the projects, software, products, or computer code, whether used
+singularly or in aggregate form, that is owned, licensed, used, assigned,
+controlled or managed by the Foundation in any form (the "Work"). For the
+purposes of this definition, "submitted" or “submission” means any form of
+electronic, verbal, or written Communication sent, given or acknowledged by You
+to the Foundation or its representatives, including but not limited to Your
+participation in or communication on electronic mailing lists, source code
+control systems, and issue tracking systems that are managed by, or on behalf
+of, the Foundation for the purpose of discussing, improving, expanding or
+complementing the Work, but excluding communication that is conspicuously marked
+or otherwise designated in writing by You as "Not a Contribution." 
+
+2. Grant of Dual Shared Ownership Copyright License. Subject to the terms and
+conditions of this Agreement and the Volatility Contributors Public License 1.0
+as amended hereafter from time to time, You hereby  grant to the Foundation a
+perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+copyright license to use, reproduce, prepare derivative works of, publicly
+display, publicly perform, sublicense, and to distribute Your Contributions and
+such derivative works. 
+
+You further agree to dual shared copyright ownership of all intellectual
+property rights in any “contributed code” from You to the Foundation, including
+all licensing, sublicensing and trademark rights (“ownership property rights”),
+and in consideration of the mutual promises and obligations of the parties in
+this Agreement, You hereby irrevocably assign, give and transfer to the
+Foundation all current and future shared ownership rights of whatever kind in
+Your contributed code, and all intellectual property rights – including by way
+of example only and not by way of any limitations- all trademark, use, licensing
+and relicensing rights; and 
+
+You hereby irrevocably appoint the Foundation, its representatives and assigns
+as Your attorney in fact for all purposes in any way directly or indirectly
+related to the ownership, development, use, preservation, protection, licensing,
+maintaining, defending and assertion of all assigned “ownership property rights”
+(express and implied) under this Agreement, as revised from time to time, as
+deemed necessary by the Foundation, in its sole discretion and business judgment
+to pursue all related legal and equitable claims, actions and causes
+(“Remedies”) of whatever nature to and protect, claim, litigate, compromise,
+negotiate and settle all such Remedies against any person, party, entity or
+organization in the Foundation’s own name and/or collectively on behalf of all
+dual shared ownership contributors to any Foundation, however designated or
+identified in any ICLA whether by name, project, version, license, or otherwise.
+
+Notwithstanding any language to the contrary, You are not prohibited from
+independently using Your own donated code for any of Your own third party
+development purposes and any such use of Your own donated code shall not
+constitute a violation of the dual shared copyright  ownership interests of the
+Foundation, excepting that 1) You shall not change the terms of the ICLA
+Agreement with the Foundation; and 2) You shall not, without express written
+permission of the Foundation, grant nor execute any release(s), compromises or
+settlements with any person, entity, organization, association or unauthorized
+users (“third parties”) that does or may in any way interfere with, conflict
+with or may be adverse to the ownership and copyright interests of the
+Foundation, or in any way diminishes the value of Your contributed code to the
+Foundation as reasonably determined by the Foundation, whether or not Your
+contributed code has been combined, included in, used, or in any way aggregated
+into any project, purpose, activity, product, service, software program
+(“aggregated software”) - designed, developed, produced, used, licensed or
+sponsored by the Foundation; and 3) You further agree that You will submit any
+concerns pertaining to proposed third party code releases, compromise or
+settlement (“Releases”) by You to the Foundation for review and response at
+license@volatilityfoundation.org prior to entering into any agreement which may
+conflict with Your rights and obligations under this Agreement. In the event of
+an unresolved disagreement between You and the Foundation concerning the
+validity of or adverse impact of any proposed release, compromise or settlement
+by You, You voluntarily agree that the decision of the Foundation shall be final
+and binding on You, your agents, assigns, successors and representatives as to
+any such proposed Releases. 
+
+Identifying Contributor Donations 
+
+You agree that each separate Contributor Code Submission must be expressly
+marked by You in the following way : 				
+“Donated under Volatility Foundation, Inc. Individual Contributor Licensing 
+Agreement”; or “Donated under VFI Individual Contributor Licensing Agreement”. 
+
+You agree that any Donated Code submitted to the Foundation that is not	properly
+marked as set-forth above in this Agreement shall be deemed for all purposes of
+this Agreement as “Donated under Volatility Foundation, Inc. Individual
+Contributor Licensing Agreement”. 
+
+If You object to the Foundation’s designation of Your unmarked code or if any
+Donated Code remains undesignated for any reason, it may be returned to the
+Contributor as (“Rejected”) at the sole discretion of the Foundation, although
+the Foundation shall have no obligation whatsoever to return any such Donated
+Code, and such Rejected code shall not be considered as a valid Contributor Code
+Donation to the Foundation under this Agreement. 
+
+3. Grant of Patent License. Subject to the terms and conditions of this
+Agreement, You hereby grant to the Foundation a perpetual, worldwide,
+non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this
+section) patent license to make, have made, use, offer to sell, sell, import,
+and otherwise transfer the Work, where such license applies only to those patent
+claims licensable by You that are necessarily infringed by Your Contribution(s)
+alone or by combination of Your Contribution(s) with the Work to which such
+Contribution(s) was submitted. If any entity institutes patent litigation
+against You or any other entity (including a cross-claim, counterclaim in a
+lawsuit of any third party lawsuit for contribution or indemnification) alleging
+that your Contribution, or the Work to which you have contributed, constitutes
+direct or contributory patent infringement, then any patent licenses granted to
+that entity under this Agreement for that Contribution or Work shall terminate
+as of the date such litigation is filed.   
+
+4. You represent and agree that you are legally entitled or authorized to grant
+the above license, individually and/ or as the authorized agent of the
+intellectual property owner of Your Contribution. If your employer(s) has rights
+to intellectual property that you create that includes your contributions, you
+represent that you have received valid express permission to make Contributions
+on behalf of that employer, that your employer has waived such rights for your
+Contributions to the Foundation, or that your employer has executed a separate
+Corporate  ICLA with the Foundation and understand that the Foundation will rely
+on your representations in this Agreement and that the Foundation will not, and
+has no affirmative obligation to conduct any due diligence concerning Your
+representations in this Agreement. 
+
+5. You represent that each of Your Contributions is Your original creation (see
+section 8 for submissions on behalf of others). You represent that Your
+Contribution submissions include complete details of any third-party license or
+other restriction (including, but not limited to, related patents and
+trademarks) of which you are personally aware and which are associated with any
+part of Your Contributions. 
+
+6. You are not expected to provide support for Your Contributions, except to the
+extent You desire to provide support. You may provide support for free, for a
+fee, or not at all. Unless required by applicable law or agreed to in writing,
+You provide Your Contributions on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied, including, without
+limitation, any warranties or conditions of TITLE, NON- INFRINGEMENT,
+MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE.  
+
+7. You agree to immediately notify the Foundation of any facts or circumstances
+of which you become aware that may affect your Contribution or would at any time
+make these representations inaccurate in any respect. 
+
+8. You agree that this Agreement may be amended from time to time by  the
+Foundation to accomplish the purposes, goals and objectives of the  Foundation
+and that any electronic notification by web posting, Agreement amendment or
+otherwise shall be deemed to be sufficient and valid notification to You under
+this Agreement. 
+
+9. You agree that this Agreement is executed in the State of Maryland and shall
+at all times be governed and interpreted in accordance with the laws of the
+State of Maryland. 
+
+ //***EXHIBIT B ENDS HERE.***//
+
