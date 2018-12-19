@@ -81,10 +81,10 @@ class Psaux(plugins.PluginInterface):
             yield (0, (task.p_pid, task_name, task.p_argc, args_str))
 
     def run(self) -> renderers.TreeGrid:
-        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
             [("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
-            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filt)))
+            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter_func)))

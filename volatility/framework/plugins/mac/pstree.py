@@ -22,7 +22,7 @@ class PsTree(plugins.PluginInterface):
             requirements.SymbolRequirement(name = "darwin", description = "Mac Kernel")
         ]
 
-    def find_level(self, pid):
+    def _find_level(self, pid):
         """Finds how deep the pid is in the processes list"""
         seen = set([])
         seen.add(pid)
@@ -44,7 +44,7 @@ class PsTree(plugins.PluginInterface):
 
         # Build the child/level maps
         for pid in self._processes:
-            self.find_level(pid)
+            self._find_level(pid)
 
         def yield_processes(pid):
             proc = self._processes[pid]

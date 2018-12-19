@@ -90,11 +90,12 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter)))
 
     def generate_timeline(self):
-        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
-        for row in self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filt)):
+        for row in self._generator(
+                plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter_func)):
             _depth, row_data = row
             description = "{} ({}): \"{}\"".format(row_data[0], row_data[1], row_data[3])
             yield (description, timeliner.TimeLinerType.CREATED, row_data[2])

@@ -43,11 +43,11 @@ class Elfs(plugins.PluginInterface):
                 yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), path))
 
     def run(self):
-        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
             [("PID", int), ("Process", str), ("Start", format_hints.Hex), ("End", format_hints.Hex),
              ("File Path", str)],
-            self._generator(plugin(self.context, self.config['primary'], self.config['vmlinux'], filter = filt)))
+            self._generator(plugin(self.context, self.config['primary'], self.config['vmlinux'], filter = filter_func)))

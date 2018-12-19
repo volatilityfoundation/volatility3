@@ -57,11 +57,11 @@ class Malfind(interfaces_plugins.PluginInterface):
                            vma.get_perms(), format_hints.HexBytes(data), disasm))
 
     def run(self):
-        filt = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
         plugin = pslist.PsList.list_tasks
 
         return renderers.TreeGrid(
             [("PID", int), ("Process", str), ("Start", format_hints.Hex), ("End", format_hints.Hex),
              ("Protection", str), ("Hexdump", format_hints.HexBytes), ("Disasm", interfaces_renderers.Disassembly)],
-            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filt)))
+            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter_func)))

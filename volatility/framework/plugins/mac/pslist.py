@@ -27,7 +27,7 @@ class PsList(interfaces_plugins.PluginInterface):
         def nullfilter():
             return False
 
-        filt = nullfilter
+        filter_func = nullfilter
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
@@ -36,8 +36,8 @@ class PsList(interfaces_plugins.PluginInterface):
             def list_filter(x):
                 return x not in filter_list
 
-            filt = list_filter
-        return filt
+            filter_func = list_filter
+        return filter_func
 
     def _generator(self):
         for task in self.list_tasks(
