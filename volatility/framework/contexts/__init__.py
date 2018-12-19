@@ -215,7 +215,7 @@ class SizedModule(Module):
                  size: int,
                  symbol_table_name: Optional[str] = None,
                  native_layer_name: Optional[str] = None,
-                 absolute_symbol_offsets: bool = False) -> None:
+                 absolute_symbol_addresses: bool = False) -> None:
         super().__init__(
             context,
             module_name = module_name,
@@ -223,7 +223,7 @@ class SizedModule(Module):
             offset = offset,
             native_layer_name = native_layer_name,
             symbol_table_name = symbol_table_name,
-            absolute_symbol_offsets = absolute_symbol_offsets)
+            absolute_symbol_addresses = absolute_symbol_addresses)
         self._size = self._check_type(size, int)
 
     @property
