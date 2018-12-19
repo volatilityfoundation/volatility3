@@ -19,7 +19,7 @@ class Malfind(interfaces_plugins.PluginInterface):
             requirements.SymbolRequirement(name = "darwin", description = "Linux Kernel")
         ]
 
-    def list_injections(self, task):
+    def _list_injections(self, task):
         """Generate memory regions for a process that may contain
         injected code.
         """
@@ -45,7 +45,7 @@ class Malfind(interfaces_plugins.PluginInterface):
         for task in tasks:
             process_name = utility.array_to_string(task.p_comm)
 
-            for vma, data in self.list_injections(task):
+            for vma, data in self._list_injections(task):
                 if is_32bit_arch:
                     architecture = "intel"
                 else:
