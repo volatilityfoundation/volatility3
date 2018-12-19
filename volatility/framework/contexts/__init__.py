@@ -182,7 +182,8 @@ class Module(interfaces.context.ModuleInterface):
             if symbol.type is None:
                 raise ValueError("Symbol {} has no associated type information".format(symbol.name))
             type_arg = symbol.type
-            offset = symbol.address + self._offset
+            if not self._absolute_symbol_addresses:
+                offset = symbol.address + self._offset
         elif type_name is not None and offset is not None:
             self._check_type(type_name, str)
             self._check_type(offset, int)
@@ -213,14 +214,16 @@ class SizedModule(Module):
                  offset: int,
                  size: int,
                  symbol_table_name: Optional[str] = None,
-                 native_layer_name: Optional[str] = None) -> None:
+                 native_layer_name: Optional[str] = None,
+                 absolute_symbol_offsets: bool = False) -> None:
         super().__init__(
             context,
             module_name = module_name,
             layer_name = layer_name,
             offset = offset,
             native_layer_name = native_layer_name,
-            symbol_table_name = symbol_table_name)
+            symbol_table_name = symbol_table_name,
+            absolute_symbol_offsets = absolute_symbol_offsets)
         self._size = self._check_type(size, int)
 
     @property
