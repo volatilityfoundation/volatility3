@@ -17,11 +17,6 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
 # specific language governing rights and limitations under the License.
 #
-"""
-Created on 6 Apr 2016
-
-@author: npetroni@volexity.com
-"""
 
 import struct
 from typing import Optional, Tuple
