@@ -1,18 +1,18 @@
-VOLATILITY CONTRIBUTORS PUBLIC LICENSE Version 1.0 
+VOLATILITY CONTRIBUTORS PUBLIC LICENSE Version 1.0
 
 THE LICENSED WORK IS PROVIDED UNDER THE TERMS OF THIS VOLATILITY CONTRIBUTORS
 PUBLIC LICENSE 1.0 (“LICENSE" or “VCPL 1.0”).  ANY USE, REPRODUCTION OR
 DISTRIBUTION OF THE LICENSED WORK CONSTITUTES DISTRIBUTOR’S AND RECIPIENT'S
 ACCEPTANCE OF THIS LICENSE AND ITS TERMS, WHETHER OR NOT SUCH DISTRIBUTOR OR
 RECIPIENT READS THE TERMS OF THIS LICENSE. "LICENSED WORK”, “DISTRIBUTOR", AND
-"RECIPIENT" ARE DEFINED BELOW. 
+"RECIPIENT" ARE DEFINED BELOW.
 
 IMPORTANT NOTE: This License specifically applies to the release of Volatility
 Framework Software V3.0 (“Licensed Work”) and subsequent releases of the
 Licensed Work, including Modifications,  Modification Documentation,
 Contributions, Derivative Works, Derived Works.” This License is subject to the
 terms of the Volatility Individual Contributor License Agreement V2.0 (“ICLA”)
-contained in Exhibit B of the License.  
+contained in Exhibit B of the License.
 
 You (including each Contributor, Distributor, Licensee of the Licensed Work)
 must read the Volatility Contributors Public License, Volatility Independent
@@ -22,7 +22,7 @@ permitted uses, and definitions of important terms defined in this License,
 Exhibit A, and the Exhibit B (“ICLA”), particularly as to Subsequent Works,
 Derivative Works, Derived Works, and required Modification Documentation, all of
 which are defined by the Initial Contributor to this License, in Exhibit A, and
-Exhibit B (“ICLA”) of this License.    
+Exhibit B (“ICLA”) of this License.
 
 See Section 2.2 below, Exhibit A attached, Exhibit B (“ICLA” ) attached and any
 CHANGELOG.txt accompanying this License to determine the specific requirements
@@ -34,7 +34,9 @@ DEFINITIONS.
 1.0  “CONTRIBUTOR” means: Any Person or Entity that makes a contribution to the
 Licensed Work under this License, or otherwise contributes to the Licensed Work
 in accordance with the terms of Exhibit A attached and/or under Exhibit B
-(“ICLA”) attached.  1.1. "CONTRIBUTION" means:
+(“ICLA”) attached.
+
+1.1. "CONTRIBUTION" means:
 
 (a) In the case of the Initial Contributor, the Initial Work distributed under
 this License by the Initial Contributor; and
@@ -57,19 +59,21 @@ to any Person, or to any Third Party, by any means, including by way of example,
 through means of any distributive access system, electronic distribution
 mechanism, sharing platform, shared or accessible network, online conferencing
 system, learning management system, electronic access, or as part of any
-training materials, guide(s), illustrations, or other distribution. 
+training materials, guide(s), illustrations, or other distribution.
 
 1.4. "ELECTRONIC DISTRIBUTION MECHANISM" means any mechanism generally accepted
 in the software development community for the electronic transfer of data.
 
 1.5. "EXECUTABLE" means the Licensed Work in any form other than Source Code.
- 					
+
 1.6. "GOVERNING JURISDICTION" means the state, province or other legal
-jurisdiction identified in Part 3 of Exhibit A. 
+jurisdiction identified in Part 3 of Exhibit A.
 
 1.7.  INDIVIDUAL CONTRIBUTOR LICENSE AGREEMENT  V2.0 “ICLA” means the Individual
 Contributor License Agreement V2.0 identified in the attached Exhibit B to this
-License. 1.7.1 “INDIVIDUAL” means a person as defined in this License or other
+License.
+
+1.7.1 “INDIVIDUAL” means a person as defined in this License or other
 legal entity, including a corporation, partnership, unincorporated association
 or other body.
 
@@ -103,13 +107,13 @@ under this License by the Initial Contributor.
 1.10. "LARGER WORK" means a work that combines the Licensed Work or portions
 thereof with Code, Data and Documentation contained in the Larger Work that is
 not governed by this License.
- 						
+
 1.11. "LICENSED WORK" means the Initial Work and/or any Subsequent Work, any
 Modifications, and any Documentation required under this License, in each case
 including portions thereof.
 
 1.12. "LICENSE NOTICE" has the meaning assigned in Part 4 of Exhibit A and in
-Part 1 and Part 2 of Exhibit B (“ICLA”). 
+Part 1 and Part 2 of Exhibit B (“ICLA”).
 
 1.13. "MODIFICATION" or "MODIFICATIONS" means any change to and/or addition to
 the Licensed Work for which the work serves as the foundational basis for the
@@ -130,7 +134,7 @@ of lab guide or lesson plan of Licensed Work Modifications and Changes. All such
 Modifications and/or Changes of the Licensed Work shall be subject to the terms
 of the Exhibit B (“ICLA”) attached. For greater clarity, an immaterial change or
 modification to the Licensed Work, as referenced in this Section, is and shall
-be determined by the Initial Contributor to the Licensed Work. 
+be determined by the Initial Contributor to the Licensed Work.
 
 1.14. "PERSON" means an individual or other legal entity, including a
 corporation, partnership, unincorporated association or other body.
@@ -148,7 +152,7 @@ and installation of an executable.
 making of any Subsequent Work, or a Modification or Change to the Licensed Work
 and that distributes that Subsequent Work under this License along with required
 Modification Documentation, Exhibit A and Exhibit B (“ICLA”) to at least one
-Third Party. 
+Third Party.
 
 1.18. "SUBSEQUENT WORK" means a work that has arises or results from
 modifications, changes to and/or additions to: (a) the Initial Work;  (b) the
@@ -176,7 +180,7 @@ name “CHANGELOG.txt” and shall include all Documentation for and associated 
 the Licensed Work, and any Modification Documentation required for any
 Derivative Work or Derived Work as defined and set forth under this License.
 
-1.20. "THIRD PARTY" means any third party. 
+1.20. "THIRD PARTY" means any third party.
 
 2. LICENSE.
 
@@ -213,14 +217,14 @@ any derivative works, and derived works (if any) prepared by Recipient with all
 Modification Documentation required under this License; in Source Code and
 Executable form, either with other Subsequent Work Modifications, or on an
 unmodified basis, or as part of a Larger Work with all Modification
-Documentation required under this License. 
+Documentation required under this License.
 
 (iii) For greater Distributor clarity, when a distribution or re-distribution of
 the Licensed Work is made by a Distributor, and where no Subsequent Work
 modifications or changes have been made to the Licensed Work under this License,
 only the Documentation in compliance with this License, received by the
 Distributor, for the Licensed Work is required to be given to a Person or entity
-to whom the Licensed Work is distributed or re-distributed under this License. 
+to whom the Licensed Work is distributed or re-distributed under this License.
 
 2.2. PATENT LICENSE FROM INITIAL AND SUBSEQUENT CONTRIBUTORS.
 
@@ -230,7 +234,7 @@ paragraphs A, B, C, D and E from Part 6 of Exhibit A.
 (b) If any Recipient receives or obtains one or more copies of the Initial Work
 or any other portion of the Licensed Work under the patent license, then all
 licensing of such copies under this License shall include the terms in
-paragraphs A, B, C, D and E from Part 6 of Exhibit A  
+paragraphs A, B, C, D and E from Part 6 of Exhibit A
 
 2.3. ACKNOWLEDGEMENT AND DISCLAIMER.
 
@@ -324,7 +328,7 @@ Derivative Works or Derived Works in any Source Code form. A Distributor may
 charge a fee for the physical act of transferring a copy, which charge shall be
 no more than the cost of physically performing source distribution.
 
-3.4. REQUIRED NOTICES IN SOURCE CODE. 
+3.4. REQUIRED NOTICES IN SOURCE CODE.
 
 Each Subsequent Contributor must ensure that the notice(s) set forth in Part 4
 of Exhibit A is included in each file of the Source Code for each Subsequent
@@ -366,7 +370,7 @@ apply to Independent Modules of any Initial Contributor, Subsequent Contributor,
 Distributor or any Recipient, and such Independent Modules may be licensed or
 made available under one or more separate license agreements, to the extent that
 they are not deemed Subsequent Works, Derivative Works or Derived Works under
-Section 1.8 of this License. 
+Section 1.8 of this License.
 
 3.7. LARGER WORKS.
 
@@ -377,7 +381,7 @@ However, in any such case, Distributor or Recipient (as the case may be) must
 make sure that the notice requirements of this License set forth in Part 4 of
 Exhibit A, Exhibit B (“ICLA”) V2.0 and the required Modification Documentation
 under this License, are fulfilled for the Licensed Work portion of the Larger
-Work.  
+Work.
 
 3.8. DESCRIPTION OF DISTRIBUTED MODIFICATIONS.
 
@@ -386,7 +390,7 @@ Initial Contributor also qualifies as a Subsequent Contributor) must cause each
 Subsequent Work created or contributed to by that Subsequent Contributor to
 contain a file documenting the changes, in accordance with the requirements of
 Part 1 of the Supplement File,  that such Subsequent Contributor made in the
-creation or contribution to that Subsequent Work. 
+creation or contribution to that Subsequent Work.
 
 (b) The Initial Contributor may at any time introduce requirements or add to or
 change earlier requirements (in each case, the "EARLIER DESCRIPTION
@@ -425,7 +429,7 @@ any Supplement File is binding on each Recipient of any Licensed Work to the
 extent Part 1 sets out the requirements for documenting changes to the Initial
 Work or any Subsequent Work, Derivative Work or Derived Work, which shall be
 interpreted to include the documentation requirements set forth in Section 1.13,
-1.18, 1.19 and 2.1 of this License. 
+1.18, 1.19 and 2.1 of this License.
 
 (e) An example of a set of requirements for documenting changes and
 contributions made by Subsequent Contributor is set out in Part 5 of Exhibit A
@@ -452,7 +456,7 @@ the Initial Contributor.
 names contained within Part 2 of the Supplement File distributed with the
 Licensed Work are the exclusive property of the Initial Contributor and may only
 be used with the permission of the Initial Contributor, or under circumstances
-otherwise permitted by law, or as expressly set out in this License.  
+otherwise permitted by law, or as expressly set out in this License.
 
 3.11. For greater certainty, any description or attribution provisions contained
 within a Supplement File may only be used to specify the nature of the
@@ -512,7 +516,7 @@ and costs of program errors, compliance with applicable laws, damage to or loss
 of data, programs or equipment, and unavailability or interruption of
 operations.
 
-6. TERMINATION.  
+6. TERMINATION.
 
 6.1. This License shall continue until terminated in accordance with the express
 terms herein.
@@ -529,7 +533,7 @@ shall constitute a material breach of this License.
 
 6.4. Upon termination of this License by or with respect to a particular
 Recipient for any reason, all rights granted hereunder and under any other
-License to that Recipient shall terminate.  
+License to that Recipient shall terminate.
 
 6.5. Upon any termination of this License by or with respect to a particular
 Recipient, Sections 1., 2., 3., 4.1, 4.2, 5.1, 5.2,  6., 6.1, 6.2, 6.3, 6.4,
@@ -545,7 +549,7 @@ valid for any purposes. The purpose of this provision is to prevent the
 intentional or unintentional purported granting of an Ineffective Other License
 to a sublicensee to avoid compliance with the required Modification
 Documentation, Exhibit A, and Exhibit B (“ICLA”) V2.0 requirements of the
-License.”  
+License.”
 
 7. LIMITATION OF LIABILITY.
 
@@ -649,10 +653,10 @@ INCORPORATING  THE TERMS OF THE ATTACHED EXHIBIT A, EXHIBIT B (“ICLA”) AND A
 SUPPLEMENT FILE(S) REFERENCED IN THIS LICENSE, ALL OF WHICH FORM A MATERIAL PART
 OF THIS LICENSE.
 
-ATTACHMENTS: 
+ATTACHMENTS:
 
 EXHIBIT A IS INCORPORATED INTO THIS VOLATILITY CONTRIBUTORS PUBLIC LICENSE V1.0
-BY REFERENCE 
+BY REFERENCE
 
 EXHIBIT B (“ICLA”) IS INCORPORATED INTO THIS VOLATILITY CONTRIBUTORS PUBLIC
 LICENSE V1.0 BY REFERENCE
@@ -661,9 +665,9 @@ SUPPLEMENT FILE AND ANY RELATED “CHANGELOG.txt” FILE(S) OF INITIAL CONTRIBUT
 ARE INCORPORATED INTO THIS VOLATILITY CONTRIBUTORS PUBLIC LICENSE BY REFERENCE
 
 
-VOLATILITY CONTRIBUTORS PUBLIC LICENSE Version 1.0 
+VOLATILITY CONTRIBUTORS PUBLIC LICENSE Version 1.0
 
-EXHIBIT A - (Volatility Contributors Public License V1.0) 
+EXHIBIT A - (Volatility Contributors Public License V1.0)
 
 PART 1: INITIAL CONTRIBUTOR AND DESIGNATED WEB SITE
 
@@ -677,20 +681,20 @@ The Designated Web Site is: https://www.volatilityfoundation.org/
 PART 2: INITIAL WORK
 
 The Initial Work comprises the computer program(s) distributed by the Initial
-Contributor having the following title(s): Volatility Framework Version 3.0. 
+Contributor having the following title(s): Volatility Framework Version 3.0.
 
 The date on which the Initial Work was first available under this License:
-12/19/2018 
+12/19/2018
 
 PART 3: GOVERNING JURISDICTION
 
 For the purposes of this License, the Governing Jurisdiction is the State of
-Maryland. 
+Maryland.
 
-PART 4: NOTICE  
+PART 4: NOTICE
 
-This file was contributed to the Volatility Framework Version 3.    
-Copyright (C) 2018 Volatility Foundation.  
+This file was contributed to the Volatility Framework Version 3.
+Copyright (C) 2018 Volatility Foundation.
 
 THE LICENSED WORK IS PROVIDED UNDER THE TERMS OF THE Volatility Contributors
 Public License V1.0("LICENSE") AS FIRST COMPLETED BY: Volatility Foundation,
@@ -706,8 +710,9 @@ https://www.volatilityfoundation.org/license/vcpl_v1.0
 
 Software distributed under the License is distributed on an "AS IS" basis,
 WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
-specific language governing rights and limitations under the License.    PART 5:
-MINIMUM SAMPLE REQUIREMENTS FOR THE DESCRIPTION OF DISTRIBUTED MODIFICATIONS
+specific language governing rights and limitations under the License.
+
+PART 5: MINIMUM SAMPLE REQUIREMENTS FOR THE DESCRIPTION OF DISTRIBUTED MODIFICATIONS
 
 Each Subsequent Contributor (including the Initial Contributor where the Initial
 Contributor qualifies as a Subsequent Contributor) is required to cause each
@@ -803,17 +808,17 @@ License.
  //***EXHIBIT A ENDS HERE.***//
 
 
-Exhibit B - INDIVIDUAL CONTRIBUTOR LICENSE AGREEMENT 
-The Volatility Foundation Inc.  
+Exhibit B - INDIVIDUAL CONTRIBUTOR LICENSE AGREEMENT
+The Volatility Foundation Inc.
 Individual Contributor License Agreement ("Agreement") V2.0
-license@volatilityfoundation.org 
+license@volatilityfoundation.org
 
-Part 1. 
+Part 1.
 
-Please read this document carefully and keep a copy for your records. 
+Please read this document carefully and keep a copy for your records.
 
 Voluntary Mutual Dual Shared Ownership Property Rights and Intellectual Property
-License Agreement 
+License Agreement
 
 You (including each Contributor, Distributor, Licensee of the Licensed Work)
 under the VOLATILITY CONTRIBUTORS PUBLIC LICENSE  1.0 which is incorporated into
@@ -824,9 +829,9 @@ inconsistent with its nonprofit status and bylaws in effect at the time of the
 Contribution. Except for the ownership property rights and license granted
 herein to the Foundation under this ICLA and the terms of the Volatility
 Contributors Public License V1.0, You reserve all right, title, and interest in
-and to Your Contributions as set forth in this Agreement. 
+and to Your Contributions as set forth in this Agreement.
 
-1. Definitions. 
+1. Definitions.
 
 "You" (or "Your") shall mean the Contributor, any copyright owner or legal
 entity authorized by the copyright owner that is making this Agreement with the
@@ -836,7 +841,7 @@ entity are considered to be a single Contributor. For the purposes of this
 definition, "control" means (i) the power, direct or indirect, to cause the
 direction or management of such entity, whether by contract or otherwise, or
 (ii) ownership of fifty percent (50%) or more of the outstanding shares, or
-(iii) beneficial ownership of such entity. 
+(iii) beneficial ownership of such entity.
 
 "Contribution" shall mean any original work of authorship, including any
 modifications, changes, and additions to an existing work, that is voluntarily
@@ -851,7 +856,7 @@ participation in or communication on electronic mailing lists, source code
 control systems, and issue tracking systems that are managed by, or on behalf
 of, the Foundation for the purpose of discussing, improving, expanding or
 complementing the Work, but excluding communication that is conspicuously marked
-or otherwise designated in writing by You as "Not a Contribution." 
+or otherwise designated in writing by You as "Not a Contribution."
 
 2. Grant of Dual Shared Ownership Copyright License. Subject to the terms and
 conditions of this Agreement and the Volatility Contributors Public License 1.0
@@ -859,7 +864,7 @@ as amended hereafter from time to time, You hereby  grant to the Foundation a
 perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable
 copyright license to use, reproduce, prepare derivative works of, publicly
 display, publicly perform, sublicense, and to distribute Your Contributions and
-such derivative works. 
+such derivative works.
 
 You further agree to dual shared copyright ownership of all intellectual
 property rights in any “contributed code” from You to the Foundation, including
@@ -869,7 +874,7 @@ this Agreement, You hereby irrevocably assign, give and transfer to the
 Foundation all current and future shared ownership rights of whatever kind in
 Your contributed code, and all intellectual property rights – including by way
 of example only and not by way of any limitations- all trademark, use, licensing
-and relicensing rights; and 
+and relicensing rights; and
 
 You hereby irrevocably appoint the Foundation, its representatives and assigns
 as Your attorney in fact for all purposes in any way directly or indirectly
@@ -908,26 +913,26 @@ an unresolved disagreement between You and the Foundation concerning the
 validity of or adverse impact of any proposed release, compromise or settlement
 by You, You voluntarily agree that the decision of the Foundation shall be final
 and binding on You, your agents, assigns, successors and representatives as to
-any such proposed Releases. 
+any such proposed Releases.
 
-Identifying Contributor Donations 
+Identifying Contributor Donations
 
 You agree that each separate Contributor Code Submission must be expressly
-marked by You in the following way : 				
-“Donated under Volatility Foundation, Inc. Individual Contributor Licensing 
-Agreement”; or “Donated under VFI Individual Contributor Licensing Agreement”. 
+marked by You in the following way :
+“Donated under Volatility Foundation, Inc. Individual Contributor Licensing
+Agreement”; or “Donated under VFI Individual Contributor Licensing Agreement”.
 
 You agree that any Donated Code submitted to the Foundation that is not	properly
 marked as set-forth above in this Agreement shall be deemed for all purposes of
 this Agreement as “Donated under Volatility Foundation, Inc. Individual
-Contributor Licensing Agreement”. 
+Contributor Licensing Agreement”.
 
 If You object to the Foundation’s designation of Your unmarked code or if any
 Donated Code remains undesignated for any reason, it may be returned to the
 Contributor as (“Rejected”) at the sole discretion of the Foundation, although
 the Foundation shall have no obligation whatsoever to return any such Donated
 Code, and such Rejected code shall not be considered as a valid Contributor Code
-Donation to the Foundation under this Agreement. 
+Donation to the Foundation under this Agreement.
 
 3. Grant of Patent License. Subject to the terms and conditions of this
 Agreement, You hereby grant to the Foundation a perpetual, worldwide,
@@ -942,7 +947,7 @@ lawsuit of any third party lawsuit for contribution or indemnification) alleging
 that your Contribution, or the Work to which you have contributed, constitutes
 direct or contributory patent infringement, then any patent licenses granted to
 that entity under this Agreement for that Contribution or Work shall terminate
-as of the date such litigation is filed.   
+as of the date such litigation is filed.
 
 4. You represent and agree that you are legally entitled or authorized to grant
 the above license, individually and/ or as the authorized agent of the
@@ -954,14 +959,14 @@ Contributions to the Foundation, or that your employer has executed a separate
 Corporate  ICLA with the Foundation and understand that the Foundation will rely
 on your representations in this Agreement and that the Foundation will not, and
 has no affirmative obligation to conduct any due diligence concerning Your
-representations in this Agreement. 
+representations in this Agreement.
 
 5. You represent that each of Your Contributions is Your original creation (see
 section 8 for submissions on behalf of others). You represent that Your
 Contribution submissions include complete details of any third-party license or
 other restriction (including, but not limited to, related patents and
 trademarks) of which you are personally aware and which are associated with any
-part of Your Contributions. 
+part of Your Contributions.
 
 6. You are not expected to provide support for Your Contributions, except to the
 extent You desire to provide support. You may provide support for free, for a
@@ -969,21 +974,20 @@ fee, or not at all. Unless required by applicable law or agreed to in writing,
 You provide Your Contributions on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied, including, without
 limitation, any warranties or conditions of TITLE, NON- INFRINGEMENT,
-MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE.
 
 7. You agree to immediately notify the Foundation of any facts or circumstances
 of which you become aware that may affect your Contribution or would at any time
-make these representations inaccurate in any respect. 
+make these representations inaccurate in any respect.
 
 8. You agree that this Agreement may be amended from time to time by  the
 Foundation to accomplish the purposes, goals and objectives of the  Foundation
 and that any electronic notification by web posting, Agreement amendment or
 otherwise shall be deemed to be sufficient and valid notification to You under
-this Agreement. 
+this Agreement.
 
 9. You agree that this Agreement is executed in the State of Maryland and shall
 at all times be governed and interpreted in accordance with the laws of the
-State of Maryland. 
+State of Maryland.
 
  //***EXHIBIT B ENDS HERE.***//
-
