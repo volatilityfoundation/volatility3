@@ -182,8 +182,9 @@ class Module(interfaces.context.ModuleInterface):
             if symbol.type is None:
                 raise ValueError("Symbol {} has no associated type information".format(symbol.name))
             type_arg = symbol.type
+            offset = symbol.address
             if not self._absolute_symbol_addresses:
-                offset = symbol.address + self._offset
+                offset += self._offset
         elif type_name is not None and offset is not None:
             self._check_type(type_name, str)
             self._check_type(offset, int)
