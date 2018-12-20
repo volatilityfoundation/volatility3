@@ -26,7 +26,7 @@ setuptools.setup(
     name = "volatility",
     description = "Memory forensics framework",
     version = constants.PACKAGE_VERSION,
-    license = "VCLA",
+    license = "VCPL",
     keywords = "volatility memory forensics framework windows linux volshell",
     author = "Volatility Foundation",
     author_email = "volatility@volatilityfoundation.org",
