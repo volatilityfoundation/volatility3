@@ -23,6 +23,13 @@ Requirements
 ============
 
 - Python 3.5.3 or later. http://www.python.org
+- Pefile 2017.8.1 or later. https://pypi.org/project/pefile/
+
+Optional Dependencies
+=====================
+
+- yara-python 3.8.0 or later. https://github.com/VirusTotal/yara-python
+- capstone 3.0.0 or later. https://www.capstone-engine.org/download.html
 
 Downloading Volatility
 ======================
@@ -44,12 +51,11 @@ Quick Start
 
 3. To get more information on a Windows memory sample and to make sure
 Volatility supports that sample type, run
-'python -f file://<imagepath> windows.info’
+'python -f <imagepath> windows.info’
 
    Example:
 
-    $ python vol.py —f file:///home/user/samples/stuxnet.vmem
-windows.info
+    $ python vol.py —f /home/user/samples/stuxnet.vmem windows.info
 
 4. Run some other plugins. The -f or —-single-location is not strictly
 required, but most plugins expect a single sample. Some also
