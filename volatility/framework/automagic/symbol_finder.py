@@ -19,7 +19,7 @@
 #
 
 import logging
-from typing import Any, Iterable, List, Tuple, Dict, Type, Optional
+from typing import Any, Iterable, List, Tuple, Type, Optional
 
 from volatility.framework import interfaces, validity
 from volatility.framework.automagic import symbol_cache
