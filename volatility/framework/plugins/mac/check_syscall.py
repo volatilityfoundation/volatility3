@@ -24,10 +24,9 @@ class Check_syscall(plugins.PluginInterface):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
         kernel = contexts.Module(self._context, 
-                                 "kernel", 
+                                 self.config['darwin'], 
                                  self.config['primary'], 
                                  0, 
-                                 self.config['darwin'], 
                                  absolute_symbol_addresses = True)                
 
         nsysent = kernel.object(symbol_name = "nsysent")
