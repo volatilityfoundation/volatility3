@@ -23,7 +23,7 @@ typically found in Linux's /proc file system.
 import logging
 from typing import List
 
-from volatility.framework import exceptions, interfaces
+from volatility.framework import exceptions, interfaces, contexts
 from volatility.framework import renderers
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
@@ -78,11 +78,13 @@ class Check_afinfo(plugins.PluginInterface):
             yield var_name, "show", var.seq_show
 
     def _generator(self):
-        _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config['vmlinux'], self.config['primary'])
-        vmlinux = self.context.module(self.config['vmlinux'], self.config['primary'], aslr_shift)
+        linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'])
 
-        linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['primary'], self.config['vmlinux'],
-                                                    aslr_shift)
+        vmlinux = contexts.Module(self.context, 
+                                  self.config['vmlinux'], 
+                                  self.config['primary'], 
+                                  0, 
+                                  absolute_symbol_addresses = True)                
 
         op_members = vmlinux.get_type('file_operations').members
         seq_members = vmlinux.get_type('seq_operations').members
