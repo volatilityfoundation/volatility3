@@ -176,12 +176,12 @@ class LinuxUtilities(object):
         return LinuxUtilities._do_get_path(rdentry, rmnt, dentry, vfsmnt)
 
     @classmethod
-    def _get_new_sock_pipe_path(cls, task, filp) -> str:
+    def _get_new_sock_pipe_path(cls, context, task, filp) -> str:
         dentry = filp.get_dentry()
 
         sym_addr = dentry.d_op.d_dname
 
-        symbs = list(dentry.context.symbol_space.get_symbols_by_location(sym_addr))
+        symbs = list(context.symbol_space.get_symbols_by_location(sym_addr))
 
         if len(symbs) == 1:
             sym = symbs[0].split(constants.BANG)[1]
@@ -211,7 +211,7 @@ class LinuxUtilities(object):
     # a 'file' structure doesn't have enough information to properly restore its full path
     # we need the root mount information from task_struct to determine this
     @classmethod
-    def path_for_file(cls, task, filp) -> str:
+    def path_for_file(cls, context, task, filp) -> str:
         try:
             dentry = filp.get_dentry()
         except exceptions.InvalidAddressException:
@@ -231,7 +231,7 @@ class LinuxUtilities(object):
             dname_is_valid = False
 
         if dname_is_valid:
-            ret = LinuxUtilities._get_new_sock_pipe_path(task, filp)
+            ret = LinuxUtilities._get_new_sock_pipe_path(context, task, filp)
         else:
             ret = LinuxUtilities._get_path_file(task, filp)
 
@@ -258,7 +258,7 @@ class LinuxUtilities(object):
 
         for (fd_num, filp) in enumerate(fds):
             if filp != 0:
-                full_path = LinuxUtilities.path_for_file(task, filp)
+                full_path = LinuxUtilities.path_for_file(context, task, filp)
 
                 yield fd_num, filp, full_path
 
