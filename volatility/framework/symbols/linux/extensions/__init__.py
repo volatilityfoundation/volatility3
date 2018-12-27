@@ -214,9 +214,9 @@ class vm_area_struct(objects.Struct):
 
         return self.vm_pgoff << constants.linux.PAGE_SHIFT
 
-    def get_name(self, task):
+    def get_name(self, context, task):
         if self.vm_file != 0:
-            fname = linux.LinuxUtilities.path_for_file(task, self.vm_file)
+            fname = linux.LinuxUtilities.path_for_file(context, task, self.vm_file)
         elif self.vm_start <= task.mm.start_brk and self.vm_end >= task.mm.brk:
             fname = "[heap]"
         elif self.vm_start <= task.mm.start_stack and self.vm_end >= task.mm.start_stack:
@@ -230,18 +230,17 @@ class vm_area_struct(objects.Struct):
 
     # used by malfind
     def is_suspicious(self):
-        ret = True
+        ret = False
 
         flags_str = self.get_protection()
 
-        if flags_str.find("VM_READ|VM_WRITE|VM_EXEC") != -1:
+        if flags_str == "rwx":
             ret = True
 
-        elif flags_str == "VM_READ|VM_EXEC" and self.vm_file != 0:
+        elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
-
+        
         return ret
-
 
 class qstr(objects.Struct):
 
