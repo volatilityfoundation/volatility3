@@ -63,7 +63,7 @@ class Maps(plugins.PluginInterface):
                         minor = inode_object.i_sb.minor
                         inode = inode_object.i_ino
 
-                path = vma.get_name(task)
+                path = vma.get_name(self.context, task)
 
                 yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), flags,
                            format_hints.Hex(page_offset), major, minor, inode, path))

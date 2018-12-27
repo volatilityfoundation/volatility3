@@ -57,7 +57,7 @@ class Elfs(plugins.PluginInterface):
                 if not (hdr[0] == 0x7f and hdr[1] == 0x45 and hdr[2] == 0x4c and hdr[3] == 0x46):
                     continue
 
-                path = vma.get_name(task)
+                path = vma.get_name(self.context, task)
 
                 yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), path))
 
