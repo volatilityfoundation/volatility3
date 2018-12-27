@@ -45,17 +45,20 @@ class Check_syscall(plugins.PluginInterface):
         ]
 
     def _generator(self, mods: Iterator[Any]):
-        aslr_shift = mac.MacUtilities.find_aslr(self.context, self.config['darwin'], self.config['primary'])
-        darwin = self.context.module(self.config['darwin'], self.config['primary'], aslr_shift)
+        mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
-        mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'], aslr_shift)
+        kernel = contexts.Module(self._context, 
+                                 self.config['darwin'], 
+                                 self.config['primary'], 
+                                 0, 
+                                 absolute_symbol_addresses = True)                
 
-        policy_list = darwin.object(symbol_name = "_mac_policy_list").cast("mac_policy_list")
+        policy_list = kernel.object(symbol_name = "_mac_policy_list").cast("mac_policy_list")
 
-        entries = darwin.object(
+        entries = kernel.object(
             type_name = "array",
             offset = policy_list.entries.dereference().vol.offset,
-            subtype = darwin.get_type('mac_policy_list_element'),
+            subtype = kernel.get_type('mac_policy_list_element'),
             count = policy_list.staticmax + 1)
 
         mask = self.context.memory[self.config['primary']].address_mask
