@@ -22,7 +22,7 @@ import logging
 from typing import Callable, Iterable, List
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import renderers, interfaces
+from volatility.framework import renderers, interfaces, contexts
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -74,14 +74,20 @@ class PsList(interfaces_plugins.PluginInterface):
     def list_tasks(cls,
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
-                   mac_symbols: str,
+                   darwin_symbols: str,
                    filter: Callable[[int], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer"""
 
-        aslr_shift = mac.MacUtilities.find_aslr(context, mac_symbols, layer_name)
-        darwin = context.module(mac_symbols, layer_name, aslr_shift)
-        proc = darwin.object(symbol_name = "allproc").lh_first
+        mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
+       
+        kernel = contexts.Module(context, 
+                                darwin_symbols, 
+                                layer_name,
+                                0, 
+                                absolute_symbol_addresses = True)                
+
+        proc = kernel.object(symbol_name = "allproc").lh_first
 
         seen = {}
         while proc is not None and proc.vol.offset != 0:
