@@ -23,7 +23,7 @@ typically found in Linux's /proc file system.
 import logging
 from typing import List
 
-from volatility.framework import exceptions, interfaces
+from volatility.framework import exceptions, interfaces, contexts
 from volatility.framework import renderers, constants
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
@@ -143,11 +143,13 @@ class Check_syscall(plugins.PluginInterface):
 
     # TODO - add finding and parsing unistd.h once cached file enumeration is added
     def _generator(self):
-        _, aslr_shift = linux.LinuxUtilities.find_aslr(self.context, self.config['vmlinux'], self.config['primary'])
-        vmlinux = self.context.module(self.config['vmlinux'], self.config['primary'], aslr_shift)
+        linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'])
 
-        linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'],
-                                                    aslr_shift)
+        vmlinux = contexts.Module(self.context, 
+                                  self.config['vmlinux'], 
+                                  self.config['primary'], 
+                                  0, 
+                                  absolute_symbol_addresses = True)                
 
         ptr_sz = vmlinux.get_type("pointer").size
         if ptr_sz == 4:

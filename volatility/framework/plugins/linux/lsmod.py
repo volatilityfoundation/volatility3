@@ -24,6 +24,7 @@ typically found in Linux's /proc file system.
 from typing import List
 
 from volatility.framework import renderers, constants, interfaces
+from volatility.framework import exceptions, contexts
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
@@ -45,17 +46,19 @@ class Lsmod(plugins.PluginInterface):
     @classmethod
     def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str, vmlinux_symbols: str):
         """Lists all the modules in the primary layer"""
+        linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
-        _, aslr_shift = linux.LinuxUtilities.find_aslr(context, vmlinux_symbols, layer_name)
-        vmlinux = context.module(vmlinux_symbols, layer_name, aslr_shift)
-
-        module_head_addr = vmlinux.get_symbol("modules").address
-
-        modules = vmlinux.object(type_name = "list_head", offset = module_head_addr)
+        vmlinux = contexts.Module(context,
+                                  vmlinux_symbols,
+                                  layer_name,
+                                  0,
+                                  absolute_symbol_addresses = True)   
+ 
+        modules = vmlinux.object(symbol_name = "modules").cast("list_head")
 
         table_name = modules.vol.type_name.split(constants.BANG)[0]
 
-        for module in modules.to_list("{}{}module".format(table_name, constants.BANG), "list"):
+        for module in modules.to_list(table_name + constants.BANG + "module", "list"):
             yield module
 
     def _generator(self):
