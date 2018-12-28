@@ -222,3 +222,41 @@ class MacUtilities(object):
     def virtual_to_physical_address(cls, addr: int) -> int:
         """Converts a virtual mac address to a physical one (does not account of ASLR)"""
         return addr - 0xffffff8000000000
+
+    @classmethod
+    def files_descriptors_for_process(cls, config: interfaces.configuration.HierarchicalDict,
+                                      context: interfaces.context.ContextInterface,
+                                      task: interfaces.objects.ObjectInterface):
+
+        num_fds = task.p_fd.fd_lastfile
+        nfiles = task.p_fd.fd_nfiles
+
+        if nfiles > num_fds:
+            num_fds = nfiles
+
+        if num_fds > 4096:
+            num_fds = 1024
+
+        file_type = config["darwin"] + constants.BANG + 'fileproc'
+
+        try:
+            table_addr = task.p_fd.fd_ofiles.dereference()
+        except exceptions.PagedInvalidAddressException:
+            return
+
+        fds = objects.utility.array_of_pointers(table_addr, count = num_fds, subtype = file_type, context = context)
+
+        for fd_num, f in enumerate(fds):
+            if f != 0:
+                try:
+                    ftype = f.f_fglob.get_fg_type()
+                except exceptions.PagedInvalidAddressException:
+                    continue
+
+                if ftype == 'DTYPE_VNODE':
+                    vnode = f.f_fglob.fg_data.dereference().cast("vnode")
+                    path = vnode.full_path()
+                else:
+                    path = "<%s>" % ftype.replace("DTYPE_", "").lower()
+
+                yield f, path, fd_num
