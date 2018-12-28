@@ -24,6 +24,7 @@ from volatility.framework import constants
 from volatility.framework import exceptions, interfaces
 from volatility.framework.symbols import generic
 from volatility.framework.objects import utility
+from volatility.framework.renderers import conversion
 
 
 class proc(generic.GenericIntelProcess):
@@ -126,7 +127,7 @@ class vnode(generic.GenericIntelProcess):
             return
 
         if vname:
-            ret.append(utility.pointer_to_string(vname))
+            ret.append(utility.pointer_to_string(vname, 255))
 
         if int(vnodeobj.v_flag) & 0x000001 != 0 and int(vnodeobj.v_mount) != 0:
             if int(vnodeobj.v_mount.mnt_vnodecovered) != 0:
@@ -145,11 +146,11 @@ class vnode(generic.GenericIntelProcess):
             elements.reverse()
 
             for e in elements:
-                files.append(e.decode("utf-8"))
+                files.append(e.encode("utf-8"))
 
-            ret = "/".join(files)
+            ret = b"/".join(files)
             if ret:
-                ret = "/" + ret
+                ret = b"/" + ret
 
         return ret
 
@@ -277,3 +278,110 @@ class vm_map_entry(generic.GenericIntelProcess):
             ret = None
 
         return ret
+
+class socket(generic.GenericIntelProcess):
+    def get_inpcb(self):
+        try:
+            ret = self.so_pcb.dereference().cast("inpcb")
+        except exceptions.PagedInvalidAddressException:
+            ret = None
+
+        return ret
+
+    def get_family(self):
+        return self.so_proto.pr_domain.dom_family
+
+    def get_protocol_as_string(self):
+        proto = self.so_proto.pr_protocol
+       
+        if proto == 6:
+            ret = "TCP"
+        elif proto == 17:
+            ret = "UDP"
+        else:
+            ret = ""             
+ 
+        return ret
+
+    def get_state(self):
+        ret = ""
+
+        if self.so_proto.pr_protocol == 6:
+            inpcb = self.get_inpcb()
+            if inpcb is not None:
+                ret = inpcb.get_tcp_state()
+        
+        return ret
+        
+    def get_connection_info(self):
+        inpcb = self.get_inpcb()
+
+        if inpcb is None:
+            ret = None
+        elif self.get_family() == 2:
+            ret = inpcb.get_ipv4_info()
+        else:
+            ret = inpcb.get_ipv6_info()
+
+        return ret
+
+    def get_converted_connection_info(self):
+        vals = self.get_connection_info()
+
+        if vals:
+            ret = conversion.convert_network_four_tuple(self.get_family(), vals)
+        else:
+            ret = None
+
+        return ret
+
+class inpcb(generic.GenericIntelProcess):
+    
+    def get_tcp_state(self):
+        tcp_states = (
+              "CLOSED",
+              "LISTEN",
+              "SYN_SENT",
+              "SYN_RECV",
+              "ESTABLISHED",
+              "CLOSE_WAIT",
+              "FIN_WAIT1",
+              "CLOSING",
+              "LAST_ACK",
+              "FIN_WAIT2",
+              "TIME_WAIT")
+
+        try:
+            tcpcb = self.inp_ppcb.dereference().cast("tcpcb")
+        except exceptions.PagedInvalidAddressException:
+            return ""
+
+        state_type = tcpcb.t_state
+        if state_type and state_type < len(tcp_states):
+            state = tcp_states[state_type]
+        else:
+            state = ""
+
+        return state
+
+    def get_ipv4_info(self):
+        lip = self.inp_dependladdr.inp46_local.ia46_addr4.s_addr   
+        lport = self.inp_lport 
+
+        rip = self.inp_dependfaddr.inp46_foreign.ia46_addr4.s_addr
+        rport = self.inp_fport 
+    
+        return [lip, lport, rip, rport]
+
+    def get_ipv6_info(self):
+        lip = self.inp_dependladdr.inp6_local.member(attr = '__u6_addr').member(attr = '__u6_addr16')
+        lport = self.inp_lport 
+
+        rip = self.inp_dependfaddr.inp6_foreign.member(attr = '__u6_addr').member(attr = '__u6_addr16')
+        rport = self.inp_fport 
+
+        return [lip, lport, rip, rport]
+
+
+
+

@@ -18,7 +18,7 @@
 # specific language governing rights and limitations under the License.
 #
 
-import datetime
+import datetime, socket, struct
 from typing import Union
 
 from volatility.framework import interfaces, renderers
@@ -65,3 +65,93 @@ def round(addr: int, align: int, up: bool = False) -> int:
         if up:
             return (addr + (align - (addr % align)))
         return (addr - (addr % align))
+
+"""
+For vol3 devs:
+
+convert_ipv4 && convert_ipv6 are slightly modified versions of their
+counterparts from vol2: 
+    
+    https://github.com/volatilityfoundation/volatility/blob/master/volatility/utils.py#L84
+
+Furthermore, vol2 used as overlay for ip addresses that made the conversion string based:
+
+    https://github.com/volatilityfoundation/volatility/blob/master/volatility/plugins/overlays/basic.py#L156
+
+by using struct.pack with the given format string on data that was then gathered through .v():
+
+    https://github.com/volatilityfoundation/volatility/blob/aa6b960c1077e447bda9d64df507ec02f8fcc958/volatility/obj.py#L439
+
+.v() for IP addresses would do obj_vm.read(), which returned a string, and struct.pack was called on it.
+
+This doesn't translate very well to vol3, since vol3 does have overlays so the plugins instead are retreiving the raw integers
+from memory. That is why convert_ip4 takes a 32 bit integer as its input and convert_ipv6 takes an array of shorts.
+This code has only been tested on Mac so far, but since the modified functions cleanly replace evaluation of data that used to
+be done by the overlays that plugins for every OS used, then I don't expect issues when vol3 linux and windows plugins use them
+
+The other thing to note about these functions, is that when you struct.pack("I",...) as convert_ip4 does, and then you try to enumerate it,
+Python3 will treat each element as an 'int' and *not* a string. That means any code that calls ord() will fail, so those calls were removed
+when porting over the vol2 and python2 version.
+"""
+def convert_ipv4(ip_as_integer):
+    ip_str = struct.pack("<I", ip_as_integer)    
+   
+    return "{0}.{1}.{2}.{3}".format(*[x for x in ip_str])
+
+def convert_ipv6(packed_ip):    
+    # Replace a run of 0x00s with None
+    numlen = [(k, len(list(g))) for k, g in itertools.groupby(packed_ip)]
+    max_zero_run = sorted(sorted(numlen, key = lambda x: x[1], reverse = True), key = lambda x: x[0])[0]
+    words = []
+    for k, l in numlen:
+        if (k == 0) and (l == max_zero_run[1]) and not (None in words):
+            words.append(None)
+        else:
+            for i in range(l):
+                words.append(k)
+
+    # Handle encapsulated IPv4 addresses
+    encapsulated = ""
+    if (words[0] is None) and (len(words) == 3 or (len(words) == 4 and words[1] == 0xffff)):
+        words = words[:-2]
+        encapsulated = inet_ntop4(packed_ip[-4:])
+    # If we start or end with None, then add an additional :
+    if words[0] is None:
+        words = [None] + words
+    if words[-1] is None:
+        words += [None]
+    # Join up everything we've got using :s
+    return ":".join(["{0:x}".format(w) if w is not None else "" for w in words]) + encapsulated 
+
+def convert_port(port_as_integer):
+    return (port_as_integer >> 8) | ((port_as_integer & 0xff) << 8)
+
+def convert_network_four_tuple(family, four_tuple):
+    """
+    Converts the connection four_tuple:
+        (source ip,
+         source port,
+         dest ip,
+         dest port)
+
+    into their string equivalents. 
+    IP addresses are expected as a tuple of unsigned shorts
+    Ports are converted to proper endianess as well
+    """
+
+    if family == socket.AF_INET:
+        ret = (convert_ipv4(four_tuple[0]),
+               convert_port(four_tuple[1]),
+               convert_ipv4(four_tuple[2]),
+               convert_port(four_tuple[3]))
+    elif family == socket.AF_INET6:
+        ret = (convert_ipv6(four_tuple[0]),
+               convert_port(four_tuple[1]),
+               convert_ipv6(four_tuple[2]),
+               convert_port(four_tuple[3]))
+    else:
+        ret = None
+
+    return ret
+
+
