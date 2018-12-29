@@ -229,7 +229,10 @@ class VolShell(cli.CommandLine):
             # Construct and run the plugin
             text_renderer.QuickTextRenderer().render(constructed.run())
         except exceptions.UnsatisfiedException as excp:
-            parser.exit(1, "Unable to validate the plugin requirements: {}\n".format(excp.unsatisfied))
+            for config_path in excp.unsatisfied:
+                print("Unsatisfied requirement {}: {}".format(config_path, excp.unsatisfied[config_path].description))
+
+            parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
 
 
 def main():

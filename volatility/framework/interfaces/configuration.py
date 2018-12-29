@@ -341,19 +341,20 @@ class RequirementInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         self._check_type(requirement, RequirementInterface)
         del self._requirements[requirement.name]
 
-    def unsatisfied_children(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied_children(self, context: interfaces.context.ContextInterface,
+                             config_path: str) -> Dict[str, 'RequirementInterface']:
         """Method that will validate all child requirements"""
-        result = []
+        result = {}
         for requirement in self.requirements.values():
             if not requirement.optional:
                 subresult = requirement.unsatisfied(context, path_join(config_path, self._name))
-                for value in subresult:
-                    result.append(value)
+                result.update(subresult)
         return result
 
     # Validation routines
     @abstractmethod
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, 'RequirementInterface']:
         """Method to validate the value stored at config_path for the configuration object against a context
 
            Returns a list containing its own name (or multiple unsatisfied requirement names) when invalid
@@ -372,7 +373,8 @@ class SimpleTypeRequirement(RequirementInterface):
         """Always raises a TypeError as instance requirements cannot have children"""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, RequirementInterface]:
         """Validates the instance requirement based upon its `instance_type`."""
         config_path = path_join(config_path, self.name)
 
@@ -382,8 +384,8 @@ class SimpleTypeRequirement(RequirementInterface):
                 constants.LOGLEVEL_V,
                 "TypeError - {} requirements only accept {} type: {}".format(self.name, self.instance_type.__name__,
                                                                              value))
-            return [config_path]
-        return []
+            return {config_path: self}
+        return {}
 
 
 class ClassRequirement(RequirementInterface):
@@ -398,7 +400,8 @@ class ClassRequirement(RequirementInterface):
     def cls(self) -> Type:
         return self._cls
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, RequirementInterface]:
         """Checks to see if a class can be recovered"""
         config_path = path_join(config_path, self.name)
 
@@ -415,8 +418,8 @@ class ClassRequirement(RequirementInterface):
                 if value in globals():
                     self._cls = globals()[value]
         if self._cls is None:
-            return [config_path]
-        return []
+            return {config_path: self}
+        return {}
 
 
 class ConstructableRequirementInterface(RequirementInterface):
@@ -546,7 +549,8 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         return []
 
     @classmethod
-    def unsatisfied(cls, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(cls, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, RequirementInterface]:
         """Returns a list of the names of all unsatisfied requirements
 
         Since a satisfied set of requirements will return [], it can be used in tests as follows:
@@ -557,12 +561,11 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             if unmet:
                 raise RuntimeError("Unsatisfied requirements: {}".format(unmet)
         """
-        result = []
+        result = {}
         for requirement in cls.get_requirements():
             if not requirement.optional:
                 subresult = requirement.unsatisfied(context, config_path)
-                for value in subresult:
-                    result.append(value)
+                result.update(subresult)
         return result
 
     def make_subconfig(self, *args, **kwargs) -> str:

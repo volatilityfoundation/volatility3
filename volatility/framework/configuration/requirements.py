@@ -25,7 +25,7 @@ etc) as well as indicating what they expect to be in the context (such as partic
 """
 import abc
 import logging
-from typing import Any, ClassVar, List, Optional, Type
+from typing import Any, ClassVar, List, Optional, Type, Dict
 
 from volatility.framework import constants, interfaces
 from volatility.framework.interfaces import configuration
@@ -39,7 +39,8 @@ class MultiRequirement(configuration.RequirementInterface):
        Technically the Interface could handle this, but it's an interface, so this is a concrete implementation.
     """
 
-    def unsatisfied(self, context: configuration.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(self, context: configuration.ContextInterface,
+                    config_path: str) -> Dict[str, configuration.RequirementInterface]:
         return self.unsatisfied_children(context, config_path)
 
 
@@ -99,31 +100,32 @@ class ListRequirement(configuration.RequirementInterface):
         self.min_elements = min_elements or 0  # type: int
         self.max_elements = max_elements  # type: Optional[int]
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, configuration.RequirementInterface]:
         """Check the types on each of the returned values and their number and then call the element type's check for each one"""
         config_path = configuration.path_join(config_path, self.name)
         default = None
         value = self.config_value(context, config_path, default)
         if not value and self.min_elements > 0:
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - ListRequirement has non-zero min_elements")
-            return [config_path]
+            return {config_path: self}
         if value == default:
             # We need to differentiate between no value and an empty list
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - Value was not specified")
-            return [config_path]
+            return {config_path: self}
         if not isinstance(value, list):
             # TODO: Check this is the correct response for an error
             raise ValueError("Unexpected config value found: {}".format(repr(value)))
         if not (self.min_elements <= len(value)):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too few values provided to list option.")
-            return [config_path]
+            return {config_path: self}
         if self.max_elements and not (len(value) < self.max_elements):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too many values provided to list option.")
-            return [config_path]
+            return {config_path: self}
         if not all([self._check_type(element, self.element_type) for element in value]):
             vollog.log(constants.LOGLEVEL_V, "TypeError - At least one element in the list is not of the correct type.")
-            return [config_path]
-        return []
+            return {config_path: self}
+        return {}
 
 
 class ChoiceRequirement(configuration.RequirementInterface):
@@ -140,20 +142,22 @@ class ChoiceRequirement(configuration.RequirementInterface):
             raise TypeError("ChoiceRequirement takes a list of strings as choices")
         self.choices = choices
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, configuration.RequirementInterface]:
         """Validates the provided value to ensure it is one of the available choices"""
         config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path)
         if value not in self.choices:
             vollog.log(constants.LOGLEVEL_V, "ValueError - Value is not within the set of available choices")
-            return [config_path]
-        return []
+            return {config_path: self}
+        return {}
 
 
 class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequirementInterface, metaclass = abc.ABCMeta):
     """Allows a variable length list of requirements"""
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, configuration.RequirementInterface]:
         """Validates the provided value to ensure it is one of the available choices"""
         config_path = configuration.path_join(config_path, self.name)
         ret_list = super().unsatisfied(context, config_path)
@@ -161,11 +165,11 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
             return ret_list
         if (self.config_value(context, config_path, None) is None
                 or self.config_value(context, configuration.path_join(config_path, 'number_of_elements'))):
-            return [config_path]
-        return []
+            return {config_path: self}
+        return {}
 
     @classmethod
-    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
         return [
             IntRequirement(
@@ -177,7 +181,7 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
         """Method for constructing within the context any required elements from subrequirements"""
 
     @abc.abstractmethod
-    def new_requirement(self, index) -> interfaces.configuration.RequirementInterface:
+    def new_requirement(self, index) -> configuration.RequirementInterface:
         """Builds a new requirement based on the specified index"""
 
     def build_configuration(self, context: interfaces.context.ContextInterface, config_path: str,
@@ -213,7 +217,7 @@ class LayerListRequirement(ComplexListRequirement):
             if layer_req is not None and isinstance(layer_req, TranslationLayerRequirement):
                 layer_req.construct(context, new_config_path)
 
-    def new_requirement(self, index) -> interfaces.configuration.RequirementInterface:
+    def new_requirement(self, index) -> configuration.RequirementInterface:
         """Constructs a new requirement based on the specified index"""
         return TranslationLayerRequirement(name = self.name + str(index), description = "Swap Layer", optional = False)
 
@@ -249,35 +253,36 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
         self.architectures = architectures
         super().__init__(name, description, default, optional)
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, configuration.RequirementInterface]:
         """Validate that the value is a valid layer name and that the layer adheres to the requirements"""
         config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
         if isinstance(value, str):
             if value not in context.memory:
                 vollog.log(9, "IndexError - Layer not found in memory space: {}".format(value))
-                return [config_path]
+                return {config_path: self}
             if self.oses and context.memory[value].metadata.get('os', None) not in self.oses:
                 vollog.log(9, "TypeError - Layer is not the required OS: {}".format(value))
-                return [config_path]
+                return {config_path: self}
             if (self.architectures
                     and context.memory[value].metadata.get('architecture', None) not in self.architectures):
                 vollog.log(9, "TypeError - Layer is not the required Architecture: {}".format(value))
-                return [config_path]
-            return []
+                return {config_path: self}
+            return {}
 
         if value is not None:
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - Translation Layer Requirement only accepts string labels: {}".format(value))
-            return [config_path]
+            return {config_path: self}
 
         # TODO: check that the space in the context lives up to the requirements for arch/os etc
 
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
-        self._validate_class(context, interfaces.configuration.parent_path(config_path))
+        self._validate_class(context, configuration.parent_path(config_path))
         vollog.log(constants.LOGLEVEL_V, "IndexError - No configuration provided: {}".format(config_path))
-        return [config_path]
+        return {config_path: self}
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the appropriate layer and adds it based on the class parameter"""
@@ -313,20 +318,21 @@ class SymbolRequirement(configuration.ConstructableRequirementInterface,
                         configuration.ConfigurableRequirementInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
 
-    def unsatisfied(self, context: interfaces.context.ContextInterface, config_path: str) -> List[str]:
+    def unsatisfied(self, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, configuration.RequirementInterface]:
         """Validate that the value is a valid within the symbol space of the provided context"""
         config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
         if not isinstance(value, str):
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - SymbolRequirement only accepts string labels: {}".format(value))
-            return [config_path]
+            return {config_path: self}
         if value not in context.symbol_space:
             # This is an expected situation, so return False rather than raise
             vollog.log(constants.LOGLEVEL_V, "IndexError - Value not present in the symbol space: {}".format(value
                                                                                                              or ""))
-            return [config_path]
-        return []
+            return {config_path: self}
+        return {}
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the symbol space within the context based on the subrequirements"""
