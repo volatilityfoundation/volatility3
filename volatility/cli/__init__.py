@@ -71,7 +71,7 @@ class PrintedProgress(object):
         message = "\rProgress: {0: 7.2f}\t\t{1:}".format(round(progress, 2), description or '')
         message_len = len(message)
         self._max_message_len = max([self._max_message_len, message_len])
-        print(message, end = ' ' * (self._max_message_len - message_len))
+        print(message, end = (' ' * (self._max_message_len - message_len)) + '\r')
 
 
 class MuteProgress(PrintedProgress):

@@ -135,18 +135,21 @@ class QuickTextRenderer(interfaces.renderers.Renderer):
         # TODO: Improve text output
         outfd = sys.stdout
 
+        line = []
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
-            outfd.write("\t{}".format(column.name))  # type: ignore
-        outfd.write("\n")
+            line.append("{}".format(column.name))
+        outfd.write("\n{}\n".format("\t".join(line)))
 
         def visitor(node, accumulator):
             accumulator.write("\n")
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             accumulator.write("*" * max(0, node.path_depth - 1))
+            line = []
             for column in grid.columns:
                 renderer = self.type_renderers.get(column.type, self.type_renderers['default'])
-                accumulator.write("\t" + renderer(node.values[column.index]))
+                line.append(renderer(node.values[column.index]))
+            accumulator.write("{}".format("\t".join(line)))
             return accumulator
 
         grid.populate(visitor, outfd)
