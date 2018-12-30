@@ -20,7 +20,7 @@
 
 import logging
 import struct
-from typing import Optional, Tuple
+from typing import Optional
 
 from volatility.framework import interfaces, constants, validity, layers
 from volatility.framework import symbols
@@ -66,11 +66,14 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
             return None
 
         mac_banners = MacBannerCache.load_banners()
+        # If we have no banners, don't bother scanning
+        if not mac_banners:
+            vollog.info("No Mac banners found - if this is a mac plugin, please check your symbol files location")
+            return None
 
+        mss = scanners.MultiStringScanner([x for x in mac_banners if x])
         for banner_offset, banner in layer.scan(
-                context = context,
-                scanner = scanners.MultiStringScanner([x for x in mac_banners if x]),
-                progress_callback = progress_callback):
+                context = context, scanner = mss, progress_callback = progress_callback):
             dtb = None
             vollog.debug("Identified banner: {}".format(repr(banner)))
 

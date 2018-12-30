@@ -39,6 +39,8 @@ class MultiRegexp(object):
             -> Generator[Tuple[int, Union[str, bytes]], None, None]:
         if not isinstance(haystack, bytes):
             raise TypeError("Search haystack must be a byte string")
+        if not self._regex:
+            raise ValueError("MultiRegexp cannot be used with an empty set of search strings")
         for match in re.finditer(self._regex, haystack):
             yield (match.start(0), match.group())
 

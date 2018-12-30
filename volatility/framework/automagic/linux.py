@@ -66,6 +66,11 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
             return None
 
         linux_banners = LinuxBannerCache.load_banners()
+        # If we have no banners, don't bother scanning
+        if not linux_banners:
+            vollog.info("No Linux banners found - if this is a linux plugin, please check your symbol files location")
+            return None
+
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             dtb = None

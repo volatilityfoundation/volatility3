@@ -17,7 +17,7 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
 # specific language governing rights and limitations under the License.
 #
-
+import gc
 import logging
 import os
 import pickle
@@ -109,6 +109,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
             progress_callback(current * 100 / total, "Building {} caches".format(self.os))
             isf_url = cacheables[current]
 
+            isf = None
             try:
                 # Loading the symbol table will be very slow until it's been validated
                 isf = intermed.IntermediateSymbolTable(context, config_path, "temp", isf_url, validate = False)
@@ -118,11 +119,17 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                 # but we should check at least that the banner matches on load.
                 banner = isf.get_symbol(self.symbol_name).constant_data
                 vollog.log(constants.LOGLEVEL_V, "Caching banner {} for file {}".format(banner, isf_url))
+
                 bannerlist = banners.get(banner, [])
                 bannerlist.append(isf_url)
                 banners[banner] = bannerlist
             except exceptions.SymbolError:
                 pass
+            finally:
+                # Get rid of the loaded file, in case it sits in memory
+                if isf:
+                    del isf
+                    gc.collect()
 
             # Rewrite the cached banners each run, since writing is faster than the banner_cache validation portion
             self.save_banners(banners)
