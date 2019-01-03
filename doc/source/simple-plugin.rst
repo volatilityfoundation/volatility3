@@ -33,7 +33,7 @@ to be able to run properly.  Any that are defined as optional need not necessari
         @classmethod
         def get_requirements(cls):
             return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                             description = 'Kernel Address Space',
+                                                             description = 'Memory layer for the kernel',
                                                              architectures = ["Intel32", "Intel64"]),
                     requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
                     requirements.IntRequirement(name = 'pid',
@@ -47,7 +47,7 @@ to instantiate the plugin).  At the moment these requirements are fairly straigh
 ::
 
     requirements.TranslationLayerRequirement(name = 'primary',
-                                             description = 'Kernel Address Space',
+                                             description = 'Memory layer for the kernel',
                                              architectures = ["Intel32", "Intel64"]),
 
 This requirement indicates that the plugin will operate on a single `TranslationLayer`

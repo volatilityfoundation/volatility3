@@ -56,7 +56,7 @@ class YaraScan(plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = "Primary kernel address space", architectures = ["Intel32", "Intel64"]),
+                name = 'primary', description = "Memory layer for the kernel", architectures = ["Intel32", "Intel64"]),
             requirements.BooleanRequirement(
                 name = "all", description = "Scan both process and kernel memory", default = False, optional = True),
             requirements.BooleanRequirement(

@@ -31,7 +31,7 @@ class Volshell(shellplugin.Volshell):
     @classmethod
     def get_requirements(cls):
         return (super().get_requirements() + [
-            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.IntRequirement(name = 'pid', description = "Process ID", optional = True)
         ])
 

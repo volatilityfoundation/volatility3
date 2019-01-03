@@ -17,8 +17,8 @@ class Check_syscall(plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "darwin", description = "OSX Kernel")]
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "darwin", description = "Mac kernel symbols")]
 
     def _generator(self):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])

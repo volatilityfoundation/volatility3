@@ -175,9 +175,14 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            IntRequirement(name = 'hive_offset', description = '', default = 0, optional = False),
-            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
-            TranslationLayerRequirement(name = 'base_layer', optional = False)
+            IntRequirement(
+                name = 'hive_offset',
+                description = 'Offset within the base layer at which the hive lives',
+                default = 0,
+                optional = False),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            TranslationLayerRequirement(
+                name = 'base_layer', description = 'Layer in which the registry hive lives', optional = False)
         ]
 
     def _translate(self, offset: int) -> int:

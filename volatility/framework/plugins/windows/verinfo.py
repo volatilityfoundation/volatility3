@@ -49,8 +49,8 @@ class VerInfo(interfaces_plugins.PluginInterface):
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
         ]
 
     @classmethod

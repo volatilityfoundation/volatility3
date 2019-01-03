@@ -36,7 +36,7 @@ class ConfigWriter(plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.BooleanRequirement(
                 name = 'extra', description = 'Outputs whole configuration tree', default = False, optional = True)
         ]

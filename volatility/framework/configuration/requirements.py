@@ -219,7 +219,8 @@ class LayerListRequirement(ComplexListRequirement):
 
     def new_requirement(self, index) -> configuration.RequirementInterface:
         """Constructs a new requirement based on the specified index"""
-        return TranslationLayerRequirement(name = self.name + str(index), description = "Swap Layer", optional = False)
+        return TranslationLayerRequirement(
+            name = self.name + str(index), description = "Layer for swap space", optional = False)
 
 
 class TranslationLayerRequirement(configuration.ConstructableRequirementInterface,

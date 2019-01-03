@@ -39,9 +39,9 @@ class VadDump(interfaces_plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Kernel Address Space',
+                                                         description = 'Memory layer for the kernel',
                                                          architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+                requirements.SymbolRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
                 # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
                 requirements.IntRequirement(name = 'address',
                                             description = "Process virtual memory address to include " \

@@ -36,8 +36,8 @@ class Lsmod(plugins.PluginInterface):
     def get_requirements(cls):
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "darwin", description = "Linux Kernel")
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "darwin", description = "Linux kernel symbols")
         ]
 
     @classmethod

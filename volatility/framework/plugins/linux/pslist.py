@@ -34,8 +34,8 @@ class PsList(interfaces_plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "vmlinux", description = "Linux Kernel")
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "vmlinux", description = "Linux kernel symbols")
         ]
 
     @classmethod

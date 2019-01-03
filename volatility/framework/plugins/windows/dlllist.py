@@ -35,8 +35,8 @@ class DllList(interfaces_plugins.PluginInterface):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
     def _generator(self, procs):

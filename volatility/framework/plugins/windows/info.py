@@ -36,8 +36,8 @@ class Info(plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS")
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
     def get_depends(self, layer_name: str, index: int = 0):

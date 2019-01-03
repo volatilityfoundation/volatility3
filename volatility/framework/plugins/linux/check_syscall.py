@@ -47,8 +47,8 @@ class Check_syscall(plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "vmlinux", description = "Linux Kernel")
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolRequirement(name = "vmlinux", description = "Linux kernel symbols")
         ]
 
     def _get_table_size_next_symbol(self, table_addr, ptr_sz, vmlinux):
