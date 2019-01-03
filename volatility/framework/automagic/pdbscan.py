@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
 vollog = logging.getLogger(__name__)
 
-ValidKernelsType = Dict[str, Tuple[int, Dict]]
+ValidKernelsType = Dict[str, Tuple[int, Dict[str, Optional[Union[bytes, str, int]]]]]
 KernelsType = Iterable[Dict[str, Any]]
 
 
@@ -197,6 +197,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 # TODO: Check that the symbols for this kernel will fulfill the requirement
                 for virtual_layer in valid_kernels:
                     _kvo, kernel = valid_kernels[virtual_layer]
+                    if not isinstance(kernel['pdb_name'], str) or not isinstance(kernel['GUID'], str):
+                        raise TypeError("PDB name or GUID not a string value")
                     filter_string = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
                     # Take the first result of search for the intermediate file
                     for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
@@ -258,7 +260,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             progress_callback = progress_callback)
         for kernel in kernels:
             # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
-            if kernel['mz_offset'] is None:
+            if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
                 # Rule out kernels that couldn't find a suitable MZ header
                 continue
             if vlayer.bits_per_register == 64:
@@ -287,7 +289,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                              progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
         """Method for finding a suitable kernel offset based on a module table"""
         vollog.debug("Kernel base determination - searching layer module list structure")
-        valid_kernels = {}
+        valid_kernels = {}  # type: ValidKernelsType
         # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
         virtual_layer_name = vlayer.name
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
@@ -319,7 +321,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                            vlayer: layers.intel.Intel,
                            progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
         vollog.debug("Kernel base determination - using KDBG structure for kernel offset")
-        valid_kernels = {}
+        valid_kernels = {}  # type: ValidKernelsType
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         physical_layer = context.memory[physical_layer_name]
         results = physical_layer.scan(context, scanners.BytesScanner(b"KDBG"), progress_callback = progress_callback)
@@ -345,10 +347,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             context: interfaces.context.ContextInterface,
                             vlayer: layers.intel.Intel,
                             address: int,
-                            progress_callback: validity.ProgressCallback = None):
+                            progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
         """Scans a virtual address """
         # Scan a few megs of the virtual space at the location to see if they're potential kernels
-        valid_kernels = {}
+
+        valid_kernels = {}  # type: ValidKernelsType
+
         virtual_layer_name = vlayer.name
         try:
             if vlayer.read(address, 0x2) == b'MZ':

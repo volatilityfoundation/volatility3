@@ -60,7 +60,8 @@ def convert_value_to_data(value: TUnion[int, float, bytes, str, bool],
     if not isinstance(value, struct_type):
         raise TypeError("Written value is not of the correct type for {}".format(struct_type.__class__.__name__))
 
-    if struct_type == int:
+    if struct_type == int and isinstance(value, int):
+        # Doubling up on the isinstance is for mypy
         return int.to_bytes(
             value, length = data_format.length, byteorder = data_format.byteorder, signed = data_format.signed)
     if struct_type == bool:

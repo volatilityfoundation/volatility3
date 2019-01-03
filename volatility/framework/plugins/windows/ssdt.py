@@ -105,9 +105,9 @@ class SSDT(plugins.PluginInterface):
             subtype = ntkrnlmp.get_type(array_subtype),
             count = service_limit)
 
-        for idx, function in enumerate(functions):
+        for idx, function_obj in enumerate(functions):
 
-            function = find_address(function)
+            function = find_address(function_obj)
             module_symbols = collection.get_module_symbols_by_absolute_location(function)
 
             for module_name, symbol_generator in module_symbols:

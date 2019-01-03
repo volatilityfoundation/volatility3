@@ -72,7 +72,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         unsatisfied = self.unsatisfied(self.context, self.config_path)
         if unsatisfied:
             vollog.info("Unable to run LayerStacker, unsatisfied requirement: {}".format(unsatisfied))
-            return unsatisfied
+            return list(unsatisfied)
         if not self.config or not self.config.get('single_location', None):
             raise ValueError("Unable to run LayerStacker, single_location parameter not provided")
         self._check_type(requirement, interfaces.configuration.RequirementInterface)

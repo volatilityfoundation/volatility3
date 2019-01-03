@@ -26,7 +26,7 @@ import math
 import multiprocessing
 import traceback
 from abc import ABCMeta, abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, ChainMap, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 from volatility.framework import constants, exceptions, interfaces, validity
 
@@ -114,7 +114,7 @@ class DataLayerInterface(
     _direct_metadata = collections.ChainMap({}, {
         'architecture': 'Unknown',
         'os': 'Unknown'
-    })  # type: collections.ChainMap[str, str]
+    })  # type: ChainMap[str, str]
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',

@@ -29,7 +29,7 @@ import ssl
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import Optional
+from typing import List, Optional
 
 from volatility import framework
 from volatility.framework import validity, constants

@@ -173,8 +173,11 @@ class HierarchicalDict(collections.abc.Mapping):
             return bytes(value)
         elif isinstance(value, list):
             new_list = []
-            for element in list:
-                new_list.append(self._sanitize_value(element))
+            for element in value:
+                element_value = self._sanitize_value(element)
+                if isinstance(element_value, list):
+                    raise TypeError("Configuration list types cannot contain list types")
+                new_list.append(element_value)
             return new_list
         else:
             raise TypeError("Invalid type stored in configuration")
@@ -504,7 +507,7 @@ class ConfigurableInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         super().__init__()
         self._context = self._check_type(context, ContextInterface)
         self._config_path = self._check_type(config_path, str)
-        self._config_cache = None
+        self._config_cache = None  # type: Optional[HierarchicalDict]
 
     @property
     def context(self) -> 'interfaces.context.ContextInterface':

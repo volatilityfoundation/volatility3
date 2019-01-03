@@ -18,7 +18,7 @@
 # specific language governing rights and limitations under the License.
 #
 
-from typing import Generator, Iterable, Optional, Tuple
+from typing import Generator, Iterable, Optional, Set, Tuple
 
 from volatility.framework import constants
 from volatility.framework import exceptions, interfaces
@@ -59,7 +59,7 @@ class proc(generic.GenericIntelProcess):
         except exceptions.PagedInvalidAddressException:
             return
 
-        seen = set()
+        seen = set()  # type: Set[int]
 
         for i in range(task.map.hdr.nentries):
             if not current_map or current_map.vol.offset in seen:

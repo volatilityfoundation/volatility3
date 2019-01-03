@@ -23,7 +23,9 @@ These include exceptions that can be thrown on errors by the symbol space or sym
 an address is invalid.  The :class:`PagedInvalidAddressException` contains information about the size of the invalid
 page.
 """
-from typing import List
+from typing import Dict
+
+from volatility.framework import interfaces
 
 
 class VolatilityException(Exception):
@@ -97,6 +99,6 @@ class MissingStructureException(VolatilityException):
 
 class UnsatisfiedException(VolatilityException):
 
-    def __init__(self, unsatisfied: List[str]) -> None:
+    def __init__(self, unsatisfied: Dict[str, interfaces.configuration.RequirementInterface]) -> None:
         super().__init__()
         self.unsatisfied = unsatisfied
