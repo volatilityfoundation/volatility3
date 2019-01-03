@@ -75,7 +75,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._base_block = self.hive.BaseBlock.dereference()
 
         self._minaddr = 0
-        # If there's no base_block, we don't know how big the address space is
+        # If there's no base_block, we don't know how big the hive layer is
         # We also don't know the root_cell_offset, so we use a hardcoded value of 0x20
         self._maxaddr = self._base_block.Length or 0x7fffffff
 

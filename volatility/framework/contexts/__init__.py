@@ -73,7 +73,7 @@ class Context(interfaces.context.ContextInterface):
         """A Memory object, allowing access to all data and translation layers currently available within the context"""
         return self._memory
 
-    # ## Address Space Functions
+    # ## Translation Layer Functions
 
     def add_layer(self, layer: interfaces.layers.DataLayerInterface) -> None:
         """Adds a named translation layer to the context

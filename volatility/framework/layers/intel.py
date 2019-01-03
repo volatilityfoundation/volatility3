@@ -76,9 +76,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
     @classproperty
     def page_size(cls) -> int:
-        """Page size for the intel address space.
+        """Page size for the intel memory layers
 
-        All Intel address spaces work on 4096 byte pages"""
+        All Intel layers work on 4096 byte pages"""
         return 1 << cls._page_size_in_bits
 
     @classproperty

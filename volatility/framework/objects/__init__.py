@@ -277,7 +277,7 @@ class Pointer(Integer):
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
                     object_info: ObjectInformation) -> Any:
-        """Ensure that pointer values always fall within the address space of the layer they're constructed on
+        """Ensure that pointer values always fall within the domain of the layer they're constructed on
 
            If there's a need for all the data within the address, the pointer should be recast.  The "pointer"
            must always live within the space (even if the data provided is invalid).

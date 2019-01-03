@@ -32,7 +32,7 @@ class LimeFormatException(exceptions.LayerException):
 class LimeLayer(segmented.SegmentedLayer):
     """A Lime format TranslationLayer. Lime is generally used to store
     physical memory images where there are large holes in the physical
-    address space"""
+    layer"""
 
     priority = 21
 
