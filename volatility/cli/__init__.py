@@ -39,7 +39,7 @@ from urllib import parse, request
 import volatility.plugins
 from volatility import framework
 from volatility.cli import text_renderer
-from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins
+from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins, configuration
 from volatility.framework.configuration import requirements
 
 # Make sure we log everything
@@ -255,10 +255,33 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             # Construct and run the plugin
             text_renderer.QuickTextRenderer().render(constructed.run())
         except exceptions.UnsatisfiedException as excp:
-            for config_path in excp.unsatisfied:
-                print("Unsatisfied requirement {}: {}".format(config_path, excp.unsatisfied[config_path].description))
-
+            self.process_exceptions(excp)
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
+
+    def process_exceptions(self, excp):
+        """Provide useful feedback if an exception occurs"""
+        # Add a blank newline
+        print("")
+        translation_failed = False
+        symbols_failed = False
+        for config_path in excp.unsatisfied:
+            translation_failed = translation_failed or isinstance(
+                excp.unsatisfied[config_path], configuration.requirements.TranslationLayerRequirement)
+            symbols_failed = symbols_failed or isinstance(excp.unsatisfied[config_path],
+                                                          configuration.requirements.SymbolRequirement)
+
+            print("Unsatisfied requirement {}: {}".format(config_path, excp.unsatisfied[config_path].description))
+
+        if symbols_failed:
+            print("\nA symbol table requirement was not fulfilled.  Please verify that:\n"
+                  "\tYou have the correct symbol file for the requirement\n"
+                  "\tThe symbol file is under the correct directory or zip file\n"
+                  "\tThe symbol file is named appropriately or contains the correct banner\n")
+        if translation_failed:
+            print("\nA translation layer requirement was not fulfilled.  Please verify that:\n"
+                  "\tA file was provided to create this layer (by -f, --single-location or by config)\n"
+                  "\tThe file exists and is readable\n"
+                  "\tThe necessary symbols are present and identified by volatility")
 
     def populate_config(self, context: interfaces.context.ContextInterface,
                         configurables_list: Dict[str, interfaces.configuration.ConfigurableInterface],
