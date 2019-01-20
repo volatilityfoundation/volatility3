@@ -20,9 +20,8 @@
 
 from typing import List
 
-import volatility.framework.constants as constants
 import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import exceptions, renderers, interfaces
+from volatility.framework import constants, exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.plugins.windows import pslist

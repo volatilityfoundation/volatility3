@@ -66,10 +66,9 @@ class Intel(interfaces.layers.TranslationLayerInterface):
                  name: str,
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
-        self._base_layer = self._check_type(self.config["memory_layer"], str)
+        self._base_layer = self.config["memory_layer"]
         self._swap_layers = []  # type: List[str]
-        self._check_type(self.config.get("swap_layers", False), bool)
-        self._page_map_offset = self._check_type(self.config["page_map_offset"], int)
+        self._page_map_offset = self.config["page_map_offset"]
 
         # These can vary depending on the type of space
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))

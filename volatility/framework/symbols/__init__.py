@@ -24,7 +24,7 @@ import enum
 import logging
 from typing import Any, Dict, Iterable, Iterator, Set, TypeVar
 
-from volatility.framework import constants, exceptions, interfaces, objects, validity
+from volatility.framework import constants, exceptions, interfaces, objects
 
 vollog = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ SymbolSpaceReturnType = TypeVar("SymbolSpaceReturnType", interfaces.objects.Temp
                                 interfaces.symbols.SymbolInterface, Dict[str, Any])
 
 
-class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRoutines):
+class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
     """Handles an ordered collection of SymbolTables
 
        This collection is ordered so that resolution of symbols can
@@ -55,8 +55,6 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface, validity.ValidityRout
 
     def free_table_name(self, prefix: str = "layer") -> str:
         """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
-        self._check_type(prefix, str)
-
         count = 1
         while prefix + str(count) in self:
             count += 1

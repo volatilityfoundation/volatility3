@@ -26,14 +26,12 @@ import datetime
 from abc import abstractmethod, ABCMeta
 from typing import Any, Callable, ClassVar, Generator, Iterable, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union
 
-from volatility.framework import validity
-
 Column = NamedTuple('Column', [('index', int), ('name', str), ('type', Any)])
 
 RenderOption = Any
 
 
-class Renderer(validity.ValidityRoutines, metaclass = ABCMeta):
+class Renderer(metaclass = ABCMeta):
     """Class that defines the interface that all output renderers must support"""
 
     def __init__(self, options: List[RenderOption]) -> None:

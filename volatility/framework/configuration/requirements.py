@@ -122,7 +122,7 @@ class ListRequirement(configuration.RequirementInterface):
         if self.max_elements and not (len(value) < self.max_elements):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too many values provided to list option.")
             return {config_path: self}
-        if not all([self._check_type(element, self.element_type) for element in value]):
+        if not all([isinstance(element, self.element_type) for element in value]):
             vollog.log(constants.LOGLEVEL_V, "TypeError - At least one element in the list is not of the correct type.")
             return {config_path: self}
         return {}

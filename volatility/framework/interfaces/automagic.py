@@ -24,7 +24,7 @@ Automagic objects attempt to automatically fill configuration values that a user
 from abc import ABCMeta
 from typing import Any, List, Optional, Tuple, Union, Type
 
-from volatility.framework import interfaces, validity
+from volatility.framework import interfaces, constants
 from volatility.framework.configuration import requirements
 
 
@@ -62,7 +62,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) -> Optional[List[Any]]:
+                 progress_callback: constants.ProgressCallback = None) -> Optional[List[Any]]:
         """Runs the automagic over the configurable"""
         return []
 
@@ -104,7 +104,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
         return results
 
 
-class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+class StackerLayerInterface(metaclass = ABCMeta):
     """Class that takes a lower layer and attempts to build on it
 
        stack_order determines the order (from low to high) that stacking layers
@@ -117,7 +117,7 @@ class StackerLayerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     def stack(self,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """
         Method to determine whether this builder can operate on the named layer.  If so, modify the context appropriately.
 

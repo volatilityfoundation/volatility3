@@ -24,7 +24,7 @@ from typing import Dict, Generator, List, Optional, Tuple
 
 import volatility.plugins.windows.handles as handles
 
-from volatility.framework import constants, interfaces, renderers, validity, exceptions, symbols
+from volatility.framework import constants, interfaces, renderers, exceptions, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins, configuration
 from volatility.framework.layers import scanners
@@ -51,7 +51,7 @@ class PoolHeaderSymbolTable(intermed.IntermediateSymbolTable):
         self.set_type_class('_POOL_HEADER', extensions._POOL_HEADER)
 
 
-class PoolConstraint(validity.ValidityRoutines):
+class PoolConstraint:
     """Class to maintain tag/size/index/type information about Pool header tags"""
 
     def __init__(self,
@@ -62,7 +62,7 @@ class PoolConstraint(validity.ValidityRoutines):
                  size: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  index: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  alignment: Optional[int] = 1) -> None:
-        self.tag = self._check_type(tag, bytes)
+        self.tag = tag
         self.type_name = type_name
         self.object_type = object_type
         self.page_type = page_type
@@ -204,7 +204,7 @@ class PoolScanner(plugins.PluginInterface):
                   symbol_table: str,
                   pool_constraints: List[PoolConstraint],
                   alignment: int = 8,
-                  progress_callback: Optional[validity.ProgressCallback] = None) \
+                  progress_callback: Optional[constants.ProgressCallback] = None) \
             -> Generator[Tuple[PoolConstraint, interfaces.objects.ObjectInterface], None, None]:
         """Returns the _POOL_HEADER object (based on the symbol_table template) after scanning through layer_name
         returning all headers that match any of the constraints provided.  Only one constraint can be provided per tag"""

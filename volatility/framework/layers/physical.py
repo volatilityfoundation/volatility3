@@ -37,7 +37,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
                  buffer: bytes,
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
-        self._buffer = self._check_type(buffer, bytes)
+        self._buffer = buffer
 
     @property
     def maximum_address(self) -> int:
@@ -66,7 +66,6 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 
     def write(self, address: int, data: bytes):
         """Writes the data from to the buffer"""
-        self._check_type(data, bytes)
         self._buffer = self._buffer[:address] + data + self._buffer[address + len(data):]
 
     @classmethod

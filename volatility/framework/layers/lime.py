@@ -21,7 +21,7 @@
 import struct
 from typing import Optional, Tuple
 
-from volatility.framework import exceptions, interfaces, validity
+from volatility.framework import exceptions, interfaces, constants
 from volatility.framework.layers import segmented
 
 
@@ -95,8 +95,7 @@ class LimeStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) \
-            -> Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         try:
             LimeLayer._check_header(context.memory[layer_name])
         except LimeFormatException:

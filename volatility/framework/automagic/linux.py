@@ -21,8 +21,7 @@
 import logging
 from typing import List, Optional, Tuple, Type
 
-import volatility.framework.objects.utility
-from volatility.framework import interfaces, constants, validity, exceptions, layers
+from volatility.framework import interfaces, constants, exceptions, layers
 from volatility.framework import symbols, objects
 from volatility.framework.automagic import symbol_cache, symbol_finder
 from volatility.framework.layers import intel, scanners
@@ -54,7 +53,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify linux within this layer"""
         # Bail out by default unless we can stack properly
         layer = context.memory[layer_name]
@@ -290,7 +289,7 @@ class LinuxUtilities(object):
                   context: interfaces.context.ContextInterface,
                   symbol_table: str,
                   layer_name: str,
-                  progress_callback: validity.ProgressCallback = None) \
+                  progress_callback: constants.ProgressCallback = None) \
             -> Tuple[int, int]:
         """Determines the offset of the actual DTB in physical space and its symbol offset"""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'

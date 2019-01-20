@@ -24,11 +24,11 @@ import collections.abc
 from abc import abstractmethod, ABC
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type
 
-from volatility.framework import constants, exceptions, validity
+from volatility.framework import constants, exceptions
 from volatility.framework.interfaces import configuration, objects, context as interfaces_context
 
 
-class SymbolInterface(validity.ValidityRoutines):
+class SymbolInterface:
     """Contains information about a named location in a program's memory"""
 
     def __init__(self,
@@ -36,21 +36,15 @@ class SymbolInterface(validity.ValidityRoutines):
                  address: int,
                  type: Optional[objects.Template] = None,
                  constant_data: Optional[bytes] = None) -> None:
-        self._name = self._check_type(name, str)
+        self._name = name
         if constants.BANG in self._name:
             raise ValueError("Symbol names cannot contain the symbol differentiator ({})".format(constants.BANG))
 
         # Scope can be added at a later date
         self._location = None
-        self._address = self._check_type(address, int)
-
-        self._type = None
-        if type is not None:
-            self._type = self._check_type(type, objects.Template)
-
-        self._constant_data = None
-        if constant_data is not None:
-            self._constant_data = self._check_type(constant_data, bytes)
+        self._address = address
+        self._type = type
+        self._constant_data = constant_data
 
     @property
     def name(self) -> str:
@@ -80,7 +74,7 @@ class SymbolInterface(validity.ValidityRoutines):
         return self._constant_data
 
 
-class BaseSymbolTableInterface(validity.ValidityRoutines):
+class BaseSymbolTableInterface:
     """The base interface, inherited by both NativeTables and SymbolTables
 
     native_types is a NativeTableInterface used for native types for the particular loaded symbol table
@@ -91,11 +85,11 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
     def __init__(self, name: str, native_types: 'NativeTableInterface',
                  table_mapping: Optional[Dict[str, str]] = None) -> None:
-        self.name = self._check_type(name, str)
+        self.name = name
         if table_mapping is None:
             table_mapping = {}
-        self.table_mapping = self._check_type(table_mapping, dict)
-        self._native_types = self._check_type(native_types, NativeTableInterface)
+        self.table_mapping = table_mapping
+        self._native_types = native_types
         self._sort_symbols = []  # type: List[Tuple[int, str]]
 
     # ## Required Symbol functions
@@ -146,7 +140,6 @@ class BaseSymbolTableInterface(validity.ValidityRoutines):
 
            WARNING: This allows changing the underlying size of all the other types referenced in the SymbolTable
         """
-        self._check_type(value, NativeTableInterface)
         self._native_types = value
 
     # ## Functions for overriding classes

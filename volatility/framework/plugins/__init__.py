@@ -25,14 +25,14 @@ These modules should only be imported from volatility.plugins NOT volatility.fra
 import logging
 from typing import List, Type
 
-from volatility.framework import interfaces, automagic, exceptions, constants, validity
+from volatility.framework import interfaces, automagic, exceptions, constants
 
 vollog = logging.getLogger(__name__)
 
 
 def run_plugin(context: interfaces.context.ContextInterface, automagics: List[interfaces.automagic.AutomagicInterface],
                plugin: Type[interfaces.plugins.PluginInterface], base_config_path: str,
-               progress_callback: validity.ProgressCallback,
+               progress_callback: constants.ProgressCallback,
                file_consumer: interfaces.plugins.FileConsumerInterface) -> interfaces.plugins.PluginInterface:
     """Constructs a plugin object based on the parameters
 

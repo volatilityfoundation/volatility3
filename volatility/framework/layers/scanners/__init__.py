@@ -30,7 +30,7 @@ class BytesScanner(layers.ScannerInterface):
 
     def __init__(self, needle: bytes) -> None:
         super().__init__()
-        self.needle = self._check_type(needle, bytes)
+        self.needle = needle
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[int, None, None]:
         """Runs through the data looking for the needle, and yields all offsets where the needle is found
@@ -48,7 +48,7 @@ class RegExScanner(layers.ScannerInterface):
 
     def __init__(self, pattern: bytes, flags: int = 0) -> None:
         super().__init__()
-        self.regex = re.compile(self._check_type(pattern, bytes), self._check_type(flags, int))
+        self.regex = re.compile(pattern, flags)
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[int, None, None]:
         """Runs through the data looking for the needle, and yields all offsets where the needle is found
@@ -65,10 +65,8 @@ class MultiStringScanner(layers.ScannerInterface):
 
     def __init__(self, patterns: List[bytes]) -> None:
         super().__init__()
-        self._check_type(patterns, list)
         self._patterns = multiregexp.MultiRegexp()
         for pattern in patterns:
-            self._check_type(pattern, bytes)
             self._patterns.add_pattern(pattern)
         self._patterns.preprocess()
 

@@ -25,7 +25,6 @@ from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import resources
 from volatility.framework.renderers import format_hints
-from volatility.framework.symbols.windows import extensions
 from volatility.plugins import yarascan
 from volatility.plugins.windows import pslist
 
@@ -89,8 +88,6 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 yield format_hints.Hex(offset), name
 
     def get_vad_maps(self, task: Any) -> Iterable[Tuple[int, int]]:
-
-        task = self._check_type(task, extensions._EPROCESS)
 
         vad_root = task.get_vad_root()
         for vad in vad_root.traverse():

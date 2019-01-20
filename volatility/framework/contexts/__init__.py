@@ -26,7 +26,7 @@ import functools
 import hashlib
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
-from volatility.framework import constants, interfaces, symbols, validity
+from volatility.framework import constants, interfaces, symbols
 
 
 class Context(interfaces.context.ContextInterface):
@@ -149,7 +149,6 @@ def get_module_wrapper(method: str) -> Callable:
     """Returns a symbol using the symbol_table_name of the Module"""
 
     def wrapper(self, name: str) -> Callable:
-        self._check_type(name, str)
         if constants.BANG in name:
             raise ValueError("Name cannot reference another module")
         return getattr(self._context.symbol_space, method)(self._module_name + constants.BANG + name)
@@ -175,7 +174,6 @@ class Module(interfaces.context.ModuleInterface):
         """
         type_arg = None  # type: Optional[Union[str, interfaces.objects.Template]]
         if symbol_name is not None:
-            self._check_type(symbol_name, str)
             if constants.BANG in symbol_name:
                 raise ValueError("Symbol_name cannot reference another module")
             symbol = self._context.symbol_space.get_symbol(self.symbol_table_name + constants.BANG + symbol_name)
@@ -186,8 +184,6 @@ class Module(interfaces.context.ModuleInterface):
             if not self._absolute_symbol_addresses:
                 offset += self._offset
         elif type_name is not None and offset is not None:
-            self._check_type(type_name, str)
-            self._check_type(offset, int)
             if constants.BANG in type_name:
                 raise ValueError("Type_name cannot reference another module")
             type_arg = self.symbol_table_name + constants.BANG + type_name
@@ -225,7 +221,7 @@ class SizedModule(Module):
             native_layer_name = native_layer_name,
             symbol_table_name = symbol_table_name,
             absolute_symbol_addresses = absolute_symbol_addresses)
-        self._size = self._check_type(size, int)
+        self._size = size
 
     @property
     def size(self) -> int:
@@ -256,12 +252,10 @@ class SizedModule(Module):
                 offset = offset - self._offset, size = size, table_name = self.symbol_table_name))
 
 
-class ModuleCollection(validity.ValidityRoutines):
+class ModuleCollection:
     """Class to contain a collection of SizedModules and reason about their contents"""
 
     def __init__(self, modules: List[SizedModule]) -> None:
-        for module in modules:
-            self._check_type(module, SizedModule)
         self._modules = modules
 
     def deduplicate(self) -> 'ModuleCollection':

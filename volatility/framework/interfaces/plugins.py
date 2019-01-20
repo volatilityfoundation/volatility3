@@ -28,8 +28,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from typing import List, Optional, TYPE_CHECKING
 
-from volatility.framework import exceptions
-from volatility.framework import validity
+from volatility.framework import exceptions, constants
 from volatility.framework.interfaces import configuration as interfaces_configuration
 
 vollog = logging.getLogger(__name__)
@@ -38,7 +37,7 @@ if TYPE_CHECKING:
     from volatility.framework import interfaces, renderers
 
 
-class FileInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+class FileInterface(metaclass = ABCMeta):
     """Class for storing Files in the plugin as a means to output a file or files when necessary"""
 
     def __init__(self, filename: str, data: bytes = None) -> None:
@@ -73,7 +72,7 @@ class FileConsumerInterface(object):
 #  The plugin runs and produces a TreeGrid output
 
 
-class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
+class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass = ABCMeta):
     """Class that defines the basic interface that all Plugins must maintain.
     The constructor must only take a `context` and `config_path`, so that plugins can be launched automatically.  As
     such all configuration information must be provided through the requirements and configuration information in the
@@ -83,7 +82,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
                  config_path: str,
-                 progress_callback: validity.ProgressCallback = None) -> None:
+                 progress_callback: constants.ProgressCallback = None) -> None:
         super().__init__(context, config_path)
         self._progress_callback = progress_callback or (lambda f, s: None)
         # Plugins self validate on construction, it makes it more difficult to work with them, but then
@@ -94,7 +93,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, validity.V
         self._file_consumer = None  # type: Optional[FileConsumerInterface]
 
     def set_file_consumer(self, consumer: FileConsumerInterface) -> None:
-        self._file_consumer = self._check_type(consumer, FileConsumerInterface)
+        self._file_consumer = consumer
 
     def produce_file(self, filedata: FileInterface) -> None:
         """Adds a file to the plugin's file store and returns the chosen filename for the file"""

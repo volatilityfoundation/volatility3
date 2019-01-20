@@ -27,7 +27,7 @@ import copy
 from abc import ABCMeta, abstractmethod
 from typing import Optional, Union
 
-from volatility.framework import interfaces, validity
+from volatility.framework import interfaces
 
 
 class ContextInterface(object, metaclass = ABCMeta):
@@ -103,7 +103,7 @@ class ContextInterface(object, metaclass = ABCMeta):
         """Create a module object """
 
 
-class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+class ModuleInterface(metaclass = ABCMeta):
     """Maintains state concerning a particular loaded module in memory
 
     This object is OS-independent.
@@ -117,13 +117,13 @@ class ModuleInterface(validity.ValidityRoutines, metaclass = ABCMeta):
                  symbol_table_name: Optional[str] = None,
                  native_layer_name: Optional[str] = None,
                  absolute_symbol_addresses: bool = False) -> None:
-        self._context = self._check_type(context, ContextInterface)
-        self._module_name = self._check_type(module_name, str)
-        self._layer_name = self._check_type(layer_name, str)
-        self._offset = self._check_type(offset, int)
+        self._context = context
+        self._module_name = module_name
+        self._layer_name = layer_name
+        self._offset = offset
         self._native_layer_name = None
         if native_layer_name:
-            self._native_layer_name = self._check_type(native_layer_name, str)
+            self._native_layer_name = native_layer_name
         self.symbol_table_name = symbol_table_name or self._module_name
         self._absolute_symbol_addresses = absolute_symbol_addresses
         super().__init__()

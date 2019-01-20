@@ -269,16 +269,17 @@ class _MMVAD_SHORT(objects.Struct):
         if self.has_member("StartingVpn"):
 
             if self.has_member("StartingVpnHigh"):
-                return (self.StartingVpn << 12) | (self.StartingVpnHigh << 44)
+                return (self.StartingVpn.cast("unsigned int") << 12) | (self.StartingVpnHigh.cast("unsigned int") << 44)
             else:
-                return self.StartingVpn << 12
+                return self.StartingVpn.cast("unsigned int") << 12
 
         elif self.has_member("Core"):
 
             if self.Core.has_member("StartingVpnHigh"):
-                return (self.Core.StartingVpn << 12) | (self.Core.StartingVpnHigh << 44)
+                return (self.Core.StartingVpn.cast("unsigned int") << 12) | (
+                    self.Core.StartingVpnHigh.cast("unsigned int") << 44)
             else:
-                return self.Core.StartingVpn << 12
+                return self.Core.StartingVpn.cast("unsigned int") << 12
 
         raise AttributeError("Unable to find the starting VPN member")
 
@@ -288,16 +289,17 @@ class _MMVAD_SHORT(objects.Struct):
         if self.has_member("EndingVpn"):
 
             if self.has_member("EndingVpnHigh"):
-                return (self.EndingVpn << 12) | (self.EndingVpnHigh << 44)
+                return (self.EndingVpn.cast("unsigned int") << 12) | (self.EndingVpnHigh.cast("unsigned int") << 44)
             else:
-                return ((self.EndingVpn + 1) << 12) - 1
+                return ((self.EndingVpn.cast("unsigned int") + 1) << 12) - 1
 
         elif self.has_member("Core"):
 
             if self.Core.has_member("EndingVpnHigh"):
-                return (self.Core.EndingVpn << 12) | (self.Core.EndingVpnHigh << 44)
+                return (self.Core.EndingVpn.cast("unsigned int") << 12) | (
+                    self.Core.EndingVpnHigh.cast("unsigned int") << 44)
             else:
-                return ((self.Core.EndingVpn + 1) << 12) - 1
+                return ((self.Core.EndingVpn.cast("unsigned int") + 1) << 12) - 1
 
         raise AttributeError("Unable to find the ending VPN member")
 

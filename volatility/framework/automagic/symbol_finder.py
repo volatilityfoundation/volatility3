@@ -21,7 +21,7 @@
 import logging
 from typing import Any, Iterable, List, Tuple, Type, Optional
 
-from volatility.framework import interfaces, validity
+from volatility.framework import interfaces, constants
 from volatility.framework.automagic import symbol_cache
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import scanners
@@ -55,7 +55,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) -> None:
+                 progress_callback: constants.ProgressCallback = None) -> None:
         """Searches for SymbolRequirements and attempt to populate them"""
 
         # Bomb out early if our details haven't been configured
@@ -88,7 +88,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                      config_path: str,
                      requirement: interfaces.configuration.ConstructableRequirementInterface,
                      layer_name: str,
-                     progress_callback: validity.ProgressCallback = None) -> None:
+                     progress_callback: constants.ProgressCallback = None) -> None:
         """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
         and scans the layer for banners"""
 

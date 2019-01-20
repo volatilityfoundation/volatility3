@@ -31,7 +31,7 @@ import traceback
 from typing import List, Optional, Tuple
 
 from volatility import framework
-from volatility.framework import interfaces, constants, validity
+from volatility.framework import interfaces, constants
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical
@@ -61,7 +61,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) -> Optional[List[str]]:
+                 progress_callback: constants.ProgressCallback = None) -> Optional[List[str]]:
         """Runs the automagic over the configurable"""
 
         # Quick exit if we're not needed
@@ -75,7 +75,6 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             return list(unsatisfied)
         if not self.config or not self.config.get('single_location', None):
             raise ValueError("Unable to run LayerStacker, single_location parameter not provided")
-        self._check_type(requirement, interfaces.configuration.RequirementInterface)
 
         # Search for suitable requirements
         self.stack(context, config_path, requirement, progress_callback)
@@ -84,7 +83,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
     def stack(self, context: interfaces.context.ContextInterface, config_path: str,
               requirement: interfaces.configuration.RequirementInterface,
-              progress_callback: validity.ProgressCallback) -> None:
+              progress_callback: constants.ProgressCallback) -> None:
         """Stacks the various layers and attaches these to a specific requirement
 
         Args:
@@ -106,7 +105,6 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
         new_context = context.clone()
         location = self.config.get('single_location', None)
-        self._check_type(location, str)
 
         # Setup the local copy of the resource
         current_layer_name = context.memory.free_layer_name("FileLayer")

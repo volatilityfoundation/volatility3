@@ -45,14 +45,14 @@ import logging
 import struct
 from typing import Any, Generator, List, Optional, Tuple, Type
 
-from volatility.framework import interfaces, layers, validity
+from volatility.framework import interfaces, layers, constants
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel
 
 vollog = logging.getLogger(__name__)
 
 
-class DtbTest(validity.ValidityRoutines):
+class DtbTest:
     """This class generically contains the tests for a page based on a set of class parameters
 
     When constructed it contains all the information necessary to extract a specific index from a page
@@ -60,11 +60,11 @@ class DtbTest(validity.ValidityRoutines):
     """
 
     def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, ptr_reference: int, mask: int) -> None:
-        self.layer_type = self._check_class(layer_type, layers.intel.Intel)
-        self.ptr_struct = self._check_type(ptr_struct, str)
+        self.layer_type = layer_type
+        self.ptr_struct = ptr_struct
         self.ptr_size = struct.calcsize(ptr_struct)
-        self.ptr_reference = self._check_type(ptr_reference, int)
-        self.mask = self._check_type(mask, int)
+        self.ptr_reference = ptr_reference
+        self.mask = mask
         self.page_size = layer_type.page_size  # type: int
 
     def _unpack(self, value: bytes) -> int:
@@ -214,8 +214,6 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
 
     def __init__(self, tests: List[DtbTest]) -> None:
         super().__init__()
-        for value in tests:
-            self._check_type(value, DtbTest)
         self.tests = tests
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[DtbTest, int], None, None]:
@@ -242,7 +240,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) -> None:
+                 progress_callback: constants.ProgressCallback = None) -> None:
         useful = []
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if (isinstance(requirement, requirements.TranslationLayerRequirement)
@@ -289,7 +287,7 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to determine and stack an intel layer on a physical layer where possible
 
         Where the DTB scan fails, it attempts a heuristic of checking for the DTB within a specific range.
@@ -373,7 +371,7 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) -> None:
+                 progress_callback: constants.ProgressCallback = None) -> None:
         """Finds translation layers that can have swap layers added"""
         path_join = interfaces.configuration.path_join
         self._translation_requirement = self.find_requirements(

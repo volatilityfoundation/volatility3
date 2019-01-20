@@ -31,7 +31,7 @@ import sys
 import traceback
 from typing import List, Type, Union
 
-from volatility.framework import class_subclasses, import_files, interfaces, validity, constants
+from volatility.framework import class_subclasses, import_files, interfaces, constants
 from volatility.framework.automagic import construct_layers, stacker, windows, pdbscan
 from volatility.framework.configuration import requirements
 
@@ -88,7 +88,7 @@ def run(automagics: List[interfaces.automagic.AutomagicInterface],
         configurable: Union[interfaces.configuration.ConfigurableInterface, Type[interfaces.configuration.
                                                                                  ConfigurableInterface]],
         config_path: str,
-        progress_callback: validity.ProgressCallback = None) -> List[traceback.TracebackException]:
+        progress_callback: constants.ProgressCallback = None) -> List[traceback.TracebackException]:
     """Runs through the list of `automagics` in order, allowing them to make changes to the context
 
     Args:

@@ -21,7 +21,7 @@
 import struct
 from typing import Any, Dict, List, Optional
 
-from volatility.framework import interfaces, validity
+from volatility.framework import interfaces, constants
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical, segmented, resources
 from volatility.framework.symbols import native
@@ -129,8 +129,7 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) \
-            -> Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempt to stack this based on the starting information"""
         memlayer = context.memory[layer_name]
         if not isinstance(memlayer, physical.FileLayer):

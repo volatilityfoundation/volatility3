@@ -271,7 +271,6 @@ class Pointer(Integer):
                  object_info: interfaces.objects.ObjectInformation,
                  data_format: DataFormatInfo,
                  subtype: Optional[templates.ObjectTemplate] = None) -> None:
-        self._check_type(subtype, templates.ObjectTemplate)
         super().__init__(context = context, object_info = object_info, type_name = type_name, data_format = data_format)
         self._vol['subtype'] = subtype
 
@@ -400,7 +399,6 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
     def __new__(cls, context: interfaces.context.ContextInterface, type_name: str,
                 object_info: interfaces.objects.ObjectInformation, base_type: interfaces.objects.Template,
                 choices: Dict[str, int], **kwargs) -> 'Enumeration':
-        cls._check_class(base_type.vol.object_class, Integer)
         value = base_type(context = context, object_info = object_info)
         return int.__new__(cls, value)  # type: ignore
 
@@ -410,9 +408,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         super().__init__(context, type_name, object_info)
 
         self._inverse_choices = {}  # type: Dict[int, str]
-        for k, v in self._check_type(choices, dict).items():
-            self._check_type(k, str)
-            self._check_type(v, int)
+        for k, v in choices.items():
             if v in self._inverse_choices:
                 # Technically this shouldn't be a problem, but since we inverse cache
                 # and can't map one value to two possibilities we throw an exception during build
@@ -478,9 +474,8 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
                  object_info: interfaces.objects.ObjectInformation,
                  count: int = 0,
                  subtype: templates.ObjectTemplate = None) -> None:
-        self._check_type(subtype, templates.ObjectTemplate)
         super().__init__(context = context, type_name = type_name, object_info = object_info)
-        self._vol['count'] = self._check_type(count, int)
+        self._vol['count'] = count
         self._vol['subtype'] = subtype
 
     # This overrides the little known Sequence.count(val) that returns the number of items in the list that match val
@@ -493,7 +488,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
     @count.setter
     def count(self, value: int) -> None:
         """Sets the count to a specific value"""
-        self._vol['count'] = self._check_type(value, int)
+        self._vol['count'] = value
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
 
@@ -574,7 +569,7 @@ class Struct(interfaces.objects.ObjectInterface):
                  members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
         super().__init__(
             context = context, type_name = type_name, object_info = object_info, size = size, members = members)
-        self._check_members(members)
+        # self._check_members(members)
         self._concrete_members = {}  # type: Dict[str, Dict]
 
     def has_member(self, member_name: str) -> bool:
@@ -628,10 +623,10 @@ class Struct(interfaces.objects.ObjectInterface):
     def _check_members(cls, members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
         # An object template is a callable that when called with a context, offset, layer_name and type_name
-        if not isinstance(members, abc.Mapping):
-            raise TypeError("Struct members parameter must be a mapping: {}".format(type(members)))
-        if not all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()]):
-            raise TypeError("Struct members must be a tuple of relative_offsets and templates")
+        assert isinstance(members, abc.Mapping)
+        "Struct members parameter must be a mapping: {}".format(type(members))
+        assert all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()])
+        "Struct members must be a tuple of relative_offsets and templates"
 
     def member(self, attr: str = 'member') -> object:
         """Specifically named method for retrieving members."""

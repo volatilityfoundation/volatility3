@@ -21,7 +21,7 @@
 import struct
 from typing import Tuple, Optional
 
-from volatility.framework import constants, exceptions, interfaces, validity
+from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.layers import segmented
 from volatility.framework.symbols import intermed
 
@@ -116,8 +116,7 @@ class WindowsCrashDump32Stacker(interfaces.automagic.StackerLayerInterface):
     def stack(cls,
               context: interfaces.context.ContextInterface,
               layer_name: str,
-              progress_callback: validity.ProgressCallback = None) \
-            -> Optional[interfaces.layers.DataLayerInterface]:
+              progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         try:
             WindowsCrashDump32Layer._check_header(context.memory[layer_name])
         except WindowsCrashDump32FormatException:

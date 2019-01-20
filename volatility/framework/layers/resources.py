@@ -32,7 +32,7 @@ import zipfile
 from typing import List, Optional
 
 from volatility import framework
-from volatility.framework import validity, constants
+from volatility.framework import constants
 
 try:
     import magic
@@ -56,7 +56,7 @@ class ResourceAccessor(object):
     """Object for openning URLs as files (downloading locally first if necessary)"""
 
     def __init__(self,
-                 progress_callback: Optional[validity.ProgressCallback] = None,
+                 progress_callback: Optional[constants.ProgressCallback] = None,
                  context: Optional[ssl.SSLContext] = None) -> None:
         """Creates a resource accessor
 

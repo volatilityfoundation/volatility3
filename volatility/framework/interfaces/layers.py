@@ -28,7 +28,7 @@ import traceback
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
-from volatility.framework import constants, exceptions, interfaces, validity
+from volatility.framework import constants, exceptions, interfaces
 
 vollog = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ ProgressValue = Union['DummyProgress', multiprocessing.Value]
 IteratorValue = Tuple[List[Tuple[str, int, int]], int]
 
 
-class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+class ScannerInterface(metaclass = ABCMeta):
     """Class for layer scanners that return locations of particular values from within the data
 
     These are designed to be given a chunk of data and return a generator which yields
@@ -85,7 +85,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     @context.setter
     def context(self, ctx: 'interfaces.context.ContextInterface') -> None:
         """Stores the context locally in case the scanner needs to access the layer"""
-        self._context = self._check_type(ctx, interfaces.context.ContextInterface)
+        self._context = ctx
 
     @property
     def layer_name(self) -> Optional[str]:
@@ -94,7 +94,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
     @layer_name.setter
     def layer_name(self, layer_name: str) -> None:
         """Stores the layer_name being scanned locally in case the scanner needs to access the layer"""
-        self._layer_name = self._check_type(layer_name, str)
+        self._layer_name = layer_name
 
     @abstractmethod
     def __call__(self, data: bytes, data_offset: int) -> Iterable[Any]:
@@ -106,8 +106,7 @@ class ScannerInterface(validity.ValidityRoutines, metaclass = ABCMeta):
         """
 
 
-class DataLayerInterface(
-        interfaces.configuration.ConfigurableInterface, validity.ValidityRoutines, metaclass = ABCMeta):
+class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metaclass = ABCMeta):
     """A Layer that directly holds data (and does not translate it).  This is effectively a leaf node in a layer tree.
     It directly accesses a data source and exposes it within volatility."""
 
@@ -122,7 +121,7 @@ class DataLayerInterface(
                  name: str,
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context, config_path)
-        self._name = self._check_type(name, str)
+        self._name = name
         if metadata:
             self._direct_metadata.update(metadata)
 
@@ -191,7 +190,7 @@ class DataLayerInterface(
     def scan(self,
              context: interfaces.context.ContextInterface,
              scanner: ScannerInterface,
-             progress_callback: validity.ProgressCallback = None,
+             progress_callback: constants.ProgressCallback = None,
              sections: Iterable[Tuple[int, int]] = None) -> Iterable[Any]:
         """Scans a Translation layer by chunk
 
@@ -200,7 +199,7 @@ class DataLayerInterface(
         if progress_callback is not None and not callable(progress_callback):
             raise TypeError("Progress_callback is not callable")
 
-        scanner = self._check_type(scanner, ScannerInterface)
+        scanner = scanner
         scanner.context = context
         scanner.layer_name = self.name
 
@@ -419,7 +418,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                     offset += chunk_size
 
 
-class Memory(validity.ValidityRoutines, collections.abc.Mapping):
+class Memory(collections.abc.Mapping):
     """Container for multiple layers of data"""
 
     def __init__(self) -> None:
@@ -441,7 +440,6 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
 
            This will throw an exception if the required dependencies are not met
         """
-        self._check_type(layer, DataLayerInterface)
         if layer.name in self._layers:
             raise exceptions.LayerException("Layer already exists: {}".format(layer.name))
         if isinstance(layer, TranslationLayerInterface):
@@ -466,8 +464,6 @@ class Memory(validity.ValidityRoutines, collections.abc.Mapping):
 
     def free_layer_name(self, prefix: str = "layer") -> str:
         """Returns an unused layer name to ensure no collision occurs when inserting a layer"""
-        self._check_type(prefix, str)
-
         count = 1
         while prefix + str(count) in self:
             count += 1

@@ -21,12 +21,12 @@
 import logging
 from typing import Any, ClassVar, Dict, List, Type
 
-from volatility.framework import interfaces, validity, exceptions
+from volatility.framework import interfaces, exceptions
 
 vollog = logging.getLogger(__name__)
 
 
-class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
+class ObjectTemplate(interfaces.objects.Template):
     """Factory class that produces objects that adhere to the Object interface on demand
 
        This is effectively a method of currying, but adds more structure to avoid abuse.
@@ -39,7 +39,6 @@ class ObjectTemplate(interfaces.objects.Template, validity.ValidityRoutines):
 
     def __init__(self, object_class: Type[interfaces.objects.ObjectInterface], type_name: str, **arguments) -> None:
         super().__init__(type_name = type_name, **arguments)
-        self._check_class(object_class, interfaces.objects.ObjectInterface)
         self._arguments['object_class'] = object_class
 
     @property

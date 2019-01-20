@@ -18,20 +18,15 @@
 # specific language governing rights and limitations under the License.
 #
 
-import collections
 from typing import List, Mapping
 
-from volatility.framework import interfaces, validity
+from volatility.framework import interfaces
 
 
-class Flags(validity.ValidityRoutines):
+class Flags:
     """Object that converts an integer into a set of flags based on their masks"""
 
     def __init__(self, choices: Mapping[str, int]) -> None:
-        self._check_type(choices, collections.Mapping)
-        for k, v in choices.items():
-            self._check_type(k, str)
-            self._check_type(v, int)
         self._choices = interfaces.objects.ReadOnlyMapping(choices)
 
     @property

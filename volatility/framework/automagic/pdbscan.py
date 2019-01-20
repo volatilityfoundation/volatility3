@@ -29,7 +29,7 @@ import os
 import struct
 from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Union
 
-from volatility.framework import constants, exceptions, interfaces, layers, validity
+from volatility.framework import constants, exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import intermed, native
@@ -87,7 +87,7 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
 def scan(ctx: interfaces.context.ContextInterface,
          layer_name: str,
          page_size: int,
-         progress_callback: validity.ProgressCallback = None,
+         progress_callback: constants.ProgressCallback = None,
          start: Optional[int] = None,
          end: Optional[int] = None) -> Generator[Dict[str, Optional[Union[bytes, str, int]]], None, None]:
     """Scans through `layer_name` at `ctx` looking for RSDS headers that indicate one of four common pdb kernel names
@@ -245,7 +245,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     def method_fixed_mapping(self,
                              context: interfaces.context.ContextInterface,
                              vlayer: layers.intel.Intel,
-                             progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
+                             progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
         # TODO: Verify this is a windows image
         vollog.debug("Kernel base determination - testing fixed base address")
         valid_kernels = {}
@@ -286,7 +286,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     def method_module_offset(self,
                              context: interfaces.context.ContextInterface,
                              vlayer: layers.intel.Intel,
-                             progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
+                             progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
         """Method for finding a suitable kernel offset based on a module table"""
         vollog.debug("Kernel base determination - searching layer module list structure")
         valid_kernels = {}  # type: ValidKernelsType
@@ -319,7 +319,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     def method_kdbg_offset(self,
                            context: interfaces.context.ContextInterface,
                            vlayer: layers.intel.Intel,
-                           progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
+                           progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
         vollog.debug("Kernel base determination - using KDBG structure for kernel offset")
         valid_kernels = {}  # type: ValidKernelsType
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
@@ -347,7 +347,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             context: interfaces.context.ContextInterface,
                             vlayer: layers.intel.Intel,
                             address: int,
-                            progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
+                            progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
         """Scans a virtual address """
         # Scan a few megs of the virtual space at the location to see if they're potential kernels
 
@@ -376,7 +376,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     def determine_valid_kernels(self,
                                 context: interfaces.context.ContextInterface,
                                 potential_layers: List[str],
-                                progress_callback: validity.ProgressCallback = None) -> ValidKernelsType:
+                                progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
         """Runs through the identified potential kernels and verifies their suitability
 
         This carries out a scan using the pdb_signature scanner on a physical layer.  It uses the
@@ -408,7 +408,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: validity.ProgressCallback = None) -> None:
+                 progress_callback: constants.ProgressCallback = None) -> None:
         if requirement.unsatisfied(context, config_path):
             if "pdbscan" not in context.symbol_space:
                 context.symbol_space.append(native.NativeTable("pdbscan", native.std_ctypes))

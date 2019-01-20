@@ -26,13 +26,13 @@ import logging
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, List, Mapping, Optional
 
-from volatility.framework import constants, validity, interfaces
+from volatility.framework import constants, interfaces
 from volatility.framework.interfaces import context as interfaces_context
 
 vollog = logging.getLogger(__name__)
 
 
-class ReadOnlyMapping(validity.ValidityRoutines, collections.abc.Mapping):
+class ReadOnlyMapping(collections.abc.Mapping):
     """A read-only mapping of various values that offer attribute access as well
 
     This ensures that the data stored in the mapping should not be modified, making an immutable mapping.
@@ -78,9 +78,6 @@ class ObjectInformation(ReadOnlyMapping):
                  member_name: Optional[str] = None,
                  parent: Optional['ObjectInterface'] = None,
                  native_layer_name: Optional[str] = None):
-        self._check_type(offset, int)
-        if parent:
-            self._check_type(parent, ObjectInterface)
         super().__init__({
             'layer_name': layer_name,
             'offset': offset,
@@ -90,16 +87,14 @@ class ObjectInformation(ReadOnlyMapping):
         })
 
 
-class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
+class ObjectInterface(metaclass = ABCMeta):
     """A base object required to be the ancestor of every object used in volatility"""
 
     def __init__(self, context: 'interfaces_context.ContextInterface', type_name: str, object_info: 'ObjectInformation',
                  **kwargs) -> None:
         # Since objects are likely to be instantiated often,
-        # we're only checking that context, offset and parent
+        # we're reliant on type_checking to ensure correctness of context, offset and parent
         # Everything else may be wrong, but that will get caught later on
-        self._check_type(context, interfaces_context.ContextInterface)
-        self._check_type(object_info, ObjectInformation)
 
         # Add an empty dictionary at the start to allow objects to add their own data to the vol object
         #
@@ -201,7 +196,7 @@ class ObjectInterface(validity.ValidityRoutines, metaclass = ABCMeta):
             return False
 
 
-class Template(validity.ValidityRoutines):
+class Template:
     """Class for all Factories that take offsets, and data layers and produce objects
 
     This is effectively a class for currying object calls.  It creates a callable that can be called with the following

@@ -23,6 +23,7 @@ Stores all the constant values that are generally fixed throughout volatility
 This includes default scanning block sizes, etc."""
 import os.path
 import sys
+from typing import Optional, Callable
 
 import volatility.framework.constants.linux
 import volatility.framework.constants.windows
@@ -53,3 +54,5 @@ os.makedirs(CACHE_PATH, exist_ok = True)
 
 LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
 MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
+
+ProgressCallback = Optional[Callable[[float, str], None]]
