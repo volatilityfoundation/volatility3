@@ -33,12 +33,12 @@
 import os
 import sys
 
-import sphinx.apidoc
+import sphinx.ext.apidoc
 
 
 def setup(app):
-    sphinx.apidoc.main(argv = [
-        '-e', '-M', '-f', '-T', '-o', 'doc/source',
+    sphinx.ext.apidoc.main(argv = [
+        '-e', '-M', '-f', '-T', '-o', 'source',
         os.path.join(os.path.dirname(__file__), '..', '..', 'volatility')
     ])
 

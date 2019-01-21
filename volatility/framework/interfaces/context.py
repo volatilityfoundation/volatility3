@@ -152,3 +152,15 @@ class ModuleInterface(metaclass = ABCMeta):
 
     def get_symbol(self, name: str) -> 'interfaces.symbols.SymbolInterface':
         """Returns a symbol from the module"""
+
+    def get_enum(self, name: str) -> 'interfaces.symbols.SymbolInterface':
+        """Returns an enumeration from the module"""
+
+    def has_type(self, name: str) -> bool:
+        """Determines whether a type is present in the module"""
+
+    def has_symbol(self, name: str) -> bool:
+        """Determines whether a symbol is present in the module"""
+
+    def has_enum(self, name: str) -> bool:
+        """Determines whether an enumeration is present in the module"""

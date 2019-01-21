@@ -153,6 +153,11 @@ def get_module_wrapper(method: str) -> Callable:
             raise ValueError("Name cannot reference another module")
         return getattr(self._context.symbol_space, method)(self._module_name + constants.BANG + name)
 
+    for entry in ['__annotations__', '__doc__', '__module__', '__name__', '__qualname__']:
+        proxy_interface = getattr(interfaces.context.ModuleInterface, method)
+        if hasattr(proxy_interface, entry):
+            setattr(wrapper, entry, getattr(proxy_interface, entry))
+
     return wrapper
 
 
