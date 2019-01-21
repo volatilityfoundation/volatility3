@@ -2,6 +2,7 @@ import argparse
 import binascii
 import datetime
 import json
+import subprocess
 from typing import Dict
 
 import yaml
@@ -60,8 +61,10 @@ class SymbolConverter:
 
     def get_argparser(self):
         response = argparse.ArgumentParser(description = "Processes the output of llvm-pdbutil pdb2yaml")
-        response.add_argument("-f", "--file", action = "store", help = "YAML file to process", required = True)
-        response.add_argument("-p", "--print", action = "store_true", help = "Print the output", default = False)
+        response.add_argument(
+            "-p", "--pdb", action = "store_true", help = "Input file is a PDB rather than YAML (requires LLVM)")
+        response.add_argument("-f", "--file", action = "store", help = "Input file to process", required = True)
+        response.add_argument("-d", "--display", action = "store_true", help = "Display the output", default = False)
         response.add_argument("-o", "--output", action = "store", help = "JSON file to output", default = None)
         return response
 
@@ -272,8 +275,16 @@ if __name__ == '__main__':
     parser = sc.get_argparser()
     args = parser.parse_args()
 
+    if args.pdb:
+        print("[*] Running llvm-pdbutil on input file")
+        process = subprocess.run(["llvm-pdbutil", "pdb2yaml", "-all", args.file], check = True, capture_output = True)
+        file_data = process.stdout
+    else:
+        print("[*] Openning {}".format(args.file))
+        file_data = open(args.file, 'r').read()
+
     print("[*] Loading YAML data...")
-    data = yaml.load(open(args.file, 'r').read())
+    data = yaml.load(file_data)
 
     print("[*] Converting the YAML to JSON...")
     sc.set_yaml_data(data)
