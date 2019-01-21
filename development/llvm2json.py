@@ -1,7 +1,7 @@
+import argparse
+import binascii
+import datetime
 import json
-import os
-import pickle
-import sys
 from typing import Dict
 
 import yaml
@@ -40,21 +40,70 @@ STRUCTURE = 0x1000
 POINTER = 0x600
 DEFAULT_REGISTER_SIZE = 8
 
+machine_type_map = {"Amd64": 34404}
+
 
 class SymbolConverter:
 
-    def __init__(self, yaml_data):
+    def __init__(self):
+        self._yaml_data = None
+        self._records = []
+        self._result = {'user_types': {}, 'enums': {}, 'metadata': {}}
+        self._unnamed_counter = 1
+        self._json_data = None
+
+    def set_yaml_data(self, yaml_data):
         self._yaml_data = yaml_data
-        self._records = self._yaml_data.get('TpiStream', {}).get('Records', {})
-        self._result = {}
+        self._records = self._yaml_data.get('TpiStream', {}).get('Records', [])
         self._unnamed_counter = 1
         self._json_data = self._convert()
+
+    def get_argparser(self):
+        response = argparse.ArgumentParser(description = "Processes the output of llvm-pdbutil pdb2yaml")
+        response.add_argument("-f", "--file", action = "store", help = "YAML file to process", required = True)
+        response.add_argument("-p", "--print", action = "store_true", help = "Print the output", default = False)
+        response.add_argument("-o", "--output", action = "store", help = "JSON file to output", default = None)
+        return response
+
+    def _get_metadata(self):
+        # FIXME: Figure out how to populate the database name
+        # FIXME: Determine the discrepancy between PdbStream.Age and DbiStream.Age
+        pdb_data = {
+            "GUID": self._convert_guid(self._yaml_data.get('PdbStream', {}).get('Guid', "{}")),
+            "age": self._yaml_data.get('DbiStream', {}).get('Age', -1),
+            "database": "ntkrnlmp.pdb",
+            "machine_type": self._convert_machine_type(self._yaml_data.get('DbiStream', {}).get('MachineType', -1)),
+            "type": "pdb"
+        }
+        result = {
+            "format": "6.0.0",
+            "producer": {
+                "datetime": datetime.datetime.now().isoformat(),
+                "name": "llvm2json",
+                "version": "0.1.0"
+            },
+            "windows": {
+                "pdb": pdb_data
+            }
+        }
+        return result
+
+    def _convert_machine_type(self, machine_type):
+        return machine_type_map.get(machine_type, -1)
+
+    def _convert_guid(self, llvm_guid: str):
+        guid_string = binascii.unhexlify("".join(llvm_guid[1:-1].split("-")))
+        converted_guid = bytearray(b"\x00" * len(guid_string))
+        guid_map = [3, 2, 1, 0, 5, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15]
+        for index in range(16):
+            converted_guid[index] = guid_string[guid_map[index]]
+        return str(binascii.hexlify(converted_guid), "latin-1").upper()
 
     def _convert(self):
         if not self._records:
             raise ValueError("YAML data does not contain TpiStream.Records")
 
-        result = {'user_types': {}, 'enums': {}}
+        result = {'user_types': {}, 'enums': {}, 'metadata': self._get_metadata()}
         record_types = set()
         for record_index in range(len(self._records)):
             parsed_record, parsed_name, parsed_type = self._convert_record(record_index)
@@ -65,7 +114,7 @@ class SymbolConverter:
             else:
                 record_types.add(self._records[record_index]['Kind'])
 
-        self._result = result
+        self._result.update(result)
         self._fix_inaccurate_array_sizes(result)
         return self._result
 
@@ -186,7 +235,6 @@ class SymbolConverter:
             elif record_kind == 'LF_ARRAY':
                 subtype, _, _ = self._convert_record(record_data.get('ElementType'), True)
                 output = {'kind': 'array', 'subtype': subtype}
-                print("INACCURATE", hex(record_data.get('ElementType')), repr(subtype))
                 output['count'] = record_data.get('Size', -1)
                 output['array_count_inaccurate'] = True
             elif record_kind == 'LF_FIELDLIST':
@@ -218,24 +266,22 @@ class SymbolConverter:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2 or not os.path.exists(sys.argv[1]):
-        print("Usage: python llvm2pdb.py <YAML FILE>")
-        sys.exit(1)
 
-    data = yaml.load(open(sys.argv[1], 'r').read())
+    sc = SymbolConverter()
 
-    stream = data['TpiStream']
-    for item_idx in range(len(stream['Records'])):
-        item = stream['Records'][item_idx]
-        if item.get('FieldList', []):
-            for entry_idx in range(len(item['FieldList'])):
-                entry = item['FieldList'][entry_idx]
-                if entry.get('DataMember', {}).get('Name', '') == 'AccountingFolded':
-                    print("Found", item_idx)
+    parser = sc.get_argparser()
+    args = parser.parse_args()
 
-    sc = SymbolConverter(data)
+    print("[*] Loading YAML data...")
+    data = yaml.load(open(args.file, 'r').read())
 
-    print()
-    print(sc.export_json())
-    with open("output.json", "w") as f:
-        json.dump(sc.export_json(), f, indent = 2, sort_keys = True)
+    print("[*] Converting the YAML to JSON...")
+    sc.set_yaml_data(data)
+
+    if not args.output or args.print:
+        print("[*] Printing data")
+        print(json.dumps(sc.export_json(), indent = 2, sort_keys = True))
+    if args.output:
+        print("[*] Saving data to {}".format(args.output))
+        with open(args.output, "w") as f:
+            json.dump(sc.export_json(), f, indent = 2, sort_keys = True)
