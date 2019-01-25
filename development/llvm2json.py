@@ -289,7 +289,7 @@ if __name__ == '__main__':
     print("[*] Converting the YAML to JSON...")
     sc.set_yaml_data(data)
 
-    if not args.output or args.print:
+    if not args.output or args.display:
         print("[*] Printing data")
         print(json.dumps(sc.export_json(), indent = 2, sort_keys = True))
     if args.output:
