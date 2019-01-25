@@ -117,6 +117,11 @@ class SymbolConverter:
             else:
                 record_types.add(self._records[record_index]['Kind'])
 
+        symbols = self._convert_symbols()
+
+        if symbols:
+            self._result['symbols'] = symbols
+
         self._result.update(result)
         self._fix_inaccurate_array_sizes(result)
         return self._result
@@ -263,6 +268,15 @@ class SymbolConverter:
                     output = fields
 
             return output, record_name, record_kind
+
+    def _convert_symbols(self):
+        output = {}
+        for entry in self._yaml_data.get('PublicsStream', {}).get('Records', []):
+            record = entry.get('PublicSym32', {})
+            if record:
+                name = record['Name']
+                output[name] = {'address': record['Offset']}
+        return output
 
     def export_json(self) -> Dict:
         return self._json_data
