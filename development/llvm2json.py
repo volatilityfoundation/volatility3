@@ -2,10 +2,11 @@ import argparse
 import binascii
 import datetime
 import json
+import re
 import subprocess
 from typing import Dict
 
-import yaml
+from ruamel import yaml
 
 value_map = {
     'LF_STRUCTURE': 'Class',
@@ -295,10 +296,12 @@ if __name__ == '__main__':
         file_data = process.stdout
     else:
         print("[*] Openning {}".format(args.file))
-        file_data = open(args.file, 'r').read()
+        file_data = open(args.file, 'r')
 
     print("[*] Loading YAML data...")
-    data = yaml.load(file_data)
+    ryaml = yaml.YAML()
+    yaml.reader.Reader.NON_PRINTABLE = re.compile(u'[^\x09\x0A\x0D\x20-\x7F\x85' u'\xA0-\uD7FF' u'\uE000-\uFFFD' u']')
+    data = ryaml.load(file_data)
 
     print("[*] Converting the YAML to JSON...")
     sc.set_yaml_data(data)
