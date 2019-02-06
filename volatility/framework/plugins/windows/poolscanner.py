@@ -86,6 +86,15 @@ class PoolScanner(plugins.PluginInterface):
     def is_windows_10(context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
         """Determine if the analyzed sample is Windows 10"""
 
+        # try the primary method based on the pe version in the ISF
+        try:
+            pe_version = context.symbol_space[symbol_table].metadata.pe_version
+            major, minor, _revision, _build = pe_version
+            return (major, minor) >= (10, 0)
+        except (AttributeError, ValueError):
+            vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
+
+        # fall back to the backup method, if necessary
         try:
             _symbol = context.symbol_space.get_symbol(symbol_table + constants.BANG + "ObHeaderCookie")
             return True
@@ -96,6 +105,15 @@ class PoolScanner(plugins.PluginInterface):
     def is_windows_8_or_later(context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> bool:
         """Determine if the analyzed sample is Windows 8 or later"""
 
+        # try the primary method based on the pe version in the ISF
+        try:
+            pe_version = context.symbol_space[symbol_table].metadata.pe_version
+            major, minor, _revision, _build = pe_version
+            return (major, minor) >= (6, 2)
+        except (AttributeError, ValueError):
+            vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
+
+        # fall back to the backup method, if necessary
         kvo = context.memory[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
         handle_table_type = ntkrnlmp.get_type("_HANDLE_TABLE")
@@ -105,6 +123,15 @@ class PoolScanner(plugins.PluginInterface):
     def is_windows_7(context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> bool:
         """Determine if the analyzed sample is Windows 7"""
 
+        # try the primary method based on the pe version in the ISF
+        try:
+            pe_version = context.symbol_space[symbol_table].metadata.pe_version
+            major, minor, _revision, _build = pe_version
+            return (major, minor) == (6, 1)
+        except (AttributeError, ValueError):
+            vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
+
+        # fall back to the backup method, if necessary
         kvo = context.memory[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
         handle_table_type = ntkrnlmp.get_type("_OBJECT_HEADER")
