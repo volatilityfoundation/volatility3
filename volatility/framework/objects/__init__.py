@@ -173,9 +173,9 @@ class Float(PrimitiveObject, float):
     _struct_type = float  # type: ClassVar[Type]
 
 
-class Char(PrimitiveObject, bytes):
+class Char(PrimitiveObject, int):
     """Primitive Object that handles characters"""
-    _struct_type = bytes  # type: ClassVar[Type]
+    _struct_type = int  # type: ClassVar[Type]
 
 
 class Bytes(PrimitiveObject, bytes):
