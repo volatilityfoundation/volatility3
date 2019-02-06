@@ -280,6 +280,7 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
                 or 'enums' not in self._json_object):
             raise exceptions.SymbolSpaceError("Malformed JSON file provided")
 
+    @property
     def metadata(self) -> Optional[interfaces.symbols.MetadataInterface]:
         """Returns a metadata object containing information about the symbol table"""
         return None
