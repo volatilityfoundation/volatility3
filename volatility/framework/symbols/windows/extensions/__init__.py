@@ -289,15 +289,16 @@ class _MMVAD_SHORT(objects.Struct):
         if self.has_member("EndingVpn"):
 
             if self.has_member("EndingVpnHigh"):
-                return (self.EndingVpn.cast("unsigned int") << 12) | (self.EndingVpnHigh.cast("unsigned int") << 44)
+                return (((self.EndingVpn.cast("unsigned int") + 1) << 12) | (self.EndingVpnHigh.cast("unsigned int") << 44)) - 1
             else:
                 return ((self.EndingVpn.cast("unsigned int") + 1) << 12) - 1
 
         elif self.has_member("Core"):
-
+            print(self.Core.EndingVpnHigh)
+            print(self.Core.EndingVpnHigh.cast("unsigned int"))
             if self.Core.has_member("EndingVpnHigh"):
-                return (self.Core.EndingVpn.cast("unsigned int") << 12) | (
-                    self.Core.EndingVpnHigh.cast("unsigned int") << 44)
+                return (((self.Core.EndingVpn.cast("unsigned int") + 1) << 12) | (
+                    self.Core.EndingVpnHigh.cast("unsigned int") << 44)) - 1
             else:
                 return ((self.Core.EndingVpn.cast("unsigned int") + 1) << 12) - 1
 
