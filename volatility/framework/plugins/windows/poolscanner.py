@@ -139,38 +139,65 @@ class PoolScanner(plugins.PluginInterface):
                 and not PoolScanner.is_windows_8_or_later(context, layer_name, symbol_table))
 
     def _generator(self):
+        for result in self.generate_pool_scan(self.context,
+                                              self.config["primary"],
+                                              self.config["nt_symbols"]):
+            constraint, mem_object, header = result
+
+            # generate some type-specific info for sanity checking
+            if constraint.object_type == "Process":
+                name = mem_object.ImageFileName.cast(
+                    "string", max_length=mem_object.ImageFileName.vol.count, errors="replace")
+            elif constraint.object_type == "File":
+                try:
+                    name = mem_object.FileName.String
+                except exceptions.PagedInvalidAddressException:
+                    vollog.log(constants.LOGLEVEL_VVV, "Skipping file at {0:#x}".format(mem_object.vol.offset))
+                    continue
+            else:
+                name = renderers.NotApplicableValue()
+
+            yield (0, (constraint.type_name, format_hints.Hex(header.vol.offset), header.vol.layer_name, name))
+
+    @classmethod
+    def generate_pool_scan(cls,
+                           context: interfaces.context.ContextInterface,
+                           layer_name: str,
+                           symbol_table: str) \
+            -> Generator[Tuple[PoolConstraint, interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface], None, None]:
+
         constraints = [
             # atom tables
             PoolConstraint(
                 b'AtmT',
-                type_name = self.config["nt_symbols"] + constants.BANG + "_RTL_ATOM_TABLE",
+                type_name = symbol_table + constants.BANG + "_RTL_ATOM_TABLE",
                 size = (200, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows before windows 8
             PoolConstraint(
                 b'Pro\xe3',
-                type_name = self.config["nt_symbols"] + constants.BANG + "_EPROCESS",
+                type_name = symbol_table + constants.BANG + "_EPROCESS",
                 object_type = "Process",
                 size = (600, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows starting with windows 8
             PoolConstraint(
                 b'Proc',
-                type_name = self.config["nt_symbols"] + constants.BANG + "_EPROCESS",
+                type_name = symbol_table + constants.BANG + "_EPROCESS",
                 object_type = "Process",
                 size = (600, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # files on windows before windows 8
             PoolConstraint(
                 b'Fil\xe5',
-                type_name = self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
+                type_name = symbol_table + constants.BANG + "_FILE_OBJECT",
                 object_type = "File",
                 size = (150, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # files on windows starting with windows 8
             PoolConstraint(
                 b'File',
-                type_name = self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
+                type_name = symbol_table + constants.BANG + "_FILE_OBJECT",
                 object_type = "File",
                 size = (150, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
@@ -178,24 +205,24 @@ class PoolScanner(plugins.PluginInterface):
 
         # get the object type map
         type_map = handles.Handles.list_objects(
-            context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
+            context = context, layer_name = layer_name, symbol_table = symbol_table)
 
         cookie = handles.Handles.find_cookie(
-            context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
+            context = context, layer_name = layer_name, symbol_table = symbol_table)
 
-        is_windows_10 = self.is_windows_10(context = self._context, symbol_table = self.config["nt_symbols"])
-        is_windows_8_or_later = self.is_windows_8_or_later(
-            context = self._context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
+        is_windows_10 = cls.is_windows_10(context = context, symbol_table = symbol_table)
+        is_windows_8_or_later = cls.is_windows_8_or_later(
+            context = context, layer_name = layer_name, symbol_table = symbol_table)
 
         # start off with the primary virtual layer
-        scan_layer = self.config['primary']
+        scan_layer = layer_name
 
         # switch to a non-virtual layer if necessary
         if not is_windows_10:
-            scan_layer = self.context.memory[scan_layer].config['memory_layer']
+            scan_layer = context.memory[scan_layer].config['memory_layer']
 
-        for constraint, header in self.pool_scan(
-                self._context, scan_layer, self.config['nt_symbols'], constraints, alignment = 8):
+        for constraint, header in cls.pool_scan(
+                context, scan_layer, symbol_table, constraints, alignment = 8):
 
             mem_object = header.get_object(
                 type_name = constraint.type_name,
@@ -209,20 +236,7 @@ class PoolScanner(plugins.PluginInterface):
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
                 continue
 
-            # generate some type-specific info for sanity checking
-            if constraint.object_type == "Process":
-                name = mem_object.ImageFileName.cast(
-                    "string", max_length = mem_object.ImageFileName.vol.count, errors = "replace")
-            elif constraint.object_type == "File":
-                try:
-                    name = mem_object.FileName.String
-                except exceptions.PagedInvalidAddressException:
-                    vollog.log(constants.LOGLEVEL_VVV, "Skipping file at {0:#x}".format(mem_object.vol.offset))
-                    continue
-            else:
-                name = renderers.NotApplicableValue()
-
-            yield (0, (constraint.type_name, format_hints.Hex(header.vol.offset), header.vol.layer_name, name))
+            yield constraint, mem_object, header
 
     @classmethod
     def pool_scan(cls,
