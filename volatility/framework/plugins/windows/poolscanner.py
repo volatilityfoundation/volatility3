@@ -139,9 +139,21 @@ class PoolScanner(plugins.PluginInterface):
                 and not PoolScanner.is_windows_8_or_later(context, layer_name, symbol_table))
 
     def _generator(self):
+
+        symbol_table = self.config["nt_symbols"]
+        constraints = self.builtin_constraints(symbol_table, [
+            b'AtmT',
+            b'Pro\xe3',
+            b'Proc',
+            b'Fil\xe5',
+            b'File',
+        ])
+
         for result in self.generate_pool_scan(self.context,
                                               self.config["primary"],
-                                              self.config["nt_symbols"]):
+                                              symbol_table,
+                                              constraints):
+
             constraint, mem_object, header = result
 
             # generate some type-specific info for sanity checking
@@ -159,14 +171,11 @@ class PoolScanner(plugins.PluginInterface):
 
             yield (0, (constraint.type_name, format_hints.Hex(header.vol.offset), header.vol.layer_name, name))
 
-    @classmethod
-    def generate_pool_scan(cls,
-                           context: interfaces.context.ContextInterface,
-                           layer_name: str,
-                           symbol_table: str) \
-            -> Generator[Tuple[PoolConstraint, interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface], None, None]:
+    @staticmethod
+    def builtin_constraints(symbol_table: str, tags: List[bytes]) -> List[PoolConstraint]:
+        """Get built-in PoolConstraints given a list of pool tags"""
 
-        constraints = [
+        builtins = [
             # atom tables
             PoolConstraint(
                 b'AtmT',
@@ -201,7 +210,17 @@ class PoolScanner(plugins.PluginInterface):
                 object_type = "File",
                 size = (150, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
-        ]
+            ]
+
+        return [constraint for constraint in builtins if constraint.tag in tags]
+
+    @classmethod
+    def generate_pool_scan(cls,
+                           context: interfaces.context.ContextInterface,
+                           layer_name: str,
+                           symbol_table: str,
+                           constraints: List[PoolConstraint]) \
+            -> Generator[Tuple[PoolConstraint, interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface], None, None]:
 
         # get the object type map
         type_map = handles.Handles.list_objects(
