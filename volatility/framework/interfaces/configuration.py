@@ -275,7 +275,7 @@ class RequirementInterface(metaclass = ABCMeta):
     :class:`~volatility.framework.configuration.requirements.IntRequirement`,
     :class:`~volatility.framework.configuration.requirements.BytesRequirement` and
     :class:`~volatility.framework.configuration.requirements.StringRequirement`) or complex types (such
-    as :class:`TranslationLayerRequirement`, :class:`SymbolRequirement` and :class:`ClassRequirement`
+    as :class:`TranslationLayerRequirement`, :class:`SymbolTableRequirement` and :class:`ClassRequirement`
     """
 
     def __init__(self,
@@ -385,7 +385,7 @@ class SimpleTypeRequirement(RequirementInterface):
 
 class ClassRequirement(RequirementInterface):
     """Requires a specific class.  This is used as means to serialize specific classes for :class:`TranslationLayerRequirement`
-    and :class:`SymbolRequirement` classes."""
+    and :class:`SymbolTableRequirement` classes."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

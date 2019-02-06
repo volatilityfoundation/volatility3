@@ -37,7 +37,7 @@ class Lsmod(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "darwin", description = "Linux kernel symbols")
+            requirements.SymbolTableRequirement(name = "darwin", description = "Linux kernel symbols")
         ]
 
     @classmethod
@@ -45,11 +45,7 @@ class Lsmod(plugins.PluginInterface):
         """Lists all the modules in the primary layer"""
         mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
-        kernel = contexts.Module(context, 
-                                 darwin_symbols, 
-                                 layer_name,
-                                 0, 
-                                 absolute_symbol_addresses = True)                
+        kernel = contexts.Module(context, darwin_symbols, layer_name, 0, absolute_symbol_addresses = True)
 
         kmod_ptr = kernel.object(symbol_name = "kmod")
 

@@ -48,7 +48,7 @@ class Check_syscall(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "vmlinux", description = "Linux kernel symbols")
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols")
         ]
 
     def _get_table_size_next_symbol(self, table_addr, ptr_sz, vmlinux):
@@ -145,11 +145,8 @@ class Check_syscall(plugins.PluginInterface):
     def _generator(self):
         linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'])
 
-        vmlinux = contexts.Module(self.context, 
-                                  self.config['vmlinux'], 
-                                  self.config['primary'], 
-                                  0, 
-                                  absolute_symbol_addresses = True)                
+        vmlinux = contexts.Module(
+            self.context, self.config['vmlinux'], self.config['primary'], 0, absolute_symbol_addresses = True)
 
         ptr_sz = vmlinux.get_type("pointer").size
         if ptr_sz == 4:

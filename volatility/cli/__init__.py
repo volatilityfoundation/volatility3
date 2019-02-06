@@ -268,7 +268,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             translation_failed = translation_failed or isinstance(
                 excp.unsatisfied[config_path], configuration.requirements.TranslationLayerRequirement)
             symbols_failed = symbols_failed or isinstance(excp.unsatisfied[config_path],
-                                                          configuration.requirements.SymbolRequirement)
+                                                          configuration.requirements.SymbolTableRequirement)
 
             print("Unsatisfied requirement {}: {}".format(config_path, excp.unsatisfied[config_path].description))
 

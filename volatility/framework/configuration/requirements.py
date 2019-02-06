@@ -315,8 +315,8 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
         return context.memory[value].build_configuration()
 
 
-class SymbolRequirement(configuration.ConstructableRequirementInterface,
-                        configuration.ConfigurableRequirementInterface):
+class SymbolTableRequirement(configuration.ConstructableRequirementInterface,
+                             configuration.ConfigurableRequirementInterface):
     """Class maintaining the limitations on what sort of symbol spaces are acceptable"""
 
     def unsatisfied(self, context: interfaces.context.ContextInterface,
@@ -326,7 +326,7 @@ class SymbolRequirement(configuration.ConstructableRequirementInterface,
         value = self.config_value(context, config_path, None)
         if not isinstance(value, str):
             vollog.log(constants.LOGLEVEL_V,
-                       "TypeError - SymbolRequirement only accepts string labels: {}".format(value))
+                       "TypeError - SymbolTableRequirement only accepts string labels: {}".format(value))
             return {config_path: self}
         if value not in context.symbol_space:
             # This is an expected situation, so return False rather than raise

@@ -38,7 +38,7 @@ class PsList(interfaces_plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "darwin", description = "Mac kernel symbols")
+            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols")
         ]
 
     @classmethod
@@ -80,12 +80,8 @@ class PsList(interfaces_plugins.PluginInterface):
         """Lists all the tasks in the primary layer"""
 
         mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
-       
-        kernel = contexts.Module(context, 
-                                darwin_symbols, 
-                                layer_name,
-                                0, 
-                                absolute_symbol_addresses = True)                
+
+        kernel = contexts.Module(context, darwin_symbols, layer_name, 0, absolute_symbol_addresses = True)
 
         proc = kernel.object(symbol_name = "allproc").lh_first
 

@@ -65,17 +65,17 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
         self._requirements = self.find_requirements(
             context,
             config_path,
-            requirement, (requirements.TranslationLayerRequirement, requirements.SymbolRequirement),
+            requirement, (requirements.TranslationLayerRequirement, requirements.SymbolTableRequirement),
             shortcut = False)
 
         for (sub_path, requirement) in self._requirements:
             parent_path = interfaces.configuration.parent_path(sub_path)
 
-            if (isinstance(requirement, requirements.SymbolRequirement)
+            if (isinstance(requirement, requirements.SymbolTableRequirement)
                     and requirement.unsatisfied(context, parent_path)):
                 for (tl_sub_path, tl_requirement) in self._requirements:
                     tl_parent_path = interfaces.configuration.parent_path(tl_sub_path)
-                    # Find the TranslationLayer sibling to the SymbolRequirement
+                    # Find the TranslationLayer sibling to the SymbolTableRequirement
                     if (isinstance(tl_requirement, requirements.TranslationLayerRequirement)
                             and tl_parent_path == parent_path):
                         if context.config.get(tl_sub_path, None):
@@ -89,7 +89,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                      requirement: interfaces.configuration.ConstructableRequirementInterface,
                      layer_name: str,
                      progress_callback: constants.ProgressCallback = None) -> None:
-        """Accepts a context, config_path and SymbolRequirement, with a constructed layer_name
+        """Accepts a context, config_path and SymbolTableRequirement, with a constructed layer_name
         and scans the layer for banners"""
 
         # Bomb out early if there's no banners

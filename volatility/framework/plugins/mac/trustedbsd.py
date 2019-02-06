@@ -41,17 +41,14 @@ class Check_syscall(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "darwin", description = "Mac kernel symbols")
+            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols")
         ]
 
     def _generator(self, mods: Iterator[Any]):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
-        kernel = contexts.Module(self._context, 
-                                 self.config['darwin'], 
-                                 self.config['primary'], 
-                                 0, 
-                                 absolute_symbol_addresses = True)                
+        kernel = contexts.Module(
+            self._context, self.config['darwin'], self.config['primary'], 0, absolute_symbol_addresses = True)
 
         policy_list = kernel.object(symbol_name = "_mac_policy_list").cast("mac_policy_list")
 

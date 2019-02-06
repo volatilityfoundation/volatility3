@@ -35,7 +35,7 @@ class PsList(interfaces_plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "vmlinux", description = "Linux kernel symbols")
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols")
         ]
 
     @classmethod
@@ -74,12 +74,8 @@ class PsList(interfaces_plugins.PluginInterface):
         """Lists all the tasks in the primary layer"""
         linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
-        vmlinux = contexts.Module(context,
-                                  vmlinux_symbols,
-                                  layer_name,
-                                  0,
-                                  absolute_symbol_addresses = True)   
- 
+        vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0, absolute_symbol_addresses = True)
+
         init_task = vmlinux.object(symbol_name = "init_task")
 
         for task in init_task.tasks:

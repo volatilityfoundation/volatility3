@@ -10,6 +10,7 @@ from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
 
+
 class Check_syscall(plugins.PluginInterface):
     """Check system call table for hooks"""
 
@@ -18,16 +19,14 @@ class Check_syscall(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "darwin", description = "Mac kernel symbols")]
+            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols")
+        ]
 
     def _generator(self):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
-        kernel = contexts.Module(self._context, 
-                                 self.config['darwin'], 
-                                 self.config['primary'], 
-                                 0, 
-                                 absolute_symbol_addresses = True)                
+        kernel = contexts.Module(
+            self._context, self.config['darwin'], self.config['primary'], 0, absolute_symbol_addresses = True)
 
         nsysent = kernel.object(symbol_name = "nsysent")
         table = kernel.object(symbol_name = "sysent")

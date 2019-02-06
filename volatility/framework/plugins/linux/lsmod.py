@@ -40,7 +40,7 @@ class Lsmod(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "vmlinux", description = "Linux kernel symbols")
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols")
         ]
 
     @classmethod
@@ -48,12 +48,8 @@ class Lsmod(plugins.PluginInterface):
         """Lists all the modules in the primary layer"""
         linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
-        vmlinux = contexts.Module(context,
-                                  vmlinux_symbols,
-                                  layer_name,
-                                  0,
-                                  absolute_symbol_addresses = True)   
- 
+        vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0, absolute_symbol_addresses = True)
+
         modules = vmlinux.object(symbol_name = "modules").cast("list_head")
 
         table_name = modules.vol.type_name.split(constants.BANG)[0]

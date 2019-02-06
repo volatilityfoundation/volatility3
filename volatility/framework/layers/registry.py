@@ -180,7 +180,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
                 description = 'Offset within the base layer at which the hive lives',
                 default = 0,
                 optional = False),
-            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             TranslationLayerRequirement(
                 name = 'base_layer', description = 'Layer in which the registry hive lives', optional = False)
         ]

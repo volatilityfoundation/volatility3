@@ -38,7 +38,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             # TODO: Convert this to a ListRequirement so that people can filter on sets of pids
             requirements.IntRequirement(
                 name = 'pid', description = "Process ID to include (all other processes are excluded)",

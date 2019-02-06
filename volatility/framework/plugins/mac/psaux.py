@@ -35,7 +35,7 @@ class Psaux(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolRequirement(name = "darwin", description = "Mac kernel symbols")
+            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols")
         ]
 
     def _generator(self, tasks: Iterator[Any]) -> Generator[Tuple[int, Tuple[int, str, int, str]], None, None]:
