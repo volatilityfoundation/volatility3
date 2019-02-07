@@ -114,13 +114,7 @@ class PoolScanner(plugins.PluginInterface):
     def _generator(self):
 
         symbol_table = self.config["nt_symbols"]
-        constraints = self.builtin_constraints(symbol_table, [
-            b'AtmT',
-            b'Pro\xe3',
-            b'Proc',
-            b'Fil\xe5',
-            b'File',
-        ])
+        constraints = self.builtin_constraints(symbol_table)
 
         for constraint, mem_object, header in self.generate_pool_scan(self.context,
                                                                       self.config["primary"],
@@ -142,8 +136,13 @@ class PoolScanner(plugins.PluginInterface):
             yield (0, (constraint.type_name, format_hints.Hex(header.vol.offset), header.vol.layer_name, name))
 
     @staticmethod
-    def builtin_constraints(symbol_table: str, tags: List[bytes]) -> List[PoolConstraint]:
-        """Get built-in PoolConstraints given a list of pool tags"""
+    def builtin_constraints(symbol_table: str, tags_filter: List[bytes] = []) -> List[PoolConstraint]:
+        """Get built-in PoolConstraints given a list of pool tags.
+
+        The tags_filter is a list of pool tags, and the associated
+        PoolConstraints are  returned. If tags_filter is empty or
+        not supplied, then all builtin constraints are returned.
+        """
 
         builtins = [
             # atom tables
@@ -182,7 +181,10 @@ class PoolScanner(plugins.PluginInterface):
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             ]
 
-        return [constraint for constraint in builtins if constraint.tag in tags]
+        if not tags_filter:
+            return builtins
+
+        return [constraint for constraint in builtins if constraint.tag in tags_filter]
 
     @classmethod
     def generate_pool_scan(cls,

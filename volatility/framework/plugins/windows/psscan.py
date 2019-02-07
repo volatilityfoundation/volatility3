@@ -48,7 +48,7 @@ class PsScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
         """Scans for processes using the poolscanner module and constraints"""
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table,
-                                                                  [b'Pro\xe3', b'Proc',])
+                                                                  [b'Pro\xe3', b'Proc'])
 
         for result in poolscanner.PoolScanner.generate_pool_scan(context,
                                                                  layer_name,
