@@ -122,13 +122,10 @@ class PoolScanner(plugins.PluginInterface):
             b'File',
         ])
 
-        for result in self.generate_pool_scan(self.context,
-                                              self.config["primary"],
-                                              symbol_table,
-                                              constraints):
-
-            constraint, mem_object, header = result
-
+        for constraint, mem_object, header in self.generate_pool_scan(self.context,
+                                                                      self.config["primary"],
+                                                                      symbol_table,
+                                                                      constraints):
             # generate some type-specific info for sanity checking
             if constraint.object_type == "Process":
                 name = mem_object.ImageFileName.cast(
