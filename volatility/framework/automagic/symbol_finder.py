@@ -56,7 +56,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
                  progress_callback: constants.ProgressCallback = None) -> None:
-        """Searches for SymbolRequirements and attempt to populate them"""
+        """Searches for SymbolTableRequirements and attempt to populate them"""
 
         # Bomb out early if our details haven't been configured
         if self.symbol_class is None:

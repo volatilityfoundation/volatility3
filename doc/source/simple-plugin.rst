@@ -35,7 +35,7 @@ to be able to run properly.  Any that are defined as optional need not necessari
             return [requirements.TranslationLayerRequirement(name = 'primary',
                                                              description = 'Memory layer for the kernel',
                                                              architectures = ["Intel32", "Intel64"]),
-                    requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+                    requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows OS"),
                     requirements.IntRequirement(name = 'pid',
                                                 description = "Process ID to include (all other processes are excluded)",
                                                 optional = True)]
@@ -66,7 +66,7 @@ layers, for example a plugin that carries out some form of difference or statist
 
 ::
 
-    requirements.SymbolRequirement(name = "nt_symbols", description = "Windows OS"),
+    requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows OS"),
 
 This requirement specifies the need for a particular `SymbolTable` (:py:class:~`volatility.framework.interfaces.SymbolTableInterface`)
 to be loaded.  This gets populated by various `Automagic` as the nearest sibling to a particular `TranslationLayerRequirement`.

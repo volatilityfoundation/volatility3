@@ -88,7 +88,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
             shortcut: Only returns requirements that live under unsatisfied requirements
 
         Returns:
-            A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolRequirements
+            A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolTableRequirements
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement_root.name)
         results = []  # type: List[Tuple[str, interfaces.configuration.RequirementInterface]]

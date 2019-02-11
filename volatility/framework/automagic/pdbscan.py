@@ -181,7 +181,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def recurse_symbol_fulfiller(self, context: interfaces.context.ContextInterface,
                                  valid_kernels: ValidKernelsType) -> None:
-        """Fulfills the SymbolRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
+        """Fulfills the SymbolTableRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
 
         This pass will construct any requirements that may need it in the context it was passed
 
