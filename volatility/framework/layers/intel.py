@@ -73,6 +73,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         # Assign constants
         self._initial_position = min(self._maxvirtaddr, self._bits_per_register) - 1
         self._initial_entry = self._mask(self._page_map_offset, self._initial_position, 0) | 0x1
+        self._entry_size = struct.calcsize(self._entry_format)
+        self._entry_number = self.page_size // self._entry_size
 
         # These can vary depending on the type of space
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
@@ -160,21 +162,27 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             # Grab the base address of the table we'll be getting the next entry from
             base_address = self._mask(entry, self._maxphyaddr - 1, size + self._index_shift)
 
-            table = self._context.memory.read(self._base_layer, base_address, self.page_size)
-
-            # If the table is entirely duplicates, then mark the whole table as bad
-            if (table == table[:struct.calcsize(self._entry_format)] *
-                (self.page_size // struct.calcsize(self._entry_format))):
+            table = self._get_valid_table(base_address)
+            if table is None:
                 raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
                                                               "Page Fault at entry " + hex(entry) + " in table " + name)
+
             # Read the data for the next entry
-            entry_data = table[(
-                index << self._index_shift):(index << self._index_shift) + struct.calcsize(self._entry_format)]
+            entry_data = table[(index << self._index_shift):(index << self._index_shift) + self._entry_size]
 
             # Read out the new entry from memory
             entry, = struct.unpack(self._entry_format, entry_data)
 
         return entry, position
+
+    def _get_valid_table(self, base_address: int) -> Optional[bytes]:
+        """Extracts the table, validates it and returns it if it's valid"""
+        table = self._context.memory.read(self._base_layer, base_address, self.page_size)
+
+        # If the table is entirely duplicates, then mark the whole table as bad
+        if (table == table[:self._entry_size] * self._entry_number):
+            return None
+        return table
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the address offset can be translated to a valid address"""
