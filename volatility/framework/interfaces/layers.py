@@ -369,6 +369,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     # ## Read/Write functions for mapped pages
 
+    @functools.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
         current_offset = offset
