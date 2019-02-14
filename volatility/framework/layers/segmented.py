@@ -56,10 +56,9 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the address offset can be translated to a valid address"""
         try:
-            return all([
-                self._context.memory[self._base_layer].is_valid(mapped_offset)
-                for _i, mapped_offset, _i, _s in self.mapping(offset, length)
-            ])
+            base_layer = self._context.memory[self._base_layer]
+            return all(
+                [base_layer.is_valid(mapped_offset) for _i, mapped_offset, _i, _s in self.mapping(offset, length)])
         except exceptions.InvalidAddressException:
             return False
 

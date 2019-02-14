@@ -70,6 +70,10 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         self._swap_layers = []  # type: List[str]
         self._page_map_offset = self.config["page_map_offset"]
 
+        # Assign constants
+        self._initial_position = min(self._maxvirtaddr, self._bits_per_register) - 1
+        self._initial_entry = self._mask(self._page_map_offset, self._initial_position, 0) | 0x1
+
         # These can vary depending on the type of space
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
 
@@ -100,8 +104,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     @staticmethod
     def _mask(value: int, high_bit: int, low_bit: int) -> int:
         """Returns the bits of a value between highbit and lowbit inclusive"""
-        high_mask = (2 ** (high_bit + 1)) - 1
-        low_mask = (2 ** low_bit) - 1
+        high_mask = (1 << (high_bit + 1)) - 1
+        low_mask = (1 << low_bit) - 1
         mask = (high_mask ^ low_mask)
         # print(high_bit, low_bit, bin(mask), bin(value))
         return value & mask
@@ -134,8 +138,8 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         # Setup the entry and how far we are through the offset
         # Position maintains the number of bits left to process
         # We or with 0x1 to ensure our page_map_offset is always valid
-        position = min(self._maxvirtaddr, self._bits_per_register) - 1
-        entry = self._mask(self._page_map_offset, position, 0) | 0x1
+        position = self._initial_position
+        entry = self._initial_entry
 
         # Run through the offset in various chunks
         for (name, size, large_page) in self._structure:
