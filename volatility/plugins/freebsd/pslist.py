@@ -36,10 +36,9 @@ class PsList(interfaces_plugins.PluginInterface):
                     name = 'primary',
                     description = "Memory layer for the kernel",
                     architectures = ['Intel32', 'Intel64']),
-                requirements.SymbolRequirement(
-                    name = 'ksyms',  #TODO: is this right?
-                    description = "FreeBSD kernel Symbols")
-                # Would it make sense to require the 'allproc' symbol?
+                #requirements.SymbolTableRequirement(
+                #    name = 'freebsd',  #TODO: is this right?
+                #    description = "FreeBSD kernel Symbols")
             ]
 
     @classmethod
@@ -55,32 +54,18 @@ class PsList(interfaces_plugins.PluginInterface):
         else:
             return lambda _: False
 
-    def _generator(self):
-        """Produces all task after filtering"""
-        for task in list_tasks(
-                self.context,
-                self.config['primary'],
-                self.config['ksyms'],
-                filter = self.create_filter([self.config.get('pid', None)])):
-            pid = task.pid
-            ppid = 0
-            if task.parent:
-                ppid = task.parent.pid
-            name = utility.array_to_string(task.comm)
-            yield (0, (pid, ppid, name))
-
     @classmethod
     def list_tasks(cls,
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
-                   ksyms_symbols: str,
+                   freebsd_symbols: str,
                    filter: Callable[[int],bool] = lambda _:False) \
                    -> Iterable[interfaces.objects.ObjectInterface]:
         """List all processes (tasks) in primary layer"""
         #TODO: aslr_mask_symbol_table?
 
         view = contexts.Module(context,
-                               ksyms_symbols,
+                               freebsd_symbols,
                                layer_name,
                                0,
                                absolute_symbol_addresses=True)
@@ -101,6 +86,19 @@ class PsList(interfaces_plugins.PluginInterface):
             yield proc
             proc = proc.p_list.le_next.dereference()
 
+    def _generator(self):
+        """Produces all task after filtering"""
+        for task in self.list_tasks(
+                self.context,
+                self.config['primary'],
+                self.config['freebsd'],
+                filter = self.create_filter([self.config.get('pid', None)])):
+            pid = task.pid
+            ppid = 0
+            if task.parent:
+                ppid = task.parent.pid
+            name = utility.array_to_string(task.comm)
+            yield (0, (pid, ppid, name))
 
     def run(self):
         """Entry point for plugin"""
