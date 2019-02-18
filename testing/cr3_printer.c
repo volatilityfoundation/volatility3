@@ -10,18 +10,16 @@ static void print_symbols() {
 	uprintf("pm_cr3: %lu\n", kernel_pmapi->pm_cr3);
 }
 
-
-
 /* The function called at load/unload. */
 static int load(struct module *module, int cmd, void *arg) {
 	int error = 0;
 	
 	switch (cmd) {
 	case MOD_LOAD:
-		uprintf("Hello, world!\n");
+		print_symbols();
 		break;
 	case MOD_UNLOAD:
-		uprintf("Good-bye, cruel world!\n");
+		uprintf("Removing\n");
 		break;
 	default:
 		error = EOPNOTSUPP;
@@ -33,9 +31,9 @@ static int load(struct module *module, int cmd, void *arg) {
 
 /* The second argument of DECLARE_MODULE. */
 static moduledata_t hello_mod = {
-	"hello", /* module name */
+	"cr3_printer", /* module name */
 	load,    /* event handler */
 	NULL     /* extra data */
 };
 
-DECLARE_MODULE(hello, hello_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
+DECLARE_MODULE(cr3_printer, cr3_printer_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
