@@ -143,14 +143,12 @@ class PoolScanner(plugins.PluginInterface):
         symbol_table = self.config["nt_symbols"]
         constraints = self.builtin_constraints(symbol_table)
 
-        for constraint, mem_object, header in self.generate_pool_scan(self.context,
-                                                                      self.config["primary"],
-                                                                      symbol_table,
-                                                                      constraints):
+        for constraint, mem_object, header in self.generate_pool_scan(self.context, self.config["primary"],
+                                                                      symbol_table, constraints):
             # generate some type-specific info for sanity checking
             if constraint.object_type == "Process":
                 name = mem_object.ImageFileName.cast(
-                    "string", max_length=mem_object.ImageFileName.vol.count, errors="replace")
+                    "string", max_length = mem_object.ImageFileName.vol.count, errors = "replace")
             elif constraint.object_type == "File":
                 try:
                     name = mem_object.FileName.String
@@ -206,7 +204,7 @@ class PoolScanner(plugins.PluginInterface):
                 object_type = "File",
                 size = (150, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
-            ]
+        ]
 
         if not tags_filter:
             return builtins
@@ -219,14 +217,13 @@ class PoolScanner(plugins.PluginInterface):
                            layer_name: str,
                            symbol_table: str,
                            constraints: List[PoolConstraint]) \
-            -> Generator[Tuple[PoolConstraint, interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface], None, None]:
+            -> Generator[Tuple[
+                             PoolConstraint, interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface], None, None]:
 
         # get the object type map
-        type_map = handles.Handles.list_objects(
-            context = context, layer_name = layer_name, symbol_table = symbol_table)
+        type_map = handles.Handles.list_objects(context = context, layer_name = layer_name, symbol_table = symbol_table)
 
-        cookie = handles.Handles.find_cookie(
-            context = context, layer_name = layer_name, symbol_table = symbol_table)
+        cookie = handles.Handles.find_cookie(context = context, layer_name = layer_name, symbol_table = symbol_table)
 
         is_windows_10 = cls.is_windows_10(context = context, symbol_table = symbol_table)
         is_windows_8_or_later = cls.is_windows_8_or_later(
@@ -239,8 +236,7 @@ class PoolScanner(plugins.PluginInterface):
         if not is_windows_10:
             scan_layer = context.memory[scan_layer].config['memory_layer']
 
-        for constraint, header in cls.pool_scan(
-                context, scan_layer, symbol_table, constraints, alignment = 8):
+        for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = 8):
 
             mem_object = header.get_object(
                 type_name = constraint.type_name,

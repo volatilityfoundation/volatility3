@@ -119,8 +119,9 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         if size_of_image > (1024 * 1024 * 100):
             raise ValueError("The claimed SizeOfImage is too large: {}".format(size_of_image))
 
-        raw_data = self._context.memory[layer_name].read(
-            self.vol.offset, nt_header.OptionalHeader.SizeOfImage, pad = True)
+        read_layer = self._context.memory[layer_name]
+
+        raw_data = read_layer.read(self.vol.offset, nt_header.OptionalHeader.SizeOfImage, pad = True)
 
         # fix the PE image base before yielding the initial view of the data
         fixed_data = self.fix_image_base(raw_data, nt_header)
@@ -151,7 +152,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
 
         for sect in nt_header.get_sections():
 
-            sectheader = self._context.memory[layer_name].read(sect.vol.offset, sect_header_size)
+            sectheader = read_layer.read(sect.vol.offset, sect_header_size)
             sectheader = self.replace_header_field(sect, sectheader, sect.PointerToRawData, sect.VirtualAddress)
             sectheader = self.replace_header_field(sect, sectheader, sect.SizeOfRawData, sect_sizes[counter])
             sectheader = self.replace_header_field(sect, sectheader, sect.Misc.VirtualSize, sect_sizes[counter])
