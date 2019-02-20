@@ -27,6 +27,7 @@ linux_automagic = ['ConstructionMagic', 'LayerStacker', 'LinuxBannerCache', 'Lin
 
 mac_automagic = ['ConstructionMagic', 'LayerStacker', 'MacBannerCache', 'MacSymbolFinder']
 
+freebsd_automagic = ['ConstructionMagic', 'LayerStacker', 'FreeBSDSymbolFinder']
 
 def available(context: interfaces.context.ContextInterface) -> List[interfaces.automagic.AutomagicInterface]:
     """Returns an ordered list of all subclasses of
@@ -55,7 +56,12 @@ def choose_automagic(automagics, plugin):
     plugin_categories = plugin.__module__.split('.')
     lowest_index = len(plugin_categories)
 
-    automagic_categories = {'windows': windows_automagic, 'linux': linux_automagic, 'mac': mac_automagic}
+    automagic_categories = {
+        'windows': windows_automagic,
+        'linux': linux_automagic,
+        'mac': mac_automagic,
+        'freebsd': freebsd_automagic
+    }
 
     for os in automagic_categories:
         try:
@@ -75,6 +81,7 @@ def choose_automagic(automagics, plugin):
     for amagic in automagics:
         if amagic.__class__.__name__ in automagic_categories[plugin_category]:
             output += [amagic]
+
     return output
 
 
