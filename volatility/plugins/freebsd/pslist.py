@@ -24,7 +24,7 @@ import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers, interfaces, contexts
 # from volatility.framework.automagic import linux #FreeBSD automagic not implemented
 from volatility.framework.configuration import requirements
-# from volatility.framework.objects import utility
+from volatility.framework.objects import utility
 
 class PsList(interfaces_plugins.PluginInterface):
     """Lists the processes present in a FreeBSD memory image"""
@@ -36,9 +36,9 @@ class PsList(interfaces_plugins.PluginInterface):
                     name = 'primary',
                     description = "Memory layer for the kernel",
                     architectures = ['Intel32', 'Intel64']),
-                #requirements.SymbolTableRequirement(
-                #    name = 'freebsd',  #TODO: is this right?
-                #    description = "FreeBSD kernel Symbols")
+                requirements.SymbolTableRequirement(
+                   name = 'freebsd',  #TODO: is this right?
+                   description = "FreeBSD kernel Symbols")
             ]
 
     @classmethod
@@ -71,7 +71,8 @@ class PsList(interfaces_plugins.PluginInterface):
                                absolute_symbol_addresses=True)
 
         # Symbol 'allproc' must be in profile
-        proc = view.object(symbol_name = "allproc").lh_first
+        allproc = view.object(symbol_name = "allproc").cast("proclist")
+        proc = allproc.lh_first.dereference()
 
         #seen = {}
         while proc is not None and proc.vol.offset != 0:
@@ -93,11 +94,9 @@ class PsList(interfaces_plugins.PluginInterface):
                 self.config['primary'],
                 self.config['freebsd'],
                 filter = self.create_filter([self.config.get('pid', None)])):
-            pid = task.pid
+            pid = task.p_pid
             ppid = 0
-            if task.parent:
-                ppid = task.parent.pid
-            name = utility.array_to_string(task.comm)
+            name = utility.array_to_string(task.p_comm)
             yield (0, (pid, ppid, name))
 
     def run(self):
