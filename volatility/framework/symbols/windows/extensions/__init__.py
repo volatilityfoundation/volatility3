@@ -488,9 +488,9 @@ class _OBJECT_HEADER(objects.Struct):
             # windows 7 and later have a TypeIndex, but windows 10
             # further encodes the index value with nt1!ObHeaderCookie
             try:
-                type_index = ((self.vol.offset >> 8) ^ cookie ^ ord(self.TypeIndex)) & 0xFF
+                type_index = ((self.vol.offset >> 8) ^ cookie ^ int(self.TypeIndex)) & 0xFF
             except AttributeError:
-                type_index = ord(self.TypeIndex)
+                type_index = int(self.TypeIndex)
 
             return type_map.get(type_index)
 
