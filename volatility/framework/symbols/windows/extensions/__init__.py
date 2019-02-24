@@ -452,7 +452,7 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
 
         try:
             name += self.FileName.String
-        except exceptions.PagedInvalidAddressException:
+        except (TypeError, exceptions.PagedInvalidAddressException):
             pass
 
         return name
