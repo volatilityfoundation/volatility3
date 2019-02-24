@@ -126,8 +126,8 @@ class Info(plugins.PluginInterface):
         yield (0, ("NtProductType", str(kuser.NtProductType.description)))
         yield (0, ("NtMajorVersion", str(kuser.NtMajorVersion)))
         yield (0, ("NtMinorVersion", str(kuser.NtMinorVersion)))
-        # yield (0, ("KdDebuggerEnabled", "True" if ord(kuser.KdDebuggerEnabled) else "False"))
-        # yield (0, ("SafeBootMode", "True" if ord(kuser.SafeBootMode) else "False"))
+        # yield (0, ("KdDebuggerEnabled", "True" if kuser.KdDebuggerEnabled else "False"))
+        # yield (0, ("SafeBootMode", "True" if kuser.SafeBootMode else "False"))
 
         dos_header = self.context.object(
             pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER", offset = kvo, layer_name = virtual_layer_name)

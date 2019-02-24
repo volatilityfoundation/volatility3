@@ -488,9 +488,9 @@ class _OBJECT_HEADER(objects.Struct):
             # windows 7 and later have a TypeIndex, but windows 10
             # further encodes the index value with nt1!ObHeaderCookie
             try:
-                type_index = ((self.vol.offset >> 8) ^ cookie ^ int(self.TypeIndex)) & 0xFF
+                type_index = ((self.vol.offset >> 8) ^ cookie ^ self.TypeIndex) & 0xFF
             except AttributeError:
-                type_index = int(self.TypeIndex)
+                type_index = self.TypeIndex
 
             return type_map.get(type_index)
 
@@ -502,7 +502,7 @@ class _OBJECT_HEADER(objects.Struct):
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
 
         try:
-            header_offset = ord(self.NameInfoOffset)
+            header_offset = self.NameInfoOffset
         except AttributeError:
             # http://codemachine.com/article_objectheader.html (Windows 7 and later)
             name_info_bit = 0x2
@@ -515,7 +515,7 @@ class _OBJECT_HEADER(objects.Struct):
 
             ntkrnlmp = self._context.module(symbol_table_name, layer_name = self.vol.layer_name, offset = kvo)
             address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address
-            calculated_index = ord(self.InfoMask) & (name_info_bit | (name_info_bit - 1))
+            calculated_index = self.InfoMask & (name_info_bit | (name_info_bit - 1))
 
             header_offset = self._context.object(
                 symbol_table_name + constants.BANG + "unsigned char",
