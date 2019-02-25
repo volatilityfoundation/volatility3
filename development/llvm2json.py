@@ -301,6 +301,7 @@ if __name__ == '__main__':
     print("[*] Loading YAML data...")
     ryaml = yaml.YAML()
     yaml.reader.Reader.NON_PRINTABLE = re.compile(u'[^\x09\x0A\x0D\x20-\x7F\x85' u'\xA0-\uD7FF' u'\uE000-\uFFFD' u']')
+    yaml.reader.Reader._printable_ascii = ('\x09\x0A\x0D' + ''.join(map(chr, range(0x20, 0x80)))).encode('ascii')
     data = ryaml.load(file_data)
 
     print("[*] Converting the YAML to JSON...")
