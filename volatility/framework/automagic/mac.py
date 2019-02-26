@@ -257,6 +257,6 @@ class MacUtilities(object):
                     vnode = f.f_fglob.fg_data.dereference().cast("vnode")
                     path = vnode.full_path()
                 else:
-                    path = "<%s>" % ftype.replace("DTYPE_", "").lower()
+                    path = "<{}>".format(ftype.replace("DTYPE_", "").lower())
 
                 yield f, path, fd_num
