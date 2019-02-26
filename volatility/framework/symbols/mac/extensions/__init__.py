@@ -22,9 +22,9 @@ from typing import Generator, Iterable, Optional, Set, Tuple
 
 from volatility.framework import constants, objects
 from volatility.framework import exceptions, interfaces
-from volatility.framework.symbols import generic
 from volatility.framework.objects import utility
 from volatility.framework.renderers import conversion
+from volatility.framework.symbols import generic
 
 
 class proc(generic.GenericIntelProcess):
@@ -154,6 +154,7 @@ class vnode(objects.Struct):
 
         return ret.decode("utf-8")
 
+
 class vm_map_entry(objects.Struct):
 
     def is_suspicious(self, context, config_prefix):
@@ -278,7 +279,9 @@ class vm_map_entry(objects.Struct):
 
         return ret
 
+
 class socket(objects.Struct):
+
     def get_inpcb(self):
         try:
             ret = self.so_pcb.dereference().cast("inpcb")
@@ -292,14 +295,14 @@ class socket(objects.Struct):
 
     def get_protocol_as_string(self):
         proto = self.so_proto.pr_protocol
-       
+
         if proto == 6:
             ret = "TCP"
         elif proto == 17:
             ret = "UDP"
         else:
-            ret = ""             
- 
+            ret = ""
+
         return ret
 
     def get_state(self):
@@ -309,9 +312,9 @@ class socket(objects.Struct):
             inpcb = self.get_inpcb()
             if inpcb is not None:
                 ret = inpcb.get_tcp_state()
-        
+
         return ret
-        
+
     def get_connection_info(self):
         inpcb = self.get_inpcb()
 
@@ -334,21 +337,12 @@ class socket(objects.Struct):
 
         return ret
 
+
 class inpcb(objects.Struct):
-    
+
     def get_tcp_state(self):
-        tcp_states = (
-              "CLOSED",
-              "LISTEN",
-              "SYN_SENT",
-              "SYN_RECV",
-              "ESTABLISHED",
-              "CLOSE_WAIT",
-              "FIN_WAIT1",
-              "CLOSING",
-              "LAST_ACK",
-              "FIN_WAIT2",
-              "TIME_WAIT")
+        tcp_states = ("CLOSED", "LISTEN", "SYN_SENT", "SYN_RECV", "ESTABLISHED", "CLOSE_WAIT", "FIN_WAIT1", "CLOSING",
+                      "LAST_ACK", "FIN_WAIT2", "TIME_WAIT")
 
         try:
             tcpcb = self.inp_ppcb.dereference().cast("tcpcb")
@@ -364,23 +358,19 @@ class inpcb(objects.Struct):
         return state
 
     def get_ipv4_info(self):
-        lip = self.inp_dependladdr.inp46_local.ia46_addr4.s_addr   
-        lport = self.inp_lport 
+        lip = self.inp_dependladdr.inp46_local.ia46_addr4.s_addr
+        lport = self.inp_lport
 
         rip = self.inp_dependfaddr.inp46_foreign.ia46_addr4.s_addr
-        rport = self.inp_fport 
-    
+        rport = self.inp_fport
+
         return [lip, lport, rip, rport]
 
     def get_ipv6_info(self):
         lip = self.inp_dependladdr.inp6_local.member(attr = '__u6_addr').member(attr = '__u6_addr16')
-        lport = self.inp_lport 
+        lport = self.inp_lport
 
         rip = self.inp_dependfaddr.inp6_foreign.member(attr = '__u6_addr').member(attr = '__u6_addr16')
-        rport = self.inp_fport 
+        rport = self.inp_fport
 
         return [lip, lport, rip, rport]
-
-
-
-
