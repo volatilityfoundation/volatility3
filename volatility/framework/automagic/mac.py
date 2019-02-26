@@ -22,7 +22,7 @@ import logging
 import struct
 from typing import Optional
 
-from volatility.framework import interfaces, constants, layers
+from volatility.framework import interfaces, constants, layers, exceptions, objects
 from volatility.framework import symbols
 from volatility.framework.automagic import symbol_cache, symbol_finder
 from volatility.framework.layers import intel, scanners
