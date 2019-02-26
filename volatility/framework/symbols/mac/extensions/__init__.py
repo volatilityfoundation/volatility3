@@ -367,10 +367,10 @@ class inpcb(objects.Struct):
         return [lip, lport, rip, rport]
 
     def get_ipv6_info(self):
-        lip = self.inp_dependladdr.inp6_local.member(attr = '__u6_addr').member(attr = '__u6_addr16')
+        lip = self.inp_dependladdr.inp6_local.member(attr = '__u6_addr').member(attr = '__u6_addr32')
         lport = self.inp_lport
 
-        rip = self.inp_dependfaddr.inp6_foreign.member(attr = '__u6_addr').member(attr = '__u6_addr16')
+        rip = self.inp_dependfaddr.inp6_foreign.member(attr = '__u6_addr').member(attr = '__u6_addr32')
         rport = self.inp_fport
 
         return [lip, lport, rip, rport]
