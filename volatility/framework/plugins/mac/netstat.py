@@ -24,7 +24,7 @@ class Netstat(plugins.PluginInterface):
     def _generator(self, tasks):
         for task in tasks:
             task_name = utility.array_to_string(task.p_comm)
-            pid = int(task.p_pid)
+            pid = task.p_pid
 
             for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(self.config, self.context,
                                                                                            task):
