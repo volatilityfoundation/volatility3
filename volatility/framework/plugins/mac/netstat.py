@@ -41,7 +41,7 @@ class Netstat(plugins.PluginInterface):
                 except exceptions.PagedInvalidAddressException:
                     continue
  
-                family = int(socket.get_family())
+                family = socket.get_family()
 
                 if family == 1:
                     try:
