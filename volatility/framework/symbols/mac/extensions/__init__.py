@@ -20,7 +20,7 @@
 
 from typing import Generator, Iterable, Optional, Set, Tuple
 
-from volatility.framework import constants
+from volatility.framework import constants, objects
 from volatility.framework import exceptions, interfaces
 from volatility.framework.symbols import generic
 from volatility.framework.objects import utility
@@ -94,7 +94,7 @@ class proc(generic.GenericIntelProcess):
             yield (start, end - start)
 
 
-class fileglob(generic.GenericIntelProcess):
+class fileglob(objects.Struct):
 
     def get_fg_type(self):
         ret = "INVALID"
@@ -109,7 +109,7 @@ class fileglob(generic.GenericIntelProcess):
         return ret.description
 
 
-class vm_map_object(generic.GenericIntelProcess):
+class vm_map_object(objects.Struct):
 
     def get_map_object(self):
         if self.has_member("vm_object"):
@@ -120,7 +120,7 @@ class vm_map_object(generic.GenericIntelProcess):
         raise AttributeError("vm_map_object -> get_object")
 
 
-class vnode(generic.GenericIntelProcess):
+class vnode(objects.Struct):
 
     def _do_calc_path(self, ret, vnodeobj, vname):
         if vnodeobj is None:
@@ -154,7 +154,7 @@ class vnode(generic.GenericIntelProcess):
 
         return ret.decode("utf-8")
 
-class vm_map_entry(generic.GenericIntelProcess):
+class vm_map_entry(objects.Struct):
 
     def is_suspicious(self, context, config_prefix):
         """Flags memory regions that are mapped rwx or that map an executable not back from a file on disk"""
@@ -278,7 +278,7 @@ class vm_map_entry(generic.GenericIntelProcess):
 
         return ret
 
-class socket(generic.GenericIntelProcess):
+class socket(objects.Struct):
     def get_inpcb(self):
         try:
             ret = self.so_pcb.dereference().cast("inpcb")
@@ -334,7 +334,7 @@ class socket(generic.GenericIntelProcess):
 
         return ret
 
-class inpcb(generic.GenericIntelProcess):
+class inpcb(objects.Struct):
     
     def get_tcp_state(self):
         tcp_states = (
