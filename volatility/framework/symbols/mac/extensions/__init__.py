@@ -137,7 +137,7 @@ class vnode(generic.GenericIntelProcess):
 
     def full_path(self):
         if self.v_flag & 0x000001 != 0 and self.v_mount != 0 and self.v_mount.mnt_flag & 0x00004000 != 0:
-            ret = "/"
+            ret = b"/"
         else:
             elements = []
             files = []
@@ -152,8 +152,7 @@ class vnode(generic.GenericIntelProcess):
             if ret:
                 ret = b"/" + ret
 
-        return ret
-
+        return ret.decode("utf-8")
 
 class vm_map_entry(generic.GenericIntelProcess):
 
