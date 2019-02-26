@@ -1,6 +1,3 @@
-"""A module containing a collection of plugins that produce data
-typically found in Linux's /proc file system.
-"""
 import logging
 
 from volatility.framework import exceptions, renderers
