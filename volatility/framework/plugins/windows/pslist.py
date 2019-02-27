@@ -51,13 +51,13 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
-    def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
+    def create_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
         filter_func = lambda _: False
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
         if filter_list:
-            filter_func = lambda x: x not in filter_list
+            filter_func = lambda x: x.UniqueProcessId not in filter_list
         return filter_func
 
     @classmethod
