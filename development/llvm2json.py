@@ -4,9 +4,18 @@ import datetime
 import json
 import re
 import subprocess
+from ruamel import yaml
 from typing import Dict
 
-from ruamel import yaml
+import cxxfilt
+import speg
+
+try:
+    import cppmangle
+
+    CPPMANGLE = True
+except ImportError:
+    CPPMANGLE = False
 
 value_map = {
     'LF_STRUCTURE': 'Class',
@@ -276,7 +285,20 @@ class SymbolConverter:
             record = entry.get('PublicSym32', {})
             if record:
                 name = record['Name']
-                output[name] = {'address': record['Offset']}
+                if CPPMANGLE:
+                    try:
+                        demangled_name = cppmangle.cdecl_sym(cppmangle.demangle(name))
+                    except (speg.ParseError, KeyError, IndexError):
+                        # TODO: report there's been an error demangling names
+                        demangled_name = name
+                    if demangled_name != name:
+                        output[demangled_name] = {'address': record['Offset'], 'linkage_name': name}
+                        print("  - {}".format(demangled_name))
+                    else:
+                        output[name] = {'address': record['Offset']}
+
+                else:
+                    output[name] = {'address': record['Offset']}
         return output
 
     def export_json(self) -> Dict:
