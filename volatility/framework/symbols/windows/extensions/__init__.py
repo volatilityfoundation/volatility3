@@ -520,7 +520,7 @@ class _OBJECT_HEADER(objects.Struct):
             header_offset = self._context.object(
                 symbol_table_name + constants.BANG + "unsigned char",
                 layer_name = self.vol.native_layer_name,
-                offset = address + calculated_index)
+                offset = kvo + address + calculated_index)
 
         header = self._context.object(
             symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
