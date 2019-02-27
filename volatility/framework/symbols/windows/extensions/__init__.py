@@ -457,6 +457,17 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
 
         return name
 
+class _KMUTANT(objects.Struct, ExecutiveObject):
+    """A class for windows mutant objects"""
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid"""
+        return True
+
+    def get_name(self) -> str:
+        """Get the object's name from the object header"""
+        header = self.object_header()
+        return header.NameInfo.Name.String  # type: ignore
 
 class _OBJECT_HEADER(objects.Struct):
     """A class for the headers for executive kernel objects, which contains

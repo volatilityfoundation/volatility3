@@ -204,6 +204,20 @@ class PoolScanner(plugins.PluginInterface):
                 object_type = "File",
                 size = (150, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # mutants on windows before windows 8
+            PoolConstraint(
+                b'Mut\xe1',
+                type_name = symbol_table + constants.BANG + "_KMUTANT",
+                object_type = "Mutant",
+                size = (64, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # mutants on windows starting with windows 8
+            PoolConstraint(
+                b'Muta',
+                type_name = symbol_table + constants.BANG + "_KMUTANT",
+                object_type = "Mutant",
+                size = (64, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         if not tags_filter:
