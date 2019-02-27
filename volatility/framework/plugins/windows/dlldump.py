@@ -22,10 +22,11 @@ import logging
 import ntpath
 from typing import List
 
-import volatility.framework.constants as constants
-import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
+
+import volatility.framework.constants as constants
+import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import interfaces
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
@@ -50,7 +51,7 @@ class DllDump(interfaces_plugins.PluginInterface):
                                             description = "Process virtual memory address to include " \
                                                           "(all other address ranges are excluded). This must be " \
                                                           "a base address, not an address within the desired range.",
-                                            optional = True)]
+                                            optional = True)] + pslist.PsList.list_processes_filter_requirements
 
     def _generator(self, procs):
         pe_table_name = PEIntermedSymbols.create(self.context, self.config_path, "windows", "pe")

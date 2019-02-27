@@ -66,7 +66,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                             description = "Process virtual memory address to include " \
                                                           "(all other address ranges are excluded). This must be " \
                                                           "a base address, not an address within the desired range.",
-                                            optional = True)]
+                                            optional = True)] + pslist.PsList.list_processes_filter_requirements
 
     @classmethod
     def protect_values(cls, context: interfaces.context.ContextInterface, virtual_layer: str,

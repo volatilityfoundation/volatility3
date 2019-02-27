@@ -20,6 +20,7 @@
 
 import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
+
 from volatility.framework import interfaces, symbols
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
@@ -37,7 +38,7 @@ class Malfind(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
-        ]
+        ] + pslist.PsList.list_processes_filter_requirements
 
     @classmethod
     def is_vad_empty(self, proc_layer, vad):

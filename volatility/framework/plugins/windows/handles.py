@@ -56,7 +56,7 @@ class Handles(interfaces_plugins.PluginInterface):
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
-        ]
+        ] + pslist.PsList.list_processes_filter_requirements
 
     def _decode_pointer(self, value, magic):
         """Windows encodes pointers to objects and decodes them on the fly
