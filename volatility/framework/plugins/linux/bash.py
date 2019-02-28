@@ -100,19 +100,21 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     def run(self):
         filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        plugin = pslist.PsList.list_tasks
-
-        return renderers.TreeGrid(
-            [("PID", int), ("Process", str), ("CommandTime", datetime.datetime), ("Command", str)],
-            self._generator(plugin(self.context, self.config['primary'], self.config['vmlinux'], filter = filter_func)))
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("CommandTime", datetime.datetime),
+                                   ("Command", str)],
+                                  self._generator(
+                                      pslist.PsList.list_tasks(
+                                          self.context,
+                                          self.config['primary'],
+                                          self.config['vmlinux'],
+                                          filter_func = filter_func)))
 
     def generate_timeline(self):
         filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        plugin = pslist.PsList.list_tasks
-
         for row in self._generator(
-                plugin(self.context, self.config['primary'], self.config['vmlinux'], filter = filter_func)):
+                pslist.PsList.list_tasks(
+                    self.context, self.config['primary'], self.config['vmlinux'], filter_func = filter_func)):
             _depth, row_data = row
             description = "{} ({}): \"{}\"".format(row_data[0], row_data[1], row_data[3])
             yield (description, timeliner.TimeLinerType.CREATED, row_data[2])

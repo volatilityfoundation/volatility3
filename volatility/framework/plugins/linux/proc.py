@@ -69,11 +69,15 @@ class Maps(plugins.PluginInterface):
                            format_hints.Hex(page_offset), major, minor, inode, path))
 
     def run(self):
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        plugin = pslist.PsList.list_tasks
-
-        return renderers.TreeGrid(
-            [("PID", int), ("Process", str), ("Start", format_hints.Hex), ("End", format_hints.Hex), ("Flags", str),
-             ("PgOff", format_hints.Hex), ("Major", int), ("Minor", int), ("Inode", int), ("File Path", str)],
-            self._generator(plugin(self.context, self.config['primary'], self.config['vmlinux'], filter = filter)))
+        return renderers.TreeGrid([("PID", int), ("Process", str),
+                                   ("Start", format_hints.Hex), ("End", format_hints.Hex), ("Flags", str),
+                                   ("PgOff", format_hints.Hex), ("Major", int), ("Minor", int), ("Inode", int),
+                                   ("File Path", str)],
+                                  self._generator(
+                                      pslist.PsList.list_tasks(
+                                          self.context,
+                                          self.config['primary'],
+                                          self.config['vmlinux'],
+                                          filter_func = filter_func)))

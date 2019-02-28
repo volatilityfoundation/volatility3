@@ -57,7 +57,7 @@ class PsList(interfaces_plugins.PluginInterface):
                 self.context,
                 self.config['primary'],
                 self.config['vmlinux'],
-                filter = self.create_filter([self.config.get('pid', None)])):
+                filter_func = self.create_filter([self.config.get('pid', None)])):
             pid = task.pid
             ppid = 0
             if task.parent:
@@ -70,7 +70,8 @@ class PsList(interfaces_plugins.PluginInterface):
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
                    vmlinux_symbols: str,
-                   filter: Callable[[int], bool] = lambda _: False) -> Iterable[interfaces.objects.ObjectInterface]:
+                   filter_func: Callable[[int], bool] = lambda _: False
+                   ) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer"""
         linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
@@ -79,7 +80,7 @@ class PsList(interfaces_plugins.PluginInterface):
         init_task = vmlinux.object(symbol_name = "init_task")
 
         for task in init_task.tasks:
-            if not filter(task):
+            if not filter_func(task):
                 yield task
 
     def run(self):

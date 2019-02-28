@@ -68,11 +68,13 @@ class Netstat(plugins.PluginInterface):
     def run(self):
         # mac.MacUtilities.aslr_mask_symbol_table(self.config, self.context)
 
-        filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
-        plugin = pslist.PsList.list_tasks
-
-        return renderers.TreeGrid(
-            [("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int), ("Remote IP", str),
-             ("Remote Port", int), ("State", str), ("Process", str)],
-            self._generator(plugin(self.context, self.config['primary'], self.config['darwin'], filter = filter)))
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),
+                                   ("Remote IP", str), ("Remote Port", int), ("State", str), ("Process", str)],
+                                  self._generator(
+                                      pslist.PsList.list_tasks(
+                                          self.context,
+                                          self.config['primary'],
+                                          self.config['darwin'],
+                                          filter_func = filter_func)))

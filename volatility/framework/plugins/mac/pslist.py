@@ -64,7 +64,7 @@ class PsList(interfaces_plugins.PluginInterface):
                 self.context,
                 self.config['primary'],
                 self.config['darwin'],
-                filter = self.create_filter([self.config.get('pid', None)])):
+                filter_func = self.create_filter([self.config.get('pid', None)])):
             pid = task.p_pid
             ppid = task.p_ppid
             name = utility.array_to_string(task.p_comm)
@@ -75,7 +75,7 @@ class PsList(interfaces_plugins.PluginInterface):
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
                    darwin_symbols: str,
-                   filter: Callable[[int], bool] = lambda _: False) -> \
+                   filter_func: Callable[[int], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer"""
 
@@ -93,7 +93,8 @@ class PsList(interfaces_plugins.PluginInterface):
             else:
                 seen[proc.vol.offset] = 1
 
-            yield proc
+            if not filter_func(proc):
+                yield proc
 
             proc = proc.p_list.le_next.dereference()
 

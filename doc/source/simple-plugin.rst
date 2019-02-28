@@ -98,7 +98,7 @@ that will be output as part of the `TreeGrid`.
 
         def run(self):
 
-            filter = pslist.PsList.create_filter([self.config.get('pid', None)])
+            filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
 
             return renderers.TreeGrid([("PID", int),
                                        ("Process", str),
