@@ -17,10 +17,11 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
 # specific language governing rights and limitations under the License.
 #
-
+import threading
+from contextlib import contextmanager
 from typing import Any, Dict, IO, List, Optional
 
-from volatility.framework import exceptions, interfaces
+from volatility.framework import exceptions, interfaces, constants
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import resources
 
@@ -77,6 +78,15 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
         ]
 
 
+class DummyLock:
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, type, value, traceback):
+        pass
+
+
 class FileLayer(interfaces.layers.DataLayerInterface):
     """a DataLayer backed by a file on the filesystem"""
 
@@ -93,6 +103,12 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._accessor = resources.ResourceAccessor()
         self._file_ = None  # type: Optional[IO[Any]]
         self._size = None  # type: Optional[int]
+        # Construct the lock now (shared if made before threading) in case we ever need it
+        if constants.PARALLELISM == 'threading':
+            self._lock = threading.Lock()
+        else:
+            # We don't need a lock for multiprocessing because child threads can't inherit file descriptors by default
+            self._lock = DummyLock()
         # Instantiate the file to throw exceptions if the file doesn't open
         _ = self._file
 
@@ -115,10 +131,11 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         # Zero based, so we return the size of the file minus 1
         if self._size:
             return self._size
-        orig = self._file.tell()
-        self._file.seek(0, 2)
-        self._size = self._file.tell()
-        self._file.seek(orig)
+        with self._lock:
+            orig = self._file.tell()
+            self._file.seek(0, 2)
+            self._size = self._file.tell()
+            self._file.seek(orig)
         return self._size
 
     @property
@@ -141,8 +158,12 @@ class FileLayer(interfaces.layers.DataLayerInterface):
                 invalid_address = self.maximum_address + 1
             raise exceptions.InvalidAddressException(self.name, invalid_address,
                                                      "Offset outside of the buffer boundaries")
-        self._file.seek(offset)
-        data = self._file.read(length)
+
+        # TODO: implement locking for multi-threading
+        with self._lock:
+            self._file.seek(offset)
+            data = self._file.read(length)
+
         if len(data) < length:
             if pad:
                 data += (b"\x00" * (length - len(data)))
@@ -162,8 +183,9 @@ class FileLayer(interfaces.layers.DataLayerInterface):
                 invalid_address = self.maximum_address + 1
             raise exceptions.InvalidAddressException(self.name, invalid_address,
                                                      "Data segment outside of the " + self.name + " file boundaries")
-        self._file.seek(offset)
-        self._file.write(data)
+        with self._lock:
+            self._file.seek(offset)
+            self._file.write(data)
 
     def __getstate__(self) -> Dict[str, Any]:
         """Do not store the open _file_ attribute, our property will ensure the file is open when needed

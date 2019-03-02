@@ -38,7 +38,6 @@ SYMBOL_BASEPATHS = [
 ]
 BANG = "!"
 PACKAGE_VERSION = "3.0.0_alpha1"
-DISABLE_MULTITHREADED_SCANNING = False
 AUTOMAGIC_CONFIG_PATH = 'automagic'
 
 LOGLEVEL_V = 9
@@ -56,3 +55,6 @@ LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
 MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
 
 ProgressCallback = Optional[Callable[[float, str], None]]
+
+# Options are 'multiprocessing', 'threading' or None
+PARALLELISM = 'multiprocessing'

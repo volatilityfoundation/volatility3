@@ -43,8 +43,7 @@ class BytesScanner(layers.ScannerInterface):
 
 
 class RegExScanner(layers.ScannerInterface):
-    # TODO: Document why this isn't thread safe?
-    thread_safe = False
+    thread_safe = True
 
     def __init__(self, pattern: bytes, flags: int = 0) -> None:
         super().__init__()
