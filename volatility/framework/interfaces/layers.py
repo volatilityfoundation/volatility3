@@ -383,7 +383,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 current_offset = offset
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
-            output += [self._context.memory.read(layer, mapped_offset, mapped_length, pad)]
+            if mapped_length > 0:
+                output += [self._context.memory.read(layer, mapped_offset, mapped_length, pad)]
             current_offset += mapped_length
         recovered_data = b"".join(output)
         return recovered_data + b"\x00" * (length - len(recovered_data))

@@ -73,14 +73,13 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
 
         # Find rightmost value less than or equal to x
         i = bisect_right(self._segments, (offset, self.context.memory[self._base_layer].maximum_address))
-        if i:
-            if not next:
-                segment = self._segments[i - 1]
-                if segment[0] <= offset < segment[0] + segment[2]:
-                    return segment
-            else:
-                if i < len(self._segments):
-                    return self._segments[i]
+        if i and not next:
+            segment = self._segments[i - 1]
+            if segment[0] <= offset < segment[0] + segment[2]:
+                return segment
+        if next:
+            if i < len(self._segments):
+                return self._segments[i]
         raise exceptions.InvalidAddressException(self.name, offset, "Invalid address at {:0x}".format(offset))
 
     def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
