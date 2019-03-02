@@ -56,5 +56,8 @@ MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
 
 ProgressCallback = Optional[Callable[[float, str], None]]
 
-# Options are 'multiprocessing', 'threading' or None
-PARALLELISM = 'multiprocessing'
+PARALLELISM_OFF = 0
+PARALLELISM_THREADING = 1
+PARALLELISM_MULTIPROCESSING = 2
+
+PARALLELISM = PARALLELISM_MULTIPROCESSING

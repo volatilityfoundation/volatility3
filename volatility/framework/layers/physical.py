@@ -104,7 +104,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._file_ = None  # type: Optional[IO[Any]]
         self._size = None  # type: Optional[int]
         # Construct the lock now (shared if made before threading) in case we ever need it
-        if constants.PARALLELISM == 'threading':
+        if constants.PARALLELISM == constants.PARALLELISM_THREADING:
             self._lock = threading.Lock()
         else:
             # We don't need a lock for multiprocessing because child threads can't inherit file descriptors by default
