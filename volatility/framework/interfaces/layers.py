@@ -212,7 +212,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
             progress = DummyProgress()  # type: ProgressValue
             scan_iterator = functools.partial(self._scan_iterator, scanner, sections)
             scan_metric = self._scan_metric(scanner, sections)
-            if scanner.thread_safe and not constants.PARALLELISM:
+            if scanner.thread_safe and constants.PARALLELISM:
                 progress = multiprocessing.Manager().Value("Q", 0)
                 scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
                 with multiprocessing.Pool() as pool:
