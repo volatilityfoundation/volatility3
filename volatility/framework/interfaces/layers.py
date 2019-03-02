@@ -426,7 +426,7 @@ class Memory(collections.abc.Mapping):
     def __init__(self) -> None:
         self._layers = {}  # type: Dict[str, DataLayerInterface]
 
-    def read(self, layer: str, offset: int, length: int, pad: bool = False):
+    def read(self, layer: str, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads from a particular layer at offset for length bytes
 
            Returns 'bytes' not 'str'

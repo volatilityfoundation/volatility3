@@ -18,7 +18,6 @@
 # specific language governing rights and limitations under the License.
 #
 import threading
-from contextlib import contextmanager
 from typing import Any, Dict, IO, List, Optional
 
 from volatility.framework import exceptions, interfaces, constants

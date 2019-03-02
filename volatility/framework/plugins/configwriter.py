@@ -53,7 +53,7 @@ class ConfigWriter(plugins.PluginInterface):
             filedata.data.write(bytes(json.dumps(config, sort_keys = True, indent = 2), 'latin-1'))
             self.produce_file(filedata)
         except Exception:
-            vollog.warn("Unable to JSON encode configuration")
+            vollog.warning("Unable to JSON encode configuration")
 
         for k, v in config.items():
             yield (0, (k, json.dumps(v)))
