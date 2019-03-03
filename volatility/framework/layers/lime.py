@@ -46,8 +46,7 @@ class LimeLayer(segmented.SegmentedLayer):
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str) -> None:
         super().__init__(context, config_path, name)
 
-        # We must run this on creation in order to get the right min/maxaddr in case scanning is our first action
-        self._load_segments()
+        # The base class loads the segments on initialization, but otherwise this must to get the right min/max addresses
 
     def _load_segments(self) -> None:
         base_layer = self._context.memory[self._base_layer]
