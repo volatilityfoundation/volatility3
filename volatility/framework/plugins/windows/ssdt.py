@@ -43,9 +43,14 @@ class SSDT(plugins.PluginInterface):
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
-    def _generator(self, mods: Iterator[Any]) -> Iterator[Tuple[int, Tuple[int, int, Any, Any]]]:
+    @classmethod
+    def build_module_collection(cls,
+                                context: interfaces.context.ContextInterface,
+                                layer_name: str,
+                                symbol_table: str) -> contexts.ModuleCollection:
+        """Builds a collection of modules"""
 
-        layer_name = self.config['primary']
+        mods = modules.Modules.list_modules(context, layer_name, symbol_table)
         context_modules = []
 
         for mod in mods:
@@ -59,16 +64,27 @@ class SSDT(plugins.PluginInterface):
             module_name = os.path.splitext(module_name_with_ext)[0]
 
             if module_name in windows_constants.KERNEL_MODULE_NAMES:
-                symbol_table_name = self.config["nt_symbols"]
+                symbol_table_name = symbol_table
             else:
                 symbol_table_name = None
 
-            context_module = contexts.SizedModule(self._context, module_name, layer_name, mod.DllBase, mod.SizeOfImage,
+            context_module = contexts.SizedModule(context,
+                                                  module_name,
+                                                  layer_name,
+                                                  mod.DllBase,
+                                                  mod.SizeOfImage,
                                                   symbol_table_name)
 
             context_modules.append(context_module)
 
-        collection = contexts.ModuleCollection(context_modules)
+        return contexts.ModuleCollection(context_modules)
+
+    def _generator(self) -> Iterator[Tuple[int, Tuple[int, int, Any, Any]]]:
+
+        layer_name = self.config['primary']
+        collection = self.build_module_collection(self.context,
+                                                  self.config["primary"],
+                                                  self.config["nt_symbols"])
 
         kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = layer_name, offset = kvo)
@@ -122,6 +138,4 @@ class SSDT(plugins.PluginInterface):
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Index", int), ("Address", format_hints.Hex), ("Module", str), ("Symbol", str)],
-                                  self._generator(
-                                      modules.Modules.list_modules(self.context, self.config['primary'],
-                                                                   self.config['nt_symbols'])))
+                                  self._generator())
