@@ -26,7 +26,7 @@ from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins import timeliner
-import volatility.plugins.windows.poolscanner as poolscanner
+import volatility.framework.plugins.windows.poolscanner as poolscanner
 
 class PsScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image"""
