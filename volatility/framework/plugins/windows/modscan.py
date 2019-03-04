@@ -20,11 +20,13 @@
 
 from typing import Iterable
 
+import volatility.plugins.windows.poolscanner as poolscanner
+
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-import volatility.plugins.windows.poolscanner as poolscanner
+
 
 class ModScan(plugins.PluginInterface):
     """Scans for modules present in a particular windows memory image"""
@@ -47,18 +49,13 @@ class ModScan(plugins.PluginInterface):
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'MmLd'])
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context,
-                                                                 layer_name,
-                                                                 symbol_table,
-                                                                 constraints):
+        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
 
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        for mod in self.scan_modules(self.context,
-                                     self.config['primary'],
-                                     self.config['nt_symbols']):
+        for mod in self.scan_modules(self.context, self.config['primary'], self.config['nt_symbols']):
 
             try:
                 BaseDllName = mod.BaseDllName.get_string()
@@ -79,9 +76,5 @@ class ModScan(plugins.PluginInterface):
             ))
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex),
-                                   ("Base", format_hints.Hex),
-                                   ("Size", format_hints.Hex),
-                                   ("Name", str),
-                                   ("Path", str)],
-                                  self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Base", format_hints.Hex), ("Size", format_hints.Hex),
+                                   ("Name", str), ("Path", str)], self._generator())

@@ -26,6 +26,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 import volatility.plugins.windows.poolscanner as poolscanner
 
+
 class MutantScan(plugins.PluginInterface):
     """Scans for mutexes present in a particular windows memory image"""
 
@@ -45,21 +46,15 @@ class MutantScan(plugins.PluginInterface):
             Iterable[interfaces.objects.ObjectInterface]:
         """Scans for mutants using the poolscanner module and constraints"""
 
-        constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table,
-                                                                  [b'Mut\xe1', b'Muta'])
+        constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Mut\xe1', b'Muta'])
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context,
-                                                                 layer_name,
-                                                                 symbol_table,
-                                                                 constraints):
+        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
 
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        for mutant in self.scan_mutants(self.context,
-                                        self.config['primary'],
-                                        self.config['nt_symbols']):
+        for mutant in self.scan_mutants(self.context, self.config['primary'], self.config['nt_symbols']):
 
             try:
                 name = mutant.get_name()
@@ -69,5 +64,7 @@ class MutantScan(plugins.PluginInterface):
             yield (0, (format_hints.Hex(mutant.vol.offset), name))
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Name", str),],
-                                  self._generator())
+        return renderers.TreeGrid([
+            ("Offset", format_hints.Hex),
+            ("Name", str),
+        ], self._generator())

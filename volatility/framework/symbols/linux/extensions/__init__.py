@@ -239,8 +239,9 @@ class vm_area_struct(objects.Struct):
 
         elif flags_str == "r-x" and self.vm_file.dereference().vol.offset == 0:
             ret = True
-        
+
         return ret
+
 
 class qstr(objects.Struct):
 

@@ -26,6 +26,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 import volatility.plugins.windows.poolscanner as poolscanner
 
+
 class FileScan(plugins.PluginInterface):
     """Scans for file objects present in a particular windows memory image"""
 
@@ -45,21 +46,15 @@ class FileScan(plugins.PluginInterface):
             Iterable[interfaces.objects.ObjectInterface]:
         """Scans for file objects using the poolscanner module and constraints"""
 
-        constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table,
-                                                                  [b'Fil\xe5', b'File'])
+        constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Fil\xe5', b'File'])
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context,
-                                                                 layer_name,
-                                                                 symbol_table,
-                                                                 constraints):
+        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
 
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        for fileobj in self.scan_files(self.context,
-                                       self.config['primary'],
-                                       self.config['nt_symbols']):
+        for fileobj in self.scan_files(self.context, self.config['primary'], self.config['nt_symbols']):
 
             try:
                 file_name = fileobj.FileName.String
@@ -69,5 +64,7 @@ class FileScan(plugins.PluginInterface):
             yield (0, (format_hints.Hex(fileobj.vol.offset), file_name))
 
     def run(self):
-        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Name", str),],
-                                  self._generator())
+        return renderers.TreeGrid([
+            ("Offset", format_hints.Hex),
+            ("Name", str),
+        ], self._generator())

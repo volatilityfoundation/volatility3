@@ -436,6 +436,7 @@ class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
         header = self.object_header()
         return header.NameInfo.Name.String  # type: ignore
 
+
 class _DRIVER_OBJECT(objects.Struct, ExecutiveObject):
     """A class for kernel driver objects."""
 
@@ -446,6 +447,7 @@ class _DRIVER_OBJECT(objects.Struct, ExecutiveObject):
     def is_valid(self) -> bool:
         """Determine if the object is valid"""
         return True
+
 
 class _FILE_OBJECT(objects.Struct, ExecutiveObject):
     """A class for windows file objects"""
@@ -467,6 +469,7 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
 
         return name
 
+
 class _KMUTANT(objects.Struct, ExecutiveObject):
     """A class for windows mutant objects"""
 
@@ -478,6 +481,7 @@ class _KMUTANT(objects.Struct, ExecutiveObject):
         """Get the object's name from the object header"""
         header = self.object_header()
         return header.NameInfo.Name.String  # type: ignore
+
 
 class _OBJECT_HEADER(objects.Struct):
     """A class for the headers for executive kernel objects, which contains

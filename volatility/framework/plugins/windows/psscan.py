@@ -28,6 +28,7 @@ from volatility.framework.renderers import format_hints
 from volatility.plugins import timeliner
 import volatility.plugins.windows.poolscanner as poolscanner
 
+
 class PsScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image"""
 
@@ -47,27 +48,20 @@ class PsScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
             Iterable[interfaces.objects.ObjectInterface]:
         """Scans for processes using the poolscanner module and constraints"""
 
-        constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table,
-                                                                  [b'Pro\xe3', b'Proc'])
+        constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Pro\xe3', b'Proc'])
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context,
-                                                                 layer_name,
-                                                                 symbol_table,
-                                                                 constraints):
+        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
 
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        for proc in self.scan_processes(
-                self.context,
-                self.config['primary'],
-                self.config['nt_symbols']):
+        for proc in self.scan_processes(self.context, self.config['primary'], self.config['nt_symbols']):
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
-                       format_hints.Hex(proc.vol.offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
-                       proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time()))
+                       format_hints.Hex(proc.vol.offset), proc.ActiveThreads, proc.get_handle_count(),
+                       proc.get_session_id(), proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time()))
 
     def generate_timeline(self):
         for row in self._generator():
@@ -77,8 +71,7 @@ class PsScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
             yield (description, timeliner.TimeLinerType.MODIFIED, row_data[9])
 
     def run(self):
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str),
-                                   ("Offset", format_hints.Hex), ("Threads", int),
-                                   ("Handles", int), ("SessionId", int), ("Wow64", bool),
+        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str), ("Offset", format_hints.Hex),
+                                   ("Threads", int), ("Handles", int), ("SessionId", int), ("Wow64", bool),
                                    ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime)],
                                   self._generator())

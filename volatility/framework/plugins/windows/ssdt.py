@@ -44,9 +44,7 @@ class SSDT(plugins.PluginInterface):
         ]
 
     @classmethod
-    def build_module_collection(cls,
-                                context: interfaces.context.ContextInterface,
-                                layer_name: str,
+    def build_module_collection(cls, context: interfaces.context.ContextInterface, layer_name: str,
                                 symbol_table: str) -> contexts.ModuleCollection:
         """Builds a collection of modules"""
 
@@ -68,11 +66,7 @@ class SSDT(plugins.PluginInterface):
             else:
                 symbol_table_name = None
 
-            context_module = contexts.SizedModule(context,
-                                                  module_name,
-                                                  layer_name,
-                                                  mod.DllBase,
-                                                  mod.SizeOfImage,
+            context_module = contexts.SizedModule(context, module_name, layer_name, mod.DllBase, mod.SizeOfImage,
                                                   symbol_table_name)
 
             context_modules.append(context_module)
@@ -82,9 +76,7 @@ class SSDT(plugins.PluginInterface):
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, int, Any, Any]]]:
 
         layer_name = self.config['primary']
-        collection = self.build_module_collection(self.context,
-                                                  self.config["primary"],
-                                                  self.config["nt_symbols"])
+        collection = self.build_module_collection(self.context, self.config["primary"], self.config["nt_symbols"])
 
         kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = layer_name, offset = kvo)
