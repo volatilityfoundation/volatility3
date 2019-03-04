@@ -232,6 +232,12 @@ class PoolScanner(plugins.PluginInterface):
                 object_type = "Driver",
                 size = (248, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # kernel modules
+            PoolConstraint(
+                b'MmLd',
+                type_name = symbol_table + constants.BANG + "_LDR_DATA_TABLE_ENTRY",
+                size = (76, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         if not tags_filter:
