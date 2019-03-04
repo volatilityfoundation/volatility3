@@ -22,7 +22,7 @@ import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.framework.plugins.windows.driverscan import DriverScan
+from volatility.plugins.windows.driverscan import DriverScan
 from volatility.plugins.windows import ssdt
 from volatility.framework import constants
 
