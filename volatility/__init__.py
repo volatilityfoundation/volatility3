@@ -18,3 +18,18 @@
 # specific language governing rights and limitations under the License.
 #
 """Volatility 3 - An open-source memory forensics framework"""
+import sys
+from importlib import abc
+
+
+class WarningFindSpec(abc.MetaPathFinder):
+    """Checks import attempts and throws a warning if the name shouldn't be used"""
+
+    def find_spec(name: str, _p, _t):
+        """Mock find_spec method that just checks the name, this must go first"""
+        if name.startswith("volatility.framework.plugins."):
+            raise Warning("Please do not use the volatility.framework.plugins namespace, only use volatility.plugins")
+
+
+if WarningFindSpec not in sys.meta_path:
+    sys.meta_path = [WarningFindSpec] + sys.meta_path
