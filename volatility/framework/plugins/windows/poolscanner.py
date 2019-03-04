@@ -218,6 +218,20 @@ class PoolScanner(plugins.PluginInterface):
                 object_type = "Mutant",
                 size = (64, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # drivers on windows before windows 8
+            PoolConstraint(
+                b'Dri\xf6',
+                type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
+                object_type = "Driver",
+                size = (248, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # drivers on windows starting with windows 8
+            PoolConstraint(
+                b'Driv',
+                type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
+                object_type = "Driver",
+                size = (248, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         if not tags_filter:

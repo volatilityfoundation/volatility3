@@ -47,6 +47,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_MMVAD', extensions._MMVAD)
         self.set_type_class('_KSYSTEM_TIME', extensions._KSYSTEM_TIME)
         self.set_type_class('_KMUTANT', extensions._KMUTANT)
+        self.set_type_class('_DRIVER_OBJECT', extensions._DRIVER_OBJECT)
 
         # This doesn't exist in very specific versions of windows
         try:

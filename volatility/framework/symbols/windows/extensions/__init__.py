@@ -436,6 +436,16 @@ class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
         header = self.object_header()
         return header.NameInfo.Name.String  # type: ignore
 
+class _DRIVER_OBJECT(objects.Struct, ExecutiveObject):
+    """A class for kernel driver objects."""
+
+    def get_driver_name(self) -> str:
+        header = self.object_header()
+        return header.NameInfo.Name.String  # type: ignore
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid"""
+        return True
 
 class _FILE_OBJECT(objects.Struct, ExecutiveObject):
     """A class for windows file objects"""
