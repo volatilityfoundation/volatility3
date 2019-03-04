@@ -53,9 +53,8 @@ class DriverScan(plugins.PluginInterface):
                                                                  symbol_table,
                                                                  constraints):
 
-            constraint, mem_object, _header = result
-            if constraint.object_type == "Driver":
-                yield mem_object
+            _constraint, mem_object, _header = result
+            yield mem_object
 
     def _generator(self):
         for driver in self.scan_drivers(self.context,

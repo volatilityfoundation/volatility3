@@ -53,9 +53,8 @@ class FileScan(plugins.PluginInterface):
                                                                  symbol_table,
                                                                  constraints):
 
-            constraint, mem_object, _header = result
-            if constraint.object_type == "File":
-                yield mem_object
+            _constraint, mem_object, _header = result
+            yield mem_object
 
     def _generator(self):
         for fileobj in self.scan_files(self.context,

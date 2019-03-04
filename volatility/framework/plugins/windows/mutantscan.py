@@ -53,9 +53,8 @@ class MutantScan(plugins.PluginInterface):
                                                                  symbol_table,
                                                                  constraints):
 
-            constraint, mem_object, _header = result
-            if constraint.object_type == "Mutant":
-                yield mem_object
+            _constraint, mem_object, _header = result
+            yield mem_object
 
     def _generator(self):
         for mutant in self.scan_mutants(self.context,
