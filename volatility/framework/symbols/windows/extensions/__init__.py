@@ -449,6 +449,21 @@ class _DRIVER_OBJECT(objects.Struct, ExecutiveObject):
         return True
 
 
+class _OBJECT_SYMBOLIC_LINK(objects.Struct, ExecutiveObject):
+    """A class for kernel link objects."""
+
+    def get_link_name(self) -> str:
+        header = self.object_header()
+        return header.NameInfo.Name.String  # type: ignore
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid"""
+        return True
+
+    def get_create_time(self):
+        return conversion.wintime_to_datetime(self.CreationTime.QuadPart)
+
+
 class _FILE_OBJECT(objects.Struct, ExecutiveObject):
     """A class for windows file objects"""
 

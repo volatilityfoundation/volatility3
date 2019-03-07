@@ -48,6 +48,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_KSYSTEM_TIME', extensions._KSYSTEM_TIME)
         self.set_type_class('_KMUTANT', extensions._KMUTANT)
         self.set_type_class('_DRIVER_OBJECT', extensions._DRIVER_OBJECT)
+        self.set_type_class('_OBJECT_SYMBOLIC_LINK', extensions._OBJECT_SYMBOLIC_LINK)
 
         # This doesn't exist in very specific versions of windows
         try:

@@ -238,6 +238,20 @@ class PoolScanner(plugins.PluginInterface):
                 type_name = symbol_table + constants.BANG + "_LDR_DATA_TABLE_ENTRY",
                 size = (76, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # symlinks on windows before windows 8
+            PoolConstraint(
+                b'Sym\xe2',
+                type_name = symbol_table + constants.BANG + "_OBJECT_SYMBOLIC_LINK",
+                object_type = "SymbolicLink",
+                size = (72, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # symlinks on windows starting with windows 8
+            PoolConstraint(
+                b'Symb',
+                type_name = symbol_table + constants.BANG + "_OBJECT_SYMBOLIC_LINK",
+                object_type = "SymbolicLink",
+                size = (72, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         if not tags_filter:
