@@ -151,36 +151,35 @@ class _CM_KEY_NODE(objects.Struct):
         for index in range(2):
             # Use get_cell because it should *always* be a KeyIndex
             subkey_node = hive.get_cell(self.SubKeyLists[index]).u.KeyIndex
-            # The keylist appears to include 4 bytes of key name after each value
-            # We can either double the list and only use the even items, or
-            # We could change the array type to a struct with both parts
-            subkey_node.List.count = subkey_node.Count * 2
-            for key_offset in subkey_node.List[::2]:
-                if (key_offset & 0x7fffffff) < hive.maximum_address:
-                    node = hive.get_node(key_offset)
-                    if node.vol.type_name.endswith(constants.BANG + "_CM_KEY_INDEX"):
-                        signature = node.cast('string', max_length = 2, encoding = 'latin-1')
-                        listjump = None
-                        if signature == 'lh' or signature == 'lf':
-                            # Leaf node (either Fast Leaf or Hash Leaf)
-                            # We need to descend down these nodes
-                            listjump = 2
-                        elif signature == 'ri':
-                            # Index root found
-                            listjump = 1
-                        if listjump:
-                            node.List.count = node.Count
-                            for subnode_offset in node.List[::listjump]:
-                                subnode = hive.get_node(subnode_offset)
-                                yield subnode
-                    elif node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
-                        yield node
-                    else:
-                        vollog.debug("Unexpected node type encountered when traversing subkeys: {}".format(
-                            node.vol.type_name))
-                else:
+            yield from self._get_subkeys_recursive(hive, subkey_node)
+
+    def _get_subkeys_recursive(self, hive: RegistryHive, node: interfaces.objects.ObjectInterface
+                               ) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Recursively descend a node returning subkeys"""
+        # The keylist appears to include 4 bytes of key name after each value
+        # We can either double the list and only use the even items, or
+        # We could change the array type to a struct with both parts
+        signature = node.Signature.cast('string', max_length = 2, encoding = 'latin-1')
+        listjump = None
+        if signature == 'ri':
+            listjump = 1
+        elif signature == 'lh' or signature == 'lf':
+            listjump = 2
+        elif node.vol.type_name.endswith(constants.BANG + "_CM_KEY_NODE"):
+            yield node
+        else:
+            vollog.debug("Unexpected node type encountered when traversing subkeys: {}, signature: {}".format(
+                node.vol.type_name, signature))
+
+        if listjump:
+            node.List.count = node.Count * listjump
+            for subnode_offset in node.List[::listjump]:
+                if (subnode_offset & 0x7fffffff) > hive.maximum_address:
                     vollog.log(constants.LOGLEVEL_VVV,
-                               "Node found with address outside the valid Hive size: {}".format(key_offset))
+                               "Node found with address outside the valid Hive size: {}".format(subnode_offset))
+                else:
+                    subnode = hive.get_node(subnode_offset)
+                    yield from self._get_subkeys_recursive(hive, subnode)
 
     def get_values(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns a list of the Value nodes for a key"""
