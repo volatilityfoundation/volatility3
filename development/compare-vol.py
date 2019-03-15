@@ -83,6 +83,7 @@ class VolatilityTester:
             "python",
             "-u",
             "vol.py",
+            "-q",
             "-f",
             image.filepath,
         ] + plugin.vol3_plugin_parameters + image.vol3_plugin_parameters.get(plugin.name, [])
@@ -101,7 +102,7 @@ class VolatilityTester:
 
 
 if __name__ == '__main__':
-    vt = VolatilityTester([VolatilityImage(filepath = x) for x in sys.argv], [
+    vt = VolatilityTester([VolatilityImage(filepath = x) for x in sys.argv[1:]], [
         VolatilityPlugin(
             name = "pslist", vol2_plugin_parameters = ["pslist"], vol3_plugin_parameters = ["windows.pslist"]),
         VolatilityPlugin(
