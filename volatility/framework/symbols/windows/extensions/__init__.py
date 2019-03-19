@@ -690,12 +690,11 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                 if self.Session == 0:
                     return renderers.NotApplicableValue()
 
-                layer_name = self.vol.layer_name
                 symbol_table_name = self.get_symbol_table().name
-                kvo = self._context.memory[layer_name].config['kernel_virtual_offset']
+                kvo = self._context.memory[self.vol.native_layer_name].config['kernel_virtual_offset']
                 ntkrnlmp = self._context.module(
                     symbol_table_name,
-                    layer_name = layer_name,
+                    layer_name = self.vol.layer_name,
                     offset = kvo,
                     native_layer_name = self.vol.native_layer_name)
                 session = ntkrnlmp.object(type_name = "_MM_SESSION_SPACE", offset = self.Session)
