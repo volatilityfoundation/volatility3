@@ -91,7 +91,7 @@ class PoolScanner(plugins.PluginInterface):
             pe_version = context.symbol_space[symbol_table].metadata.pe_version
             major, minor, _revision, _build = pe_version
             return (major, minor) >= (10, 0)
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError, TypeError):
             vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
 
         # fall back to the backup method, if necessary
@@ -110,7 +110,7 @@ class PoolScanner(plugins.PluginInterface):
             pe_version = context.symbol_space[symbol_table].metadata.pe_version
             major, minor, _revision, _build = pe_version
             return (major, minor) >= (6, 2)
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError, TypeError):
             vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
 
         # fall back to the backup method, if necessary
@@ -252,6 +252,12 @@ class PoolScanner(plugins.PluginInterface):
                 object_type = "SymbolicLink",
                 size = (72, None),
                 page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            # registry hives
+            PoolConstraint(
+                b'CM10',
+                type_name=symbol_table + constants.BANG + "_CMHIVE",
+                size=(800, None),
+                page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         if not tags_filter:
