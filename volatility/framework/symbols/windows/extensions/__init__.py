@@ -70,7 +70,10 @@ class _POOL_HEADER(objects.Struct):
 
         # otherwise we have an executive object in the pool
         else:
-            alignment = pool_header_size
+            if symbols.symbol_table_is_64bit(self._context, symbol_table_name):
+                alignment = 16
+            else:
+                alignment = 8
 
             # FIXME: calculate and cache this
             max_optional_headers_length = 0x60
