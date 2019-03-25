@@ -532,7 +532,7 @@ class _OBJECT_HEADER(objects.Struct):
             # further encodes the index value with nt1!ObHeaderCookie
             try:
                 type_index = ((self.vol.offset >> 8) ^ cookie ^ self.TypeIndex) & 0xFF
-            except AttributeError:
+            except (AttributeError, TypeError):
                 type_index = self.TypeIndex
 
             return type_map.get(type_index)
@@ -697,7 +697,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                 kvo = self._context.memory[self.vol.native_layer_name].config['kernel_virtual_offset']
                 ntkrnlmp = self._context.module(
                     symbol_table_name,
-                    layer_name = self.vol.layer_name,
+                    layer_name = self.vol.native_layer_name,
                     offset = kvo,
                     native_layer_name = self.vol.native_layer_name)
                 session = ntkrnlmp.object(type_name = "_MM_SESSION_SPACE", offset = self.Session)
