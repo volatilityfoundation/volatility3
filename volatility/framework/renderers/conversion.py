@@ -34,7 +34,8 @@ def wintime_to_datetime(wintime: int) -> Union[interfaces.renderers.BaseAbsentVa
     unix_time = unix_time - 11644473600
     try:
         return datetime.datetime.utcfromtimestamp(unix_time)
-    except ValueError:
+        # Windows sometimes throws OSErrors rather than ValueErrors when it can't convert a value
+    except (ValueError, OSError):
         return renderers.UnparsableValue()
 
 
