@@ -80,10 +80,17 @@ class VerInfo(interfaces_plugins.PluginInterface):
         pe = pefile.PE(data = pe_data.getvalue(), fast_load = True)
         pe.parse_data_directories([pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]])
 
-        major = pe.VS_FIXEDFILEINFO.ProductVersionMS >> 16
-        minor = pe.VS_FIXEDFILEINFO.ProductVersionMS & 0xFFFF
-        product = pe.VS_FIXEDFILEINFO.ProductVersionLS >> 16
-        build = pe.VS_FIXEDFILEINFO.ProductVersionLS & 0xFFFF
+        if isinstance(pe.VS_FIXEDFILEINFO, list):
+            # pefile >= 2018.8.8 (estimated)
+            version_struct = pe.VS_FIXEDFILEINFO[0]
+        else:
+            # pefile <= 2017.11.5 (estimated)
+            version_struct = pe.VS_FIXEDFILEINFO
+
+        major = version_struct.ProductVersionMS >> 16
+        minor = version_struct.ProductVersionMS & 0xFFFF
+        product = version_struct.ProductVersionLS >> 16
+        build = version_struct.ProductVersionLS & 0xFFFF
 
         pe_data.close()
 
