@@ -34,7 +34,7 @@ RenderOption = Any
 class Renderer(metaclass = ABCMeta):
     """Class that defines the interface that all output renderers must support"""
 
-    def __init__(self, options: List[RenderOption]) -> None:
+    def __init__(self, options: Optional[List[RenderOption]] = None) -> None:
         """Accepts an options object to configure the renderers"""
         # FIXME: Once the config option objects are in place, put the _type_check in place
 
