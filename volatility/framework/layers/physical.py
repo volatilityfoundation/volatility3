@@ -18,7 +18,7 @@
 # specific language governing rights and limitations under the License.
 #
 import threading
-from typing import Any, Dict, IO, List, Optional
+from typing import Any, Dict, IO, List, Optional, Union
 
 from volatility.framework import exceptions, interfaces, constants
 from volatility.framework.configuration import requirements
@@ -103,11 +103,9 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._file_ = None  # type: Optional[IO[Any]]
         self._size = None  # type: Optional[int]
         # Construct the lock now (shared if made before threading) in case we ever need it
+        self._lock = DummyLock()  # type: Union[DummyLock, threading.Lock]
         if constants.PARALLELISM == constants.PARALLELISM_THREADING:
             self._lock = threading.Lock()
-        else:
-            # We don't need a lock for multiprocessing because child threads can't inherit file descriptors by default
-            self._lock = DummyLock()
         # Instantiate the file to throw exceptions if the file doesn't open
         _ = self._file
 
