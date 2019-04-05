@@ -19,7 +19,7 @@
 #
 
 import os
-from typing import Any, Iterator, List, Tuple
+from typing import Any, Iterator, List, Tuple, Sequence
 
 from volatility.framework import constants, interfaces
 from volatility.framework import contexts
@@ -61,13 +61,12 @@ class SSDT(plugins.PluginInterface):
 
             module_name = os.path.splitext(module_name_with_ext)[0]
 
+            symbol_table_name = None
             if module_name in windows_constants.KERNEL_MODULE_NAMES:
                 symbol_table_name = symbol_table
-            else:
-                symbol_table_name = None
 
-            context_module = contexts.SizedModule(context, module_name, layer_name, mod.DllBase, mod.SizeOfImage,
-                                                  symbol_table_name)
+            context_module = contexts.SizedModule(
+                context, module_name, layer_name, mod.DllBase, mod.SizeOfImage, symbol_table_name = symbol_table_name)
 
             context_modules.append(context_module)
 
