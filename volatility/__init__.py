@@ -20,6 +20,7 @@
 """Volatility 3 - An open-source memory forensics framework"""
 import sys
 from importlib import abc
+from typing import List
 
 
 class WarningFindSpec(abc.MetaPathFinder):
@@ -32,8 +33,8 @@ class WarningFindSpec(abc.MetaPathFinder):
             raise Warning("Please do not use the volatility.framework.plugins namespace, only use volatility.plugins")
 
 
-if WarningFindSpec not in sys.meta_path:
-    sys.meta_path = [WarningFindSpec] + sys.meta_path
+warning_find_spec = [WarningFindSpec()]  # type: List[abc.MetaPathFinder]
+sys.meta_path = warning_find_spec + sys.meta_path
 
 # We point the volatility.plugins __path__ variable at BOTH
 #   volatility/plugins
