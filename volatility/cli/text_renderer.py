@@ -191,7 +191,8 @@ class PrettyTextRenderer(interfaces.renderers.Renderer):
             for column in grid.columns:
                 renderer = self.type_renderers.get(column.type, self.type_renderers['default'])
                 data = renderer(node.values[column.index])
-                max_column_widths[column.name] = max(max_column_widths.get(column, 0), len(data))
+                max_column_widths[column.name] = max(
+                    max_column_widths.get(column.name, len(column.name)), len("{}".format(data)))
                 line[column] = data
             accumulator.append((node.path_depth, line))
             return accumulator
