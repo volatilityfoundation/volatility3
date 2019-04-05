@@ -161,7 +161,7 @@ class PoolScanner(plugins.PluginInterface):
             yield (0, (constraint.type_name, format_hints.Hex(header.vol.offset), header.vol.layer_name, name))
 
     @staticmethod
-    def builtin_constraints(symbol_table: str, tags_filter: List[bytes] = []) -> List[PoolConstraint]:
+    def builtin_constraints(symbol_table: str, tags_filter: List[bytes] = None) -> List[PoolConstraint]:
         """Get built-in PoolConstraints given a list of pool tags.
 
         The tags_filter is a list of pool tags, and the associated
