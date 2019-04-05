@@ -23,7 +23,7 @@ import logging
 import random
 import string
 import sys
-from typing import Callable, Any
+from typing import Callable, Any, List, Tuple
 
 from volatility.framework.renderers import format_hints
 
@@ -182,7 +182,7 @@ class PrettyTextRenderer(interfaces.renderers.Renderer):
         column_separator = " | "
 
         tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
-        max_column_widths = dict([(column, len(column.name)) for column in grid.columns])
+        max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
 
         def visitor(node, accumulator):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
@@ -191,21 +191,21 @@ class PrettyTextRenderer(interfaces.renderers.Renderer):
             for column in grid.columns:
                 renderer = self.type_renderers.get(column.type, self.type_renderers['default'])
                 data = renderer(node.values[column.index])
-                max_column_widths[column] = max(max_column_widths.get(column, 0), len(data))
+                max_column_widths[column.name] = max(max_column_widths.get(column, 0), len(data))
                 line[column] = data
             accumulator.append((node.path_depth, line))
             return accumulator
 
-        final_output = []
+        final_output = []  # type: List[Tuple[int, List]]
         grid.populate(visitor, final_output)
 
         # Always align the tree to the left
-        format_string = ["{0:<" + str(max_column_widths[tree_indent_column]) + "s}"]
+        format_string_list = ["{0:<" + str(max_column_widths[tree_indent_column]) + "s}"]
         for column in grid.columns:
-            format_string.append("{" + str(column.index + 1) + ":" + display_alignment +
-                                 str(max_column_widths[column]) + "s}")
+            format_string_list.append("{" + str(column.index + 1) + ":" + display_alignment +
+                                      str(max_column_widths[column.name]) + "s}")
 
-        format_string = column_separator.join(format_string) + "\n"
+        format_string = column_separator.join(format_string_list) + "\n"
 
         column_titles = [""] + [column.name for column in grid.columns]
         outfd.write(format_string.format(*column_titles))

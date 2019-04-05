@@ -25,9 +25,10 @@ from importlib import abc
 class WarningFindSpec(abc.MetaPathFinder):
     """Checks import attempts and throws a warning if the name shouldn't be used"""
 
-    def find_spec(name: str, _p, _t):
+    @staticmethod
+    def find_spec(fullname: str, path, target = None):
         """Mock find_spec method that just checks the name, this must go first"""
-        if name.startswith("volatility.framework.plugins."):
+        if fullname.startswith("volatility.framework.plugins."):
             raise Warning("Please do not use the volatility.framework.plugins namespace, only use volatility.plugins")
 
 
