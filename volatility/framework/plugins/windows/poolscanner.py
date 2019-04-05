@@ -35,7 +35,7 @@ from volatility.framework.symbols.windows import extensions
 vollog = logging.getLogger(__name__)
 
 
-class PoolType(enum.IntEnum):
+class PoolType(enum.IntFlag):
     """Class to maintain the different possible PoolTypes
     The values must be integer powers of 2"""
 
