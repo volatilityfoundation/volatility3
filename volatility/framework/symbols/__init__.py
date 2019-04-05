@@ -22,7 +22,7 @@ import collections
 import collections.abc
 import enum
 import logging
-from typing import Any, Dict, Iterable, Iterator, Set, TypeVar
+from typing import Any, Dict, Iterable, Iterator, TypeVar
 
 from volatility.framework import constants, exceptions, interfaces, objects
 
@@ -267,7 +267,7 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
         return new_symbol
 
     original_get_symbol = symbol_table.get_symbol
-    symbol_table.get_symbol = address_masked_get_symbol
+    setattr(symbol_table, "get_symbol", address_masked_get_symbol)
     return symbol_table
 
 
