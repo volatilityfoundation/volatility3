@@ -110,6 +110,10 @@ class ObjectInterface(metaclass = ABCMeta):
         self._vol = collections.ChainMap({}, object_info, {'type_name': type_name, 'offset': normalized_offset}, kwargs)
         self._context = context
 
+    def __getattr__(self, attr: str) -> Any:
+        """Method for ensuring volatility members can be returned"""
+        raise AttributeError
+
     @property
     def vol(self) -> ReadOnlyMapping:
         """Returns the volatility specific object information"""
