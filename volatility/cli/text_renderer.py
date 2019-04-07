@@ -23,7 +23,8 @@ import logging
 import random
 import string
 import sys
-from typing import Callable, Any, List, Tuple
+from functools import wraps
+from typing import Any, List, Tuple
 
 from volatility.framework.renderers import format_hints
 
@@ -66,18 +67,32 @@ def hex_bytes_as_text(value: bytes) -> str:
     return output
 
 
-class Optional(object):
+def optional(func):
 
-    def __init__(self, func: Callable[[Any], str]) -> None:
-        self._func = func
-
-    def __call__(self, x: Any) -> str:
+    @wraps(func)
+    def wrapped(x: Any) -> str:
         if isinstance(x, interfaces.renderers.BaseAbsentValue):
             if isinstance(x, renderers.NotApplicableValue):
                 return "N/A"
             else:
                 return "-"
-        return self._func(x)
+        return func(x)
+
+    return wrapped
+
+
+def quoted_optional(func):
+
+    @wraps(func)
+    def wrapped(x: Any) -> str:
+        result = optional(func)(x)
+        if result == "-" or result == "N/A":
+            return ""
+        if isinstance(x, int) and not isinstance(x, (format_hints.Hex, format_hints.Bin)):
+            return "{}".format(result)
+        return "\"{}\"".format(result)
+
+    return wrapped
 
 
 def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
@@ -106,16 +121,23 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
     return QuickTextRenderer.type_renderers[bytes](disasm.data)
 
 
-class QuickTextRenderer(interfaces.renderers.Renderer):
+class CLIRenderer(interfaces.renderers.Renderer):
+    """Class to add specific requirements for CLI renderers"""
+    name = "unnamed"
+
+
+class QuickTextRenderer(CLIRenderer):
     type_renderers = {
-        format_hints.Bin: Optional(lambda x: "0b{:b}".format(x)),
-        format_hints.Hex: Optional(lambda x: "0x{:x}".format(x)),
-        format_hints.HexBytes: Optional(hex_bytes_as_text),
-        interfaces.renderers.Disassembly: Optional(display_disassembly),
-        bytes: Optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
-        datetime.datetime: Optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
-        'default': Optional(lambda x: "{}".format(x))
+        format_hints.Bin: optional(lambda x: "0b{:b}".format(x)),
+        format_hints.Hex: optional(lambda x: "0x{:x}".format(x)),
+        format_hints.HexBytes: optional(hex_bytes_as_text),
+        interfaces.renderers.Disassembly: optional(display_disassembly),
+        bytes: optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
+        datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
+        'default': optional(lambda x: "{}".format(x))
     }
+
+    name = "quick"
 
     def get_render_options(self):
         pass
@@ -156,8 +178,58 @@ class QuickTextRenderer(interfaces.renderers.Renderer):
         outfd.write("\n")
 
 
-class PrettyTextRenderer(interfaces.renderers.Renderer):
+class CSVRenderer(CLIRenderer):
+    type_renderers = {
+        format_hints.Bin: quoted_optional(lambda x: "0b{:b}".format(x)),
+        format_hints.Hex: quoted_optional(lambda x: "0x{:x}".format(x)),
+        format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
+        interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
+        bytes: quoted_optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
+        datetime.datetime: quoted_optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
+        'default': quoted_optional(lambda x: "{}".format(x))
+    }
+
+    name = "csv"
+
+    def get_render_options(self):
+        pass
+
+    def render(self, grid: interfaces.renderers.TreeGrid) -> None:
+        """
+        Renders each row immediately to stdout.
+
+        Args:
+            grid: The TreeGrid object to render
+
+        """
+        outfd = sys.stdout
+
+        line = ['"TreeDepth"']
+        for column in grid.columns:
+            # Ignore the type because namedtuples don't realize they have accessible attributes
+            line.append("{}".format('"' + column.name + '"'))
+        outfd.write("\n{}".format(",".join(line)))
+
+        def visitor(node, accumulator):
+            accumulator.write("\n")
+            # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
+            accumulator.write(str(max(0, node.path_depth - 1)) + ",")
+            line = []
+            for column in grid.columns:
+                renderer = self.type_renderers.get(column.type, self.type_renderers['default'])
+                line.append(renderer(node.values[column.index]))
+            accumulator.write("{}".format(",".join(line)))
+            return accumulator
+
+        grid.populate(visitor, outfd)
+
+        outfd.write("\n")
+
+
+class PrettyTextRenderer(CLIRenderer):
     type_renderers = QuickTextRenderer.type_renderers
+
+    name = "pretty"
 
     def get_render_options(self):
         pass

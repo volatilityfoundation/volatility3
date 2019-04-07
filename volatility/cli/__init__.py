@@ -93,6 +93,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         volatility.framework.require_interface_version(0, 0, 0)
 
+        renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
+
         parser = argparse.ArgumentParser(prog = 'volatility', description = "An open-source memory forensics framework")
         parser.add_argument(
             "-c", "--config", help = "Load the configuration from a json file", default = None, type = str)
@@ -116,6 +118,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
         parser.add_argument(
+            "-l", "--log", help = "Log output to a file as well as the console", default = None, type = str)
+        parser.add_argument(
             "-o",
             "--output-dir",
             help = "Directory in which to output any generated files",
@@ -123,7 +127,12 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             type = str)
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument(
-            "-l", "--log", help = "Log output to a file as well as the console", default = None, type = str)
+            "-r",
+            "--renderer",
+            metavar = 'RENDERER',
+            help = "Determines how to render the output",
+            default = "quick",
+            choices = list(renderers))
         parser.add_argument(
             "-f",
             "--file",
@@ -253,7 +262,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
             # Construct and run the plugin
-            text_renderer.QuickTextRenderer().render(constructed.run())
+            renderers[args.renderer]().render(constructed.run())
         except exceptions.UnsatisfiedException as excp:
             self.process_exceptions(excp)
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
