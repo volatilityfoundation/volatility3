@@ -17,13 +17,15 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
 # specific language governing rights and limitations under the License.
 #
-
+import logging
 from typing import Iterator, List, Tuple
 
 import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import renderers, interfaces
+from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
+
+vollog = logging.getLogger(__name__)
 
 
 class HiveList(plugins.PluginInterface):
@@ -65,9 +67,26 @@ class HiveList(plugins.PluginInterface):
         reloff = ntkrnlmp.get_type("_CMHIVE").relative_child_offset("HiveList")
         cmhive = ntkrnlmp.object(type_name = "_CMHIVE", offset = list_entry.vol.offset - reloff)
 
-        for hive in cmhive.HiveList:
-            if filter_string is None or filter_string.lower() in str(hive.get_name() or "").lower():
-                yield hive
+        # Run through the list fowards
+        seen = set()
+        traverse_backwards = False
+        try:
+            for hive in cmhive.HiveList:
+                if filter_string is None or filter_string.lower() in str(hive.get_name() or "").lower():
+                    seen.add(hive.vol.offset)
+                    yield hive
+        except exceptions.InvalidAddressException:
+            vollog.warning("Hivelist failed traversing the list forwards, traversing backwards")
+            traverse_backwards = True
+
+        if traverse_backwards:
+            try:
+                for hive in cmhive.HiveList.to_list(cmhive.vol.type_name, "HiveList", forward = False):
+                    if filter_string is None or filter_string.lower() in str(
+                            hive.get_name() or "").lower() and hive.vol.offset not in seen:
+                        yield hive
+            except exceptions.InvalidAddressException:
+                vollog.warning("Hivelist failed traversing the list backwards, giving up")
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("FileFullPath", str)], self._generator())
