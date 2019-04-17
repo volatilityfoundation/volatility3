@@ -413,7 +413,6 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         self._vol['base_type'] = base_type
 
     @classmethod
-    @functools.lru_cache(maxsize = 128)
     def _generate_inverse_choices(cls, choices: Dict[str, int]) -> Dict[int, str]:
         """Generates the inverse choices for the object"""
         inverse_choices = {}  # type: Dict[int, str]

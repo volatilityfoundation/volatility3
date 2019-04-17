@@ -19,7 +19,7 @@
 #
 """Objects are the core of volatility, and provide pythonic access to interpreted values of data from a layer.
 """
-
+import abc
 import collections
 import collections.abc
 import logging
@@ -166,8 +166,8 @@ class ObjectInterface(metaclass = ABCMeta):
         """Returns whether the object would contain a member called member_name"""
         return False
 
-    class VolTemplateProxy(object):
-        """A container for proxied methods that the ObjectTemplate of this object will call.  This primarily to keep
+    class VolTemplateProxy(metaclass = abc.ABCMeta):
+        """A container for proxied methods that the ObjectTemplate of this object will call.  This is primarily to keep
         methods together for easy organization/management, there is no significant need for it to be a separate class.
 
         The methods of this class *must* be class methods rather than standard methods, to allow for code reuse.
@@ -176,25 +176,30 @@ class ObjectInterface(metaclass = ABCMeta):
         new templates for each and every potental object type."""
 
         @classmethod
+        @abc.abstractmethod
         def size(cls, template: 'Template') -> int:
             """Returns the size of the template object"""
 
         @classmethod
+        @abc.abstractmethod
         def children(cls, template: 'Template') -> List['Template']:
             """Returns the children of the template"""
             return []
 
         @classmethod
+        @abc.abstractmethod
         def replace_child(cls, template: 'Template', old_child: 'Template', new_child: 'Template') -> None:
             """Substitutes the old_child for the new_child"""
             raise KeyError("Template does not contain any children to replace: {}".format(template.vol.type_name))
 
         @classmethod
+        @abc.abstractmethod
         def relative_child_offset(cls, template: 'Template', child: str) -> int:
             """Returns the relative offset from the head of the parent data to the child member"""
             raise KeyError("Template does not contain any children: {}".format(template.vol.type_name))
 
         @classmethod
+        @abc.abstractmethod
         def has_member(cls, template: 'Template', member_name: str) -> bool:
             """Returns whether the object would contain a member called member_name"""
             return False
