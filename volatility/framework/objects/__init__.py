@@ -19,6 +19,7 @@
 #
 
 import collections
+import functools
 import logging
 import struct
 from collections import abc
@@ -406,18 +407,24 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
                  object_info: interfaces.objects.ObjectInformation, base_type: Integer,
                  choices: Dict[str, int]) -> None:
         super().__init__(context, type_name, object_info)
-
-        self._inverse_choices = {}  # type: Dict[int, str]
-        for k, v in choices.items():
-            if v in self._inverse_choices:
-                # Technically this shouldn't be a problem, but since we inverse cache
-                # and can't map one value to two possibilities we throw an exception during build
-                # We can remove/work around this if it proves a common issue
-                raise ValueError("Enumeration value {} duplicated as {} and {}".format(v, k, self._inverse_choices[v]))
-            self._inverse_choices[v] = k
+        self._inverse_choices = self._generate_inverse_choices(choices)
         self._vol['choices'] = choices
 
         self._vol['base_type'] = base_type
+
+    @classmethod
+    @functools.lru_cache(maxsize = 128)
+    def _generate_inverse_choices(cls, choices: Dict[str, int]) -> Dict[int, str]:
+        """Generates the inverse choices for the object"""
+        inverse_choices = {}  # type: Dict[int, str]
+        for k, v in choices.items():
+            if v in inverse_choices:
+                # Technically this shouldn't be a problem, but since we inverse cache
+                # and can't map one value to two possibilities we throw an exception during build
+                # We can remove/work around this if it proves a common issue
+                raise ValueError("Enumeration value {} duplicated as {} and {}".format(v, k, inverse_choices[v]))
+            inverse_choices[v] = k
+        return inverse_choices
 
     def lookup(self, value: int) -> str:
         """Looks up an individual value and returns the associated name"""
@@ -444,6 +451,14 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         raise NotImplementedError("Writing to Enumerations is not yet implemented")
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
+        @classmethod
+        def lookup(cls, template: interfaces.objects.Template, value: int) -> str:
+            """Looks up an individual value and returns the associated name"""
+            _inverse_choices = Enumeration._generate_inverse_choices(template.vol['choices'])
+            if value in _inverse_choices:
+                return _inverse_choices[value]
+            raise ValueError("The value of the enumeration is outside the possible choices")
 
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
