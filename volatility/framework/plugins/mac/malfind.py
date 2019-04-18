@@ -77,7 +77,7 @@ class Malfind(interfaces_plugins.PluginInterface):
                            vma.get_perms(), format_hints.HexBytes(data), disasm))
 
     def run(self):
-        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
                                    ("End", format_hints.Hex), ("Protection", str), ("Hexdump", format_hints.HexBytes),

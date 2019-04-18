@@ -42,7 +42,7 @@ class PsList(interfaces_plugins.PluginInterface):
         ]
 
     @classmethod
-    def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
+    def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
 
         filter_func = lambda _: False
         # FIXME: mypy #4973 or #2608
@@ -61,7 +61,7 @@ class PsList(interfaces_plugins.PluginInterface):
                 self.context,
                 self.config['primary'],
                 self.config['darwin'],
-                filter_func = self.create_filter([self.config.get('pid', None)])):
+                filter_func = self.create_pid_filter([self.config.get('pid', None)])):
             pid = task.p_pid
             ppid = task.p_ppid
             name = utility.array_to_string(task.p_comm)

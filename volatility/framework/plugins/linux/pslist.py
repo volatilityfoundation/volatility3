@@ -39,7 +39,7 @@ class PsList(interfaces_plugins.PluginInterface):
         ]
 
     @classmethod
-    def create_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
+    def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[int], bool]:
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
@@ -57,7 +57,7 @@ class PsList(interfaces_plugins.PluginInterface):
                 self.context,
                 self.config['primary'],
                 self.config['vmlinux'],
-                filter_func = self.create_filter([self.config.get('pid', None)])):
+                filter_func = self.create_pid_filter([self.config.get('pid', None)])):
             pid = task.pid
             ppid = 0
             if task.parent:

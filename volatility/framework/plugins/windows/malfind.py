@@ -123,7 +123,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                            vad.get_commit_charge(), vad.get_private_memory(), format_hints.HexBytes(data), disasm))
 
     def run(self):
-        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start VPN", format_hints.Hex),
                                    ("End VPN", format_hints.Hex), ("Tag", str), ("Protection", str),

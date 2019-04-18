@@ -53,7 +53,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
     ]
 
     @classmethod
-    def create_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+    def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
         filter_func = lambda _: False
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
@@ -102,7 +102,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 self.context,
                 self.config['primary'],
                 self.config['nt_symbols'],
-                filter_func = self.create_filter([self.config.get('pid', None)])):
+                filter_func = self.create_pid_filter([self.config.get('pid', None)])):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset

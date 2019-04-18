@@ -56,7 +56,7 @@ class Lsof(plugins.PluginInterface):
     def run(self):
         linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'])
 
-        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("FD", int), ("Path", str)],
                                   self._generator(

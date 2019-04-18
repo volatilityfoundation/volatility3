@@ -107,7 +107,7 @@ class DllDump(interfaces_plugins.PluginInterface):
                 yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):
-        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Result", str)],
                                   self._generator(

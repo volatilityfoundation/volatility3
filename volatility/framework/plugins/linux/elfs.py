@@ -62,7 +62,7 @@ class Elfs(plugins.PluginInterface):
                 yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), path))
 
     def run(self):
-        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
                                    ("End", format_hints.Hex), ("File Path", str)],

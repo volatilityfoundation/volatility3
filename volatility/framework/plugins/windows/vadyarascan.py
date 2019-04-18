@@ -74,7 +74,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
 
-        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         for task in pslist.PsList.list_processes(
                 context = self.context,

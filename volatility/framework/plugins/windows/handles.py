@@ -312,7 +312,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
     def run(self):
 
-        filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Offset", format_hints.Hex),
                                    ("HandleValue", format_hints.Hex), ("Type", str),

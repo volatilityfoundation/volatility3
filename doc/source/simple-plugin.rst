@@ -98,7 +98,7 @@ that will be output as part of the `TreeGrid`.
 
         def run(self):
 
-            filter_func = pslist.PsList.create_filter([self.config.get('pid', None)])
+            filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
             return renderers.TreeGrid([("PID", int),
                                        ("Process", str),
@@ -113,7 +113,7 @@ that will be output as part of the `TreeGrid`.
 
 In this instance, the plugin constructs a filter (using the PsList plugin's `classmethod` for creating filters).
 It passes checks the plugin's configuration for the `pid` value, and passes it in as a list if it finds it, or None if
-it does not.  The :py:func:`~volatility.plugins.windows.pslist.PsList.create_filter` method accepts a list of process
+it does not.  The :py:func:`~volatility.plugins.windows.pslist.PsList.create_pid_filter` method accepts a list of process
 identifiers that are included in the list, if the list is empty all processes are returned.
 
 The next line specifies the columns by their name and type.  The types are simple types (`int`, `str`, `bytes`, `float`, `bool`)
