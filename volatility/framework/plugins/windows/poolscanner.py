@@ -20,7 +20,7 @@
 
 import enum
 import logging
-from typing import Dict, Generator, List, Optional, Tuple
+from typing import Dict, Generator, List, Optional, Tuple, Callable
 
 import volatility.plugins.windows.handles as handles
 
@@ -72,6 +72,39 @@ class PoolConstraint:
         self.alignment = alignment
 
 
+def os_distinguisher(version_check: Tuple[int, ...],
+                     symbol_name: Optional[str] = None,
+                     type_name: Optional[str] = None,
+                     type_member: Optional[str] = None) -> Callable[[interfaces.context.ContextInterface, str], bool]:
+    """Distinguishes an operating system based on the metadata and falling back to check whether a structure exists"""
+    # try the primary method based on the pe version in the ISF
+    if not symbol_name and not type_name:
+        raise ValueError("OS Distinguisher must have at least one fallback method (symbol or type/member)")
+
+    def method(context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
+
+        try:
+            pe_version = context.symbol_space[symbol_table].metadata.pe_version
+            major, minor, revision, build = pe_version
+            return (major, minor, revision, build) >= version_check
+        except (AttributeError, ValueError, TypeError):
+            vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
+
+        # fall back to the backup method, if necessary
+        try:
+            if symbol_name:
+                _symbol = context.symbol_space.get_symbol(symbol_table + constants.BANG + symbol_name)
+            else:
+                type_class = context.symbol_space.get_type(symbol_table + constants.BANG + type_name)
+                if type_member:
+                    return type_class.has_member(type_member)
+            return True
+        except exceptions.SymbolError:
+            return False
+
+    return method
+
+
 class PoolScanner(plugins.PluginInterface):
     """A generic pool scanner plugin"""
 
@@ -83,24 +116,7 @@ class PoolScanner(plugins.PluginInterface):
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
-    @staticmethod
-    def is_windows_10(context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
-        """Determine if the analyzed sample is Windows 10"""
-
-        # try the primary method based on the pe version in the ISF
-        try:
-            pe_version = context.symbol_space[symbol_table].metadata.pe_version
-            major, minor, _revision, _build = pe_version
-            return (major, minor) >= (10, 0)
-        except (AttributeError, ValueError, TypeError):
-            vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
-
-        # fall back to the backup method, if necessary
-        try:
-            _symbol = context.symbol_space.get_symbol(symbol_table + constants.BANG + "ObHeaderCookie")
-            return True
-        except exceptions.SymbolError:
-            return False
+    is_windows_10 = os_distinguisher(version_check = (10, 0), symbol_name = "ObHeaderCookie")
 
     @staticmethod
     def is_windows_8_or_later(context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> bool:
