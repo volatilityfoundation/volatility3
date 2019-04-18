@@ -33,7 +33,6 @@ import volatility
 import volatility.framework.layers.resources
 from volatility import schemas, symbols
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
-from volatility.framework.layers import physical
 from volatility.framework.configuration import requirements
 from volatility.framework.symbols import native, metadata
 
@@ -85,7 +84,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                  isf_url: str,
                  native_types: interfaces.symbols.NativeTableInterface = None,
                  table_mapping: Optional[Dict[str, str]] = None,
-                 validate: bool = True) -> None:
+                 validate: bool = True,
+                 class_types: Optional[Dict[str, Type[interfaces.objects.ObjectInterface]]] = None) -> None:
         """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
         done.
@@ -119,7 +119,12 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Inherit
         super().__init__(
-            context, config_path, name, native_types or self._delegate.natives, table_mapping = table_mapping)
+            context,
+            config_path,
+            name,
+            native_types or self._delegate.natives,
+            table_mapping = table_mapping,
+            class_types = class_types)
 
     @staticmethod
     def _closest_version(version: str, versions: Dict[Tuple[int, int, int], Type['ISFormatTable']]) \
@@ -197,7 +202,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                sub_path: str,
                filename: str,
                native_types: Optional[interfaces.symbols.NativeTableInterface] = None,
-               table_mapping: Optional[Dict[str, str]] = None) -> str:
+               table_mapping: Optional[Dict[str, str]] = None,
+               class_types: Optional[Dict[str, Type[interfaces.objects.ObjectInterface]]] = None) -> str:
         """Takes a context and loads an intermediate symbol table based on a filename.
 
         Args:
@@ -220,7 +226,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             name = table_name,
             isf_url = urls[0],
             native_types = native_types,
-            table_mapping = table_mapping)
+            table_mapping = table_mapping,
+            class_types = class_types)
         context.symbol_space.append(table)
         return table_name
 

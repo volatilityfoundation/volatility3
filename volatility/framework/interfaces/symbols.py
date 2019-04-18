@@ -83,14 +83,22 @@ class BaseSymbolTableInterface:
     Note: table_mapping is a rarely used feature (since symbol tables are typically self-contained)
     """
 
-    def __init__(self, name: str, native_types: 'NativeTableInterface',
-                 table_mapping: Optional[Dict[str, str]] = None) -> None:
+    def __init__(self,
+                 name: str,
+                 native_types: 'NativeTableInterface',
+                 table_mapping: Optional[Dict[str, str]] = None,
+                 class_types: Optional[Dict[str, Type[objects.ObjectInterface]]] = None) -> None:
         self.name = name
         if table_mapping is None:
             table_mapping = {}
         self.table_mapping = table_mapping
         self._native_types = native_types
         self._sort_symbols = []  # type: List[Tuple[int, str]]
+
+        # Set any provisioned class_types
+        if class_types:
+            for class_type in class_types:
+                self.set_type_class(class_type, class_types[class_type])
 
     # ## Required Symbol functions
 
@@ -244,9 +252,10 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
                  config_path: str,
                  name: str,
                  native_types: 'NativeTableInterface',
-                 table_mapping: Optional[Dict[str, str]] = None) -> None:
+                 table_mapping: Optional[Dict[str, str]] = None,
+                 class_types: Optional[Dict[str, Type[objects.ObjectInterface]]] = None) -> None:
         configuration.ConfigurableInterface.__init__(self, context, config_path)
-        BaseSymbolTableInterface.__init__(self, name, native_types, table_mapping)
+        BaseSymbolTableInterface.__init__(self, name, native_types, table_mapping, class_types = class_types)
 
     def build_configuration(self) -> 'configuration.HierarchicalDict':
         config = super().build_configuration()
