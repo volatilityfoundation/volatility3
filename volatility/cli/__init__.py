@@ -45,7 +45,7 @@ from volatility.framework.configuration import requirements
 # Make sure we log everything
 
 vollog = logging.getLogger()
-vollog.setLevel(0)
+vollog.setLevel(1)
 # Trim the console down by default
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
@@ -160,7 +160,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
-            file_logger.setLevel(0)
+            file_logger.setLevel(1)
             file_formatter = logging.Formatter(
                 datefmt = '%y-%m-%d %H:%M:%S', fmt = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
             file_logger.setFormatter(file_formatter)
