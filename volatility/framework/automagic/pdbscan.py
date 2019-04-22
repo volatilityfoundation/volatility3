@@ -29,6 +29,7 @@ import os
 import struct
 from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Union
 
+from volatility import symbols
 from volatility.framework import constants, exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
@@ -206,6 +207,25 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         break
                     else:
                         isf_path = ''
+                        try:
+                            from volatility.framework.symbols.windows import pdb_isf
+                            import json, lzma
+                            filename = pdb_isf.PDBRetreiver().retreive_pdb(
+                                guid = kernel['GUID'] + str(kernel['age']), file_name = kernel['pdb_name'])
+                            json_output = pdb_isf.PDBConvertor(filename).read_pdb()
+                            output_file = os.path.join(symbols.__path__[0], "windows", filter_string + ".json.xz")
+
+                            # Write the JSON file to disk
+                            os.makedirs(os.path.dirname(output_file), exist_ok = True)
+                            with lzma.open(output_file, "w") as f:
+                                f.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
+
+                            # Try again
+                            for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
+                                isf_path = value
+                                break
+                        except ImportError:
+                            vollog.debug("Dependencies for automatic windows ISF downloader failed")
                     if isf_path:
                         vollog.debug("Using symbol library: {}".format(filter_string))
                         clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
