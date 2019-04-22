@@ -1,3 +1,4 @@
+import binascii
 import datetime
 import json
 import logging
@@ -203,7 +204,18 @@ class PDBConvertor:
 
     def generate_metadata(self):
         """Generates the metadata necessary for this object"""
-        pdb_data = {"GUID": "", "age": "", "database": "ntkrnlmp.pdb", "machine_type": "", "type": "pdb"}
+        dbg = self._pdb.STREAM_DBI
+        machine_type = dbg.machine[len('IMAGE_FILE_MACHINE_'):].lower()
+        last_bytes = str(binascii.hexlify(bytes(self._pdb.STREAM_PDB.GUID.Data4, 'utf16')), 'ascii')[-16:]
+        guidstr = u'{:08x}{:04x}{:04x}{}'.format(self._pdb.STREAM_PDB.GUID.Data1, self._pdb.STREAM_PDB.GUID.Data2,
+                                                 self._pdb.STREAM_PDB.GUID.Data3, last_bytes)
+        pdb_data = {
+            "GUID": guidstr.upper(),
+            "age": self._pdb.Age,
+            "database": "ntkrnlmp.pdb",
+            "machine_type": machine_type,
+            "type": "pdb"
+        }
         result = {
             "format": "6.0.0",
             "producer": {
