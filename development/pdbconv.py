@@ -4,7 +4,6 @@ import datetime
 import json
 import logging
 import os
-import sys
 import tempfile
 from typing import Dict
 
@@ -228,7 +227,6 @@ class PDBConvertor:
     def generate_metadata(self):
         """Generates the metadata necessary for this object"""
         dbg = self._pdb.STREAM_DBI
-        machine_type = dbg.machine[len('IMAGE_FILE_MACHINE_'):].lower()
         last_bytes = str(binascii.hexlify(bytes(self._pdb.STREAM_PDB.GUID.Data4, 'utf16')), 'ascii')[-16:]
         guidstr = u'{:08x}{:04x}{:04x}{}'.format(self._pdb.STREAM_PDB.GUID.Data1, self._pdb.STREAM_PDB.GUID.Data2,
                                                  self._pdb.STREAM_PDB.GUID.Data3, last_bytes)
@@ -236,8 +234,7 @@ class PDBConvertor:
             "GUID": guidstr.upper(),
             "age": self._pdb.STREAM_PDB.Age,
             "database": "ntkrnlmp.pdb",
-            "machine_type": machine_type,
-            "type": "pdb"
+            "machine_type": int(dbg.machine)
         }
         result = {
             "format": "6.0.0",
@@ -294,7 +291,10 @@ class PDBConvertor:
                 virt_base = sects[sym.segment - 1].VirtualAddress
             except IndexError:
                 continue
-            output[sym.name] = {"address": omap.remap(sym.offset + virt_base)}
+            if omap:
+                output[sym.name] = {"address": omap.remap(sym.offset + virt_base)}
+            else:
+                output[sym.name] = {"address": sym.offset + virt_base}
 
         return output
 
