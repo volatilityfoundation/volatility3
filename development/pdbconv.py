@@ -332,6 +332,10 @@ class PDBConvertor:
             output = self._determine_size(field.modified_type)
         elif field.leaf_type == "LF_ENUM":
             output = self._determine_size(field.utype)
+        elif field.leaf_type == "LF_BITFIELD":
+            output = self._determine_size(field.base_type)
+        elif field.leaf_type == "LF_MEMBER":
+            output = self._determine_size(field.index)
         if output is None:
             import pdb
             pdb.set_trace()
@@ -393,11 +397,16 @@ if __name__ == '__main__':
         "-g", "--guid", metavar = "GUID", help = "GUID + Age string for the required PDB file", default = None)
     args = parser.parse_args()
 
+    delfile = False
     if args.guid is not None:
         filename = PDBRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern)
+        delfile = True
     else:
         filename = args.file
     convertor = PDBConvertor(filename)
 
     with open(args.output, "w") as f:
         json.dump(convertor.read_pdb(), f, indent = 2, sort_keys = True)
+
+    if delfile:
+        os.remove(filename)
