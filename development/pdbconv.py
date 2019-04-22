@@ -1,11 +1,14 @@
+import argparse
 import binascii
 import datetime
 import json
 import logging
 import sys
+import tempfile
 from typing import Dict
 
 import pdbparse
+import requests
 
 logger = logging.getLogger(__name__)
 logger.setLevel(1)
@@ -15,6 +18,25 @@ console.setLevel(1)
 formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
 console.setFormatter(formatter)
 logger.addHandler(console)
+
+
+class PDBRetreiver:
+
+    def retreive_pdb(self, guid, file_name) -> str:
+        logger.info("Download PDB file...")
+        file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])
+        for sym_url in ['http://msdl.microsoft.com/download/symbols']:
+            url = sym_url + "/{}/{}/".format(file_name, guid)
+
+            result = None
+            for suffix in [file_name[:-1] + '_', file_name]:
+                pdb_file = requests.get(url + suffix, headers = {'User-Agent': "Microsoft-Symbol-Server/6.11.0001.404"})
+                with tempfile.NamedTemporaryFile(delete = False) as f:
+                    f.write(pdb_file.content)
+                    result = f.name
+            if result:
+                break
+        return result
 
 
 class PDBConvertor:
@@ -211,7 +233,7 @@ class PDBConvertor:
                                                  self._pdb.STREAM_PDB.GUID.Data3, last_bytes)
         pdb_data = {
             "GUID": guidstr.upper(),
-            "age": self._pdb.Age,
+            "age": self._pdb.STREAM_PDB.Age,
             "database": "ntkrnlmp.pdb",
             "machine_type": machine_type,
             "type": "pdb"
@@ -361,6 +383,21 @@ class PDBConvertor:
 
 
 if __name__ == '__main__':
-    convertor = PDBConvertor(sys.argv[1])
-    with open(sys.argv[2], "w") as f:
+    parser = argparse.ArgumentParser(description = "Convertor for PDB files to Volatility 3 Intermediate Symbol Format")
+    parser.add_argument("-o", "--output", metavar = "OUTPUT", help = "Filename for data output", required = True)
+    file_group = parser.add_argument_group("file", description = "File-based conversion of PDB to ISF")
+    file_group.add_argument("-f", "--file", metavar = "FILE", help = "PDB file to translate to ISF")
+    data_group = parser.add_argument_group("data", description = "Convert based on a GUID and filename pattern")
+    data_group.add_argument("-p", "--pattern", metavar = "PATTERN", help = "Filename pattern to recover PDB file")
+    data_group.add_argument(
+        "-g", "--guid", metavar = "GUID", help = "GUID + Age string for the required PDB file", default = None)
+    args = parser.parse_args()
+
+    if args.guid is not None:
+        filename = PDBRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern)
+    else:
+        filename = args.file
+    convertor = PDBConvertor(filename)
+
+    with open(args.output, "w") as f:
         json.dump(convertor.read_pdb(), f, indent = 2, sort_keys = True)
