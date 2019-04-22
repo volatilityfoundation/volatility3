@@ -219,6 +219,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             os.makedirs(os.path.dirname(output_file), exist_ok = True)
                             with lzma.open(output_file, "w") as f:
                                 f.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
+                            # Clean up after ourselves
+                            os.remove(filename)
 
                             # Try again
                             for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
