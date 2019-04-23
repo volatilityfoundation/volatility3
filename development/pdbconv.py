@@ -13,11 +13,12 @@ import requests
 logger = logging.getLogger(__name__)
 logger.setLevel(1)
 
-console = logging.StreamHandler()
-console.setLevel(1)
-formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
-console.setFormatter(formatter)
-logger.addHandler(console)
+if __name__ == '__main__':
+    console = logging.StreamHandler()
+    console.setLevel(1)
+    formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
+    console.setFormatter(formatter)
+    logger.addHandler(console)
 
 
 class PDBRetreiver:
@@ -321,14 +322,13 @@ class PDBConvertor:
         """Reads the user types from the PDB file"""
         logger.info("Reading usertypes...")
         output = {}
-        for stream in self._pdb.streams:
-            if isinstance(stream, pdbparse.PDBTypeStream):
-                for type_index in stream.types:
-                    user_type = stream.types[type_index]
-                    if (user_type.leaf_type == "LF_STRUCTURE" and not user_type.prop.fwdref):
-                        output.update(self._format_usertype(user_type, "struct"))
-                    elif (user_type.leaf_type == "LF_UNION" and not user_type.prop.fwdref):
-                        output.update(self._format_usertype(user_type, "union"))
+        stream = self._pdb.STREAM_TPI
+        for type_index in stream.types:
+            user_type = stream.types[type_index]
+            if (user_type.leaf_type == "LF_STRUCTURE" and not user_type.prop.fwdref):
+                output.update(self._format_usertype(user_type, "struct"))
+            elif (user_type.leaf_type == "LF_UNION" and not user_type.prop.fwdref):
+                output.update(self._format_usertype(user_type, "union"))
         return output
 
     def _format_usertype(self, usertype, kind) -> Dict:
@@ -404,7 +404,11 @@ class PDBConvertor:
 
     def read_basetypes(self) -> Dict:
         """Reads the base types from the PDB file"""
-        output = {}
+        ptr_size = 4
+        if "64" in self._pdb.STREAM_DBI.machine:
+            ptr_size = 8
+
+        output = {"pointer": {"endian": "little", "kind": "int", "signed": False, "size": ptr_size}}
         for index in self._seen_ctypes:
             output[self.ctype[index]] = {
                 "endian": "little",
