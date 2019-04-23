@@ -212,15 +212,18 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             import json, lzma
                             filename = pdb_isf.PDBRetreiver().retreive_pdb(
                                 guid = kernel['GUID'] + str(kernel['age']), file_name = kernel['pdb_name'])
-                            json_output = pdb_isf.PDBConvertor(filename).read_pdb()
-                            output_file = os.path.join(symbols.__path__[0], "windows", filter_string + ".json.xz")
+                            try:
+                                json_output = pdb_isf.PDBConvertor(filename).read_pdb()
+                                output_file = os.path.join(symbols.__path__[0], "windows", filter_string + ".json.xz")
 
-                            # Write the JSON file to disk
-                            os.makedirs(os.path.dirname(output_file), exist_ok = True)
-                            with lzma.open(output_file, "w") as f:
-                                f.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
-                            # Clean up after ourselves
-                            os.remove(filename)
+                                # Write the JSON file to disk
+                                os.makedirs(os.path.dirname(output_file), exist_ok = True)
+                                # FIXME: If the directory is unwritable we should ideally write this to the cache location
+                                with lzma.open(output_file, "w") as f:
+                                    f.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
+                            finally:
+                                # Clean up after ourselves
+                                os.remove(filename)
 
                             # Try again
                             for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
