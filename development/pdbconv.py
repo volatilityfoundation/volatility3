@@ -174,6 +174,15 @@ class PDBConvertor:
         "T_VOID": "void",
     }
 
+    ctype_python_types = {
+        "char": "char",
+        "unsigned char": "char",
+        "float": "float",
+        "double": "float",
+        "long double": "float",
+        "void": "void"
+    }
+
     base_type_size = {
         "T_32PRCHAR": 4,
         "T_32PUCHAR": 4,
@@ -187,6 +196,7 @@ class PDBConvertor:
         "T_64PUQUAD": 8,
         "T_64PUSHORT": 8,
         "T_64PVOID": 8,
+        "T_VOID": 0,
         "T_INT4": 4,
         "T_INT8": 8,
         "T_LONG": 4,
@@ -212,6 +222,15 @@ class PDBConvertor:
         self._filename = filename
         logger.info("Parsing PDB...")
         self._pdb = pdbparse.parse(filename)
+        self._seen_ctypes = set([])
+
+    def lookup_ctype(self, ctype: str) -> str:
+        self._seen_ctypes.add(ctype)
+        return self.ctype[ctype]
+
+    def lookup_ctype_pointers(self, ctype_pointer: str) -> str:
+        self._seen_ctypes.add(ctype_pointer.replace('32P', '').replace('64P', ''))
+        return self.ctype_pointers[ctype_pointer]
 
     def read_pdb(self) -> Dict:
         """Reads in the PDB file and forms essentially a python dictionary of necessary data"""
@@ -263,7 +282,7 @@ class PDBConvertor:
     def _format_enum(self, user_enum):
         output = {
             user_enum.name: {
-                'base': self.ctype[user_enum.utype],
+                'base': self.lookup_ctype(user_enum.utype),
                 'size': self._determine_size(user_enum.utype),
                 'constants': dict([(enum.name, enum.enum_value) for enum in user_enum.fieldlist.substructs])
             }
@@ -347,10 +366,10 @@ class PDBConvertor:
         output = {}
         if isinstance(kind, str):
             try:
-                output = self.ctype_pointers[kind]
+                output = self.lookup_ctype_pointers(kind)
             except:
                 try:
-                    output = {'kind': 'base', 'name': self.ctype[kind]}
+                    output = {'kind': 'base', 'name': self.lookup_ctype(kind)}
                 except:
                     output = {'kind': 'base', 'name': kind}
         elif kind.leaf_type == 'LF_MODIFIER':
@@ -385,6 +404,15 @@ class PDBConvertor:
 
     def read_basetypes(self) -> Dict:
         """Reads the base types from the PDB file"""
+        output = {}
+        for index in self._seen_ctypes:
+            output[self.ctype[index]] = {
+                "endian": "little",
+                "kind": self.ctype_python_types.get(self.ctype[index], "int"),
+                "signed": False if "_U" in index else True,
+                "size": self.base_type_size[index]
+            }
+        return output
 
 
 if __name__ == '__main__':
