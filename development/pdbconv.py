@@ -121,6 +121,9 @@ class PDBConvertor:
 
     def lookup_ctype_pointers(self, ctype_pointer: str) -> Dict[str, Union[str, Dict[str, str]]]:
         base_type = ctype_pointer.replace('32P', '').replace('64P', '')
+        if base_type == ctype_pointer:
+            # We raise a KeyError, because we've been asked about a type that isn't a pointer
+            raise KeyError
         self._seen_ctypes.add(base_type)
         return {"kind": "pointer", "subtype": {"kind": "base", "name": base_type}}
 
@@ -259,10 +262,10 @@ class PDBConvertor:
         if isinstance(kind, str):
             try:
                 output = self.lookup_ctype_pointers(kind)
-            except:
+            except KeyError:
                 try:
                     output = {'kind': 'base', 'name': self.lookup_ctype(kind)}
-                except:
+                except KeyError:
                     output = {'kind': 'base', 'name': kind}
         elif kind.leaf_type == 'LF_MODIFIER':
             output = self._format_kind(kind.modified_type)
