@@ -33,9 +33,10 @@ class PDBRetreiver:
             result = None
             for suffix in [file_name[:-1] + '_', file_name]:
                 pdb_file = requests.get(url + suffix, headers = {'User-Agent': "Microsoft-Symbol-Server/6.11.0001.404"})
-                with tempfile.NamedTemporaryFile(delete = False) as f:
-                    f.write(pdb_file.content)
-                    result = f.name
+                if pdb_file.status_code != 404:
+                    with tempfile.NamedTemporaryFile(delete = False) as f:
+                        f.write(pdb_file.content)
+                        result = f.name
             if result:
                 break
         return result
