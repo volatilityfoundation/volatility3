@@ -29,6 +29,12 @@ import os
 import struct
 from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Union
 
+try:
+    from volatility.framework.symbols.windows import pdb_isf
+    import json, lzma
+except ImportError:
+    pdb_isf = None
+
 from volatility import symbols
 from volatility.framework import constants, exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
@@ -197,40 +203,24 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             if valid_kernels:
                 # TODO: Check that the symbols for this kernel will fulfill the requirement
                 for virtual_layer in valid_kernels:
+                    isf_path = None
                     _kvo, kernel = valid_kernels[virtual_layer]
                     if not isinstance(kernel['pdb_name'], str) or not isinstance(kernel['GUID'], str):
                         raise TypeError("PDB name or GUID not a string value")
                     filter_string = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
+
                     # Take the first result of search for the intermediate file
                     for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
                         isf_path = value
                         break
                     else:
-                        isf_path = ''
-                        try:
-                            from volatility.framework.symbols.windows import pdb_isf
-                            import json, lzma
-                            filename = pdb_isf.PDBRetreiver().retreive_pdb(
-                                guid = kernel['GUID'] + str(kernel['age']), file_name = kernel['pdb_name'])
-                            try:
-                                json_output = pdb_isf.PDBConvertor(filename).read_pdb()
-                                output_file = os.path.join(symbols.__path__[0], "windows", filter_string + ".json.xz")
+                        # If none are found, attempt to download the pdb, convert it and try again
+                        self.download_pdb_isf(kernel['GUID'], kernel['age'], kernel['pdb_name'])
+                        # Try again
+                        for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
+                            isf_path = value
+                            break
 
-                                # Write the JSON file to disk
-                                os.makedirs(os.path.dirname(output_file), exist_ok = True)
-                                # FIXME: If the directory is unwritable we should ideally write this to the cache location
-                                with lzma.open(output_file, "w") as f:
-                                    f.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
-                            finally:
-                                # Clean up after ourselves
-                                os.remove(filename)
-
-                            # Try again
-                            for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
-                                isf_path = value
-                                break
-                        except ImportError:
-                            vollog.debug("Dependencies for automatic windows ISF downloader failed")
                     if isf_path:
                         vollog.debug("Using symbol library: {}".format(filter_string))
                         clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
@@ -246,6 +236,42 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         vollog.debug("Required symbol library path not found: {}".format(filter_string))
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
+
+    def download_pdb_isf(self, guid: str, age: int, pdb_name: str) -> None:
+        """Attempts to download the PDB file, convert it to an ISF file and save it to one of the symbol locations"""
+        if pdb_isf is None:
+            return None
+
+        # Check for writability
+        filter_string = os.path.join(pdb_name, guid + "-" + str(age))
+        for path in symbols.__path__:
+
+            # Store any temporary files created by downloading PDB files
+            tmp_files = []
+            potential_output_filename = os.path.join(path, "windows", filter_string + ".json.xz")
+            try:
+                os.makedirs(os.path.dirname(potential_output_filename), exist_ok = True)
+                data_written = False
+                with lzma.open(potential_output_filename, "w") as of:
+                    # Once we haven't thrown an error, do the computation
+                    tmp_files.append(pdb_isf.PDBRetreiver().retreive_pdb(guid + str(age), file_name = pdb_name))
+                    json_output = pdb_isf.PDBConvertor(tmp_files[-1]).read_pdb()
+                    of.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
+                    # After we've successfully written it out, record the fact so we don't clear it out
+                    data_written = True
+                break
+            except PermissionError:
+                continue
+            finally:
+                # If something else failed, removed the symbol file so we don't pick it up in the future
+                if not data_written and os.path.exists(potential_output_filename):
+                    os.remove(potential_output_filename)
+                # Clear out all the temporary file if we constructed one
+                for filename in tmp_files:
+                    os.remove(filename)
+        else:
+            vollog.warning("Cannot write downloaded symbols, please add the appropriate symbols"
+                           " or add/modify a symbols directory that is writable")
 
     def set_kernel_virtual_offset(self, context: interfaces.context.ContextInterface,
                                   valid_kernels: ValidKernelsType) -> None:
