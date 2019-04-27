@@ -125,7 +125,7 @@ class PDBConvertor:
             # We raise a KeyError, because we've been asked about a type that isn't a pointer
             raise KeyError
         self._seen_ctypes.add(base_type)
-        return {"kind": "pointer", "subtype": {"kind": "base", "name": base_type}}
+        return {"kind": "pointer", "subtype": {"kind": "base", "name": self.ctype[base_type]}}
 
     def read_pdb(self) -> Dict:
         """Reads in the PDB file and forms essentially a python dictionary of necessary data"""
