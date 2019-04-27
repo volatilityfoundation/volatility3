@@ -8,6 +8,7 @@ import tempfile
 from typing import Dict
 
 import pdbparse
+import pdbparse.undecorate
 import requests
 
 logger = logging.getLogger(__name__)
@@ -217,6 +218,8 @@ class PDBConvertor:
         "T_64PLONG": 8,
         "PTR_64": 8,
         "PTR_32": 4,
+        "PTR_NEAR32": 4,
+        "PTR_NEAR64": 8,
     }
 
     def __init__(self, filename):
@@ -311,10 +314,11 @@ class PDBConvertor:
                 virt_base = sects[sym.segment - 1].VirtualAddress
             except IndexError:
                 continue
+            name, _, _ = pdbparse.undecorate.undecorate(sym.name)
             if omap:
-                output[sym.name] = {"address": omap.remap(sym.offset + virt_base)}
+                output[name] = {"address": omap.remap(sym.offset + virt_base)}
             else:
-                output[sym.name] = {"address": sym.offset + virt_base}
+                output[name] = {"address": sym.offset + virt_base}
 
         return output
 
