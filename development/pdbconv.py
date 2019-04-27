@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import tempfile
-from typing import Dict
+from typing import Dict, Union
 
 import pdbparse
 import pdbparse.undecorate
@@ -42,121 +42,6 @@ class PDBRetreiver:
 
 
 class PDBConvertor:
-    ctype_pointers = {
-        "T_32PINT4": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "long"
-            }
-        },
-        "T_32PRCHAR": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "char"
-            }
-        },
-        "T_32PUCHAR": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "unsigned char"
-            }
-        },
-        "T_32PULONG": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "unsigned long"
-            }
-        },
-        "T_32PLONG": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "long"
-            }
-        },
-        "T_32PUQUAD": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "unsigned long long"
-            }
-        },
-        "T_32PUSHORT": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "unsigned short"
-            }
-        },
-        "T_32PVOID": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "void"
-            }
-        },
-        "T_64PINT4": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "long"
-            }
-        },
-        "T_64PRCHAR": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "char"
-            }
-        },
-        "T_64PUCHAR": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "unsigned char"
-            }
-        },
-        "T_64PULONG": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "unsigned long"
-            }
-        },
-        "T_64PLONG": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "long"
-            }
-        },
-        "T_64PUQUAD": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "unsigned long long"
-            }
-        },
-        "T_64PUSHORT": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "unsigned short"
-            }
-        },
-        "T_64PVOID": {
-            "kind": "pointer",
-            "subtype": {
-                "kind": "base",
-                "name": "void"
-            }
-        }
-    }
-
     ctype = {
         "T_INT4": "int",
         "T_INT8": "long long",
@@ -191,6 +76,7 @@ class PDBConvertor:
         "T_32PULONG": 4,
         "T_32PUQUAD": 4,
         "T_32PUSHORT": 4,
+        "T_32PLONG": 4,
         "T_32PWCHAR": 4,
         "T_32PVOID": 4,
         "T_64PRCHAR": 8,
@@ -198,6 +84,7 @@ class PDBConvertor:
         "T_64PULONG": 8,
         "T_64PUQUAD": 8,
         "T_64PUSHORT": 8,
+        "T_64PLONG": 8,
         "T_64PWCHAR": 8,
         "T_64PVOID": 8,
         "T_VOID": 0,
@@ -216,8 +103,6 @@ class PDBConvertor:
         "T_UQUAD": 8,
         "T_USHORT": 2,
         "T_WCHAR": 2,
-        "T_32PLONG": 4,
-        "T_64PLONG": 8,
         "PTR_64": 8,
         "PTR_32": 4,
         "PTR_NEAR32": 4,
@@ -234,9 +119,10 @@ class PDBConvertor:
         self._seen_ctypes.add(ctype)
         return self.ctype[ctype]
 
-    def lookup_ctype_pointers(self, ctype_pointer: str) -> str:
-        self._seen_ctypes.add(ctype_pointer.replace('32P', '').replace('64P', ''))
-        return self.ctype_pointers[ctype_pointer]
+    def lookup_ctype_pointers(self, ctype_pointer: str) -> Dict[str, Union[str, Dict[str, str]]]:
+        base_type = ctype_pointer.replace('32P', '').replace('64P', '')
+        self._seen_ctypes.add(base_type)
+        return {"kind": "pointer", "subtype": {"kind": "base", "name": base_type}}
 
     def read_pdb(self) -> Dict:
         """Reads in the PDB file and forms essentially a python dictionary of necessary data"""
