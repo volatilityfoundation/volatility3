@@ -250,7 +250,7 @@ class PDBConvertor:
     def generate_metadata(self):
         """Generates the metadata necessary for this object"""
         dbg = self._pdb.STREAM_DBI
-        last_bytes = str(binascii.hexlify(bytes(self._pdb.STREAM_PDB.GUID.Data4, 'utf16')), 'ascii')[-16:]
+        last_bytes = str(binascii.hexlify(self._pdb.STREAM_PDB.GUID.Data4), 'ascii')[-16:]
         guidstr = u'{:08x}{:04x}{:04x}{}'.format(self._pdb.STREAM_PDB.GUID.Data1, self._pdb.STREAM_PDB.GUID.Data2,
                                                  self._pdb.STREAM_PDB.GUID.Data3, last_bytes)
         pdb_data = {
