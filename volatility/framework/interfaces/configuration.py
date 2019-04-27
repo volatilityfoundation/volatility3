@@ -513,7 +513,7 @@ class ConfigurableInterface(metaclass = ABCMeta):
     @property
     def config(self) -> HierarchicalDict:
         """The Hierarchical configuration Dictionary for this Configurable object"""
-        if self._config_cache is None:
+        if not hasattr(self, "_config_cache") or self._config_cache is None:
             self._config_cache = self._context.config.branch(self._config_path)
         return self._config_cache
 
