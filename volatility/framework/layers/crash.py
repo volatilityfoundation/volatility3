@@ -45,20 +45,16 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str) -> None:
 
-        self.header = None
-        self.dtb = None
+        # Construct these so we can use self.config
+        self._context = context
+        self._config_path = config_path
+        self._page_size = 0x1000
+        self._base_layer = self.config["base_layer"]
 
-        # BaseLayer will properly construct the context and config and everything else we need
-        # then the SegmentedLayer will call load_segments
-        super().__init__(context, config_path, name)
-
-    def _read_header(self) -> None:
-        # The checks happen here, so that context/config can be constructed by the superclass to be used here
         # Create a custom SymbolSpace
-        self._crash_table_name = intermed.IntermediateSymbolTable.create(self.context, self._config_path, 'windows',
-                                                                         'crash')
+        self._crash_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'crash')
         # Check Header
-        hdr_layer = self.context.memory[self._base_layer]
+        hdr_layer = self._context.memory[self._base_layer]
         hdr_offset = 0
         self._check_header(hdr_layer, hdr_offset)
 
@@ -73,9 +69,10 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         if self.header.DumpType != 0x1:
             raise WindowsCrashDump32FormatException("unsupported dump format 0x{:x}".format(self.header.DumpType))
 
+        super().__init__(context, config_path, name)
+
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer"""
-        self._read_header()
 
         segments = []
 
