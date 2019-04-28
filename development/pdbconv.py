@@ -4,12 +4,11 @@ import datetime
 import json
 import logging
 import os
-import tempfile
 from typing import Dict, Union
+from urllib import request
 
 import pdbparse
 import pdbparse.undecorate
-import requests
 
 logger = logging.getLogger(__name__)
 logger.setLevel(1)
@@ -32,11 +31,11 @@ class PDBRetreiver:
 
             result = None
             for suffix in [file_name[:-1] + '_', file_name]:
-                pdb_file = requests.get(url + suffix, headers = {'User-Agent': "Microsoft-Symbol-Server/6.11.0001.404"})
-                if pdb_file.status_code != 404:
-                    with tempfile.NamedTemporaryFile(delete = False) as f:
-                        f.write(pdb_file.content)
-                        result = f.name
+                try:
+                    logger.debug("Retreiving file: {}".format(url + suffix))
+                    result, _ = request.urlretrieve(url + suffix)
+                except request.HTTPError as excp:
+                    logger.debug("HTTP Error encountered: {}".format(excp))
             if result:
                 break
         return result
@@ -324,6 +323,8 @@ if __name__ == '__main__':
     data_group.add_argument("-p", "--pattern", metavar = "PATTERN", help = "Filename pattern to recover PDB file")
     data_group.add_argument(
         "-g", "--guid", metavar = "GUID", help = "GUID + Age string for the required PDB file", default = None)
+    data_group.add_argument(
+        "-k", "--keep", action = "store_true", default = False, help = "Keep the downloaded PDB file")
     args = parser.parse_args()
 
     delfile = False
@@ -337,5 +338,7 @@ if __name__ == '__main__':
     with open(args.output, "w") as f:
         json.dump(convertor.read_pdb(), f, indent = 2, sort_keys = True)
 
-    if delfile:
+    if args.keep:
+        print("Temporary PDB file: {}".format(filename))
+    elif delfile:
         os.remove(filename)
