@@ -73,8 +73,8 @@ class PoolConstraint:
 
 
 def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
-                     fallback_checks: List[Tuple[str, Optional[str], bool]],
-                     invert: bool = False) -> Callable[[interfaces.context.ContextInterface, str], bool]:
+                     fallback_checks: List[Tuple[str, Optional[str], bool]]
+                     ) -> Callable[[interfaces.context.ContextInterface, str], bool]:
     """Distinguishes a symbol table as being above a particular version or point
 
        This will primarily check the version metadata first and foremost.
@@ -285,8 +285,7 @@ class PoolScanner(plugins.PluginInterface):
         cookie = handles.Handles.find_cookie(context = context, layer_name = layer_name, symbol_table = symbol_table)
 
         is_windows_10 = cls.is_windows_10(context = context, symbol_table = symbol_table)
-        is_windows_8_or_later = cls.is_windows_8_or_later(
-            context = context, layer_name = layer_name, symbol_table = symbol_table)
+        is_windows_8_or_later = cls.is_windows_8_or_later(context = context, symbol_table = symbol_table)
 
         # start off with the primary virtual layer
         scan_layer = layer_name
