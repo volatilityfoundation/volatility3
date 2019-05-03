@@ -72,35 +72,53 @@ class PoolConstraint:
         self.alignment = alignment
 
 
-def os_distinguisher(version_check: Tuple[int, ...],
-                     symbol_name: Optional[str] = None,
-                     type_name: Optional[str] = None,
-                     type_member: Optional[str] = None) -> Callable[[interfaces.context.ContextInterface, str], bool]:
-    """Distinguishes an operating system based on the metadata and falling back to check whether a structure exists"""
-    # try the primary method based on the pe version in the ISF
-    if not symbol_name and not type_name:
-        raise ValueError("OS Distinguisher must have at least one fallback method (symbol or type/member)")
+def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
+                     fallback_checks: List[Tuple[str, Optional[str], bool]],
+                     invert: bool = False) -> Callable[[interfaces.context.ContextInterface, str], bool]:
+    """Distinguishes a symbol table as being above a particular version or point
 
+       This will primarily check the version metadata first and foremost.
+       If that metadata isn't available then each item in the fallback_checks is tested.
+       If invert is specified then the result will be true if the version is less than that specified, or in the case of
+       fallback, if any of the fallback checks is successful.
+
+       A fallback check is made up of:
+        * a symbol or type name
+        * a member name (implying that the value before was a type name)
+        * whether that symbol, type or member must be present or absent for the symbol table to be more above the required point
+
+        Note: Specifying that a member must not be present includes the whole type not being present too (ie, either will pass the test)
+    """
+
+    # try the primary method based on the pe version in the ISF
     def method(context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
 
         try:
             pe_version = context.symbol_space[symbol_table].metadata.pe_version
             major, minor, revision, build = pe_version
-            return (major, minor, revision, build) >= version_check
+            return version_check((major, minor, revision, build))
         except (AttributeError, ValueError, TypeError):
             vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
 
+        if not fallback_checks:
+            raise ValueError("No fallback methods for os_distinguishing provided")
+
         # fall back to the backup method, if necessary
-        try:
-            if symbol_name:
-                _symbol = context.symbol_space.get_symbol(symbol_table + constants.BANG + symbol_name)
+        for name, member, response in fallback_checks:
+            if member is None:
+                if (context.symbol_space.has_symbol(symbol_table + constants.BANG + name)
+                        or context.symbol_space.has_type(symbol_table + constants.BANG + name)) != response:
+                    return False
             else:
-                type_class = context.symbol_space.get_type(symbol_table + constants.BANG + type_name)
-                if type_member:
-                    return type_class.has_member(type_member)
-            return True
-        except exceptions.SymbolError:
-            return False
+                try:
+                    symbol_type = context.symbol_space.get_type(symbol_table + constants.BANG + name)
+                    if symbol_type.has_member(member) != response:
+                        return False
+                except exceptions.SymbolError:
+                    if not response:
+                        return False
+
+        return True
 
     return method
 
@@ -116,44 +134,14 @@ class PoolScanner(plugins.PluginInterface):
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
-    is_windows_10 = os_distinguisher(version_check = (10, 0), symbol_name = "ObHeaderCookie")
-
-    @staticmethod
-    def is_windows_8_or_later(context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> bool:
-        """Determine if the analyzed sample is Windows 8 or later"""
-
-        # try the primary method based on the pe version in the ISF
-        try:
-            pe_version = context.symbol_space[symbol_table].metadata.pe_version
-            major, minor, _revision, _build = pe_version
-            return (major, minor) >= (6, 2)
-        except (AttributeError, ValueError, TypeError):
-            vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
-
-        # fall back to the backup method, if necessary
-        kvo = context.memory[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
-        handle_table_type = ntkrnlmp.get_type("_HANDLE_TABLE")
-        return not handle_table_type.has_member("HandleCount")
-
-    @staticmethod
-    def is_windows_7(context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> bool:
-        """Determine if the analyzed sample is Windows 7"""
-
-        # try the primary method based on the pe version in the ISF
-        try:
-            pe_version = context.symbol_space[symbol_table].metadata.pe_version
-            major, minor, _revision, _build = pe_version
-            return (major, minor) == (6, 1)
-        except (AttributeError, ValueError):
-            vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
-
-        # fall back to the backup method, if necessary
-        kvo = context.memory[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
-        handle_table_type = ntkrnlmp.get_type("_OBJECT_HEADER")
-        return (handle_table_type.has_member("TypeIndex")
-                and not PoolScanner.is_windows_8_or_later(context, layer_name, symbol_table))
+    is_windows_10 = os_distinguisher(
+        version_check = lambda x: x >= (10, 0), fallback_checks = [("ObHeaderCookie", None, True)])
+    is_windows_8_or_later = os_distinguisher(
+        version_check = lambda x: x >= (6, 2), fallback_checks = [("_HANDLE_TABLE", "HandleCount", False)])
+    # Technically, this is win7 or less
+    is_windows_7 = os_distinguisher(
+        version_check = lambda x: x == (6, 1),
+        fallback_checks = [("_OBJECT_HEADER", "TypeIndex", True), ("_HANDLE_TABLE", "HandleCount", True)])
 
     def _generator(self):
 
