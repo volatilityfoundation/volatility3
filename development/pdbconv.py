@@ -336,6 +336,8 @@ if __name__ == '__main__':
         filename = args.file
     else:
         parser.error("No GUID/pattern or file provided")
+        # This is just for type checking because this code will never actually get hit
+        filename = ""
     convertor = PDBConvertor(filename)
 
     with open(args.output, "w") as f:
