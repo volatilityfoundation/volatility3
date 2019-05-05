@@ -4,7 +4,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Dict, Union
+from typing import Dict, Union, Optional, Any
 from urllib import request
 
 import pdbparse
@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
 class PDBRetreiver:
 
-    def retreive_pdb(self, guid, file_name) -> str:
+    def retreive_pdb(self, guid: str, file_name: str) -> Optional[str]:
         logger.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])
         for sym_url in ['http://msdl.microsoft.com/download/symbols']:
@@ -110,7 +110,7 @@ class PDBConvertor:
         "PTR_NEAR64": 8,
     }
 
-    def __init__(self, filename):
+    def __init__(self, filename: str):
         self._filename = filename
         logger.info("Parsing PDB...")
         self._pdb = pdbparse.parse(filename)
@@ -139,7 +139,7 @@ class PDBConvertor:
         }
         return output
 
-    def generate_metadata(self):
+    def generate_metadata(self) -> Dict[str, Any]:
         """Generates the metadata necessary for this object"""
         dbg = self._pdb.STREAM_DBI
         last_bytes = str(binascii.hexlify(self._pdb.STREAM_PDB.GUID.Data4), 'ascii')[-16:]
@@ -329,11 +329,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     delfile = False
-    if args.guid is not None:
+    if args.guid is not None and args.pattern is not None:
         filename = PDBRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern)
         delfile = True
-    else:
+    elif args.file:
         filename = args.file
+    else:
+        parser.error("No GUID/pattern or file provided")
     convertor = PDBConvertor(filename)
 
     with open(args.output, "w") as f:
