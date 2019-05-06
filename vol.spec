@@ -46,9 +46,7 @@ a = Analysis(['vol.py'],
                      collect_data_files('volatility.plugins', include_py_files = True),
              hiddenimports = collect_submodules('volatility.framework.automagic') + \
                              collect_submodules('volatility.framework.plugins') + \
-                             collect_submodules('volatility.framework.symbols') + \
-                             collect_submodules('volatility.plugins') + \
-                             collect_submodules('volatility.automagic'),
+                             collect_submodules('volatility.framework.symbols'),
              hookspath = [],
              runtime_hooks = [],
              excludes = [],

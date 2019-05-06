@@ -30,7 +30,11 @@ class WarningFindSpec(abc.MetaPathFinder):
     def find_spec(fullname: str, path, target = None):
         """Mock find_spec method that just checks the name, this must go first"""
         if fullname.startswith("volatility.framework.plugins."):
-            raise Warning("Please do not use the volatility.framework.plugins namespace, only use volatility.plugins")
+            warning = "Please do not use the volatility.framework.plugins namespace directly, only use volatility.plugins"
+            # Pyinstaller uses pkgutil to import, but needs to read the modules to figure out dependencies
+            # As such, we only print the warning when directly imported rather than being run from a script
+            if 'pkgutil' not in sys.modules:
+                raise Warning(warning)
 
 
 warning_find_spec = [WarningFindSpec()]  # type: List[abc.MetaPathFinder]
