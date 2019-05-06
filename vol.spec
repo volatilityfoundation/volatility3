@@ -27,6 +27,12 @@ from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 block_cipher = None
 
+# NOTE: Issues with default pyinstaller build:
+# jsonschema:
+#   - https://github.com/pyinstaller/pyinstaller/issues/4100
+#   - https://github.com/pyinstaller/pyinstaller/pull/4168
+
+
 # Volatility must be findable in sys.path in order for collect_submodules to work
 # This adds the current working directory, which should usually do the trick
 sys.path.append(os.getcwd())
@@ -38,8 +44,11 @@ a = Analysis(['vol.py'],
                      collect_data_files('volatility.framework.plugins', include_py_files = True) + \
                      collect_data_files('volatility.schemas') + \
                      collect_data_files('volatility.plugins', include_py_files = True),
-             hiddenimports = collect_submodules('volatility.framework.plugins') + \
-                             collect_submodules('volatility.plugins'),
+             hiddenimports = collect_submodules('volatility.framework.automagic') + \
+                             collect_submodules('volatility.framework.plugins') + \
+                             collect_submodules('volatility.framework.symbols') + \
+                             collect_submodules('volatility.plugins') + \
+                             collect_submodules('volatility.automagic'),
              hookspath = [],
              runtime_hooks = [],
              excludes = [],
