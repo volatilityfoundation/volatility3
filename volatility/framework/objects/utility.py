@@ -23,7 +23,7 @@ from typing import Optional, Union
 from volatility.framework import interfaces, objects, constants
 
 
-def array_to_string(array: objects.Array, count: Optional[int] = None,
+def array_to_string(array: 'objects.Array', count: Optional[int] = None,
                     errors: str = 'replace') -> interfaces.objects.ObjectInterface:
     """Takes a volatility Array of characters and returns a string"""
     # TODO: Consider checking the Array's target is a native char
@@ -35,7 +35,7 @@ def array_to_string(array: objects.Array, count: Optional[int] = None,
     return array.cast("string", max_length = count, errors = errors)
 
 
-def pointer_to_string(pointer: objects.Pointer, count: int, errors: str = 'replace'):
+def pointer_to_string(pointer: 'objects.Pointer', count: int, errors: str = 'replace'):
     """Takes a volatility Pointer to characters and returns a string"""
     if not isinstance(pointer, objects.Pointer):
         raise TypeError("pointer_to_string takes a Pointer")

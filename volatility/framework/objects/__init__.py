@@ -19,7 +19,6 @@
 #
 
 import collections
-import functools
 import logging
 import struct
 from collections import abc
@@ -27,7 +26,7 @@ from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, U
 
 from volatility.framework import interfaces
 from volatility.framework.interfaces.objects import ObjectInformation
-from volatility.framework.objects import templates
+from volatility.framework.objects import templates, utility
 
 vollog = logging.getLogger(__name__)
 
