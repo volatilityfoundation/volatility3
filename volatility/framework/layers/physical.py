@@ -17,6 +17,7 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
 # specific language governing rights and limitations under the License.
 #
+import functools
 import threading
 from typing import Any, Dict, IO, List, Optional, Union
 
@@ -155,18 +156,22 @@ class FileLayer(interfaces.layers.DataLayerInterface):
                 invalid_address = self.maximum_address + 1
             raise exceptions.InvalidAddressException(self.name, invalid_address,
                                                      "Offset outside of the buffer boundaries")
+        return self._read(self._file, self._lock, self.name, offset, length, pad)
 
+    @staticmethod
+    @functools.lru_cache(4096)
+    def _read(file_object: IO[Any], lock, name: str, offset: int, length: int, pad: bool = False) -> bytes:
         # TODO: implement locking for multi-threading
-        with self._lock:
-            self._file.seek(offset)
-            data = self._file.read(length)
+        with lock:
+            file_object.seek(offset)
+            data = file_object.read(length)
 
         if len(data) < length:
             if pad:
                 data += (b"\x00" * (length - len(data)))
             else:
-                raise exceptions.InvalidAddressException(
-                    self.name, offset + len(data), "Could not read sufficient bytes from the " + self.name + " file")
+                raise exceptions.InvalidAddressException(name, offset + len(data),
+                                                         "Could not read sufficient bytes from the " + name + " file")
         return data
 
     def write(self, offset: int, data: bytes) -> None:
