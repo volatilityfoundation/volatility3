@@ -17,7 +17,6 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
 # specific language governing rights and limitations under the License.
 #
-import functools
 import threading
 from typing import Any, Dict, IO, List, Optional, Union
 
@@ -150,10 +149,6 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads from the file at offset for length"""
-        return self._read(offset, length, pad)
-
-    @functools.lru_cache(maxsize = 512)
-    def _read(self, offset: int, length: int, pad: bool = False) -> bytes:
         if not self.is_valid(offset, length):
             invalid_address = offset
             if self.minimum_address < offset <= self.maximum_address:
