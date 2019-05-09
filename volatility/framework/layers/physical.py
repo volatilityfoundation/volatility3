@@ -160,7 +160,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         return self._read(self._lock, self._file, self.name, offset, length, pad)
 
     @staticmethod
-    @functools.lru_cache(maxsize = 512)
+    # @functools.lru_cache(maxsize = 512)
     def _read(lock: Union[DummyLock, threading.Lock],
               file_object: IO[Any],
               name: str,
