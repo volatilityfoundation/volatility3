@@ -150,6 +150,10 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads from the file at offset for length"""
+        return self._read(offset, length, pad)
+
+    @functools.lru_cache(maxsize = 512)
+    def _read(self, offset: int, length: int, pad: bool = False) -> bytes:
         if not self.is_valid(offset, length):
             invalid_address = offset
             if self.minimum_address < offset <= self.maximum_address:
@@ -157,20 +161,10 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             raise exceptions.InvalidAddressException(self.name, invalid_address,
                                                      "Offset outside of the buffer boundaries")
 
-        return self._read(self._lock, self._file, self.name, offset, length, pad)
-
-    @staticmethod
-    # @functools.lru_cache(maxsize = 512)
-    def _read(lock: Union[DummyLock, threading.Lock],
-              file_object: IO[Any],
-              name: str,
-              offset: int,
-              length: int,
-              pad: bool = False) -> bytes:
         # TODO: implement locking for multi-threading
-        with lock:
-            file_object.seek(offset)
-            data = file_object.read(length)
+        with self._lock:
+            self._file.seek(offset)
+            data = self._file.read(length)
 
         if len(data) < length:
             if pad:
