@@ -19,6 +19,7 @@
 #
 
 import collections
+import functools
 import logging
 import math
 import struct
@@ -175,6 +176,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
 
         return entry, position
 
+    @functools.lru_cache(1025)
     def _get_valid_table(self, base_address: int) -> Optional[bytes]:
         """Extracts the table, validates it and returns it if it's valid"""
         table = self._context.memory.read(self._base_layer, base_address, self.page_size)
