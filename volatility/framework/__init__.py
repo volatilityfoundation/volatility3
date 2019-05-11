@@ -86,10 +86,10 @@ def hide_from_subclasses(cls: Type) -> Type:
     return cls
 
 
-T = TypeVar('T', bound = 'Type')
+T = TypeVar('T')
 
 
-def class_subclasses(cls: T) -> Generator[T, None, None]:
+def class_subclasses(cls: Type[T]) -> Generator[Type[T], None, None]:
     """Returns all the (recursive) subclasses of a given class"""
     if not inspect.isclass(cls):
         raise TypeError("class_subclasses parameter not a valid class: {}".format(cls))
@@ -146,6 +146,6 @@ def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
 # We currently require 3.5.3 since 3.5.1 has no typing.Type and 3.5.2 is broken for ''/delayed encapsulated types
 required_python_version = (3, 5, 3)
 if (sys.version_info.major != required_python_version[0] or sys.version_info.minor < required_python_version[1] or
-        (sys.version_info.minor == required_python_version[1] and sys.version_info.micro < required_python_version[2])):
+    (sys.version_info.minor == required_python_version[1] and sys.version_info.micro < required_python_version[2])):
     raise RuntimeError(
         "Volatility framework requires python version {}.{}.{} or greater".format(*required_python_version))
