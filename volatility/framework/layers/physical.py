@@ -18,6 +18,7 @@
 # specific language governing rights and limitations under the License.
 #
 import threading
+from collections import OrderedDict
 from typing import Any, Dict, IO, List, Optional, Union
 
 from volatility.framework import exceptions, interfaces, constants
@@ -106,6 +107,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._lock = DummyLock()  # type: Union[DummyLock, threading.Lock]
         if constants.PARALLELISM == constants.PARALLELISM_THREADING:
             self._lock = threading.Lock()
+        self._cache = OrderedDict()
         # Instantiate the file to throw exceptions if the file doesn't open
         _ = self._file
 
@@ -156,6 +158,10 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             raise exceptions.InvalidAddressException(self.name, invalid_address,
                                                      "Offset outside of the buffer boundaries")
 
+        if (length, offset) in self._cache.keys():
+            self._cache.move_to_end((length, offset))
+            return self._cache[(length, offset)]
+
         # TODO: implement locking for multi-threading
         with self._lock:
             self._file.seek(offset)
@@ -167,6 +173,10 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             else:
                 raise exceptions.InvalidAddressException(
                     self.name, offset + len(data), "Could not read sufficient bytes from the " + self.name + " file")
+
+        self._cache[(length, offset)] = data
+        if len(self._cache) > 1024:
+            self._cache.popitem(last = True)
         return data
 
     def write(self, offset: int, data: bytes) -> None:
