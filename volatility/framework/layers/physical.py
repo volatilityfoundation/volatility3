@@ -165,8 +165,8 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             if pad:
                 data += (b"\x00" * (length - len(data)))
             else:
-                raise exceptions.InvalidAddressException(name, offset + len(data),
-                                                         "Could not read sufficient bytes from the " + name + " file")
+                raise exceptions.InvalidAddressException(
+                    self.name, offset + len(data), "Could not read sufficient bytes from the " + self.name + " file")
         return data
 
     def write(self, offset: int, data: bytes) -> None:
