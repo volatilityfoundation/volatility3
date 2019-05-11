@@ -4,7 +4,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Dict, Union, Optional, Any
+from typing import Dict, Union, Optional, Any, Set
 from urllib import request
 
 import pdbparse
@@ -114,7 +114,7 @@ class PDBConvertor:
         self._filename = filename
         logger.info("Parsing PDB...")
         self._pdb = pdbparse.parse(filename)
-        self._seen_ctypes = set([])
+        self._seen_ctypes = set([])  # type: Set[str]
 
     def lookup_ctype(self, ctype: str) -> str:
         self._seen_ctypes.add(ctype)
@@ -167,7 +167,7 @@ class PDBConvertor:
     def read_enums(self) -> Dict:
         """Reads the Enumerations from the PDB file"""
         logger.info("Reading enums...")
-        output = {}
+        output = {}  # type: Dict[str, Any]
         stream = self._pdb.STREAM_TPI
         for type_index in stream.types:
             user_type = stream.types[type_index]
@@ -229,11 +229,11 @@ class PDBConvertor:
 
     def _format_usertype(self, usertype, kind) -> Dict:
         """Produces a single usertype"""
-        fields = {}
+        fields = {}  # type: Dict[str, Dict[str, Any]]
         [fields.update(self._format_field(s)) for s in usertype.fieldlist.substructs]
         return {usertype.name: {'fields': fields, 'kind': kind, 'size': usertype.size}}
 
-    def _format_field(self, field):
+    def _format_field(self, field) -> Dict[str, Dict[str, Any]]:
         return {field.name: {"offset": field.offset, "type": self._format_kind(field.index)}}
 
     def _determine_size(self, field):
@@ -329,6 +329,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     delfile = False
+    filename = None
     if args.guid is not None and args.pattern is not None:
         filename = PDBRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern)
         delfile = True
@@ -336,9 +337,11 @@ if __name__ == '__main__':
         filename = args.file
     else:
         parser.error("No GUID/pattern or file provided")
-        # This is just for type checking because this code will never actually get hit
-        filename = ""
-    convertor = PDBConvertor(filename)
+
+    if filename:
+        convertor = PDBConvertor(filename)
+    else:
+        parser.error("No suitable filename provided or retrieved")
 
     with open(args.output, "w") as f:
         json.dump(convertor.read_pdb(), f, indent = 2, sort_keys = True)

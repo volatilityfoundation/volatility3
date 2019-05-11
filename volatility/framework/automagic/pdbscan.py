@@ -29,11 +29,12 @@ import os
 import struct
 from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Union
 
+pdb_isf = None
 try:
     from volatility.framework.symbols.windows import pdb_isf
     import json, lzma
 except ImportError:
-    pdb_isf = None
+    pass
 
 from volatility import symbols
 from volatility.framework import constants, exceptions, interfaces, layers
