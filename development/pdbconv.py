@@ -338,10 +338,10 @@ if __name__ == '__main__':
     else:
         parser.error("No GUID/pattern or file provided")
 
-    if filename:
-        convertor = PDBConvertor(filename)
-    else:
+    if not filename:
         parser.error("No suitable filename provided or retrieved")
+
+    convertor = PDBConvertor(filename)
 
     with open(args.output, "w") as f:
         json.dump(convertor.read_pdb(), f, indent = 2, sort_keys = True)
