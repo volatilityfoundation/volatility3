@@ -18,4 +18,4 @@
 # specific language governing rights and limitations under the License.
 #
 
-from volatility.framework.layers import resources, intel, lime, physical, segmented, vmware, crash
+from volatility.framework.layers import resources, intel, lime, physical, segmented, vmware, crash, msf
