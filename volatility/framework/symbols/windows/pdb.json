@@ -1,0 +1,170 @@
+{
+  "symbols": {
+  },
+  "user_types": {
+    "SI_PERSIST": {
+      "fields": {
+        "cb": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "mpspnpn": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    },
+    "MSF_HDR": {
+      "fields": {
+        "Magic": {
+          "offset": 0,
+          "type": {
+            "count": 44,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "PageSize": {
+          "offset": 44,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "FPM": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "Mac": {
+          "offset": 50,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "siSt": {
+          "offset": 52,
+          "type": {
+            "kind": "struct",
+            "name": "SI_PERSIST"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 60
+    },
+    "BIG_MSF_HDR": {
+      "fields": {
+        "Magic": {
+          "offset": 0,
+          "type": {
+            "count": 30,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "PageSize": {
+          "offset": 30,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "FPM": {
+          "offset": 34,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Mac": {
+          "offset": 38,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "siSt": {
+          "offset": 42,
+          "type": {
+            "kind": "struct",
+            "name": "SI_PERSIST"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 60
+    }
+  },
+  "enums": {
+  },
+  "base_types": {
+    "unsigned char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": false,
+      "size": 1
+    },
+    "unsigned short": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 2
+    },
+    "long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 4
+    },
+    "char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": true,
+      "size": 1
+    },
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 8
+    },
+    "unsigned long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    }
+  },
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "ikelos-by-hand",
+      "datetime": "2019-05-22T15:51:03"
+    },
+    "format": "4.0.0"
+  }
+}
