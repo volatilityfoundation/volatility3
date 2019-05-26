@@ -335,7 +335,7 @@ class PoolScanner(plugins.PluginInterface):
             # We have to manually load a symbol table
 
             if symbols.symbol_table_is_64bit(context, symbol_table):
-                is_win_7 = PoolScanner.is_windows_7(context, 'primary', symbol_table)
+                is_win_7 = cls.is_windows_7(context = context, symbol_table = symbol_table)
                 if is_win_7:
                     pool_header_json_filename = "poolheader-x64-win7"
                 else:
