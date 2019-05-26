@@ -4,7 +4,7 @@
   "user_types": {
     "SI_PERSIST": {
       "fields": {
-        "cb": {
+        "StreamInfoSize": {
           "offset": 0,
           "type": {
             "kind": "base",
@@ -42,21 +42,21 @@
             "name": "long"
           }
         },
-        "FPM": {
+        "FreePageMapNumber": {
           "offset": 48,
           "type": {
             "kind": "base",
             "name": "unsigned short"
           }
         },
-        "Mac": {
+        "NumPages": {
           "offset": 50,
           "type": {
             "kind": "base",
             "name": "unsigned short"
           }
         },
-        "siSt": {
+        "StreamTableStreamInfo": {
           "offset": 52,
           "type": {
             "kind": "struct",
@@ -81,28 +81,28 @@
           }
         },
         "PageSize": {
-          "offset": 30,
+          "offset": 32,
           "type": {
             "kind": "base",
             "name": "long"
           }
         },
-        "FPM": {
-          "offset": 34,
+        "FreePageMapNumber": {
+          "offset": 36,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
-        "Mac": {
-          "offset": 38,
+        "NumPages": {
+          "offset": 40,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
-        "siSt": {
-          "offset": 42,
+        "StreamTableStreamInfo": {
+          "offset": 44,
           "type": {
             "kind": "struct",
             "name": "SI_PERSIST"
