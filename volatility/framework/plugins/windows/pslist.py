@@ -67,7 +67,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                        context: interfaces.context.ContextInterface,
                        layer_name: str,
                        symbol_table: str,
-                       filter_func: Callable[[int], bool] = lambda _: False) -> \
+                       filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the processes in the primary layer that are in the pid config option"""
 
