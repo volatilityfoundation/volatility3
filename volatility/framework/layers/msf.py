@@ -21,15 +21,18 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
         self._base_layer = self.config["base_layer"]
 
         self._pdb_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'pdb')
-        self._version = self._check_header()
+        response = self._check_header()
+        if response is None:
+            raise ValueError("Could not find a suitable header")
+        self._version, self._header = response
 
-    def _check_header(self) -> Optional[str]:
+    def _check_header(self) -> Optional[Tuple[str, interfaces.objects.ObjectInterface]]:
         """Verifies the header of the PDB file and returns the version of the file"""
         for header in self.headers:
             header_type = self._pdb_table_name + constants.BANG + header
             current_header = self.context.object(header_type, self._base_layer, 0)
             if utility.array_to_string(current_header.Magic) == self.headers[header]:
-                return header
+                return header, current_header
         return None
 
     @property
