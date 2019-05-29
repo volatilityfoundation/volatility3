@@ -25,6 +25,7 @@ import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
+from volatility.framework.objects import utility
 from volatility.plugins import timeliner
 
 
@@ -60,6 +61,16 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
         filter_list = [x for x in pid_list if x is not None]
         if filter_list:
             filter_func = lambda x: x.UniqueProcessId not in filter_list
+        return filter_func
+
+    @classmethod
+    def create_name_filter(cls, name_list: List[str] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+        filter_func = lambda _: False
+        # FIXME: mypy #4973 or #2608
+        name_list = name_list or []
+        filter_list = [x for x in name_list if x is not None]
+        if filter_list:
+            filter_func = lambda x: utility.array_to_string(x.ImageFileName) not in filter_list
         return filter_func
 
     @classmethod

@@ -1,0 +1,255 @@
+{
+    "symbols": {}, 
+    "enums": {
+        "StateEnum": {
+            "base": "long", 
+            "constants": {
+                "SERVICE_START_PENDING": 2, 
+                "SERVICE_STOP_PENDING": 3, 
+                "SERVICE_STOPPED": 1, 
+                "SERVICE_CONTINUE_PENDING": 5, 
+                "SERVICE_PAUSE_PENDING": 6, 
+                "SERVICE_PAUSED": 7, 
+                "SERVICE_RUNNING": 4
+            }, 
+            "size": 4
+        }, 
+        "StartEnum": {
+            "base": "long", 
+            "constants": {
+                "SERVICE_DEMAND_START": 3, 
+                "SERVICE_AUTO_START": 2, 
+                "SERVICE_BOOT_START": 0, 
+                "SERVICE_DISABLED": 4, 
+                "SERVICE_SYSTEM_START": 1
+            }, 
+            "size": 4
+        }
+    }, 
+    "base_types": {
+        "unsigned long": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "unsigned char": {
+            "kind": "char", 
+            "size": 1, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "pointer": {
+            "kind": "int", 
+            "size": 8, 
+            "signed": false, 
+            "endian": "little"
+        }, 
+        "unsigned int": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": false, 
+            "endian": "little"
+        },
+        "unsigned short": {
+            "kind": "int",
+            "size": 2,
+            "signed": false,
+            "endian": "little"
+        },
+        "long": {
+            "kind": "int", 
+            "size": 4, 
+            "signed": false, 
+            "endian": "little"
+        }
+    }, 
+    "user_types": {
+        "_SERVICE_LIST_ENTRY": {
+            "fields": {
+                "Flink": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_SERVICE_LIST_ENTRY"
+                        }
+                    },
+                    "offset": 16
+                }, 
+                "Blink": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_SERVICE_LIST_ENTRY"
+                        }
+                    },
+                    "offset": 0
+                }
+            }, 
+            "kind": "struct", 
+            "size": 16
+        }, 
+        "_SERVICE_PROCESS": {
+            "fields": {
+                "BinaryPath": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned short"
+                        }
+                    },
+                    "offset": 16
+                }, 
+                "ProcessId": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned int"
+                    }, 
+                    "offset": 24
+                }
+            }, 
+            "kind": "struct", 
+            "size": 24
+        }, 
+        "_SERVICE_HEADER": {
+            "fields": {
+                "Tag": {
+                    "type": {
+                        "count": 4, 
+                        "subtype": {
+                            "kind": "base", 
+                            "name": "unsigned char"
+                        }, 
+                        "kind": "array"
+                    }, 
+                    "offset": 0
+                }, 
+                "ServiceRecord": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_SERVICE_RECORD"
+                        }
+                    },
+                    "offset": 16
+                }
+            }, 
+            "kind": "struct", 
+            "size": 16
+        }, 
+        "_SERVICE_RECORD": {
+            "fields": {
+                "ServiceList": {
+                    "type": {
+                        "kind": "struct", 
+                        "name": "_SERVICE_LIST_ENTRY"
+                    }, 
+                    "offset": 120
+                }, 
+                "DisplayName": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned short"
+                        }
+                    }, 
+                    "offset": 16
+                }, 
+                "ServiceProcess": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_SERVICE_PROCESS"
+                        }
+                    }, 
+                    "offset": 40
+                }, 
+                "ServiceName": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned short"
+                        }
+                    },
+                    "offset": 8
+                }, 
+                "PrevEntry": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "struct",
+                            "name": "_SERVICE_RECORD"
+                        }
+                    },
+                    "offset": 0
+                }, 
+                "Start": {
+                    "type": {
+                        "kind": "enum", 
+                        "name": "StartEnum"
+                    }, 
+                    "offset": 76
+                }, 
+                "State": {
+                    "type": {
+                        "kind": "enum", 
+                        "name": "StateEnum"
+                    }, 
+                    "offset": 52
+                }, 
+                "Tag": {
+                    "type": {
+                        "count": 4, 
+                        "subtype": {
+                            "kind": "base", 
+                            "name": "unsigned char"
+                        }, 
+                        "kind": "array"
+                    }, 
+                    "offset": 32
+                }, 
+                "DriverName": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned short"
+                        }
+                    }, 
+                    "offset": 40
+                }, 
+                "Type": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned long"
+                    }, 
+                    "offset": 48
+                }, 
+                "Order": {
+                    "type": {
+                        "kind": "base", 
+                        "name": "unsigned int"
+                    }, 
+                    "offset": 24
+                }
+            }, 
+            "kind": "struct", 
+            "size": 120
+        }
+    }, 
+    "metadata": {
+        "producer": {
+            "version": "0.0.1", 
+            "name": "vtypes_to_json.py", 
+            "datetime": "2019-04-17T13:45:16.417006"
+        }, 
+        "format": "4.1.0"
+    }
+}
