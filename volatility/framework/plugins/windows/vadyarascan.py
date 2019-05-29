@@ -87,7 +87,8 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                     sections = self.get_vad_maps(task)):
                 yield format_hints.Hex(offset), name
 
-    def get_vad_maps(self, task: Any) -> Iterable[Tuple[int, int]]:
+    @staticmethod
+    def get_vad_maps(task: Any) -> Iterable[Tuple[int, int]]:
 
         vad_root = task.get_vad_root()
         for vad in vad_root.traverse():
