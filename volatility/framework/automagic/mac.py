@@ -95,6 +95,10 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
                     compare_banner_offset = banner_offset,
                     progress_callback = progress_callback)
 
+                if kaslr_shift == 0:
+                    vollog.debug("Invalid kalsr_shift found at offset: {}".format(banner_offset))
+                    continue
+
                 bootpml4_addr = MacUtilities.virtual_to_physical_address(
                     table.get_symbol("BootPML4").address + kaslr_shift)
 
