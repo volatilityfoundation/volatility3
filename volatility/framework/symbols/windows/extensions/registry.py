@@ -25,6 +25,7 @@ from typing import Optional, Iterable, Union
 
 from volatility.framework import constants, exceptions, objects, interfaces
 from volatility.framework.layers.registry import RegistryHive
+from volatility.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
 

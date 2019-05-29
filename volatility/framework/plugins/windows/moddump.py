@@ -21,21 +21,19 @@
 import logging
 from typing import List, Generator, Iterable
 
-import volatility.framework.constants as constants
-import volatility.framework.exceptions as exceptions
-import volatility.framework.interfaces.plugins as interfaces_plugins
-import volatility.framework.renderers as renderers
-import volatility.plugins.windows.modules as modules
-import volatility.plugins.windows.pslist as pslist
+from volatility.plugins.windows import pslist, modules
+
+from volatility.framework import constants, exceptions, renderers
 from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.framework.symbols.windows.pe import PEIntermedSymbols
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows.extensions import pe
 
 vollog = logging.getLogger(__name__)
 
 
-class ModDump(interfaces_plugins.PluginInterface):
+class ModDump(interfaces.plugins.PluginInterface):
     """Dumps kernel modules"""
 
     @classmethod
@@ -108,7 +106,8 @@ class ModDump(interfaces_plugins.PluginInterface):
     def _generator(self, mods):
 
         session_layers = list(self.get_session_layers(self.context, self.config['primary'], self.config['nt_symbols']))
-        pe_table_name = PEIntermedSymbols.create(self.context, self.config_path, "windows", "pe")
+        pe_table_name = intermed.IntermediateSymbolTable.create(
+            self.context, self.config_path, "windows", "pe", class_types = pe.class_types)
 
         for mod in mods:
             try:
@@ -126,7 +125,7 @@ class ModDump(interfaces_plugins.PluginInterface):
                         offset = mod.DllBase,
                         layer_name = session_layer_name)
 
-                    filedata = interfaces_plugins.FileInterface("module.{0:#x}.dmp".format(mod.DllBase))
+                    filedata = interfaces.plugins.FileInterface("module.{0:#x}.dmp".format(mod.DllBase))
 
                     for offset, data in dos_header.reconstruct():
                         filedata.data.seek(offset)

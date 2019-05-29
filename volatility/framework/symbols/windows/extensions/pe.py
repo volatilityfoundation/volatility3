@@ -183,3 +183,11 @@ class _IMAGE_NT_HEADERS(objects.Struct):
                 symbol_table_name + constants.BANG + "_IMAGE_SECTION_HEADER",
                 offset = sect_addr,
                 layer_name = layer_name)
+
+
+class_types = {
+    '_IMAGE_DOS_HEADER': _IMAGE_DOS_HEADER,
+    # the 32- and 64-bit extensions behave the same way, but the underlying structure is different
+    '_IMAGE_NT_HEADERS': _IMAGE_NT_HEADERS,
+    '_IMAGE_NT_HEADERS64': _IMAGE_NT_HEADERS
+}

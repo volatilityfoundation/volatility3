@@ -25,8 +25,9 @@ from volatility.framework.interfaces import plugins
 from volatility.framework import constants, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
-from volatility.framework.symbols.windows.kdbg import KdbgIntermedSymbols
-from volatility.framework.symbols.windows.pe import PEIntermedSymbols
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import extensions
+from volatility.framework.symbols.windows.extensions import kdbg
 
 
 class Info(plugins.PluginInterface):
@@ -66,10 +67,16 @@ class Info(plugins.PluginInterface):
 
         native_types = self.context.symbol_space[self.config["nt_symbols"]].natives
 
-        kdbg_table_name = KdbgIntermedSymbols.create(
-            self.context, self.config_path, "windows", "kdbg", native_types = native_types)
+        kdbg_table_name = intermed.IntermediateSymbolTable.create(
+            self.context,
+            self.config_path,
+            "windows",
+            "kdbg",
+            native_types = native_types,
+            class_types = extensions.kdbg.class_types)
 
-        pe_table_name = PEIntermedSymbols.create(self.context, self.config_path, "windows", "pe")
+        pe_table_name = intermed.IntermediateSymbolTable.create(
+            self.context, self.config_path, "windows", "pe", class_types = extensions.pe.class_types)
 
         kvo = virtual_layer.config["kernel_virtual_offset"]
 

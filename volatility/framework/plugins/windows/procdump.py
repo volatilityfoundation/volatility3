@@ -29,7 +29,9 @@ import volatility.plugins.windows.pslist as pslist
 from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
-from volatility.framework.symbols.windows.pe import PEIntermedSymbols
+from volatility.framework.symbols.windows.extensions import pe
+
+from volatility.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
 
@@ -48,7 +50,8 @@ class ProcDump(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        pe_table_name = PEIntermedSymbols.create(self.context, self.config_path, "windows", "pe")
+        pe_table_name = intermed.IntermediateSymbolTable.create(
+            self.context, self.config_path, "windows", "pe", class_types = pe.class_types)
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
