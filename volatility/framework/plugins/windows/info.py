@@ -21,7 +21,7 @@
 import time
 from typing import List
 
-import volatility.framework.interfaces.plugins as plugins
+from volatility.framework.interfaces import plugins
 from volatility.framework import constants, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import TreeGrid
@@ -82,7 +82,7 @@ class Info(plugins.PluginInterface):
             offset = kvo + kdbg_offset,
             layer_name = virtual_layer_name)
 
-        yield (0, ("Memory Location", self.config["primary.memory_layer.location"]))
+        yield (0, ("Memory Location", self.config["primary.memory_layer.base_layer.location"]))
         yield (0, ("Kernel Base", hex(self.config["primary.kernel_virtual_offset"])))
         yield (0, ("DTB", hex(self.config["primary.page_map_offset"])))
         yield (0, ("Symbols", self.config["nt_symbols.isf_url"]))
