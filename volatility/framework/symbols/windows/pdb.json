@@ -56,7 +56,7 @@
             "name": "unsigned short"
           }
         },
-        "StreamTableStreamInfo": {
+        "StreamInfo": {
           "offset": 52,
           "type": {
             "kind": "struct",
@@ -101,7 +101,7 @@
             "name": "unsigned long"
           }
         },
-        "StreamTableStreamInfo": {
+        "StreamInfo": {
           "offset": 44,
           "type": {
             "kind": "struct",
@@ -110,7 +110,7 @@
         }
       },
       "kind": "struct",
-      "size": 60
+      "size": 52
     }
   },
   "enums": {
