@@ -39,6 +39,8 @@ class PdbReader:
         msf_layer = msf.PdbMSF(new_context, msf_config_path, msf_layer_name)
         new_context.add_layer(msf_layer)
 
+        msf_layer.read_streams()
+
         return msf_layer_name, new_context
 
 
