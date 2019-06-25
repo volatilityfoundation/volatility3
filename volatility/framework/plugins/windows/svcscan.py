@@ -19,7 +19,7 @@
 #
 
 import logging
-from typing import Any, List
+from typing import List
 from volatility.framework import interfaces, renderers, constants, symbols
 from volatility.framework.layers import scanners
 from volatility.framework.configuration import requirements
@@ -65,7 +65,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
         ] + pslist.PsList.list_processes_filter_requirements
 
     @staticmethod
-    def get_record_tuple(service_record: Any):
+    def get_record_tuple(service_record: interfaces.objects.ObjectInterface):
         return (format_hints.Hex(service_record.vol.offset),
                 service_record.Order,
                 service_record.get_pid(),
