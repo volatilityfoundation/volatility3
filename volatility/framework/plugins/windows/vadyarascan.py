@@ -19,7 +19,7 @@
 #
 
 import logging
-from typing import Any, Iterable, List, Tuple
+from typing import Iterable, List, Tuple
 
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
@@ -88,7 +88,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 yield format_hints.Hex(offset), name
 
     @staticmethod
-    def get_vad_maps(task: Any) -> Iterable[Tuple[int, int]]:
+    def get_vad_maps(task: interfaces.objects.ObjectInterface) -> Iterable[Tuple[int, int]]:
 
         vad_root = task.get_vad_root()
         for vad in vad_root.traverse():
