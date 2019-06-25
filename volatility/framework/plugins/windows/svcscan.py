@@ -107,7 +107,6 @@ class SvcScan(interfaces.plugins.PluginInterface):
         else:
             raise NotImplementedError("This version of Windows is not supported!")
 
-        print(symbol_filename)
         return ServicesIntermedSymbols.create(context,
                                               config_path,
                                               "windows",
