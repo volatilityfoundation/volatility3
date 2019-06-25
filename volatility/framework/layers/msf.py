@@ -29,6 +29,10 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
         self._streams = {}  # type: Dict[int, Optional[PdbMSFStream]]
 
     def read_streams(self):
+        # Shortcut in case they've already been read
+        if self._streams:
+            return
+
         # Recover the root table, by recovering the root table index table...
         module = self.context.module(self._pdb_table_name, self._base_layer, offset = 0)
         entry_size = module.get_type("unsigned long").size
@@ -120,6 +124,13 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
     def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
         yield (offset, offset, length, self._base_layer)
 
+    def get_stream(self, index) -> Optional['PdbMSFStream']:
+        self.read_streams()
+        if index not in self._streams:
+            raise ValueError("Stream not present")
+        if self._streams[index]:
+            return self.context.memory[self._streams[index]]
+
 
 class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
 
@@ -166,5 +177,5 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
         return len(self._pages) * self._pdb_layer.page_size
 
     @property
-    def _pdb_layer(self) -> PdbMSF:
+    def _pdb_layer(self) -> Optional[PdbMSF]:
         return self._context.memory.get(self._base_layer, None)
