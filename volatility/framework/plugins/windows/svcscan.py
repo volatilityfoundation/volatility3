@@ -62,7 +62,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
-        ] + pslist.PsList.list_processes_filter_requirements
+        ]
 
     @staticmethod
     def get_record_tuple(service_record: interfaces.objects.ObjectInterface):
