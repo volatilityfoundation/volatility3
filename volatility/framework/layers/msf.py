@@ -78,13 +78,13 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
 
     def create_stream_from_pages(self, stream_name: str, pages: List[int]) -> str:
         # Construct a root layer based on a number of pages
-        layer_name = self.context.memory.free_layer_name(self.name + "_" + stream_name)
+        layer_name = self.context.layers.free_layer_name(self.name + "_" + stream_name)
         path_join = interfaces.configuration.path_join
         config_path = path_join(self.config_path, stream_name)
         self.context.config[path_join(config_path, 'base_layer')] = self.name
         self.context.config[path_join(config_path, 'pages')] = pages
         layer = PdbMSFStream(self.context, config_path, layer_name)
-        self.context.memory.add_layer(layer)
+        self.context.layers.add_layer(layer)
         return layer_name
 
     def _check_header(self) -> Optional[Tuple[str, interfaces.objects.ObjectInterface]]:
@@ -112,14 +112,14 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
 
     @property
     def maximum_address(self) -> int:
-        return self.context.memory[self._base_layer].maximum_address
+        return self.context.layers[self._base_layer].maximum_address
 
     @property
     def minimum_address(self) -> int:
-        return self.context.memory[self._base_layer].minimum_address
+        return self.context.layers[self._base_layer].minimum_address
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        return self.context.memory[self._base_layer].is_valid(offset, length)
+        return self.context.layers[self._base_layer].is_valid(offset, length)
 
     def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
         yield (offset, offset, length, self._base_layer)
@@ -129,7 +129,7 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
         if index not in self._streams:
             raise ValueError("Stream not present")
         if self._streams[index]:
-            return self.context.memory[self._streams[index]]
+            return self.context.layers[self._streams[index]]
 
 
 class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
@@ -178,4 +178,4 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
 
     @property
     def _pdb_layer(self) -> Optional[PdbMSF]:
-        return self._context.memory.get(self._base_layer, None)
+        return self._context.layers.get(self._base_layer, None)
