@@ -69,7 +69,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             if not proc_layer_name:
                 continue
 
-            proc_layer = self.context.memory[proc_layer_name]
+            proc_layer = self.context.layers[proc_layer_name]
 
             bang_addrs = []
 

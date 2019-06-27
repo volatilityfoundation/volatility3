@@ -85,7 +85,7 @@ def find_pd_mapping(ctx, layer_name, entries):
 
         pt_offset = (entry & PHYS_MASK) >> 12
         try:
-            pt = ctx.memory.read(baselayer_name, pt_offset, PAGE_SIZE)
+            pt = ctx.layers.read(baselayer_name, pt_offset, PAGE_SIZE)
         except exceptions.InvalidAddressException:
             # print("page fault at " + hex(pt_offset))
             return False
@@ -109,7 +109,7 @@ def find_pdpt_mapping(ctx, layer_name, entries):
 
         pd_offset = (entry & PHYS_MASK) >> 12
         try:
-            pd = ctx.memory.read(baselayer_name, pd_offset, PAGE_SIZE)
+            pd = ctx.layers.read(baselayer_name, pd_offset, PAGE_SIZE)
         except exceptions.InvalidAddressException:
             # print("page fault at " + hex(pd_offset))
             return False
@@ -129,7 +129,7 @@ def find_pml4_mapping(ctx, layer_name, entries):
         pdpte_offset = (entry & PHYS_MASK) >> 12
 
         try:
-            pdpte = ctx.memory.read(baselayer_name, pdpte_offset, PAGE_SIZE)
+            pdpte = ctx.layers.read(baselayer_name, pdpte_offset, PAGE_SIZE)
         except exceptions.InvalidAddressException:
             # print("page fault at " + hex(pdpte_offset))
             return False
@@ -158,13 +158,13 @@ if __name__ == '__main__':
                                                       "filename")] = filename
         data = layers.physical.FileLayer(ctx, 'config' + str(args.filenames.index(filename)),
                                          'data' + str(args.filenames.index(filename)))
-        ctx.memory.add_layer(data)
+        ctx.layers.add_layer(data)
         if args.lime:
             ctx.config[interfaces.configuration.path_join('lime-config' + str(args.filenames.index(filename)),
                                                           "base_layer")] = 'data' + str(args.filenames.index(filename))
             data = layers.lime.LimeLayer(ctx, 'lime-config' + str(args.filenames.index(filename)),
                                          'lime-data' + str(args.filenames.index(filename)))
-            ctx.memory.add_layer(data)
+            ctx.layers.add_layer(data)
 
         layername = 'data'
         if args.lime:
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         for i in range(len(args.filenames)):
             print("[*] Scanning " + args.filenames[i] + "...")
             baselayer_name = layername + str(i)
-            scan_results = ctx.memory[baselayer_name].scan(ctx, PML4EScanner())
+            scan_results = ctx.layers[baselayer_name].scan(ctx, PML4EScanner())
 
             for (dtb, entries) in scan_results:
                 # print("trying: " + hex(dtb))

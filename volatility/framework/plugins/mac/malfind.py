@@ -48,7 +48,7 @@ class Malfind(interfaces_plugins.PluginInterface):
         if proc_layer_name is None:
             return
 
-        proc_layer = self.context.memory[proc_layer_name]
+        proc_layer = self.context.layers[proc_layer_name]
 
         for vma in task.get_map_iter():
             if vma.is_suspicious(self.context, self.config['darwin']):

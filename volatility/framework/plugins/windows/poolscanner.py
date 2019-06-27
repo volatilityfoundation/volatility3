@@ -260,9 +260,9 @@ class PoolScanner(plugins.PluginInterface):
             # registry hives
             PoolConstraint(
                 b'CM10',
-                type_name=symbol_table + constants.BANG + "_CMHIVE",
-                size=(800, None),
-                page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+                type_name = symbol_table + constants.BANG + "_CMHIVE",
+                size = (800, None),
+                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         if not tags_filter:
@@ -292,7 +292,7 @@ class PoolScanner(plugins.PluginInterface):
 
         # switch to a non-virtual layer if necessary
         if not is_windows_10:
-            scan_layer = context.memory[scan_layer].config['memory_layer']
+            scan_layer = context.layers[scan_layer].config['memory_layer']
 
         for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = 8):
 
@@ -355,7 +355,7 @@ class PoolScanner(plugins.PluginInterface):
         header_offset = header_type.relative_child_offset('PoolTag')
 
         # Run the scan locating the offsets of a particular tag
-        layer = context.memory[layer_name]
+        layer = context.layers[layer_name]
         scanner = scanners.MultiStringScanner([c for c in constraint_lookup.keys()])
         for offset, pattern in layer.scan(context, scanner, progress_callback = progress_callback):
             for constraint in constraint_lookup[pattern]:

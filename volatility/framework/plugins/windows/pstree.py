@@ -56,7 +56,7 @@ class PsTree(pslist.PsList):
                 offset = proc.vol.offset
             else:
                 layer_name = self.config['primary']
-                memory = self.context.memory[layer_name]
+                memory = self.context.layers[layer_name]
                 (_, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
             self._processes[proc.UniqueProcessId] = proc

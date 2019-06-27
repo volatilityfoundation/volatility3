@@ -50,7 +50,7 @@ class Malfind(interfaces_plugins.PluginInterface):
         if not proc_layer_name:
             return
 
-        proc_layer = self.context.memory[proc_layer_name]
+        proc_layer = self.context.layers[proc_layer_name]
 
         for vma in task.mm.get_mmap_iter():
             if vma.is_suspicious() and vma.get_name(self.context, task) != "[vdso]":

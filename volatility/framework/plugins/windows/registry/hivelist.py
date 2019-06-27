@@ -59,7 +59,7 @@ class HiveList(plugins.PluginInterface):
         """Lists all the hives in the primary layer"""
 
         # We only use the object factory to demonstrate how to use one
-        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
         list_head = ntkrnlmp.get_symbol("CmpHiveListHead").address

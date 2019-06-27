@@ -79,7 +79,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
         try:
             # before windows 7
-            if not self.context.memory[virtual].is_valid(handle_table_entry.Object):
+            if not self.context.layers[virtual].is_valid(handle_table_entry.Object):
                 return None
             fast_ref = handle_table_entry.Object.cast(self.config["nt_symbols"] + constants.BANG + "_EX_FAST_REF")
             object_header = fast_ref.dereference().cast(self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER")
@@ -116,7 +116,7 @@ class Handles(interfaces_plugins.PluginInterface):
                 return None
 
             virtual_layer_name = self.config['primary']
-            kvo = self.context.memory[virtual_layer_name].config['kernel_virtual_offset']
+            kvo = self.context.layers[virtual_layer_name].config['kernel_virtual_offset']
             ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual_layer_name, offset = kvo)
 
             try:
@@ -124,7 +124,7 @@ class Handles(interfaces_plugins.PluginInterface):
             except exceptions.SymbolError:
                 return None
 
-            data = self.context.memory.read(virtual_layer_name, kvo + func_addr, 0x200)
+            data = self.context.layers.read(virtual_layer_name, kvo + func_addr, 0x200)
             if data == None:
                 return None
 
@@ -153,7 +153,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
         type_map = {}
 
-        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
         try:
@@ -192,7 +192,7 @@ class Handles(interfaces_plugins.PluginInterface):
         except exceptions.SymbolError:
             return None
 
-        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        kvo = context.layers[layer_name].config['kernel_virtual_offset']
         return context.object(symbol_table + constants.BANG + "unsigned int", layer_name, offset = kvo + offset)
 
     def _make_handle_array(self, offset, level, depth = 0):
@@ -200,7 +200,7 @@ class Handles(interfaces_plugins.PluginInterface):
         entries, going as deep into the table "levels" as necessary."""
 
         virtual = self.config["primary"]
-        kvo = self.context.memory[virtual].config['kernel_virtual_offset']
+        kvo = self.context.layers[virtual].config['kernel_virtual_offset']
 
         ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual, offset = kvo)
 
@@ -211,12 +211,12 @@ class Handles(interfaces_plugins.PluginInterface):
             subtype = ntkrnlmp.get_type("_HANDLE_TABLE_ENTRY")
             count = 0x1000 / subtype.size
 
-        if not self.context.memory[virtual].is_valid(offset):
+        if not self.context.layers[virtual].is_valid(offset):
             return
 
         table = ntkrnlmp.object(type_name = "array", offset = offset, subtype = subtype, count = int(count))
 
-        layer_object = self.context.memory[virtual]
+        layer_object = self.context.layers[virtual]
         masked_offset = (offset & layer_object.maximum_address)
 
         for entry in table:

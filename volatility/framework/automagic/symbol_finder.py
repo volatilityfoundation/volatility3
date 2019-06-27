@@ -98,7 +98,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
 
         mss = scanners.MultiStringScanner([x for x in self.banners if x is not None])
 
-        layer = context.memory[layer_name]
+        layer = context.layers[layer_name]
 
         # Check if the Stacker has already found what we're looking for
         if layer.config.get(self.banner_config_key, None):
@@ -106,7 +106,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
         else:
             # Swap to the physical layer for scanning
             # TODO: Fix this so it works for layers other than just Intel
-            layer = context.memory[layer.config['memory_layer']]
+            layer = context.layers[layer.config['memory_layer']]
             banner_list = layer.scan(context = context, scanner = mss, progress_callback = progress_callback)
 
         for _, banner in banner_list:

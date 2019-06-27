@@ -98,7 +98,7 @@ class ModDump(interfaces.plugins.PluginInterface):
         """
 
         for layer_name in session_layers:
-            if context.memory[layer_name].is_valid(base_address):
+            if context.layers[layer_name].is_valid(base_address):
                 return layer_name
 
         return None

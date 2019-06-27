@@ -42,13 +42,13 @@ class GenericIntelProcess(objects.Struct):
 
         # Figure out a suitable name we can use for the new layer
         if preferred_name is None:
-            preferred_name = context.memory.free_layer_name(prefix = self.vol.layer_name + "_Process_")
+            preferred_name = context.layers.free_layer_name(prefix = self.vol.layer_name + "_Process_")
         else:
-            if preferred_name in context.memory:
-                preferred_name = context.memory.free_layer_name(prefix = preferred_name)
+            if preferred_name in context.layers:
+                preferred_name = context.layers.free_layer_name(prefix = preferred_name)
 
         # Copy the parent's config and then make suitable changes
-        parent_layer = context.memory[self.vol.layer_name]
+        parent_layer = context.layers[self.vol.layer_name]
         parent_config = parent_layer.build_configuration()
         # It's an intel layer, because we hardwire the "memory_layer" config option
         # FIXME: this could be for other architectures if we don't hardwire this/these values
@@ -61,5 +61,5 @@ class GenericIntelProcess(objects.Struct):
         new_layer = parent_layer.__class__(context, config_path = config_path, name = preferred_name)
 
         # Add the constructed layer and return the name
-        context.memory.add_layer(new_layer)
+        context.layers.add_layer(new_layer)
         return preferred_name

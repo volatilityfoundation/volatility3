@@ -58,9 +58,9 @@ class ContextInterface(object, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def memory(self) -> 'interfaces.layers.Memory':
+    def layers(self) -> 'interfaces.layers.LayerContainer':
         """Returns the memory object for the context"""
-        raise NotImplementedError("Memory has not been implemented.")
+        raise NotImplementedError("LayerContainer has not been implemented.")
 
     def add_layer(self, layer: 'interfaces.layers.DataLayerInterface'):
         """Adds a named translation layer to the context memory
@@ -68,7 +68,7 @@ class ContextInterface(object, metaclass = ABCMeta):
         Args:
             layer: Layer object to be added to the context memory
         """
-        self.memory.add_layer(layer)
+        self.layers.add_layer(layer)
 
     # ## Object Factory Functions
 

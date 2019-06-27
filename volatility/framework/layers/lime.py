@@ -49,7 +49,7 @@ class LimeLayer(segmented.SegmentedLayer):
         # The base class loads the segments on initialization, but otherwise this must to get the right min/max addresses
 
     def _load_segments(self) -> None:
-        base_layer = self._context.memory[self._base_layer]
+        base_layer = self._context.layers[self._base_layer]
         base_maxaddr = base_layer.maximum_address
         maxaddr = 0
         offset = 0
@@ -96,9 +96,9 @@ class LimeStacker(interfaces.automagic.StackerLayerInterface):
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         try:
-            LimeLayer._check_header(context.memory[layer_name])
+            LimeLayer._check_header(context.layers[layer_name])
         except LimeFormatException:
             return None
-        new_name = context.memory.free_layer_name("LimeLayer")
+        new_name = context.layers.free_layer_name("LimeLayer")
         context.config[interfaces.configuration.path_join(new_name, "base_layer")] = layer_name
         return LimeLayer(context, new_name, new_name)

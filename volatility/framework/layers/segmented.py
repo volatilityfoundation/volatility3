@@ -56,7 +56,7 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the address offset can be translated to a valid address"""
         try:
-            base_layer = self._context.memory[self._base_layer]
+            base_layer = self._context.layers[self._base_layer]
             return all(
                 [base_layer.is_valid(mapped_offset) for _i, mapped_offset, _i, _s in self.mapping(offset, length)])
         except exceptions.InvalidAddressException:
@@ -72,7 +72,7 @@ class SegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = AB
             self._load_segments()
 
         # Find rightmost value less than or equal to x
-        i = bisect_right(self._segments, (offset, self.context.memory[self._base_layer].maximum_address))
+        i = bisect_right(self._segments, (offset, self.context.layers[self._base_layer].maximum_address))
         if i and not next:
             segment = self._segments[i - 1]
             if segment[0] <= offset < segment[0] + segment[2]:

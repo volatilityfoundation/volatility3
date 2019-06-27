@@ -107,7 +107,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         location = self.config.get('single_location', None)
 
         # Setup the local copy of the resource
-        current_layer_name = context.memory.free_layer_name("FileLayer")
+        current_layer_name = context.layers.free_layer_name("FileLayer")
         current_config_path = interfaces.configuration.path_join(config_path, "stack", current_layer_name)
 
         # This must be specific to get us started, setup the config and run
@@ -130,7 +130,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                     vollog.log(constants.LOGLEVEL_VVVV, "Attempting to stack using {}".format(stacker_cls.__name__))
                     new_layer = stacker.stack(new_context, current_layer_name, progress_callback)
                     if new_layer:
-                        new_context.memory.add_layer(new_layer)
+                        new_context.layers.add_layer(new_layer)
                         vollog.log(constants.LOGLEVEL_VVVV,
                                    "Stacked {} using {}".format(new_layer.name, stacker_cls.__name__))
                         break
@@ -153,7 +153,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             if result:
                 path, layer = result
                 # splice in the new configuration into the original context
-                context.config.merge(path, new_context.memory[layer].build_configuration())
+                context.config.merge(path, new_context.layers[layer].build_configuration())
 
                 # Call the construction magic now we may have new things to construct
                 constructor = construct_layers.ConstructionMagic(

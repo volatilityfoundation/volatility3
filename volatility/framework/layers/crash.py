@@ -54,7 +54,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         # Create a custom SymbolSpace
         self._crash_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'crash')
         # Check Header
-        hdr_layer = self._context.memory[self._base_layer]
+        hdr_layer = self._context.layers[self._base_layer]
         hdr_offset = 0
         self._check_header(hdr_layer, hdr_offset)
 
@@ -118,9 +118,9 @@ class WindowsCrashDump32Stacker(interfaces.automagic.StackerLayerInterface):
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         try:
-            WindowsCrashDump32Layer._check_header(context.memory[layer_name])
+            WindowsCrashDump32Layer._check_header(context.layers[layer_name])
         except WindowsCrashDump32FormatException:
             return None
-        new_name = context.memory.free_layer_name("WindowsCrashDump32Layer")
+        new_name = context.layers.free_layer_name("WindowsCrashDump32Layer")
         context.config[interfaces.configuration.path_join(new_name, "base_layer")] = layer_name
         return WindowsCrashDump32Layer(context, new_name, new_name)

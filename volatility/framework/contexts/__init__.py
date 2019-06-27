@@ -46,7 +46,7 @@ class Context(interfaces.context.ContextInterface):
         """Initializes the context."""
         super().__init__()
         self._symbol_space = symbols.SymbolSpace()
-        self._memory = interfaces.layers.Memory()
+        self._memory = interfaces.layers.LayerContainer()
         self._config = interfaces.configuration.HierarchicalDict()
 
     # ## Symbol Space Functions
@@ -69,8 +69,8 @@ class Context(interfaces.context.ContextInterface):
         return self._symbol_space
 
     @property
-    def memory(self) -> interfaces.layers.Memory:
-        """A Memory object, allowing access to all data and translation layers currently available within the context"""
+    def layers(self) -> interfaces.layers.LayerContainer:
+        """A LayerContainer object, allowing access to all data and translation layers currently available within the context"""
         return self._memory
 
     # ## Translation Layer Functions
@@ -240,7 +240,7 @@ class SizedModule(Module):
 
         The mapping should be sorted and should be quicker than reading the data
         We turn it into JSON to make a common string and use a quick hash, because collissions are unlikely"""
-        layer = self._context.memory[self.layer_name]
+        layer = self._context.layers[self.layer_name]
         if not isinstance(layer, interfaces.layers.TranslationLayerInterface):
             raise TypeError("Hashing modules on non-TranslationLayers is not allowed")
         return hashlib.md5(bytes(str(list(layer.mapping(self.offset, self.size, ignore_errors = True))),

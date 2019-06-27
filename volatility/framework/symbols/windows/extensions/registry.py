@@ -140,13 +140,13 @@ class _CM_KEY_NODE(objects.Struct):
     """Extension to allow traversal of registry keys"""
 
     def get_volatile(self) -> bool:
-        if not isinstance(self._context.memory[self.vol.layer_name], RegistryHive):
+        if not isinstance(self._context.layers[self.vol.layer_name], RegistryHive):
             raise ValueError("Cannot determine volatility of registry key without an offset in a RegistryHive layer")
         return bool(self.vol.offset & 0x80000000)
 
     def get_subkeys(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns a list of the key nodes"""
-        hive = self._context.memory[self.vol.layer_name]
+        hive = self._context.layers[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
         for index in range(2):
@@ -184,7 +184,7 @@ class _CM_KEY_NODE(objects.Struct):
 
     def get_values(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns a list of the Value nodes for a key"""
-        hive = self._context.memory[self.vol.layer_name]
+        hive = self._context.layers[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
         child_list = hive.get_cell(self.ValueList.List).u.KeyList
@@ -200,7 +200,7 @@ class _CM_KEY_NODE(objects.Struct):
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
 
     def get_key_path(self) -> interfaces.objects.ObjectInterface:
-        reg = self._context.memory[self.vol.layer_name]
+        reg = self._context.layers[self.vol.layer_name]
         if not isinstance(reg, RegistryHive):
             raise TypeError("Key was not instantiated on a RegistryHive layer")
         # Using the offset adds a significant delay (since it cannot be cached easily)
@@ -224,7 +224,7 @@ class _CM_KEY_VALUE(objects.Struct):
         datalen = self.DataLength & 0x7fffffff
         data = b""
         # Check if the data is stored inline
-        layer = self._context.memory[self.vol.layer_name]
+        layer = self._context.layers[self.vol.layer_name]
         if not isinstance(layer, RegistryHive):
             raise TypeError("Key value was not instantiated on a RegistryHive layer")
 

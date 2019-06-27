@@ -110,21 +110,21 @@ def scan(ctx: interfaces.context.ContextInterface,
     pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
 
     if start is None:
-        start = ctx.memory[layer_name].minimum_address
+        start = ctx.layers[layer_name].minimum_address
     if end is None:
-        end = ctx.memory[layer_name].maximum_address
+        end = ctx.layers[layer_name].maximum_address
 
-    for (GUID, age, pdb_name, signature_offset) in ctx.memory[layer_name].scan(
+    for (GUID, age, pdb_name, signature_offset) in ctx.layers[layer_name].scan(
             ctx, PdbSignatureScanner(pdb_names), progress_callback = progress_callback, sections = [(start,
                                                                                                      end - start)]):
         mz_offset = None
         sig_pfn = signature_offset // page_size
 
         for i in range(sig_pfn, min_pfn, -1):
-            if not ctx.memory[layer_name].is_valid(i * page_size, 2):
+            if not ctx.layers[layer_name].is_valid(i * page_size, 2):
                 break
 
-            data = ctx.memory[layer_name].read(i * page_size, 2)
+            data = ctx.layers[layer_name].read(i * page_size, 2)
             if data == b'MZ':
                 mz_offset = i * page_size
                 break
@@ -179,7 +179,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             virtual_layer_name = context.config.get(sub_config_path, None)
             layer_name = context.config.get(interfaces.configuration.path_join(sub_config_path, "memory_layer"), None)
             if layer_name and virtual_layer_name:
-                memlayer = context.memory[virtual_layer_name]
+                memlayer = context.layers[virtual_layer_name]
                 if isinstance(memlayer, intel.Intel):
                     results = [virtual_layer_name]
         else:
@@ -285,7 +285,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         """
         for virtual_layer in valid_kernels:
             # Set the virtual offset under the TranslationLayer it applies to
-            kvo_path = interfaces.configuration.path_join(context.memory[virtual_layer].config_path,
+            kvo_path = interfaces.configuration.path_join(context.layers[virtual_layer].config_path,
                                                           'kernel_virtual_offset')
             kvo, kernel = valid_kernels[virtual_layer]
             context.config[kvo_path] = kvo
@@ -345,7 +345,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
         virtual_layer_name = vlayer.name
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
-        physical_layer = context.memory[physical_layer_name]
+        physical_layer = context.layers[physical_layer_name]
         # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
         results = physical_layer.scan(
             context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"), progress_callback = progress_callback)
@@ -375,7 +375,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         vollog.debug("Kernel base determination - using KDBG structure for kernel offset")
         valid_kernels = {}  # type: ValidKernelsType
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
-        physical_layer = context.memory[physical_layer_name]
+        physical_layer = context.layers[physical_layer_name]
         results = physical_layer.scan(context, scanners.BytesScanner(b"KDBG"), progress_callback = progress_callback)
 
         seen = set()  # type: Set[int]
@@ -446,7 +446,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         """
         valid_kernels = {}  # type: ValidKernelsType
         for virtual_layer_name in potential_layers:
-            vlayer = context.memory.get(virtual_layer_name, None)
+            vlayer = context.layers.get(virtual_layer_name, None)
             if isinstance(vlayer, layers.intel.Intel):
                 for method in self.methods:
                     valid_kernels = method(self, context, vlayer, progress_callback)

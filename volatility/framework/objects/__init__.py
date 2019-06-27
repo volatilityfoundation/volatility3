@@ -143,7 +143,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
                     object_info: ObjectInformation) -> TUnion[int, float, bool, bytes, str]:
-        data = context.memory.read(object_info.layer_name, object_info.offset, data_format.length)
+        data = context.layers.read(object_info.layer_name, object_info.offset, data_format.length)
         return convert_data_to_value(data, cls._struct_type, data_format)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
@@ -156,7 +156,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
     def write(self, value: TUnion[int, float, bool, bytes, str]) -> None:
         """Writes the object into the layer of the context at the current offset"""
         data = convert_value_to_data(value, self._struct_type, self._data_format)
-        return self._context.memory.write(self.vol.layer_name, self.vol.offset, data)
+        return self._context.layers.write(self.vol.layer_name, self.vol.offset, data)
 
 
 class Boolean(PrimitiveObject, int):
@@ -285,8 +285,8 @@ class Pointer(Integer):
         length, endian, signed = data_format
         if signed:
             raise TypeError("Pointers cannot have signed values")
-        mask = context.memory[object_info.native_layer_name].address_mask
-        data = context.memory.read(object_info.layer_name, object_info.offset, length)
+        mask = context.layers[object_info.native_layer_name].address_mask
+        data = context.layers.read(object_info.layer_name, object_info.offset, length)
         value = int.from_bytes(data, byteorder = endian, signed = signed)
         return value & mask
 
@@ -297,7 +297,7 @@ class Pointer(Integer):
            If layer_name is None, it defaults to the same layer that the pointer is currently instantiated in.
         """
         layer_name = layer_name or self.vol.native_layer_name
-        mask = self._context.memory[layer_name].address_mask
+        mask = self._context.layers[layer_name].address_mask
         offset = self & mask
         return self.vol.subtype(
             context = self._context,
@@ -306,7 +306,7 @@ class Pointer(Integer):
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from memory"""
         layer_name = layer_name or self.vol.layer_name
-        return self._context.memory[layer_name].is_valid(self)
+        return self._context.layers[layer_name].is_valid(self)
 
     def __getattr__(self, attr: str) -> Any:
         """Convenience function to access unknown attributes by getting them from the subtype object"""
@@ -547,7 +547,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
     def __getitem__(self, i):
         """Returns the i-th item from the array"""
         result = []  # type: List[interfaces.objects.Template]
-        mask = self._context.memory[self.vol.layer_name].address_mask
+        mask = self._context.layers[self.vol.layer_name].address_mask
         # We use the range function to deal with slices for us
         series = range(self.vol.count)[i]
         return_list = True
@@ -652,7 +652,7 @@ class Struct(interfaces.objects.ObjectInterface):
         if attr in self._concrete_members:
             return self._concrete_members[attr]
         elif attr in self.vol.members:
-            mask = self._context.memory[self.vol.layer_name].address_mask
+            mask = self._context.layers[self.vol.layer_name].address_mask
             relative_offset, member = self.vol.members[attr]
             member = member(
                 context = self._context,

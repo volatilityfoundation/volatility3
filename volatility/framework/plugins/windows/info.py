@@ -48,12 +48,12 @@ class Info(plugins.PluginInterface):
             layer_name: the name of the starting layer
             index: the index/order of the layer
         """
-        layer = self.context.memory[layer_name]
+        layer = self.context.layers[layer_name]
         yield index, layer
         try:
             for depends in layer.dependencies:
                 for j, dep in self.get_depends(depends, index + 1):
-                    yield j, self.context.memory[dep.name]
+                    yield j, self.context.layers[dep.name]
         except AttributeError:
             # FileLayer won't have dependencies
             pass
@@ -61,7 +61,7 @@ class Info(plugins.PluginInterface):
     def _generator(self):
 
         virtual_layer_name = self.config["primary"]
-        virtual_layer = self.context.memory[virtual_layer_name]
+        virtual_layer = self.context.layers[virtual_layer_name]
         if not isinstance(virtual_layer, layers.intel.Intel):
             raise TypeError("Virtual Layer is not an intel layer")
 

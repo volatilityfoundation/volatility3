@@ -44,7 +44,7 @@ class Psaux(plugins.PluginInterface):
             if proc_layer_name is None:
                 continue
 
-            proc_layer = self.context.memory[proc_layer_name]
+            proc_layer = self.context.layers[proc_layer_name]
 
             argsstart = task.user_stack - task.p_argslen
 

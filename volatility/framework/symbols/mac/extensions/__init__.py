@@ -36,7 +36,7 @@ class proc(generic.GenericIntelProcess):
         """Constructs a new layer based on the process's DTB.
         Returns the name of the Layer or None.
         """
-        parent_layer = self._context.memory[self.vol.layer_name]
+        parent_layer = self._context.layers[self.vol.layer_name]
 
         if not isinstance(parent_layer, interfaces.layers.TranslationLayerInterface):
             raise TypeError("Parent layer is not a translation layer, unable to construct process layer")

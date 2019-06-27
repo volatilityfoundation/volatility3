@@ -56,7 +56,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify linux within this layer"""
         # Bail out by default unless we can stack properly
-        layer = context.memory[layer_name]
+        layer = context.layers[layer_name]
         join = interfaces.configuration.path_join
 
         # Never stack on top of an intel layer
@@ -96,7 +96,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                     table.get_symbol(dtb_symbol_name).address + kaslr_shift)
 
                 # Build the new layer
-                new_layer_name = context.memory.free_layer_name("IntelLayer")
+                new_layer_name = context.layers.free_layer_name("IntelLayer")
                 config_path = join("IntelHelper", new_layer_name)
                 context.config[join(config_path, "memory_layer")] = layer_name
                 context.config[join(config_path, "page_map_offset")] = dtb
@@ -274,7 +274,7 @@ class LinuxUtilities(object):
                                aslr_shift = 0):
 
         sym_table = context.symbol_space[symbol_table]
-        sym_layer = context.memory[layer_name]
+        sym_layer = context.layers[layer_name]
 
         if aslr_shift == 0:
             if not isinstance(sym_layer, layers.intel.Intel):
@@ -297,7 +297,7 @@ class LinuxUtilities(object):
         swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
         module = context.module(symbol_table, layer_name, 0)
 
-        for offset in context.memory[layer_name].scan(
+        for offset in context.layers[layer_name].scan(
                 scanner = scanners.RegExScanner(swapper_signature),
                 context = context,
                 progress_callback = progress_callback):

@@ -58,7 +58,7 @@ class Check_syscall(plugins.PluginInterface):
             subtype = kernel.get_type('mac_policy_list_element'),
             count = policy_list.staticmax + 1)
 
-        mask = self.context.memory[self.config['primary']].address_mask
+        mask = self.context.layers[self.config['primary']].address_mask
         mods_list = [(mod.name, mod.address & mask, (mod.address & mask) + mod.size) for mod in mods]
 
         for i, ent in enumerate(entries):

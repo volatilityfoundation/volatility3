@@ -80,7 +80,7 @@ class YaraScan(plugins.PluginInterface):
 
     def _generator(self):
 
-        layer = self.context.memory[self.config['primary']]
+        layer = self.context.layers[self.config['primary']]
         rules = None
         if self.config.get('yara_rules', None) is not None:
             rule = self.config['yara_rules']

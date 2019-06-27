@@ -78,7 +78,7 @@ class Malfind(interfaces.plugins.PluginInterface):
         """
 
         proc_layer_name = proc.add_process_layer()
-        proc_layer = context.memory[proc_layer_name]
+        proc_layer = context.layers[proc_layer_name]
 
         for vad in proc.get_vad_root().traverse():
             protection_string = vad.get_protection(

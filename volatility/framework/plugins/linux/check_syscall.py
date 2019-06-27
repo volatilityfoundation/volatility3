@@ -118,7 +118,7 @@ class Check_syscall(plugins.PluginInterface):
             # if we can't find the disassemble function then bail and rely on a different method
             return 0
 
-        data = self.context.memory.read(self.config['primary'], func_addr, 6)
+        data = self.context.layers.read(self.config['primary'], func_addr, 6)
 
         for (address, size, mnemonic, op_str) in md.disasm_lite(data, func_addr):
             if mnemonic == 'CMP':

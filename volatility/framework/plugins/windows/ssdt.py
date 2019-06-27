@@ -77,7 +77,7 @@ class SSDT(plugins.PluginInterface):
         layer_name = self.config['primary']
         collection = self.build_module_collection(self.context, self.config["primary"], self.config["nt_symbols"])
 
-        kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
+        kvo = self.context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = layer_name, offset = kvo)
 
         # this is just one way to enumerate the native (NT) service table.

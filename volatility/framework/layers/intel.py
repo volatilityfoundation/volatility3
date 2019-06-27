@@ -179,7 +179,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
     @functools.lru_cache(1025)
     def _get_valid_table(self, base_address: int) -> Optional[bytes]:
         """Extracts the table, validates it and returns it if it's valid"""
-        table = self._context.memory.read(self._base_layer, base_address, self.page_size)
+        table = self._context.layers.read(self._base_layer, base_address, self.page_size)
 
         # If the table is entirely duplicates, then mark the whole table as bad
         if (table == table[:self._entry_size] * self._entry_number):
@@ -191,7 +191,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         try:
             # TODO: Consider reimplementing this, since calls to mapping can call is_valid
             return all([
-                self._context.memory[layer].is_valid(mapped_offset)
+                self._context.layers[layer].is_valid(mapped_offset)
                 for _, mapped_offset, _, layer in self.mapping(offset, length)
             ])
         except exceptions.InvalidAddressException:
@@ -205,7 +205,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
         if length == 0:
             try:
                 mapped_offset, _, layer_name = self._translate(offset)
-                if not self._context.memory[layer_name].is_valid(mapped_offset):
+                if not self._context.layers[layer_name].is_valid(mapped_offset):
                     raise exceptions.InvalidAddressException(layer_name = layer_name, invalid_address = mapped_offset)
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
@@ -217,7 +217,7 @@ class Intel(interfaces.layers.TranslationLayerInterface):
             try:
                 chunk_offset, page_size, layer_name = self._translate(offset)
                 chunk_size = min(page_size - (chunk_offset % page_size), length)
-                if not self._context.memory[layer_name].is_valid(chunk_offset, chunk_size):
+                if not self._context.layers[layer_name].is_valid(chunk_offset, chunk_size):
                     raise exceptions.InvalidAddressException(layer_name = layer_name, invalid_address = chunk_offset)
             except (exceptions.PagedInvalidAddressException, exceptions.InvalidAddressException) as excp:
                 if not ignore_errors:

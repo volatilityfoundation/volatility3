@@ -119,7 +119,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
         if size_of_image > (1024 * 1024 * 100):
             raise ValueError("The claimed SizeOfImage is too large: {}".format(size_of_image))
 
-        read_layer = self._context.memory[layer_name]
+        read_layer = self._context.layers[layer_name]
 
         raw_data = read_layer.read(self.vol.offset, nt_header.OptionalHeader.SizeOfImage, pad = True)
 

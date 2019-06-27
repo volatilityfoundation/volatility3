@@ -56,7 +56,7 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempts to identify mac within this layer"""
         # Bail out by default unless we can stack properly
-        layer = context.memory[layer_name]
+        layer = context.layers[layer_name]
         new_layer = None
         join = interfaces.configuration.path_join
 
@@ -102,7 +102,7 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
                 bootpml4_addr = MacUtilities.virtual_to_physical_address(
                     table.get_symbol("BootPML4").address + kaslr_shift)
 
-                new_layer_name = context.memory.free_layer_name("MacDTBTempLayer")
+                new_layer_name = context.layers.free_layer_name("MacDTBTempLayer")
                 config_path = join("automagic", "MacIntelHelper", new_layer_name)
                 context.config[join(config_path, "memory_layer")] = layer_name
                 context.config[join(config_path, "page_map_offset")] = bootpml4_addr
@@ -117,7 +117,7 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
                 dtb = idlepml4_addr
 
                 # Build the new layer
-                new_layer_name = context.memory.free_layer_name("IntelLayer")
+                new_layer_name = context.layers.free_layer_name("IntelLayer")
                 config_path = join("automagic", "MacIntelHelper", new_layer_name)
                 context.config[join(config_path, "memory_layer")] = layer_name
                 context.config[join(config_path, "page_map_offset")] = dtb
@@ -142,7 +142,7 @@ class MacUtilities(object):
                                aslr_shift = 0):
 
         sym_table = context.symbol_space[symbol_table]
-        sym_layer = context.memory[layer_name]
+        sym_layer = context.layers[layer_name]
 
         if aslr_shift == 0:
             if not isinstance(sym_layer, layers.intel.Intel):
@@ -156,11 +156,11 @@ class MacUtilities(object):
     def _scan_generator(cls, context, layer_name, progress_callback):
         darwin_signature = rb"Darwin Kernel Version \d{1,3}\.\d{1,3}\.\d{1,3}: [^\x00]+\x00"
 
-        for offset in context.memory[layer_name].scan(
+        for offset in context.layers[layer_name].scan(
                 scanner = scanners.RegExScanner(darwin_signature), context = context,
                 progress_callback = progress_callback):
 
-            banner = context.memory[layer_name].read(offset, 128)
+            banner = context.layers[layer_name].read(offset, 128)
 
             idx = banner.find(b"\x00")
             if idx != -1:
@@ -200,13 +200,13 @@ class MacUtilities(object):
 
             tmp_aslr_shift = offset - cls.virtual_to_physical_address(version_json_address)
 
-            major_string = context.memory[layer_name].read(version_major_phys_offset + tmp_aslr_shift, 4)
+            major_string = context.layers[layer_name].read(version_major_phys_offset + tmp_aslr_shift, 4)
             major = struct.unpack("<I", major_string)[0]
 
             if major != banner_major:
                 continue
 
-            minor_string = context.memory[layer_name].read(version_minor_phys_offset + tmp_aslr_shift, 4)
+            minor_string = context.layers[layer_name].read(version_minor_phys_offset + tmp_aslr_shift, 4)
             minor = struct.unpack("<I", minor_string)[0]
 
             if minor != banner_minor:

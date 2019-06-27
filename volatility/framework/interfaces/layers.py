@@ -296,7 +296,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
         data = b''
         for layer_name, address, chunk_size in data_to_scan:
             try:
-                data += self.context.memory[layer_name].read(address, chunk_size)
+                data += self.context.layers[layer_name].read(address, chunk_size)
             except exceptions.InvalidAddressException:
                 vollog.debug("Invalid address in layer {} found scanning {} at address {:x}".format(
                     layer_name, self.name, address))
@@ -329,7 +329,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     @property
     def metadata(self) -> Mapping:
         """Returns a ReadOnly copy of the metadata published by this layer"""
-        maps = [self.context.memory[layer_name].metadata for layer_name in self.dependencies]
+        maps = [self.context.layers[layer_name].metadata for layer_name in self.dependencies]
         return interfaces.objects.ReadOnlyMapping(collections.ChainMap({}, self._direct_metadata, *maps))
 
 
@@ -384,7 +384,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
             if mapped_length > 0:
-                output += [self._context.memory.read(layer, mapped_offset, mapped_length, pad)]
+                output += [self._context.layers.read(layer, mapped_offset, mapped_length, pad)]
             current_offset += mapped_length
         recovered_data = b"".join(output)
         return recovered_data + b"\x00" * (length - len(recovered_data))
@@ -399,7 +399,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                     self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
             elif offset < current_offset:
                 raise exceptions.LayerException("Mapping returned an overlapping element")
-            self._context.memory.write(layer, mapped_offset, value)
+            self._context.layers.write(layer, mapped_offset, value)
             current_offset += length
 
     # ## Scan implementation with knowledge of pages
@@ -420,7 +420,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                     offset += chunk_size
 
 
-class Memory(collections.abc.Mapping):
+class LayerContainer(collections.abc.Mapping):
     """Container for multiple layers of data"""
 
     def __init__(self) -> None:

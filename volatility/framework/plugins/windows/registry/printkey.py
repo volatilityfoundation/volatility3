@@ -98,7 +98,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 hive_offset = hive_offset, base_layer = self.config['primary'], nt_symbols = self.config['nt_symbols'])
             hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset))
             try:
-                self.context.memory.add_layer(hive)
+                self.context.layers.add_layer(hive)
 
                 # Walk it
                 if 'key' in self.config:

@@ -56,16 +56,16 @@ class LayerWriter(plugins.PluginInterface):
 
     def _generator(self):
         if self.config.get('layer_name', None) is None:
-            for layer_name in self.context.memory:
+            for layer_name in self.context.layers:
                 yield 0, ("Layer '{}' available as '{}'".format(layer_name,
-                                                                self.context.memory[layer_name].__class__.__name__), )
-        elif self.config['layer_name'] not in self.context.memory:
+                                                                self.context.layers[layer_name].__class__.__name__), )
+        elif self.config['layer_name'] not in self.context.layers:
             yield 0, ('Layer Name does not exist', )
         elif os.path.exists(self.config.get('output', self.default_output_name)):
             yield 0, ('Refusing to overwrite existing output file', )
         else:
             chunk_size = self.config.get('block_size', self.default_block_size)
-            layer = self.context.memory[self.config['layer_name']]
+            layer = self.context.layers[self.config['layer_name']]
 
             try:
                 filedata = plugins.FileInterface(self.config.get('output', self.default_output_name))

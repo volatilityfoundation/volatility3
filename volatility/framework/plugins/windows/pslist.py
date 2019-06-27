@@ -72,7 +72,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
         """Lists all the processes in the primary layer that are in the pid config option"""
 
         # We only use the object factory to demonstrate how to use one
-        kvo = context.memory[layer_name].config['kernel_virtual_offset']
+        kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
@@ -108,7 +108,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 offset = proc.vol.offset
             else:
                 layer_name = self.config['primary']
-                memory = self.context.memory[layer_name]
+                memory = self.context.layers[layer_name]
                 if not isinstance(memory, layers.intel.Intel):
                     raise TypeError("Primary layer is not an intel layer")
                 (_, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]

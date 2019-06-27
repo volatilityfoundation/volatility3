@@ -78,7 +78,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
     def generate_mapping(self, layer_name: str) -> Dict[int, Set[Tuple[str, int]]]:
         """Creates a reverse mapping between virtual addresses and physical addresses"""
-        layer = self._context.memory[layer_name]
+        layer = self._context.layers[layer_name]
         reverse_map = dict()  # type: Dict[int, Set[Tuple[str, int]]]
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
@@ -95,7 +95,7 @@ class Strings(interfaces.plugins.PluginInterface):
             for process in pslist.PsList.list_processes(self.context, self.config['primary'],
                                                         self.config['nt_symbols']):
                 proc_layer_name = process.add_process_layer()
-                proc_layer = self.context.memory[proc_layer_name]
+                proc_layer = self.context.layers[proc_layer_name]
                 if isinstance(proc_layer, interfaces.layers.TranslationLayerInterface):
                     for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                         kpage, vpage, page_size, maplayer = mapval

@@ -197,7 +197,7 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
                 value_path = configuration.path_join(config_path, self.name, req.name)
                 value = context.config.get(value_path, None)
                 if value is not None:
-                    result.splice(req.name, context.memory[value].build_configuration())
+                    result.splice(req.name, context.layers[value].build_configuration())
                     result[req.name] = value
         return result
 
@@ -260,14 +260,14 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
         config_path = configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
         if isinstance(value, str):
-            if value not in context.memory:
+            if value not in context.layers:
                 vollog.log(constants.LOGLEVEL_V, "IndexError - Layer not found in memory space: {}".format(value))
                 return {config_path: self}
-            if self.oses and context.memory[value].metadata.get('os', None) not in self.oses:
+            if self.oses and context.layers[value].metadata.get('os', None) not in self.oses:
                 vollog.log(constants.LOGLEVEL_V, "TypeError - Layer is not the required OS: {}".format(value))
                 return {config_path: self}
             if (self.architectures
-                    and context.memory[value].metadata.get('architecture', None) not in self.architectures):
+                    and context.layers[value].metadata.get('architecture', None) not in self.architectures):
                 vollog.log(constants.LOGLEVEL_V, "TypeError - Layer is not the required Architecture: {}".format(value))
                 return {config_path: self}
             return {}
@@ -292,7 +292,7 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
         # Determine the layer name
         name = self.name
         counter = 2
-        while name in context.memory:
+        while name in context.layers:
             name = self.name + str(counter)
             counter += 1
 
@@ -312,7 +312,7 @@ class TranslationLayerRequirement(configuration.ConstructableRequirementInterfac
     def build_configuration(self, context: interfaces.context.ContextInterface, _: str,
                             value: Any) -> configuration.HierarchicalDict:
         """Builds the appropriate configuration for the specified requirement"""
-        return context.memory[value].build_configuration()
+        return context.layers[value].build_configuration()
 
 
 class SymbolTableRequirement(configuration.ConstructableRequirementInterface,

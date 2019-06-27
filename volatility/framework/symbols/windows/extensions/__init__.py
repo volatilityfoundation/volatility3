@@ -472,12 +472,12 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
 
     def is_valid(self) -> bool:
         """Determine if the object is valid"""
-        return self.FileName.Length > 0 and self._context.memory[self.vol.layer_name].is_valid(self.FileName.Buffer)
+        return self.FileName.Length > 0 and self._context.layers[self.vol.layer_name].is_valid(self.FileName.Buffer)
 
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
         name = renderers.UnreadableValue()  # type: Union[str, interfaces.renderers.BaseAbsentValue]
 
-        if self._context.memory[self.vol.layer_name].is_valid(self.DeviceObject):
+        if self._context.layers[self.vol.layer_name].is_valid(self.DeviceObject):
             name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
 
         try:
@@ -550,7 +550,7 @@ class _OBJECT_HEADER(objects.Struct):
             # http://codemachine.com/article_objectheader.html (Windows 7 and later)
             name_info_bit = 0x2
 
-            layer = self._context.memory[self.vol.native_layer_name]
+            layer = self._context.layers[self.vol.native_layer_name]
             kvo = layer.config.get("kernel_virtual_offset", None)
 
             if kvo == None:
@@ -638,7 +638,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
     def add_process_layer(self, config_prefix: str = None, preferred_name: str = None):
         """Constructs a new layer based on the process's DirectoryTableBase"""
 
-        parent_layer = self._context.memory[self.vol.layer_name]
+        parent_layer = self._context.layers[self.vol.layer_name]
 
         if not isinstance(parent_layer, intel.Intel):
             # We can't get bits_per_register unless we're an intel space (since that's not defined at the higher layer)
@@ -663,7 +663,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
 
         proc_layer_name = self.add_process_layer()
 
-        proc_layer = self._context.memory[proc_layer_name]
+        proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
             return
 
@@ -694,7 +694,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                     return renderers.NotApplicableValue()
 
                 symbol_table_name = self.get_symbol_table().name
-                kvo = self._context.memory[self.vol.native_layer_name].config['kernel_virtual_offset']
+                kvo = self._context.layers[self.vol.native_layer_name].config['kernel_virtual_offset']
                 ntkrnlmp = self._context.module(
                     symbol_table_name,
                     layer_name = self.vol.native_layer_name,

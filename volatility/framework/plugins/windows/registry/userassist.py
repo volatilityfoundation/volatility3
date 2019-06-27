@@ -82,7 +82,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
         if len(userassist_data) < self._userassist_size:
             return item
 
-        userassist_layer_name = self.context.memory.free_layer_name("userassist_buffer")
+        userassist_layer_name = self.context.layers.free_layer_name("userassist_buffer")
         buffer = BufferDataLayer(self.context, self._config_path, userassist_layer_name, userassist_data)
         self.context.add_layer(buffer)
         userassist_obj = self.context.object(
@@ -247,7 +247,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
             try:
                 hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset))
                 hive_name = hive.hive.cast(self.config["nt_symbols"] + constants.BANG + "_CMHIVE").get_name()
-                self.context.memory.add_layer(hive)
+                self.context.layers.add_layer(hive)
                 yield from self.list_userassist(hive)
                 continue
             except exceptions.PagedInvalidAddressException as excp:

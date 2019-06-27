@@ -40,7 +40,7 @@ class Volshell(shellplugin.Volshell):
 
         # We only use the object factory to demonstrate how to use one
         layer_name = self.config['primary']
-        kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
+        kvo = self.context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = self.context.module(self.config['nt_symbols'], layer_name = layer_name, offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
@@ -74,7 +74,7 @@ class Volshell(shellplugin.Volshell):
 
         # Provide some OS-agnostic convenience elements for ease
         layer_name = self.config['primary']
-        kvo = self.context.memory[layer_name].config['kernel_virtual_offset']
+        kvo = self.context.layers[layer_name].config['kernel_virtual_offset']
         nt = self.context.module(self.config['nt_symbols'], layer_name = layer_name, offset = kvo)
         ps = lambda: list(self.list_processes())
 

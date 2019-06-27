@@ -35,13 +35,13 @@ if __name__ == '__main__':
                                                       "filename")] = filename
         data = layers.physical.FileLayer(ctx, 'config' + str(args.filenames.index(filename)),
                                          'data' + str(args.filenames.index(filename)))
-        ctx.memory.add_layer(data)
+        ctx.layers.add_layer(data)
         if args.lime:
             ctx.config[interfaces.configuration.path_join('lime-config' + str(args.filenames.index(filename)),
                                                           "base_layer")] = 'data' + str(args.filenames.index(filename))
             data = layers.lime.LimeLayer(ctx, 'lime-config' + str(args.filenames.index(filename)),
                                          'lime-data' + str(args.filenames.index(filename)))
-            ctx.memory.add_layer(data)
+            ctx.layers.add_layer(data)
 
     layername = 'data'
     if args.lime:
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     if tests:
         for i in range(len(args.filenames)):
             print("[*] Scanning " + args.filenames[i] + "...")
-            scan_results = ctx.memory[layername + str(i)].scan(ctx, windows.PageMapScanner(tests))
+            scan_results = ctx.layers[layername + str(i)].scan(ctx, windows.PageMapScanner(tests))
 
             # Self-referential tests need post-processing to gather the most likely offset
             if args.selfref:

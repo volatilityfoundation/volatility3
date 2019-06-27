@@ -48,7 +48,7 @@ class Elfs(plugins.PluginInterface):
             if not proc_layer_name:
                 continue
 
-            proc_layer = self.context.memory[proc_layer_name]
+            proc_layer = self.context.layers[proc_layer_name]
 
             name = utility.array_to_string(task.comm)
 

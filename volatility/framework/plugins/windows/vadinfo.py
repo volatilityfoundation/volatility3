@@ -75,7 +75,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
         These don't change often, but if they do in the future, then finding them
         # dynamically versus hard-coding here will ensure we parse them properly."""
 
-        kvo = context.memory[virtual_layer].config["kernel_virtual_offset"]
+        kvo = context.layers[virtual_layer].config["kernel_virtual_offset"]
         ntkrnlmp = context.module(nt_symbols, layer_name = virtual_layer, offset = kvo)
         addr = ntkrnlmp.get_symbol("MmProtectToValue").address
         values = ntkrnlmp.object(

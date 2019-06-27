@@ -55,7 +55,7 @@ class VmwareLayer(segmented.SegmentedLayer):
         if "vmware" not in self._context.symbol_space:
             self._context.symbol_space.append(native.NativeTable("vmware", native.std_ctypes))
 
-        meta_layer = self.context.memory.get(self._meta_layer, None)
+        meta_layer = self.context.layers.get(self._meta_layer, None)
         header_size = struct.calcsize(self.header_structure)
         data = meta_layer.read(0, header_size)
         magic, unknown, groupCount = struct.unpack(self.header_structure, data)
@@ -131,21 +131,21 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         """Attempt to stack this based on the starting information"""
-        memlayer = context.memory[layer_name]
+        memlayer = context.layers[layer_name]
         if not isinstance(memlayer, physical.FileLayer):
             return None
         location = memlayer.location
         if location.endswith(".vmem"):
             vmss = location[:-5] + ".vmss"
             vmsn = location[:-5] + ".vmsn"
-            current_layer_name = context.memory.free_layer_name("VmwareMetaLayer")
+            current_layer_name = context.layers.free_layer_name("VmwareMetaLayer")
             current_config_path = interfaces.configuration.path_join("automagic", "layer_stacker", "stack",
                                                                      current_layer_name)
 
             try:
                 _ = resources.ResourceAccessor().open(vmss).read(10)
                 context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
-                context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
+                context.layers.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
                 vmss_success = True
             except IOError:
                 vmss_success = False
@@ -154,14 +154,14 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
                 try:
                     _ = resources.ResourceAccessor().open(vmsn).read(10)
                     context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmsn
-                    context.memory.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
+                    context.layers.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
                     vmsn_success = True
                 except IOError:
                     vmsn_success = False
 
             if not vmss_success and not vmsn_success:
                 return None
-            new_layer_name = context.memory.free_layer_name("VmwareLayer")
+            new_layer_name = context.layers.free_layer_name("VmwareLayer")
             context.config[interfaces.configuration.path_join(current_config_path, "base_layer")] = layer_name
             context.config[interfaces.configuration.path_join(current_config_path, "meta_layer")] = current_layer_name
             new_layer = VmwareLayer(context, current_config_path, new_layer_name)
