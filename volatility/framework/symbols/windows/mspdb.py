@@ -21,7 +21,7 @@ class PdbReader:
 
            Note: the context may be changed by this method
         """
-        physical_layer_name = context.memory.free_layer_name("FileLayer")
+        physical_layer_name = context.layers.free_layer_name("FileLayer")
         physical_config_path = interfaces.configuration.path_join("pdbreader", physical_layer_name)
 
         # Create the file layer
@@ -33,7 +33,7 @@ class PdbReader:
         new_context.add_layer(physical_layer)
 
         # Add on the MSF format layer
-        msf_layer_name = context.memory.free_layer_name("MSFLayer")
+        msf_layer_name = context.layers.free_layer_name("MSFLayer")
         msf_config_path = interfaces.configuration.path_join("pdbreader", msf_layer_name)
         new_context.config[interfaces.configuration.path_join(msf_config_path, "base_layer")] = physical_layer_name
         msf_layer = msf.PdbMSF(new_context, msf_config_path, msf_layer_name)
