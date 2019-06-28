@@ -35,7 +35,8 @@ from volatility.framework.symbols.windows import extensions
 vollog = logging.getLogger(__name__)
 
 
-class PoolType(enum.IntFlag):
+# TODO: When python3.5 is no longer supported, make this enum.IntFlag
+class PoolType(enum.IntEnum):
     """Class to maintain the different possible PoolTypes
     The values must be integer powers of 2"""
 
@@ -259,9 +260,9 @@ class PoolScanner(plugins.PluginInterface):
             # registry hives
             PoolConstraint(
                 b'CM10',
-                type_name = symbol_table + constants.BANG + "_CMHIVE",
-                size = (800, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+                type_name=symbol_table + constants.BANG + "_CMHIVE",
+                size=(800, None),
+                page_type=PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         if not tags_filter:
