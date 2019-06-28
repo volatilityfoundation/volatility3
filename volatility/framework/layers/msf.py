@@ -26,7 +26,7 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
         if response is None:
             raise ValueError("Could not find a suitable header")
         self._version, self._header = response
-        self._streams = {}  # type: Dict[int, Optional[PdbMSFStream]]
+        self._streams = {}  # type: Dict[int, str]
 
     def read_streams(self):
         # Shortcut in case they've already been read
@@ -45,7 +45,8 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
             offset = self._header.vol.size,
             count = root_index_size,
             subtype = module.get_type("unsigned long"))
-        root_index_layer_name = self.create_stream_from_pages("root_index", [x for x in root_index])
+        root_index_layer_name = self.create_stream_from_pages("root_index", self._header.StreamInfo.StreamInfoSize,
+                                                              [x for x in root_index])
 
         module = self.context.module(self._pdb_table_name, root_index_layer_name, offset = 0)
         root_pages = self.context.object(
@@ -54,7 +55,8 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
             offset = 0,
             count = root_table_num_pages,
             subtype = module.get_type("unsigned long"))
-        root_layer_name = self.create_stream_from_pages("root", [x for x in root_pages])
+        root_layer_name = self.create_stream_from_pages("root", self._header.StreamInfo.StreamInfoSize,
+                                                        [x for x in root_pages])
 
         module = self.context.module(self._pdb_table_name, root_layer_name, offset = 0)
         num_streams = module.object(type_name = "unsigned long", offset = 0)
@@ -72,17 +74,19 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
                     count = list_size,
                     subtype = module.get_type("unsigned long"))
                 current_offset += (list_size * entry_size)
-                self._streams[stream] = self.create_stream_from_pages("stream", [x for x in stream_page_list])
+                self._streams[stream] = self.create_stream_from_pages("stream" + str(stream), stream_sizes[stream],
+                                                                      [x for x in stream_page_list])
             else:
                 self._streams[stream] = None
 
-    def create_stream_from_pages(self, stream_name: str, pages: List[int]) -> str:
+    def create_stream_from_pages(self, stream_name: str, maximum_size: int, pages: List[int]) -> str:
         # Construct a root layer based on a number of pages
-        layer_name = self.context.layers.free_layer_name(self.name + "_" + stream_name)
+        layer_name = self.name + "_" + stream_name
         path_join = interfaces.configuration.path_join
         config_path = path_join(self.config_path, stream_name)
         self.context.config[path_join(config_path, 'base_layer')] = self.name
         self.context.config[path_join(config_path, 'pages')] = pages
+        self.context.config[path_join(config_path, 'maximum_size')] = maximum_size
         layer = PdbMSFStream(self.context, config_path, layer_name)
         self.context.layers.add_layer(layer)
         return layer_name
@@ -129,7 +133,9 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
         if index not in self._streams:
             raise ValueError("Stream not present")
         if self._streams[index]:
-            return self.context.layers[self._streams[index]]
+            layer = self.context.layers[self._streams[index]]
+            if isinstance(layer, PdbMSFStream):
+                return layer
 
 
 class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
@@ -148,7 +154,11 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
             raise TypeError("Base Layer must be a PdbMSF layer")
 
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.ListRequirement(name = 'pages', element_type = int, min_elements = 1)]
+        return [
+            requirements.ListRequirement(name = 'pages', element_type = int, min_elements = 1),
+            requirements.TranslationLayerRequirement(name = 'base_layer'),
+            requirements.IntRequirement(name = 'maximum_size')
+        ]
 
     def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
         returned = 0
@@ -174,7 +184,7 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
 
     @property
     def maximum_address(self) -> int:
-        return len(self._pages) * self._pdb_layer.page_size
+        return self.config.get('maximum_size', len(self._pages) * self._pdb_layer.page_size)
 
     @property
     def _pdb_layer(self) -> Optional[PdbMSF]:
