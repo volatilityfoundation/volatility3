@@ -424,8 +424,10 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
             inverse_choices[v] = k
         return inverse_choices
 
-    def lookup(self, value: int) -> str:
+    def lookup(self, value: int = None) -> str:
         """Looks up an individual value and returns the associated name"""
+        if value is None:
+            return self.lookup(self)
         if value in self._inverse_choices:
             return self._inverse_choices[value]
         raise ValueError("The value of the enumeration is outside the possible choices")

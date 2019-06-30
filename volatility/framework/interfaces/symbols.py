@@ -223,7 +223,7 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         """Look-up a symbol name across all the contained symbol tables"""
 
     @abstractmethod
-    def get_enumeration(self, enum_name: str) -> Dict[str, Any]:
+    def get_enumeration(self, enum_name: str) -> objects.Template:
         """Look-up an enumeration across all the contained symbol tables"""
 
     @abstractmethod
@@ -268,14 +268,14 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
 class NativeTableInterface(BaseSymbolTableInterface):
     """Class to distinguish NativeSymbolLists from other symbol lists"""
 
-    def get_symbol(self, name: str):
+    def get_symbol(self, name: str) -> objects.Template:
         raise exceptions.SymbolError("NativeTables never hold symbols")
 
     @property
     def symbols(self) -> Iterable[str]:
         return []
 
-    def get_enumeration(self, name: str) -> Dict[str, Any]:
+    def get_enumeration(self, name: str) -> objects.Template:
         raise exceptions.SymbolError("NativeTables never hold enumerations")
 
     @property

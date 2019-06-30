@@ -207,10 +207,10 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             raise exceptions.SymbolError("Unresolvable Symbol: {}".format(symbol_name))
         return retval
 
-    def get_enumeration(self, enum_name: str) -> Dict[str, Any]:
+    def get_enumeration(self, enum_name: str) -> interfaces.objects.Template:
         """Look-up a set of enumeration choices from a specific symbol table"""
         retval = self._weak_resolve(SymbolType.ENUM, enum_name)
-        if not isinstance(retval, dict):
+        if not isinstance(retval, interfaces.objects.Template):
             raise exceptions.SymbolError("Unresolvable Enumeration: {}".format(enum_name))
         return retval
 
