@@ -111,9 +111,297 @@
       },
       "kind": "struct",
       "size": 52
+    },
+    "TPI_HEADER": {
+      "fields": {
+        "version": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "header_size": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "index_min": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "index_max": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "gprec_size": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "tpi_hash_stream": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "tpi_hash_pad_stream": {
+          "offset": 22,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "hash_key_size": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "hash_bucket_size": {
+          "offset": 28,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "hash_values_offset": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "hash_values_size": {
+          "offset": 36,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ti_off_offset": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ti_off_size": {
+          "offset": 44,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "hash_adj_offset": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "hash_adj_size": {
+          "offset": 52,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 56
     }
   },
   "enums": {
+    "LEAF_TYPE": {
+      "base": "unsigned short",
+      "constants": {
+        "LF_MODIFIER_16t": 1,
+        "LF_POINTER_16t": 2,
+        "LF_ARRAY_16t": 3,
+        "LF_CLASS_16t": 4,
+        "LF_STRUCTURE_16t": 5,
+        "LF_UNION_16t": 6,
+        "LF_ENUM_16t": 7,
+        "LF_PROCEDURE_16t": 8,
+        "LF_MFUNCTION_16t": 9,
+        "LF_VTSHAPE": 10,
+        "LF_COBOL0_16t": 11,
+        "LF_COBOL1": 12,
+        "LF_BARRAY_16t": 13,
+        "LF_LABEL": 14,
+        "LF_NULL": 15,
+        "LF_NOTTRAN": 16,
+        "LF_DIMARRAY_16t": 17,
+        "LF_VFTPATH_16t": 18,
+        "LF_PRECOMP_16t": 19,
+        "LF_ENDPRECOMP": 20,
+        "LF_OEM_16t": 21,
+        "LF_TYPESERVER_ST": 22,
+        "LF_SKIP_16t": 512,
+        "LF_ARGLIST_16t": 513,
+        "LF_DEFARG_16t": 514,
+        "LF_LIST": 515,
+        "LF_FIELDLIST_16t": 516,
+        "LF_DERIVED_16t": 517,
+        "LF_BITFIELD_16t": 518,
+        "LF_METHODLIST_16t": 519,
+        "LF_DIMCONU_16t": 520,
+        "LF_DIMCONLU_16t": 521,
+        "LF_DIMVARU_16t": 522,
+        "LF_DIMVARLU_16t": 523,
+        "LF_REFSYM": 524,
+        "LF_BCLASS_16t": 1024,
+        "LF_VBCLASS_16t": 1025,
+        "LF_IVBCLASS_16t": 1026,
+        "LF_ENUMERATE_ST": 1027,
+        "LF_FRIENDFCN_16t": 1028,
+        "LF_INDEX_16t": 1029,
+        "LF_MEMBER_16t": 1030,
+        "LF_STMEMBER_16t": 1031,
+        "LF_METHOD_16t": 1032,
+        "LF_NESTTYPE_16t": 1033,
+        "LF_VFUNCTAB_16t": 1034,
+        "LF_FRIENDCLS_16t": 1035,
+        "LF_ONEMETHOD_16t": 1036,
+        "LF_VFUNCOFF_16t": 1037,
+        "LF_TI16_MAX": 4096,
+        "LF_MODIFIER": 4097,
+        "LF_POINTER": 4098,
+        "LF_ARRAY_ST": 4099,
+        "LF_CLASS_ST": 4100,
+        "LF_STRUCTURE_ST": 4101,
+        "LF_UNION_ST": 4102,
+        "LF_ENUM_ST": 4103,
+        "LF_PROCEDURE": 4104,
+        "LF_MFUNCTION": 4105,
+        "LF_COBOL0": 4106,
+        "LF_BARRAY": 4107,
+        "LF_DIMARRAY_ST": 4108,
+        "LF_VFTPATH": 4109,
+        "LF_PRECOMP_ST": 4110,
+        "LF_OEM": 4111,
+        "LF_ALIAS_ST": 4112,
+        "LF_OEM2": 4113,
+        "LF_SKIP": 4608,
+        "LF_ARGLIST": 4609,
+        "LF_DEFARG_ST": 4610,
+        "LF_FIELDLIST": 4611,
+        "LF_DERIVED": 4612,
+        "LF_BITFIELD": 4613,
+        "LF_METHODLIST": 4614,
+        "LF_DIMCONU": 4615,
+        "LF_DIMCONLU": 4616,
+        "LF_DIMVARU": 4617,
+        "LF_DIMVARLU": 4618,
+        "LF_BCLASS": 5120,
+        "LF_VBCLASS": 5121,
+        "LF_IVBCLASS": 5122,
+        "LF_FRIENDFCN_ST": 5123,
+        "LF_INDEX": 5124,
+        "LF_MEMBER_ST": 5125,
+        "LF_STMEMBER_ST": 5126,
+        "LF_METHOD_ST": 5127,
+        "LF_NESTTYPE_ST": 5128,
+        "LF_VFUNCTAB": 5129,
+        "LF_FRIENDCLS": 5130,
+        "LF_ONEMETHOD_ST": 5131,
+        "LF_VFUNCOFF": 5132,
+        "LF_NESTTYPEEX_ST": 5133,
+        "LF_MEMBERMODIFY_ST": 5134,
+        "LF_MANAGED_ST": 5135,
+        "LF_ST_MAX": 5376,
+        "LF_TYPESERVER": 5377,
+        "LF_ENUMERATE": 5378,
+        "LF_ARRAY": 5379,
+        "LF_CLASS": 5380,
+        "LF_STRUCTURE": 5381,
+        "LF_UNION": 5382,
+        "LF_ENUM": 5383,
+        "LF_DIMARRAY": 5384,
+        "LF_PRECOMP": 5385,
+        "LF_ALIAS": 5386,
+        "LF_DEFARG": 5387,
+        "LF_FRIENDFCN": 5388,
+        "LF_MEMBER": 5389,
+        "LF_STMEMBER": 5390,
+        "LF_METHOD": 5391,
+        "LF_NESTTYPE": 5392,
+        "LF_ONEMETHOD": 5393,
+        "LF_NESTTYPEEX": 5394,
+        "LF_MEMBERMODIFY": 5395,
+        "LF_MANAGED": 5396,
+        "LF_TYPESERVER2": 5397,
+        "LF_STRIDED_ARRAY": 5398,
+        "LF_HLSL": 5399,
+        "LF_MODIFIER_EX": 5400,
+        "LF_INTERFACE": 5401,
+        "LF_BINTERFACE": 5402,
+        "LF_VECTOR": 5403,
+        "LF_MATRIX": 5404,
+        "LF_VFTABLE": 5405,
+        "LF_FUNC_ID": 5633,
+        "LF_MFUNC_ID": 5634,
+        "LF_BUILDINFO": 5635,
+        "LF_SUBSTR_LIST": 5636,
+        "LF_STRING_ID": 5637,
+        "LF_UDT_SRC_LINE": 5638,
+        "LF_UDT_MOD_SRC_LINE": 5639,
+        "LF_NUMERIC": 32768,
+        "LF_CHAR": 32768,
+        "LF_SHORT": 32769,
+        "LF_USHORT": 32770,
+        "LF_LONG": 32771,
+        "LF_ULONG": 32772,
+        "LF_REAL32": 32773,
+        "LF_REAL64": 32774,
+        "LF_REAL80": 32775,
+        "LF_REAL128": 32776,
+        "LF_QUADWORD": 32777,
+        "LF_UQUADWORD": 32778,
+        "LF_REAL48": 32779,
+        "LF_COMPLEX32": 32780,
+        "LF_COMPLEX64": 32781,
+        "LF_COMPLEX80": 32782,
+        "LF_COMPLEX128": 32783,
+        "LF_VARSTRING": 32784,
+        "LF_OCTWORD": 32791,
+        "LF_UOCTWORD": 32792,
+        "LF_DECIMAL": 32793,
+        "LF_DATE": 32794,
+        "LF_UTF8STRING": 32795,
+        "LF_REAL16": 32796,
+        "LF_PAD0": 240,
+        "LF_PAD1": 241,
+        "LF_PAD2": 242,
+        "LF_PAD3": 243,
+        "LF_PAD4": 244,
+        "LF_PAD5": 245,
+        "LF_PAD6": 246,
+        "LF_PAD7": 247,
+        "LF_PAD8": 248,
+        "LF_PAD9": 249,
+        "LF_PAD10": 250,
+        "LF_PAD11": 251,
+        "LF_PAD12": 252,
+        "LF_PAD13": 253,
+        "LF_PAD14": 254,
+        "LF_PAD15": 255
+      },
+      "size": 2
+    }
   },
   "base_types": {
     "unsigned char": {
