@@ -21,12 +21,16 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
         super().__init__(context, config_path, name, metadata)
         self._base_layer = self.config["base_layer"]
 
-        self._pdb_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'pdb')
+        self._pdb_symbol_table = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'pdb')
         response = self._check_header()
         if response is None:
             raise ValueError("Could not find a suitable header")
         self._version, self._header = response
         self._streams = {}  # type: Dict[int, str]
+
+    @property
+    def pdb_symbol_table(self) -> str:
+        return self._pdb_symbol_table
 
     def read_streams(self):
         # Shortcut in case they've already been read
@@ -34,7 +38,7 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
             return
 
         # Recover the root table, by recovering the root table index table...
-        module = self.context.module(self._pdb_table_name, self._base_layer, offset = 0)
+        module = self.context.module(self.pdb_symbol_table, self._base_layer, offset = 0)
         entry_size = module.get_type("unsigned long").size
 
         root_table_num_pages = math.ceil(self._header.StreamInfo.StreamInfoSize / self._header.PageSize)
@@ -48,17 +52,13 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
         root_index_layer_name = self.create_stream_from_pages("root_index", self._header.StreamInfo.StreamInfoSize,
                                                               [x for x in root_index])
 
-        module = self.context.module(self._pdb_table_name, root_index_layer_name, offset = 0)
-        root_pages = self.context.object(
-            symbol = self._pdb_table_name + constants.BANG + "array",
-            layer_name = root_index_layer_name,
-            offset = 0,
-            count = root_table_num_pages,
-            subtype = module.get_type("unsigned long"))
+        module = self.context.module(self.pdb_symbol_table, root_index_layer_name, offset = 0)
+        root_pages = module.object(
+            type_name = "array", offset = 0, count = root_table_num_pages, subtype = module.get_type("unsigned long"))
         root_layer_name = self.create_stream_from_pages("root", self._header.StreamInfo.StreamInfoSize,
                                                         [x for x in root_pages])
 
-        module = self.context.module(self._pdb_table_name, root_layer_name, offset = 0)
+        module = self.context.module(self.pdb_symbol_table, root_layer_name, offset = 0)
         num_streams = module.object(type_name = "unsigned long", offset = 0)
         stream_sizes = module.object(
             type_name = "array", offset = entry_size, count = num_streams, subtype = module.get_type("unsigned long"))
@@ -94,7 +94,7 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
     def _check_header(self) -> Optional[Tuple[str, interfaces.objects.ObjectInterface]]:
         """Verifies the header of the PDB file and returns the version of the file"""
         for header in self.headers:
-            header_type = self._pdb_table_name + constants.BANG + header
+            header_type = self.pdb_symbol_table + constants.BANG + header
             current_header = self.context.object(header_type, self._base_layer, 0)
             if utility.array_to_string(current_header.Magic) == self.headers[header]:
                 if not (current_header.PageSize < 0x100 or current_header.PageSize > (128 * 0x10000)):
@@ -152,6 +152,10 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
             raise ValueError("Invalid/no pages specified")
         if not isinstance(self._pdb_layer, PdbMSF):
             raise TypeError("Base Layer must be a PdbMSF layer")
+
+    @property
+    def pdb_symbol_table(self) -> str:
+        return self._context.layers[self._base_layer].pdb_symbol_table
 
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
