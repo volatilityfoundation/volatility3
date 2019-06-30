@@ -222,6 +222,55 @@
       },
       "kind": "struct",
       "size": 56
+    },
+    "LF_MODIFIER": {
+      "fields": {
+        "subtype_index": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "constant": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "volatile": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 1,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "unaligned": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 2,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 6
     }
   },
   "enums": {
