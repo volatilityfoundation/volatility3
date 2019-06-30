@@ -400,11 +400,11 @@ class Version1Format(ISFormatTable):
             raise exceptions.SymbolError("Enumeration not found in {} table: {}".format(self.name, enum_name))
         curdict = self._json_object['enums'][enum_name]
         base_type = self.natives.get_type(curdict['base'])
+        # The size isn't actually used, the base-type defines it.
         return objects.templates.ObjectTemplate(
             type_name = 'Enumeration',
             object_class = objects.Enumeration,
             base_type = base_type,
-            size = curdict['size'],
             choices = curdict['constants'])
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:

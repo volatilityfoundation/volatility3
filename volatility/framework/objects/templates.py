@@ -17,7 +17,6 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
 # specific language governing rights and limitations under the License.
 #
-import functools
 import logging
 from typing import Any, ClassVar, Dict, List, Type
 
