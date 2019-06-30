@@ -95,6 +95,8 @@ class PdbReader:
             pass
         elif LeafType in [LeafType.LF_MEMBER, LeafType.LF_MEMBER_ST]:
             pass
+        elif LeafType in [LeafType.LF_MODIFIER]:
+            module.object(type_name = "LF_MODIFIER", offset = offset + LeafType.vol.base_type.size)
         else:
             raise ValueError("Unhandled leaf_type: {}".format(LeafType))
 
