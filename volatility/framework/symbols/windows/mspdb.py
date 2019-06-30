@@ -14,6 +14,10 @@ class PdbReader:
         self._layer_name, self._context = self.load_pdb_layer(context, location)
 
     @property
+    def context(self):
+        return self._context
+
+    @property
     def pdb_layer_name(self):
         return self._layer_name
 
@@ -81,18 +85,18 @@ class PdbReader:
         return header
 
     def process_type(self, module: interfaces.context.ModuleInterface, offset: int) -> Dict[str, Dict]:
-        leaf_type = module.object(type_name = "unsigned short", offset = offset)
-        LeafType = module.get_enumeration("LEAF_TYPE")
+        LeafType = self.context.object(
+            module.get_enumeration("LEAF_TYPE"), layer_name = module._layer_name, offset = offset)
 
-        if leaf_type in [
+        if LeafType in [
                 LeafType.LF_CLASS, LeafType.LF_CLASS_ST, LeafType.LF_STRUCTURE, LeafType.LF_STRUCTURE_ST,
                 LeafType.LF_INTERFACE
         ]:
             pass
-        elif leaf_type in [LeafType.LF_MEMBER, LeafType.LF_MEMBER_ST]:
+        elif LeafType in [LeafType.LF_MEMBER, LeafType.LF_MEMBER_ST]:
             pass
         else:
-            raise ValueError("Unhandled leaf_type: {}".format(leaf_type))
+            raise ValueError("Unhandled leaf_type: {}".format(LeafType))
 
         return {}
 
