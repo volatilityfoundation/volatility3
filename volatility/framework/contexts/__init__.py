@@ -201,10 +201,10 @@ class Module(interfaces.context.ModuleInterface):
 
     get_symbol = get_module_wrapper('get_symbol')
     get_type = get_module_wrapper('get_type')
-    get_enum = get_module_wrapper('get_enum')
+    get_enumeration = get_module_wrapper('get_enumeration')
     has_symbol = get_module_wrapper('has_symbol')
     has_type = get_module_wrapper('has_type')
-    has_enum = get_module_wrapper('has_enum')
+    has_enumeration = get_module_wrapper('has_enumeration')
 
 
 class SizedModule(Module):
