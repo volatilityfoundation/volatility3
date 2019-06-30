@@ -388,7 +388,7 @@ class Version1Format(ISFormatTable):
         lookup = self._json_object['enums'].get(name, None)
         if not lookup:
             raise exceptions.SymbolSpaceError("Unknown enumeration: {}".format(name))
-        result = {"choices": copy.deepcopy(lookup['constants']), "base_type": self.natives.get_type(lookup['base'])}
+        result = {"choices": copy.deepcopy(lookup['constants']), "base_type": self.natives.get_type(lookup['type'])}
         return result
 
     def get_enumeration(self, enum_name: str) -> interfaces.objects.Template:
