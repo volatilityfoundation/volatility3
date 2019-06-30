@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import Tuple
+from typing import Tuple, Dict
 from urllib import request
 
 from volatility.framework import contexts, interfaces
@@ -10,9 +10,12 @@ from volatility.framework.layers import physical, msf
 class PdbReader:
     """Class to read Microsoft PDB files"""
 
-    def __init__(self, context: interfaces.context.ContextInterface, layer_name: str):
-        self._context = context
-        self._layer_name = layer_name
+    def __init__(self, context: interfaces.context.ContextInterface, location: str):
+        self._layer_name, self._context = self.load_pdb_layer(context, location)
+
+    @property
+    def pdb_layer_name(self):
+        return self._layer_name
 
     @classmethod
     def load_pdb_layer(cls, context: interfaces.context.ContextInterface,
@@ -43,6 +46,56 @@ class PdbReader:
 
         return msf_layer_name, new_context
 
+    def read_tpi_stream(self):
+        tpi_layer = self._context.layers.get(self._layer_name + "_stream2", None)
+        if not tpi_layer:
+            raise ValueError("No TPI stream available")
+        module = self._context.module(module_name = tpi_layer.pdb_symbol_table, layer_name = tpi_layer.name, offset = 0)
+        header = module.object(type_name = "TPI_HEADER", offset = 0)
+
+        # Check the header
+        if not (56 <= header.header_size < 1024):
+            raise ValueError("TPI Stream Header size outside normal bounds")
+        if header.index_min < 4096:
+            raise ValueError("Minimum TPI index is 4096, found: {}".format(header.index_min))
+        if header.index_max < header.index_min:
+            raise ValueError("Maximum TPI index is smaller than minimum TPI index, found: {} < {} ".format(
+                header.index_max, header.index_min))
+
+        types = {}
+
+        offset = header.header_size
+        # Ensure we use the same type everywhere
+        length_type = "unsigned short"
+        length_len = module.get_type(length_type).size
+        while tpi_layer.maximum_address - offset > 0:
+            length = module.object(type_name = length_type, offset = offset)
+            offset += length_len
+            types.update(self.process_type(module, offset))
+            offset += length
+            # Since types can only refer to earlier types, assigning the name at this point is fine
+
+        if tpi_layer.maximum_address - offset != 0:
+            raise ValueError("Type values did not fill the TPI stream correctly")
+
+        return header
+
+    def process_type(self, module: interfaces.context.ModuleInterface, offset: int) -> Dict[str, Dict]:
+        leaf_type = module.object(type_name = "unsigned short", offset = offset)
+        LeafType = module.get_enumeration("LEAF_TYPE")
+
+        if leaf_type in [
+                LeafType.LF_CLASS, LeafType.LF_CLASS_ST, LeafType.LF_STRUCTURE, LeafType.LF_STRUCTURE_ST,
+                LeafType.LF_INTERFACE
+        ]:
+            pass
+        elif leaf_type in [LeafType.LF_MEMBER, LeafType.LF_MEMBER_ST]:
+            pass
+        else:
+            raise ValueError("Unhandled leaf_type: {}".format(leaf_type))
+
+        return {}
+
 
 if __name__ == '__main__':
 
@@ -55,12 +108,12 @@ if __name__ == '__main__':
         parser.error("File {} does not exists".format(args.filename))
     location = "file:" + request.pathname2url(args.filename)
 
-    layer_name, ctx = PdbReader.load_pdb_layer(ctx, location)
-
-    reader = PdbReader(ctx, layer_name)
+    reader = PdbReader(ctx, location)
 
     ### TESTING
-    x = ctx.object('pdb1!BIG_MSF_HDR', layer_name, 0)
+    # x = ctx.object('pdb1!BIG_MSF_HDR', reader.pdb_layer_name, 0)
+    header = reader.read_tpi_stream()
+
     import pdb
 
     pdb.set_trace()
