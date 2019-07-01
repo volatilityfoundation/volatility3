@@ -96,7 +96,11 @@ class PdbReader:
         elif LeafType in [LeafType.LF_MEMBER, LeafType.LF_MEMBER_ST]:
             pass
         elif LeafType in [LeafType.LF_MODIFIER]:
-            module.object(type_name = "LF_MODIFIER", offset = offset + LeafType.vol.base_type.size)
+            modifier = module.object(type_name = "LF_MODIFIER", offset = offset + LeafType.vol.base_type.size)
+        elif LeafType in [LeafType.LF_POINTER]:
+            pointer = module.object(type_name = "LF_POINTER", offset = offset + LeafType.vol.base_type.size)
+            import pdb
+            pdb.set_trace()
         else:
             raise ValueError("Unhandled leaf_type: {}".format(LeafType))
 
