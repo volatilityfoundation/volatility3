@@ -21,7 +21,7 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
         super().__init__(context, config_path, name, metadata)
         self._base_layer = self.config["base_layer"]
 
-        self._pdb_symbol_table = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'pdb')
+        self._pdb_symbol_table = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'mspdb')
         response = self._check_header()
         if response is None:
             raise ValueError("Could not find a suitable header")

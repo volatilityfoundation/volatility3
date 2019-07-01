@@ -271,6 +271,67 @@
       },
       "kind": "struct",
       "size": 6
+    },
+    "LF_POINTER": {
+      "fields": {
+        "subtype_index": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "constant": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 7,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "reference": {
+          "offset": 4,
+          "type": {
+            "bit_length": 3,
+            "bit_position": 5,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "pointer_type": {
+          "offset": 4,
+          "type": {
+            "bit_length": 5,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "size": {
+          "offset": 4,
+          "type": {
+            "bit_length": 6,
+            "bit_position": 13,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
     }
   },
   "enums": {
