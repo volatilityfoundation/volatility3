@@ -75,7 +75,10 @@ class PdbReader:
         while tpi_layer.maximum_address - offset > 0:
             length = module.object(type_name = length_type, offset = offset)
             offset += length_len
-            types.update(self.process_type(module, offset))
+            output, consumed = self.consume_type(module, offset, length)
+            types.update(output)
+            # if consumed != length:
+            #     raise ValueError("Bytes unconsumed")
             offset += length
             # Since types can only refer to earlier types, assigning the name at this point is fine
 
@@ -84,27 +87,54 @@ class PdbReader:
 
         return header
 
-    def process_type(self, module: interfaces.context.ModuleInterface, offset: int) -> Dict[str, Dict]:
+    def consume_type(self, module: interfaces.context.ModuleInterface, offset: int,
+                     length: int) -> Tuple[Dict[str, Dict], int]:
+        """Returns the dictionary for the type, and the number of bytes consumed"""
         LeafType = self.context.object(
             module.get_enumeration("LEAF_TYPE"), layer_name = module._layer_name, offset = offset)
+        consumed = LeafType.vol.base_type.size
+        offset += consumed
+        length -= consumed
 
         if LeafType in [
                 LeafType.LF_CLASS, LeafType.LF_CLASS_ST, LeafType.LF_STRUCTURE, LeafType.LF_STRUCTURE_ST,
                 LeafType.LF_INTERFACE
         ]:
-            pass
+            structure = module.object(type_name = "LF_STRUCTURE", offset = offset)
+            consumed = structure.vol.size
         elif LeafType in [LeafType.LF_MEMBER, LeafType.LF_MEMBER_ST]:
-            pass
+            member = module.object(type_name = "LF_MEMBER", offset = offset)
+            name = member.name.cast("string", max_length = 256, encoding = "latin-1")
+            consumed += member.vol.size + len(name) + 1
         elif LeafType in [LeafType.LF_MODIFIER]:
-            modifier = module.object(type_name = "LF_MODIFIER", offset = offset + LeafType.vol.base_type.size)
+            modifier = module.object(type_name = "LF_MODIFIER", offset = offset)
+            consumed += modifier.vol.size
+            # Lookup and return the modified type
         elif LeafType in [LeafType.LF_POINTER]:
-            pointer = module.object(type_name = "LF_POINTER", offset = offset + LeafType.vol.base_type.size)
-            import pdb
-            pdb.set_trace()
+            pointer = module.object(type_name = "LF_POINTER", offset = offset)
+            consumed += pointer.vol.size
+        elif LeafType in [LeafType.LF_FIELDLIST]:
+            sub_length = length
+            sub_offset = offset
+            field = []
+            while length > consumed:
+                subfield, sub_consumed = self.consume_type(module, sub_offset, sub_length)
+                sub_length -= sub_consumed
+                sub_offset += sub_consumed
+                consumed += sub_consumed
+                field.append(subfield)
+            pass
+        elif LeafType in [LeafType.LF_ARGLIST]:
+            pass
         else:
             raise ValueError("Unhandled leaf_type: {}".format(LeafType))
 
-        return {}
+        # if consumed != length:
+        #     import pdb
+        #     pdb.set_trace()
+
+        print("LEAF_TYPE", LeafType.lookup())
+        return {"leaf_type": LeafType}, consumed
 
 
 if __name__ == '__main__':
