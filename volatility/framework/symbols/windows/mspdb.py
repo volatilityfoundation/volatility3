@@ -10,8 +10,11 @@ from volatility.framework.layers import physical, msf
 class PdbReader:
     """Class to read Microsoft PDB files"""
 
+    sub_resolvers = {""}
+
     def __init__(self, context: interfaces.context.ContextInterface, location: str):
         self._layer_name, self._context = self.load_pdb_layer(context, location)
+        self.types = []
 
     @property
     def context(self):
@@ -66,20 +69,22 @@ class PdbReader:
             raise ValueError("Maximum TPI index is smaller than minimum TPI index, found: {} < {} ".format(
                 header.index_max, header.index_min))
 
-        types = {}
+        self.types = []
 
         offset = header.header_size
         # Ensure we use the same type everywhere
         length_type = "unsigned short"
         length_len = module.get_type(length_type).size
+        type_index = 1
         while tpi_layer.maximum_address - offset > 0:
             length = module.object(type_name = length_type, offset = offset)
             if not isinstance(length, int):
                 raise ValueError("Non-integer length provided")
             offset += length_len
             output, consumed = self.consume_type(module, offset, length)
-            types.update(output)
+            self.types.append(output)
             offset += length
+            type_index += 1
             # Since types can only refer to earlier types, assigning the name at this point is fine
 
         if tpi_layer.maximum_address - offset != 0:
@@ -90,6 +95,7 @@ class PdbReader:
     def consume_type(self, module: interfaces.context.ModuleInterface, offset: int, length: int,
                      no_output = False) -> Tuple[Dict[str, Dict], int]:
         """Returns the dictionary for the type, and the number of bytes consumed"""
+        result = {}
         leaf_type = self.context.object(
             module.get_enumeration("LEAF_TYPE"), layer_name = module._layer_name, offset = offset)
         consumed = leaf_type.vol.base_type.size
@@ -102,26 +108,29 @@ class PdbReader:
             structure = module.object(type_name = "LF_STRUCTURE", offset = offset)
             name = self.parse_string(leaf_type, structure.name, size = length - structure.vol.size - consumed)
             consumed = length
+            result[name] = structure
         elif leaf_type in [leaf_type.LF_MEMBER, leaf_type.LF_MEMBER_ST]:
             member = module.object(type_name = "LF_MEMBER", offset = offset)
             name = self.parse_string(leaf_type, member.name, size = length - member.vol.size - consumed)
-            consumed = length
+            result[name] = member
+            print(name)
+            consumed += member.vol.size + len(name) + 1
         elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_POINTER, leaf_type.LF_PROCEDURE]:
             # TODO: Subresolve sub-types
             obj = module.object(type_name = leaf_type.lookup(), offset = offset)
             consumed = length
-            # Lookup and return the modified type
         elif leaf_type in [leaf_type.LF_FIELDLIST]:
             sub_length = length - consumed
             sub_offset = offset
-            field = []
+            fields = []
             while length > consumed:
                 subfield, sub_consumed = self.consume_type(module, sub_offset, sub_length, True)
+                sub_consumed += self.consume_padding(module.layer_name, sub_offset + sub_consumed)
                 sub_length -= sub_consumed
                 sub_offset += sub_consumed
                 consumed += sub_consumed
-                field.append(subfield)
-            pass
+                fields.append(subfield)
+            result = fields
         elif leaf_type in [leaf_type.LF_BITFIELD]:
             consumed = length
         elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
@@ -131,17 +140,22 @@ class PdbReader:
         else:
             raise ValueError("Unhandled leaf_type: {}".format(leaf_type))
 
-        if consumed != length:
-            print("CONSUMED != length", hex(consumed), hex(length), leaf_type.lookup())
-
         if not no_output:
             print(leaf_type.lookup())
-        return {"leaf_type": leaf_type}, consumed
+        return result, consumed
+
+    def consume_padding(self, layer_name: str, offset: int) -> int:
+        """Returns the amount of padding used between fields"""
+        val = self.context.layers[layer_name].read(offset, 1)
+        if not (int(val[0]) & 0xf0):
+            return 0
+        return (int(val[0]) & 0x0f)
 
     def parse_string(self,
                      leaf_type: interfaces.objects.ObjectInterface,
                      structure: interfaces.objects.ObjectInterface,
                      size = 0) -> str:
+        """Consumes either a c-string or a pascal string depending on the leaf_type"""
         if leaf_type > leaf_type.LF_ST_MAX:
             name = structure.cast("string", max_length = size, encoding = "latin-1")
         else:
@@ -167,6 +181,7 @@ if __name__ == '__main__':
     # x = ctx.object('pdb1!BIG_MSF_HDR', reader.pdb_layer_name, 0)
     header = reader.read_tpi_stream()
 
-    # import pdb
-    #
-    # pdb.set_trace()
+    import pdb
+
+    pdb.set_trace()
+    print(reader.types)
