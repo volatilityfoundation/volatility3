@@ -74,11 +74,11 @@ class PdbReader:
         length_len = module.get_type(length_type).size
         while tpi_layer.maximum_address - offset > 0:
             length = module.object(type_name = length_type, offset = offset)
+            if not isinstance(length, int):
+                raise ValueError("Non-integer length provided")
             offset += length_len
             output, consumed = self.consume_type(module, offset, length)
             types.update(output)
-            # if consumed != length:
-            #     raise ValueError("Bytes unconsumed")
             offset += length
             # Since types can only refer to earlier types, assigning the name at this point is fine
 
@@ -87,54 +87,67 @@ class PdbReader:
 
         return header
 
-    def consume_type(self, module: interfaces.context.ModuleInterface, offset: int,
-                     length: int) -> Tuple[Dict[str, Dict], int]:
+    def consume_type(self, module: interfaces.context.ModuleInterface, offset: int, length: int,
+                     no_output = False) -> Tuple[Dict[str, Dict], int]:
         """Returns the dictionary for the type, and the number of bytes consumed"""
-        LeafType = self.context.object(
+        leaf_type = self.context.object(
             module.get_enumeration("LEAF_TYPE"), layer_name = module._layer_name, offset = offset)
-        consumed = LeafType.vol.base_type.size
+        consumed = leaf_type.vol.base_type.size
         offset += consumed
-        length -= consumed
 
-        if LeafType in [
-                LeafType.LF_CLASS, LeafType.LF_CLASS_ST, LeafType.LF_STRUCTURE, LeafType.LF_STRUCTURE_ST,
-                LeafType.LF_INTERFACE
+        if leaf_type in [
+                leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
+                leaf_type.LF_INTERFACE
         ]:
             structure = module.object(type_name = "LF_STRUCTURE", offset = offset)
-            consumed = structure.vol.size
-        elif LeafType in [LeafType.LF_MEMBER, LeafType.LF_MEMBER_ST]:
+            name = self.parse_string(leaf_type, structure.name, size = length - structure.vol.size - consumed)
+            consumed = length
+        elif leaf_type in [leaf_type.LF_MEMBER, leaf_type.LF_MEMBER_ST]:
             member = module.object(type_name = "LF_MEMBER", offset = offset)
-            name = member.name.cast("string", max_length = 256, encoding = "latin-1")
-            consumed += member.vol.size + len(name) + 1
-        elif LeafType in [LeafType.LF_MODIFIER]:
-            modifier = module.object(type_name = "LF_MODIFIER", offset = offset)
-            consumed += modifier.vol.size
+            name = self.parse_string(leaf_type, member.name, size = length - member.vol.size - consumed)
+            consumed = length
+        elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_POINTER, leaf_type.LF_PROCEDURE]:
+            # TODO: Subresolve sub-types
+            obj = module.object(type_name = leaf_type.lookup(), offset = offset)
+            consumed = length
             # Lookup and return the modified type
-        elif LeafType in [LeafType.LF_POINTER]:
-            pointer = module.object(type_name = "LF_POINTER", offset = offset)
-            consumed += pointer.vol.size
-        elif LeafType in [LeafType.LF_FIELDLIST]:
-            sub_length = length
+        elif leaf_type in [leaf_type.LF_FIELDLIST]:
+            sub_length = length - consumed
             sub_offset = offset
             field = []
             while length > consumed:
-                subfield, sub_consumed = self.consume_type(module, sub_offset, sub_length)
+                subfield, sub_consumed = self.consume_type(module, sub_offset, sub_length, True)
                 sub_length -= sub_consumed
                 sub_offset += sub_consumed
                 consumed += sub_consumed
                 field.append(subfield)
             pass
-        elif LeafType in [LeafType.LF_ARGLIST]:
-            pass
+        elif leaf_type in [leaf_type.LF_BITFIELD]:
+            consumed = length
+        elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
+            consumed = length
+        elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUMERATE, leaf_type.LF_ENUM, leaf_type.LF_UNION]:
+            consumed = length
         else:
-            raise ValueError("Unhandled leaf_type: {}".format(LeafType))
+            raise ValueError("Unhandled leaf_type: {}".format(leaf_type))
 
-        # if consumed != length:
-        #     import pdb
-        #     pdb.set_trace()
+        if consumed != length:
+            print("CONSUMED != length", hex(consumed), hex(length), leaf_type.lookup())
 
-        print("LEAF_TYPE", LeafType.lookup())
-        return {"leaf_type": LeafType}, consumed
+        if not no_output:
+            print(leaf_type.lookup())
+        return {"leaf_type": leaf_type}, consumed
+
+    def parse_string(self,
+                     leaf_type: interfaces.objects.ObjectInterface,
+                     structure: interfaces.objects.ObjectInterface,
+                     size = 0) -> str:
+        if leaf_type > leaf_type.LF_ST_MAX:
+            name = structure.cast("string", max_length = size, encoding = "latin-1")
+        else:
+            name = structure.cast("pascal_string")
+            name = name.string.cast("string", max_length = name.length, encoding = "latin-1")
+        return name
 
 
 if __name__ == '__main__':
@@ -154,6 +167,6 @@ if __name__ == '__main__':
     # x = ctx.object('pdb1!BIG_MSF_HDR', reader.pdb_layer_name, 0)
     header = reader.read_tpi_stream()
 
-    import pdb
-
-    pdb.set_trace()
+    # import pdb
+    #
+    # pdb.set_trace()

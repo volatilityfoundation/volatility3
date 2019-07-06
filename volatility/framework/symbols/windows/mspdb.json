@@ -2,6 +2,26 @@
   "symbols": {
   },
   "user_types": {
+    "pascal_string": {
+      "fields": {
+        "length": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "string": {
+          "offset": 1,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 2
+    },
     "SI_PERSIST": {
       "fields": {
         "StreamInfoSize": {
@@ -259,10 +279,24 @@
             "kind": "base",
             "name": "unsigned long"
           }
+        },
+        "size": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "name": {
+          "offset": 18,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
         }
       },
       "kind": "struct",
-      "size": 16
+      "size": 18
     },
     "LF_MEMBER": {
       "fields": {
@@ -356,11 +390,11 @@
             "name": "unsigned long"
           }
         },
-        "constant": {
+        "pointer_type": {
           "offset": 4,
           "type": {
-            "bit_length": 1,
-            "bit_position": 7,
+            "bit_length": 5,
+            "bit_position": 0,
             "kind": "bitfield",
             "type": {
               "kind": "base",
@@ -368,7 +402,7 @@
             }
           }
         },
-        "reference": {
+        "mode": {
           "offset": 4,
           "type": {
             "bit_length": 3,
@@ -380,11 +414,59 @@
             }
           }
         },
-        "pointer_type": {
+        "flat32": {
           "offset": 4,
           "type": {
-            "bit_length": 5,
-            "bit_position": 0,
+            "bit_length": 1,
+            "bit_position": 8,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "volatile": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 9,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "constant": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 10,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "unaligned": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 11,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "restricted": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 12,
             "kind": "bitfield",
             "type": {
               "kind": "base",
@@ -403,10 +485,80 @@
               "name": "unsigned long"
             }
           }
+        },
+        "mocom": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 19,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "lref": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 20,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "rref": {
+          "offset": 4,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 21,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
         }
       },
       "kind": "struct",
-      "size": 8
+      "size": 6
+    },
+    "LF_PROCEDURE": {
+      "fields": {
+        "return_type": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "attributes": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "parameter_count": {
+          "offset": 6,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "argument_list": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12
     }
   },
   "enums": {
