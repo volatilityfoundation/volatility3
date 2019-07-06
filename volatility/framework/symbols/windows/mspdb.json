@@ -417,7 +417,41 @@
       "kind": "struct",
       "size": 56
     },
-    "LF_STRUCTURE": {
+    "LF_ARRAY": {
+      "fields": {
+        "element_type": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "indexing_type": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "size": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "name": {
+          "offset": 10,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 10
+    },
+    "LF_ENUM": {
       "fields": {
         "count": {
           "offset": 0,
@@ -433,36 +467,22 @@
             "name": "Type_Properties"
           }
         },
-        "fields": {
+        "subtype_index": {
           "offset": 4,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
-        "derived_from": {
+        "fields": {
           "offset": 8,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
-        "vtable_shape": {
-          "offset": 12,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "size": {
-          "offset": 16,
-          "type": {
-            "kind": "base",
-            "name": "unsigned short"
-          }
-        },
         "name": {
-          "offset": 18,
+          "offset": 12,
           "type": {
             "kind": "base",
             "name": "string"
@@ -470,7 +490,7 @@
         }
       },
       "kind": "struct",
-      "size": 18
+      "size": 12
     },
     "LF_MEMBER": {
       "fields": {
@@ -733,6 +753,61 @@
       },
       "kind": "struct",
       "size": 12
+    },
+    "LF_STRUCTURE": {
+      "fields": {
+        "count": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "properties": {
+          "offset": 2,
+          "type": {
+            "kind": "struct",
+            "name": "Type_Properties"
+          }
+        },
+        "fields": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "derived_from": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "vtable_shape": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "size": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "name": {
+          "offset": 18,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 18
     }
   },
   "enums": {
