@@ -22,6 +22,180 @@
       "kind": "struct",
       "size": 2
     },
+    "Type_Properties": {
+      "fields": {
+        "packed": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "constructors": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 1,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "overloaded_operators": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 2,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "nested_type": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 3,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "contains_nested": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 4,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "overloaded_assignment": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 5,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "overloaded_casting": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 6,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "forward_reference": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 7,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "scoped_definition": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 8,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "unique_name": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 9,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "sealed": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 10,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "hfa": {
+          "offset": 0,
+          "type": {
+            "bit_length": 2,
+            "bit_position": 11,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "intrinsic_type": {
+          "offset": 0,
+          "type": {
+            "bit_length": 1,
+            "bit_position": 12,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        },
+        "mocom": {
+          "offset": 0,
+          "type": {
+            "bit_length": 2,
+            "bit_position": 13,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned short"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 2
+    },
     "SI_PERSIST": {
       "fields": {
         "StreamInfoSize": {
@@ -255,8 +429,8 @@
         "properties": {
           "offset": 2,
           "type": {
-            "kind": "base",
-            "name": "unsigned short"
+            "kind": "struct",
+            "name": "Type_Properties"
           }
         },
         "fields": {
