@@ -863,11 +863,11 @@
           "offset": 8,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned short"
           }
         },
         "name": {
-          "offset": 12,
+          "offset": 10,
           "type": {
             "kind": "base",
             "name": "string"
