@@ -412,7 +412,10 @@ class PdbReader:
 
     def get_size_from_index(self, index: int) -> int:
         if index < 0x1000:
-            _, base = primatives[index & 0xff]
+            if (index & 0xf00):
+                _, base = indirections[index & 0xf00]
+            else:
+                _, base = primatives[index & 0xff]
             return base['size']
         else:
             leaf_type, name, value = self.types[index - 0x1000]
@@ -524,7 +527,6 @@ class PdbReader:
 
     def convert_fields(self, fields: int):
         result = {}
-        print(fields)
         _, _, fields_struct = self.types[fields]
         for field in fields_struct:
             _, name, member = field
