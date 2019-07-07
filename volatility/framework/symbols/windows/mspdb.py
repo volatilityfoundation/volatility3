@@ -42,13 +42,13 @@ primatives = {
     0x70: ("rchar", {
         "endian": "little",
         "kind": "char",
-        "signed": False,
+        "signed": True,
         "size": 1
     }),
     0x71: ("wchar", {
         "endian": "little",
         "kind": "int",
-        "signed": False,
+        "signed": True,
         "size": 2
     }),
     # 0x7a: ("rchar16", {}),
@@ -99,7 +99,7 @@ primatives = {
         "endian": "little",
         "kind": "int",
         "signed": False,
-        "size": 2
+        "size": 4
     }),
     0x13: ("int64", {
         "endian": "little",
@@ -152,43 +152,43 @@ primatives = {
     0x46: ("f16", {
         "endian": "little",
         "kind": "float",
-        "signed": False,
+        "signed": True,
         "size": 2
     }),
     0x40: ("f32", {
         "endian": "little",
         "kind": "float",
-        "signed": False,
+        "signed": True,
         "size": 4
     }),
     0x45: ("f32pp", {
         "endian": "little",
         "kind": "float",
-        "signed": False,
+        "signed": True,
         "size": 4
     }),
     0x44: ("f48", {
         "endian": "little",
         "kind": "float",
-        "signed": False,
+        "signed": True,
         "size": 6
     }),
-    0x41: ("f64", {
+    0x41: ("double", {
         "endian": "little",
         "kind": "float",
-        "signed": False,
+        "signed": True,
         "size": 8
     }),
     0x42: ("f80", {
         "endian": "little",
         "kind": "float",
-        "signed": False,
+        "signed": True,
         "size": 10
     }),
     0x43: ("f128", {
         "endian": "little",
         "kind": "float",
-        "signed": False,
+        "signed": True,
         "size": 16
     })
 }
@@ -200,19 +200,26 @@ indirections = {
         "signed": False,
         "size": 2
     }),
-    0x400: ("pointer", {
+    0x400: ("pointer32", {
         "endian": "little",
         "kind": "int",
         "signed": False,
         "size": 4
     }),
-    0x600: ("pointer64", {
+    0x600: ("pointer", {
         "endian": "little",
         "kind": "int",
         "signed": False,
         "size": 8
     })
 }
+
+
+class ForwardArrayCount:
+
+    def __init__(self, size, element_type):
+        self.element_type = element_type
+        self.size = size
 
 
 class PdbReader:
@@ -282,6 +289,8 @@ class PdbReader:
         self.bases = {}
         self.user_types = {}
 
+        type_references = {}
+
         offset = header.header_size
         # Ensure we use the same type everywhere
         length_type = "unsigned short"
@@ -293,7 +302,11 @@ class PdbReader:
                 raise ValueError("Non-integer length provided")
             offset += length_len
             output, consumed = self.consume_type(module, offset, length)
-            self.types.append(output)
+            leaf_type, name, value = output
+            if name == '<unnamed-tag>':
+                name = '__unnamed_' + hex(len(self.types) + 0x1000)[2:]
+            type_references[name] = len(self.types)
+            self.types.append((leaf_type, name, value))
             offset += length
             type_index += 1
             # Since types can only refer to earlier types, assigning the name at this point is fine
@@ -302,31 +315,57 @@ class PdbReader:
             raise ValueError("Type values did not fill the TPI stream correctly")
 
         for index in range(len(self.types)):
-            if isinstance(self.types[index], Tuple):
-                leaf_type, name, value = self.types[index]
-                if leaf_type in [
-                        leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
-                        leaf_type.LF_INTERFACE
-                ]:
-                    if not value.properties.forward_reference:
-                        self.user_types[name] = {
-                            "kind": "struct",
-                            "size": 0,
-                            "fields": self.convert_fields(value.fields - 0x1000)
-                        }
-                if leaf_type in [leaf_type.LF_UNION]:
-                    if not value.properties.forward_reference:
-                        # Deal with UNION types
-                        self.user_types[name] = {
-                            "kind": "union",
-                            "size": 0,
-                            "fields": self.convert_fields(value.fields - 0x1000)
-                        }
+            leaf_type, name, value = self.types[index]
+            if leaf_type in [
+                    leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
+                    leaf_type.LF_INTERFACE
+            ]:
+                if not value.properties.forward_reference:
+                    self.user_types[name] = {
+                        "kind": "struct",
+                        "size": value.size,
+                        "fields": self.convert_fields(value.fields - 0x1000)
+                    }
+            if leaf_type in [leaf_type.LF_UNION]:
+                if not value.properties.forward_reference:
+                    # Deal with UNION types
+                    self.user_types[name] = {
+                        "kind": "union",
+                        "size": value.size,
+                        "fields": self.convert_fields(value.fields - 0x1000)
+                    }
+
+        # Re-run through for ForwardSizeReferences
+        self.user_types = self.replace_forward_size_references(self.user_types, type_references)
 
         with open("file.out", "w") as f:
             json.dump({"user_types": self.user_types, "base_types": self.bases}, f, indent = 2, sort_keys = True)
 
         return header
+
+    def get_json(self):
+        return {"user_types": self.user_types, "base_types": self.bases}
+
+    def replace_forward_size_references(self, types, type_references):
+        """Finds all ForwardArrayCounts and calculates them one ForwardReferences have been resolved"""
+        if isinstance(types, dict):
+            for k, v in types.items():
+                types[k] = self.replace_forward_size_references(v, type_references)
+        elif isinstance(types, list):
+            new_types = []
+            for v in types:
+                new_types.append(self.replace_forward_size_references(v, type_references))
+            types = new_types
+        elif isinstance(types, ForwardArrayCount):
+            element_type = types.element_type
+            # If we're a forward array count, we need to do the calculation now after all the types have been processed
+            if element_type > 0x1000:
+                _, name, _ = self.types[types.element_type - 0x1000]
+                # If there's no name, the original size is probably fine
+                if name:
+                    element_type = type_references[name] + 0x1000
+            return types.size // self.get_size_from_index(element_type)
+        return types
 
     def get_type_from_index(self, index: int) -> Dict[str, Any]:
         """Takes a type index and returns appropriate dictionary"""
@@ -346,7 +385,11 @@ class PdbReader:
             if leaf_type in [leaf_type.LF_MODIFIER]:
                 result = self.get_type_from_index(value.subtype_index)
             elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
-                pass
+                result = {
+                    "count": ForwardArrayCount(value.size, value.element_type),
+                    "kind": "array",
+                    "subtype": self.get_type_from_index(value.element_type)
+                }
             elif leaf_type in [leaf_type.LF_BITFIELD]:
                 result = {
                     "kind": "bitfield",
@@ -357,13 +400,43 @@ class PdbReader:
             elif leaf_type in [leaf_type.LF_POINTER]:
                 result = {"kind": "pointer", "subtype": self.get_type_from_index(value.subtype_index)}
             elif leaf_type in [leaf_type.LF_PROCEDURE]:
-                return {}
+                return {"kind": "function"}
             elif leaf_type in [leaf_type.LF_UNION]:
                 result = {"kind": "union", "name": name}
+            elif leaf_type in [leaf_type.LF_ENUM]:
+                result = {"kind": "enum", "name": name}
             elif not name:
                 import pdb
                 pdb.set_trace()
             return result
+
+    def get_size_from_index(self, index: int) -> int:
+        if index < 0x1000:
+            _, base = primatives[index & 0xff]
+            return base['size']
+        else:
+            leaf_type, name, value = self.types[index - 0x1000]
+            if leaf_type in [
+                    leaf_type.LF_UNION, leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE,
+                    leaf_type.LF_STRUCTURE_ST, leaf_type.LF_INTERFACE
+            ]:
+                if not value.properties.forward_reference:
+                    return value.size
+            elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
+                return value.size
+            elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_ENUM]:
+                return self.get_size_from_index(value.subtype_index)
+            elif leaf_type in [leaf_type.LF_MEMBER]:
+                return self.get_size_from_index(value.field_type)
+            elif leaf_type in [leaf_type.LF_BITFIELD]:
+                return self.get_size_from_index(value.underlying_type)
+            elif leaf_type in [leaf_type.LF_POINTER]:
+                return value.size
+            elif leaf_type in [leaf_type.LF_PROCEDURE]:
+                return -1
+            else:
+                raise ValueError("Unable to determine size of leaf_type {}".format(leaf_type.lookup()))
+            return 1
 
     def consume_type(
             self, module: interfaces.context.ModuleInterface, offset: int, length: int
@@ -475,7 +548,3 @@ if __name__ == '__main__':
     ### TESTING
     # x = ctx.object('pdb1!BIG_MSF_HDR', reader.pdb_layer_name, 0)
     header = reader.read_tpi_stream()
-
-    import pdb
-
-    pdb.set_trace()
