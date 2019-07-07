@@ -402,7 +402,7 @@ class Version1Format(ISFormatTable):
         base_type = self.natives.get_type(curdict['base'])
         # The size isn't actually used, the base-type defines it.
         return objects.templates.ObjectTemplate(
-            type_name = 'Enumeration',
+            type_name = self.name + constants.BANG + enum_name,
             object_class = objects.Enumeration,
             base_type = base_type,
             choices = curdict['constants'])
