@@ -1,11 +1,15 @@
 import argparse
 import json
+import logging
 import os
-from typing import Tuple, Dict, Any, Optional
+from bisect import bisect
+from typing import Tuple, Dict, Any, Optional, Union, List
 from urllib import request
 
-from volatility.framework import contexts, interfaces
+from volatility.framework import contexts, interfaces, constants
 from volatility.framework.layers import physical, msf
+
+vollog = logging.getLogger(__name__)
 
 primatives = {
     0x03: ("void", {
@@ -229,10 +233,14 @@ class PdbReader:
 
     def __init__(self, context: interfaces.context.ContextInterface, location: str):
         self._layer_name, self._context = self.load_pdb_layer(context, location)
+        self._dbiheader = None
         self.types = []
         self.bases = {}
         self.user_types = {}
         self.enumerations = {}
+        self.symbols = {}
+        self.omap_mapping = []
+        self.sections = []
 
     @property
     def context(self):
@@ -271,7 +279,16 @@ class PdbReader:
 
         return msf_layer_name, new_context
 
-    def read_tpi_stream(self):
+    def reset(self):
+        self.bases = {}
+        self.user_types = {}
+        self.enumerations = {}
+        self.symbols = {}
+        self.sections = []
+        self.omap_mapping = []
+
+    def read_tpi_stream(self) -> None:
+        print("Reading TPI")
         tpi_layer = self._context.layers.get(self._layer_name + "_stream2", None)
         if not tpi_layer:
             raise ValueError("No TPI stream available")
@@ -289,10 +306,6 @@ class PdbReader:
 
         # Reset the state
         self.types = []
-        self.bases = {}
-        self.user_types = {}
-        self.enumerations = {}
-
         type_references = {}
 
         offset = header.header_size
@@ -317,6 +330,72 @@ class PdbReader:
 
         if tpi_layer.maximum_address - offset != 0:
             raise ValueError("Type values did not fill the TPI stream correctly")
+
+        self.process_types(type_references)
+
+    def read_dbi_stream(self) -> None:
+        print("Reading DBI")
+        dbi_layer = self._context.layers.get(self._layer_name + "_stream3", None)
+        if not dbi_layer:
+            raise ValueError("No DBI stream available")
+        module = self._context.module(module_name = dbi_layer.pdb_symbol_table, layer_name = dbi_layer.name, offset = 0)
+        self._dbiheader = module.object(type_name = "DBI_HEADER", offset = 0)
+
+        # Skip past sections we don't care about to get to the DBG header
+        dbg_hdr_offset = (self._dbiheader.vol.size + self._dbiheader.module_size + self._dbiheader.secconSize +
+                          self._dbiheader.secmapSize + self._dbiheader.filinfSize + self._dbiheader.tsmapSize +
+                          self._dbiheader.ecinfoSize)
+        self._dbidbgheader = module.object(type_name = "DBI_DBG_HEADER", offset = dbg_hdr_offset)
+
+        self.sections = []
+        self.omap_mapping = []
+
+        if self._dbidbgheader.snSectionHdrOrig != -1:
+            section_orig_layer_name = self._layer_name + "_stream" + str(self._dbidbgheader.snSectionHdrOrig)
+            consumed, length = 0, self.context.layers[section_orig_layer_name].maximum_address
+            while consumed < length:
+                section = self.context.object(
+                    dbi_layer.pdb_symbol_table + constants.BANG + "IMAGE_SECTION_HEADER",
+                    offset = consumed,
+                    layer_name = section_orig_layer_name)
+                self.sections.append(section)
+                consumed += section.vol.size
+
+            if self._dbidbgheader.snOmapFromSrc != -1:
+                omap_layer_name = self._layer_name + "_stream" + str(self._dbidbgheader.snOmapFromSrc)
+                length = self.context.layers[omap_layer_name].maximum_address
+                data = self.context.layers[omap_layer_name].read(0, length)
+                # For speed we don't use the framework to read this (usually sizeable) data
+                for i in range(0, length, 8):
+                    self.omap_mapping.append((int.from_bytes(data[i:i + 4], byteorder = 'little'),
+                                              int.from_bytes(data[i + 4:i + 8], byteorder = 'little')))
+        elif self._dbidbgheader.snSectionHdr != -1:
+            section_layer_name = self._layer_name + "_stream" + str(self._dbidbgheader.snSectionHdr)
+            consumed, length = 0, self.context.layers[section_layer_name].maximum_address
+            while consumed < length:
+                section = self.context.object(
+                    dbi_layer.pdb_symbol_table + constants.BANG + "IMAGE_SECTION_HEADER",
+                    offset = consumed,
+                    layer_name = section_layer_name)
+                self.sections.append(section)
+                consumed += section.vol.size
+
+    def omap_lookup(self, address):
+        """Looks up an address using the omap mapping"""
+        pos = bisect(self.omap_mapping, (address, 0))
+        if self.omap_mapping[pos][0] != address:
+            pos = pos - 1
+
+        if not self.omap_mapping[pos][1]:
+            return 0
+        return self.omap_mapping[pos][1] + (address - self.omap_mapping[pos][0])
+
+    def process_types(self, type_references: Dict[str, int]) -> None:
+        """Reads the TPI and symbol streams to populate the reader's variables"""
+
+        self.bases = {}
+        self.user_types = {}
+        self.enumerations = {}
 
         for index in range(len(self.types)):
             leaf_type, name, value = self.types[index]
@@ -350,36 +429,62 @@ class PdbReader:
         # Re-run through for ForwardSizeReferences
         self.user_types = self.replace_forward_references(self.user_types, type_references)
 
-        with open("file.out", "w") as f:
-            json.dump(self.get_json(), f, indent = 2, sort_keys = True)
+    def read_symbol_stream(self):
+        """Reads in the symbol stream"""
+        self.symbols = {}
 
-        return header
+        if not self._dbiheader:
+            self.read_dbi_stream()
+
+        print("Reading Symbols")
+
+        symrec_layer = self._context.layers.get(self._layer_name + "_stream" + str(self._dbiheader.symrecStream), None)
+        if not symrec_layer:
+            raise ValueError("No SymRec stream available")
+        module = self._context.module(
+            module_name = symrec_layer.pdb_symbol_table, layer_name = symrec_layer.name, offset = 0)
+
+        offset = 0
+        max_address = symrec_layer.maximum_address
+
+        while offset < max_address:
+            sym = module.object(type_name = "GLOBAL_SYMBOL", offset = offset)
+            leaf_type = module.object(type_name = "unsigned short", offset = sym.leaf_type.vol.offset)
+            name = None
+            if leaf_type == 0x110e:
+                # v3 symbol (c-string)
+                name = self.parse_string(sym.name, False, sym.length - sym.vol.size - 4)
+                address = self.sections[sym.segment - 1].VirtualAddress + sym.offset
+            elif leaf_type == 0x1009:
+                # v2 symbol (pascal-string)
+                name = self.parse_string(sym.name, True, sym.length - sym.vol.size - 4)
+                address = self.sections[sym.segment - 1].VirtualAddress + sym.offset
+            else:
+                vollog.warning("Only v2 and v3 symbols are supported")
+            if name:
+                if self.omap_mapping:
+                    address = self.omap_lookup(address)
+                self.symbols[name] = {"address": address}
+            offset += sym.length + 2  # Add on length itself
+
+    def read_necessary_streams(self):
+        if not self.user_types:
+            self.read_tpi_stream()
+        if not self.symbols:
+            self.read_symbol_stream()
 
     def get_json(self):
-        return {"user_types": self.user_types, "enums": self.enumerations, "base_types": self.bases}
+        """Returns the intermediate format JSON data from this pdb file"""
+        self.read_necessary_streams()
 
-    def replace_forward_references(self, types, type_references):
-        """Finds all ForwardArrayCounts and calculates them one ForwardReferences have been resolved"""
-        if isinstance(types, dict):
-            for k, v in types.items():
-                types[k] = self.replace_forward_references(v, type_references)
-        elif isinstance(types, list):
-            new_types = []
-            for v in types:
-                new_types.append(self.replace_forward_references(v, type_references))
-            types = new_types
-        elif isinstance(types, ForwardArrayCount):
-            element_type = types.element_type
-            # If we're a forward array count, we need to do the calculation now after all the types have been processed
-            if element_type > 0x1000:
-                _, name, _ = self.types[types.element_type - 0x1000]
-                # If there's no name, the original size is probably fine
-                if name:
-                    element_type = type_references[name] + 0x1000
-            return types.size // self.get_size_from_index(element_type)
-        return types
+        return {
+            "user_types": self.user_types,
+            "enums": self.enumerations,
+            "base_types": self.bases,
+            "symbols": self.symbols
+        }
 
-    def get_type_from_index(self, index: int) -> Dict[str, Any]:
+    def get_type_from_index(self, index: int) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """Takes a type index and returns appropriate dictionary"""
         if index < 0x1000:
             base_name, base = primatives[index & 0xff]
@@ -424,6 +529,7 @@ class PdbReader:
             return result
 
     def get_size_from_index(self, index: int) -> int:
+        """Returns the size of the structure based on the type index provided"""
         if index < 0x1000:
             if (index & 0xf00):
                 _, base = indirections[index & 0xf00]
@@ -511,7 +617,8 @@ class PdbReader:
             consumed = length
         elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUM]:
             enum = module.object(type_name = "LF_ENUM", offset = offset)
-            name = self.parse_string(leaf_type, enum.name, size = length - enum.vol.size - consumed)
+            name = self.parse_string(
+                enum.name, leaf_type < leaf_type.LF_ST_MAX, size = length - enum.vol.size - consumed)
             enum.name = name
             result = leaf_type, name, enum
             consumed = length
@@ -524,13 +631,21 @@ class PdbReader:
             consumed += enum.vol.size + len(name) + 1 + excess
         elif leaf_type in [leaf_type.LF_UNION]:
             union = module.object(type_name = "LF_UNION", offset = offset)
-            name = self.parse_string(leaf_type, union.name, size = length - union.vol.size - consumed)
+            name = self.parse_string(
+                union.name, leaf_type < leaf_type.LF_ST_MAX, size = length - union.vol.size - consumed)
             result = leaf_type, name, union
             consumed = length
         else:
             raise ValueError("Unhandled leaf_type: {}".format(leaf_type))
 
         return result, consumed
+
+    def consume_padding(self, layer_name: str, offset: int) -> int:
+        """Returns the amount of padding used between fields"""
+        val = self.context.layers[layer_name].read(offset, 1)
+        if not (int(val[0]) & 0xf0):
+            return 0
+        return (int(val[0]) & 0x0f)
 
     def determine_extended_value(self, leaf_type: interfaces.objects.ObjectInterface,
                                  value: interfaces.objects.ObjectInterface, module: interfaces.context.ModuleInterface,
@@ -559,35 +674,48 @@ class PdbReader:
             excess = value.vol.data_format.length
             # Updated the consume/offset counters
         name = module.object(type_name = "string", offset = value.vol.offset + value.vol.data_format.length)
-        name = self.parse_string(leaf_type, name, size = length)
+        name = self.parse_string(name, leaf_type < leaf_type.LF_ST_MAX, size = length)
         return name, value, excess
 
-    def consume_padding(self, layer_name: str, offset: int) -> int:
-        """Returns the amount of padding used between fields"""
-        val = self.context.layers[layer_name].read(offset, 1)
-        if not (int(val[0]) & 0xf0):
-            return 0
-        return (int(val[0]) & 0x0f)
-
-    def parse_string(self,
-                     leaf_type: interfaces.objects.ObjectInterface,
-                     structure: interfaces.objects.ObjectInterface,
-                     size: int = 0) -> str:
-        """Consumes either a c-string or a pascal string depending on the leaf_type"""
-        if leaf_type > leaf_type.LF_ST_MAX:
-            name = structure.cast("string", max_length = size, encoding = "latin-1")
-        else:
-            name = structure.cast("pascal_string")
-            name = name.string.cast("string", max_length = name.length, encoding = "latin-1")
-        return name
-
     def convert_fields(self, fields: int):
+        """Converts a field list into a list of fields"""
         result = {}
         _, _, fields_struct = self.types[fields]
         for field in fields_struct:
             _, name, member = field
             result[name] = {"offset": member.offset, "type": self.get_type_from_index(member.field_type)}
         return result
+
+    def replace_forward_references(self, types, type_references):
+        """Finds all ForwardArrayCounts and calculates them one ForwardReferences have been resolved"""
+        if isinstance(types, dict):
+            for k, v in types.items():
+                types[k] = self.replace_forward_references(v, type_references)
+        elif isinstance(types, list):
+            new_types = []
+            for v in types:
+                new_types.append(self.replace_forward_references(v, type_references))
+            types = new_types
+        elif isinstance(types, ForwardArrayCount):
+            element_type = types.element_type
+            # If we're a forward array count, we need to do the calculation now after all the types have been processed
+            if element_type > 0x1000:
+                _, name, _ = self.types[types.element_type - 0x1000]
+                # If there's no name, the original size is probably fine
+                if name:
+                    element_type = type_references[name] + 0x1000
+            return types.size // self.get_size_from_index(element_type)
+        return types
+
+    def parse_string(self, structure: interfaces.objects.ObjectInterface, parse_as_pascal: bool = False,
+                     size: int = 0) -> str:
+        """Consumes either a c-string or a pascal string depending on the leaf_type"""
+        if not parse_as_pascal:
+            name = structure.cast("string", max_length = size, encoding = "latin-1")
+        else:
+            name = structure.cast("pascal_string")
+            name = name.string.cast("string", max_length = name.length, encoding = "latin-1")
+        return name
 
 
 if __name__ == '__main__':
@@ -603,6 +731,5 @@ if __name__ == '__main__':
 
     reader = PdbReader(ctx, location)
 
-    ### TESTING
-    # x = ctx.object('pdb1!BIG_MSF_HDR', reader.pdb_layer_name, 0)
-    header = reader.read_tpi_stream()
+    with open("file.out", "w") as f:
+        json.dump(reader.get_json(), f, indent = 2, sort_keys = True)

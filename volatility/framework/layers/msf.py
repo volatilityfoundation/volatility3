@@ -8,7 +8,7 @@ from volatility.framework.symbols import intermed
 
 
 class PdbMSF(interfaces.layers.TranslationLayerInterface):
-    headers = {
+    _headers = {
         "MSF_HDR": "Microsoft C/C++ program database 2.00\r\n\x1a\x4a\x47",
         "BIG_MSF_HDR": "Microsoft C/C++ MSF 7.00\r\n\x1a\x44\x53",
     }
@@ -93,10 +93,10 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
 
     def _check_header(self) -> Optional[Tuple[str, interfaces.objects.ObjectInterface]]:
         """Verifies the header of the PDB file and returns the version of the file"""
-        for header in self.headers:
+        for header in self._headers:
             header_type = self.pdb_symbol_table + constants.BANG + header
             current_header = self.context.object(header_type, self._base_layer, 0)
-            if utility.array_to_string(current_header.Magic) == self.headers[header]:
+            if utility.array_to_string(current_header.Magic) == self._headers[header]:
                 if not (current_header.PageSize < 0x100 or current_header.PageSize > (128 * 0x10000)):
                     return header, current_header
         return None
