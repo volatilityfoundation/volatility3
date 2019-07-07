@@ -472,14 +472,14 @@ class PdbReader:
             structure = module.object(type_name = "LF_STRUCTURE", offset = offset)
             name, value, excess = self.determine_extended_value(leaf_type, structure.size, module, length)
             structure.size = value
+            structure.name = name
             consumed = length
             result = leaf_type, name, structure
         elif leaf_type in [leaf_type.LF_MEMBER, leaf_type.LF_MEMBER_ST]:
             member = module.object(type_name = "LF_MEMBER", offset = offset)
             name, value, excess = self.determine_extended_value(leaf_type, member.offset, module, length)
             member.offset = value
-            # excess = 0
-            # name = self.parse_string(leaf_type, member.name, size = length - member.vol.size - consumed)
+            member.name = name
             result = leaf_type, name, member
             consumed += member.vol.size + len(name) + 1 + excess
         elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_POINTER, leaf_type.LF_PROCEDURE]:
@@ -506,16 +506,20 @@ class PdbReader:
             array = module.object(type_name = "LF_ARRAY", offset = offset)
             name, value, excess = self.determine_extended_value(leaf_type, array.size, module, length)
             array.size = value
+            array.name = name
             result = leaf_type, name, array
             consumed = length
         elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUM]:
             enum = module.object(type_name = "LF_ENUM", offset = offset)
             name = self.parse_string(leaf_type, enum.name, size = length - enum.vol.size - consumed)
+            enum.name = name
             result = leaf_type, name, enum
             consumed = length
         elif leaf_type in [leaf_type.LF_ENUMERATE]:
             enum = module.object(type_name = 'LF_ENUMERATE', offset = offset)
             name, value, excess = self.determine_extended_value(leaf_type, enum.value, module, length)
+            enum.value = value
+            enum.name = name
             result = leaf_type, name, enum
             consumed += enum.vol.size + len(name) + 1 + excess
         elif leaf_type in [leaf_type.LF_UNION]:
