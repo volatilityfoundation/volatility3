@@ -12,7 +12,7 @@ primatives = {
         "endian": "little",
         "kind": "void",
         "signed": True,
-        "size": 0
+        "size": 4
     }),
     # 0x08: ("HRESULT", {}),
     0x10: ("char", {
@@ -21,7 +21,7 @@ primatives = {
         "signed": True,
         "size": 1
     }),
-    0x20: ("uchar", {
+    0x20: ("unsigned char", {
         "endian": "little",
         "kind": "char",
         "signed": False,
@@ -39,7 +39,7 @@ primatives = {
         "signed": False,
         "size": 1
     }),
-    0x70: ("rchar", {
+    0x70: ("char", {
         "endian": "little",
         "kind": "char",
         "signed": True,
@@ -53,73 +53,73 @@ primatives = {
     }),
     # 0x7a: ("rchar16", {}),
     # 0x7b: ("rchar32", {}),
-    0x11: ("int16", {
+    0x11: ("short", {
         "endian": "little",
         "kind": "int",
         "signed": True,
         "size": 2
     }),
-    0x21: ("uint16", {
+    0x21: ("unsigned short", {
         "endian": "little",
         "kind": "int",
         "signed": False,
         "size": 2
     }),
-    0x72: ("int16", {
+    0x72: ("short", {
         "endian": "little",
         "kind": "int",
         "signed": True,
         "size": 2
     }),
-    0x73: ("uint16", {
+    0x73: ("unsigned short", {
         "endian": "little",
         "kind": "int",
         "signed": False,
         "size": 2
     }),
-    0x12: ("int32", {
+    0x12: ("long", {
         "endian": "little",
         "kind": "int",
         "signed": True,
         "size": 4
     }),
-    0x22: ("uint32", {
+    0x22: ("unsigned long", {
         "endian": "little",
         "kind": "int",
         "signed": False,
         "size": 4
     }),
-    0x74: ("int32", {
+    0x74: ("int", {
         "endian": "little",
         "kind": "int",
         "signed": True,
         "size": 4
     }),
-    0x75: ("uint32", {
+    0x75: ("unsigned int", {
         "endian": "little",
         "kind": "int",
         "signed": False,
         "size": 4
     }),
-    0x13: ("int64", {
+    0x13: ("long long", {
         "endian": "little",
         "kind": "int",
         "signed": True,
         "size": 8
     }),
-    0x23: ("uint64", {
+    0x23: ("unsigned long long", {
         "endian": "little",
         "kind": "int",
         "signed": False,
         "size": 8
     }),
-    0x76: ("int64", {
+    0x76: ("long long", {
         "endian": "little",
         "kind": "int",
         "signed": True,
         "size": 8
     }),
-    0x77: ("uint64", {
+    0x77: ("unsigned long long", {
         "endian": "little",
         "kind": "int",
         "signed": False,
