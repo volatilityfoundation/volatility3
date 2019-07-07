@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 from typing import Tuple, Dict, Any, Optional
 from urllib import request
@@ -313,8 +314,17 @@ class PdbReader:
                             "size": 0,
                             "fields": self.convert_fields(value.fields - 0x1000)
                         }
+                if leaf_type in [leaf_type.LF_UNION]:
+                    if not value.properties.forward_reference:
+                        # Deal with UNION types
+                        self.user_types[name] = {
+                            "kind": "union",
+                            "size": 0,
+                            "fields": self.convert_fields(value.fields - 0x1000)
+                        }
 
-        print(self.user_types)
+        with open("file.out", "w") as f:
+            json.dump({"user_types": self.user_types, "base_types": self.bases}, f, indent = 2, sort_keys = True)
 
         return header
 
@@ -328,7 +338,7 @@ class PdbReader:
             if indirection:
                 pointer_name, pointer_base = indirections[indirection]
                 self.bases[pointer_name] = pointer_base
-                result = {"type": pointer_name, "subtype": result}
+                result = {"kind": pointer_name, "subtype": result}
             return result
         else:
             leaf_type, name, value = self.types[index - 0x1000]
@@ -337,6 +347,19 @@ class PdbReader:
                 result = self.get_type_from_index(value.subtype_index)
             elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
                 pass
+            elif leaf_type in [leaf_type.LF_BITFIELD]:
+                result = {
+                    "kind": "bitfield",
+                    "type": self.get_type_from_index(value.underlying_type),
+                    "bit_length": value.length,
+                    "bit_position": value.position
+                }
+            elif leaf_type in [leaf_type.LF_POINTER]:
+                result = {"kind": "pointer", "subtype": self.get_type_from_index(value.subtype_index)}
+            elif leaf_type in [leaf_type.LF_PROCEDURE]:
+                return {}
+            elif leaf_type in [leaf_type.LF_UNION]:
+                result = {"kind": "union", "name": name}
             elif not name:
                 import pdb
                 pdb.set_trace()
@@ -384,17 +407,23 @@ class PdbReader:
                 fields.append(subfield)
             result = leaf_type, None, fields
         elif leaf_type in [leaf_type.LF_BITFIELD]:
-            result = leaf_type, None, None
+            bitfield = module.object(type_name = "LF_BITFIELD", offset = offset)
+            result = leaf_type, None, bitfield
             consumed = length
         elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
             array = module.object(type_name = "LF_ARRAY", offset = offset)
             name = self.parse_string(leaf_type, array.name, size = length - array.vol.size - consumed)
             result = leaf_type, name, array
             consumed = length
-        elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUMERATE, leaf_type.LF_ENUM, leaf_type.LF_UNION]:
+        elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUMERATE, leaf_type.LF_ENUM]:
             enum = module.object(type_name = "LF_ENUM", offset = offset)
             name = self.parse_string(leaf_type, enum.name, size = length - enum.vol.size - consumed)
             result = leaf_type, name, enum
+            consumed = length
+        elif leaf_type in [leaf_type.LF_UNION]:
+            union = module.object(type_name = "LF_UNION", offset = offset)
+            name = self.parse_string(leaf_type, union.name, size = length - union.vol.size - consumed)
+            result = leaf_type, name, union
             consumed = length
         else:
             raise ValueError("Unhandled leaf_type: {}".format(leaf_type))
