@@ -406,8 +406,7 @@ class PdbReader:
             elif leaf_type in [leaf_type.LF_ENUM]:
                 result = {"kind": "enum", "name": name}
             elif not name:
-                import pdb
-                pdb.set_trace()
+                raise ValueError("No name for structure that should be named")
             return result
 
     def get_size_from_index(self, index: int) -> int:
@@ -457,16 +456,19 @@ class PdbReader:
                 leaf_type.LF_INTERFACE
         ]:
             structure = module.object(type_name = "LF_STRUCTURE", offset = offset)
-            name = self.parse_string(leaf_type, structure.name, size = length - structure.vol.size - consumed)
+            name, value, excess = self.determine_extended_value(leaf_type, structure.size, module, length)
+            structure.size = value
             consumed = length
             result = leaf_type, name, structure
         elif leaf_type in [leaf_type.LF_MEMBER, leaf_type.LF_MEMBER_ST]:
             member = module.object(type_name = "LF_MEMBER", offset = offset)
-            name = self.parse_string(leaf_type, member.name, size = length - member.vol.size - consumed)
+            name, value, excess = self.determine_extended_value(leaf_type, member.offset, module, length)
+            member.offset = value
+            # excess = 0
+            # name = self.parse_string(leaf_type, member.name, size = length - member.vol.size - consumed)
             result = leaf_type, name, member
-            consumed += member.vol.size + len(name) + 1
+            consumed += member.vol.size + len(name) + 1 + excess
         elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_POINTER, leaf_type.LF_PROCEDURE]:
-            # TODO: Subresolve sub-types
             obj = module.object(type_name = leaf_type.lookup(), offset = offset)
             result = leaf_type, None, obj
             consumed = length
@@ -488,7 +490,8 @@ class PdbReader:
             consumed = length
         elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
             array = module.object(type_name = "LF_ARRAY", offset = offset)
-            name = self.parse_string(leaf_type, array.name, size = length - array.vol.size - consumed)
+            name, value, excess = self.determine_extended_value(leaf_type, array.size, module, length)
+            array.size = value
             result = leaf_type, name, array
             consumed = length
         elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUMERATE, leaf_type.LF_ENUM]:
@@ -506,6 +509,36 @@ class PdbReader:
 
         return result, consumed
 
+    def determine_extended_value(self, leaf_type: interfaces.objects.ObjectInterface,
+                                 value: interfaces.objects.ObjectInterface, module: interfaces.context.ModuleInterface,
+                                 length: int) -> Tuple[str, interfaces.objects.ObjectInterface, int]:
+        """Reads a value and potentially consumes more data to construct the value"""
+        excess = 0
+        if value >= leaf_type.LF_CHAR:
+            sub_leaf_type = self.context.object(
+                self.context.symbol_space.get_enumeration(leaf_type.vol.type_name),
+                layer_name = leaf_type.vol.layer_name,
+                offset = value.vol.offset)
+            # Set the offset at just after the previous size type
+            offset = value.vol.offset + value.vol.data_format.length
+            if sub_leaf_type in [leaf_type.LF_CHAR]:
+                value = module.object(type_name = 'char', offset = offset)
+            elif sub_leaf_type in [leaf_type.LF_SHORT]:
+                value = module.object(type_name = 'short', offset = offset)
+            elif sub_leaf_type in [leaf_type.LF_USHORT]:
+                value = module.object(type_name = 'unsigned short', offset = offset)
+            elif sub_leaf_type in [leaf_type.LF_LONG]:
+                value = module.object(type_name = 'long', offset = offset)
+            elif sub_leaf_type in [leaf_type.LF_ULONG]:
+                value = module.object(type_name = 'unsigned long', offset = offset)
+            else:
+                raise TypeError("Unexpected extended value type")
+            excess = value.vol.data_format.length
+            # Updated the consume/offset counters
+        name = module.object(type_name = "string", offset = value.vol.offset + value.vol.data_format.length)
+        name = self.parse_string(leaf_type, name, size = length)
+        return name, value, excess
+
     def consume_padding(self, layer_name: str, offset: int) -> int:
         """Returns the amount of padding used between fields"""
         val = self.context.layers[layer_name].read(offset, 1)
@@ -516,7 +549,7 @@ class PdbReader:
     def parse_string(self,
                      leaf_type: interfaces.objects.ObjectInterface,
                      structure: interfaces.objects.ObjectInterface,
-                     size = 0) -> str:
+                     size: int = 0) -> str:
         """Consumes either a c-string or a pascal string depending on the leaf_type"""
         if leaf_type > leaf_type.LF_ST_MAX:
             name = structure.cast("string", max_length = size, encoding = "latin-1")
