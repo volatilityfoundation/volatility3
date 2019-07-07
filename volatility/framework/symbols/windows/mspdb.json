@@ -451,6 +451,33 @@
       "kind": "struct",
       "size": 10
     },
+    "LF_BITFIELD": {
+      "fields": {
+        "underlying_type": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "length": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "position": {
+          "offset": 5,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 0
+    },
     "LF_ENUM": {
       "fields": {
         "count": {
@@ -808,6 +835,47 @@
       },
       "kind": "struct",
       "size": 18
+    },
+    "LF_UNION": {
+      "fields": {
+        "count": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "properties": {
+          "offset": 2,
+          "type": {
+            "kind": "struct",
+            "name": "Type_Properties"
+          }
+        },
+        "fields": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "size": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "name": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12
     }
   },
   "enums": {
