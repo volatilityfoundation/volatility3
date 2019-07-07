@@ -348,7 +348,7 @@ class PdbReader:
                     }
 
         # Re-run through for ForwardSizeReferences
-        self.user_types = self.replace_forward_size_references(self.user_types, type_references)
+        self.user_types = self.replace_forward_references(self.user_types, type_references)
 
         with open("file.out", "w") as f:
             json.dump(self.get_json(), f, indent = 2, sort_keys = True)
@@ -358,15 +358,15 @@ class PdbReader:
     def get_json(self):
         return {"user_types": self.user_types, "enums": self.enumerations, "base_types": self.bases}
 
-    def replace_forward_size_references(self, types, type_references):
+    def replace_forward_references(self, types, type_references):
         """Finds all ForwardArrayCounts and calculates them one ForwardReferences have been resolved"""
         if isinstance(types, dict):
             for k, v in types.items():
-                types[k] = self.replace_forward_size_references(v, type_references)
+                types[k] = self.replace_forward_references(v, type_references)
         elif isinstance(types, list):
             new_types = []
             for v in types:
-                new_types.append(self.replace_forward_size_references(v, type_references))
+                new_types.append(self.replace_forward_references(v, type_references))
             types = new_types
         elif isinstance(types, ForwardArrayCount):
             element_type = types.element_type
