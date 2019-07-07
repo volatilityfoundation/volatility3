@@ -230,6 +230,9 @@ class PdbReader:
     def __init__(self, context: interfaces.context.ContextInterface, location: str):
         self._layer_name, self._context = self.load_pdb_layer(context, location)
         self.types = []
+        self.bases = {}
+        self.user_types = {}
+        self.enumerations = {}
 
     @property
     def context(self):
@@ -288,6 +291,7 @@ class PdbReader:
         self.types = []
         self.bases = {}
         self.user_types = {}
+        self.enumerations = {}
 
         type_references = {}
 
@@ -326,7 +330,7 @@ class PdbReader:
                         "size": value.size,
                         "fields": self.convert_fields(value.fields - 0x1000)
                     }
-            if leaf_type in [leaf_type.LF_UNION]:
+            elif leaf_type in [leaf_type.LF_UNION]:
                 if not value.properties.forward_reference:
                     # Deal with UNION types
                     self.user_types[name] = {
@@ -334,17 +338,25 @@ class PdbReader:
                         "size": value.size,
                         "fields": self.convert_fields(value.fields - 0x1000)
                     }
+            elif leaf_type in [leaf_type.LF_ENUM]:
+                if not value.properties.forward_reference:
+                    self.enumerations[name] = {
+                        'base': self.get_type_from_index(value.subtype_index)['name'],
+                        'size': self.get_size_from_index(value.subtype_index),
+                        'constants':
+                        dict([(name, enum.value) for _, name, enum in self.get_type_from_index(value.fields)])
+                    }
 
         # Re-run through for ForwardSizeReferences
         self.user_types = self.replace_forward_size_references(self.user_types, type_references)
 
         with open("file.out", "w") as f:
-            json.dump({"user_types": self.user_types, "base_types": self.bases}, f, indent = 2, sort_keys = True)
+            json.dump(self.get_json(), f, indent = 2, sort_keys = True)
 
         return header
 
     def get_json(self):
-        return {"user_types": self.user_types, "base_types": self.bases}
+        return {"user_types": self.user_types, "enums": self.enumerations, "base_types": self.bases}
 
     def replace_forward_size_references(self, types, type_references):
         """Finds all ForwardArrayCounts and calculates them one ForwardReferences have been resolved"""
@@ -405,6 +417,8 @@ class PdbReader:
                 result = {"kind": "union", "name": name}
             elif leaf_type in [leaf_type.LF_ENUM]:
                 result = {"kind": "enum", "name": name}
+            elif leaf_type in [leaf_type.LF_FIELDLIST]:
+                result = value
             elif not name:
                 raise ValueError("No name for structure that should be named")
             return result
@@ -494,11 +508,16 @@ class PdbReader:
             array.size = value
             result = leaf_type, name, array
             consumed = length
-        elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUMERATE, leaf_type.LF_ENUM]:
+        elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUM]:
             enum = module.object(type_name = "LF_ENUM", offset = offset)
             name = self.parse_string(leaf_type, enum.name, size = length - enum.vol.size - consumed)
             result = leaf_type, name, enum
             consumed = length
+        elif leaf_type in [leaf_type.LF_ENUMERATE]:
+            enum = module.object(type_name = 'LF_ENUMERATE', offset = offset)
+            name, value, excess = self.determine_extended_value(leaf_type, enum.value, module, length)
+            result = leaf_type, name, enum
+            consumed += enum.vol.size + len(name) + 1 + excess
         elif leaf_type in [leaf_type.LF_UNION]:
             union = module.object(type_name = "LF_UNION", offset = offset)
             name = self.parse_string(leaf_type, union.name, size = length - union.vol.size - consumed)
