@@ -519,6 +519,33 @@
       "kind": "struct",
       "size": 12
     },
+    "LF_ENUMERATE": {
+      "fields": {
+        "attributes": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "value": {
+          "offset": 2,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "name": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 4
+    },
     "LF_MEMBER": {
       "fields": {
         "attributes": {
