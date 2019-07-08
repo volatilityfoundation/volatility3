@@ -549,6 +549,13 @@
             "name": "unsigned short"
           }
         },
+        "machine": {
+          "offset": 58,
+          "type": {
+            "kind": "enum",
+            "name": "MACHINE_TYPE"
+          }
+        },
         "reserved": {
           "offset": 60,
           "type": {
@@ -1277,6 +1284,44 @@
       },
       "kind": "struct",
       "size": 8
+    },
+    "PDB_INFORMATION": {
+      "fields": {
+        "version": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "signature": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "age": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "GUID": {
+          "offset": 12,
+          "type": {
+            "count": 16,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 0
     }
   },
   "enums": {
@@ -1304,7 +1349,6 @@
         "IMAGE_FILE_MACHINE_IA64": 512,
         "IMAGE_FILE_MACHINE_MIPS16": 614,
         "IMAGE_FILE_MACHINE_ALPHA64": 644,
-        "IMAGE_FILE_MACHINE_AXP64": 644,
         "IMAGE_FILE_MACHINE_MIPSFPU": 870,
         "IMAGE_FILE_MACHINE_MIPSFPU16": 1126,
         "IMAGE_FILE_MACHINE_TRICORE": 1312,

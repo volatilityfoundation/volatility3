@@ -1,4 +1,5 @@
 import argparse
+import binascii
 import datetime
 import json
 import logging
@@ -242,6 +243,7 @@ class PdbReader:
         self.symbols = {}
         self.omap_mapping = []
         self.sections = []
+        self.metadata = {"format": "6.0.0", "windows": {}}
 
     @property
     def context(self):
@@ -289,12 +291,16 @@ class PdbReader:
         self.omap_mapping = []
 
     def read_necessary_streams(self):
+        """Read streams to populate the various internal components for a PDB table"""
+        if not self.metadata['windows'].get('pdb', None):
+            self.read_pdb_info_stream()
         if not self.user_types:
             self.read_tpi_stream()
         if not self.symbols:
             self.read_symbol_stream()
 
     def read_tpi_stream(self) -> None:
+        """Reads the TPI type steam"""
         print("Reading TPI")
         tpi_layer = self._context.layers.get(self._layer_name + "_stream2", None)
         if not tpi_layer:
@@ -341,6 +347,7 @@ class PdbReader:
         self.process_types(type_references)
 
     def read_dbi_stream(self) -> None:
+        """Reads the DBI Stream"""
         print("Reading DBI")
         dbi_layer = self._context.layers.get(self._layer_name + "_stream3", None)
         if not dbi_layer:
@@ -426,6 +433,34 @@ class PdbReader:
                 self.symbols[self.name_strip(name)] = {"address": address}
             offset += sym.length + 2  # Add on length itself
 
+    def read_pdb_info_stream(self):
+        """Reads in the pdb information stream"""
+        print("Reading PDB Info")
+        pdb_info_layer = self._context.layers.get(self._layer_name + "_stream1", None)
+        if not pdb_info_layer:
+            raise ValueError("No PDB Info Stream available")
+        module = self._context.module(
+            module_name = pdb_info_layer.pdb_symbol_table, layer_name = pdb_info_layer.name, offset = 0)
+        pdb_info = module.object(type_name = "PDB_INFORMATION", offset = 0)
+
+        if not self._dbiheader:
+            self.read_dbi_stream()
+
+        self.metadata['windows']['pdb'] = {
+            "GUID": self.convert_bytes_to_guid(pdb_info.GUID),
+            "age": pdb_info.age,
+            "database": "ntkrnlmp.pdb",
+            "machine_type": self._dbiheader.machine
+        }
+
+    def convert_bytes_to_guid(self, original: bytes) -> str:
+        """Convert the bytes to the correct ordering for a GUID"""
+        orig_guid_list = [x for x in original]
+        guid_list = []
+        for i in [3, 2, 1, 0, 5, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15]:
+            guid_list.append(orig_guid_list[i])
+        return str(binascii.hexlify(bytes(guid_list)), "latin-1").upper()
+
     # SYMBOL HANDLING CODE
 
     def omap_lookup(self, address):
@@ -462,22 +497,19 @@ class PdbReader:
         """Returns the intermediate format JSON data from this pdb file"""
         self.read_necessary_streams()
 
+        # Set the time/datestamp for the output
+        self.metadata["producer"] = {
+            "datetime": datetime.datetime.now().isoformat(),
+            "name": "volatility3",
+            "version": constants.PACKAGE_VERSION
+        }
+
         return {
             "user_types": self.user_types,
             "enums": self.enumerations,
             "base_types": self.bases,
             "symbols": self.symbols,
-            "metadata": {
-                "format": "6.0.0",
-                "producer": {
-                    "datetime": datetime.datetime.now().isoformat(),
-                    "name": "volatility3",
-                    "version": "0.1.0"
-                },
-                "windows": {
-                    "pdb": {}
-                }
-            }
+            "metadata": self.metadata,
         }
 
     def get_type_from_index(self, index: int) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
@@ -694,7 +726,7 @@ class PdbReader:
         return result
 
     def replace_forward_references(self, types, type_references):
-        """Finds all ForwardArrayCounts and calculates them one ForwardReferences have been resolved"""
+        """Finds all ForwardArrayCounts and calculates them once ForwardReferences have been resolved"""
         if isinstance(types, dict):
             for k, v in types.items():
                 types[k] = self.replace_forward_references(v, type_references)
