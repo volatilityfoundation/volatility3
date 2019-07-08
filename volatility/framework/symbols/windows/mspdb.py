@@ -250,16 +250,22 @@ class PdbReader:
 
     """
 
-    def __init__(self, context: interfaces.context.ContextInterface, location: str):
+    def __init__(self,
+                 context: interfaces.context.ContextInterface,
+                 location: str,
+                 progress_callback: constants.ProgressCallback = None) -> None:
         self._layer_name, self._context = self.load_pdb_layer(context, location)
         self._dbiheader = None
+        if not progress_callback:
+            progress_callback = lambda x, y: True
+        self._progress_callback = progress_callback
         self.types = []
         self.bases = {}
         self.user_types = {}
         self.enumerations = {}
         self.symbols = {}
-        self.omap_mapping = []
-        self.sections = []
+        self._omap_mapping = []
+        self._sections = []
         self.metadata = {"format": "6.0.0", "windows": {}}
 
     @property
@@ -304,8 +310,8 @@ class PdbReader:
         self.user_types = {}
         self.enumerations = {}
         self.symbols = {}
-        self.sections = []
-        self.omap_mapping = []
+        self._sections = []
+        self._omap_mapping = []
 
     def read_necessary_streams(self):
         """Read streams to populate the various internal components for a PDB table"""
@@ -344,6 +350,7 @@ class PdbReader:
         length_len = module.get_type(length_type).size
         type_index = 1
         while tpi_layer.maximum_address - offset > 0:
+            self._progress_callback(offset * 100 / tpi_layer.maximum_address, "Reading TPI layer")
             length = module.object(type_name = length_type, offset = offset)
             if not isinstance(length, int):
                 raise ValueError("Non-integer length provided")
@@ -378,8 +385,8 @@ class PdbReader:
                           self._dbiheader.ecinfoSize)
         self._dbidbgheader = module.object(type_name = "DBI_DBG_HEADER", offset = dbg_hdr_offset)
 
-        self.sections = []
-        self.omap_mapping = []
+        self._sections = []
+        self._omap_mapping = []
 
         if self._dbidbgheader.snSectionHdrOrig != -1:
             section_orig_layer_name = self._layer_name + "_stream" + str(self._dbidbgheader.snSectionHdrOrig)
@@ -389,7 +396,7 @@ class PdbReader:
                     dbi_layer.pdb_symbol_table + constants.BANG + "IMAGE_SECTION_HEADER",
                     offset = consumed,
                     layer_name = section_orig_layer_name)
-                self.sections.append(section)
+                self._sections.append(section)
                 consumed += section.vol.size
 
             if self._dbidbgheader.snOmapFromSrc != -1:
@@ -398,8 +405,8 @@ class PdbReader:
                 data = self.context.layers[omap_layer_name].read(0, length)
                 # For speed we don't use the framework to read this (usually sizeable) data
                 for i in range(0, length, 8):
-                    self.omap_mapping.append((int.from_bytes(data[i:i + 4], byteorder = 'little'),
-                                              int.from_bytes(data[i + 4:i + 8], byteorder = 'little')))
+                    self._omap_mapping.append((int.from_bytes(data[i:i + 4], byteorder = 'little'),
+                                               int.from_bytes(data[i + 4:i + 8], byteorder = 'little')))
         elif self._dbidbgheader.snSectionHdr != -1:
             section_layer_name = self._layer_name + "_stream" + str(self._dbidbgheader.snSectionHdr)
             consumed, length = 0, self.context.layers[section_layer_name].maximum_address
@@ -408,7 +415,7 @@ class PdbReader:
                     dbi_layer.pdb_symbol_table + constants.BANG + "IMAGE_SECTION_HEADER",
                     offset = consumed,
                     layer_name = section_layer_name)
-                self.sections.append(section)
+                self._sections.append(section)
                 consumed += section.vol.size
 
     def read_symbol_stream(self):
@@ -430,22 +437,24 @@ class PdbReader:
         max_address = symrec_layer.maximum_address
 
         while offset < max_address:
+            self._progress_callback(offset * 100 / max_address, "Reading Symbol layer")
             sym = module.object(type_name = "GLOBAL_SYMBOL", offset = offset)
             leaf_type = module.object(type_name = "unsigned short", offset = sym.leaf_type.vol.offset)
             name = None
             address = None
-            if leaf_type == 0x110e:
-                # v3 symbol (c-string)
-                name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 2)
-                address = self.sections[sym.segment - 1].VirtualAddress + sym.offset
-            elif leaf_type == 0x1009:
-                # v2 symbol (pascal-string)
-                name = self.parse_string(sym.name, True, sym.length - sym.vol.size + 2)
-                address = self.sections[sym.segment - 1].VirtualAddress + sym.offset
-            else:
-                vollog.warning("Only v2 and v3 symbols are supported")
+            if sym.segment < len(self._sections):
+                if leaf_type == 0x110e:
+                    # v3 symbol (c-string)
+                    name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 2)
+                    address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
+                elif leaf_type == 0x1009:
+                    # v2 symbol (pascal-string)
+                    name = self.parse_string(sym.name, True, sym.length - sym.vol.size + 2)
+                    address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
+                else:
+                    vollog.warning("Only v2 and v3 symbols are supported")
             if name:
-                if self.omap_mapping:
+                if self._omap_mapping:
                     address = self.omap_lookup(address)
                 self.symbols[self.name_strip(name)] = {"address": address}
             offset += sym.length + 2  # Add on length itself
@@ -482,13 +491,13 @@ class PdbReader:
 
     def omap_lookup(self, address):
         """Looks up an address using the omap mapping"""
-        pos = bisect(self.omap_mapping, (address, -1))
-        if self.omap_mapping[pos + 1][0] == address:
+        pos = bisect(self._omap_mapping, (address, -1))
+        if self._omap_mapping[pos + 1][0] == address:
             pos += 1
 
-        if not self.omap_mapping[pos][1]:
+        if not self._omap_mapping[pos][1]:
             return 0
-        return self.omap_mapping[pos][1] + (address - self.omap_mapping[pos][0])
+        return self._omap_mapping[pos][1] + (address - self._omap_mapping[pos][0])
 
     def name_strip(self, name):
         """Strips unnecessary components from the start of a symbol name"""
@@ -614,7 +623,9 @@ class PdbReader:
         self.user_types = {}
         self.enumerations = {}
 
-        for index in range(len(self.types)):
+        max_len = len(self.types)
+        for index in range(max_len):
+            self._progress_callback(index * 100 / max_len, "Processing types")
             leaf_type, name, value = self.types[index]
             if leaf_type in [
                     leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
@@ -809,7 +820,8 @@ class PdbReader:
 
 class PdbRetreiver:
 
-    def retreive_pdb(self, guid: str, file_name: str) -> Optional[str]:
+    def retreive_pdb(self, guid: str, file_name: str,
+                     progress_callback: constants.ProgressCallback = None) -> Optional[str]:
         vollog.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])
         for sym_url in ['http://msdl.microsoft.com/download/symbols']:
@@ -817,6 +829,8 @@ class PdbRetreiver:
 
             result = None
             for suffix in [file_name[:-1] + '_', file_name]:
+                if progress_callback is not None:
+                    progress_callback(50, "Downloading {}".format(url + suffix))
                 try:
                     vollog.debug("Attempting to retrieve {}".format(url + suffix))
                     result, _ = request.urlretrieve(url + suffix)
@@ -825,26 +839,50 @@ class PdbRetreiver:
             if result:
                 vollog.debug("Successfully written to {}".format(result))
                 break
+        if progress_callback is not None:
+            progress_callback(100, "Downloading {}".format(url + suffix))
         return result
 
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("-f", "--filename", help = "Provide the name of a pdb file to read", required = True)
-    parser.add_argument("-o", "--output", help = "Provide the name of the JSON output file", required = True)
+    parser = argparse.ArgumentParser(
+        description = "Read PDB files and convert to Volatility 3 Intermediate Symbol Format")
+    parser.add_argument("-o", "--output", metavar = "OUTPUT", help = "Filename for data output", required = True)
+    file_group = parser.add_argument_group("file", description = "File-based conversion of PDB to ISF")
+    file_group.add_argument("-f", "--file", metavar = "FILE", help = "PDB file to translate to ISF")
+    data_group = parser.add_argument_group("data", description = "Convert based on a GUID and filename pattern")
+    data_group.add_argument("-p", "--pattern", metavar = "PATTERN", help = "Filename pattern to recover PDB file")
+    data_group.add_argument(
+        "-g", "--guid", metavar = "GUID", help = "GUID + Age string for the required PDB file", default = None)
+    data_group.add_argument(
+        "-k", "--keep", action = "store_true", default = False, help = "Keep the downloaded PDB file")
     args = parser.parse_args()
 
-    ctx = contexts.Context()
-    if not os.path.exists(args.filename):
-        parser.error("File {} does not exists".format(args.filename))
-    location = "file:" + request.pathname2url(args.filename)
-
-    reader = PdbReader(ctx, location)
-
-    if os.path.exists(args.output):
-        with open(args.output, "w") as f:
-            json.dump(reader.get_json(), f, indent = 2, sort_keys = True)
+    delfile = False
+    filename = None
+    if args.guid is not None and args.pattern is not None:
+        filename = PdbRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern)
+        delfile = True
+    elif args.file:
+        filename = args.file
     else:
-        print("Cowardly refusing to overwrite existing output file: {}".format(args.output))
+        parser.error("No GUID/pattern or file provided")
+
+    if not filename:
+        parser.error("No suitable filename provided or retrieved")
+
+    ctx = contexts.Context()
+    if not os.path.exists(filename):
+        parser.error("File {} does not exists".format(filename))
+    location = "file:" + request.pathname2url(filename)
+
+    convertor = PdbReader(ctx, location)
+
+    with open(args.output, "w") as f:
+        json.dump(convertor.get_json(), f, indent = 2, sort_keys = True)
+
+    if args.keep:
+        print("Temporary PDB file: {}".format(filename))
+    elif delfile:
+        os.remove(filename)
