@@ -23,8 +23,8 @@
     based scanner for use within the framework by calling :func:`~volatility.framework.interfaces.layers.DataLayerInterface.scan`.
 """
 
-import logging
 import json
+import logging
 import lzma
 import math
 import os
@@ -184,8 +184,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 results += self.find_virtual_layers_from_req(context, sub_config_path, subreq)
         return results
 
-    def recurse_symbol_fulfiller(self, context: interfaces.context.ContextInterface,
-                                 valid_kernels: ValidKernelsType) -> None:
+    def recurse_symbol_fulfiller(self,
+                                 context: interfaces.context.ContextInterface,
+                                 valid_kernels: ValidKernelsType,
+                                 progress_callback: constants.ProgressCallback = None) -> None:
         """Fulfills the SymbolTableRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
 
         This pass will construct any requirements that may need it in the context it was passed
@@ -213,7 +215,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         break
                     else:
                         # If none are found, attempt to download the pdb, convert it and try again
-                        self.download_pdb_isf(kernel['GUID'], kernel['age'], kernel['pdb_name'])
+                        self.download_pdb_isf(kernel['GUID'], kernel['age'], kernel['pdb_name'], progress_callback)
                         # Try again
                         for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
                             isf_path = value
@@ -235,7 +237,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
 
-    def download_pdb_isf(self, guid: str, age: int, pdb_name: str) -> None:
+    def download_pdb_isf(self, guid: str, age: int, pdb_name: str,
+                         progress_callback: constants.ProgressCallback = None) -> None:
         """Attempts to download the PDB file, convert it to an ISF file and save it to one of the symbol locations"""
         # Check for writability
         filter_string = os.path.join(pdb_name, guid + "-" + str(age))
@@ -249,9 +252,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 data_written = False
                 with lzma.open(potential_output_filename, "w") as of:
                     # Once we haven't thrown an error, do the computation
-                    tmp_files.append(mspdb.PdbRetreiver().retreive_pdb(guid + str(age), file_name = pdb_name))
+                    tmp_files.append(mspdb.PdbRetreiver().retreive_pdb(
+                        guid + str(age), file_name = pdb_name, progress_callback = progress_callback))
                     location = "file:" + request.pathname2url(tmp_files[-1])
-                    json_output = mspdb.PdbReader(self.context, location).get_json()
+                    json_output = mspdb.PdbReader(self.context, location, progress_callback).get_json()
                     of.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
                     # After we've successfully written it out, record the fact so we don't clear it out
                     data_written = True
@@ -469,5 +473,5 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 if symbol_req.unsatisfied(context, parent_path):
                     valid_kernels = self.determine_valid_kernels(context, potential_layers, progress_callback)
                     if valid_kernels:
-                        self.recurse_symbol_fulfiller(context, valid_kernels)
+                        self.recurse_symbol_fulfiller(context, valid_kernels, progress_callback)
                         self.set_kernel_virtual_offset(context, valid_kernels)
