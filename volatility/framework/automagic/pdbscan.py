@@ -24,23 +24,20 @@
 """
 
 import logging
+import json
+import lzma
 import math
 import os
 import struct
 from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Tuple, Union
-
-pdb_isf = None
-try:
-    from volatility.framework.symbols.windows import pdb_isf
-    import json, lzma
-except ImportError:
-    pass
+from urllib import request
 
 from volatility import symbols
 from volatility.framework import constants, exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import intermed, native
+from volatility.framework.symbols.windows import mspdb
 
 if __name__ == "__main__":
     import sys
@@ -240,9 +237,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def download_pdb_isf(self, guid: str, age: int, pdb_name: str) -> None:
         """Attempts to download the PDB file, convert it to an ISF file and save it to one of the symbol locations"""
-        if pdb_isf is None:
-            return None
-
         # Check for writability
         filter_string = os.path.join(pdb_name, guid + "-" + str(age))
         for path in symbols.__path__:
@@ -255,8 +249,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 data_written = False
                 with lzma.open(potential_output_filename, "w") as of:
                     # Once we haven't thrown an error, do the computation
-                    tmp_files.append(pdb_isf.PDBRetreiver().retreive_pdb(guid + str(age), file_name = pdb_name))
-                    json_output = pdb_isf.PDBConvertor(tmp_files[-1]).read_pdb()
+                    tmp_files.append(mspdb.PdbRetreiver().retreive_pdb(guid + str(age), file_name = pdb_name))
+                    location = "file:" + request.pathname2url(tmp_files[-1])
+                    json_output = mspdb.PdbReader(self.context, location).get_json()
                     of.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
                     # After we've successfully written it out, record the fact so we don't clear it out
                     data_written = True
