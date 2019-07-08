@@ -229,9 +229,26 @@ class ForwardArrayCount:
 
 
 class PdbReader:
-    """Class to read Microsoft PDB files"""
+    """Class to read Microsoft PDB files
 
-    sub_resolvers = {""}
+    This reads the various streams according to various sources as to how pdb should be read.
+    These sources include:
+
+    https://docs.rs/crate/pdb/0.5.0/source/src/
+    https://github.com/moyix/pdbparse
+    https://llvm.org/docs/PDB/index.html
+    https://github.com/Microsoft/microsoft-pdb/
+
+    In order to generate ISF files, we need the type stream (2), and the symbols stream (variable).  
+    The MultiStream Format wrapper is handled as a volatility layer, which constructs sublayers for each stream.
+    The streams can then be read contiguously allowing the data to be accessed.
+
+    Volatility's type system is strong when everything must be laid out in advance, but PDB data is reasonably dynamic,
+    particularly when it comes to names.  We must therefore parse it after we've collected other information already.
+    This is in comparison to something such as Construct/pdbparse which can use just-parsed data to determine dynamically
+    sized data following.
+
+    """
 
     def __init__(self, context: interfaces.context.ContextInterface, location: str):
         self._layer_name, self._context = self.load_pdb_layer(context, location)
@@ -301,7 +318,7 @@ class PdbReader:
 
     def read_tpi_stream(self) -> None:
         """Reads the TPI type steam"""
-        print("Reading TPI")
+        vollog.debug("Reading TPI")
         tpi_layer = self._context.layers.get(self._layer_name + "_stream2", None)
         if not tpi_layer:
             raise ValueError("No TPI stream available")
@@ -348,7 +365,7 @@ class PdbReader:
 
     def read_dbi_stream(self) -> None:
         """Reads the DBI Stream"""
-        print("Reading DBI")
+        vollog.debug("Reading DBI stream")
         dbi_layer = self._context.layers.get(self._layer_name + "_stream3", None)
         if not dbi_layer:
             raise ValueError("No DBI stream available")
@@ -401,7 +418,7 @@ class PdbReader:
         if not self._dbiheader:
             self.read_dbi_stream()
 
-        print("Reading Symbols")
+        vollog.debug("Reading Symbols")
 
         symrec_layer = self._context.layers.get(self._layer_name + "_stream" + str(self._dbiheader.symrecStream), None)
         if not symrec_layer:
@@ -435,16 +452,16 @@ class PdbReader:
 
     def read_pdb_info_stream(self):
         """Reads in the pdb information stream"""
-        print("Reading PDB Info")
+        if not self._dbiheader:
+            self.read_dbi_stream()
+
+        vollog.debug("Reading PDB Info")
         pdb_info_layer = self._context.layers.get(self._layer_name + "_stream1", None)
         if not pdb_info_layer:
             raise ValueError("No PDB Info Stream available")
         module = self._context.module(
             module_name = pdb_info_layer.pdb_symbol_table, layer_name = pdb_info_layer.name, offset = 0)
         pdb_info = module.object(type_name = "PDB_INFORMATION", offset = 0)
-
-        if not self._dbiheader:
-            self.read_dbi_stream()
 
         self.metadata['windows']['pdb'] = {
             "GUID": self.convert_bytes_to_guid(pdb_info.GUID),
@@ -790,10 +807,33 @@ class PdbReader:
         return name, value, excess
 
 
+class PdbRetreiver:
+
+    def retreive_pdb(self, guid: str, file_name: str) -> Optional[str]:
+        vollog.info("Download PDB file...")
+        file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])
+        for sym_url in ['http://msdl.microsoft.com/download/symbols']:
+            url = sym_url + "/{}/{}/".format(file_name, guid)
+
+            result = None
+            for suffix in [file_name[:-1] + '_', file_name]:
+                try:
+                    vollog.debug("Attempting to retrieve {}".format(url + suffix))
+                    result, _ = request.urlretrieve(url + suffix)
+                except request.HTTPError as excp:
+                    vollog.debug("Failed with {}".format(excp))
+            if result:
+                vollog.debug("Successfully written to {}".format(result))
+                break
+        return result
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
+
     parser.add_argument("-f", "--filename", help = "Provide the name of a pdb file to read", required = True)
+    parser.add_argument("-o", "--output", help = "Provide the name of the JSON output file", required = True)
     args = parser.parse_args()
 
     ctx = contexts.Context()
@@ -803,5 +843,8 @@ if __name__ == '__main__':
 
     reader = PdbReader(ctx, location)
 
-    with open("file.out", "w") as f:
-        json.dump(reader.get_json(), f, indent = 2, sort_keys = True)
+    if os.path.exists(args.output):
+        with open(args.output, "w") as f:
+            json.dump(reader.get_json(), f, indent = 2, sort_keys = True)
+    else:
+        print("Cowardly refusing to overwrite existing output file: {}".format(args.output))
