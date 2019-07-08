@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import json
 import logging
 import os
@@ -465,8 +466,28 @@ class PdbReader:
             if name:
                 if self.omap_mapping:
                     address = self.omap_lookup(address)
-                self.symbols[name] = {"address": address}
+                self.symbols[self.name_strip(name)] = {"address": address}
             offset += sym.length + 2  # Add on length itself
+
+    def name_strip(self, name):
+        """Strips unnecessary components from the start of a symbol name"""
+        new_name = name
+
+        if new_name[:7] in ["__imp__", "__imp_@"]:
+            new_name = new_name[7:]
+        elif new_name[:6] in ["__imp_"]:
+            new_name = new_name[6:]
+        elif new_name[:1] in ["_", "@", "\u007F"]:
+            new_name = new_name[1:]
+
+        name_array = new_name.split("@")
+        if len(name_array) == 2:
+            if name_array[1].isnumeric() and name_array[0][0] != "?":
+                new_name = name_array[0]
+            else:
+                new_name = name
+
+        return new_name
 
     def read_necessary_streams(self):
         if not self.user_types:
@@ -482,7 +503,18 @@ class PdbReader:
             "user_types": self.user_types,
             "enums": self.enumerations,
             "base_types": self.bases,
-            "symbols": self.symbols
+            "symbols": self.symbols,
+            "metadata": {
+                "format": "6.0.0",
+                "producer": {
+                    "datetime": datetime.datetime.now().isoformat(),
+                    "name": "volatility3",
+                    "version": "0.1.0"
+                },
+                "windows": {
+                    "pdb": {}
+                }
+            }
         }
 
     def get_type_from_index(self, index: int) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
