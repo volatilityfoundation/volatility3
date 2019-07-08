@@ -382,9 +382,9 @@ class PdbReader:
 
     def omap_lookup(self, address):
         """Looks up an address using the omap mapping"""
-        pos = bisect(self.omap_mapping, (address, 0))
-        if self.omap_mapping[pos][0] != address:
-            pos = pos - 1
+        pos = bisect(self.omap_mapping, (address, -1))
+        if self.omap_mapping[pos + 1][0] == address:
+            pos += 1
 
         if not self.omap_mapping[pos][1]:
             return 0
@@ -453,11 +453,11 @@ class PdbReader:
             name = None
             if leaf_type == 0x110e:
                 # v3 symbol (c-string)
-                name = self.parse_string(sym.name, False, sym.length - sym.vol.size - 4)
+                name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 4)
                 address = self.sections[sym.segment - 1].VirtualAddress + sym.offset
             elif leaf_type == 0x1009:
                 # v2 symbol (pascal-string)
-                name = self.parse_string(sym.name, True, sym.length - sym.vol.size - 4)
+                name = self.parse_string(sym.name, True, sym.length - sym.vol.size + 4)
                 address = self.sections[sym.segment - 1].VirtualAddress + sym.offset
             else:
                 vollog.warning("Only v2 and v3 symbols are supported")
