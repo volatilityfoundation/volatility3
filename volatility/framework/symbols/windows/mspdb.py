@@ -451,13 +451,14 @@ class PdbReader:
             sym = module.object(type_name = "GLOBAL_SYMBOL", offset = offset)
             leaf_type = module.object(type_name = "unsigned short", offset = sym.leaf_type.vol.offset)
             name = None
+            address = None
             if leaf_type == 0x110e:
                 # v3 symbol (c-string)
-                name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 4)
+                name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 2)
                 address = self.sections[sym.segment - 1].VirtualAddress + sym.offset
             elif leaf_type == 0x1009:
                 # v2 symbol (pascal-string)
-                name = self.parse_string(sym.name, True, sym.length - sym.vol.size + 4)
+                name = self.parse_string(sym.name, True, sym.length - sym.vol.size + 2)
                 address = self.sections[sym.segment - 1].VirtualAddress + sym.offset
             else:
                 vollog.warning("Only v2 and v3 symbols are supported")
