@@ -288,6 +288,12 @@ class PdbReader:
         self.sections = []
         self.omap_mapping = []
 
+    def read_necessary_streams(self):
+        if not self.user_types:
+            self.read_tpi_stream()
+        if not self.symbols:
+            self.read_symbol_stream()
+
     def read_tpi_stream(self) -> None:
         print("Reading TPI")
         tpi_layer = self._context.layers.get(self._layer_name + "_stream2", None)
@@ -381,55 +387,6 @@ class PdbReader:
                 self.sections.append(section)
                 consumed += section.vol.size
 
-    def omap_lookup(self, address):
-        """Looks up an address using the omap mapping"""
-        pos = bisect(self.omap_mapping, (address, -1))
-        if self.omap_mapping[pos + 1][0] == address:
-            pos += 1
-
-        if not self.omap_mapping[pos][1]:
-            return 0
-        return self.omap_mapping[pos][1] + (address - self.omap_mapping[pos][0])
-
-    def process_types(self, type_references: Dict[str, int]) -> None:
-        """Reads the TPI and symbol streams to populate the reader's variables"""
-
-        self.bases = {}
-        self.user_types = {}
-        self.enumerations = {}
-
-        for index in range(len(self.types)):
-            leaf_type, name, value = self.types[index]
-            if leaf_type in [
-                    leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
-                    leaf_type.LF_INTERFACE
-            ]:
-                if not value.properties.forward_reference:
-                    self.user_types[name] = {
-                        "kind": "struct",
-                        "size": value.size,
-                        "fields": self.convert_fields(value.fields - 0x1000)
-                    }
-            elif leaf_type in [leaf_type.LF_UNION]:
-                if not value.properties.forward_reference:
-                    # Deal with UNION types
-                    self.user_types[name] = {
-                        "kind": "union",
-                        "size": value.size,
-                        "fields": self.convert_fields(value.fields - 0x1000)
-                    }
-            elif leaf_type in [leaf_type.LF_ENUM]:
-                if not value.properties.forward_reference:
-                    self.enumerations[name] = {
-                        'base': self.get_type_from_index(value.subtype_index)['name'],
-                        'size': self.get_size_from_index(value.subtype_index),
-                        'constants':
-                        dict([(name, enum.value) for _, name, enum in self.get_type_from_index(value.fields)])
-                    }
-
-        # Re-run through for ForwardSizeReferences
-        self.user_types = self.replace_forward_references(self.user_types, type_references)
-
     def read_symbol_stream(self):
         """Reads in the symbol stream"""
         self.symbols = {}
@@ -469,6 +426,18 @@ class PdbReader:
                 self.symbols[self.name_strip(name)] = {"address": address}
             offset += sym.length + 2  # Add on length itself
 
+    # SYMBOL HANDLING CODE
+
+    def omap_lookup(self, address):
+        """Looks up an address using the omap mapping"""
+        pos = bisect(self.omap_mapping, (address, -1))
+        if self.omap_mapping[pos + 1][0] == address:
+            pos += 1
+
+        if not self.omap_mapping[pos][1]:
+            return 0
+        return self.omap_mapping[pos][1] + (address - self.omap_mapping[pos][0])
+
     def name_strip(self, name):
         """Strips unnecessary components from the start of a symbol name"""
         new_name = name
@@ -488,12 +457,6 @@ class PdbReader:
                 new_name = name
 
         return new_name
-
-    def read_necessary_streams(self):
-        if not self.user_types:
-            self.read_tpi_stream()
-        if not self.symbols:
-            self.read_symbol_stream()
 
     def get_json(self):
         """Returns the intermediate format JSON data from this pdb file"""
@@ -593,6 +556,47 @@ class PdbReader:
                 raise ValueError("Unable to determine size of leaf_type {}".format(leaf_type.lookup()))
             return 1
 
+    ### TYPE HANDLING CODE
+
+    def process_types(self, type_references: Dict[str, int]) -> None:
+        """Reads the TPI and symbol streams to populate the reader's variables"""
+
+        self.bases = {}
+        self.user_types = {}
+        self.enumerations = {}
+
+        for index in range(len(self.types)):
+            leaf_type, name, value = self.types[index]
+            if leaf_type in [
+                    leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
+                    leaf_type.LF_INTERFACE
+            ]:
+                if not value.properties.forward_reference:
+                    self.user_types[name] = {
+                        "kind": "struct",
+                        "size": value.size,
+                        "fields": self.convert_fields(value.fields - 0x1000)
+                    }
+            elif leaf_type in [leaf_type.LF_UNION]:
+                if not value.properties.forward_reference:
+                    # Deal with UNION types
+                    self.user_types[name] = {
+                        "kind": "union",
+                        "size": value.size,
+                        "fields": self.convert_fields(value.fields - 0x1000)
+                    }
+            elif leaf_type in [leaf_type.LF_ENUM]:
+                if not value.properties.forward_reference:
+                    self.enumerations[name] = {
+                        'base': self.get_type_from_index(value.subtype_index)['name'],
+                        'size': self.get_size_from_index(value.subtype_index),
+                        'constants':
+                        dict([(name, enum.value) for _, name, enum in self.get_type_from_index(value.fields)])
+                    }
+
+        # Re-run through for ForwardSizeReferences
+        self.user_types = self.replace_forward_references(self.user_types, type_references)
+
     def consume_type(
             self, module: interfaces.context.ModuleInterface, offset: int, length: int
     ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[interfaces.objects.
@@ -680,36 +684,6 @@ class PdbReader:
             return 0
         return (int(val[0]) & 0x0f)
 
-    def determine_extended_value(self, leaf_type: interfaces.objects.ObjectInterface,
-                                 value: interfaces.objects.ObjectInterface, module: interfaces.context.ModuleInterface,
-                                 length: int) -> Tuple[str, interfaces.objects.ObjectInterface, int]:
-        """Reads a value and potentially consumes more data to construct the value"""
-        excess = 0
-        if value >= leaf_type.LF_CHAR:
-            sub_leaf_type = self.context.object(
-                self.context.symbol_space.get_enumeration(leaf_type.vol.type_name),
-                layer_name = leaf_type.vol.layer_name,
-                offset = value.vol.offset)
-            # Set the offset at just after the previous size type
-            offset = value.vol.offset + value.vol.data_format.length
-            if sub_leaf_type in [leaf_type.LF_CHAR]:
-                value = module.object(type_name = 'char', offset = offset)
-            elif sub_leaf_type in [leaf_type.LF_SHORT]:
-                value = module.object(type_name = 'short', offset = offset)
-            elif sub_leaf_type in [leaf_type.LF_USHORT]:
-                value = module.object(type_name = 'unsigned short', offset = offset)
-            elif sub_leaf_type in [leaf_type.LF_LONG]:
-                value = module.object(type_name = 'long', offset = offset)
-            elif sub_leaf_type in [leaf_type.LF_ULONG]:
-                value = module.object(type_name = 'unsigned long', offset = offset)
-            else:
-                raise TypeError("Unexpected extended value type")
-            excess = value.vol.data_format.length
-            # Updated the consume/offset counters
-        name = module.object(type_name = "string", offset = value.vol.offset + value.vol.data_format.length)
-        name = self.parse_string(name, leaf_type < leaf_type.LF_ST_MAX, size = length)
-        return name, value, excess
-
     def convert_fields(self, fields: int):
         """Converts a field list into a list of fields"""
         result = {}
@@ -740,7 +714,10 @@ class PdbReader:
             return types.size // self.get_size_from_index(element_type)
         return types
 
-    def parse_string(self, structure: interfaces.objects.ObjectInterface, parse_as_pascal: bool = False,
+    # COMMON CODE
+
+    @staticmethod
+    def parse_string(structure: interfaces.objects.ObjectInterface, parse_as_pascal: bool = False,
                      size: int = 0) -> str:
         """Consumes either a c-string or a pascal string depending on the leaf_type"""
         if not parse_as_pascal:
@@ -749,6 +726,36 @@ class PdbReader:
             name = structure.cast("pascal_string")
             name = name.string.cast("string", max_length = name.length, encoding = "latin-1")
         return name
+
+    def determine_extended_value(self, leaf_type: interfaces.objects.ObjectInterface,
+                                 value: interfaces.objects.ObjectInterface, module: interfaces.context.ModuleInterface,
+                                 length: int) -> Tuple[str, interfaces.objects.ObjectInterface, int]:
+        """Reads a value and potentially consumes more data to construct the value"""
+        excess = 0
+        if value >= leaf_type.LF_CHAR:
+            sub_leaf_type = self.context.object(
+                self.context.symbol_space.get_enumeration(leaf_type.vol.type_name),
+                layer_name = leaf_type.vol.layer_name,
+                offset = value.vol.offset)
+            # Set the offset at just after the previous size type
+            offset = value.vol.offset + value.vol.data_format.length
+            if sub_leaf_type in [leaf_type.LF_CHAR]:
+                value = module.object(type_name = 'char', offset = offset)
+            elif sub_leaf_type in [leaf_type.LF_SHORT]:
+                value = module.object(type_name = 'short', offset = offset)
+            elif sub_leaf_type in [leaf_type.LF_USHORT]:
+                value = module.object(type_name = 'unsigned short', offset = offset)
+            elif sub_leaf_type in [leaf_type.LF_LONG]:
+                value = module.object(type_name = 'long', offset = offset)
+            elif sub_leaf_type in [leaf_type.LF_ULONG]:
+                value = module.object(type_name = 'unsigned long', offset = offset)
+            else:
+                raise TypeError("Unexpected extended value type")
+            excess = value.vol.data_format.length
+            # Updated the consume/offset counters
+        name = module.object(type_name = "string", offset = value.vol.offset + value.vol.data_format.length)
+        name = self.parse_string(name, leaf_type < leaf_type.LF_ST_MAX, size = length)
+        return name, value, excess
 
 
 if __name__ == '__main__':
