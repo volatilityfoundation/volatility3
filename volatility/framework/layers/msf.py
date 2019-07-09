@@ -155,6 +155,7 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
             layer = self.context.layers[self._streams[index]]
             if isinstance(layer, PdbMSFStream):
                 return layer
+        return None
 
 
 class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
@@ -173,9 +174,14 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
             raise TypeError("Base Layer must be a PdbMSF layer")
 
     @property
-    def pdb_symbol_table(self) -> str:
-        return self._context.layers[self._base_layer].pdb_symbol_table
+    def pdb_symbol_table(self) -> Optional[str]:
+        layer = self._context.layers[self._base_layer]
+        if isinstance(layer, PdbMSF):
+            return layer.pdb_symbol_table
+        else:
+            return None
 
+    @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ListRequirement(name = 'pages', element_type = int, min_elements = 1),
@@ -210,5 +216,10 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
         return self.config.get('maximum_size', len(self._pages) * self._pdb_layer.page_size)
 
     @property
-    def _pdb_layer(self) -> Optional[PdbMSF]:
-        return self._context.layers.get(self._base_layer, None)
+    def _pdb_layer(self) -> PdbMSF:
+        if self._base_layer not in self._context.layers:
+            raise ValueError("No PdbMSF layer found: {}".format(self._base_layer))
+        result = self._context.layers[self._base_layer]
+        if isinstance(result, PdbMSF):
+            return result
+        raise ValueError("Base layer is not PdbMSF")

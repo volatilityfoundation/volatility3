@@ -274,17 +274,18 @@ class PdbReader:
                  location: str,
                  progress_callback: constants.ProgressCallback = None) -> None:
         self._layer_name, self._context = self.load_pdb_layer(context, location)
-        self._dbiheader = None
+        self._dbiheader = None  # type: Optional[interfaces.objects.ObjectInterface]
         if not progress_callback:
-            progress_callback = lambda x, y: True
+            progress_callback = lambda x, y: None
         self._progress_callback = progress_callback
-        self.types = []
-        self.bases = {}
-        self.user_types = {}
-        self.enumerations = {}
-        self.symbols = {}
-        self._omap_mapping = []
-        self._sections = []
+        self.types = [
+        ]  # type: List[Tuple[interfaces.objects.ObjectInterface, str, interfaces.objects.ObjectInterface]]
+        self.bases = {}  # type: Dict[str, Any]
+        self.user_types = {}  # type: Dict[str, Any]
+        self.enumerations = {}  # type: Dict[str, Any]
+        self.symbols = {}  # type: Dict[str, Any]
+        self._omap_mapping = []  # type: List[Tuple[int, int]]
+        self._sections = []  # type: List[interfaces.objects.ObjectInterface]
         self.metadata = {"format": "6.0.0", "windows": {}}
 
     @property
@@ -361,7 +362,7 @@ class PdbReader:
 
         # Reset the state
         self.types = []
-        type_references = {}
+        type_references = {}  # type: Dict[str, int]
 
         offset = header.header_size
         # Ensure we use the same type everywhere
@@ -397,6 +398,9 @@ class PdbReader:
             raise ValueError("No DBI stream available")
         module = self._context.module(module_name = dbi_layer.pdb_symbol_table, layer_name = dbi_layer.name, offset = 0)
         self._dbiheader = module.object(type_name = "DBI_HEADER", offset = 0)
+
+        if not self._dbiheader:
+            raise ValueError("DBI Header could not be read")
 
         # Skip past sections we don't care about to get to the DBG header
         dbg_hdr_offset = (self._dbiheader.vol.size + self._dbiheader.module_size + self._dbiheader.secconSize +
@@ -557,12 +561,12 @@ class PdbReader:
             "metadata": self.metadata,
         }
 
-    def get_type_from_index(self, index: int) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+    def get_type_from_index(self, index: int) -> Union[List[Any], Dict[str, Any]]:
         """Takes a type index and returns appropriate dictionary"""
         if index < 0x1000:
             base_name, base = primatives[index & 0xff]
             self.bases[base_name] = base
-            result = {"kind": "base", "name": base_name}
+            result = {"kind": "base", "name": base_name}  # type: Union[List[Dict[str, Any]], Dict[str, Any]]
             indirection = (index & 0xf00)
             if indirection:
                 pointer_name, pointer_base = indirections[indirection]
@@ -666,8 +670,11 @@ class PdbReader:
                     }
             elif leaf_type in [leaf_type.LF_ENUM]:
                 if not value.properties.forward_reference:
+                    base = self.get_type_from_index(value.subtype_index)
+                    if not isinstance(base, Dict):
+                        raise ValueError("Invalid base type returned for Enumeration")
                     self.enumerations[name] = {
-                        'base': self.get_type_from_index(value.subtype_index)['name'],
+                        'base': base['name'],
                         'size': self.get_size_from_index(value.subtype_index),
                         'constants':
                         dict([(name, enum.value) for _, name, enum in self.get_type_from_index(value.fields)])
@@ -681,7 +688,7 @@ class PdbReader:
     ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[interfaces.objects.
                                                                                            ObjectInterface]], int]:
         """Returns a (leaf_type, name, object) Tuple for a type, and the number of bytes consumed"""
-        result = None, None, None
+        result = None, None, None  # type: Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[Union[List, interfaces.objects.ObjectInterface]]]
         leaf_type = self.context.object(
             module.get_enumeration("LEAF_TYPE"), layer_name = module._layer_name, offset = offset)
         consumed = leaf_type.vol.base_type.size
@@ -735,7 +742,7 @@ class PdbReader:
             enum = module.object(type_name = "LF_ENUM", offset = offset)
             name = self.parse_string(
                 enum.name, leaf_type < leaf_type.LF_ST_MAX, size = length - enum.vol.size - consumed)
-            enum.name = name
+            enum.name = name  # type: Union[str, interfaces.objects.ObjectInterface]
             result = leaf_type, name, enum
             consumed = length
         elif leaf_type in [leaf_type.LF_ENUMERATE]:
