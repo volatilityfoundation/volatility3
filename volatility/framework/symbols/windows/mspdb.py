@@ -39,7 +39,12 @@ primatives = {
         "signed": True,
         "size": 4
     }),
-    # 0x08: ("HRESULT", {}),
+    0x08: ("HRESULT", {
+        "endian": "little",
+        "kind": "int",
+        "signed": False,
+        "size": 4
+    }),
     0x10: ("char", {
         "endian": "little",
         "kind": "char",
