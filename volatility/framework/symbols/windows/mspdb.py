@@ -746,7 +746,7 @@ class PdbReader:
             consumed = length
         elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
             array = module.object(type_name = "LF_ARRAY", offset = offset)
-            name, value, excess = self.determine_extended_value(leaf_type, array.size, module, length)
+            name, value, excess = self.determine_extended_value(leaf_type, array.size, module, length - array.vol.size)
             array.size = value
             array.name = name
             result = leaf_type, name, array
@@ -760,7 +760,7 @@ class PdbReader:
             consumed = length
         elif leaf_type in [leaf_type.LF_ENUMERATE]:
             enum = module.object(type_name = 'LF_ENUMERATE', offset = offset)
-            name, value, excess = self.determine_extended_value(leaf_type, enum.value, module, length)
+            name, value, excess = self.determine_extended_value(leaf_type, enum.value, module, length - enum.vol.size)
             enum.value = value
             enum.name = name
             result = leaf_type, name, enum
