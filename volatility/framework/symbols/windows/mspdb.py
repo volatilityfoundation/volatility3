@@ -479,7 +479,10 @@ class PdbReader:
             if name:
                 if self._omap_mapping:
                     address = self.omap_lookup(address)
-                self.symbols[self.name_strip(name)] = {"address": address}
+                stripped_name = self.name_strip(name)
+                self.symbols[stripped_name] = {"address": address}
+                if name != self.name_strip(name):
+                    self.symbols[stripped_name]["linkage_name"] = name
             offset += sym.length + 2  # Add on length itself
 
     def read_pdb_info_stream(self):
