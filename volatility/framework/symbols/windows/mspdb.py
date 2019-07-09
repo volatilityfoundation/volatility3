@@ -258,7 +258,7 @@ class PdbReader:
     https://llvm.org/docs/PDB/index.html
     https://github.com/Microsoft/microsoft-pdb/
 
-    In order to generate ISF files, we need the type stream (2), and the symbols stream (variable).  
+    In order to generate ISF files, we need the type stream (2), and the symbols stream (variable).
     The MultiStream Format wrapper is handled as a volatility layer, which constructs sublayers for each stream.
     The streams can then be read contiguously allowing the data to be accessed.
 
@@ -475,7 +475,7 @@ class PdbReader:
                     name = self.parse_string(sym.name, True, sym.length - sym.vol.size + 2)
                     address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
                 else:
-                    vollog.warning("Only v2 and v3 symbols are supported")
+                    vollog.debug("Only v2 and v3 symbols are supported")
             if name:
                 if self._omap_mapping:
                     address = self.omap_lookup(address)
@@ -607,12 +607,14 @@ class PdbReader:
 
     def get_size_from_index(self, index: int) -> int:
         """Returns the size of the structure based on the type index provided"""
+        result = -1
+        name = ''
         if index < 0x1000:
             if (index & 0xf00):
                 _, base = indirections[index & 0xf00]
             else:
                 _, base = primatives[index & 0xff]
-            return base['size']
+            result = base['size']
         else:
             leaf_type, name, value = self.types[index - 0x1000]
             if leaf_type in [
@@ -620,22 +622,31 @@ class PdbReader:
                     leaf_type.LF_STRUCTURE_ST, leaf_type.LF_INTERFACE
             ]:
                 if not value.properties.forward_reference:
-                    return value.size
+                    result = value.size
             elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
-                return value.size
+                result = value.size
             elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_ENUM]:
-                return self.get_size_from_index(value.subtype_index)
+                result = self.get_size_from_index(value.subtype_index)
             elif leaf_type in [leaf_type.LF_MEMBER]:
-                return self.get_size_from_index(value.field_type)
+                result = self.get_size_from_index(value.field_type)
             elif leaf_type in [leaf_type.LF_BITFIELD]:
-                return self.get_size_from_index(value.underlying_type)
+                result = self.get_size_from_index(value.underlying_type)
             elif leaf_type in [leaf_type.LF_POINTER]:
-                return value.size
+                result = value.size
+                if not result:
+                    if value.pointer_type == 0x0a:
+                        return 4
+                    elif value.pointer_type == 0x0c:
+                        return 8
+                    else:
+                        raise ValueError("Pointer size could not be determined")
             elif leaf_type in [leaf_type.LF_PROCEDURE]:
-                return -1
+                result = -1
             else:
                 raise ValueError("Unable to determine size of leaf_type {}".format(leaf_type.lookup()))
-            return 1
+        if result <= 0:
+            raise ValueError("Invalid size identified: {} ({})".format(index, name, result))
+        return result
 
     ### TYPE HANDLING CODE
 
@@ -699,14 +710,16 @@ class PdbReader:
                 leaf_type.LF_INTERFACE
         ]:
             structure = module.object(type_name = "LF_STRUCTURE", offset = offset)
-            name, value, excess = self.determine_extended_value(leaf_type, structure.size, module, length)
+            name, value, excess = self.determine_extended_value(leaf_type, structure.size, module,
+                                                                length - structure.vol.size)
             structure.size = value
             structure.name = name
             consumed = length
             result = leaf_type, name, structure
         elif leaf_type in [leaf_type.LF_MEMBER, leaf_type.LF_MEMBER_ST]:
             member = module.object(type_name = "LF_MEMBER", offset = offset)
-            name, value, excess = self.determine_extended_value(leaf_type, member.offset, module, length)
+            name, value, excess = self.determine_extended_value(leaf_type, member.offset, module,
+                                                                length - member.vol.size)
             member.offset = value
             member.name = name
             result = leaf_type, name, member
