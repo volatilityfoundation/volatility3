@@ -582,7 +582,7 @@ class PdbReader:
                     result = {"kind": "pointer", "subtype": result}
                 else:
                     self.bases[pointer_name] = pointer_base
-                    result = {"kind": "pointer", "name": pointer_name, "subtype": result}
+                    result = {"kind": "pointer", "base": pointer_name, "subtype": result}
             return result
         else:
             leaf_type, name, value = self.types[index - 0x1000]

@@ -358,8 +358,9 @@ class Version1Format(ISFormatTable):
                 update['count'] = dictionary['count']
                 update['subtype'] = self._interdict_to_template(dictionary['subtype'])
             elif type_name == 'pointer':
-                if dictionary.get('name', None):
-                    native_template = self.natives.get_type(self.name + constants.BANG + dictionary['name'])
+                if dictionary.get('base', None):
+                    base_type = self.natives.get_type(self.name + constants.BANG + dictionary['base'])
+                    update['data_format'] = base_type.vol['data_format']
                 update['subtype'] = self._interdict_to_template(dictionary['subtype'])
             elif type_name == 'enum':
                 update = self._lookup_enum(dictionary['name'])
