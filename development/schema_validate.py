@@ -35,7 +35,7 @@ if __name__ == '__main__':
     for filename in args.filenames:
         try:
             if os.path.exists(filename):
-                print("[?] Validation successful: {}".format(filename))
+                print("[?] Validating file: {}".format(filename))
                 with open(filename, 'r') as t:
                     test = json.load(t)
 
@@ -53,6 +53,6 @@ if __name__ == '__main__':
                 print("[x] File not found: {}".format(filename))
         except Exception as e:
             failures.append(filename)
-            print("[x] Exception occured: {}".format(filename))
+            print("[x] Exception occured: {} ({})".format(filename, repr(e)))
 
     print("Failures", failures)
