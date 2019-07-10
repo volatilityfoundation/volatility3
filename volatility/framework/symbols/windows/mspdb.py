@@ -892,6 +892,25 @@ class PdbRetreiver:
 
 if __name__ == '__main__':
 
+    class PrintedProgress(object):
+        """A progress handler that prints the progress value and the description onto the command line"""
+
+        def __init__(self):
+            self._max_message_len = 0
+
+        def __call__(self, progress: Union[int, float], description: str = None):
+            """ A simple function for providing text-based feedback
+
+            .. warning:: Only for development use.
+
+            Args:
+                progress: Percentage of progress of the current procedure
+            """
+            message = "\rProgress: {0: 7.2f}\t\t{1:}".format(round(progress, 2), description or '')
+            message_len = len(message)
+            self._max_message_len = max([self._max_message_len, message_len])
+            print(message, end = (' ' * (self._max_message_len - message_len)) + '\r')
+
     parser = argparse.ArgumentParser(
         description = "Read PDB files and convert to Volatility 3 Intermediate Symbol Format")
     parser.add_argument("-o", "--output", metavar = "OUTPUT", help = "Filename for data output", required = True)
@@ -905,10 +924,12 @@ if __name__ == '__main__':
         "-k", "--keep", action = "store_true", default = False, help = "Keep the downloaded PDB file")
     args = parser.parse_args()
 
+    pg_cb = PrintedProgress()
+
     delfile = False
     filename = None
     if args.guid is not None and args.pattern is not None:
-        filename = PdbRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern)
+        filename = PdbRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern, progress_callback = pg_cb)
         delfile = True
     elif args.file:
         filename = args.file
@@ -923,7 +944,7 @@ if __name__ == '__main__':
         parser.error("File {} does not exists".format(filename))
     location = "file:" + request.pathname2url(filename)
 
-    convertor = PdbReader(ctx, location)
+    convertor = PdbReader(ctx, location, progress_callback = pg_cb)
 
     with open(args.output, "w") as f:
         json.dump(convertor.get_json(), f, indent = 2, sort_keys = True)
