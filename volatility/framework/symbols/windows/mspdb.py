@@ -866,6 +866,20 @@ class PdbReader:
 
 class PdbRetreiver:
 
+    def get_report_hook(self, progress_callback, url):
+        """Returns a report hook that converts output into a progress_callback"""
+
+        if progress_callback is None:
+            return lambda x, y, z: None
+
+        def report_hook(chunk_num, chunk_size, total_size):
+            if total_size < 0:
+                progress_callback(50, "Downloading {}".format(url))
+            else:
+                progress_callback(chunk_num * chunk_size * 100 / total_size, "Downloading {}".format(url))
+
+        return report_hook
+
     def retreive_pdb(self, guid: str, file_name: str,
                      progress_callback: constants.ProgressCallback = None) -> Optional[str]:
         vollog.info("Download PDB file...")
@@ -875,11 +889,10 @@ class PdbRetreiver:
 
             result = None
             for suffix in [file_name[:-1] + '_', file_name]:
-                if progress_callback is not None:
-                    progress_callback(50, "Downloading {}".format(url + suffix))
                 try:
                     vollog.debug("Attempting to retrieve {}".format(url + suffix))
-                    result, _ = request.urlretrieve(url + suffix)
+                    reporthook = self.get_report_hook(progress_callback, url)
+                    result, _ = request.urlretrieve(url + suffix, reporthook = reporthook)
                 except request.HTTPError as excp:
                     vollog.debug("Failed with {}".format(excp))
             if result:
