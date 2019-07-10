@@ -578,8 +578,11 @@ class PdbReader:
             indirection = (index & 0xf00)
             if indirection:
                 pointer_name, pointer_base = indirections[indirection]
-                self.bases[pointer_name] = pointer_base
-                result = {"kind": "pointer", "name": pointer_name, "subtype": result}
+                if self.bases.get('pointer', None) and self.bases['pointer'] == pointer_base:
+                    result = {"kind": "pointer", "subtype": result}
+                else:
+                    self.bases[pointer_name] = pointer_base
+                    result = {"kind": "pointer", "name": pointer_name, "subtype": result}
             return result
         else:
             leaf_type, name, value = self.types[index - 0x1000]
