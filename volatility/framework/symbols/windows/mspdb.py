@@ -523,8 +523,8 @@ class PdbReader:
     def omap_lookup(self, address):
         """Looks up an address using the omap mapping"""
         pos = bisect(self._omap_mapping, (address, -1))
-        if self._omap_mapping[pos + 1][0] == address:
-            pos += 1
+        if self._omap_mapping[pos][0] > address:
+            pos -= 1
 
         if not self._omap_mapping[pos][1]:
             return 0
@@ -775,8 +775,7 @@ class PdbReader:
             consumed += enum.vol.size + len(name) + 1 + excess
         elif leaf_type in [leaf_type.LF_UNION]:
             union = module.object(type_name = "LF_UNION", offset = offset)
-            name = self.parse_string(
-                union.name, leaf_type < leaf_type.LF_ST_MAX, size = length - union.vol.size - consumed)
+            name = self.parse_string(union.name, leaf_type < leaf_type.LF_ST_MAX, size = length - union.vol.size)
             result = leaf_type, name, union
             consumed = length
         else:
