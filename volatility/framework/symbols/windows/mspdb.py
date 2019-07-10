@@ -382,7 +382,7 @@ class PdbReader:
             offset += length_len
             output, consumed = self.consume_type(module, offset, length)
             leaf_type, name, value = output
-            if name == '<unnamed-tag>':
+            if name == '<unnamed-tag>' or name == '__unnamed':
                 name = '__unnamed_' + hex(len(self.types) + 0x1000)[2:]
             type_references[name] = len(self.types)
             self.types.append((leaf_type, name, value))
