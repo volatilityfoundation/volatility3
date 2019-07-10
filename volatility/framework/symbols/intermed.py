@@ -358,6 +358,8 @@ class Version1Format(ISFormatTable):
                 update['count'] = dictionary['count']
                 update['subtype'] = self._interdict_to_template(dictionary['subtype'])
             elif type_name == 'pointer':
+                if dictionary.get('name', None):
+                    native_template = self.natives.get_type(self.name + constants.BANG + dictionary['name'])
                 update['subtype'] = self._interdict_to_template(dictionary['subtype'])
             elif type_name == 'enum':
                 update = self._lookup_enum(dictionary['name'])
@@ -572,3 +574,11 @@ class Version6Format(Version5Format):
         if self._json_object.get('metadata', {}).get('linux'):
             return metadata.LinuxMetadata(self._json_object['metadata']['linux'])
         return None
+
+
+class Version7Format(Version6Format):
+    """Class for storing intermediate debugging data as objects and classes"""
+    current = 7
+    revision = 0
+    age = 1
+    version = (current - age, age, revision)
