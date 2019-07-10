@@ -236,7 +236,7 @@ indirections = {
         "signed": False,
         "size": 4
     }),
-    0x600: ("pointer", {
+    0x600: ("pointer64", {
         "endian": "little",
         "kind": "int",
         "signed": False,
@@ -291,7 +291,7 @@ class PdbReader:
         self.symbols = {}  # type: Dict[str, Any]
         self._omap_mapping = []  # type: List[Tuple[int, int]]
         self._sections = []  # type: List[interfaces.objects.ObjectInterface]
-        self.metadata = {"format": "6.0.0", "windows": {}}
+        self.metadata = {"format": "6.1.0", "windows": {}}
 
     @property
     def context(self):
@@ -579,7 +579,7 @@ class PdbReader:
             if indirection:
                 pointer_name, pointer_base = indirections[indirection]
                 self.bases[pointer_name] = pointer_base
-                result = {"kind": pointer_name, "subtype": result}
+                result = {"kind": "pointer", "name": pointer_name, "subtype": result}
             return result
         else:
             leaf_type, name, value = self.types[index - 0x1000]
@@ -600,6 +600,13 @@ class PdbReader:
                     "bit_position": value.position
                 }
             elif leaf_type in [leaf_type.LF_POINTER]:
+                # Since we use the base['pointer'] to set the size for pointers, update it and check we don't get conflicts
+                size = self.get_size_from_index(index)
+                if self.bases.get("pointer", None) is None:
+                    self.bases['pointer'] = {"endian": "little", "kind": "int", "signed": False, "size": size}
+                else:
+                    if size != self.bases['pointer']['size']:
+                        raise ValueError("Native pointers with different sizes!")
                 result = {"kind": "pointer", "subtype": self.get_type_from_index(value.subtype_index)}
             elif leaf_type in [leaf_type.LF_PROCEDURE]:
                 return {"kind": "function"}
