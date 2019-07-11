@@ -1263,7 +1263,7 @@
         }
       },
       "kind": "struct",
-      "size": 12
+      "size": 10
     },
     "OMAP_RECORD": {
       "fields": {

@@ -729,16 +729,16 @@ class PdbReader:
                 leaf_type.LF_INTERFACE
         ]:
             structure = module.object(type_name = "LF_STRUCTURE", offset = offset)
-            name, value, excess = self.determine_extended_value(leaf_type, structure.size, module,
-                                                                length - structure.vol.size)
+            name_offset = structure.name.vol.offset - structure.vol.offset
+            name, value, excess = self.determine_extended_value(leaf_type, structure.size, module, length - name_offset)
             structure.size = value
             structure.name = name
             consumed = length
             result = leaf_type, name, structure
         elif leaf_type in [leaf_type.LF_MEMBER, leaf_type.LF_MEMBER_ST]:
             member = module.object(type_name = "LF_MEMBER", offset = offset)
-            name, value, excess = self.determine_extended_value(leaf_type, member.offset, module,
-                                                                length - member.vol.size)
+            name_offset = member.name.vol.offset - member.vol.offset
+            name, value, excess = self.determine_extended_value(leaf_type, member.offset, module, length - name_offset)
             member.offset = value
             member.name = name
             result = leaf_type, name, member
@@ -765,27 +765,31 @@ class PdbReader:
             consumed = length
         elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
             array = module.object(type_name = "LF_ARRAY", offset = offset)
-            name, value, excess = self.determine_extended_value(leaf_type, array.size, module, length - array.vol.size)
+            name_offset = array.name.vol.offset - array.vol.offset
+            name, value, excess = self.determine_extended_value(leaf_type, array.size, module, length - name_offset)
             array.size = value
             array.name = name
             result = leaf_type, name, array
             consumed = length
         elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUM]:
             enum = module.object(type_name = "LF_ENUM", offset = offset)
-            name = self.parse_string(enum.name, leaf_type < leaf_type.LF_ST_MAX, size = length - enum.vol.size)
+            name_offset = enum.name.vol.offset - enum.vol.offset
+            name = self.parse_string(enum.name, leaf_type < leaf_type.LF_ST_MAX, size = length - name_offset)
             enum.name = name  # type: Union[str, interfaces.objects.ObjectInterface]
             result = leaf_type, name, enum
             consumed = length
         elif leaf_type in [leaf_type.LF_ENUMERATE]:
             enum = module.object(type_name = 'LF_ENUMERATE', offset = offset)
-            name, value, excess = self.determine_extended_value(leaf_type, enum.value, module, length - enum.vol.size)
+            name_offset = enum.name.vol.offset - enum.vol.offset
+            name, value, excess = self.determine_extended_value(leaf_type, enum.value, module, length - name_offset)
             enum.value = value
             enum.name = name
             result = leaf_type, name, enum
             consumed += enum.vol.size + len(name) + 1 + excess
         elif leaf_type in [leaf_type.LF_UNION]:
             union = module.object(type_name = "LF_UNION", offset = offset)
-            name = self.parse_string(union.name, leaf_type < leaf_type.LF_ST_MAX, size = length - union.vol.size)
+            name_offset = union.name.vol.offset - union.vol.offset
+            name = self.parse_string(union.name, leaf_type < leaf_type.LF_ST_MAX, size = length - name_offset)
             result = leaf_type, name, union
             consumed = length
         else:
