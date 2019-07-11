@@ -20,7 +20,7 @@
 import math
 from typing import Optional, Dict, Any, List, Iterable, Tuple
 
-from volatility.framework import interfaces, constants
+from volatility.framework import interfaces, constants, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.symbols import intermed
@@ -168,6 +168,7 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
         super().__init__(context, config_path, name, metadata)
         self._base_layer = self.config["base_layer"]
         self._pages = self.config.get("pages", None)
+        self._pages_len = len(self._pages)
         if not self._pages:
             raise ValueError("Invalid/no pages specified")
         if not isinstance(self._pdb_layer, PdbMSF):
@@ -196,7 +197,12 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
             page = math.floor((offset + returned) / page_size)
             page_position = ((offset + returned) % page_size)
             chunk_size = min(page_size - page_position, length)
-            yield (offset + returned, (self._pages[page] * page_size) + page_position, chunk_size, self._base_layer)
+            if page >= self._pages_len:
+                if not ignore_errors:
+                    raise exceptions.InvalidAddressException(
+                        layer_name = self.name, invalid_address = offset + returned)
+            else:
+                yield (offset + returned, (self._pages[page] * page_size) + page_position, chunk_size, self._base_layer)
             returned += chunk_size
             length -= chunk_size
 
