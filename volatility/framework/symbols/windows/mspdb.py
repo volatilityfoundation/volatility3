@@ -748,7 +748,7 @@ class PdbReader:
             result = leaf_type, None, obj
             consumed = length
         elif leaf_type in [leaf_type.LF_FIELDLIST]:
-            sub_length = length - consumed
+            sub_length = length
             sub_offset = offset
             fields = []
             while length > consumed:
@@ -772,8 +772,7 @@ class PdbReader:
             consumed = length
         elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUM]:
             enum = module.object(type_name = "LF_ENUM", offset = offset)
-            name = self.parse_string(
-                enum.name, leaf_type < leaf_type.LF_ST_MAX, size = length - enum.vol.size - consumed)
+            name = self.parse_string(enum.name, leaf_type < leaf_type.LF_ST_MAX, size = length - enum.vol.size)
             enum.name = name  # type: Union[str, interfaces.objects.ObjectInterface]
             result = leaf_type, name, enum
             consumed = length
