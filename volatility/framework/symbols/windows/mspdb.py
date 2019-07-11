@@ -722,6 +722,7 @@ class PdbReader:
             module.get_enumeration("LEAF_TYPE"), layer_name = module._layer_name, offset = offset)
         consumed = leaf_type.vol.base_type.size
         offset += consumed
+        length -= consumed
 
         if leaf_type in [
                 leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
