@@ -798,7 +798,7 @@ class PdbReader:
     def consume_padding(self, layer_name: str, offset: int) -> int:
         """Returns the amount of padding used between fields"""
         val = self.context.layers[layer_name].read(offset, 1)
-        if not (int(val[0]) & 0xf0):
+        if not ((val[0] & 0xf0) == 0xf0):
             return 0
         return (int(val[0]) & 0x0f)
 
