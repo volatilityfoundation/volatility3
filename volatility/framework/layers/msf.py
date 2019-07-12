@@ -86,7 +86,9 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
 
         for stream in range(num_streams):
             list_size = math.ceil(stream_sizes[stream] / self.page_size)
-            if list_size:
+            if list_size == 0 or stream_sizes[stream] == 0xffffffff:
+                self._streams[stream] = None
+            else:
                 stream_page_list = module.object(
                     type_name = "array",
                     offset = current_offset,
@@ -95,8 +97,6 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
                 current_offset += (list_size * entry_size)
                 self._streams[stream] = self.create_stream_from_pages("stream" + str(stream), stream_sizes[stream],
                                                                       [x for x in stream_page_list])
-            else:
-                self._streams[stream] = None
 
     def create_stream_from_pages(self, stream_name: str, maximum_size: int, pages: List[int]) -> str:
         # Construct a root layer based on a number of pages
