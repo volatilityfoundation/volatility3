@@ -27,7 +27,8 @@ from volatility.framework.renderers import format_hints
 from volatility.framework.plugins.windows import poolscanner
 from volatility.framework.plugins.windows import vadyarascan
 from volatility.plugins.windows import pslist
-from volatility.framework.symbols.windows.services import ServicesIntermedSymbols
+from volatility.framework.symbols.windows.extensions import services
+from volatility.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
 
@@ -107,11 +108,12 @@ class SvcScan(interfaces.plugins.PluginInterface):
         else:
             raise NotImplementedError("This version of Windows is not supported!")
 
-        return ServicesIntermedSymbols.create(context,
-                                              config_path,
-                                              "windows",
-                                              symbol_filename,
-                                              native_types = native_types)
+        return intermed.IntermediateSymbolTable.create(context,
+                                                       config_path,
+                                                       "windows",
+                                                       symbol_filename,
+                                                       class_types = services.class_types,
+                                                       native_types = native_types)
 
     def _generator(self):
 
