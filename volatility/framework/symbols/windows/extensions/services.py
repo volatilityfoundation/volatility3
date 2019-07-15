@@ -137,3 +137,8 @@ class _SERVICE_HEADER(objects.Struct):
             return self.ServiceRecord.is_valid()
         except exceptions.InvalidAddressException:
             return False
+
+class_types = {
+    '_SERVICE_RECORD': _SERVICE_RECORD,
+    '_SERVICE_HEADER': _SERVICE_HEADER
+}
