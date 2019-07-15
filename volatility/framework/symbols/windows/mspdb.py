@@ -25,7 +25,7 @@ import logging
 import os
 from bisect import bisect
 from typing import Tuple, Dict, Any, Optional, Union, List
-from urllib import request
+from urllib import request, error
 
 from volatility.framework import contexts, interfaces, constants
 from volatility.framework.layers import physical, msf
@@ -714,8 +714,8 @@ class PdbReader:
 
     def consume_type(
             self, module: interfaces.context.ModuleInterface, offset: int, length: int
-    ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[interfaces.objects.
-                                                                                           ObjectInterface]], int]:
+    ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Union[None, List, interfaces.objects.
+                                                                                        ObjectInterface]], int]:
         """Returns a (leaf_type, name, object) Tuple for a type, and the number of bytes consumed"""
         result = None, None, None  # type: Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[Union[List, interfaces.objects.ObjectInterface]]]
         leaf_type = self.context.object(
@@ -764,7 +764,7 @@ class PdbReader:
             enum = module.object(type_name = "LF_ENUM", offset = offset + consumed)
             name_offset = enum.name.vol.offset - enum.vol.offset
             name = self.parse_string(enum.name, leaf_type < leaf_type.LF_ST_MAX, size = remaining - name_offset)
-            enum.name = name  # type: Union[str, interfaces.objects.ObjectInterface]
+            enum.name = name
             result = leaf_type, name, enum
             consumed += remaining
         elif leaf_type in [leaf_type.LF_UNION]:
@@ -805,10 +805,13 @@ class PdbReader:
             return 0
         return (int(val[0]) & 0x0f)
 
-    def convert_fields(self, fields: int):
+    def convert_fields(self, fields: int) -> Dict[Optional[str], Dict[str, Any]]:
         """Converts a field list into a list of fields"""
-        result = {}
+        result = {}  # type: Dict[Optional[str], Dict[str, Any]]
         _, _, fields_struct = self.types[fields]
+        if not isinstance(fields_struct, list):
+            vollog.warning("Fields structure did not contain a list of fields")
+            return result
         for field in fields_struct:
             _, name, member = field
             result[name] = {"offset": member.offset, "type": self.get_type_from_index(member.field_type)}
@@ -846,7 +849,7 @@ class PdbReader:
         else:
             name = structure.cast("pascal_string")
             name = name.string.cast("string", max_length = name.length, encoding = "latin-1")
-        return name
+        return str(name)
 
     def determine_extended_value(self, leaf_type: interfaces.objects.ObjectInterface,
                                  value: interfaces.objects.ObjectInterface, module: interfaces.context.ModuleInterface,
@@ -875,8 +878,8 @@ class PdbReader:
             excess = value.vol.data_format.length
             # Updated the consume/offset counters
         name = module.object(type_name = "string", offset = value.vol.offset + value.vol.data_format.length)
-        name = self.parse_string(name, leaf_type < leaf_type.LF_ST_MAX, size = length - excess)
-        return name, value, excess
+        name_str = self.parse_string(name, leaf_type < leaf_type.LF_ST_MAX, size = length - excess)
+        return name_str, value, excess
 
 
 class PdbRetreiver:
@@ -908,7 +911,7 @@ class PdbRetreiver:
                     vollog.debug("Attempting to retrieve {}".format(url + suffix))
                     reporthook = self.get_report_hook(progress_callback, url)
                     result, _ = request.urlretrieve(url + suffix, reporthook = reporthook)
-                except request.HTTPError as excp:
+                except error.HTTPError as excp:
                     vollog.debug("Failed with {}".format(excp))
             if result:
                 vollog.debug("Successfully written to {}".format(result))
