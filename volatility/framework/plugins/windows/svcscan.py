@@ -24,9 +24,7 @@ from volatility.framework import interfaces, renderers, constants, symbols
 from volatility.framework.layers import scanners
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.framework.plugins.windows import poolscanner
-from volatility.framework.plugins.windows import vadyarascan
-from volatility.plugins.windows import pslist
+from volatility.plugins.windows import poolscanner, vadyarascan, pslist
 from volatility.framework.symbols.windows.extensions import services
 from volatility.framework.symbols import intermed
 
