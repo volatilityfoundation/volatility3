@@ -268,7 +268,7 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
 class NativeTableInterface(BaseSymbolTableInterface):
     """Class to distinguish NativeSymbolLists from other symbol lists"""
 
-    def get_symbol(self, name: str) -> objects.Template:
+    def get_symbol(self, name: str) -> SymbolInterface:
         raise exceptions.SymbolError("NativeTables never hold symbols")
 
     @property

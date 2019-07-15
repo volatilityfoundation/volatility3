@@ -153,7 +153,7 @@ class ModuleInterface(metaclass = ABCMeta):
     def get_symbol(self, name: str) -> 'interfaces.symbols.SymbolInterface':
         """Returns a symbol from the module"""
 
-    def get_enumeration(self, name: str) -> 'interfaces.object.Template':
+    def get_enumeration(self, name: str) -> 'interfaces.objects.Template':
         """Returns an enumeration from the module"""
 
     def has_type(self, name: str) -> bool:

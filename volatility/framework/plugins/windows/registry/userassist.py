@@ -23,7 +23,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Generator
 
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
@@ -127,7 +127,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
         return self.context.symbol_space.get_type(self.config['nt_symbols'] + constants.BANG +
                                                   "_KUSER_SHARED_DATA").has_member('CookiePad')
 
-    def list_userassist(self, hive: RegistryHive):
+    def list_userassist(self, hive: RegistryHive) -> Generator[Tuple[int, Tuple], None, None]:
         """Generate userassist data for a registry hive."""
 
         hive_name = hive.hive.cast(self.config["nt_symbols"] + constants.BANG + "_CMHIVE").get_name()
@@ -148,6 +148,9 @@ class UserAssist(interfaces.plugins.PluginInterface):
             vollog.warning("list_userassist did not find a valid node_path (or None)")
             return
 
+        if not isinstance(userassist_node_path, list):
+            vollog.warning("userassist_node_path did not return a list as expected")
+            return
         userassist_node = userassist_node_path[-1]
         # iterate through the GUIDs under the userassist key
         for guidkey in userassist_node.get_subkeys():
