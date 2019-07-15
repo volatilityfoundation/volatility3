@@ -140,7 +140,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
                                                  filter_func = filter_func):
 
             proc_layer_name = task.add_process_layer()
-            layer = self.context.memory[proc_layer_name]
+            layer = self.context.layers[proc_layer_name]
 
             for offset in layer.scan(context = self.context,
                                      scanner = scanners.BytesScanner(needle = service_tag),
