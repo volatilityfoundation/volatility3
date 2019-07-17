@@ -30,10 +30,11 @@ ultimately it was a different type and could not be used in the same places (cri
 operations important, since a + b might not work, but b + a might work fine).
 
 Volatility 3 has also had significant speed improvements, where volatility 2 was designed to allow access to live memory
-images wehre the underlying data could change during the run of the plugin, in volatility 3 the data is now read once
+images where the underlying data could change during the run of the plugin, in volatility 3 the data is now read once
 at the time of object construction, and will remain static, even if the underlying layer changes.  This was because live
 memory analysis was barely ever used, and this feature could cause a particular value to be re-read many times over for
-no benefit (particularly since each re-read could result in many image reads due to page table translations being followed).
+no benefit (particularly since each re-read could result in many additional image reads from following page table 
+translations).
 
 Finally, in order to provide volatility specific information without impact on the ability for structures to have members
 with arbitrary names, all the metadata about the object (such as its layer or offset) have been moved to a read-only `vol`
