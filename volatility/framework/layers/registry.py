@@ -221,35 +221,14 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
     def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
 
-        # TODO: Check the offset and offset + length are not outside the norms
         if length < 0:
             raise ValueError("Mapping length of RegistryHive must be positive or zero")
 
-        # Try using the symbol first at the start of the page
+        # Return the translated offset without checking bounds within the HBIN.  The check runs into
+        # issues when pages are swapped on large HBINs, and did not seem to find any errors on single page
+        # HBINs while dramatically slowing performance.
         translated_offset = self._translate(offset)
-        hbin_offset = self._translate(self._mask(offset, 31, 12))
-        hbin = self.context.object(
-            self._reg_table_name + constants.BANG + "_HBIN", offset = hbin_offset, layer_name = self._base_layer)
-
-        if hbin.Signature.cast("string", max_length=4, encoding="latin-1") == 'hbin':
-            # the offset is in a single page hbin, so we can check that the length doesn't exceed the bounds
-            if translated_offset + length > hbin_offset + hbin.Size and hbin.Size > 0:
-                raise RegistryFormatException("Cell address {} outside expected HBIN limit: {}".format(
-                    hex(translated_offset + length), hex(hbin_offset + hbin.Size)))
-        else:
-            # This is most likely a large page.  Previously, we attempted to walk backwards and find
-            # the first page, then perform the bounds check.  This ran into issues because:
-            # 1) if a page between the desired offset and the HBIN is paged, the loop will raise an exception
-            # 2) if the HBIN itself is paged, the check will not be possible, and we could keep walking back
-            #    and find the wrong HBIN anyway
-            # Either of the above scenarios will result in skipped nodes that are otherwise valid, so it's not
-            # a very useful check for these large pages, so just log it and return the translated offset
-            vollog.log(constants.LOGLEVEL_VVV,
-                       "First page of HBIN for {} not available, can't do bounds check".format(
-                           hex(offset)))
-
         response = [(offset, translated_offset, length, self._base_layer)]
-
         return response
 
     @property
