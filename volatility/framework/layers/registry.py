@@ -55,8 +55,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._reg_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
                                                                        'registry')
 
-        self.hive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
-                                        self._hive_offset).Hive
+        self._cmhive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
+                                          self._hive_offset)
+
+        self.hive = self._cmhive.Hive
 
         # TODO: Check the checksum
         if self.hive.Signature != 0xbee0bee0:
@@ -75,9 +77,24 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._base_block = self.hive.BaseBlock.dereference()
 
         self._minaddr = 0
-        # If there's no base_block, we don't know how big the hive layer is
-        # We also don't know the root_cell_offset, so we use a hardcoded value of 0x20
-        self._maxaddr = self._base_block.Length or 0x7fffffff
+        try:
+            self._maxaddr_non_volatile = self.hive.Storage[0].Length
+            self._maxaddr_volatile = self.hive.Storage[1].Length
+            self._maxaddr = max(self._maxaddr_non_volatile, self._maxaddr_volatile)
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "Setting hive max address to {}".format(hex(self._maxaddr)))
+        except exceptions.InvalidAddressException:
+            self._maxaddr = 0x7fffffff
+            self._maxaddr_volatile = 0x7fffffff
+            self._maxaddr_non_volatile = 0x7fffffff
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "Exception when setting hive max address, using {}".format(hex(self._maxaddr)))
+
+    def get_maxaddr(self, volatile):
+        return self._maxaddr_volatile if volatile else self._maxaddr_non_volatile
+
+    def get_name(self) -> str:
+        return self._cmhive.get_name() or "[NONAME]"
 
     @property
     def hive_offset(self) -> int:
@@ -92,7 +109,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
     def root_cell_offset(self) -> int:
         """Returns the offset for the root cell in this hive"""
         try:
-            if self._base_block.Length > 0:
+            if self._base_block.Signature.cast("string", max_length=4, encoding="latin-1") == 'regf':
                 return self._base_block.RootCell
         except InvalidAddressException:
             pass
@@ -189,10 +206,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         """Translates a single cell index to a cell memory offset and the suboffset within it"""
 
         # Ignore the volatile bit when determining maxaddr validity
-        if offset & 0x7fffffff > self._maxaddr:
+        volatile = self._mask(offset, 31, 31) >> 31
+        if offset & 0x7fffffff > self.get_maxaddr(volatile):
             raise RegistryInvalidIndex("Mapping request for value greater than maxaddr")
 
-        volatile = self._mask(offset, 31, 31) >> 31
         storage = self.hive.Storage[volatile]
         dir_index = self._mask(offset, 30, 21) >> 21
         table_index = self._mask(offset, 20, 12) >> 12
@@ -208,30 +225,31 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         if length < 0:
             raise ValueError("Mapping length of RegistryHive must be positive or zero")
 
-        response = []
-        while length > 0:
-            # Try using the symbol first
-            hbin_offset = self._translate(self._mask(offset, 31, 12))
-            hbin = self.context.object(
-                self._reg_table_name + constants.BANG + "_HBIN", offset = hbin_offset, layer_name = self._base_layer)
+        # Try using the symbol first at the start of the page
+        translated_offset = self._translate(offset)
+        hbin_offset = self._translate(self._mask(offset, 31, 12))
+        hbin = self.context.object(
+            self._reg_table_name + constants.BANG + "_HBIN", offset = hbin_offset, layer_name = self._base_layer)
 
-            # Now get the cell's offset and figure out if it goes outside the bin
-            # We could use some invariants such as whether cells always fit within a bin?
-            translated_offset = self._translate(offset)
-            if translated_offset + length > hbin_offset + hbin.Size:
-                # Generally suggests the hbin is a large (larger than a page) bin
-                # In which case, hunt backwards for the right hbin header and check the size again
-                while hbin.Signature.cast("string", max_length = 4, encoding = "latin-1") != 'hbin':
-                    hbin_offset = hbin_offset - 0x1000
-                    hbin = self.context.object(
-                        self._reg_table_name + constants.BANG + "_HBIN",
-                        offset = hbin_offset,
-                        layer_name = self._base_layer)
-                    if translated_offset + length > hbin_offset + hbin.Size and hbin.Size > 0:
-                        raise RegistryFormatException("Cell address {} outside expected HBIN limit: {}".format(
-                            hex(translated_offset + length), hex(hbin_offset + hbin.Size)))
-            response.append((offset, translated_offset, length, self._base_layer))
-            length -= length
+        if hbin.Signature.cast("string", max_length=4, encoding="latin-1") == 'hbin':
+            # the offset is in a single page hbin, so we can check that the length doesn't exceed the bounds
+            if translated_offset + length > hbin_offset + hbin.Size and hbin.Size > 0:
+                raise RegistryFormatException("Cell address {} outside expected HBIN limit: {}".format(
+                    hex(translated_offset + length), hex(hbin_offset + hbin.Size)))
+        else:
+            # This is most likely a large page.  Previously, we attempted to walk backwards and find
+            # the first page, then perform the bounds check.  This ran into issues because:
+            # 1) if a page between the desired offset and the HBIN is paged, the loop will raise an exception
+            # 2) if the HBIN itself is paged, the check will not be possible, and we could keep walking back
+            #    and find the wrong HBIN anyway
+            # Either of the above scenarios will result in skipped nodes that are otherwise valid, so it's not
+            # a very useful check for these large pages, so just log it and return the translated offset
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "First page of HBIN for {} not available, can't do bounds check".format(
+                           hex(offset)))
+
+        response = [(offset, translated_offset, length, self._base_layer)]
+
         return response
 
     @property
