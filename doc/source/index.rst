@@ -9,6 +9,7 @@ Volatility 3 is Open Source.
 
     basics
     simple-plugin
+    vol2to3
 
 
 Python Packages
