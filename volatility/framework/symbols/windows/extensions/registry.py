@@ -24,8 +24,7 @@ import struct
 from typing import Optional, Iterable, Union
 
 from volatility.framework import constants, exceptions, objects, interfaces
-from volatility.framework.layers.registry import RegistryHive
-from volatility.framework.symbols import intermed
+from volatility.framework.layers.registry import RegistryHive, RegistryInvalidIndex, RegistryFormatException
 
 vollog = logging.getLogger(__name__)
 
@@ -80,10 +79,9 @@ class _HMAP_ENTRY(objects.Struct):
 
     def get_block_offset(self) -> int:
         try:
-            return self.PermanentBinAddress ^ (self.PermanentBinAddress & 0xf)
+            return (self.PermanentBinAddress ^ (self.PermanentBinAddress & 0xf)) + self.BlockOffset
         except AttributeError:
             return self.BlockAddress
-
 
 class _CMHIVE(objects.Struct):
 
@@ -160,7 +158,11 @@ class _CM_KEY_NODE(objects.Struct):
         # The keylist appears to include 4 bytes of key name after each value
         # We can either double the list and only use the even items, or
         # We could change the array type to a struct with both parts
-        signature = node.Signature.cast('string', max_length = 2, encoding = 'latin-1')
+        try:
+            signature = node.cast('string', max_length = 2, encoding = 'latin-1')
+        except (exceptions.InvalidAddressException, RegistryFormatException):
+            return
+
         listjump = None
         if signature == 'ri':
             listjump = 1
@@ -177,9 +179,14 @@ class _CM_KEY_NODE(objects.Struct):
             for subnode_offset in node.List[::listjump]:
                 if (subnode_offset & 0x7fffffff) > hive.maximum_address:
                     vollog.log(constants.LOGLEVEL_VVV,
-                               "Node found with address outside the valid Hive size: {}".format(subnode_offset))
+                               "Node found with address outside the valid Hive size: {}".format(hex(subnode_offset)))
                 else:
-                    subnode = hive.get_node(subnode_offset)
+                    try:
+                        subnode = hive.get_node(subnode_offset)
+                    except (exceptions.InvalidAddressException, RegistryFormatException):
+                        vollog.log(constants.LOGLEVEL_VVV,
+                                   "Failed to get node at {}, skipping".format(hex(subnode_offset)))
+                        continue
                     yield from self._get_subkeys_recursive(hive, subnode)
 
     def get_values(self) -> Iterable[interfaces.objects.ObjectInterface]:
@@ -189,11 +196,20 @@ class _CM_KEY_NODE(objects.Struct):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
         child_list = hive.get_cell(self.ValueList.List).u.KeyList
         child_list.count = self.ValueList.Count
-        for v in child_list:
-            if v != 0:
-                node = hive.get_node(v)
-                if node.vol.type_name.endswith(constants.BANG + '_CM_KEY_VALUE'):
-                    yield node
+
+        try:
+            for v in child_list:
+                if v != 0:
+                    try:
+                        node = hive.get_node(v)
+                    except (RegistryInvalidIndex, RegistryFormatException) as excp:
+                        vollog.debug("Invalid address {}".format(excp))
+                        continue
+                    if node.vol.type_name.endswith(constants.BANG + '_CM_KEY_VALUE'):
+                        yield node
+        except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
+            vollog.debug("Invalid address {}".format(excp))
+            return
 
     def get_name(self) -> interfaces.objects.ObjectInterface:
         """Since this is just a casting convenience, it can be a property"""
@@ -206,7 +222,8 @@ class _CM_KEY_NODE(objects.Struct):
         # Using the offset adds a significant delay (since it cannot be cached easily)
         # if self.vol.offset == reg.get_node(reg.root_cell_offset).vol.offset:
         if self.vol.offset == reg.root_cell_offset + 4:
-            return self.get_name()
+            # return the last part of the hive name for the root entry
+            return reg.get_name().split('\\')[-1]
         return reg.get_node(self.Parent).get_key_path() + '\\' + self.get_name()
 
 
@@ -270,11 +287,14 @@ class _CM_KEY_VALUE(objects.Struct):
             return output
         if self_type == RegValueTypes.REG_MULTI_SZ:
             return str(data, encoding = "utf-16-le").split("\x00")[0]
-        if self_type == RegValueTypes.REG_BINARY:
+        if self_type in [RegValueTypes.REG_BINARY,
+                         RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR,
+                         RegValueTypes.REG_RESOURCE_LIST,
+                         RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST]:
             return data
         if self_type == RegValueTypes.REG_NONE:
             return ''
 
         # Fall back if it's something weird
         vollog.debug("Unknown registry value type encountered: {}".format(self.Type))
-        return self.Data.cast("string", max_length = datalen, encoding = "latin-1")
+        return data.hex()
