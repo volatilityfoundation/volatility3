@@ -370,7 +370,7 @@ class Version1Format(ISFormatTable):
             return native_template
 
         # Otherwise
-        if dictionary['kind'] not in ['struct', 'union', 'CPPObject']:
+        if dictionary['kind'] not in [e.value for e in objects.StructType]:
             raise exceptions.SymbolSpaceError("Unknown Intermediate format: {}".format(dictionary))
 
         reference_name = dictionary['name']
@@ -381,7 +381,8 @@ class Version1Format(ISFormatTable):
             reference_name = (self.table_mapping.get(reference_parts[0], reference_parts[0]) + constants.BANG +
                               constants.BANG.join(reference_parts[1:]))
 
-        return objects.templates.ReferenceTemplate(type_name = reference_name)
+        return objects.templates.ReferenceTemplate(
+            type_name = reference_name, struct_type = objects.StructType(dictionary['kind']))
 
     def _lookup_enum(self, name: str) -> Dict[str, Any]:
         """Looks up an enumeration and returns a dictionary of __init__ parameters for an Enum"""

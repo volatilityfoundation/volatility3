@@ -19,6 +19,7 @@
 #
 
 import collections
+import enum
 import logging
 import struct
 from collections import abc
@@ -573,6 +574,12 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
         raise NotImplementedError("Writing to Arrays is not yet implemented")
 
 
+class StructType(enum.Enum):
+    STRUCT = 'struct'
+    UNION = 'union'
+    CLASS = 'class'
+
+
 class Struct(interfaces.objects.ObjectInterface):
     """Object which can contain members that are other objects
 
@@ -583,7 +590,12 @@ class Struct(interfaces.objects.ObjectInterface):
                  object_info: interfaces.objects.ObjectInformation, size: int,
                  members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
         super().__init__(
-            context = context, type_name = type_name, object_info = object_info, size = size, members = members)
+            context = context,
+            type_name = type_name,
+            object_info = object_info,
+            size = size,
+            members = members,
+            struct_type = StructType.STRUCT)
         # self._check_members(members)
         self._concrete_members = {}  # type: Dict[str, Dict]
 
