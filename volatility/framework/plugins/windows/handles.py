@@ -81,8 +81,8 @@ class Handles(interfaces_plugins.PluginInterface):
             # before windows 7
             if not self.context.layers[virtual].is_valid(handle_table_entry.Object):
                 return None
-            fast_ref = handle_table_entry.Object.cast(self.config["nt_symbols"] + constants.BANG + "_EX_FAST_REF")
-            object_header = fast_ref.dereference().cast(self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER")
+            fast_ref = handle_table_entry.Object.cast("_EX_FAST_REF")
+            object_header = fast_ref.dereference().cast("_OBJECT_HEADER")
             object_header.GrantedAccess = handle_table_entry.GrantedAccess
         except AttributeError:
             # starting with windows 8
@@ -284,16 +284,16 @@ class Handles(interfaces_plugins.PluginInterface):
                         continue
 
                     if obj_type == "File":
-                        item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT")
+                        item = entry.Body.cast("_FILE_OBJECT")
                         obj_name = item.file_name_with_device()
                     elif obj_type == "Process":
-                        item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_EPROCESS")
+                        item = entry.Body.cast("_EPROCESS")
                         obj_name = "{} Pid {}".format(utility.array_to_string(proc.ImageFileName), item.UniqueProcessId)
                     elif obj_type == "Thread":
-                        item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_ETHREAD")
+                        item = entry.Body.cast("_ETHREAD")
                         obj_name = "Tid {} Pid {}".format(item.Cid.UniqueThread, item.Cid.UniqueProcess)
                     elif obj_type == "Key":
-                        item = entry.Body.cast(self.config["nt_symbols"] + constants.BANG + "_CM_KEY_BODY")
+                        item = entry.Body.cast("_CM_KEY_BODY")
                         obj_name = item.get_full_key_name()
                     else:
                         try:
