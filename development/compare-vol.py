@@ -41,8 +41,10 @@ class VolatilityTester:
     def run_tests(self):
         with open("volatility-timings.csv", 'w') as csvfile:
             self.csv_writer = csv.writer(csvfile)
-            self.csv_writer.writerow(
-                ["Image Path", "Plugin Name", "Volatility 3", "Volatility 2", "Image Info", "Volatility 2 Total"])
+            self.csv_writer.writerow([
+                "Image Path", "Plugin Name", "Volatility 3", "Volatility 3 (pypy)", "Volatility 2", "Image Info",
+                "Volatility 2 Total"
+            ])
             for image in self.images:
                 for plugin in self.plugins:
                     self.run_test(plugin, image)
@@ -95,8 +97,28 @@ class VolatilityTester:
         with open(os.path.join(self.output_directory, 'vol3_{}_{}_stdout'.format(plugin.name, image_hash)), "wb") as f:
             f.write(vol3_completed.stdout)
 
+        # Volatility 3 Pypy3 Test
+        print("[*] Testing volatility3 (pypy) {} with image {}".format(plugin.name, image.filepath))
+        os.chdir(self.volatility3_path)
+        cmd = [
+            "pypy3",
+            "-u",
+            "vol.py",
+            "-q",
+            "-f",
+            image.filepath,
+        ] + plugin.vol3_plugin_parameters + image.vol3_plugin_parameters.get(plugin.name, [])
+        start_time = time.perf_counter()
+        vol3_pypy_completed = subprocess.run(cmd, cwd = self.volatility3_path, capture_output = True)
+        end_time = time.perf_counter()
+        vol3_pypy_time = end_time - start_time
+        print("    Tested  volatility3 (pypy) {} with image {}: {}".format(plugin.name, image.filepath, vol3_pypy_time))
+        with open(os.path.join(self.output_directory, 'vol3_pypy_{}_{}_stdout'.format(plugin.name, image_hash)),
+                  "wb") as f:
+            f.write(vol3_pypy_completed.stdout)
+
         self.csv_writer.writerow([
-            image.filepath, plugin.name, vol3_time, vol2_time, image.vol2_imageinfo_time,
+            image.filepath, plugin.name, vol3_time, vol3_pypy_time, vol2_time, image.vol2_imageinfo_time,
             vol2_time + image.vol2_imageinfo_time
         ])
 
@@ -108,7 +130,22 @@ if __name__ == '__main__':
         VolatilityPlugin(
             name = "psscan", vol2_plugin_parameters = ["psscan"], vol3_plugin_parameters = ["windows.psscan"]),
         VolatilityPlugin(
+            name = "driverscan",
+            vol2_plugin_parameters = ["driverscan"],
+            vol3_plugin_parameters = ["windows.driverscan"]),
+        VolatilityPlugin(
+            name = "handles", vol2_plugin_parameters = ["handles"], vol3_plugin_parameters = ["windows.handles"]),
+        VolatilityPlugin(
+            name = "modules", vol2_plugin_parameters = ["modules"], vol3_plugin_parameters = ["windows.modules"]),
+        VolatilityPlugin(
             name = "hivelist", vol2_plugin_parameters = ["hivelist"], vol3_plugin_parameters = ["registry.hivelist"]),
+        VolatilityPlugin(
+            name = "vadinfo", vol2_plugin_parameters = ["vadinfo"], vol3_plugin_parameters = ["windows.vadinfo"]),
+        VolatilityPlugin(
+            name = "modscan", vol2_plugin_parameters = ["modscan"], vol3_plugin_parameters = ["windows.modscan"]),
+        VolatilityPlugin(
+            name = "svcscan", vol2_plugin_parameters = ["svcscan"], vol3_plugin_parameters = ["windows.svcscan"]),
+        VolatilityPlugin(name = "ssdt", vol2_plugin_parameters = ["ssdt"], vol3_plugin_parameters = ["windows.ssdt"]),
         VolatilityPlugin(
             name = "printkey",
             vol2_plugin_parameters = ["printkey", "-K", "Classes"],
