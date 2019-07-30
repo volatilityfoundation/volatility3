@@ -26,7 +26,7 @@ from volatility.framework.objects import utility
 from volatility.framework.symbols import intermed
 
 
-class PdbMSF(interfaces.layers.TranslationLayerInterface):
+class PdbMultiStreamFormat(interfaces.layers.TranslationLayerInterface):
     _headers = {
         "MSF_HDR": "Microsoft C/C++ program database 2.00\r\n\x1a\x4a\x47",
         "BIG_MSF_HDR": "Microsoft C/C++ MSF 7.00\r\n\x1a\x44\x53",
@@ -40,7 +40,7 @@ class PdbMSF(interfaces.layers.TranslationLayerInterface):
         super().__init__(context, config_path, name, metadata)
         self._base_layer = self.config["base_layer"]
 
-        self._pdb_symbol_table = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'mspdb')
+        self._pdb_symbol_table = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'pdb')
         response = self._check_header()
         if response is None:
             raise ValueError("Could not find a suitable header")
@@ -171,13 +171,13 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
         self._pages_len = len(self._pages)
         if not self._pages:
             raise ValueError("Invalid/no pages specified")
-        if not isinstance(self._pdb_layer, PdbMSF):
-            raise TypeError("Base Layer must be a PdbMSF layer")
+        if not isinstance(self._pdb_layer, PdbMultiStreamFormat):
+            raise TypeError("Base Layer must be a PdbMultiStreamFormat layer")
 
     @property
     def pdb_symbol_table(self) -> Optional[str]:
         layer = self._context.layers[self._base_layer]
-        if isinstance(layer, PdbMSF):
+        if isinstance(layer, PdbMultiStreamFormat):
             return layer.pdb_symbol_table
         else:
             return None
@@ -222,10 +222,10 @@ class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
         return self.config.get('maximum_size', len(self._pages) * self._pdb_layer.page_size)
 
     @property
-    def _pdb_layer(self) -> PdbMSF:
+    def _pdb_layer(self) -> PdbMultiStreamFormat:
         if self._base_layer not in self._context.layers:
-            raise ValueError("No PdbMSF layer found: {}".format(self._base_layer))
+            raise ValueError("No PdbMultiStreamFormat layer found: {}".format(self._base_layer))
         result = self._context.layers[self._base_layer]
-        if isinstance(result, PdbMSF):
+        if isinstance(result, PdbMultiStreamFormat):
             return result
-        raise ValueError("Base layer is not PdbMSF")
+        raise ValueError("Base layer is not PdbMultiStreamFormat")

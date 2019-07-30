@@ -37,7 +37,7 @@ from volatility.framework import constants, exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import intermed, native
-from volatility.framework.symbols.windows import mspdb
+from volatility.framework.symbols.windows import pdbconv
 
 if __name__ == "__main__":
     import sys
@@ -252,12 +252,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 data_written = False
                 with lzma.open(potential_output_filename, "w") as of:
                     # Once we haven't thrown an error, do the computation
-                    filename = mspdb.PdbRetreiver().retreive_pdb(
+                    filename = pdbconv.PdbRetreiver().retreive_pdb(
                         guid + str(age), file_name = pdb_name, progress_callback = progress_callback)
                     if filename:
                         tmp_files.append(filename)
                         location = "file:" + request.pathname2url(tmp_files[-1])
-                        json_output = mspdb.PdbReader(self.context, location, progress_callback).get_json()
+                        json_output = pdbconv.PdbReader(self.context, location, progress_callback).get_json()
                         of.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
                         # After we've successfully written it out, record the fact so we don't clear it out
                         data_written = True
