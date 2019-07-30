@@ -17,7 +17,6 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
 # specific language governing rights and limitations under the License.
 #
-import argparse
 import binascii
 import datetime
 import json
@@ -323,7 +322,7 @@ class PdbReader:
         msf_layer_name = context.layers.free_layer_name("MSFLayer")
         msf_config_path = interfaces.configuration.path_join("pdbreader", msf_layer_name)
         new_context.config[interfaces.configuration.path_join(msf_config_path, "base_layer")] = physical_layer_name
-        msf_layer = msf.PdbMSF(new_context, msf_config_path, msf_layer_name)
+        msf_layer = msf.PdbMultiStreamFormat(new_context, msf_config_path, msf_layer_name)
         new_context.add_layer(msf_layer)
 
         msf_layer.read_streams()
@@ -922,6 +921,7 @@ class PdbRetreiver:
 
 
 if __name__ == '__main__':
+    import argparse
 
     class PrintedProgress(object):
         """A progress handler that prints the progress value and the description onto the command line"""
