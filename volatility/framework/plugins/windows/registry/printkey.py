@@ -154,7 +154,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     node_path = [hive.get_node(hive.root_cell_offset)]
                 yield from self.hive_walker(hive, node_path)
 
-            except (exceptions.PagedInvalidAddressException, exceptions.InvalidAddressException, KeyError, RegistryFormatException) as excp:
+            except (exceptions.InvalidAddressException, KeyError, RegistryFormatException) as excp:
                 if type(excp) == KeyError:
                     vollog.debug("Key '{}' not found in Hive at offset {}.".format(self.config['key'],
                                                                                    hex(hive_offset)))
