@@ -55,10 +55,10 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         self._reg_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
                                                                        'registry')
 
-        self._cmhive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
-                                          self._hive_offset)
-
-        self.hive = self._cmhive.Hive
+        cmhive = self.context.object(self._table_name + constants.BANG + "_CMHIVE", self._base_layer,
+                                     self._hive_offset)
+        self._cmhive_name = cmhive.get_name()
+        self.hive = cmhive.Hive
 
         # TODO: Check the checksum
         if self.hive.Signature != 0xbee0bee0:
@@ -94,7 +94,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
         return self._maxaddr_volatile if volatile else self._maxaddr_non_volatile
 
     def get_name(self) -> str:
-        return self._cmhive.get_name() or "[NONAME]"
+        return self._cmhive_name or "[NONAME]"
 
     @property
     def hive_offset(self) -> int:
