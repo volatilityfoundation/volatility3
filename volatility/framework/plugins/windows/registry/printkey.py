@@ -118,8 +118,6 @@ class PrintKey(interfaces.plugins.PluginInterface):
                         sub_node_name = sub_node.get_name()
                     except exceptions.InvalidAddressException as excp:
                         vollog.debug(excp)
-                        vollog.log(constants.LOGLEVEL_VVV,
-                                   "Couldn't get subnode name at {}, not recursing".format(hex(sub_node.vol.offset)))
                         continue
 
                     yield from self.hive_walker(hive, node_path + [sub_node], key_path + "\\" + sub_node_name)
