@@ -81,7 +81,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 key_node_name = key_node.get_name()
             except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
                 vollog.debug(excp)
-                key_node_name = "-"
+                key_node_name = renderers.UnreadableValue()
 
             result = (self._get_depth(key_path), (last_write_time, renderers.format_hints.Hex(hive.hive_offset), "Key",
                                              key_path, key_node_name, "", key_node.get_volatile()))
@@ -92,19 +92,19 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 value_node_name = value_node.get_name() or "(Default)"
             except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
                 vollog.debug(excp)
-                value_node_name = "-"
+                value_node_name = renderers.UnreadableValue()
 
             try:
                 value_data = str(value_node.decode_data())
             except (ValueError, exceptions.InvalidAddressException, RegistryFormatException) as excp:
                 vollog.debug(excp)
-                value_data = "-"
+                value_data = renderers.UnreadableValue()
 
             try:
                 value_type = RegValueTypes.get(value_node.Type).name
             except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
                 vollog.debug(excp)
-                value_type = "-"
+                value_type = renderers.UnreadableValue()
 
             result = (self._get_depth(key_path), (last_write_time, renderers.format_hints.Hex(hive.hive_offset),
                                                  value_type, key_path, value_node_name,
