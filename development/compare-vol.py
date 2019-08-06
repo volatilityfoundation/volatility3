@@ -5,7 +5,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 import time
 from dataclasses import dataclass, field
 from typing import Dict, List
@@ -145,7 +144,14 @@ class Volatility3PyPyTest(VolatilityTest):
 
 class VolatilityTester:
 
-    def __init__(self, images, plugins, output_dir, vol2_path: str = None, vol3_path: str = None, rekall_path = None):
+    def __init__(self,
+                 images: List[VolatilityImage],
+                 plugins: List[VolatilityPlugin],
+                 frameworks: List[str],
+                 output_dir: str,
+                 vol2_path: str = None,
+                 vol3_path: str = None,
+                 rekall_path = None):
         self.images = images
         self.plugins = plugins
         if not vol2_path:
@@ -154,17 +160,19 @@ class VolatilityTester:
             vol3_path = output_dir
         if not rekall_path:
             rekall_path = output_dir
-        self.tests = [
+        available_tests = [
             Volatility3Test(vol3_path, output_dir),
             Volatility3PyPyTest(vol3_path, output_dir),
             Volatility2Test(vol2_path, output_dir),
             RekallTest(rekall_path, output_dir)
         ]
+        self.tests = [x for x in available_tests if x.short_name.lower() in frameworks]
         self.csv_writer = None
-        print("[?] Vol2 path", vol2_path)
-        print("[?] Vol3 path", vol3_path)
-        print("[?] Rekall path", rekall_path)
+        print(f"[?] Vol2 path {vol2_path}")
+        print(f"[?] Vol3 path {vol3_path}")
+        print(f"[?] Rekall path {rekall_path}")
         print("")
+        print(f"[?] Frameworks: {[x.long_name for x in self.tests]}")
 
     def run_tests(self):
         with open("volatility-timings.csv", 'w') as csvfile:
@@ -221,13 +229,33 @@ if __name__ == '__main__':
     ]
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-dir", type = str, default = os.getcwd())
-    parser.add_argument("--vol3path", type = str, default = os.path.join(os.getcwd(), 'volatility3'))
-    parser.add_argument("--vol2path", type = str, default = os.path.join(os.getcwd(), 'volatility'))
-    parser.add_argument("--rekallpath", type = str, default = os.path.join(os.getcwd(), 'rekall'))
+    parser.add_argument("--output-dir", type = str, default = os.getcwd(), help = "Directory to store all results")
+    parser.add_argument(
+        "--vol3path",
+        type = str,
+        default = os.path.join(os.getcwd(), 'volatility3'),
+        help = "Path ot the volatility 3 directory")
+    parser.add_argument(
+        "--vol2path",
+        type = str,
+        default = os.path.join(os.getcwd(), 'volatility'),
+        help = "Path to the volatility 2 directory")
+    parser.add_argument(
+        "--rekallpath",
+        type = str,
+        default = os.path.join(os.getcwd(), 'rekall'),
+        help = "Path to the rekall directory")
+    parser.add_argument(
+        "--frameworks",
+        nargs = "+",
+        type = str,
+        choices = [x.short_name.lower() for x in VolatilityTest.__subclasses__()],
+        default = [x.short_name.lower() for x in VolatilityTest.__subclasses__()],
+        help = "A comma separated list of frameworks to test")
     parser.add_argument('images', metavar = 'IMAGE', type = str, nargs = '+', help = 'The list of images to compare')
-    args, excess = parser.parse_args()
+    args = parser.parse_args()
 
-    vt = VolatilityTester([VolatilityImage(filepath = x) for x in args.images], plugins, args.output_dir, args.vol2path,
-                          args.vol3path, args.rekallpath)
+    vt = VolatilityTester([VolatilityImage(filepath = x) for x in args.images], plugins,
+                          [x.lower() for x in args.frameworks], args.output_dir, args.vol2path, args.vol3path,
+                          args.rekallpath)
     vt.run_tests()
