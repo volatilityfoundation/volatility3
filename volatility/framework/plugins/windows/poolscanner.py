@@ -358,9 +358,8 @@ class PoolScanner(plugins.PluginInterface):
         layer = context.layers[layer_name]
         scanner = scanners.MultiStringScanner([c for c in constraint_lookup.keys()])
         for offset, pattern in layer.scan(context, scanner, progress_callback = progress_callback):
+            header = module.object(type_name = "_POOL_HEADER", offset = offset - header_offset)
             for constraint in constraint_lookup[pattern]:
-                header = module.object(type_name = "_POOL_HEADER", offset = offset - header_offset)
-
                 # Size check
                 try:
                     if constraint.size is not None:
