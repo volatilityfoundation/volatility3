@@ -99,6 +99,14 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         parser.add_argument(
             "-c", "--config", help = "Load the configuration from a json file", default = None, type = str)
         parser.add_argument(
+            "--parallelism",
+            help = "Enables parallelism (defaults to processes if no argument given)",
+            nargs = '?',
+            choices = ['processes', 'threads', 'off'],
+            const = 'processes',
+            default = None,
+            type = str)
+        parser.add_argument(
             "-e",
             "--extend",
             help = "Extend the configuration with a new (or changed) setting",
@@ -170,6 +178,14 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             console.setLevel(30 - (partial_args.verbosity * 10))
         else:
             console.setLevel(10 - (partial_args.verbosity - 2))
+
+        # Set the PARALLELISM
+        if partial_args.parallelism == 'processes':
+            constants.PARALLELISM = constants.PARALLELISM_MULTIPROCESSING
+        elif partial_args.parallelism == 'threading':
+            constants.PARALLELISM = constants.PARALLELISM_THREADING
+        else:
+            constants.PARALLELISM = constants.PARALLELISM_OFF
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
