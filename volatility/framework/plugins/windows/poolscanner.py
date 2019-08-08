@@ -396,6 +396,7 @@ class PoolScanner(plugins.PluginInterface):
         # Setup the pool header and offset differential
         try:
             module = context.module(symbol_table, layer_name, offset = 0)
+            module.get_type("_POOL_HEADER")
         except exceptions.SymbolError:
             # We have to manually load a symbol table
 
