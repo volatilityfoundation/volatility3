@@ -28,7 +28,8 @@ import volatility.plugins.windows.modules as modules
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.framework.symbols.windows.pe import PEIntermedSymbols
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import extensions
 from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
@@ -107,7 +108,8 @@ class VerInfo(interfaces_plugins.PluginInterface):
             session_layers: <generator> of layers in the session to be checked
         """
 
-        pe_table_name = PEIntermedSymbols.create(self.context, self.config_path, "windows", "pe")
+        pe_table_name = intermed.IntermediateSymbolTable.create(
+            self.context, self.config_path, "windows", "pe", class_types = extensions.pe.class_types)
 
         for mod in mods:
             try:

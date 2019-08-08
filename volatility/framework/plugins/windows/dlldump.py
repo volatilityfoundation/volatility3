@@ -31,7 +31,8 @@ from volatility.framework import interfaces
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
-from volatility.framework.symbols.windows.pe import PEIntermedSymbols
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import extensions
 
 vollog = logging.getLogger(__name__)
 
@@ -54,7 +55,8 @@ class DllDump(interfaces_plugins.PluginInterface):
                                             optional = True)] + pslist.PsList.list_processes_filter_requirements
 
     def _generator(self, procs):
-        pe_table_name = PEIntermedSymbols.create(self.context, self.config_path, "windows", "pe")
+        pe_table_name = intermed.IntermediateSymbolTable.create(
+            self.context, self.config_path, "windows", "pe", class_types = extensions.pe.class_types)
 
         filter_func = lambda _: False
         if self.config.get('address', None) is not None:
