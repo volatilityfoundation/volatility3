@@ -44,6 +44,9 @@ class _POOL_HEADER(objects.StructType):
         if constants.BANG in type_name:
             symbol_table_name, type_name = type_name.split(constants.BANG)[0:2]
 
+        object_header_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_OBJECT_HEADER")
+        infomask_offset = object_header_type.relative_child_offset('InfoMask')
+
         pool_header_size = self.vol.size
 
         # if there is no object type, then just instantiate a structure
@@ -61,25 +64,44 @@ class _POOL_HEADER(objects.StructType):
             else:
                 alignment = 8
 
-            # FIXME: calculate and cache this
-            max_optional_headers_length = 0x60
+            lengths_of_optional_headers = self._calculate_optional_header_lengths(self._context, symbol_table_name)
+            max_optional_headers_length = sum(lengths_of_optional_headers)
 
             # use the top down approach for windows 8 and later
             if use_top_down:
                 # define the starting and ending bounds for the scan
                 start_offset = self.vol.offset + pool_header_size
-                end_offset = start_offset + min(max_optional_headers_length, self.BlockSize * alignment)
+                addr_limit = min(max_optional_headers_length, self.BlockSize * alignment)
 
-                for addr in range(start_offset, end_offset, alignment):
-                    object_header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER",
-                                                         layer_name = self.vol.layer_name,
-                                                         offset = addr,
-                                                         native_layer_name = native_layer_name)
+                # A single read is better than lots of little one-byte reads.
+                # We're ok padding this, because the byte we'd check would be 0 which would only be valid if there
+                # were no optional headers in the first place (ie, if we read too much for headers that don't exist,
+                # but the bit we could read were valid)
+                infomask_data = self._context.layers[self.vol.layer_name].read(
+                    start_offset + infomask_offset, addr_limit, pad = True)
 
-                    if not object_header.is_valid():
+                for addr in range(0, addr_limit, alignment):
+                    infomask_value = infomask_data[addr]
+
+                    optional_headers_length = 0
+                    for i in range(len(lengths_of_optional_headers)):
+                        if infomask_value & (1 << i):
+                            optional_headers_length += lengths_of_optional_headers[i]
+
+                    if optional_headers_length != addr:
                         continue
 
                     try:
+
+                        object_header = self._context.object(
+                            symbol_table_name + constants.BANG + "_OBJECT_HEADER",
+                            layer_name = self.vol.layer_name,
+                            offset = addr + start_offset,
+                            native_layer_name = native_layer_name)
+
+                        if not object_header.is_valid():
+                            continue
+
                         object_type_string = object_header.get_object_type(type_map, cookie)
                         if object_type_string == object_type:
 
@@ -112,6 +134,26 @@ class _POOL_HEADER(objects.StructType):
                     return None
         return None
 
+    @classmethod
+    @functools.lru_cache()
+    def _calculate_optional_header_lengths(cls, context: interfaces.context.ContextInterface,
+                                           symbol_table_name: str) -> List[int]:
+        sizes = []
+        for header in [
+                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
+                'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
+        ]:
+            try:
+                type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)
+                header_type = context.symbol_space.get_type(type_name)
+                sizes.append(header_type.size)
+            except:
+                # Some of these may not exist, for example:
+                #   if build < 9200: PADDING_INFO else: AUDIT_INFO
+                #   if build == 10586: HANDLE_REVOCATION_INFO else EXTENDED_INFO
+                # based on what's present and what's not, this list should be the right order and the right length
+                pass
+        return sizes
 
 class _KSYSTEM_TIME(objects.StructType):
     """A system time structure that stores a high and low part."""
