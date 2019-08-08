@@ -835,7 +835,9 @@ class PdbReader:
                     _, name, toplevel_type = self.types[element_type - 0x1000]
                     loop = False
                     # If there's no name, the original size is probably fine as long as we're not indirect (LF_MODIFIER)
-                    if not name and toplevel_type.vol.type_name.endswith('LF_MODIFIER'):
+                    if not name and isinstance(
+                            toplevel_type,
+                            interfaces.objects.ObjectInterface) and toplevel_type.vol.type_name.endswith('LF_MODIFIER'):
                         # We have check they don't point to a forward reference, so we go round again with the subtype
                         element_type = toplevel_type.subtype_index
                         loop = True
