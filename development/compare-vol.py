@@ -197,11 +197,15 @@ if __name__ == '__main__':
         VolatilityPlugin(
             name = "pslist", vol2_plugin_parameters = ["pslist"], vol3_plugin_parameters = ["windows.pslist"]),
         VolatilityPlugin(
-            name = "psscan", vol2_plugin_parameters = ["psscan"], vol3_plugin_parameters = ["windows.psscan"]),
+            name = "psscan",
+            vol2_plugin_parameters = ["psscan"],
+            vol3_plugin_parameters = ["windows.psscan"],
+            rekall_plugin_parameters = ["psscan", "--scan_kernel"]),
         VolatilityPlugin(
             name = "driverscan",
             vol2_plugin_parameters = ["driverscan"],
-            vol3_plugin_parameters = ["windows.driverscan"]),
+            vol3_plugin_parameters = ["windows.driverscan"],
+            rekall_plugin_parameters = ["driverscan", "--scan_kernel"]),
         VolatilityPlugin(
             name = "handles", vol2_plugin_parameters = ["handles"], vol3_plugin_parameters = ["windows.handles"]),
         VolatilityPlugin(
@@ -217,9 +221,15 @@ if __name__ == '__main__':
             vol3_plugin_parameters = ["windows.vadinfo"],
             rekall_plugin_parameters = ["vad"]),
         VolatilityPlugin(
-            name = "modscan", vol2_plugin_parameters = ["modscan"], vol3_plugin_parameters = ["windows.modscan"]),
+            name = "modscan",
+            vol2_plugin_parameters = ["modscan"],
+            vol3_plugin_parameters = ["windows.modscan"],
+            rekall_plugin_parameters = ["modscan", "--scan_kernel"]),
         VolatilityPlugin(
-            name = "svcscan", vol2_plugin_parameters = ["svcscan"], vol3_plugin_parameters = ["windows.svcscan"]),
+            name = "svcscan",
+            vol2_plugin_parameters = ["svcscan"],
+            vol3_plugin_parameters = ["windows.svcscan"],
+            rekall_plugin_parameters = ["svcscan", "--scan_kernel"]),
         VolatilityPlugin(name = "ssdt", vol2_plugin_parameters = ["ssdt"], vol3_plugin_parameters = ["windows.ssdt"]),
         VolatilityPlugin(
             name = "printkey",
