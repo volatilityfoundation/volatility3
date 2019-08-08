@@ -556,9 +556,12 @@ class _OBJECT_HEADER(objects.StructType):
         This API abstracts away those details.
         """
 
+        if self.vol.get('object_header_object_type', None) is not None:
+            return self.vol.object_header_object_type
+
         try:
             # vista and earlier have a Type member
-            return self.Type.Name.String
+            self._vol['object_header_object_type'] = self.Type.Name.String
         except AttributeError:
             # windows 7 and later have a TypeIndex, but windows 10
             # further encodes the index value with nt1!ObHeaderCookie
@@ -567,7 +570,8 @@ class _OBJECT_HEADER(objects.StructType):
             except (AttributeError, TypeError):
                 type_index = self.TypeIndex
 
-            return type_map.get(type_index)
+            self._vol['object_header_object_type'] = type_map.get(type_index)
+        return self.vol.object_header_object_type
 
     @property
     def NameInfo(self) -> interfaces.objects.ObjectInterface:
