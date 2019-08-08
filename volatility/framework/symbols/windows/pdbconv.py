@@ -658,11 +658,11 @@ class PdbReader:
                     else:
                         raise ValueError("Pointer size could not be determined")
             elif leaf_type in [leaf_type.LF_PROCEDURE]:
-                result = -1
+                raise ValueError("LF_PROCEDURE size could not be identified")
             else:
                 raise ValueError("Unable to determine size of leaf_type {}".format(leaf_type.lookup()))
         if result <= 0:
-            raise ValueError("Invalid size identified: {} ({})".format(index, name, result))
+            raise ValueError("Invalid size identified: {} ({})".format(index, name))
         return result
 
     ### TYPE HANDLING CODE
@@ -830,10 +830,18 @@ class PdbReader:
             element_type = types.element_type
             # If we're a forward array count, we need to do the calculation now after all the types have been processed
             if element_type > 0x1000:
-                _, name, _ = self.types[types.element_type - 0x1000]
-                # If there's no name, the original size is probably fine
-                if name:
-                    element_type = type_references[name] + 0x1000
+                loop = True
+                while loop:
+                    _, name, toplevel_type = self.types[element_type - 0x1000]
+                    loop = False
+                    # If there's no name, the original size is probably fine as long as we're not indirect (LF_MODIFIER)
+                    if not name and toplevel_type.vol.type_name.endswith('LF_MODIFIER'):
+                        # We have check they don't point to a forward reference, so we go round again with the subtype
+                        element_type = toplevel_type.subtype_index
+                        loop = True
+                    elif name:
+                        # If there is a name, look it up so we're not using a reference but the real thing
+                        element_type = type_references[name] + 0x1000
             return types.size // self.get_size_from_index(element_type)
         return types
 
