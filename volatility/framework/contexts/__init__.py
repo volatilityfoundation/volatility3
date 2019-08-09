@@ -186,16 +186,14 @@ class Module(interfaces.context.ModuleInterface):
                 raise ValueError("Symbol {} has no associated type information".format(symbol.name))
             type_arg = symbol.type
             offset = symbol.address
+            if not self._absolute_symbol_addresses:
+                offset += self._offset
         elif type_name is not None and offset is not None:
             if constants.BANG in type_name:
                 raise ValueError("Type_name cannot reference another module")
             type_arg = self.symbol_table_name + constants.BANG + type_name
         else:
             raise ValueError("One of symbol_name, or type_name & offset, must be specified to construct a module")
-
-        # If we're using module-relative-addresses, add on the module offset
-        if not self._absolute_symbol_addresses:
-            offset += self._offset
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
         if 'layer_name' in kwargs:
             del kwargs['layer_name']
