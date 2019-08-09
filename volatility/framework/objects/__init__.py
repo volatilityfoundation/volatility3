@@ -451,6 +451,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         raise NotImplementedError("Writing to Enumerations is not yet implemented")
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+        _methods = ['lookup']
 
         @classmethod
         def lookup(cls, template: interfaces.objects.Template, value: int) -> str:

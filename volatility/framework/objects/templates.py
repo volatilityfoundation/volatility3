@@ -17,6 +17,7 @@
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
 # specific language governing rights and limitations under the License.
 #
+import functools
 import logging
 from typing import Any, ClassVar, Dict, List, Type
 
@@ -40,11 +41,9 @@ class ObjectTemplate(interfaces.objects.Template):
         super().__init__(type_name = type_name, **arguments)
         self._arguments['object_class'] = object_class
 
-        # proxy_cls = self.vol.object_class.VolTemplateProxy
-        # for method_name in dir(proxy_cls):
-        #     if (method_name not in dir(interfaces.objects.ObjectInterface.VolTemplateProxy)
-        #             and callable(getattr(proxy_cls, method_name)) and not method_name.startswith('_')):
-        #         setattr(self, method_name, functools.partial(getattr(proxy_cls, method_name), self))
+        proxy_cls = self.vol.object_class.VolTemplateProxy
+        for method_name in proxy_cls._methods:
+            setattr(self, method_name, functools.partial(getattr(proxy_cls, method_name), self))
 
     @property
     def size(self) -> int:
