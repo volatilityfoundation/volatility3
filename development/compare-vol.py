@@ -50,7 +50,7 @@ class VolatilityTest:
         os.chdir(self.path)
         cmd = self.plugin_cmd(plugin, image)
         start_time = time.perf_counter()
-        completed = subprocess.run(cmd, cwd = self.path, capture_output = True)
+        completed = subprocess.run(cmd, cwd = self.path, capture_output = True, timeout = 300)
         end_time = time.perf_counter()
         total_time = end_time - start_time
         print("    Tested  {} {} with image {}: {}".format(self.short_name, plugin.name, image.filepath, total_time))
