@@ -174,7 +174,7 @@ class ObjectInterface(metaclass = ABCMeta):
         Each method also takes a template since the templates may contain the necessary data about the
         yet-to-be-constructed object.  It allows objects to control how their templates respond without needing to write
         new templates for each and every potental object type."""
-        _methods = []
+        _methods = []  # type: List[str]
 
         @classmethod
         @abc.abstractmethod
