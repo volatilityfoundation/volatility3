@@ -77,6 +77,7 @@ class ContextInterface(object, metaclass = ABCMeta):
                symbol: Union[str, 'interfaces.objects.Template'],
                layer_name: str,
                offset: int,
+               symbol_type: Optional[constants.SymbolType] = None,
                native_layer_name: str = None,
                **arguments):
         """Object factory, takes a context, symbol, offset and optional layer_name
