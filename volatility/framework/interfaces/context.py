@@ -147,7 +147,7 @@ class ModuleInterface(metaclass = ABCMeta):
 
     @abstractmethod
     def object(self,
-               symbol: Union[str, 'interfaces.objects.Template'],
+               symbol: str,
                symbol_type: Optional[constants.SymbolType] = None,
                offset: int = None,
                native_layer_name: Optional[str] = None,
