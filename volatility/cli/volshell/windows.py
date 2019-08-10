@@ -44,7 +44,7 @@ class Volshell(shellplugin.Volshell):
         ntkrnlmp = self.context.module(self.config['nt_symbols'], layer_name = layer_name, offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
-        list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + ps_aph_offset)
+        list_entry = ntkrnlmp.object(symbol = "_LIST_ENTRY", offset = ps_aph_offset)
 
         # This is example code to demonstrate how to use symbol_space directly, rather than through a module:
         #
@@ -58,7 +58,7 @@ class Volshell(shellplugin.Volshell):
         # having been present.  Strictly, the value of the requirement should be joined with the BANG character
         # defined in the constants file
         reloff = ntkrnlmp.get_type("_EPROCESS").relative_child_offset("ActiveProcessLinks")
-        eproc = ntkrnlmp.object(type_name = "_EPROCESS", offset = list_entry.vol.offset - reloff)
+        eproc = ntkrnlmp.object(symbol = "_EPROCESS", offset = list_entry.vol.offset - reloff, absolute = True)
 
         for proc in eproc.ActiveProcessLinks:
             yield proc

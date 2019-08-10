@@ -25,11 +25,10 @@ class Check_syscall(plugins.PluginInterface):
     def _generator(self):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
-        kernel = contexts.Module(
-            self._context, self.config['darwin'], self.config['primary'], 0, absolute_symbol_addresses = True)
+        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        nsysent = kernel.object(symbol_name = "nsysent")
-        table = kernel.object(symbol_name = "sysent")
+        nsysent = kernel.object(symbol = "nsysent", symbol_type = constants.SymbolType.SYMBOL)
+        table = kernel.object(symbol = "sysent", symbol_type = constants.SymbolType.SYMBOL)
 
         # smear help
         num_ents = min(nsysent, table.count)

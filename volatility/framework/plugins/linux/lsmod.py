@@ -23,8 +23,8 @@ typically found in Linux's /proc file system.
 
 from typing import List
 
+from volatility.framework import contexts
 from volatility.framework import renderers, constants, interfaces
-from volatility.framework import exceptions, contexts
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
@@ -48,9 +48,9 @@ class Lsmod(plugins.PluginInterface):
         """Lists all the modules in the primary layer"""
         linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
-        vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0, absolute_symbol_addresses = True)
+        vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)
 
-        modules = vmlinux.object(symbol_name = "modules").cast("list_head")
+        modules = vmlinux.object(symbol = "modules", symbol_type = constants.SymbolType.SYMBOL).cast("list_head")
 
         table_name = modules.vol.type_name.split(constants.BANG)[0]
 

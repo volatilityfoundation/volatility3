@@ -98,7 +98,7 @@ class Check_afinfo(plugins.PluginInterface):
                 except exceptions.SymbolError:
                     continue
 
-                global_var = vmlinux.object(type_name = struct_type, offset = global_var.address)
+                global_var = vmlinux.object(symbol = struct_type, offset = global_var.address)
 
                 for name, member, address in self._check_afinfo(global_var_name, global_var, op_members, seq_members):
                     yield 0, (name, member, format_hints.Hex(address))

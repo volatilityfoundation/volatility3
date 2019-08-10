@@ -63,8 +63,7 @@ class PdbMultiStreamFormat(interfaces.layers.TranslationLayerInterface):
         root_table_num_pages = math.ceil(self._header.StreamInfo.StreamInfoSize / self._header.PageSize)
         root_index_size = math.ceil((root_table_num_pages * entry_size) / self._header.PageSize)
         root_index = module.object(
-            type_name = "array",
-            layer_name = self._base_layer,
+            symbol = "array",
             offset = self._header.vol.size,
             count = root_index_size,
             subtype = module.get_type("unsigned long"))
@@ -73,14 +72,14 @@ class PdbMultiStreamFormat(interfaces.layers.TranslationLayerInterface):
 
         module = self.context.module(self.pdb_symbol_table, root_index_layer_name, offset = 0)
         root_pages = module.object(
-            type_name = "array", offset = 0, count = root_table_num_pages, subtype = module.get_type("unsigned long"))
+            symbol = "array", offset = 0, count = root_table_num_pages, subtype = module.get_type("unsigned long"))
         root_layer_name = self.create_stream_from_pages("root", self._header.StreamInfo.StreamInfoSize,
                                                         [x for x in root_pages])
 
         module = self.context.module(self.pdb_symbol_table, root_layer_name, offset = 0)
-        num_streams = module.object(type_name = "unsigned long", offset = 0)
+        num_streams = module.object(symbol = "unsigned long", offset = 0)
         stream_sizes = module.object(
-            type_name = "array", offset = entry_size, count = num_streams, subtype = module.get_type("unsigned long"))
+            symbol = "array", offset = entry_size, count = num_streams, subtype = module.get_type("unsigned long"))
 
         current_offset = (num_streams + 1) * entry_size
 
@@ -90,7 +89,7 @@ class PdbMultiStreamFormat(interfaces.layers.TranslationLayerInterface):
                 self._streams[stream] = None
             else:
                 stream_page_list = module.object(
-                    type_name = "array",
+                    symbol = "array",
                     offset = current_offset,
                     count = list_size,
                     subtype = module.get_type("unsigned long"))

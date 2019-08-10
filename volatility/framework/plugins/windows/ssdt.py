@@ -19,7 +19,7 @@
 #
 
 import os
-from typing import Any, Iterator, List, Tuple, Sequence
+from typing import Any, Iterator, List, Tuple
 
 from volatility.framework import constants, interfaces
 from volatility.framework import contexts
@@ -85,7 +85,7 @@ class SSDT(plugins.PluginInterface):
         ## we could also find nt!KeServiceDescriptorTable (NT) and KeServiceDescriptorTableShadow (NT, Win32K)
         service_table_address = ntkrnlmp.get_symbol("KiServiceTable").address
         service_limit_address = ntkrnlmp.get_symbol("KiServiceLimit").address
-        service_limit = ntkrnlmp.object(type_name = "int", offset = kvo + service_limit_address)
+        service_limit = ntkrnlmp.object(symbol = "int", offset = service_limit_address)
 
         # on 32-bit systems the table indexes are 32-bits and contain pointers (unsigned)
         # on 64-bit systems the indexes are also 32-bits but they're offsets from the
@@ -107,8 +107,8 @@ class SSDT(plugins.PluginInterface):
             find_address = passthrough
 
         functions = ntkrnlmp.object(
-            type_name = "array",
-            offset = kvo + service_table_address,
+            symbol = "array",
+            offset = service_table_address,
             subtype = ntkrnlmp.get_type(array_subtype),
             count = service_limit)
 

@@ -87,7 +87,8 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
 
     def __call__(self, data: bytes, data_offset: int):
         for offset, pattern in self._subscanner(data, data_offset):
-            header = self._module.object(type_name = "_POOL_HEADER", offset = offset - self._header_offset)
+            header = self._module.object(
+                symbol = "_POOL_HEADER", offset = offset - self._header_offset, absolute = True)
             constraint = self._constraint_lookup[pattern]
             try:
                 # Size check

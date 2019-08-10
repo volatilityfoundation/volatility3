@@ -78,8 +78,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
         kvo = context.layers[virtual_layer].config["kernel_virtual_offset"]
         ntkrnlmp = context.module(nt_symbols, layer_name = virtual_layer, offset = kvo)
         addr = ntkrnlmp.get_symbol("MmProtectToValue").address
-        values = ntkrnlmp.object(
-            type_name = "array", offset = kvo + addr, subtype = ntkrnlmp.get_type("int"), count = 32)
+        values = ntkrnlmp.object(symbol = "array", offset = addr, subtype = ntkrnlmp.get_type("int"), count = 32)
         return values  # type: ignore
 
     @classmethod

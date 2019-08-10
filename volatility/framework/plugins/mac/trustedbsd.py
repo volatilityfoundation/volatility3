@@ -47,13 +47,13 @@ class Check_syscall(plugins.PluginInterface):
     def _generator(self, mods: Iterator[Any]):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
-        kernel = contexts.Module(
-            self._context, self.config['darwin'], self.config['primary'], 0, absolute_symbol_addresses = True)
+        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        policy_list = kernel.object(symbol_name = "_mac_policy_list").cast("mac_policy_list")
+        policy_list = kernel.object(
+            symbol = "_mac_policy_list", symbol_type = constants.SymbolType.SYMBOL).cast("mac_policy_list")
 
         entries = kernel.object(
-            type_name = "array",
+            symbol = "array",
             offset = policy_list.entries.dereference().vol.offset,
             subtype = kernel.get_type('mac_policy_list_element'),
             count = policy_list.staticmax + 1)

@@ -21,7 +21,7 @@
 from typing import Callable, Iterable, List
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import renderers, interfaces, contexts
+from volatility.framework import renderers, interfaces, contexts, constants
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -75,9 +75,9 @@ class PsList(interfaces_plugins.PluginInterface):
         """Lists all the tasks in the primary layer"""
         linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
-        vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0, absolute_symbol_addresses = True)
+        vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)
 
-        init_task = vmlinux.object(symbol_name = "init_task")
+        init_task = vmlinux.object(symbol = "init_task", symbol_type = constants.SymbolType.SYMBOL)
 
         for task in init_task.tasks:
             if not filter_func(task):

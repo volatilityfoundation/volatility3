@@ -21,7 +21,7 @@
 typically found in Mac's lsmod command.
 """
 
-from volatility.framework import renderers, interfaces, contexts
+from volatility.framework import renderers, interfaces, contexts, constants
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
@@ -45,9 +45,9 @@ class Lsmod(plugins.PluginInterface):
         """Lists all the modules in the primary layer"""
         mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0, absolute_symbol_addresses = True)
+        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
-        kmod_ptr = kernel.object(symbol_name = "kmod")
+        kmod_ptr = kernel.object(symbol = "kmod", symbol_type = constants.SymbolType.SYMBOL)
 
         # TODO - use smear-proof list walking API after dev release
         kmod = kmod_ptr.dereference().cast("kmod_info")

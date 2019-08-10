@@ -25,10 +25,9 @@ class Check_trap_table(plugins.PluginInterface):
     def _generator(self):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
-        kernel = contexts.Module(
-            self._context, self.config['darwin'], self.config['primary'], 0, absolute_symbol_addresses = True)
+        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        table = kernel.object(symbol_name = "mach_trap_table")
+        table = kernel.object(symbol = "mach_trap_table", symbol_type = constants.SymbolType.SYMBOL)
 
         for i, ent in enumerate(table):
             try:
