@@ -75,9 +75,9 @@ class Modules(interfaces.plugins.PluginInterface):
         type_name = ldr_entry_type.type_name.split(constants.BANG)[1]
 
         list_head = ntkrnlmp.get_symbol("PsLoadedModuleList").address
-        list_entry = ntkrnlmp.object(type_name = "_LIST_ENTRY", offset = kvo + list_head)
+        list_entry = ntkrnlmp.object(symbol = "_LIST_ENTRY", offset = list_head)
         reloff = ldr_entry_type.relative_child_offset("InLoadOrderLinks")
-        module = ntkrnlmp.object(type_name = type_name, offset = list_entry.vol.offset - reloff)
+        module = ntkrnlmp.object(symbol = type_name, offset = list_entry.vol.offset - reloff, absolute = True)
 
         for mod in module.InLoadOrderLinks:
             yield mod

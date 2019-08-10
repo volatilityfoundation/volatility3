@@ -162,7 +162,7 @@ class Handles(interfaces_plugins.PluginInterface):
             table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
 
         ptrs = ntkrnlmp.object(
-            type_name = "array", offset = kvo + table_addr, subtype = ntkrnlmp.get_type("pointer"), count = 100)
+            symbol = "array", offset = table_addr, subtype = ntkrnlmp.get_type("pointer"), count = 100)
 
         for i, ptr in enumerate(ptrs):  #type: ignore
             # the first entry in the table is always null. break the
@@ -214,7 +214,7 @@ class Handles(interfaces_plugins.PluginInterface):
         if not self.context.layers[virtual].is_valid(offset):
             return
 
-        table = ntkrnlmp.object(type_name = "array", offset = offset, subtype = subtype, count = int(count))
+        table = ntkrnlmp.object(symbol = "array", offset = offset, subtype = subtype, count = int(count))
 
         layer_object = self.context.layers[virtual]
         masked_offset = (offset & layer_object.maximum_address)

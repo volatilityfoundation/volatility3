@@ -27,7 +27,7 @@ import copy
 from abc import ABCMeta, abstractmethod
 from typing import Optional, Union
 
-from volatility.framework import interfaces
+from volatility.framework import interfaces, constants
 
 
 class ContextInterface(object, metaclass = ABCMeta):
@@ -115,8 +115,7 @@ class ModuleInterface(metaclass = ABCMeta):
                  layer_name: str,
                  offset: int,
                  symbol_table_name: Optional[str] = None,
-                 native_layer_name: Optional[str] = None,
-                 absolute_symbol_addresses: bool = False) -> None:
+                 native_layer_name: Optional[str] = None) -> None:
         self._context = context
         self._module_name = module_name
         self._layer_name = layer_name
@@ -125,7 +124,6 @@ class ModuleInterface(metaclass = ABCMeta):
         if native_layer_name:
             self._native_layer_name = native_layer_name
         self.symbol_table_name = symbol_table_name or self._module_name
-        self._absolute_symbol_addresses = absolute_symbol_addresses
         super().__init__()
 
     @property
@@ -148,7 +146,12 @@ class ModuleInterface(metaclass = ABCMeta):
         return self._context
 
     @abstractmethod
-    def object(self, symbol_name: str = None, type_name: str = None, offset: int = None,
+    def object(self,
+               symbol: Union[str, 'interfaces.objects.Template'],
+               symbol_type: Optional[constants.SymbolType] = None,
+               offset: int = None,
+               native_layer_name: Optional[str] = None,
+               absolute: bool = False,
                **kwargs) -> 'interfaces.objects.ObjectInterface':
         """Returns an object created using the symbol_table_name and layer_name of the Module"""
 

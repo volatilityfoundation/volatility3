@@ -12,6 +12,7 @@ from volatility.framework.objects import utility
 
 vollog = logging.getLogger(__name__)
 
+
 class Check_sysctl(plugins.PluginInterface):
     """Check sysctl handlers for hooks"""
 
@@ -25,17 +26,17 @@ class Check_sysctl(plugins.PluginInterface):
 
     def _parse_global_variable_sysctls(self, kernel, name):
         known_sysctls = {
-            "hostname"      : "hostname",
-            "nisdomainname" : "domainname",
+            "hostname": "hostname",
+            "nisdomainname": "domainname",
         }
-            
+
         var_str = ""
 
         if name in known_sysctls:
             var_name = known_sysctls[name]
 
             try:
-                var_array = kernel.object(symbol_name = var_name)
+                var_array = kernel.object(symbol = var_name)
             except exceptions.SymbolError:
                 var_array = None
 
@@ -61,7 +62,7 @@ class Check_sysctl(plugins.PluginInterface):
                 name = utility.pointer_to_string(sysctl.oid_name, 128)
             except exceptions.PagedInvalidAddressException:
                 name = ""
-            
+
             if len(name) == 0:
                 break
 
@@ -103,14 +104,13 @@ class Check_sysctl(plugins.PluginInterface):
                 sysctl = sysctl.oid_link.sle_next
             except exceptions.PagedInvalidAddressException:
                 break
-            
+
     def _generator(self):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
-        kernel = contexts.Module(
-            self._context, self.config['darwin'], self.config['primary'], 0, absolute_symbol_addresses = True)
+        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        sysctl_list = kernel.object(symbol_name = "sysctl__children")
+        sysctl_list = kernel.object(symbo = "sysctl__children", symbol_type = constants.SymbolType.SYMBOL)
 
         for sysctl, name, val in self._process_sysctl_list(kernel, sysctl_list):
             check_addr = sysctl.oid_handler
@@ -130,4 +130,5 @@ class Check_sysctl(plugins.PluginInterface):
 
     def run(self):
         return renderers.TreeGrid([("Name", str), ("Number", int), ("Perms", str),
-                                   ("Handler Address", format_hints.Hex), ("Value", str), ("Handler Symbol", str)], self._generator())
+                                   ("Handler Address", format_hints.Hex), ("Value", str), ("Handler Symbol", str)],
+                                  self._generator())

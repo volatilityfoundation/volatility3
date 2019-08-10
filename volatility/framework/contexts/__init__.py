@@ -93,6 +93,7 @@ class Context(interfaces.context.ContextInterface):
                symbol: Union[str, interfaces.objects.Template],
                layer_name: str,
                offset: int,
+               symbol_type: Optional[constants.SymbolType] = None,
                native_layer_name: Optional[str] = None,
                **arguments) -> interfaces.objects.ObjectInterface:
         """Object factory, takes a context, symbol, offset and optional layername
@@ -110,11 +111,20 @@ class Context(interfaces.context.ContextInterface):
             A fully constructed object
         """
         if not isinstance(symbol, interfaces.objects.Template):
-            object_template = self._symbol_space.get_type(symbol)
+            if symbol_type == constants.SymbolType.SYMBOL:
+                symbol_obj = self._symbol_space.get_symbol(symbol)
+                if symbol_obj.type is None:
+                    raise ValueError("Symbol {} has no associated type information".format(symbol_obj.name))
+                object_template = symbol_obj.type
+            elif symbol_type == constants.SymbolType.ENUM:
+                object_template = self._symbol_space.get_enumeration(symbol)
+            else:
+                object_template = self._symbol_space.get_type(symbol)
         else:
             object_template = symbol
             # Ensure that if a pre-constructed type is provided we just instantiate it
             arguments.update(object_template.vol)
+
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
         return object_template(
@@ -149,9 +159,11 @@ def get_module_wrapper(method: str) -> Callable:
     """Returns a symbol using the symbol_table_name of the Module"""
 
     def wrapper(self, name: str) -> Callable:
-        if constants.BANG in name:
-            raise ValueError("Name cannot reference another module")
-        return getattr(self._context.symbol_space, method)(self._module_name + constants.BANG + name)
+        if constants.BANG not in name:
+            name = self._module_name + constants.BANG + name
+        else:
+            raise ValueError("Cannot reference another module when calling {}".format(method))
+        return getattr(self._context.symbol_space, method)(name)
 
     for entry in ['__annotations__', '__doc__', '__module__', '__name__', '__qualname__']:
         proxy_interface = getattr(interfaces.context.ModuleInterface, method)
@@ -164,40 +176,45 @@ def get_module_wrapper(method: str) -> Callable:
 class Module(interfaces.context.ModuleInterface):
 
     def object(self,
-               symbol_name: Optional[str] = None,
-               type_name: Optional[str] = None,
-               offset: Optional[int] = None,
+               symbol: str,
+               symbol_type: Optional[constants.SymbolType] = None,
+               offset: int = None,
                native_layer_name: Optional[str] = None,
-               **kwargs) -> interfaces.objects.ObjectInterface:
+               absolute: bool = False,
+               **kwargs) -> 'interfaces.objects.ObjectInterface':
         """Returns an object created using the symbol_table_name and layer_name of the Module
 
         Args:
-            symbol_name: Name of the symbol (within the module) to construct, type_name and offset must not be specified
-            type_name: Name of the type (within the module) to construct, offset must be specified and symbol_name must not
-            offset: The location (absolute within memory), type_name must be specified and symbol_name must not
+            symbol: Name of the type/symbol/enumeration (within the module) to construct
+            symbol_type: One of the SymbolType enumeratino (Type/Symbol/Enum), defaults to Type
+            offset: The location of the object, ignored when symbol_type is SYMBOL 
             native_layer_name: Name of the layer in which constructed objects are made (for pointers)
         """
-        type_arg = None  # type: Optional[Union[str, interfaces.objects.Template]]
-        if symbol_name is not None:
-            if constants.BANG in symbol_name:
-                raise ValueError("Symbol_name cannot reference another module")
-            symbol = self._context.symbol_space.get_symbol(self.symbol_table_name + constants.BANG + symbol_name)
-            if symbol.type is None:
-                raise ValueError("Symbol {} has no associated type information".format(symbol.name))
-            type_arg = symbol.type
-            offset = symbol.address
-            if not self._absolute_symbol_addresses:
-                offset += self._offset
-        elif type_name is not None and offset is not None:
-            if constants.BANG in type_name:
-                raise ValueError("Type_name cannot reference another module")
-            type_arg = self.symbol_table_name + constants.BANG + type_name
+        if constants.BANG not in symbol:
+            symbol = self.symbol_table_name + constants.BANG + symbol
         else:
-            raise ValueError("One of symbol_name, or type_name & offset, must be specified to construct a module")
+            raise ValueError("Cannot reference another module when constructing an object")
+
+        # Only set the offset if type is Symbol and we were given a name, not a template
+        if symbol_type == constants.SymbolType.SYMBOL:
+            offset = self._context.symbol_space.get_symbol(symbol).address
+
+        if offset is None:
+            raise ValueError("Offset must not be None for non-symbol objects")
+
+        if not absolute:
+            offset += self._offset
+
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
         if 'layer_name' in kwargs:
             del kwargs['layer_name']
-        return self._context.object(type_arg, self._layer_name, offset, native_layer_name, **kwargs)
+        return self._context.object(
+            symbol = symbol,
+            symbol_type = symbol_type,
+            layer_name = self._layer_name,
+            offset = offset,
+            native_layer_name = native_layer_name,
+            **kwargs)
 
     get_symbol = get_module_wrapper('get_symbol')
     get_type = get_module_wrapper('get_type')
@@ -216,16 +233,14 @@ class SizedModule(Module):
                  offset: int,
                  size: int,
                  symbol_table_name: Optional[str] = None,
-                 native_layer_name: Optional[str] = None,
-                 absolute_symbol_addresses: bool = False) -> None:
+                 native_layer_name: Optional[str] = None) -> None:
         super().__init__(
             context,
             module_name = module_name,
             layer_name = layer_name,
             offset = offset,
             native_layer_name = native_layer_name,
-            symbol_table_name = symbol_table_name,
-            absolute_symbol_addresses = absolute_symbol_addresses)
+            symbol_table_name = symbol_table_name)
         self._size = size
 
     @property

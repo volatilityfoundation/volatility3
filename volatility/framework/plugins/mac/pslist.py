@@ -22,7 +22,7 @@ import logging
 from typing import Callable, Iterable, List
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import renderers, interfaces, contexts
+from volatility.framework import renderers, interfaces, contexts, constants
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -78,9 +78,9 @@ class PsList(interfaces_plugins.PluginInterface):
 
         mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0, absolute_symbol_addresses = True)
+        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
-        proc = kernel.object(symbol_name = "allproc").lh_first
+        proc = kernel.object(symbol = "allproc", symbol_type = constants.SymbolType.SYMBOL).lh_first
 
         seen = {}
         while proc is not None and proc.vol.offset != 0:
