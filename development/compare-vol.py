@@ -185,7 +185,7 @@ class VolatilityTester:
     def run_tests(self):
         with open("volatility-timings.csv", 'w') as csvfile:
             self.csv_writer = csv.writer(csvfile)
-            titles = ["Image Path", "Plugin Name"]
+            titles = ["Image Hash", "Image Path", "Plugin Name"]
             for test in self.tests:
                 titles += test.result_titles()
             self.csv_writer.writerow(titles)
@@ -200,7 +200,7 @@ class VolatilityTester:
         for test in self.tests:
             results += test.create_results(plugin, image, image_hash)
 
-        self.csv_writer.writerow([image.filepath, plugin.name] + results)
+        self.csv_writer.writerow([image_hash, image.filepath, plugin.name] + results)
 
 
 if __name__ == '__main__':
