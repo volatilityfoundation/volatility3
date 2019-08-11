@@ -142,6 +142,11 @@ class ModuleInterface(metaclass = ABCMeta):
         """Layer name in which the Module resides"""
         return self._layer_name
 
+    @property
+    def context(self) -> ContextInterface:
+        """Context that the module uses"""
+        return self._context
+
     @abstractmethod
     def object(self, symbol_name: str = None, type_name: str = None, offset: int = None,
                **kwargs) -> 'interfaces.objects.ObjectInterface':
