@@ -1,54 +1,54 @@
 {
-    "symbols": {}, 
+    "symbols": {},
     "enums": {
         "StateEnum": {
-            "base": "long", 
+            "base": "long",
             "constants": {
-                "SERVICE_START_PENDING": 2, 
-                "SERVICE_STOP_PENDING": 3, 
-                "SERVICE_STOPPED": 1, 
-                "SERVICE_CONTINUE_PENDING": 5, 
-                "SERVICE_PAUSE_PENDING": 6, 
-                "SERVICE_PAUSED": 7, 
+                "SERVICE_START_PENDING": 2,
+                "SERVICE_STOP_PENDING": 3,
+                "SERVICE_STOPPED": 1,
+                "SERVICE_CONTINUE_PENDING": 5,
+                "SERVICE_PAUSE_PENDING": 6,
+                "SERVICE_PAUSED": 7,
                 "SERVICE_RUNNING": 4
-            }, 
+            },
             "size": 4
-        }, 
+        },
         "StartEnum": {
-            "base": "long", 
+            "base": "long",
             "constants": {
-                "SERVICE_DEMAND_START": 3, 
-                "SERVICE_AUTO_START": 2, 
-                "SERVICE_BOOT_START": 0, 
-                "SERVICE_DISABLED": 4, 
+                "SERVICE_DEMAND_START": 3,
+                "SERVICE_AUTO_START": 2,
+                "SERVICE_BOOT_START": 0,
+                "SERVICE_DISABLED": 4,
                 "SERVICE_SYSTEM_START": 1
-            }, 
+            },
             "size": 4
         }
-    }, 
+    },
     "base_types": {
         "unsigned long": {
-            "kind": "int", 
-            "size": 4, 
-            "signed": false, 
+            "kind": "int",
+            "size": 4,
+            "signed": false,
             "endian": "little"
-        }, 
+        },
         "unsigned char": {
-            "kind": "char", 
-            "size": 1, 
-            "signed": false, 
+            "kind": "char",
+            "size": 1,
+            "signed": false,
             "endian": "little"
-        }, 
+        },
         "pointer": {
-            "kind": "int", 
-            "size": 4, 
-            "signed": false, 
+            "kind": "int",
+            "size": 4,
+            "signed": false,
             "endian": "little"
-        }, 
+        },
         "unsigned int": {
-            "kind": "int", 
-            "size": 4, 
-            "signed": false, 
+            "kind": "int",
+            "size": 4,
+            "signed": false,
             "endian": "little"
         },
         "unsigned short": {
@@ -58,12 +58,12 @@
             "endian": "little"
         },
         "long": {
-            "kind": "int", 
-            "size": 4, 
-            "signed": false, 
+            "kind": "int",
+            "size": 4,
+            "signed": false,
             "endian": "little"
         }
-    }, 
+    },
     "user_types": {
         "_SERVICE_LIST_ENTRY": {
             "fields": {
@@ -76,7 +76,7 @@
                         }
                     },
                     "offset": 4
-                }, 
+                },
                 "Blink": {
                     "type": {
                         "kind": "pointer",
@@ -87,14 +87,13 @@
                     },
                     "offset": 0
                 }
-            }, 
-            "kind": "struct", 
+            },
+            "kind": "struct",
             "size": 8
-        }, 
+        },
         "_SERVICE_PROCESS": {
             "fields": {
                 "BinaryPath": {
-                    "BinaryPath": {
                     "type": {
                         "kind": "pointer",
                         "subtype": {
@@ -103,31 +102,31 @@
                         }
                     },
                     "offset": 8
-                }, 
+                },
                 "ProcessId": {
                     "type": {
-                        "kind": "base", 
+                        "kind": "base",
                         "name": "unsigned int"
-                    }, 
+                    },
                     "offset": 12
                 }
-            }, 
-            "kind": "struct", 
+            },
+            "kind": "struct",
             "size": 12
-        }, 
+        },
         "_SERVICE_HEADER": {
             "fields": {
                 "Tag": {
                     "type": {
-                        "count": 4, 
+                        "count": 4,
                         "subtype": {
-                            "kind": "base", 
+                            "kind": "base",
                             "name": "unsigned char"
-                        }, 
+                        },
                         "kind": "array"
-                    }, 
+                    },
                     "offset": 0
-                }, 
+                },
                 "ServiceRecord": {
                     "type": {
                         "kind": "pointer",
@@ -138,19 +137,19 @@
                     },
                     "offset": 12
                 }
-            }, 
-            "kind": "struct", 
+            },
+            "kind": "struct",
             "size": 12
-        }, 
+        },
         "_SERVICE_RECORD": {
             "fields": {
                 "ServiceList": {
                     "type": {
-                        "kind": "struct", 
+                        "kind": "struct",
                         "name": "_SERVICE_LIST_ENTRY"
-                    }, 
+                    },
                     "offset": 92
-                }, 
+                },
                 "DisplayName": {
                     "type": {
                         "kind": "pointer",
@@ -160,7 +159,7 @@
                         }
                     },
                     "offset": 8
-                }, 
+                },
                 "ServiceProcess": {
                     "type": {
                         "kind": "pointer",
@@ -170,7 +169,7 @@
                         }
                     },
                     "offset": 28
-                }, 
+                },
                 "ServiceName": {
                     "type": {
                         "kind": "pointer",
@@ -180,7 +179,7 @@
                         }
                     },
                     "offset": 4
-                }, 
+                },
                 "PrevEntry": {
                     "type": {
                         "kind": "pointer",
@@ -190,32 +189,32 @@
                         }
                     },
                     "offset": 0
-                }, 
+                },
                 "Start": {
                     "type": {
-                        "kind": "enum", 
+                        "kind": "enum",
                         "name": "StartEnum"
-                    }, 
+                    },
                     "offset": 60
-                }, 
+                },
                 "State": {
                     "type": {
-                        "kind": "enum", 
+                        "kind": "enum",
                         "name": "StateEnum"
-                    }, 
+                    },
                     "offset": 36
-                }, 
+                },
                 "Tag": {
                     "type": {
-                        "count": 4, 
+                        "count": 4,
                         "subtype": {
-                            "kind": "base", 
+                            "kind": "base",
                             "name": "unsigned char"
-                        }, 
+                        },
                         "kind": "array"
-                    }, 
+                    },
                     "offset": 24
-                }, 
+                },
                 "DriverName": {
                     "type": {
                         "kind": "pointer",
@@ -223,34 +222,34 @@
                             "kind": "base",
                             "name": "unsigned short"
                         }
-                    }, 
+                    },
                     "offset": 28
-                }, 
+                },
                 "Type": {
                     "type": {
-                        "kind": "base", 
+                        "kind": "base",
                         "name": "unsigned long"
-                    }, 
+                    },
                     "offset": 32
-                }, 
+                },
                 "Order": {
                     "type": {
-                        "kind": "base", 
+                        "kind": "base",
                         "name": "unsigned int"
-                    }, 
+                    },
                     "offset": 12
                 }
-            }, 
-            "kind": "struct", 
+            },
+            "kind": "struct",
             "size": 92
         }
-    }, 
+    },
     "metadata": {
         "producer": {
-            "version": "0.0.1", 
-            "name": "vtypes_to_json.py", 
+            "version": "0.0.1",
+            "name": "vtypes_to_json.py",
             "datetime": "2019-04-17T13:45:16.417006"
-        }, 
+        },
         "format": "4.1.0"
     }
 }
