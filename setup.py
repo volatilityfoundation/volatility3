@@ -54,5 +54,4 @@ setuptools.setup(
         'yara': ["yara-python>=3.8.0"],
         'disasm': ["capstone;platform_system=='Linux'", "capstone-windows;platform_system=='Windows'"],
         'doc': ["sphinx>=1.8.2", "sphinx_autodoc_typehints>=1.4.0"],
-        'pdbconv': ["pdbparse>=1.4"]
     })
