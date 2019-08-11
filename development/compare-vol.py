@@ -240,7 +240,7 @@ if __name__ == '__main__':
             name = "svcscan",
             vol2_plugin_parameters = ["svcscan"],
             vol3_plugin_parameters = ["windows.svcscan"],
-            rekall_plugin_parameters = ["svcscan", "--scan_kernel"]),
+            rekall_plugin_parameters = ["svcscan"]),
         VolatilityPlugin(name = "ssdt", vol2_plugin_parameters = ["ssdt"], vol3_plugin_parameters = ["windows.ssdt"]),
         VolatilityPlugin(
             name = "printkey",
