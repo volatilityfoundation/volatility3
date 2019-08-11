@@ -50,7 +50,10 @@ class VolatilityTest:
         os.chdir(self.path)
         cmd = self.plugin_cmd(plugin, image)
         start_time = time.perf_counter()
-        completed = subprocess.run(cmd, cwd = self.path, capture_output = True, timeout = 300)
+        try:
+            completed = subprocess.run(cmd, cwd = self.path, capture_output = True, timeout = 420)
+        except subprocess.TimeoutExpired as excp:
+            completed = excp
         end_time = time.perf_counter()
         total_time = end_time - start_time
         print("    Tested  {} {} with image {}: {}".format(self.short_name, plugin.name, image.filepath, total_time))
@@ -58,6 +61,11 @@ class VolatilityTest:
                 os.path.join(self.output_directory, '{}_{}_{}_stdout'.format(self.short_name, plugin.name, image_hash)),
                 "wb") as f:
             f.write(completed.stdout)
+        if completed.stderr:
+            with open(
+                    os.path.join(self.output_directory, '{}_{}_{}_stderr'.format(self.short_name, plugin.name,
+                                                                                 image_hash)), "wb") as f:
+                f.write(completed.stderr)
         return [total_time]
 
     def plugin_cmd(self, plugin: VolatilityPlugin, image: VolatilityImage):
@@ -177,7 +185,10 @@ class VolatilityTester:
     def run_tests(self):
         with open("volatility-timings.csv", 'w') as csvfile:
             self.csv_writer = csv.writer(csvfile)
-            self.csv_writer.writerow(["Image Path", "Plugin Name"] + [test.result_titles() for test in self.tests])
+            titles = ["Image Path", "Plugin Name"]
+            for test in self.tests:
+                titles += test.result_titles()
+            self.csv_writer.writerow(titles)
             for image in self.images:
                 for plugin in self.plugins:
                     self.run_test(plugin, image)
