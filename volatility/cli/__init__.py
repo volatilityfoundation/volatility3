@@ -138,7 +138,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             "-r",
             "--renderer",
             metavar = 'RENDERER',
-            help = "Determines how to render the output",
+            help = "Determines how to render the output ({})".format(", ".join(list(renderers))),
             default = "quick",
             choices = list(renderers))
         parser.add_argument(
