@@ -27,8 +27,8 @@ class Check_syscall(plugins.PluginInterface):
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        nsysent = kernel.object(symbol = "nsysent", symbol_type = constants.SymbolType.SYMBOL)
-        table = kernel.object(symbol = "sysent", symbol_type = constants.SymbolType.SYMBOL)
+        nsysent = kernel.object_from_symbol(symbol = "nsysent")
+        table = kernel.object_from_symbol(symbol = "sysent")
 
         # smear help
         num_ents = min(nsysent, table.count)

@@ -77,7 +77,7 @@ class PsList(interfaces_plugins.PluginInterface):
 
         vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)
 
-        init_task = vmlinux.object(symbol = "init_task", symbol_type = constants.SymbolType.SYMBOL)
+        init_task = vmlinux.object_from_symbol(symbol = "init_task")
 
         for task in init_task.tasks:
             if not filter_func(task):

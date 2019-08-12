@@ -20,16 +20,22 @@
 
 import collections
 import collections.abc
+import enum
 import logging
 from typing import Any, Dict, Iterable, Iterator, TypeVar
 
 from volatility.framework import constants, exceptions, interfaces, objects
-from volatility.framework.constants import SymbolType
 
 vollog = logging.getLogger(__name__)
 
 SymbolSpaceReturnType = TypeVar("SymbolSpaceReturnType", interfaces.objects.Template,
                                 interfaces.symbols.SymbolInterface, Dict[str, Any])
+
+
+class SymbolType(enum.Enum):
+    TYPE = 1
+    SYMBOL = 2
+    ENUM = 3
 
 
 class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):

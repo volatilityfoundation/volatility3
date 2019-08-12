@@ -26,7 +26,7 @@ import functools
 import hashlib
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
-from volatility.framework import constants, interfaces, symbols
+from volatility.framework import constants, interfaces, symbols, exceptions
 
 
 class Context(interfaces.context.ContextInterface):
@@ -93,7 +93,6 @@ class Context(interfaces.context.ContextInterface):
                symbol: Union[str, interfaces.objects.Template],
                layer_name: str,
                offset: int,
-               symbol_type: Optional[constants.SymbolType] = None,
                native_layer_name: Optional[str] = None,
                **arguments) -> interfaces.objects.ObjectInterface:
         """Object factory, takes a context, symbol, offset and optional layername
@@ -111,15 +110,10 @@ class Context(interfaces.context.ContextInterface):
             A fully constructed object
         """
         if not isinstance(symbol, interfaces.objects.Template):
-            if symbol_type == constants.SymbolType.SYMBOL:
-                symbol_obj = self._symbol_space.get_symbol(symbol)
-                if symbol_obj.type is None:
-                    raise ValueError("Symbol {} has no associated type information".format(symbol_obj.name))
-                object_template = symbol_obj.type
-            elif symbol_type == constants.SymbolType.ENUM:
-                object_template = self._symbol_space.get_enumeration(symbol)
-            else:
+            try:
                 object_template = self._symbol_space.get_type(symbol)
+            except exceptions.SymbolError:
+                object_template = self._symbol_space.get_enumeration(symbol)
         else:
             object_template = symbol
             # Ensure that if a pre-constructed type is provided we just instantiate it
@@ -177,7 +171,6 @@ class Module(interfaces.context.ModuleInterface):
 
     def object(self,
                symbol: str,
-               symbol_type: Optional[constants.SymbolType] = None,
                offset: int = None,
                native_layer_name: Optional[str] = None,
                absolute: bool = False,
@@ -186,7 +179,6 @@ class Module(interfaces.context.ModuleInterface):
 
         Args:
             symbol: Name of the type/symbol/enumeration (within the module) to construct
-            symbol_type: One of the SymbolType enumeratino (Type/Symbol/Enum), defaults to Type
             offset: The location of the object, ignored when symbol_type is SYMBOL 
             native_layer_name: Name of the layer in which constructed objects are made (for pointers)
         """
@@ -194,10 +186,6 @@ class Module(interfaces.context.ModuleInterface):
             symbol = self.symbol_table_name + constants.BANG + symbol
         else:
             raise ValueError("Cannot reference another module when constructing an object")
-
-        # Only set the offset if type is Symbol and we were given a name, not a template
-        if symbol_type == constants.SymbolType.SYMBOL:
-            offset = self._context.symbol_space.get_symbol(symbol).address
 
         if offset is None:
             raise ValueError("Offset must not be None for non-symbol objects")
@@ -210,10 +198,38 @@ class Module(interfaces.context.ModuleInterface):
             del kwargs['layer_name']
         return self._context.object(
             symbol = symbol,
-            symbol_type = symbol_type,
             layer_name = self._layer_name,
             offset = offset,
-            native_layer_name = native_layer_name,
+            native_layer_name = native_layer_name or self._native_layer_name,
+            **kwargs)
+
+    def object_from_symbol(self, symbol: str, native_layer_name: Optional[str] = None, absolute: bool = False,
+                           **kwargs) -> 'interfaces.objects.ObjectInterface':
+        if constants.BANG not in symbol:
+            symbol = self.symbol_table_name + constants.BANG + symbol
+        else:
+            raise ValueError("Cannot reference another module when constructing an object")
+
+        # Only set the offset if type is Symbol and we were given a name, not a template
+        symbol_val = self._context.symbol_space.get_symbol(symbol)
+        offset = symbol_val.address
+
+        if not absolute:
+            offset += self._offset
+
+        if symbol_val.type is None:
+            raise ValueError("Symbol {} has no associated type".format(symbol_val.name))
+
+        # Ensure we don't use a layer_name other than the module's, why would anyone do that?
+        if 'layer_name' in kwargs:
+            del kwargs['layer_name']
+
+        # Since type may be a template, we don't just call our own module method
+        return self._context.object(
+            symbol = symbol_val.type,
+            layer_name = self._layer_name,
+            offset = offset,
+            native_layer_name = native_layer_name or self._native_layer_name,
             **kwargs)
 
     get_symbol = get_module_wrapper('get_symbol')

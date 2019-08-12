@@ -27,7 +27,7 @@ class Check_trap_table(plugins.PluginInterface):
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        table = kernel.object(symbol = "mach_trap_table", symbol_type = constants.SymbolType.SYMBOL)
+        table = kernel.object_from_symbol(symbol = "mach_trap_table")
 
         for i, ent in enumerate(table):
             try:
