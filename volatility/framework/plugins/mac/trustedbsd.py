@@ -22,11 +22,11 @@ import logging
 from typing import List, Iterator, Any
 
 from volatility.framework import exceptions, interfaces
-from volatility.framework.objects import utility
-from volatility.framework import renderers, constants, contexts
+from volatility.framework import renderers, contexts
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
+from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 from volatility.plugins.mac import lsmod
 
@@ -49,8 +49,7 @@ class Check_syscall(plugins.PluginInterface):
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        policy_list = kernel.object(
-            symbol = "_mac_policy_list", symbol_type = constants.SymbolType.SYMBOL).cast("mac_policy_list")
+        policy_list = kernel.object_from_symbol(symbol = "_mac_policy_list").cast("mac_policy_list")
 
         entries = kernel.object(
             symbol = "array",

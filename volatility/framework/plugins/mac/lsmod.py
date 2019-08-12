@@ -47,7 +47,7 @@ class Lsmod(plugins.PluginInterface):
 
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
-        kmod_ptr = kernel.object(symbol = "kmod", symbol_type = constants.SymbolType.SYMBOL)
+        kmod_ptr = kernel.object_from_symbol(symbol = "kmod")
 
         # TODO - use smear-proof list walking API after dev release
         kmod = kmod_ptr.dereference().cast("kmod_info")

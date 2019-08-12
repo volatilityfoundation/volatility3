@@ -80,7 +80,7 @@ class PsList(interfaces_plugins.PluginInterface):
 
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
-        proc = kernel.object(symbol = "allproc", symbol_type = constants.SymbolType.SYMBOL).lh_first
+        proc = kernel.object_from_symbol(symbol = "allproc").lh_first
 
         seen = {}
         while proc is not None and proc.vol.offset != 0:

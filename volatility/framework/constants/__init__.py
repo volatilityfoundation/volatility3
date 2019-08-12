@@ -21,7 +21,6 @@
 
 Stores all the constant values that are generally fixed throughout volatility
 This includes default scanning block sizes, etc."""
-import enum
 import os.path
 import sys
 from typing import Optional, Callable
@@ -62,9 +61,3 @@ PARALLELISM_THREADING = 1
 PARALLELISM_MULTIPROCESSING = 2
 
 PARALLELISM = PARALLELISM_OFF
-
-
-class SymbolType(enum.Enum):
-    TYPE = 1
-    SYMBOL = 2
-    ENUM = 3
