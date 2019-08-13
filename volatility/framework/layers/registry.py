@@ -78,20 +78,20 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         self._minaddr = 0
         try:
-            self._maxaddr_non_volatile = self.hive.Storage[0].Length
-            self._maxaddr_volatile = self.hive.Storage[1].Length
-            self._maxaddr = max(self._maxaddr_non_volatile, self._maxaddr_volatile)
+            self._hive_maxaddr_non_volatile = self.hive.Storage[0].Length
+            self._hive_maxaddr_volatile = self.hive.Storage[1].Length
+            self._maxaddr = 0x80000000 | self._hive_maxaddr_volatile
             vollog.log(constants.LOGLEVEL_VVV,
                        "Setting hive max address to {}".format(hex(self._maxaddr)))
         except exceptions.InvalidAddressException:
-            self._maxaddr = 0x7fffffff
-            self._maxaddr_volatile = 0x7fffffff
-            self._maxaddr_non_volatile = 0x7fffffff
+            self._hive_maxaddr_non_volatile = 0x7fffffff
+            self._hive_maxaddr_volatile = 0x7fffffff
+            self._maxaddr = 0x80000000 | self._hive_maxaddr_volatile
             vollog.log(constants.LOGLEVEL_VVV,
                        "Exception when setting hive max address, using {}".format(hex(self._maxaddr)))
 
-    def get_maxaddr(self, volatile):
-        return self._maxaddr_volatile if volatile else self._maxaddr_non_volatile
+    def _get_hive_maxaddr(self, volatile):
+        return self._hive_maxaddr_volatile if volatile else self._hive_maxaddr_non_volatile
 
     def get_name(self) -> str:
         return self._cmhive_name or "[NONAME]"
@@ -207,7 +207,7 @@ class RegistryHive(interfaces.layers.TranslationLayerInterface):
 
         # Ignore the volatile bit when determining maxaddr validity
         volatile = self._mask(offset, 31, 31) >> 31
-        if offset & 0x7fffffff > self.get_maxaddr(volatile):
+        if offset & 0x7fffffff > self._get_hive_maxaddr(volatile):
             raise RegistryInvalidIndex("Mapping request for value greater than maxaddr")
 
         storage = self.hive.Storage[volatile]
