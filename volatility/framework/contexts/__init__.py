@@ -178,9 +178,10 @@ class Module(interfaces.context.ModuleInterface):
         """Returns an object created using the symbol_table_name and layer_name of the Module
 
         Args:
-            object_type: Name of the type/symbol/enumeration (within the module) to construct
-            offset: The location of the object, ignored when symbol_type is SYMBOL 
+            object_type: Name of the type/enumeration (within the module) to construct
+            offset: The location of the object, ignored when symbol_type is SYMBOL
             native_layer_name: Name of the layer in which constructed objects are made (for pointers)
+            absolute: whether the type's offset is absolute within memory or relative to the module
         """
         if constants.BANG not in object_type:
             object_type = self.symbol_table_name + constants.BANG + object_type
@@ -208,6 +209,15 @@ class Module(interfaces.context.ModuleInterface):
                            native_layer_name: Optional[str] = None,
                            absolute: bool = False,
                            **kwargs) -> 'interfaces.objects.ObjectInterface':
+        """Returns an object based on a specific symbol (containing type and offset information) and
+        the layer_name of the Module.  This will throw a ValueError if the symbol does not contain an associated type,
+        or if the symbol name is invalid.  It will throw a SymbolError if the symbol cannot be found.
+
+        Args:
+            symbol_name: Name of the symbol (within the module) to construct
+            native_layer_name: Name of the layer in which constructed objects are made (for pointers)
+            absolute: whether the symbol's address is absolute or relative to the module
+        """
         if constants.BANG not in symbol_name:
             symbol_name = self.symbol_table_name + constants.BANG + symbol_name
         else:
