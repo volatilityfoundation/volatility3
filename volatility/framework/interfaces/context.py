@@ -151,7 +151,7 @@ class ModuleInterface(metaclass = ABCMeta):
 
     @abstractmethod
     def object_from_symbol(self,
-                           object_type: str,
+                           symbol_name: str,
                            native_layer_name: Optional[str] = None,
                            absolute: bool = False,
                            **kwargs) -> 'interfaces.objects.ObjectInterface':

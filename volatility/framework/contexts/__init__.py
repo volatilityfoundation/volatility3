@@ -204,17 +204,17 @@ class Module(interfaces.context.ModuleInterface):
             **kwargs)
 
     def object_from_symbol(self,
-                           object_type: str,
+                           symbol_name: str,
                            native_layer_name: Optional[str] = None,
                            absolute: bool = False,
                            **kwargs) -> 'interfaces.objects.ObjectInterface':
-        if constants.BANG not in object_type:
-            object_type = self.symbol_table_name + constants.BANG + object_type
+        if constants.BANG not in symbol_name:
+            symbol_name = self.symbol_table_name + constants.BANG + symbol_name
         else:
             raise ValueError("Cannot reference another module when constructing an object")
 
         # Only set the offset if type is Symbol and we were given a name, not a template
-        symbol_val = self._context.symbol_space.get_symbol(object_type)
+        symbol_val = self._context.symbol_space.get_symbol(symbol_name)
         offset = symbol_val.address
 
         if not absolute:
