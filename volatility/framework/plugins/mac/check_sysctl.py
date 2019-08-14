@@ -110,7 +110,7 @@ class Check_sysctl(plugins.PluginInterface):
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        sysctl_list = kernel.object_from_symbol(object_type = "sysctl__children")
+        sysctl_list = kernel.object_from_symbol(symbol_name = "sysctl__children")
 
         for sysctl, name, val in self._process_sysctl_list(kernel, sysctl_list):
             check_addr = sysctl.oid_handler
