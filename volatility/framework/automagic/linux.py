@@ -303,7 +303,7 @@ class LinuxUtilities(object):
                 progress_callback = progress_callback):
             task_symbol = module.get_type('task_struct')
             init_task_address = offset - task_symbol.relative_child_offset('comm')
-            init_task = module.object(symbol = 'task_struct', offset = init_task_address, absolute = True)
+            init_task = module.object(object_type = 'task_struct', offset = init_task_address, absolute = True)
             if init_task.pid != 0:
                 continue
             elif init_task.has_member('state') and init_task.state.cast('unsigned int') != 0:

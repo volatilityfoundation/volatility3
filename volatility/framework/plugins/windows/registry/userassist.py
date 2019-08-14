@@ -86,7 +86,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
         buffer = BufferDataLayer(self.context, self._config_path, userassist_layer_name, userassist_data)
         self.context.add_layer(buffer)
         userassist_obj = self.context.object(
-            symbol = self._reg_table_name + constants.BANG + self._userassist_type_name,
+            object_type = self._reg_table_name + constants.BANG + self._userassist_type_name,
             layer_name = userassist_layer_name,
             offset = 0)
 

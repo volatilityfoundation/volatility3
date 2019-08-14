@@ -700,7 +700,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                     layer_name = self.vol.native_layer_name,
                     offset = kvo,
                     native_layer_name = self.vol.native_layer_name)
-                session = ntkrnlmp.object(symbol = "_MM_SESSION_SPACE", offset = self.Session, absolute = True)
+                session = ntkrnlmp.object(object_type = "_MM_SESSION_SPACE", offset = self.Session, absolute = True)
 
                 if session.has_member("SessionId"):
                     return session.SessionId

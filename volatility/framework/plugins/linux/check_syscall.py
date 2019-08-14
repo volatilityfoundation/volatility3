@@ -176,7 +176,7 @@ class Check_syscall(plugins.PluginInterface):
 
         for (table_name, (tableaddr, tblsz)) in tables:
             table = vmlinux.object(
-                symbol = "array", subtype = vmlinux.get_type("pointer"), offset = tableaddr, count = tblsz)
+                object_type = "array", subtype = vmlinux.get_type("pointer"), offset = tableaddr, count = tblsz)
 
             for (i, call_addr) in enumerate(table):
                 if not call_addr:

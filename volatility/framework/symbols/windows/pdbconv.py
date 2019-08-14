@@ -353,7 +353,7 @@ class PdbReader:
         if not tpi_layer:
             raise ValueError("No TPI stream available")
         module = self._context.module(module_name = tpi_layer.pdb_symbol_table, layer_name = tpi_layer.name, offset = 0)
-        header = module.object(symbol = "TPI_HEADER", offset = 0)
+        header = module.object(object_type = "TPI_HEADER", offset = 0)
 
         # Check the header
         if not (56 <= header.header_size < 1024):
@@ -375,7 +375,7 @@ class PdbReader:
         type_index = 1
         while tpi_layer.maximum_address - offset > 0:
             self._progress_callback(offset * 100 / tpi_layer.maximum_address, "Reading TPI layer")
-            length = module.object(symbol = length_type, offset = offset)
+            length = module.object(object_type = length_type, offset = offset)
             if not isinstance(length, int):
                 raise ValueError("Non-integer length provided")
             offset += length_len
@@ -401,7 +401,7 @@ class PdbReader:
         if not dbi_layer:
             raise ValueError("No DBI stream available")
         module = self._context.module(module_name = dbi_layer.pdb_symbol_table, layer_name = dbi_layer.name, offset = 0)
-        self._dbiheader = module.object(symbol = "DBI_HEADER", offset = 0)
+        self._dbiheader = module.object(object_type = "DBI_HEADER", offset = 0)
 
         if not self._dbiheader:
             raise ValueError("DBI Header could not be read")
@@ -410,7 +410,7 @@ class PdbReader:
         dbg_hdr_offset = (self._dbiheader.vol.size + self._dbiheader.module_size + self._dbiheader.secconSize +
                           self._dbiheader.secmapSize + self._dbiheader.filinfSize + self._dbiheader.tsmapSize +
                           self._dbiheader.ecinfoSize)
-        self._dbidbgheader = module.object(symbol = "DBI_DBG_HEADER", offset = dbg_hdr_offset)
+        self._dbidbgheader = module.object(object_type = "DBI_DBG_HEADER", offset = dbg_hdr_offset)
 
         self._sections = []
         self._omap_mapping = []
@@ -465,8 +465,8 @@ class PdbReader:
 
         while offset < max_address:
             self._progress_callback(offset * 100 / max_address, "Reading Symbol layer")
-            sym = module.object(symbol = "GLOBAL_SYMBOL", offset = offset)
-            leaf_type = module.object(symbol = "unsigned short", offset = sym.leaf_type.vol.offset)
+            sym = module.object(object_type = "GLOBAL_SYMBOL", offset = offset)
+            leaf_type = module.object(object_type = "unsigned short", offset = sym.leaf_type.vol.offset)
             name = None
             address = None
             if sym.segment < len(self._sections):
@@ -500,7 +500,7 @@ class PdbReader:
             raise ValueError("No PDB Info Stream available")
         module = self._context.module(
             module_name = pdb_info_layer.pdb_symbol_table, layer_name = pdb_info_layer.name, offset = 0)
-        pdb_info = module.object(symbol = "PDB_INFORMATION", offset = 0)
+        pdb_info = module.object(object_type = "PDB_INFORMATION", offset = 0)
 
         self.metadata['windows']['pdb'] = {
             "GUID": self.convert_bytes_to_guid(pdb_info.GUID),
@@ -726,7 +726,7 @@ class PdbReader:
                 leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
                 leaf_type.LF_INTERFACE
         ]:
-            structure = module.object(symbol = "LF_STRUCTURE", offset = offset + consumed)
+            structure = module.object(object_type = "LF_STRUCTURE", offset = offset + consumed)
             name_offset = structure.name.vol.offset - structure.vol.offset
             name, value, excess = self.determine_extended_value(leaf_type, structure.size, module,
                                                                 remaining - name_offset)
@@ -735,7 +735,7 @@ class PdbReader:
             consumed += remaining
             result = leaf_type, name, structure
         elif leaf_type in [leaf_type.LF_MEMBER, leaf_type.LF_MEMBER_ST]:
-            member = module.object(symbol = "LF_MEMBER", offset = offset + consumed)
+            member = module.object(object_type = "LF_MEMBER", offset = offset + consumed)
             name_offset = member.name.vol.offset - member.vol.offset
             name, value, excess = self.determine_extended_value(leaf_type, member.offset, module,
                                                                 remaining - name_offset)
@@ -744,7 +744,7 @@ class PdbReader:
             result = leaf_type, name, member
             consumed += member.vol.size + len(name) + 1 + excess
         elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
-            array = module.object(symbol = "LF_ARRAY", offset = offset + consumed)
+            array = module.object(object_type = "LF_ARRAY", offset = offset + consumed)
             name_offset = array.name.vol.offset - array.vol.offset
             name, value, excess = self.determine_extended_value(leaf_type, array.size, module, remaining - name_offset)
             array.size = value
@@ -752,7 +752,7 @@ class PdbReader:
             result = leaf_type, name, array
             consumed += remaining
         elif leaf_type in [leaf_type.LF_ENUMERATE]:
-            enum = module.object(symbol = 'LF_ENUMERATE', offset = offset + consumed)
+            enum = module.object(object_type = 'LF_ENUMERATE', offset = offset + consumed)
             name_offset = enum.name.vol.offset - enum.vol.offset
             name, value, excess = self.determine_extended_value(leaf_type, enum.value, module, remaining - name_offset)
             enum.value = value
@@ -760,20 +760,20 @@ class PdbReader:
             result = leaf_type, name, enum
             consumed += enum.vol.size + len(name) + 1 + excess
         elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUM]:
-            enum = module.object(symbol = "LF_ENUM", offset = offset + consumed)
+            enum = module.object(object_type = "LF_ENUM", offset = offset + consumed)
             name_offset = enum.name.vol.offset - enum.vol.offset
             name = self.parse_string(enum.name, leaf_type < leaf_type.LF_ST_MAX, size = remaining - name_offset)
             enum.name = name
             result = leaf_type, name, enum
             consumed += remaining
         elif leaf_type in [leaf_type.LF_UNION]:
-            union = module.object(symbol = "LF_UNION", offset = offset + consumed)
+            union = module.object(object_type = "LF_UNION", offset = offset + consumed)
             name_offset = union.name.vol.offset - union.vol.offset
             name = self.parse_string(union.name, leaf_type < leaf_type.LF_ST_MAX, size = remaining - name_offset)
             result = leaf_type, name, union
             consumed += remaining
         elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_POINTER, leaf_type.LF_PROCEDURE]:
-            obj = module.object(symbol = leaf_type.lookup(), offset = offset + consumed)
+            obj = module.object(object_type = leaf_type.lookup(), offset = offset + consumed)
             result = leaf_type, None, obj
             consumed += remaining
         elif leaf_type in [leaf_type.LF_FIELDLIST]:
@@ -789,7 +789,7 @@ class PdbReader:
                 fields.append(subfield)
             result = leaf_type, None, fields
         elif leaf_type in [leaf_type.LF_BITFIELD]:
-            bitfield = module.object(symbol = "LF_BITFIELD", offset = offset + consumed)
+            bitfield = module.object(object_type = "LF_BITFIELD", offset = offset + consumed)
             result = leaf_type, None, bitfield
             consumed += remaining
         else:
@@ -873,20 +873,20 @@ class PdbReader:
             # Set the offset at just after the previous size type
             offset = value.vol.offset + value.vol.data_format.length
             if sub_leaf_type in [leaf_type.LF_CHAR]:
-                value = module.object(symbol = 'char', offset = offset)
+                value = module.object(object_type = 'char', offset = offset)
             elif sub_leaf_type in [leaf_type.LF_SHORT]:
-                value = module.object(symbol = 'short', offset = offset)
+                value = module.object(object_type = 'short', offset = offset)
             elif sub_leaf_type in [leaf_type.LF_USHORT]:
-                value = module.object(symbol = 'unsigned short', offset = offset)
+                value = module.object(object_type = 'unsigned short', offset = offset)
             elif sub_leaf_type in [leaf_type.LF_LONG]:
-                value = module.object(symbol = 'long', offset = offset)
+                value = module.object(object_type = 'long', offset = offset)
             elif sub_leaf_type in [leaf_type.LF_ULONG]:
-                value = module.object(symbol = 'unsigned long', offset = offset)
+                value = module.object(object_type = 'unsigned long', offset = offset)
             else:
                 raise TypeError("Unexpected extended value type")
             excess = value.vol.data_format.length
             # Updated the consume/offset counters
-        name = module.object(symbol = "string", offset = value.vol.offset + value.vol.data_format.length)
+        name = module.object(object_type = "string", offset = value.vol.offset + value.vol.data_format.length)
         name_str = self.parse_string(name, leaf_type < leaf_type.LF_ST_MAX, size = length - excess)
         return name_str, value, excess
 

@@ -50,7 +50,7 @@ class Lsmod(plugins.PluginInterface):
 
         vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)
 
-        modules = vmlinux.object_from_symbol(symbol = "modules").cast("list_head")
+        modules = vmlinux.object_from_symbol(object_type = "modules").cast("list_head")
 
         table_name = modules.vol.type_name.split(constants.BANG)[0]
 

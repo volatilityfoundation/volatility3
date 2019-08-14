@@ -63,9 +63,9 @@ class HiveList(plugins.PluginInterface):
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
         list_head = ntkrnlmp.get_symbol("CmpHiveListHead").address
-        list_entry = ntkrnlmp.object(symbol = "_LIST_ENTRY", offset = list_head)
+        list_entry = ntkrnlmp.object(object_type = "_LIST_ENTRY", offset = list_head)
         reloff = ntkrnlmp.get_type("_CMHIVE").relative_child_offset("HiveList")
-        cmhive = ntkrnlmp.object(symbol = "_CMHIVE", offset = list_entry.vol.offset - reloff, absolute = True)
+        cmhive = ntkrnlmp.object(object_type = "_CMHIVE", offset = list_entry.vol.offset - reloff, absolute = True)
 
         # Run through the list fowards
         seen = set()

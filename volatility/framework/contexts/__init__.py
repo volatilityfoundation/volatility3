@@ -90,7 +90,7 @@ class Context(interfaces.context.ContextInterface):
     # ## Object Factory Functions
 
     def object(self,
-               symbol: Union[str, interfaces.objects.Template],
+               object_type: Union[str, interfaces.objects.Template],
                layer_name: str,
                offset: int,
                native_layer_name: Optional[str] = None,
@@ -101,7 +101,7 @@ class Context(interfaces.context.ContextInterface):
         and constructs an object using the object template on the layer at the offset.
 
         Args:
-            symbol: The name (or template) of the symbol type on which to construct the object.  If this is a name, it should contain an explicit table name.
+            object_type: The name (or template) of the symbol type on which to construct the object.  If this is a name, it should contain an explicit table name.
             layer_name: The name of the layer on which to construct the object
             offset: The offset within the layer at which the data used to create the object lives
 
@@ -109,13 +109,13 @@ class Context(interfaces.context.ContextInterface):
         Returns:
             A fully constructed object
         """
-        if not isinstance(symbol, interfaces.objects.Template):
+        if not isinstance(object_type, interfaces.objects.Template):
             try:
-                object_template = self._symbol_space.get_type(symbol)
+                object_template = self._symbol_space.get_type(object_type)
             except exceptions.SymbolError:
-                object_template = self._symbol_space.get_enumeration(symbol)
+                object_template = self._symbol_space.get_enumeration(object_type)
         else:
-            object_template = symbol
+            object_template = object_type
             # Ensure that if a pre-constructed type is provided we just instantiate it
             arguments.update(object_template.vol)
 
@@ -170,7 +170,7 @@ def get_module_wrapper(method: str) -> Callable:
 class Module(interfaces.context.ModuleInterface):
 
     def object(self,
-               symbol: str,
+               object_type: str,
                offset: int = None,
                native_layer_name: Optional[str] = None,
                absolute: bool = False,
@@ -178,12 +178,12 @@ class Module(interfaces.context.ModuleInterface):
         """Returns an object created using the symbol_table_name and layer_name of the Module
 
         Args:
-            symbol: Name of the type/symbol/enumeration (within the module) to construct
+            object_type: Name of the type/symbol/enumeration (within the module) to construct
             offset: The location of the object, ignored when symbol_type is SYMBOL 
             native_layer_name: Name of the layer in which constructed objects are made (for pointers)
         """
-        if constants.BANG not in symbol:
-            symbol = self.symbol_table_name + constants.BANG + symbol
+        if constants.BANG not in object_type:
+            object_type = self.symbol_table_name + constants.BANG + object_type
         else:
             raise ValueError("Cannot reference another module when constructing an object")
 
@@ -197,21 +197,24 @@ class Module(interfaces.context.ModuleInterface):
         if 'layer_name' in kwargs:
             del kwargs['layer_name']
         return self._context.object(
-            symbol = symbol,
+            object_type = object_type,
             layer_name = self._layer_name,
             offset = offset,
             native_layer_name = native_layer_name or self._native_layer_name,
             **kwargs)
 
-    def object_from_symbol(self, symbol: str, native_layer_name: Optional[str] = None, absolute: bool = False,
+    def object_from_symbol(self,
+                           object_type: str,
+                           native_layer_name: Optional[str] = None,
+                           absolute: bool = False,
                            **kwargs) -> 'interfaces.objects.ObjectInterface':
-        if constants.BANG not in symbol:
-            symbol = self.symbol_table_name + constants.BANG + symbol
+        if constants.BANG not in object_type:
+            object_type = self.symbol_table_name + constants.BANG + object_type
         else:
             raise ValueError("Cannot reference another module when constructing an object")
 
         # Only set the offset if type is Symbol and we were given a name, not a template
-        symbol_val = self._context.symbol_space.get_symbol(symbol)
+        symbol_val = self._context.symbol_space.get_symbol(object_type)
         offset = symbol_val.address
 
         if not absolute:
@@ -226,7 +229,7 @@ class Module(interfaces.context.ModuleInterface):
 
         # Since type may be a template, we don't just call our own module method
         return self._context.object(
-            symbol = symbol_val.type,
+            object_type = symbol_val.type,
             layer_name = self._layer_name,
             offset = offset,
             native_layer_name = native_layer_name or self._native_layer_name,
