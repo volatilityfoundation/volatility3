@@ -105,7 +105,8 @@ class Info(plugins.PluginInterface):
 
         vers_offset = ntkrnlmp.get_symbol("KdVersionBlock").address
 
-        vers = ntkrnlmp.object(symbol = "_DBGKD_GET_VERSION64", layer_name = virtual_layer_name, offset = vers_offset)
+        vers = ntkrnlmp.object(
+            object_type = "_DBGKD_GET_VERSION64", layer_name = virtual_layer_name, offset = vers_offset)
 
         yield (0, ("KdVersionBlock", hex(vers.vol.offset)))
         yield (0, ("Major/Minor", "{0}.{1}".format(vers.MajorVersion, vers.MinorVersion)))
@@ -113,7 +114,8 @@ class Info(plugins.PluginInterface):
 
         cpu_count_offset = ntkrnlmp.get_symbol("KeNumberProcessors").address
 
-        cpu_count = ntkrnlmp.object(symbol = "unsigned int", layer_name = virtual_layer_name, offset = cpu_count_offset)
+        cpu_count = ntkrnlmp.object(
+            object_type = "unsigned int", layer_name = virtual_layer_name, offset = cpu_count_offset)
 
         yield (0, ("KeNumberProcessors", str(cpu_count)))
 
@@ -124,7 +126,7 @@ class Info(plugins.PluginInterface):
             kuser_addr = 0xFFFFF78000000000
 
         kuser = ntkrnlmp.object(
-            symbol = "_KUSER_SHARED_DATA", layer_name = virtual_layer_name, offset = kuser_addr, absolute = True)
+            object_type = "_KUSER_SHARED_DATA", layer_name = virtual_layer_name, offset = kuser_addr, absolute = True)
 
         yield (0, ("SystemTime", str(kuser.SystemTime.get_time())))
         yield (0, ("NtSystemRoot",

@@ -87,7 +87,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
         ps_aph_offset = ntkrnlmp.get_symbol("PsActiveProcessHead").address
-        list_entry = ntkrnlmp.object(symbol = "_LIST_ENTRY", offset = ps_aph_offset)
+        list_entry = ntkrnlmp.object(object_type = "_LIST_ENTRY", offset = ps_aph_offset)
 
         # This is example code to demonstrate how to use symbol_space directly, rather than through a module:
         #
@@ -101,7 +101,7 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
         # having been present.  Strictly, the value of the requirement should be joined with the BANG character
         # defined in the constants file
         reloff = ntkrnlmp.get_type("_EPROCESS").relative_child_offset("ActiveProcessLinks")
-        eproc = ntkrnlmp.object(symbol = "_EPROCESS", offset = list_entry.vol.offset - reloff, absolute = True)
+        eproc = ntkrnlmp.object(object_type = "_EPROCESS", offset = list_entry.vol.offset - reloff, absolute = True)
 
         for proc in eproc.ActiveProcessLinks:
             if not filter_func(proc):

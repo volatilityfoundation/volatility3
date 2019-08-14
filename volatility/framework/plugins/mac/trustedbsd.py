@@ -49,10 +49,10 @@ class Check_syscall(plugins.PluginInterface):
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        policy_list = kernel.object_from_symbol(symbol = "_mac_policy_list").cast("mac_policy_list")
+        policy_list = kernel.object_from_symbol(object_type = "_mac_policy_list").cast("mac_policy_list")
 
         entries = kernel.object(
-            symbol = "array",
+            object_type = "array",
             offset = policy_list.entries.dereference().vol.offset,
             subtype = kernel.get_type('mac_policy_list_element'),
             count = policy_list.staticmax + 1)

@@ -74,7 +74,7 @@ class ContextInterface(object, metaclass = ABCMeta):
 
     @abstractmethod
     def object(self,
-               symbol: Union[str, 'interfaces.objects.Template'],
+               object_type: Union[str, 'interfaces.objects.Template'],
                layer_name: str,
                offset: int,
                native_layer_name: str = None,
@@ -142,7 +142,7 @@ class ModuleInterface(metaclass = ABCMeta):
 
     @abstractmethod
     def object(self,
-               symbol: str,
+               object_type: str,
                offset: int = None,
                native_layer_name: Optional[str] = None,
                absolute: bool = False,
@@ -150,7 +150,10 @@ class ModuleInterface(metaclass = ABCMeta):
         """Returns an object created using the symbol_table_name and layer_name of the Module"""
 
     @abstractmethod
-    def object_from_symbol(self, symbol: str, native_layer_name: Optional[str] = None, absolute: bool = False,
+    def object_from_symbol(self,
+                           object_type: str,
+                           native_layer_name: Optional[str] = None,
+                           absolute: bool = False,
                            **kwargs) -> 'interfaces.objects.ObjectInterface':
         """Returns an object created usnig the symbol_table_name and layer_name of the Module"""
 
