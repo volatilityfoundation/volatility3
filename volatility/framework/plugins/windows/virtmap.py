@@ -21,7 +21,7 @@
 import logging
 from typing import List, Tuple, Dict, Generator
 
-from volatility.framework import interfaces, renderers
+from volatility.framework import interfaces, renderers, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 
@@ -73,6 +73,8 @@ class VirtMap(interfaces.plugins.PluginInterface):
                     object_type = "pointer", offset = module.get_symbol("MmSystemRangeStart").address)
                 result = cls._enumerate_system_va_type(large_page_size, system_range_start, module,
                                                        visible_state.SystemVaType)
+            else:
+                raise exceptions.MissingStructureException("Required structures not found")
         elif module.has_symbol('MiSystemVaType'):
             system_range_start = module.object(
                 object_type = "pointer", offset = module.get_symbol("MmSystemRangeStart").address)
@@ -82,6 +84,8 @@ class VirtMap(interfaces.plugins.PluginInterface):
                 object_type = 'array', offset = symbol.address, count = array_count, subtype = module.get_type('char'))
 
             result = cls._enumerate_system_va_type(large_page_size, system_range_start, module, type_array)
+        else:
+            raise exceptions.MissingStructureException("Required structures not found")
 
         return result
 
