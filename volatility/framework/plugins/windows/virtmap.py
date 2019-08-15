@@ -50,46 +50,61 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
     @classmethod
     def determine_map(cls, module: interfaces.context.ModuleInterface) -> \
-    Dict[int, List[Tuple[int, int]]]:
+            Dict[int, List[Tuple[int, int]]]:
         """Returns the virtual map from a windows kernel module"""
         result = {}
         system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
+        large_page_size = (module.context.layers[module.layer_name].page_size ** 2) // module.get_type("_MMPTE").size
+
         if module.has_symbol('MiVisibleState'):
             symbol = module.get_symbol('MiVisibleState')
             visible_state = module.object(
-                type = 'pointer', offset = symbol.address,
+                object_type = 'pointer', offset = symbol.address,
                 subtype = module.get_type('_MI_VISIBLE_STATE')).dereference()
-            for i in range(visible_state.SystemVaRegions.count):
-                lookup = system_va_type.lookup(i)
-                region_range = result.get(lookup, [])
-                region_range.append((visible_state.SystemVaRegions[i].BaseAddress,
-                                     visible_state.SystemVaRegions[i].NumberOfBytes))
-                result[lookup] = region_range
+            if hasattr(visible_state, 'SystemVaRegions'):
+                for i in range(visible_state.SystemVaRegions.count):
+                    lookup = system_va_type.lookup(i)
+                    region_range = result.get(lookup, [])
+                    region_range.append((visible_state.SystemVaRegions[i].BaseAddress,
+                                         visible_state.SystemVaRegions[i].NumberOfBytes))
+                    result[lookup] = region_range
+            elif hasattr(visible_state, 'SystemVaType'):
+                system_range_start = module.object(
+                    object_type = "pointer", offset = module.get_symbol("MmSystemRangeStart").address)
+                result = cls._enumerate_system_va_type(large_page_size, system_range_start, module,
+                                                       visible_state.SystemVaType)
         elif module.has_symbol('MiSystemVaType'):
-            symbol = module.get_symbol('MiSystemVaType')
-            large_page_size = (module.context.layers[module.layer_name].page_size **
-                               2) // module.get_type("_MMPTE").size
             system_range_start = module.object(
                 object_type = "pointer", offset = module.get_symbol("MmSystemRangeStart").address)
+            symbol = module.get_symbol('MiSystemVaType')
             array_count = (0xFFFFFFFF + 1 - system_range_start) // large_page_size
             type_array = module.object(
                 object_type = 'array', offset = symbol.address, count = array_count, subtype = module.get_type('char'))
-            system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
-            start = system_range_start
-            prev_entry = -1
-            cur_size = large_page_size
 
-            for entry in type_array:
-                entry = system_va_type.lookup(entry)
-                if entry != prev_entry:
-                    region_range = result.get(entry, [])
-                    region_range.append((start, cur_size))
-                    result[entry] = region_range
-                    start = start + cur_size
-                    cur_size = large_page_size
-                else:
-                    cur_size += large_page_size
-                prev_entry = entry
+            result = cls._enumerate_system_va_type(large_page_size, system_range_start, module, type_array)
+
+        return result
+
+    @classmethod
+    def _enumerate_system_va_type(cls, large_page_size: int, system_range_start: int,
+                                  module: interfaces.context.ContextInterface,
+                                  type_array: interfaces.objects.ObjectInterface):
+        result = {}
+        system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
+        start = system_range_start
+        prev_entry = -1
+        cur_size = large_page_size
+        for entry in type_array:
+            entry = system_va_type.lookup(entry)
+            if entry != prev_entry:
+                region_range = result.get(entry, [])
+                region_range.append((start, cur_size))
+                result[entry] = region_range
+                start = start + cur_size
+                cur_size = large_page_size
+            else:
+                cur_size += large_page_size
+            prev_entry = entry
 
         return result
 
