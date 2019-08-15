@@ -70,10 +70,10 @@ class VirtMap(interfaces.plugins.PluginInterface):
             large_page_size = (module.context.layers[module.layer_name].page_size **
                                2) // module.get_type("_MMPTE").size
             system_range_start = module.object(
-                type = "pointer", offset = module.get_symbol("MmSystemRangeStart").address)
+                object_type = "pointer", offset = module.get_symbol("MmSystemRangeStart").address)
             array_count = (0xFFFFFFFF + 1 - system_range_start) // large_page_size
             type_array = module.object(
-                type = 'array', offset = symbol.address, count = array_count, subtype = module.get_type('char'))
+                object_type = 'array', offset = symbol.address, count = array_count, subtype = module.get_type('char'))
             system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
             start = system_range_start
             prev_entry = -1
@@ -108,4 +108,4 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
         return renderers.TreeGrid([("Region", str), ("Start offset", format_hints.Hex),
                                    ("End offset", format_hints.Hex)],
-                                  self._generator(self.determine_map(context = self.context, module = module)))
+                                  self._generator(self.determine_map(module = module)))
