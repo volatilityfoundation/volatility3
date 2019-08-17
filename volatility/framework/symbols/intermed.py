@@ -96,7 +96,9 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             name: The name for the symbol table (this is used in symbols e.g. table!symbol )
             isf_url: The URL pointing to the ISF file location
             native_types: The NativeSymbolTable that contains the native types for this symbol table
+            table_mapping: A dictionary linking names referenced in the file with symbol tables in the context
             validate: Determines whether the ISF file will be validated against the appropriate schema
+            class_types: A dictionary of type names and classes that override Struct when they are instantiated
         """
         # Check there are no obvious errors
         # Open the file and test the version

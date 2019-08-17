@@ -254,6 +254,19 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
                  native_types: 'NativeTableInterface',
                  table_mapping: Optional[Dict[str, str]] = None,
                  class_types: Optional[Dict[str, Type[objects.ObjectInterface]]] = None) -> None:
+        """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
+        appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
+        done.
+
+        Args:
+            context: The volatility context for the symbol table
+            config_path: The configuration path for the symbol table
+            name: The name for the symbol table (this is used in symbols e.g. table!symbol )
+            isf_url: The URL pointing to the ISF file location
+            native_types: The NativeSymbolTable that contains the native types for this symbol table
+            table_mapping: A dictionary linking names referenced in the file with symbol tables in the context
+            class_types: A dictionary of type names and classes that override Struct when they are instantiated
+        """
         configuration.ConfigurableInterface.__init__(self, context, config_path)
         BaseSymbolTableInterface.__init__(self, name, native_types, table_mapping, class_types = class_types)
 
