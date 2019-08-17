@@ -45,13 +45,6 @@ class PoolType(enum.IntEnum):
     FREE = 4
 
 
-class PoolHeaderSymbolTable(intermed.IntermediateSymbolTable):
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.set_type_class('_POOL_HEADER', extensions._POOL_HEADER)
-
-
 class PoolConstraint:
     """Class to maintain tag/size/index/type information about Pool header tags"""
 
@@ -415,7 +408,8 @@ class PoolScanner(plugins.PluginInterface):
                 config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "poolheader"),
                 sub_path = "windows",
                 filename = pool_header_json_filename,
-                table_mapping = {'nt_symbols': symbol_table})
+                table_mapping = {'nt_symbols': symbol_table},
+                class_types = {'_POOL_HEADER', extensions._POOL_HEADER})
             module = context.module(new_table_name, layer_name, offset = 0)
         return module
 
