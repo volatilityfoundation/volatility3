@@ -19,6 +19,7 @@
 #
 
 import enum
+import functools
 import logging
 from typing import Dict, Generator, List, Optional, Tuple, Callable
 
@@ -141,6 +142,7 @@ def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
     """
 
     # try the primary method based on the pe version in the ISF
+    @functools.wraps(version_check)
     def method(context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
 
         try:
