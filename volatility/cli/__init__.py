@@ -181,11 +181,11 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         # Set the PARALLELISM
         if partial_args.parallelism == 'processes':
-            constants.PARALLELISM = constants.PARALLELISM_MULTIPROCESSING
+            constants.PARALLELISM = constants.Parallelism.Multiprocessing
         elif partial_args.parallelism == 'threading':
-            constants.PARALLELISM = constants.PARALLELISM_THREADING
+            constants.PARALLELISM = constants.Parallelism.Threading
         else:
-            constants.PARALLELISM = constants.PARALLELISM_OFF
+            constants.PARALLELISM = constants.Parallelism.Off
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context

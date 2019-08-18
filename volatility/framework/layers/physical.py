@@ -104,7 +104,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         self._size = None  # type: Optional[int]
         # Construct the lock now (shared if made before threading) in case we ever need it
         self._lock = DummyLock()  # type: Union[DummyLock, threading.Lock]
-        if constants.PARALLELISM == constants.PARALLELISM_THREADING:
+        if constants.PARALLELISM == constants.Parallelism.Threading:
             self._lock = threading.Lock()
         # Instantiate the file to throw exceptions if the file doesn't open
         _ = self._file
