@@ -403,13 +403,13 @@ class PoolScanner(plugins.PluginInterface):
             else:
                 pool_header_json_filename = "poolheader-x86"
 
-            new_table_name = PoolHeaderSymbolTable.create(
+            new_table_name = intermed.IntermediateSymbolTable.create(
                 context = context,
                 config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "poolheader"),
                 sub_path = "windows",
                 filename = pool_header_json_filename,
                 table_mapping = {'nt_symbols': symbol_table},
-                class_types = {'_POOL_HEADER', extensions._POOL_HEADER})
+                class_types = {'_POOL_HEADER': extensions._POOL_HEADER})
             module = context.module(new_table_name, layer_name, offset = 0)
         return module
 
