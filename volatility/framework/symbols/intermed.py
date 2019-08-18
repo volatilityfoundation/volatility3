@@ -76,6 +76,19 @@ def _construct_delegate_function(name: str, is_property: bool = False) -> Any:
 
 
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
+    """The IntermediateSymbolTable class reads a JSON file and conducts common tasks such as validation, construction
+    by looking up a JSON file from the available files and ensuring the appropriate version of the schema and proxy are 
+    chosen.
+
+    The JSON format itself is made up of various groups (symbols, user_types, base_types, enums and metadata) 
+        * Symbols link a name to a particular offset relative to the start of a section of memory
+        * Base types define the simplest primitive data types, these can make more complex structure
+        * User types define the more complex types by specifying members at a relative offset from the start of the type
+        * Enums can specify a list of names and values and a type inside which the numeric encoding will fit
+        * Metadata defines information about the originating file
+
+    These are documented in JSONSchema JSON files located in volatility/schemas.
+    """
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -86,7 +99,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                  table_mapping: Optional[Dict[str, str]] = None,
                  validate: bool = True,
                  class_types: Optional[Dict[str, Type[interfaces.objects.ObjectInterface]]] = None) -> None:
-        """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
+        """Instantiates a SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
         done.
 
