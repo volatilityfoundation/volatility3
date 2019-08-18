@@ -82,7 +82,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Volatility'
-copyright = '2012-2018, Volatility Foundation'
+copyright = '2012-2019, Volatility Foundation'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -136,7 +136,8 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 # html_theme = 'default'
-html_theme = 'pydoctheme'
+# html_theme = 'pydoctheme'
+html_theme = 'sphinx_rtd_theme'
 html_theme_path = ['tools']
 html_theme_options = {'collapsiblesidebar': True}
 
@@ -294,5 +295,6 @@ intersphinx_mapping = {'http://docs.python.org/': None}
 
 # -- Autodoc options -------------------------------------------------------
 
-autodoc_member_order = 'groupwise'
+# autodoc_member_order = 'groupwise'
 autodoc_default_flags = ['members', 'inherited-members']
+autoclass_content = 'both'
