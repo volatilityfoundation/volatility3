@@ -24,6 +24,7 @@ import functools
 import logging
 import math
 import multiprocessing
+import threading
 import traceback
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
@@ -212,10 +213,23 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
             progress = DummyProgress()  # type: ProgressValue
             scan_iterator = functools.partial(self._scan_iterator, scanner, sections)
             scan_metric = self._scan_metric(scanner, sections)
-            if scanner.thread_safe and constants.PARALLELISM:
-                progress = multiprocessing.Manager().Value("Q", 0)
+            if not scanner.thread_safe or constants.PARALLELISM == constants.Parallelism.Off:
+                progress = DummyProgress()
                 scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
-                with multiprocessing.Pool() as pool:
+                for value in scan_iterator():
+                    if progress_callback:
+                        progress_callback(
+                            scan_metric(progress.value),
+                            "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
+                    yield from scan_chunk(value)
+            else:
+                progress = multiprocessing.Manager().Value("Q", 0)
+                parallel_module = multiprocessing
+                if constants.PARALLELISM == constants.Parallelism.Threading:
+                    progress = DummyProgress()
+                    parallel_module = threading
+                scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
+                with parallel_module.Pool() as pool:
                     result = pool.map_async(scan_chunk, scan_iterator())
                     while not result.ready():
                         if progress_callback:
@@ -228,15 +242,6 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                         result.wait(0.1)
                     for result_value in result.get():
                         yield from result_value
-            else:
-                progress = DummyProgress()
-                scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
-                for value in scan_iterator():
-                    if progress_callback:
-                        progress_callback(
-                            scan_metric(progress.value),
-                            "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
-                    yield from scan_chunk(value)
         except Exception as e:
             # We don't care the kind of exception, so catch and report on everything, yielding nothing further
             vollog.debug("Scan Failure: {}".format(str(e)))
