@@ -118,7 +118,7 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
             for i in disasm_types[disasm.architecture].disasm(disasm.data, disasm.offset):
                 output += "\n0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str)
         return output
-    return QuickTextRenderer.type_renderers[bytes](disasm.data)
+    return QuickTextRenderer._type_renderers[bytes](disasm.data)
 
 
 class CLIRenderer(interfaces.renderers.Renderer):
@@ -127,7 +127,7 @@ class CLIRenderer(interfaces.renderers.Renderer):
 
 
 class QuickTextRenderer(CLIRenderer):
-    type_renderers = {
+    _type_renderers = {
         format_hints.Bin: optional(lambda x: "0b{:b}".format(x)),
         format_hints.Hex: optional(lambda x: "0x{:x}".format(x)),
         format_hints.HexBytes: optional(hex_bytes_as_text),
@@ -168,7 +168,7 @@ class QuickTextRenderer(CLIRenderer):
             accumulator.write("*" * max(0, node.path_depth - 1))
             line = []
             for column in grid.columns:
-                renderer = self.type_renderers.get(column.type, self.type_renderers['default'])
+                renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
                 line.append(renderer(node.values[column.index]))
             accumulator.write("{}".format("\t".join(line)))
             return accumulator
@@ -179,7 +179,7 @@ class QuickTextRenderer(CLIRenderer):
 
 
 class CSVRenderer(CLIRenderer):
-    type_renderers = {
+    _type_renderers = {
         format_hints.Bin: quoted_optional(lambda x: "0b{:b}".format(x)),
         format_hints.Hex: quoted_optional(lambda x: "0x{:x}".format(x)),
         format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
@@ -216,7 +216,7 @@ class CSVRenderer(CLIRenderer):
             accumulator.write(str(max(0, node.path_depth - 1)) + ",")
             line = []
             for column in grid.columns:
-                renderer = self.type_renderers.get(column.type, self.type_renderers['default'])
+                renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
                 line.append(renderer(node.values[column.index]))
             accumulator.write("{}".format(",".join(line)))
             return accumulator
@@ -227,7 +227,7 @@ class CSVRenderer(CLIRenderer):
 
 
 class PrettyTextRenderer(CLIRenderer):
-    type_renderers = QuickTextRenderer.type_renderers
+    _type_renderers = QuickTextRenderer._type_renderers
 
     name = "pretty"
 
@@ -261,7 +261,7 @@ class PrettyTextRenderer(CLIRenderer):
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
             line = {}
             for column in grid.columns:
-                renderer = self.type_renderers.get(column.type, self.type_renderers['default'])
+                renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
                 data = renderer(node.values[column.index])
                 max_column_widths[column.name] = max(
                     max_column_widths.get(column.name, len(column.name)), len("{}".format(data)))
