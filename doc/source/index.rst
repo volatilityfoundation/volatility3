@@ -16,17 +16,7 @@ Python Packages
 ===============
 
 .. toctree::
-    :hidden:
-
     volatility
-
-.. toctree::
-    :titlesonly:
-    :maxdepth: 2
-
-    volatility.cli
-    volatility.framework
-    volatility.plugins
 
 Indices and tables
 ==================
