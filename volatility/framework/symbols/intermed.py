@@ -77,10 +77,10 @@ def _construct_delegate_function(name: str, is_property: bool = False) -> Any:
 
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     """The IntermediateSymbolTable class reads a JSON file and conducts common tasks such as validation, construction
-    by looking up a JSON file from the available files and ensuring the appropriate version of the schema and proxy are 
+    by looking up a JSON file from the available files and ensuring the appropriate version of the schema and proxy are
     chosen.
 
-    The JSON format itself is made up of various groups (symbols, user_types, base_types, enums and metadata) 
+    The JSON format itself is made up of various groups (symbols, user_types, base_types, enums and metadata)
         * Symbols link a name to a particular offset relative to the start of a section of memory
         * Base types define the simplest primitive data types, these can make more complex structure
         * User types define the more complex types by specifying members at a relative offset from the start of the type
