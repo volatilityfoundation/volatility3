@@ -22,6 +22,7 @@ import datetime
 from typing import Callable, Iterable, List
 
 import volatility.framework.interfaces.plugins as plugins
+from volatility import classproperty
 from volatility.framework import renderers, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
@@ -49,6 +50,10 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.IntRequirement(
                 name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
         ]
+
+    @classproperty
+    def version(cls):
+        return (2, 0, 0)
 
     @classmethod
     def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:

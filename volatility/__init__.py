@@ -20,7 +20,22 @@
 """Volatility 3 - An open-source memory forensics framework"""
 import sys
 from importlib import abc
-from typing import List
+from typing import List, TypeVar, Callable
+
+_T = TypeVar("_T")
+_S = TypeVar("_S")
+
+
+class classproperty(object):
+    """Class property decorator
+
+    Note this will change the return type """
+
+    def __init__(self, func: Callable[[_S], _T]) -> None:
+        self._func = func
+
+    def __get__(self, _owner_self, owner_cls: _S) -> _T:
+        return self._func(owner_cls)
 
 
 class WarningFindSpec(abc.MetaPathFinder):

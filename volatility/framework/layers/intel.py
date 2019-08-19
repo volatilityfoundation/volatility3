@@ -23,27 +23,13 @@ import functools
 import logging
 import math
 import struct
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from volatility import framework, classproperty
 from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
-
-_T = TypeVar("_T")
-_S = TypeVar("_S")
-
-
-class classproperty(object):
-    """Class property decorator
-
-    Note this will change the return type """
-
-    def __init__(self, func: Callable[[_S], _T]) -> None:
-        self._func = func
-
-    def __get__(self, _owner_self, owner_cls: _S) -> _T:
-        return self._func(owner_cls)
 
 
 class Intel(interfaces.layers.TranslationLayerInterface):

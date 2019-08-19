@@ -99,4 +99,6 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             yield (start, end - start)
 
     def run(self):
+        self.check_plugin_version(pslist.PsList, (1, 0, 0))
+
         return renderers.TreeGrid([('Offset', format_hints.Hex), ('Rule', str)], self._generator())

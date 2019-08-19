@@ -18,14 +18,12 @@
 # specific language governing rights and limitations under the License.
 #
 
-from volatility.plugins.windows.driverscan import DriverScan
-
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import constants
 from volatility.framework import renderers, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.plugins.windows import ssdt
+from volatility.plugins.windows import ssdt, driverscan
 
 MAJOR_FUNCTIONS = [
     'IRP_MJ_CREATE', 'IRP_MJ_CREATE_NAMED_PIPE', 'IRP_MJ_CLOSE', 'IRP_MJ_READ', 'IRP_MJ_WRITE',
@@ -53,7 +51,8 @@ class DriverIrp(plugins.PluginInterface):
 
         collection = ssdt.SSDT.build_module_collection(self.context, self.config['primary'], self.config['nt_symbols'])
 
-        for driver in DriverScan.scan_drivers(self.context, self.config['primary'], self.config['nt_symbols']):
+        for driver in driverscan.DriverScan.scan_drivers(self.context, self.config['primary'],
+                                                         self.config['nt_symbols']):
 
             try:
                 driver_name = driver.get_driver_name()
@@ -76,6 +75,9 @@ class DriverIrp(plugins.PluginInterface):
                                    format_hints.Hex(address), module_name, renderers.NotAvailableValue()))
 
     def run(self):
+        self.check_plugin_version(ssdt.SSDT, (1, 0, 0))
+        self.check_plugin_version(driverscan.DriverScan, (1, 0, 0))
+
         return renderers.TreeGrid([
             ("Offset", format_hints.Hex),
             ("Driver Name", str),

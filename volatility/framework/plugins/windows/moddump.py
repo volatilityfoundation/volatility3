@@ -58,6 +58,7 @@ class ModDump(interfaces.plugins.PluginInterface):
         Returns:
             <list> of layer names
         """
+        cls.check_plugin_version(pslist.PsList, (1, 0, 0))
         seen_ids = []  # type: List[interfaces.objects.ObjectInterface]
         filter_func = pslist.PsList.create_pid_filter(pids or [])
 
@@ -146,7 +147,6 @@ class ModDump(interfaces.plugins.PluginInterface):
             yield (0, (format_hints.Hex(mod.DllBase), BaseDllName, result_text))
 
     def run(self):
-
         return renderers.TreeGrid([("Base", format_hints.Hex), ("Name", str), ("Result", str)],
                                   self._generator(
                                       modules.Modules.list_modules(

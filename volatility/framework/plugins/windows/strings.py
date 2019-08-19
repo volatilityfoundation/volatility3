@@ -44,6 +44,7 @@ class Strings(interfaces.plugins.PluginInterface):
         # TODO: Make URLRequirement that can accept a file address which the framework can open
 
     def run(self):
+        self.check_plugin_version(pslist.PsList, (1, 0, 0))
 
         return renderers.TreeGrid([("String", str), ("Physical Address", format_hints.Hex), ("Result", str)],
                                   self._generator())
