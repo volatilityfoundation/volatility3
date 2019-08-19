@@ -63,6 +63,8 @@ class DllList(interfaces_plugins.PluginInterface):
 
     def run(self):
 
+        self.check_plugin_version(pslist.PsList, (1, 0, 0))
+
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex),

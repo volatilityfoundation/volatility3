@@ -155,6 +155,8 @@ class VerInfo(interfaces_plugins.PluginInterface):
                            format_hints.Hex(entry.DllBase), BaseDllName, major, minor, product, build))
 
     def run(self):
+        self.check_plugin_version(pslist.PsList, (1, 0, 0))
+
         procs = pslist.PsList.list_processes(self.context, self.config["primary"], self.config["nt_symbols"])
 
         mods = modules.Modules.list_modules(self.context, self.config["primary"], self.config["nt_symbols"])

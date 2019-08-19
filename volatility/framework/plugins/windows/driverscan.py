@@ -23,6 +23,7 @@ from typing import Iterable
 import volatility.plugins.windows.poolscanner as poolscanner
 
 import volatility.framework.interfaces.plugins as plugins
+from volatility import classproperty
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
@@ -79,3 +80,7 @@ class DriverScan(plugins.PluginInterface):
         return renderers.TreeGrid([("Offset", format_hints.Hex),
                                    ("Start", format_hints.Hex), ("Size", format_hints.Hex), ("Service Key", str),
                                    ("Driver Name", str), ("Name", str)], self._generator())
+
+    @classproperty
+    def version(cls):
+        return (1, 0, 0)

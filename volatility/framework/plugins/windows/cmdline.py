@@ -65,6 +65,7 @@ class CmdLine(interfaces_plugins.PluginInterface):
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):
+        self.check_plugin_version(pslist.PsList, (1, 0, 0))
 
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 

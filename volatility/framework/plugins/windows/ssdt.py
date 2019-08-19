@@ -21,6 +21,7 @@
 import os
 from typing import Any, Iterator, List, Tuple
 
+from volatility import classproperty
 from volatility.framework import constants, interfaces
 from volatility.framework import contexts
 from volatility.framework import exceptions, symbols
@@ -130,3 +131,7 @@ class SSDT(plugins.PluginInterface):
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Index", int), ("Address", format_hints.Hex), ("Module", str), ("Symbol", str)],
                                   self._generator())
+
+    @classproperty
+    def version(cls):
+        return (1, 0, 0)

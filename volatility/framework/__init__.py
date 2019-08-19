@@ -23,9 +23,9 @@ import inspect
 import logging
 import os
 import sys
-from typing import Any, Dict, Generator, List, Type, TypeVar
+from typing import Any, Dict, Generator, List, Type, TypeVar, Callable
 
-from volatility.framework import interfaces, constants
+from volatility.framework import constants, interfaces
 
 # ##
 #
