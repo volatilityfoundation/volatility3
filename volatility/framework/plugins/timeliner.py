@@ -140,8 +140,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
             try:
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
 
-                plugin = plugins.run_plugin(self.context, automagics, plugin_class, self.config_path,
-                                            self._progress_callback, self._file_consumer)
+                plugin = plugins.construct_plugin(self.context, automagics, plugin_class, self.config_path,
+                                                  self._progress_callback, self._file_consumer)
 
                 if isinstance(plugin, TimeLinerInterface):
                     runable_plugins.append(plugin)

@@ -30,10 +30,11 @@ from volatility.framework import interfaces, automagic, exceptions, constants
 vollog = logging.getLogger(__name__)
 
 
-def run_plugin(context: interfaces.context.ContextInterface, automagics: List[interfaces.automagic.AutomagicInterface],
-               plugin: Type[interfaces.plugins.PluginInterface], base_config_path: str,
-               progress_callback: constants.ProgressCallback,
-               file_consumer: interfaces.plugins.FileConsumerInterface) -> interfaces.plugins.PluginInterface:
+def construct_plugin(context: interfaces.context.ContextInterface,
+                     automagics: List[interfaces.automagic.AutomagicInterface],
+                     plugin: Type[interfaces.plugins.PluginInterface], base_config_path: str,
+                     progress_callback: constants.ProgressCallback,
+                     file_consumer: interfaces.plugins.FileConsumerInterface) -> interfaces.plugins.PluginInterface:
     """Constructs a plugin object based on the parameters
 
     Clever magic figures out how to fulfill each requirement that might not be fulfilled

@@ -270,7 +270,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             if args.quiet:
                 progress_callback = MuteProgress()
 
-            constructed = plugins.run_plugin(ctx, automagics, plugin, base_config_path, progress_callback, self)
+            constructed = plugins.construct_plugin(ctx, automagics, plugin, base_config_path, progress_callback, self)
 
             if args.write_config:
                 vollog.debug("Writing out configuration data to config.json")
