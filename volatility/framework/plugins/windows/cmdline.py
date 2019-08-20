@@ -37,6 +37,8 @@ class CmdLine(interfaces_plugins.PluginInterface):
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(
+                name = 'pslist', description = 'PsList plugin requirement', plugin = pslist.PsList, version = (1, 0, 0))
             requirements.IntRequirement(
                 name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
         ]
@@ -65,8 +67,6 @@ class CmdLine(interfaces_plugins.PluginInterface):
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):
-        self.check_plugin_version(pslist.PsList, (1, 0, 0))
-
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Args", str)],

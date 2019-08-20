@@ -114,31 +114,6 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
         return (0, 0, 0)
 
     @classmethod
-    def check_plugin_version(cls, plugin: 'PluginInterface', required_version: Tuple[int, ...]) -> bool:
-        """Verify the plugin provides the needed API.
-        Validating the existence of the plugin is handled by the import statement and python's traditional import machinery
-
-        Args
-            plugin: The plugin whose version needs checking
-            required_version: Tuple of the minimum semantic version required for the plugin
-        """
-        result = True
-        plugin_name = plugin.__name__
-        if len(required_version) > 0 and plugin.version[0] != required_version[0]:
-            raise exceptions.PluginVersionException("Version {} of {} does not meet required version {}".format(
-                plugin.version[0], plugin_name, required_version[0]))
-        if len(required_version) > 1 and plugin.version[1] > required_version[1]:
-            raise exceptions.PluginVersionException("Version {}.{} of {} does not meet required version {}.{}".format(
-                plugin.version[0], plugin.version[1], plugin_name, required_version[0], required_version[1]))
-        if len(required_version) > 2 and plugin.version[1] == required_version[1] and plugin.version[2] > \
-                required_version[2]:
-            raise exceptions.PluginVersionException(
-                "Version {}.{}.{} of {} does not meet required version {}.{}.{}".format(
-                    plugin.version[0], plugin.version[1], plugin.version[2], plugin_name, required_version[0],
-                    required_version[1], required_version[2]))
-        return result
-
-    @classmethod
     def get_requirements(cls) -> List[interfaces_configuration.RequirementInterface]:
         """Returns a list of Requirement objects for this plugin"""
         return []

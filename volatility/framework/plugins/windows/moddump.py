@@ -40,6 +40,7 @@ class ModDump(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Reuse the requirements from the plugins we use
         return [
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
@@ -58,7 +59,6 @@ class ModDump(interfaces.plugins.PluginInterface):
         Returns:
             <list> of layer names
         """
-        cls.check_plugin_version(pslist.PsList, (1, 0, 0))
         seen_ids = []  # type: List[interfaces.objects.ObjectInterface]
         filter_func = pslist.PsList.create_pid_filter(pids or [])
 

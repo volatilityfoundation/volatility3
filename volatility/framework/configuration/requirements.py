@@ -25,7 +25,7 @@ etc) as well as indicating what they expect to be in the context (such as partic
 """
 import abc
 import logging
-from typing import Any, ClassVar, List, Optional, Type, Dict
+from typing import Any, ClassVar, List, Optional, Type, Dict, Tuple
 
 from volatility.framework import constants, interfaces
 from volatility.framework.interfaces import configuration
@@ -366,3 +366,29 @@ class SymbolTableRequirement(configuration.ConstructableRequirementInterface,
                             value: Any) -> configuration.HierarchicalDict:
         """Builds the appropriate configuration for the specified requirement"""
         return context.symbol_space[value].build_configuration()
+
+
+class PluginRequirement(interfaces.configuration.RequirementInterface):
+
+    def __init__(self,
+                 name: str,
+                 description: str = None,
+                 default: None = None,
+                 optional: bool = False,
+                 plugin: interfaces.plugins.PluginInterface = None,
+                 version: Optional[Tuple[int, ...]] = None) -> None:
+        super().__init__(name = name, description = description, default = default, optional = optional)
+        if plugin is None:
+            raise ValueError("Plugin cannot be None")
+        self._plugin = plugin
+        if version is None:
+            raise ValueError("Version cannot be None")
+        self._version = version
+
+    def unsatisfied(self, context: interfaces.context.ContextInterface,
+                    config_path: str) -> Dict[str, interfaces.configuration.RequirementInterface]:
+        if len(self._version) > 0 and self._plugin.version[0] != self._version[0]:
+            return {config_path: self}
+        if len(self._version) > 1 and self._plugin.version[1] > self._version[1]:
+            return {config_path: self}
+        return {}

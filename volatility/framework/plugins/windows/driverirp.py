@@ -42,6 +42,8 @@ class DriverIrp(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
+            requirements.PluginRequirement(name = 'ssdt', plugin = ssdt.SSDT, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'driverscan', plugin = driverscan.DriverScan, version = (1, 0, 0)),
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
@@ -75,8 +77,6 @@ class DriverIrp(plugins.PluginInterface):
                                    format_hints.Hex(address), module_name, renderers.NotAvailableValue()))
 
     def run(self):
-        self.check_plugin_version(ssdt.SSDT, (1, 0, 0))
-        self.check_plugin_version(driverscan.DriverScan, (1, 0, 0))
 
         return renderers.TreeGrid([
             ("Offset", format_hints.Hex),
