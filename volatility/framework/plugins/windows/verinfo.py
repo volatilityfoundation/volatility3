@@ -49,6 +49,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
@@ -155,8 +156,6 @@ class VerInfo(interfaces_plugins.PluginInterface):
                            format_hints.Hex(entry.DllBase), BaseDllName, major, minor, product, build))
 
     def run(self):
-        self.check_plugin_version(pslist.PsList, (1, 0, 0))
-
         procs = pslist.PsList.list_processes(self.context, self.config["primary"], self.config["nt_symbols"])
 
         mods = modules.Modules.list_modules(self.context, self.config["primary"], self.config["nt_symbols"])
