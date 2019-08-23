@@ -45,8 +45,10 @@ class ProcDump(interfaces_plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
-        ] + pslist.PsList.list_processes_filter_requirements
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.IntRequirement(
+                name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
+        ]
 
     def _generator(self, procs):
 

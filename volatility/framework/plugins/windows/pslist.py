@@ -45,13 +45,10 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 name = 'physical',
                 description = 'Display physical offsets instead of virtual',
                 default = cls.PHYSICAL_DEFAULT,
-                optional = True)
-        ] + cls.list_processes_filter_requirements
-
-    list_processes_filter_requirements = [
-        requirements.IntRequirement(
-            name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
-    ]
+                optional = True),
+            requirements.IntRequirement(
+                name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
+        ]
 
     @classmethod
     def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:

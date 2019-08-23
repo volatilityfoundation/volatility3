@@ -53,8 +53,10 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 name = "max_size",
                 default = 0x40000000,
                 description = "Set the maximum size (default is 1GB)",
-                optional = True)
-        ] + pslist.PsList.list_processes_filter_requirements
+                optional = True),
+            requirements.IntRequirement(
+                name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
+        ]
 
     def _generator(self):
 
