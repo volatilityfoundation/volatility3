@@ -26,15 +26,13 @@ They are called and carry out some algorithms on data stored in layers using obj
 import io
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 
 from volatility.framework import exceptions, constants
-from volatility.framework.interfaces import configuration as interfaces_configuration
+from volatility.framework.interfaces import configuration as interfaces_configuration, \
+    renderers as interfaces_renderers, context as interfaces_context
 
 vollog = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from volatility.framework import interfaces, renderers
 
 
 class FileInterface(metaclass = ABCMeta):
@@ -80,7 +78,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
     """
 
     def __init__(self,
-                 context: 'interfaces.context.ContextInterface',
+                 context: interfaces_context.ContextInterface,
                  config_path: str,
                  progress_callback: constants.ProgressCallback = None) -> None:
         super().__init__(context, config_path)
@@ -103,12 +101,12 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
             vollog.debug("No file consumer specified to consume: {}".format(filedata.preferred_filename))
 
     @classmethod
-    def get_requirements(cls) -> List['interfaces.configuration.RequirementInterface']:
+    def get_requirements(cls) -> List[interfaces_configuration.RequirementInterface]:
         """Returns a list of Requirement objects for this plugin"""
         return []
 
     @abstractmethod
-    def run(self) -> 'interfaces.renderers.TreeGrid':
+    def run(self) -> interfaces_renderers.TreeGrid:
         """Executes the functionality of the code
 
         .. note:: This method expects `self.validate` to have been called to ensure all necessary options have been provided
