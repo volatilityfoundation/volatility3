@@ -54,7 +54,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                 default = 0x40000000,
                 description = "Set the maximum size (default is 1GB)",
                 optional = True),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
             requirements.IntRequirement(
                 name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
         ]
