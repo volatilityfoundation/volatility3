@@ -36,6 +36,7 @@ to be able to run properly.  Any that are defined as optional need not necessari
                                                              description = 'Memory layer for the kernel',
                                                              architectures = ["Intel32", "Intel64"]),
                     requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows OS"),
+                    requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
                     requirements.IntRequirement(name = 'pid',
                                                 description = "Process ID to include (all other processes are excluded)",
                                                 optional = True)]
@@ -60,7 +61,7 @@ loaded layer will appear in the plugin's configuration under the name `primary`
 Finally, this defines that the translation layer must be on the Intel Architecture.  At the moment, this acts as a filter,
 failing to be satisfied by memory images that do not match the architecture required.
 
-This requirement (and the next) are known as Complex Requirements, and user interfaces will likely not directly
+This requirement (and the next two) are known as Complex Requirements, and user interfaces will likely not directly
 request a value for this from a user.  The value stored in the configuration tree for a
 :py:class:`~volatility.framework.configuration.requirements.TranslationLayerRequirement` is
 the string name of a layer present in the context's memory that satisfies the requirement.
@@ -83,6 +84,16 @@ the appropriate :py:class:`SymbolTable <volatility.framework.interfaces.symbols.
 name of the :py:class:`SymbolTable <volatility.framework.interfaces.symbols.SymbolTableInterface>` will be stored in the configuration.
 
 This requirement is also a Complex Requirement and therefore will not be requested directly from the user.
+
+::
+
+    requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+
+This requirement indicates that the plugin will make use of another plugin's code, and specifies the version requirements
+on that plugin.  The version is specified in terms of Semantic Versioning, meaning that to be compatible, the major
+versions must be identical and the minor version must be equal to or higher than the one provided.  This requirement
+does make use of any data from the configuration, even if it were provided, it is merely a functional check before
+running the plugin.
 
 ::
 
