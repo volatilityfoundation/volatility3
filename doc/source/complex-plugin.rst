@@ -121,5 +121,11 @@ The table name can then by used to access the constructed table from the context
 
     context.symbol_space[table_name]
 
-Writing new layers
-------------------
+Writing new translation layers
+------------------------------
+
+
+Writing new Templates and Objects
+---------------------------------
+
+
