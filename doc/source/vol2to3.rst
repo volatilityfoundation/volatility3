@@ -6,15 +6,15 @@ Library and Context
 
 Volatility 3 has been designed from the ground up to be a library, this means the components are independent and all
 state required to run a particular plugin at a particular time is self-contained in an object derived from
-a :py:class:`~volatility.framework.interfaces.contexts.ContextInterface`.
+a :py:class:`~volatility.framework.interfaces.context.ContextInterface`.
 
 The context contains the two core components that make up volatility, layers of data and the available symbols.
 
 Symbols and Types
 -----------------
 
-Volatility 3 no longer uses profiles, it comes with an extensive library of symbol tables
-(:py:class:`~volatility.framework.interfaces.symbols.SymbolTableInterface`), and can generate new symbol
+Volatility 3 no longer uses profiles, it comes with an extensive library of
+:py:class:`symbol tables <volatility.framework.interfaces.symbols.SymbolTableInterface>`, and can generate new symbol
 tables for most windows memory images, based on the memory image itself.  This allows symbol tables to include specific
 offsets for locations (symbol locations) based on that operating system in particular.  This means it is easier and quicker
 to identify structures within an operating system, by having known offsets for those structures provided by the official
@@ -30,26 +30,26 @@ ultimately it was a different type and could not be used in the same places (cri
 operations important, since a + b might not work, but b + a might work fine).
 
 Volatility 3 has also had significant speed improvements, where volatility 2 was designed to allow access to live memory
-images where the underlying data could change during the run of the plugin, in volatility 3 the data is now read once
-at the time of object construction, and will remain static, even if the underlying layer changes.  This was because live
-memory analysis was barely ever used, and this feature could cause a particular value to be re-read many times over for
-no benefit (particularly since each re-read could result in many additional image reads from following page table 
-translations).
+images and situations in which the underlying data could change during the run of the plugin, in volatility 3 the data
+is now read once at the time of object construction, and will remain static, even if the underlying layer changes.
+This was because live memory analysis was barely ever used, and this feature could cause a particular value to be
+re-read many times over for no benefit (particularly since each re-read could result in many additional image reads
+from following page table translations).
 
 Finally, in order to provide volatility specific information without impact on the ability for structures to have members
 with arbitrary names, all the metadata about the object (such as its layer or offset) have been moved to a read-only `vol`
 dictionary.
 
 Further the distinction between a :py:class:`~volatility.framework.interfaces.objects.Template` (the thing that
-constructs an object) and the Object (:py:class:`~volatility.framework.interfaces.objects.ObjectInterface`) itself has
+constructs an object) and the :py:class:`Object <volatility.framework.interfaces.objects.ObjectInterface>` itself has
 been made more explicit.  In volatility 2, some information (such as size) could only be determined from a constructed object,
 leading to instantiating a template on an empty buffer, just to determine the size.  In volatility 3, templates contain
 information such as their size, which can be queried directly without constructing the object.
 
 Layer and Layer dependencies
 ----------------------------
-Address spaces in volatility 2, are now more accurately referred to as Translation Layers
-(:py:class:`~volatility.framework.interfaces.layers.TranslationLayerInterface`), since each one typically sits
+Address spaces in volatility 2, are now more accurately referred to as
+:py:class:`Translation Layers <volatility.framework.interfaces.layers.TranslationLayerInterface>`, since each one typically sits
 atop another and can translate addresses between the higher logical layer and the lower physical layer.  Address spaces in
 volatility 2 were strictly limited to a stack, one on top of one other.  In volatility 3, layers can have multiple
 "dependencies" (lower layers), which allows for the integration of features such as swap space.
