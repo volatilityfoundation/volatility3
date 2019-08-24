@@ -21,8 +21,8 @@
 import logging
 from typing import Callable, Iterable, List
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import renderers, interfaces, contexts, constants
+from volatility import classproperty
+from volatility.framework import renderers, interfaces, contexts
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -30,8 +30,12 @@ from volatility.framework.objects import utility
 vollog = logging.getLogger(__name__)
 
 
-class PsList(interfaces_plugins.PluginInterface):
+class PsList(interfaces.plugins.PluginInterface):
     """Lists the processes present in a particular mac memory image"""
+
+    @classproperty
+    def version(cls):
+        return (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):

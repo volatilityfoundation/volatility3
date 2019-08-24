@@ -19,10 +19,10 @@
 #
 
 from volatility.framework import renderers
+from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.plugins.mac import pslist
-from volatility.framework.configuration import requirements
 
 
 class PsTree(plugins.PluginInterface):
@@ -39,7 +39,8 @@ class PsTree(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols")
+            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
 
     def _find_level(self, pid):

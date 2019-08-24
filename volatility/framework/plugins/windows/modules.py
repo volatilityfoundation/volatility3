@@ -20,6 +20,7 @@
 
 from typing import List
 
+from volatility import classproperty
 from volatility.framework import constants
 from volatility.framework import exceptions, interfaces
 from volatility.framework import renderers
@@ -29,6 +30,10 @@ from volatility.framework.renderers import format_hints
 
 class Modules(interfaces.plugins.PluginInterface):
     """Lists the loaded kernel modules"""
+
+    @classproperty
+    def version(cls):
+        return (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

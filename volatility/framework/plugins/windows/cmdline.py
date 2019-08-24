@@ -37,9 +37,7 @@ class CmdLine(interfaces_plugins.PluginInterface):
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.PluginRequirement(
-                name = 'pslist', description = 'PsList plugin requirement', plugin = pslist.PsList, version = (1, 0,
-                                                                                                               0)),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
             requirements.IntRequirement(
                 name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
         ]

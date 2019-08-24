@@ -41,7 +41,8 @@ class SSDT(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
         ]
 
     @classmethod

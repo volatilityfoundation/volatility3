@@ -20,39 +20,41 @@
 
 import logging
 from typing import List
+
 from volatility.framework import interfaces, renderers, constants, symbols
-from volatility.framework.layers import scanners
 from volatility.framework.configuration import requirements
+from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
-from volatility.plugins.windows import poolscanner, vadyarascan, pslist
-from volatility.framework.symbols.windows.extensions import services
 from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows.extensions import services
+from volatility.plugins.windows import poolscanner, vadyarascan, pslist
 
 vollog = logging.getLogger(__name__)
+
 
 class SvcScan(interfaces.plugins.PluginInterface):
     """Scans for windows services"""
 
     is_vista_or_later = poolscanner.os_distinguisher(
-        version_check=lambda x: x >= (6, 0), fallback_checks=[("KdCopyDataBlock", None, True)])
+        version_check = lambda x: x >= (6, 0), fallback_checks = [("KdCopyDataBlock", None, True)])
 
     is_windows_xp = poolscanner.os_distinguisher(
-        version_check=lambda x: (5, 1) <= x < (5, 2), fallback_checks=[("KdCopyDataBlock", None, False),
-                                                                       ("_HANDLE_TABLE", "HandleCount", True)])
+        version_check = lambda x: (5, 1) <= x < (5, 2),
+        fallback_checks = [("KdCopyDataBlock", None, False), ("_HANDLE_TABLE", "HandleCount", True)])
 
     is_xp_or_2003 = poolscanner.os_distinguisher(
-        version_check=lambda x: (5, 1) <= x < (6, 0), fallback_checks=[("KdCopyDataBlock", None, False),
-                                                                       ("_HANDLE_TABLE", "HandleCount", True)])
+        version_check = lambda x: (5, 1) <= x < (6, 0),
+        fallback_checks = [("KdCopyDataBlock", None, False), ("_HANDLE_TABLE", "HandleCount", True)])
 
     is_win10_up_to_15063 = poolscanner.os_distinguisher(
-        version_check=lambda x: (10, 0) <= x < (10, 0, 16299), fallback_checks=[("ObHeaderCookie", None, True),
-                                                                                ("_HANDLE_TABLE", "HandleCount", False),
-                                                                                ("ObHeaderCookie", None, True)])
+        version_check = lambda x: (10, 0) <= x < (10, 0, 16299),
+        fallback_checks = [("ObHeaderCookie", None, True), ("_HANDLE_TABLE", "HandleCount", False),
+                           ("ObHeaderCookie", None, True)])
 
     is_win10_16299_or_later = poolscanner.os_distinguisher(
-        version_check=lambda x: x >= (10, 0, 16299), fallback_checks=[("ObHeaderCookie", None, True),
-                                                                      ("_HANDLE_TABLE", "HandleCount", False),
-                                                                      ("ObHeaderCookie", None, True)])
+        version_check = lambda x: x >= (10, 0, 16299),
+        fallback_checks = [("ObHeaderCookie", None, True), ("_HANDLE_TABLE", "HandleCount", False),
+                           ("ObHeaderCookie", None, True)])
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -60,25 +62,20 @@ class SvcScan(interfaces.plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'vadyarascan', plugin = vadyarascan.VadYaraScan, version = (1, 0, 0))
         ]
 
     @staticmethod
     def get_record_tuple(service_record: interfaces.objects.ObjectInterface):
-        return (format_hints.Hex(service_record.vol.offset),
-                service_record.Order,
-                service_record.get_pid(),
-                service_record.Start.description,
-                service_record.State.description,
-                service_record.get_type(),
-                service_record.get_name(),
-                service_record.get_display(),
-                service_record.get_binary())
+        return (format_hints.Hex(service_record.vol.offset), service_record.Order, service_record.get_pid(),
+                service_record.Start.description, service_record.State.description, service_record.get_type(),
+                service_record.get_name(), service_record.get_display(), service_record.get_binary())
 
     @staticmethod
-    def create_service_table(context: interfaces.context.ContextInterface,
-                             symbol_table: str,
-                             config_path: str) -> str:
+    def create_service_table(context: interfaces.context.ContextInterface, symbol_table: str, config_path: str) -> str:
 
         native_types = context.symbol_space[symbol_table].natives
         is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
@@ -89,7 +86,8 @@ class SvcScan(interfaces.plugins.PluginInterface):
             symbol_filename = "services-xp-2003-x64"
         elif poolscanner.PoolScanner.is_windows_8_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win8-x64"
-        elif poolscanner.PoolScanner.is_windows_8_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
+        elif poolscanner.PoolScanner.is_windows_8_or_later(
+                context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win8-x86"
         elif SvcScan.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win10-15063-x64"
@@ -106,26 +104,24 @@ class SvcScan(interfaces.plugins.PluginInterface):
         else:
             raise NotImplementedError("This version of Windows is not supported!")
 
-        return intermed.IntermediateSymbolTable.create(context,
-                                                       config_path,
-                                                       "windows",
-                                                       symbol_filename,
-                                                       class_types = services.class_types,
-                                                       native_types = native_types)
+        return intermed.IntermediateSymbolTable.create(
+            context,
+            config_path,
+            "windows",
+            symbol_filename,
+            class_types = services.class_types,
+            native_types = native_types)
 
     def _generator(self):
 
-        service_table_name = self.create_service_table(self.context,
-                                                       self.config["nt_symbols"],
-                                                       self.config_path)
+        service_table_name = self.create_service_table(self.context, self.config["nt_symbols"], self.config_path)
 
-        relative_tag_offset = self.context.symbol_space.get_type(
-            service_table_name + constants.BANG + "_SERVICE_RECORD").relative_child_offset("Tag")
+        relative_tag_offset = self.context.symbol_space.get_type(service_table_name + constants.BANG +
+                                                                 "_SERVICE_RECORD").relative_child_offset("Tag")
 
         filter_func = pslist.PsList.create_name_filter(["services.exe"])
 
-        is_vista_or_later = SvcScan.is_vista_or_later(context = self.context,
-                                                      symbol_table = self.config["nt_symbols"])
+        is_vista_or_later = SvcScan.is_vista_or_later(context = self.context, symbol_table = self.config["nt_symbols"])
 
         if is_vista_or_later:
             service_tag = b"serH"
@@ -134,31 +130,35 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
         seen = []
 
-        for task in pslist.PsList.list_processes(context = self.context,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols'],
-                                                 filter_func = filter_func):
+        for task in pslist.PsList.list_processes(
+                context = self.context,
+                layer_name = self.config['primary'],
+                symbol_table = self.config['nt_symbols'],
+                filter_func = filter_func):
 
             proc_layer_name = task.add_process_layer()
             layer = self.context.layers[proc_layer_name]
 
-            for offset in layer.scan(context = self.context,
-                                     scanner = scanners.BytesScanner(needle = service_tag),
-                                     sections = vadyarascan.VadYaraScan.get_vad_maps(task)):
+            for offset in layer.scan(
+                    context = self.context,
+                    scanner = scanners.BytesScanner(needle = service_tag),
+                    sections = vadyarascan.VadYaraScan.get_vad_maps(task)):
 
                 if not is_vista_or_later:
-                    service_record = self.context.object(service_table_name + constants.BANG + "_SERVICE_RECORD",
-                                                         offset = offset - relative_tag_offset,
-                                                         layer_name = proc_layer_name)
+                    service_record = self.context.object(
+                        service_table_name + constants.BANG + "_SERVICE_RECORD",
+                        offset = offset - relative_tag_offset,
+                        layer_name = proc_layer_name)
 
                     if not service_record.is_valid():
                         continue
 
                     yield (0, self.get_record_tuple(service_record))
                 else:
-                    service_header = self.context.object(service_table_name + constants.BANG + "_SERVICE_HEADER",
-                                                         offset = offset,
-                                                         layer_name = proc_layer_name)
+                    service_header = self.context.object(
+                        service_table_name + constants.BANG + "_SERVICE_HEADER",
+                        offset = offset,
+                        layer_name = proc_layer_name)
 
                     if not service_header.is_valid():
                         continue
@@ -173,13 +173,14 @@ class SvcScan(interfaces.plugins.PluginInterface):
                         yield (0, self.get_record_tuple(service_record))
 
     def run(self):
-        return renderers.TreeGrid([('Offset', format_hints.Hex),
-                                   ('Order', int),
-                                   ('Pid', int),
-                                   ('Start', str),
-                                   ('State', str),
-                                   ('Type', str),
-                                   ('Name', str),
-                                   ('Display', str),
-                                   ('Binary', str),
-                                   ], self._generator())
+        return renderers.TreeGrid([
+            ('Offset', format_hints.Hex),
+            ('Order', int),
+            ('Pid', int),
+            ('Start', str),
+            ('State', str),
+            ('Type', str),
+            ('Name', str),
+            ('Display', str),
+            ('Binary', str),
+        ], self._generator())
