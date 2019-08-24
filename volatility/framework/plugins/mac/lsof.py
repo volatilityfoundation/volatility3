@@ -10,6 +10,7 @@ from volatility.plugins.mac import pslist
 
 vollog = logging.getLogger(__name__)
 
+
 class lsof(plugins.PluginInterface):
     """Lists all open file descriptors for all processes"""
 
@@ -18,7 +19,8 @@ class lsof(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel")
+            requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
 
     def _generator(self, tasks):
@@ -32,11 +34,10 @@ class lsof(plugins.PluginInterface):
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([("PID", int), ("File Descriptor", int), ("File Path", str)], 
+        return renderers.TreeGrid([("PID", int), ("File Descriptor", int), ("File Path", str)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(        
+                                      pslist.PsList.list_tasks(
                                           self.context,
                                           self.config['primary'],
                                           self.config['darwin'],
-                                          filter_func = filter_func)))          
-            
+                                          filter_func = filter_func)))

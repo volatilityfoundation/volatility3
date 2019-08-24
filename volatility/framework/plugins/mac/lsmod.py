@@ -20,8 +20,8 @@
 """A module containing a collection of plugins that produce data
 typically found in Mac's lsmod command.
 """
-
-from volatility.framework import renderers, interfaces, contexts, constants
+from volatility import classproperty
+from volatility.framework import renderers, interfaces, contexts
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
@@ -31,6 +31,10 @@ from volatility.framework.renderers import format_hints
 
 class Lsmod(plugins.PluginInterface):
     """Lists loaded kernel modules"""
+
+    @classproperty
+    def version(cls):
+        return (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):

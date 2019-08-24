@@ -43,7 +43,8 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols")
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
         ]
 
     def _generator(self, tasks):

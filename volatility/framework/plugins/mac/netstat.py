@@ -19,7 +19,8 @@ class Netstat(plugins.PluginInterface):
         return [
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel")
+            requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
 
     def _generator(self, tasks):

@@ -41,6 +41,7 @@ class ModDump(interfaces.plugins.PluginInterface):
         # Reuse the requirements from the plugins we use
         return [
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")

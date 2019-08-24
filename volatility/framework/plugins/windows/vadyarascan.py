@@ -21,6 +21,7 @@
 import logging
 from typing import Iterable, List, Tuple
 
+from volatility import classproperty
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import resources
@@ -37,6 +38,10 @@ except ImportError:
 
 
 class VadYaraScan(interfaces.plugins.PluginInterface):
+
+    @classproperty
+    def version(cls):
+        return (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
