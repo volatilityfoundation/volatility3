@@ -25,7 +25,6 @@ from typing import Dict, Generator, List, Optional, Tuple, Callable
 
 import volatility.plugins.windows.handles as handles
 
-from volatility import classproperty
 from volatility.framework import constants, interfaces, renderers, exceptions, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins, configuration
@@ -179,9 +178,7 @@ def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
 class PoolScanner(plugins.PluginInterface):
     """A generic pool scanner plugin"""
 
-    @classproperty
-    def version(cls):
-        return (1, 0, 0)
+    _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

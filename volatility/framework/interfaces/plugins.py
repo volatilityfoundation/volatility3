@@ -78,6 +78,10 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
     context it is passed.
     """
 
+    # Be careful with inheritance around this
+    _version = (0, 0, 0)  # type: Tuple[int, int, int]
+    """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
+
     def __init__(self,
                  context: interfaces_context.ContextInterface,
                  config_path: str,
@@ -111,7 +115,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
             MINOR version when you add functionality in a backwards compatible manner.
             PATCH version when you make backwards compatible bug fixes.
         """
-        return (0, 0, 0)
+        return cls._version
 
     @classmethod
     def get_requirements(cls) -> List[interfaces_configuration.RequirementInterface]:
