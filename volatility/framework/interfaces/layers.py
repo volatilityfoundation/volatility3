@@ -358,19 +358,12 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Returns a list of layer names that this layer translates onto"""
         return []
 
-    ### Translation layer convenience function
+    def _decode(self, data: bytes, mapped_offset: int, offset: int) -> bytes:
+        """Decodes any necessary data"""
+        return data
 
-    def translate(self, offset: int, ignore_errors: bool = False) -> Tuple[Optional[int], Optional[str]]:
-        mapping = self.mapping(offset, 0, ignore_errors)
-        if mapping:
-            _, mapped_offset, _, layer = list(mapping)[0]
-        else:
-            if ignore_errors:
-                # We should only hit this if we ignored errors, but check anyway
-                return None, None
-            raise exceptions.InvalidAddressException(self.name, offset,
-                                                     "Cannot translate {} in layer {}".format(offset, self.name))
-        return mapped_offset, layer
+    def _encode(self, data: bytes, mapped_offset: int, offset: int) -> bytes:
+        """Encodes any necessary data"""
 
     # ## Read/Write functions for mapped pages
 
@@ -379,18 +372,24 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
         current_offset = offset
         output = []  # type: List[bytes]
-        for (offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
-            if not pad and offset > current_offset:
+        for (layer_offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
+            if not pad and layer_offset > current_offset:
                 raise exceptions.InvalidAddressException(
                     self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
-            elif offset > current_offset:
-                output += [b"\x00" * (offset - current_offset)]
-                current_offset = offset
-            elif offset < current_offset:
-                raise exceptions.LayerException(self.name, "Mapping returned an overlapping element")
+            elif layer_offset > current_offset:
+                output += [b"\x00" * (layer_offset - current_offset)]
+                current_offset = layer_offset
+            # The layer_offset can be less than the current_offset in non-linearly mapped layers
+            # it does not suggest an overlap, but that the data is in an encoded block
             if mapped_length > 0:
-                output += [self._context.layers.read(layer, mapped_offset, mapped_length, pad)]
-            current_offset += mapped_length
+                processed_data = self._decode(
+                    self._context.layers.read(layer, mapped_offset, mapped_length, pad), mapped_offset, layer_offset)
+                # Chop off anything unnecessary at the start
+                processed_data = processed_data[current_offset - layer_offset:]
+                # Chop off anything unnecessary at the end
+                processed_data = processed_data[:length - (current_offset - offset)]
+                output += [processed_data]
+                current_offset += len(processed_data)
         recovered_data = b"".join(output)
         return recovered_data + b"\x00" * (length - len(recovered_data))
 
@@ -398,15 +397,21 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Writes a value at offset, distributing the writing across any underlying mapping"""
         current_offset = offset
         length = len(value)
-        for (offset, mapped_offset, length, layer) in self.mapping(offset, length):
-            if offset > current_offset:
+        for (layer_offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length):
+            if layer_offset > current_offset:
                 raise exceptions.InvalidAddressException(
                     self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
-            elif offset < current_offset:
-                raise exceptions.LayerException(self.name, "Mapping returned an overlapping element")
-            self._context.layers.write(layer, mapped_offset, value[:length])
-            value = value[length:]
-            current_offset += length
+            original_data = self._context.layers.read(layer, mapped_offset, mapped_length)
+            # Always chunk the value based on the mapping
+            value_to_write = original_data[:current_offset - layer_offset] + value[:mapped_length -
+                                                                                   (current_offset - layer_offset)]
+            value = value[mapped_length - (current_offset - layer_offset):]
+            encoded_value = self._encode(value_to_write, mapped_offset, layer_offset)
+            if len(encoded_value) != mapped_length:
+                raise exceptions.LayerException(self.name,
+                                                "Unable to write new value, does not map to the same dimensions")
+            self._context.layers.write(layer, mapped_offset, encoded_value)
+            current_offset += len(value_to_write)
 
     # ## Scan implementation with knowledge of pages
 
