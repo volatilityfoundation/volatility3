@@ -404,7 +404,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                     self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
             elif offset < current_offset:
                 raise exceptions.LayerException(self.name, "Mapping returned an overlapping element")
-            self._context.layers.write(layer, mapped_offset, value)
+            self._context.layers.write(layer, mapped_offset, value[:length])
+            value = value[length:]
             current_offset += length
 
     # ## Scan implementation with knowledge of pages
