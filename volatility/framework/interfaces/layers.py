@@ -364,6 +364,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     def _encode(self, data: bytes, mapped_offset: int, offset: int) -> bytes:
         """Encodes any necessary data"""
+        return data
 
     # ## Read/Write functions for mapped pages
 
