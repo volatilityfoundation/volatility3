@@ -44,7 +44,7 @@ class InvalidAddressException(VolatilityException):
     """Thrown when an address is not valid in the space it was requested"""
 
     def __init__(self, layer_name: str, invalid_address: int, *args) -> None:
-        super().__init__(layer_name, invalid_address, *args)
+        super().__init__(*args)
         self.invalid_address = invalid_address
         self.layer_name = layer_name
 
@@ -87,6 +87,10 @@ class SymbolSpaceError(VolatilityException):
 
 class LayerException(VolatilityException):
     """Thrown when an error occurs dealing with memory and layers"""
+
+    def __init__(self, layer_name: str, *args) -> None:
+        super().__init__(*args)
+        self.layer_name = layer_name
 
 
 class StructureException(VolatilityException):
