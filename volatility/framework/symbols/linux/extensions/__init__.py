@@ -26,6 +26,7 @@ import volatility.framework.objects.utility
 from volatility.framework import constants
 from volatility.framework import exceptions, objects, interfaces
 from volatility.framework.automagic import linux
+from volatility.framework.layers import linear
 from volatility.framework.symbols import generic
 
 vollog = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ class task_struct(generic.GenericIntelProcess):
         except exceptions.PagedInvalidAddressException:
             return None
 
-        if not isinstance(parent_layer, interfaces.layers.TranslationLayerInterface):
+        if not isinstance(parent_layer, linear.LinearlyMappedLayer):
             raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
 
         dtb, layer_name = parent_layer.translate(pgd)
