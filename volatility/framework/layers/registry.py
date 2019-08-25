@@ -25,6 +25,7 @@ from volatility.framework import constants, exceptions, interfaces, objects
 from volatility.framework.configuration import requirements
 from volatility.framework.configuration.requirements import IntRequirement, TranslationLayerRequirement
 from volatility.framework.exceptions import InvalidAddressException
+from volatility.framework.layers import linear
 from volatility.framework.symbols import intermed
 from volatility.plugins.windows import pslist
 
@@ -39,7 +40,7 @@ class RegistryInvalidIndex(exceptions.LayerException):
     """Thrown when an index that doesn't exist or can't be found occurs"""
 
 
-class RegistryHive(interfaces.layers.TranslationLayerInterface):
+class RegistryHive(linear.LinearlyMappedLayer):
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,

@@ -27,6 +27,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
 
 from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
+from volatility.framework.layers import linear
 
 vollog = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class classproperty(object):
         return self._func(owner_cls)
 
 
-class Intel(interfaces.layers.TranslationLayerInterface):
+class Intel(linear.LinearlyMappedLayer):
     """Translation Layer for the Intel IA32 memory mapping"""
 
     priority = 40

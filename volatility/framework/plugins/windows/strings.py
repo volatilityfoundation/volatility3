@@ -24,7 +24,7 @@ from typing import Dict, Generator, List, Set, Tuple
 
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.layers import intel, resources
+from volatility.framework.layers import intel, resources, linear
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
 
@@ -96,7 +96,7 @@ class Strings(interfaces.plugins.PluginInterface):
                                                         self.config['nt_symbols']):
                 proc_layer_name = process.add_process_layer()
                 proc_layer = self.context.layers[proc_layer_name]
-                if isinstance(proc_layer, interfaces.layers.TranslationLayerInterface):
+                if isinstance(proc_layer, linear.LinearlyMappedLayer):
                     for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                         kpage, vpage, page_size, maplayer = mapval
                         for val in range(kpage, kpage + page_size, 0x1000):

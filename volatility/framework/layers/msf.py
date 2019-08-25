@@ -22,11 +22,12 @@ from typing import Optional, Dict, Any, List, Iterable, Tuple
 
 from volatility.framework import interfaces, constants, exceptions
 from volatility.framework.configuration import requirements
+from volatility.framework.layers import linear
 from volatility.framework.objects import utility
 from volatility.framework.symbols import intermed
 
 
-class PdbMultiStreamFormat(interfaces.layers.TranslationLayerInterface):
+class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
     _headers = {
         "MSF_HDR": "Microsoft C/C++ program database 2.00\r\n\x1a\x4a\x47",
         "BIG_MSF_HDR": "Microsoft C/C++ MSF 7.00\r\n\x1a\x44\x53",
@@ -157,7 +158,7 @@ class PdbMultiStreamFormat(interfaces.layers.TranslationLayerInterface):
         return None
 
 
-class PdbMSFStream(interfaces.layers.TranslationLayerInterface):
+class PdbMSFStream(linear.LinearlyMappedLayer):
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
