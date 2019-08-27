@@ -1,21 +1,5 @@
-# This file was contributed to the Volatility Framework Version 3.
-# Copyright (C) 2018 Volatility Foundation.
-#
-# THE LICENSED WORK IS PROVIDED UNDER THE TERMS OF THE Volatility Contributors
-# Public License V1.0("LICENSE") AS FIRST COMPLETED BY: Volatility Foundation,
-# Inc. ANY USE, PUBLIC DISPLAY, PUBLIC PERFORMANCE, REPRODUCTION OR DISTRIBUTION
-# OF, OR PREPARATION OF SUBSEQUENT WORKS, DERIVATIVE WORKS OR DERIVED WORKS BASED
-# ON, THE LICENSED WORK CONSTITUTES RECIPIENT'S ACCEPTANCE OF THIS LICENSE AND ITS
-# TERMS, WHETHER OR NOT SUCH RECIPIENT READS THE TERMS OF THE LICENSE. "LICENSED
-# WORK,” “RECIPIENT" AND “DISTRIBUTOR" ARE DEFINED IN THE LICENSE. A COPY OF THE
-# LICENSE IS LOCATED IN THE TEXT FILE ENTITLED "LICENSE.txt" ACCOMPANYING THE
-# CONTENTS OF THIS FILE. IF A COPY OF THE LICENSE DOES NOT ACCOMPANY THIS FILE, A
-# COPY OF THE LICENSE MAY ALSO BE OBTAINED AT THE FOLLOWING WEB SITE:
-# https://www.volatilityfoundation.org/license/vcpl_v1.0
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
-# specific language governing rights and limitations under the License.
+# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
 
 import enum
@@ -82,6 +66,7 @@ class _HMAP_ENTRY(objects.Struct):
             return (self.PermanentBinAddress ^ (self.PermanentBinAddress & 0xf)) + self.BlockOffset
         except AttributeError:
             return self.BlockAddress
+
 
 class _CMHIVE(objects.Struct):
 
@@ -287,10 +272,10 @@ class _CM_KEY_VALUE(objects.Struct):
             return output
         if self_type == RegValueTypes.REG_MULTI_SZ:
             return str(data, encoding = "utf-16-le").split("\x00")[0]
-        if self_type in [RegValueTypes.REG_BINARY,
-                         RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR,
-                         RegValueTypes.REG_RESOURCE_LIST,
-                         RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST]:
+        if self_type in [
+                RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
+                RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
+        ]:
             return data
         if self_type == RegValueTypes.REG_NONE:
             return ''

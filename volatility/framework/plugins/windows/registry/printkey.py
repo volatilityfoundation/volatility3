@@ -1,21 +1,5 @@
-# This file was contributed to the Volatility Framework Version 3.
-# Copyright (C) 2018 Volatility Foundation.
-#
-# THE LICENSED WORK IS PROVIDED UNDER THE TERMS OF THE Volatility Contributors
-# Public License V1.0("LICENSE") AS FIRST COMPLETED BY: Volatility Foundation,
-# Inc. ANY USE, PUBLIC DISPLAY, PUBLIC PERFORMANCE, REPRODUCTION OR DISTRIBUTION
-# OF, OR PREPARATION OF SUBSEQUENT WORKS, DERIVATIVE WORKS OR DERIVED WORKS BASED
-# ON, THE LICENSED WORK CONSTITUTES RECIPIENT'S ACCEPTANCE OF THIS LICENSE AND ITS
-# TERMS, WHETHER OR NOT SUCH RECIPIENT READS THE TERMS OF THE LICENSE. "LICENSED
-# WORK,” “RECIPIENT" AND “DISTRIBUTOR" ARE DEFINED IN THE LICENSE. A COPY OF THE
-# LICENSE IS LOCATED IN THE TEXT FILE ENTITLED "LICENSE.txt" ACCOMPANYING THE
-# CONTENTS OF THIS FILE. IF A COPY OF THE LICENSE DOES NOT ACCOMPANY THIS FILE, A
-# COPY OF THE LICENSE MAY ALSO BE OBTAINED AT THE FOLLOWING WEB SITE:
-# https://www.volatilityfoundation.org/license/vcpl_v1.0
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the
-# specific language governing rights and limitations under the License.
+# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
 
 import datetime
@@ -84,7 +68,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 key_node_name = renderers.UnreadableValue()
 
             result = (self._get_depth(key_path), (last_write_time, renderers.format_hints.Hex(hive.hive_offset), "Key",
-                                             key_path, key_node_name, "", key_node.get_volatile()))
+                                                  key_path, key_node_name, "", key_node.get_volatile()))
             yield result
 
         for value_node in node.get_values():
@@ -106,9 +90,9 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 vollog.debug(excp)
                 value_type = renderers.UnreadableValue()
 
-            result = (self._get_depth(key_path), (last_write_time, renderers.format_hints.Hex(hive.hive_offset),
-                                                 value_type, key_path, value_node_name,
-                                                 value_data, node.get_volatile()))
+            result = (self._get_depth(key_path),
+                      (last_write_time, renderers.format_hints.Hex(hive.hive_offset), value_type, key_path,
+                       value_node_name, value_data, node.get_volatile()))
             yield result
 
         if self.config.get('recurse', None):
@@ -142,7 +126,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
             reg_config_path = self.make_subconfig(
                 hive_offset = hive_offset, base_layer = self.config['primary'], nt_symbols = self.config['nt_symbols'])
             try:
-                hive = RegistryHive(self.context, reg_config_path, name='hive' + hex(hive_offset))
+                hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset))
                 self.context.layers.add_layer(hive)
 
                 # Walk it
