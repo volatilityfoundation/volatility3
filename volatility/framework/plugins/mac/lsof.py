@@ -1,11 +1,13 @@
+# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
+#
+
 import logging
 
-from volatility.framework import exceptions, renderers
+from volatility.framework import renderers
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
-from volatility.framework.objects import utility
-from volatility.framework.renderers import format_hints
 from volatility.plugins.mac import pslist
 
 vollog = logging.getLogger(__name__)
