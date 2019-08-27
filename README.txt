@@ -16,8 +16,7 @@ technical and performance challenges associated with the original
 code base that became apparent over the previous 10 years. Another benefit
 of the rewrite is that Volatility 3 could be released under a custom
 license that was more aligned with the goals of the Volatility community,
-the Volatility Contributors Public License (VCPL). See the LICENSE file for
-more details.
+the Volatility Software License (VSL). See the LICENSE file for more details.
 
 Requirements
 ============
