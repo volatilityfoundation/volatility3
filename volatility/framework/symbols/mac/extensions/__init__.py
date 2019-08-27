@@ -93,7 +93,6 @@ class proc(generic.GenericIntelProcess):
 
             yield (start, end - start)
 
-
 class fileglob(objects.Struct):
 
     def get_fg_type(self):
@@ -337,7 +336,6 @@ class socket(objects.Struct):
 
         return ret
 
-
 class inpcb(objects.Struct):
 
     def get_tcp_state(self):
@@ -374,3 +372,14 @@ class inpcb(objects.Struct):
         rport = self.inp_fport
 
         return [lip, lport, rip, rport]
+
+class queue_entry(objects.Struct):
+    def walk_list(self, list_head, member_name, type_name):
+        n = self.next.dereference().cast(type_name)
+        while n is not None and n.vol.offset != list_head:
+            yield n
+            n = n.member(attr = member_name).next.dereference().cast(type_name)
+        p = self.prev.dereference().cast(type_name)
+        while p is not None and p.vol.offset != list_head:
+            yield p
+            p = p.member(attr = member_name).prev.dereference().cast(type_name)

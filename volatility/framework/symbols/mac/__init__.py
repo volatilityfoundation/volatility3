@@ -36,3 +36,5 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('vm_map_object', extensions.vm_map_object)
         self.set_type_class('socket', extensions.socket)
         self.set_type_class('inpcb', extensions.inpcb)
+        self.set_type_class('queue_entry', extensions.queue_entry)
+
