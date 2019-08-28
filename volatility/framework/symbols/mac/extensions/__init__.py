@@ -367,3 +367,32 @@ class queue_entry(objects.Struct):
         while p is not None and p.vol.offset != list_head:
             yield p
             p = p.member(attr = member_name).prev.dereference().cast(type_name)
+
+class sysctl_oid(objects.Struct):
+    def get_perms(self):
+        ret = ""
+
+        checks = [0x80000000, 0x40000000, 0x00800000]
+        perms  = ["R", "W", "L"]
+        
+        for (i, c) in enumerate(checks):
+            if c & self.oid_kind:
+                ret = ret + perms[i]
+            else:
+                ret = ret + "-"
+
+        return ret
+
+    def get_ctltype(self):
+        types = {1: 'CTLTYPE_NODE', 2: 'CTLTYPE_INT', 3: 'CTLTYPE_STRING', 4: 'CTLTYPE_QUAD', 5: 'CTLTYPE_OPAQUE'}
+
+        ctltype = self.oid_kind & 0xf
+
+        if 0 < ctltype < 6:
+            ret = types[ctltype]
+        else:
+            ret = ""
+
+        return ret
+
+

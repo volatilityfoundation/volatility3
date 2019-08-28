@@ -40,7 +40,7 @@ class Check_sysctl(plugins.PluginInterface):
 
             try:
                 var_array = kernel.object(object_type = var_name)
-            except exceptions.SymbolError:
+            except ValueError:
                 var_array = None
 
             if var_array is not None:
