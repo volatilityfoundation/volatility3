@@ -249,7 +249,7 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
             isf_url: The URL pointing to the ISF file location
             native_types: The NativeSymbolTable that contains the native types for this symbol table
             table_mapping: A dictionary linking names referenced in the file with symbol tables in the context
-            class_types: A dictionary of type names and classes that override Struct when they are instantiated
+            class_types: A dictionary of type names and classes that override StructType when they are instantiated
         """
         configuration.ConfigurableInterface.__init__(self, context, config_path)
         BaseSymbolTableInterface.__init__(self, name, native_types, table_mapping, class_types = class_types)

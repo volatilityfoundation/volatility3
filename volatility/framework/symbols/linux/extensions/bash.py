@@ -8,7 +8,7 @@ from volatility.framework.objects import utility
 from volatility.framework.renderers import conversion
 
 
-class hist_entry(objects.Struct):
+class hist_entry(objects.StructType):
 
     def is_valid(self):
         try:

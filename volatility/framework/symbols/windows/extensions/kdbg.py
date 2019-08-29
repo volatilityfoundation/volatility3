@@ -6,7 +6,7 @@ from volatility.framework import constants
 from volatility.framework import objects
 
 
-class _KDDEBUGGER_DATA64(objects.Struct):
+class _KDDEBUGGER_DATA64(objects.StructType):
 
     def get_build_lab(self):
         """Returns the NT build lab string from the KDBG"""

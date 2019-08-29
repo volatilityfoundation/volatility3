@@ -98,7 +98,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
             pass
         return 0x20
 
-    def get_cell(self, cell_offset: int) -> 'objects.Struct':
+    def get_cell(self, cell_offset: int) -> 'objects.StructType':
         """Returns the appropriate Cell value for a cell offset"""
         # This would be an _HCELL containing CELL_DATA, but to save time we skip the size of the HCELL
         cell = self._context.object(
@@ -107,7 +107,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
             layer_name = self.name)
         return cell
 
-    def get_node(self, cell_offset: int) -> 'objects.Struct':
+    def get_node(self, cell_offset: int) -> 'objects.StructType':
         """Returns the appropriate Node, interpreted from the Cell based on its Signature"""
         cell = self.get_cell(cell_offset)
         signature = cell.cast('string', max_length = 2, encoding = 'latin-1')
@@ -129,7 +129,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
                                                                              cell_offset))
             return cell
 
-    def get_key(self, key: str, return_list: bool = False) -> Union[List[objects.Struct], objects.Struct]:
+    def get_key(self, key: str, return_list: bool = False) -> Union[List[objects.StructType], objects.StructType]:
         """Gets a specific registry key by key path
 
         return_list specifies whether the return result will be a single node (default) or a list of nodes from
@@ -157,7 +157,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
             return node_key
         return node_key[-1]
 
-    def visit_nodes(self, visitor: Callable[[objects.Struct], None], node: Optional[objects.Struct] = None) -> None:
+    def visit_nodes(self, visitor: Callable[[objects.StructType], None],
+                    node: Optional[objects.StructType] = None) -> None:
         """Applies a callable (visitor) to all nodes within the registry tree from a given node"""
         if not node:
             node = self.get_node(self.root_cell_offset)

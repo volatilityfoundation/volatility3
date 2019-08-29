@@ -112,7 +112,7 @@ Another useful parameter is `table_mapping` which allows for type referenced ins
         table_mapping = {'one_table': 'another_table'})
 
 The last parameter that can be used is called `class_types` which allows a particular structure to be instantiated on
-a class other than :py:class:`~volatility.framework.objects.Struct`, allowing for additional methods to be defined and
+a class other than :py:class:`~volatility.framework.objects.StructType`, allowing for additional methods to be defined and
 associated with the type.
 
 The table name can then by used to access the constructed table from the context, such as:

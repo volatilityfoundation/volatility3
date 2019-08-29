@@ -44,7 +44,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
         return key_path.count("\\", key_arg_ending_index)
 
-    def hive_walker(self, hive: RegistryHive, node_path: Sequence[objects.Struct] = None,
+    def hive_walker(self, hive: RegistryHive, node_path: Sequence[objects.StructType] = None,
                     key_path: str = None) -> Generator:
         """Walks through a set of nodes from a given node (last one in node_path).
         Avoids loops by not traversing into nodes already present in the node_path
