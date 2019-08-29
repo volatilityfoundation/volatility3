@@ -7,32 +7,29 @@ import inspect
 import logging
 import os
 import sys
-from typing import Any, Dict, Generator, List, Type, TypeVar, Callable
+from typing import Any, Dict, Generator, List, Type, TypeVar
 
 from volatility.framework import constants, interfaces
 
 # ##
 #
-# Libtool version scheme
+# SemVer version scheme
 #
-# Current - The number of the current interface exported by the library
-# Revision - The implementation number of the most recent interface exported by this library
-# Age - The number of previous additional interfaces supported by this library
+# Increment the:
 #
-# 1. If the source changes, increment the revision
-# 2. If the interface has changed, increment current, set revision to 0
-# 3. If only additions to the interface have been made, increment age
-# 4. If changes or removals of the interface have been made, set age to 0
+#     MAJOR version when you make incompatible API changes,
+#     MINOR version when you add functionality in a backwards compatible manner, and
+#     PATCH version when you make backwards compatible bug fixes.
 
-# We use the libtool library versioning
-CURRENT = 0  # Number of releases of the library with any change
-REVISION = 0  # Number of changes that don't affect the interface
-AGE = 0  # Number of consecutive versions of the interface the current version supports
+# We use the SemVer 2.0.0 versioning scheme
+MAJOR = 0  # Number of releases of the library with a breaking change
+MINOR = 0  # Number of changes that only add to the interface
+PATCH = 0  # Number of changes that do not change the interface
 
 
 def interface_version():
     """Provides the so version number of the library"""
-    return CURRENT - AGE, AGE, REVISION
+    return MAJOR, MINOR, PATCH
 
 
 vollog = logging.getLogger(__name__)
