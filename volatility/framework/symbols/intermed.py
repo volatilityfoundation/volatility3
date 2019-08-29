@@ -130,12 +130,12 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             -> Type['ISFormatTable']:
         """Determines the highest suitable handler for specified version format
 
-        An interface version such as (Current-Age).Age.Revision means that (Current - Age) of the provider must be equal to that of the
-          consumer, and the provider (the JSON in this instance) must have a greater age (indicating that only additive
+        An interface version such as Major.Minor.Patch means that Major of the provider must be equal to that of the
+          consumer, and the provider (the JSON in this instance) must have a greater minor (indicating that only additive
           changes have been made) than the consumer (in this case, the file reader).
         """
-        supported, age, revision = [int(x) for x in version.split(".")]
-        supported_versions = [x for x in versions if x[0] == supported and x[1] >= age]
+        major, minor, patch = [int(x) for x in version.split(".")]
+        supported_versions = [x for x in versions if x[0] == major and x[1] >= minor]
         if not supported_versions:
             raise ValueError(
                 "No Intermediate Format interface versions support file interface version: {}".format(version))
@@ -294,10 +294,7 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
 
 class Version1Format(ISFormatTable):
     """Class for storing intermediate debugging data as objects and classes"""
-    current = 1
-    revision = 0
-    age = 1
-    version = (current - age, age, revision)
+    version = (0, 0, 1)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the location offset given by the symbol name"""
@@ -436,10 +433,7 @@ class Version1Format(ISFormatTable):
 
 class Version2Format(Version1Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    current = 2
-    revision = 0
-    age = 0
-    version = (current - age, age, revision)
+    version = (2, 0, 0)
 
     def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
         """Determines the appropriate native_types to use from the JSON data"""
@@ -488,10 +482,7 @@ class Version2Format(Version1Format):
 
 class Version3Format(Version2Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    current = 3
-    revision = 0
-    age = 1
-    version = (current - age, age, revision)
+    version = (2, 0, 1)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the symbol given by the symbol name"""
@@ -510,10 +501,7 @@ class Version3Format(Version2Format):
 
 class Version4Format(Version3Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    current = 4
-    revision = 0
-    age = 0
-    version = (current - age, age, revision)
+    version = (4, 0, 0)
 
     format_mapping = {
         'int': objects.Integer,
@@ -544,10 +532,7 @@ class Version4Format(Version3Format):
 
 class Version5Format(Version4Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    current = 5
-    revision = 0
-    age = 1
-    version = (current - age, age, revision)
+    version = (4, 0, 1)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the symbol given by the symbol name"""
@@ -569,10 +554,7 @@ class Version5Format(Version4Format):
 
 class Version6Format(Version5Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    current = 6
-    revision = 0
-    age = 0
-    version = (current - age, age, revision)
+    version = (6, 0, 0)
 
     @property
     def metadata(self) -> Optional[interfaces.symbols.MetadataInterface]:
@@ -586,7 +568,4 @@ class Version6Format(Version5Format):
 
 class Version7Format(Version6Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    current = 7
-    revision = 0
-    age = 1
-    version = (current - age, age, revision)
+    version = (6, 0, 1)
