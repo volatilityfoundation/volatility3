@@ -9,7 +9,7 @@ from volatility.framework import objects, interfaces
 from volatility.framework.renderers import conversion
 
 
-class _IMAGE_DOS_HEADER(objects.Struct):
+class _IMAGE_DOS_HEADER(objects.StructType):
 
     def get_nt_header(self) -> interfaces.objects.ObjectInterface:
         """Carve out the NT header from this DOS header. This reflects on the
@@ -146,7 +146,7 @@ class _IMAGE_DOS_HEADER(objects.Struct):
             counter += 1
 
 
-class _IMAGE_NT_HEADERS(objects.Struct):
+class _IMAGE_NT_HEADERS(objects.StructType):
 
     def get_sections(self) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Iterate through the section headers for this PE file.

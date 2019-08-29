@@ -8,8 +8,7 @@ from volatility.framework.symbols.wrappers import Flags
 from volatility.framework import renderers
 from typing import Union
 
-
-class _SERVICE_RECORD(objects.Struct):
+class _SERVICE_RECORD(objects.StructType):
     """A service record structure"""
 
     def is_valid(self) -> bool:
@@ -44,27 +43,35 @@ class _SERVICE_RECORD(objects.Struct):
         # or kernel driver, the binary path is stored differently
         try:
             if "PROCESS" in self.get_type():
-                return self.ServiceProcess.BinaryPath.dereference().cast(
-                    "string", encoding = "utf-16", errors = "replace", max_length = 512)
+                return self.ServiceProcess.BinaryPath.dereference().cast("string",
+                                                                         encoding = "utf-16",
+                                                                         errors = "replace",
+                                                                         max_length = 512)
             else:
-                return self.DriverName.dereference().cast(
-                    "string", encoding = "utf-16", errors = "replace", max_length = 512)
+                return self.DriverName.dereference().cast("string",
+                                                          encoding = "utf-16",
+                                                          errors = "replace",
+                                                          max_length = 512)
         except exceptions.InvalidAddressException:
             return renderers.UnreadableValue()
 
     def get_name(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
         """Returns the service name"""
         try:
-            return self.ServiceName.dereference().cast(
-                "string", encoding = "utf-16", errors = "replace", max_length = 512)
+            return self.ServiceName.dereference().cast("string",
+                                                       encoding = "utf-16",
+                                                       errors = "replace",
+                                                       max_length = 512)
         except exceptions.InvalidAddressException:
             return renderers.UnreadableValue()
 
     def get_display(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
         """Returns the service display"""
         try:
-            return self.DisplayName.dereference().cast(
-                "string", encoding = "utf-16", errors = "replace", max_length = 512)
+            return self.DisplayName.dereference().cast("string",
+                                                       encoding = "utf-16",
+                                                       errors = "replace",
+                                                       max_length = 512)
         except exceptions.InvalidAddressException:
             return renderers.UnreadableValue()
 
@@ -105,8 +112,7 @@ class _SERVICE_RECORD(objects.Struct):
         except exceptions.InvalidAddressException:
             raise StopIteration
 
-
-class _SERVICE_HEADER(objects.Struct):
+class _SERVICE_HEADER(objects.StructType):
     """A service header structure"""
 
     def is_valid(self) -> bool:
@@ -116,5 +122,7 @@ class _SERVICE_HEADER(objects.Struct):
         except exceptions.InvalidAddressException:
             return False
 
-
-class_types = {'_SERVICE_RECORD': _SERVICE_RECORD, '_SERVICE_HEADER': _SERVICE_HEADER}
+class_types = {
+    '_SERVICE_RECORD': _SERVICE_RECORD,
+    '_SERVICE_HEADER': _SERVICE_HEADER
+}

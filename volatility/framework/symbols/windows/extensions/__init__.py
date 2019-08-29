@@ -18,7 +18,7 @@ vollog = logging.getLogger(__name__)
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
 
-class _POOL_HEADER(objects.Struct):
+class _POOL_HEADER(objects.StructType):
     """A kernel pool allocation header. Exists at the base of the
     allocation and provides a tag that we can scan for."""
 
@@ -113,7 +113,7 @@ class _POOL_HEADER(objects.Struct):
         return None
 
 
-class _KSYSTEM_TIME(objects.Struct):
+class _KSYSTEM_TIME(objects.StructType):
     """A system time structure that stores a high and low part."""
 
     def get_time(self):
@@ -121,7 +121,7 @@ class _KSYSTEM_TIME(objects.Struct):
         return conversion.wintime_to_datetime(wintime)
 
 
-class _MMVAD_SHORT(objects.Struct):
+class _MMVAD_SHORT(objects.StructType):
     """A class that represents process virtual memory ranges. Each instance
     is a node in a binary tree structure and is pointed to by VadRoot."""
 
@@ -375,7 +375,7 @@ class _MMVAD(_MMVAD_SHORT):
         return file_name
 
 
-class _EX_FAST_REF(objects.Struct):
+class _EX_FAST_REF(objects.StructType):
     """This is a standard Windows structure that stores a pointer to an
     object but also leverages the least significant bits to encode additional
     details. When dereferencing the pointer, we need to strip off the extra bits."""
@@ -416,7 +416,7 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
             native_layer_name = self.vol.native_layer_name)
 
 
-class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
+class _DEVICE_OBJECT(objects.StructType, ExecutiveObject):
     """A class for kernel device objects."""
 
     def get_device_name(self) -> str:
@@ -424,7 +424,7 @@ class _DEVICE_OBJECT(objects.Struct, ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
 
-class _DRIVER_OBJECT(objects.Struct, ExecutiveObject):
+class _DRIVER_OBJECT(objects.StructType, ExecutiveObject):
     """A class for kernel driver objects."""
 
     def get_driver_name(self) -> str:
@@ -436,7 +436,7 @@ class _DRIVER_OBJECT(objects.Struct, ExecutiveObject):
         return True
 
 
-class _OBJECT_SYMBOLIC_LINK(objects.Struct, ExecutiveObject):
+class _OBJECT_SYMBOLIC_LINK(objects.StructType, ExecutiveObject):
     """A class for kernel link objects."""
 
     def get_link_name(self) -> str:
@@ -451,7 +451,7 @@ class _OBJECT_SYMBOLIC_LINK(objects.Struct, ExecutiveObject):
         return conversion.wintime_to_datetime(self.CreationTime.QuadPart)
 
 
-class _FILE_OBJECT(objects.Struct, ExecutiveObject):
+class _FILE_OBJECT(objects.StructType, ExecutiveObject):
     """A class for windows file objects"""
 
     def is_valid(self) -> bool:
@@ -472,7 +472,7 @@ class _FILE_OBJECT(objects.Struct, ExecutiveObject):
         return name
 
 
-class _KMUTANT(objects.Struct, ExecutiveObject):
+class _KMUTANT(objects.StructType, ExecutiveObject):
     """A class for windows mutant objects"""
 
     def is_valid(self) -> bool:
@@ -485,7 +485,7 @@ class _KMUTANT(objects.Struct, ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
 
-class _OBJECT_HEADER(objects.Struct):
+class _OBJECT_HEADER(objects.StructType):
     """A class for the headers for executive kernel objects, which contains
     quota information, ownership details, naming data, and ACLs."""
 
@@ -557,7 +557,7 @@ class _OBJECT_HEADER(objects.Struct):
         return header
 
 
-class _ETHREAD(objects.Struct):
+class _ETHREAD(objects.StructType):
     """A class for executive thread objects."""
 
     def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
@@ -565,7 +565,7 @@ class _ETHREAD(objects.Struct):
         return self.ThreadsProcess.dereference(kernel_layer)
 
 
-class _UNICODE_STRING(objects.Struct):
+class _UNICODE_STRING(objects.StructType):
     """A class for Windows unicode string structures."""
 
     def get_string(self) -> interfaces.objects.ObjectInterface:
@@ -733,7 +733,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
             return self.VadRoot.dereference().cast("_MMVAD")
 
 
-class _LIST_ENTRY(objects.Struct, collections.abc.Iterable):
+class _LIST_ENTRY(objects.StructType, collections.abc.Iterable):
     """A class for double-linked lists on Windows."""
 
     def to_list(self,

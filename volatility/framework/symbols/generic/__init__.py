@@ -9,7 +9,7 @@ from typing import Union
 from volatility.framework import objects, interfaces
 
 
-class GenericIntelProcess(objects.Struct):
+class GenericIntelProcess(objects.StructType):
 
     def _add_process_layer(self,
                            context: interfaces.context.ContextInterface,

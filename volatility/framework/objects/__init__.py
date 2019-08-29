@@ -558,7 +558,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
         raise NotImplementedError("Writing to Arrays is not yet implemented")
 
 
-class Struct(interfaces.objects.ObjectInterface):
+class AggregateType(interfaces.objects.ObjectInterface):
     """Object which can contain members that are other objects
 
        Keep the number of methods in this class low or very specific, since each one could overload a valid member.
@@ -582,7 +582,7 @@ class Struct(interfaces.objects.ObjectInterface):
         def size(cls, template: interfaces.objects.Template) -> int:
             """Method to return the size of this type"""
             if template.vol.get('size', None) is None:
-                raise TypeError("Struct ObjectTemplate not provided with a size")
+                raise TypeError("ObjectTemplate not provided with a size")
             return template.vol.size
 
         @classmethod
@@ -623,10 +623,17 @@ class Struct(interfaces.objects.ObjectInterface):
     def _check_members(cls, members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
         # Members should be an iterable mapping of symbol names to tuples of (relative_offset, ObjectTemplate)
         # An object template is a callable that when called with a context, offset, layer_name and type_name
+
+        # We duplicate this code to avoid polluting the methodspace
+        agg_name = 'AggregateType'
+        for agg_type in AggregateTypes:
+            if isinstance(cls, agg_type):
+                agg_name = agg_type.__name__
+
         assert isinstance(members, abc.Mapping)
-        "Struct members parameter must be a mapping: {}".format(type(members))
+        "{} members parameter must be a mapping: {}".format(agg_name, type(members))
         assert all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()])
-        "Struct members must be a tuple of relative_offsets and templates"
+        "{} members must be a tuple of relative_offsets and templates".format(agg_name)
 
     def member(self, attr: str = 'member') -> object:
         """Specifically named method for retrieving members."""
@@ -649,25 +656,37 @@ class Struct(interfaces.objects.ObjectInterface):
                     native_layer_name = self.vol.native_layer_name))
             self._concrete_members[attr] = member
             return member
-        raise AttributeError("Struct has no attribute: {}.{}".format(self.vol.type_name, attr))
+        # We duplicate this code to avoid polluting the methodspace
+        agg_name = 'AggregateType'
+        for agg_type in AggregateTypes:
+            if isinstance(self, agg_type):
+                agg_name = agg_type.__name__
+        raise AttributeError("{} has no attribute: {}.{}".format(agg_name, self.vol.type_name, attr))
 
     def __dir__(self) -> Iterable[str]:
         """Returns a complete list of members when dir is called"""
         return list(super().__dir__()) + list(self.vol.members)
 
     def write(self, value):
-        raise TypeError("Structs cannot be written to directly, individual members must be written instead")
+        # We duplicate this code to avoid polluting the methodspace
+        agg_name = 'AggregateType'
+        for agg_type in AggregateTypes:
+            if isinstance(self, agg_type):
+                agg_name = agg_type.__name__
+        raise TypeError(
+            "{}s cannot be written to directly, individual members must be written instead".format(agg_name))
 
 
-# Nice way of duplicating the class, but *could* causes problems with isintance
-class Union(Struct):
+class StructType(AggregateType):
     pass
 
 
-class CPPObject(Struct):
+class UnionType(AggregateType):
     pass
 
 
-# Really nasty way of duplicating the class
-# WILL cause problems with any mutable class/static variables
-# Union = type('Union', Struct.__bases__, dict(Struct.__dict__))
+class ClassType(AggregateType):
+    pass
+
+
+AggregateTypes = {StructType: 'struct', UnionType: 'union', ClassType: 'class'}

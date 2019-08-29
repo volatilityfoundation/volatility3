@@ -59,7 +59,7 @@ class RegKeyFlags(enum.IntEnum):
     KEY_VIRTUAL_STORE = 0x200
 
 
-class _HMAP_ENTRY(objects.Struct):
+class _HMAP_ENTRY(objects.StructType):
 
     def get_block_offset(self) -> int:
         try:
@@ -67,8 +67,7 @@ class _HMAP_ENTRY(objects.Struct):
         except AttributeError:
             return self.BlockAddress
 
-
-class _CMHIVE(objects.Struct):
+class _CMHIVE(objects.StructType):
 
     def get_name(self) -> Optional[interfaces.objects.ObjectInterface]:
         """Determine a name for the hive. Note that some attributes are
@@ -86,7 +85,7 @@ class _CMHIVE(objects.Struct):
     name = property(get_name)
 
 
-class _CM_KEY_BODY(objects.Struct):
+class _CM_KEY_BODY(objects.StructType):
     """This represents an open handle to a registry key and
     is not tied to the registry hive file format on disk."""
 
@@ -119,7 +118,7 @@ class _CM_KEY_BODY(objects.Struct):
         return "\\".join(reversed(output))
 
 
-class _CM_KEY_NODE(objects.Struct):
+class _CM_KEY_NODE(objects.StructType):
     """Extension to allow traversal of registry keys"""
 
     def get_volatile(self) -> bool:
@@ -212,7 +211,7 @@ class _CM_KEY_NODE(objects.Struct):
         return reg.get_node(self.Parent).get_key_path() + '\\' + self.get_name()
 
 
-class _CM_KEY_VALUE(objects.Struct):
+class _CM_KEY_VALUE(objects.StructType):
     """Extensions to extract data from CM_KEY_VALUE nodes"""
 
     def get_name(self) -> interfaces.objects.ObjectInterface:
@@ -272,10 +271,10 @@ class _CM_KEY_VALUE(objects.Struct):
             return output
         if self_type == RegValueTypes.REG_MULTI_SZ:
             return str(data, encoding = "utf-16-le").split("\x00")[0]
-        if self_type in [
-                RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
-                RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
-        ]:
+        if self_type in [RegValueTypes.REG_BINARY,
+                         RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR,
+                         RegValueTypes.REG_RESOURCE_LIST,
+                         RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST]:
             return data
         if self_type == RegValueTypes.REG_NONE:
             return ''

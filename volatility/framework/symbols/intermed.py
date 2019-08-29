@@ -95,7 +95,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             native_types: The NativeSymbolTable that contains the native types for this symbol table
             table_mapping: A dictionary linking names referenced in the file with symbol tables in the context
             validate: Determines whether the ISF file will be validated against the appropriate schema
-            class_types: A dictionary of type names and classes that override Struct when they are instantiated
+            class_types: A dictionary of type names and classes that override StructType when they are instantiated
         """
         # Check there are no obvious errors
         # Open the file and test the version
@@ -327,7 +327,7 @@ class Version1Format(ISFormatTable):
         return list(self._json_object.get('user_types', {})) + list(self.natives.types)
 
     def get_type_class(self, name: str) -> Type[interfaces.objects.ObjectInterface]:
-        return self._overrides.get(name, objects.Struct)
+        return self._overrides.get(name, objects.AggregateType)
 
     def set_type_class(self, name: str, clazz: Type[interfaces.objects.ObjectInterface]) -> None:
         if name not in self.types:
@@ -372,7 +372,7 @@ class Version1Format(ISFormatTable):
             return native_template
 
         # Otherwise
-        if dictionary['kind'] not in ['struct', 'union', 'CPPObject']:
+        if dictionary['kind'] not in objects.AggregateTypes.values():
             raise exceptions.SymbolSpaceError("Unknown Intermediate format: {}".format(dictionary))
 
         reference_name = dictionary['name']
@@ -423,6 +423,10 @@ class Version1Format(ISFormatTable):
             member = (interdict['offset'], self._interdict_to_template(interdict['type']))
             members[member_name] = member
         object_class = self.get_type_class(type_name)
+        if object_class == objects.AggregateType:
+            for clazz in objects.AggregateTypes:
+                if objects.AggregateTypes[clazz] == curdict['kind']:
+                    object_class = clazz
         return objects.templates.ObjectTemplate(
             type_name = self.name + constants.BANG + type_name,
             object_class = object_class,
@@ -471,6 +475,10 @@ class Version2Format(Version1Format):
             member = (interdict['offset'], self._interdict_to_template(interdict['type']))
             members[member_name] = member
         object_class = self.get_type_class(type_name)
+        if object_class == objects.AggregateType:
+            for clazz in objects.AggregateTypes:
+                if objects.AggregateTypes[clazz] == curdict['kind']:
+                    object_class = clazz
         return objects.templates.ObjectTemplate(
             type_name = self.name + constants.BANG + type_name,
             object_class = object_class,

@@ -77,7 +77,7 @@ class task_struct(generic.GenericIntelProcess):
             yield (start, end - start)
 
 
-class fs_struct(objects.Struct):
+class fs_struct(objects.StructType):
 
     def get_root_dentry(self):
         # < 2.6.26
@@ -98,7 +98,7 @@ class fs_struct(objects.Struct):
         raise AttributeError("Unable to find the root mount")
 
 
-class mm_struct(objects.Struct):
+class mm_struct(objects.StructType):
 
     def get_mmap_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Returns an iterator for the mmap list member of an mm_struct."""
@@ -117,7 +117,7 @@ class mm_struct(objects.Struct):
             link = link.vm_next
 
 
-class super_block(objects.Struct):
+class super_block(objects.StructType):
     # include/linux/kdev_t.h
     MINORBITS = 20
 
@@ -130,7 +130,7 @@ class super_block(objects.Struct):
         return self.s_dev & ((1 << self.MINORBITS) - 1)
 
 
-class vm_area_struct(objects.Struct):
+class vm_area_struct(objects.StructType):
     perm_flags = {
         0x00000001: "r",
         0x00000002: "w",
@@ -228,7 +228,7 @@ class vm_area_struct(objects.Struct):
         return ret
 
 
-class qstr(objects.Struct):
+class qstr(objects.StructType):
 
     def name_as_str(self) -> str:
         if self.has_member("len"):
@@ -244,13 +244,13 @@ class qstr(objects.Struct):
         return ret
 
 
-class dentry(objects.Struct):
+class dentry(objects.StructType):
 
     def path(self) -> str:
         return self.d_name.name_as_str()
 
 
-class struct_file(objects.Struct):
+class struct_file(objects.StructType):
 
     def get_dentry(self) -> interfaces.objects.ObjectInterface:
         if self.has_member("f_dentry"):
@@ -269,7 +269,7 @@ class struct_file(objects.Struct):
             raise AttributeError("Unable to find file -> vfs mount")
 
 
-class list_head(objects.Struct, collections.abc.Iterable):
+class list_head(objects.StructType, collections.abc.Iterable):
 
     def to_list(self,
                 symbol_type: str,
@@ -303,7 +303,7 @@ class list_head(objects.Struct, collections.abc.Iterable):
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
 
 
-class files_struct(objects.Struct):
+class files_struct(objects.StructType):
 
     def get_fds(self) -> interfaces.objects.ObjectInterface:
         if self.has_member("fdt"):
@@ -322,7 +322,7 @@ class files_struct(objects.Struct):
             raise AttributeError("Unable to find files -> maximum file descriptors")
 
 
-class mount(objects.Struct):
+class mount(objects.StructType):
 
     def get_mnt_sb(self):
         if self.has_member("mnt"):
@@ -355,7 +355,7 @@ class mount(objects.Struct):
         return self.mnt_mountpoint
 
 
-class vfsmount(objects.Struct):
+class vfsmount(objects.StructType):
 
     def is_valid(self):
         return self.get_mnt_sb() != 0 and \

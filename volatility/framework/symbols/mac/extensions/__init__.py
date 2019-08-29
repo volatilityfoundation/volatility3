@@ -77,7 +77,7 @@ class proc(generic.GenericIntelProcess):
 
             yield (start, end - start)
 
-class fileglob(objects.Struct):
+class fileglob(objects.StructType):
 
     def get_fg_type(self):
         ret = "INVALID"
@@ -92,7 +92,7 @@ class fileglob(objects.Struct):
         return ret.description
 
 
-class vm_map_object(objects.Struct):
+class vm_map_object(objects.StructType):
 
     def get_map_object(self):
         if self.has_member("vm_object"):
@@ -103,7 +103,7 @@ class vm_map_object(objects.Struct):
         raise AttributeError("vm_map_object -> get_object")
 
 
-class vnode(objects.Struct):
+class vnode(objects.StructType):
 
     def _do_calc_path(self, ret, vnodeobj, vname):
         if vnodeobj is None:
@@ -138,7 +138,7 @@ class vnode(objects.Struct):
         return ret.decode("utf-8")
 
 
-class vm_map_entry(objects.Struct):
+class vm_map_entry(objects.StructType):
 
     def is_suspicious(self, context, config_prefix):
         """Flags memory regions that are mapped rwx or that map an executable not back from a file on disk"""
@@ -263,7 +263,7 @@ class vm_map_entry(objects.Struct):
         return ret
 
 
-class socket(objects.Struct):
+class socket(objects.StructType):
 
     def get_inpcb(self):
         try:
@@ -320,7 +320,8 @@ class socket(objects.Struct):
 
         return ret
 
-class inpcb(objects.Struct):
+
+class inpcb(objects.StructType):
 
     def get_tcp_state(self):
         tcp_states = ("CLOSED", "LISTEN", "SYN_SENT", "SYN_RECV", "ESTABLISHED", "CLOSE_WAIT", "FIN_WAIT1", "CLOSING",
@@ -356,14 +357,3 @@ class inpcb(objects.Struct):
         rport = self.inp_fport
 
         return [lip, lport, rip, rport]
-
-class queue_entry(objects.Struct):
-    def walk_list(self, list_head, member_name, type_name):
-        n = self.next.dereference().cast(type_name)
-        while n is not None and n.vol.offset != list_head:
-            yield n
-            n = n.member(attr = member_name).next.dereference().cast(type_name)
-        p = self.prev.dereference().cast(type_name)
-        while p is not None and p.vol.offset != list_head:
-            yield p
-            p = p.member(attr = member_name).prev.dereference().cast(type_name)
