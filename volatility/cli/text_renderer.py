@@ -258,13 +258,14 @@ class PrettyTextRenderer(CLIRenderer):
 
         # Always align the tree to the left
         format_string_list = ["{0:<" + str(max_column_widths[tree_indent_column]) + "s}"]
-        for column in grid.columns:
+        sorted_columns = list(sorted(grid.columns, key = lambda x: x.index))
+        for column in sorted_columns:
             format_string_list.append("{" + str(column.index + 1) + ":" + display_alignment +
                                       str(max_column_widths[column.name]) + "s}")
 
         format_string = column_separator.join(format_string_list) + "\n"
 
-        column_titles = [""] + [column.name for column in grid.columns]
+        column_titles = [""] + [column.name for column in sorted_columns]
         outfd.write(format_string.format(*column_titles))
         for (depth, line) in final_output:
-            outfd.write(format_string.format("*" * depth, *[line[x] for x in line]))
+            outfd.write(format_string.format("*" * depth, *[line[column] for column in sorted_columns]))
