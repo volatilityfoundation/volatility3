@@ -151,9 +151,10 @@ class QuickTextRenderer(CLIRenderer):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             accumulator.write("*" * max(0, node.path_depth - 1))
             line = []
-            for column in grid.columns:
+            for column_index in range(len(grid.columns)):
+                column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
-                line.append(renderer(node.values[column.index]))
+                line.append(renderer(node.values[column_index]))
             accumulator.write("{}".format("\t".join(line)))
             return accumulator
 
@@ -199,9 +200,10 @@ class CSVRenderer(CLIRenderer):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             accumulator.write(str(max(0, node.path_depth - 1)) + ",")
             line = []
-            for column in grid.columns:
+            for column_index in range(len(grid.columns)):
+                column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
-                line.append(renderer(node.values[column.index]))
+                line.append(renderer(node.values[column_index]))
             accumulator.write("{}".format(",".join(line)))
             return accumulator
 
@@ -244,9 +246,10 @@ class PrettyTextRenderer(CLIRenderer):
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
             line = {}
-            for column in grid.columns:
+            for column_index in range(len(grid.columns)):
+                column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
-                data = renderer(node.values[column.index])
+                data = renderer(node.values[column_index])
                 max_column_widths[column.name] = max(
                     max_column_widths.get(column.name, len(column.name)), len("{}".format(data)))
                 line[column] = data
@@ -258,14 +261,14 @@ class PrettyTextRenderer(CLIRenderer):
 
         # Always align the tree to the left
         format_string_list = ["{0:<" + str(max_column_widths[tree_indent_column]) + "s}"]
-        sorted_columns = list(sorted(grid.columns, key = lambda x: x.index))
-        for column in sorted_columns:
-            format_string_list.append("{" + str(column.index + 1) + ":" + display_alignment +
+        for column_index in range(len(grid.columns)):
+            column = grid.columns[column_index]
+            format_string_list.append("{" + str(column_index + 1) + ":" + display_alignment +
                                       str(max_column_widths[column.name]) + "s}")
 
         format_string = column_separator.join(format_string_list) + "\n"
 
-        column_titles = [""] + [column.name for column in sorted_columns]
+        column_titles = [""] + [column.name for column in grid.columns]
         outfd.write(format_string.format(*column_titles))
         for (depth, line) in final_output:
-            outfd.write(format_string.format("*" * depth, *[line[column] for column in sorted_columns]))
+            outfd.write(format_string.format("*" * depth, *[line[column] for column in grid.columns]))

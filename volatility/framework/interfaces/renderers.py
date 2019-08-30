@@ -10,7 +10,7 @@ import datetime
 from abc import abstractmethod, ABCMeta
 from typing import Any, Callable, ClassVar, Generator, Iterable, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union
 
-Column = NamedTuple('Column', [('index', int), ('name', str), ('type', Any)])
+Column = NamedTuple('Column', [('name', str), ('type', Any)])
 
 RenderOption = Any
 
@@ -47,7 +47,7 @@ class TreeNode(collections.Sequence, metaclass = ABCMeta):
     @property
     @abstractmethod
     def values(self) -> Iterable['BaseTypes']:
-        """Returns the list of values from the particular node, based on column.index"""
+        """Returns the list of values from the particular node, based on column index"""
 
     @property
     @abstractmethod

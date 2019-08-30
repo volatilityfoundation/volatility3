@@ -73,7 +73,7 @@ class TreeNode(interfaces.renderers.TreeNode):
 
     @property
     def values(self) -> Iterable[interfaces.renderers.BaseTypes]:
-        """Returns the list of values from the particular node, based on column.index"""
+        """Returns the list of values from the particular node, based on column index"""
         return self._values
 
     @property
@@ -146,7 +146,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
             if not is_simple_type:
                 raise TypeError("Column {}'s type is not a simple type: {}".format(name,
                                                                                    column_type.__class__.__name__))
-            converted_columns.append(interfaces.renderers.Column(len(converted_columns), name, column_type))
+            converted_columns.append(interfaces.renderers.Column(name, column_type))
         self.RowStructure = collections.namedtuple("RowStructure",
                                                    [self.sanitize_name(column.name) for column in converted_columns])
         self._columns = converted_columns
@@ -316,10 +316,11 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
         _index = None
         self._type = None
         self.ascending = ascending
-        for i in treegrid.columns:
-            if i.name.lower() == column_name.lower():
-                _index = i.index
-                self._type = i.type
+        for i in range(len(treegrid.columns)):
+            column = treegrid.columns[i]
+            if column.name.lower() == column_name.lower():
+                _index = i
+                self._type = column.type
         if _index is None:
             raise ValueError("Column not found in TreeGrid columns: {}".format(column_name))
         self._index = _index
