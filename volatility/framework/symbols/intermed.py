@@ -482,7 +482,7 @@ class Version2Format(Version1Format):
 
 class Version3Format(Version2Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    version = (2, 0, 1)
+    version = (2, 1, 0)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the symbol given by the symbol name"""
@@ -532,7 +532,7 @@ class Version4Format(Version3Format):
 
 class Version5Format(Version4Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    version = (4, 0, 1)
+    version = (4, 1, 0)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
         """Returns the symbol given by the symbol name"""
@@ -568,4 +568,4 @@ class Version6Format(Version5Format):
 
 class Version7Format(Version6Format):
     """Class for storing intermediate debugging data as objects and classes"""
-    version = (6, 0, 1)
+    version = (6, 1, 0)
