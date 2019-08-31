@@ -9,6 +9,7 @@ import datetime
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from volatility.framework import interfaces
+from volatility.framework.interfaces import renderers
 
 
 class UnreadableValue(interfaces.renderers.BaseAbsentValue):
@@ -331,6 +332,12 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
         if isinstance(value, interfaces.renderers.BaseAbsentValue):
             if self._type == datetime.datetime:
                 value = datetime.datetime.min
-            elif self._type == int:
+            elif self._type in [int, float]:
                 value = -1
+            elif self._type == bool:
+                value = False
+            elif self._type in [str, renderers.Disassembly]:
+                value = "-"
+            elif self._type == bytes:
+                value = b""
         return value

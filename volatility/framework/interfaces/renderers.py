@@ -98,9 +98,9 @@ class Disassembly(object):
 # contain the types that the validator will accept (which would not include the base)
 
 _Type = TypeVar("_Type", bound = Type)
-ColumnsType = List[Tuple[str, Type]]
 BaseTypes = Union[Type[int], Type[str], Type[float], Type[bytes], Type[datetime.datetime], Type[BaseAbsentValue],
                   Type[Disassembly]]
+ColumnsType = List[Tuple[str, BaseTypes]]
 VisitorSignature = Callable[[TreeNode, _Type], _Type]
 
 
