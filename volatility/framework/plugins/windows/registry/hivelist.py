@@ -15,6 +15,8 @@ vollog = logging.getLogger(__name__)
 class HiveList(plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image"""
 
+    _version = (1, 0, 0)
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [

@@ -8,9 +8,10 @@ from typing import Generator, List, Sequence
 
 from volatility.framework import objects, renderers, exceptions, interfaces, constants
 from volatility.framework.configuration import requirements
-from volatility.framework.layers.registry import RegistryHive, RegistryFormatException, RegistryInvalidIndex
+from volatility.framework.layers.registry import RegistryHive, RegistryFormatException
 from volatility.framework.renderers import TreeGrid, conversion, format_hints
 from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
+from volatility.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
             requirements.StringRequirement(
                 name = 'key', description = "Key to start from", default = None, optional = True),
@@ -31,21 +33,12 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 name = 'recurse', description = 'Recurses through keys', default = False, optional = True)
         ]
 
-    def _get_depth(self, key_path: str = None) -> int:
-        key_arg = self.config.get('key', None)
-
-        if not key_path:
-            return 0
-
-        if not key_arg:
-            return key_path.count("\\")
-
-        key_arg_ending_index = key_path.find(key_arg) + len(key_arg)
-
-        return key_path.count("\\", key_arg_ending_index)
-
-    def hive_walker(self, hive: RegistryHive, node_path: Sequence[objects.StructType] = None,
-                    key_path: str = None) -> Generator:
+    @classmethod
+    def hive_walker(cls,
+                    hive: RegistryHive,
+                    node_path: Sequence[objects.StructType] = None,
+                    key_path: str = None,
+                    recurse: bool = False) -> Generator:
         """Walks through a set of nodes from a given node (last one in node_path).
         Avoids loops by not traversing into nodes already present in the node_path
         """
@@ -67,8 +60,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 vollog.debug(excp)
                 key_node_name = renderers.UnreadableValue()
 
-            result = (self._get_depth(key_path), (last_write_time, renderers.format_hints.Hex(hive.hive_offset), "Key",
-                                                  key_path, key_node_name, "", key_node.get_volatile()))
+            result = (len(node_path), (last_write_time, renderers.format_hints.Hex(hive.hive_offset), "Key", key_path,
+                                       key_node_name, "", key_node.get_volatile()))
             yield result
 
         for value_node in node.get_values():
@@ -90,12 +83,11 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 vollog.debug(excp)
                 value_type = renderers.UnreadableValue()
 
-            result = (self._get_depth(key_path),
-                      (last_write_time, renderers.format_hints.Hex(hive.hive_offset), value_type, key_path,
-                       value_node_name, value_data, node.get_volatile()))
+            result = (len(node_path), (last_write_time, renderers.format_hints.Hex(hive.hive_offset), value_type,
+                                       key_path, value_node_name, value_data, node.get_volatile()))
             yield result
 
-        if self.config.get('recurse', None):
+        if recurse:
             for sub_node in node.get_subkeys():
                 if sub_node.vol.offset not in [x.vol.offset for x in node_path]:
                     try:
@@ -104,49 +96,51 @@ class PrintKey(interfaces.plugins.PluginInterface):
                         vollog.debug(excp)
                         continue
 
-                    yield from self.hive_walker(hive, node_path + [sub_node], key_path + "\\" + sub_node_name)
+                    yield from cls.hive_walker(
+                        hive, node_path + [sub_node], key_path = key_path + "\\" + sub_node_name, recurse = recurse)
 
-    def registry_walker(self):
+    def registry_walker(self,
+                        context: interfaces.context.ContextInterface,
+                        layer_name: str,
+                        symbol_table: str,
+                        offset: int = None,
+                        key: str = None):
         """Walks through a registry, hive by hive"""
-        if self.config.get('offset', None) is None:
+        if offset is None:
             try:
-                import volatility.plugins.windows.registry.hivelist as hivelist
                 hive_offsets = [
-                    hive.vol.offset for hive in hivelist.HiveList.list_hives(self.context, self.config['primary'], self.
-                                                                             config['nt_symbols'])
+                    hive.vol.offset for hive in hivelist.HiveList.list_hives(context, layer_name, symbol_table)
                 ]
             except ImportError:
                 vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")
                 raise ValueError("Unable to import windows.hivelist plugin, please provide a hive offset")
         else:
-            hive_offsets = [self.config['offset']]
+            hive_offsets = [offset]
 
         for hive_offset in hive_offsets:
             # Construct the hive
             reg_config_path = self.make_subconfig(
-                hive_offset = hive_offset, base_layer = self.config['primary'], nt_symbols = self.config['nt_symbols'])
+                hive_offset = hive_offset, base_layer = layer_name, nt_symbols = symbol_table)
             try:
-                hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset))
-                self.context.layers.add_layer(hive)
+                hive = RegistryHive(context, reg_config_path, name = 'hive' + hex(hive_offset))
+                context.layers.add_layer(hive)
 
                 # Walk it
-                if 'key' in self.config:
-                    node_path = hive.get_key(self.config['key'], return_list = True)
+                if key is not None:
+                    node_path = hive.get_key(key, return_list = True)
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
-                yield from self.hive_walker(hive, node_path)
+                yield from self.hive_walker(hive, node_path, recurse = self.config.get('recurse', None))
 
             except (exceptions.InvalidAddressException, KeyError, RegistryFormatException) as excp:
                 if type(excp) == KeyError:
-                    vollog.debug("Key '{}' not found in Hive at offset {}.".format(self.config['key'],
-                                                                                   hex(hive_offset)))
+                    vollog.debug("Key '{}' not found in Hive at offset {}.".format(key, hex(hive_offset)))
                 elif type(excp) == RegistryFormatException:
                     vollog.debug(excp)
                 else:
                     vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
-                result = (0, (renderers.UnreadableValue(), format_hints.Hex(hive_offset), "Key",
-                              self.config.get('key', "ROOT"), renderers.UnreadableValue(), renderers.UnreadableValue(),
-                              renderers.UnreadableValue()))
+                result = (0, (renderers.UnreadableValue(), format_hints.Hex(hive_offset), "Key", key or 'ROOT',
+                              renderers.UnreadableValue(), renderers.UnreadableValue(), renderers.UnreadableValue()))
                 yield result
 
     def run(self):
@@ -154,4 +148,5 @@ class PrintKey(interfaces.plugins.PluginInterface):
         return TreeGrid(
             columns = [('Last Write Time', datetime.datetime), ('Hive Offset', format_hints.Hex), ('Type', str),
                        ('Key', str), ('Name', str), ('Data', str), ('Volatile', bool)],
-            generator = self.registry_walker())
+            generator = self.registry_walker(self._context, self.config['primary'], self.config['nt_symbols'],
+                                             self.config.get('offset', None), self.config.get('key', None)))
