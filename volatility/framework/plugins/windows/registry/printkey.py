@@ -131,6 +131,10 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
                 for (x, y) in self.hive_walker(hive, node_path, recurse = self.config.get('recurse', None)):
+                    (_, _, value_type, _, _, _, _) = y
+                    if value_type != 'key':
+                        # Values are classed as one node deeper than subkeys, but we want them at the same level
+                        x -= 1
                     yield (x - len(node_path), y)
 
             except (exceptions.InvalidAddressException, KeyError, RegistryFormatException) as excp:
