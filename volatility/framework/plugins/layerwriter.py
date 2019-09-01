@@ -59,8 +59,6 @@ class LayerWriter(plugins.PluginInterface):
                     filedata.data.write(data)
                 self.produce_file(filedata)
             except Exception as excp:
-                import pdb
-                pdb.set_trace()
                 vollog.warning("Unable to write out output file")
 
             yield 0, ('Layer {} has been written to {}'.format(self.config['layer_name'],
