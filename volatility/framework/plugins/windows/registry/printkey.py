@@ -130,7 +130,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     node_path = hive.get_key(key, return_list = True)
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
-                yield from self.hive_walker(hive, node_path, recurse = self.config.get('recurse', None))
+                for (x, y) in self.hive_walker(hive, node_path, recurse = self.config.get('recurse', None)):
+                    yield (x - len(node_path), y)
 
             except (exceptions.InvalidAddressException, KeyError, RegistryFormatException) as excp:
                 if type(excp) == KeyError:
