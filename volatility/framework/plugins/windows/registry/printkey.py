@@ -139,7 +139,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     vollog.debug(excp)
                 else:
                     vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
-                result = (0, (renderers.UnreadableValue(), format_hints.Hex(hive_offset), "Key", key or 'ROOT',
+                result = (0, (renderers.UnreadableValue(), format_hints.Hex(hive_offset), "Key", '?\\' + (key or ''),
                               renderers.UnreadableValue(), renderers.UnreadableValue(), renderers.UnreadableValue()))
                 yield result
 
