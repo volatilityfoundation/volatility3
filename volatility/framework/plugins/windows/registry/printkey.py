@@ -64,6 +64,17 @@ class PrintKey(interfaces.plugins.PluginInterface):
                                        key_node_name, "", key_node.get_volatile()))
             yield result
 
+            if recurse:
+                if key_node.vol.offset not in [x.vol.offset for x in node_path]:
+                    try:
+                        sub_node_name = key_node.get_name()
+                    except exceptions.InvalidAddressException as excp:
+                        vollog.debug(excp)
+                        continue
+
+                    yield from cls.hive_walker(
+                        hive, node_path + [key_node], key_path = key_path + "\\" + sub_node_name, recurse = recurse)
+
         for value_node in node.get_values():
             try:
                 value_node_name = value_node.get_name() or "(Default)"
@@ -86,18 +97,6 @@ class PrintKey(interfaces.plugins.PluginInterface):
             result = (len(node_path), (last_write_time, renderers.format_hints.Hex(hive.hive_offset), value_type,
                                        key_path, value_node_name, value_data, node.get_volatile()))
             yield result
-
-        if recurse:
-            for sub_node in node.get_subkeys():
-                if sub_node.vol.offset not in [x.vol.offset for x in node_path]:
-                    try:
-                        sub_node_name = sub_node.get_name()
-                    except exceptions.InvalidAddressException as excp:
-                        vollog.debug(excp)
-                        continue
-
-                    yield from cls.hive_walker(
-                        hive, node_path + [sub_node], key_path = key_path + "\\" + sub_node_name, recurse = recurse)
 
     def registry_walker(self,
                         context: interfaces.context.ContextInterface,
@@ -131,10 +130,6 @@ class PrintKey(interfaces.plugins.PluginInterface):
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
                 for (x, y) in self.hive_walker(hive, node_path, recurse = self.config.get('recurse', None)):
-                    (_, _, value_type, _, _, _, _) = y
-                    if value_type != 'key':
-                        # Values are classed as one node deeper than subkeys, but we want them at the same level
-                        x -= 1
                     yield (x - len(node_path), y)
 
             except (exceptions.InvalidAddressException, KeyError, RegistryFormatException) as excp:
