@@ -11,10 +11,10 @@ import copy
 from abc import ABCMeta, abstractmethod
 from typing import Optional, Union
 
-from volatility.framework import interfaces, constants
+from volatility.framework import interfaces
 
 
-class ContextInterface(object, metaclass = ABCMeta):
+class ContextInterface(metaclass = ABCMeta):
     """All context-like objects must adhere to the following interface.
 
     This interface is present to avoid import dependency cycles.
@@ -68,7 +68,14 @@ class ContextInterface(object, metaclass = ABCMeta):
            Looks up the layer_name in the context, finds the object template based on the symbol,
            and constructs an object using the object template on the layer at the offset.
 
-           Returns a fully constructed object
+           Args:
+               object_type: Either a string name of the type, or a Template of the type to be constructed
+               layer_name: The name of the layer on which to construct the object
+               offset: The address within the layer at which to construct the object
+               native_layer_name: The layer this object references (should it be a pointer or similar)
+
+           Returns:
+                A fully constructed object
         """
 
     def clone(self) -> 'ContextInterface':
@@ -84,7 +91,22 @@ class ContextInterface(object, metaclass = ABCMeta):
                offset: int,
                native_layer_name: Optional[str] = None,
                size: Optional[int] = None) -> 'ModuleInterface':
-        """Create a module object """
+        """Create a module object
+
+        A module object is associated with a symbol table, and acts like a context, but offsets locations by a known value
+        and looks up symbols, by default within the associated symbol table.  It can also be sized should that information
+        be available.
+
+        Args:
+            module_name: The name of the module
+            layer_name: The layer the module is associated with (which layer the module lives within)
+            offset: The initial/base offset of the module (used as the offset for relative symbols)
+            native_layer_name: The default native_layer_name to use when the module constructs objects
+            size: The size, in bytes, that the module occupys from offset location within the layer named layer_name
+
+        Returns:
+            A module object
+        """
 
 
 class ModuleInterface(metaclass = ABCMeta):
@@ -100,6 +122,17 @@ class ModuleInterface(metaclass = ABCMeta):
                  offset: int,
                  symbol_table_name: Optional[str] = None,
                  native_layer_name: Optional[str] = None) -> None:
+        """
+        Constructs a new os-independent module
+
+        Args:
+            context: The context within which this module will exist
+            module_name: The name of the module
+            layer_name: The layer within the context in which the module exists
+            offset: The offset at which the module exists in the layer
+            symbol_table_name: The name of an associated symbol table
+            native_layer_name: The default native layer for objects constructed by the module
+        """
         self._context = context
         self._module_name = module_name
         self._layer_name = layer_name
@@ -112,6 +145,7 @@ class ModuleInterface(metaclass = ABCMeta):
 
     @property
     def name(self) -> str:
+        """The name of the constructed module"""
         return self._module_name
 
     @property
@@ -136,7 +170,17 @@ class ModuleInterface(metaclass = ABCMeta):
                native_layer_name: Optional[str] = None,
                absolute: bool = False,
                **kwargs) -> 'interfaces.objects.ObjectInterface':
-        """Returns an object created using the symbol_table_name and layer_name of the Module"""
+        """Returns an object created using the symbol_table_name and layer_name of the Module
+
+        Args:
+            object_type: The name of object type to construct (using the module's symbol_table)
+            offset: the offset (unless absolute is set) from the start of the module
+            native_layer_name: The native layer for objects that reference a different layer (if not the default provided during module construction)
+            absolute: A boolean specifying whether the offset is absolute within the layer, or relative to the start of the module
+
+        Returns:
+            The constructed object
+        """
 
     @abstractmethod
     def object_from_symbol(self,
@@ -144,7 +188,16 @@ class ModuleInterface(metaclass = ABCMeta):
                            native_layer_name: Optional[str] = None,
                            absolute: bool = False,
                            **kwargs) -> 'interfaces.objects.ObjectInterface':
-        """Returns an object created usnig the symbol_table_name and layer_name of the Module"""
+        """Returns an object created using the symbol_table_name and layer_name of the Module
+
+        Args:
+            symbol_name: The name of a symbol (that must be present in the module's symbol table).  The symbol's associated type will be used to construct an object at the symbol's offset.
+            native_layer_name: The native layer for objects that reference a different layer (if not the default provided during module construction)
+            absolute: A boolean specifying whether the offset is absolute within the layer, or relative to the start of the module
+
+        Returns:
+            The constructed object
+        """
 
     def get_type(self, name: str) -> 'interfaces.objects.Template':
         """Returns a type from the module"""

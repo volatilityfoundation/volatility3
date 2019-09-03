@@ -88,7 +88,7 @@ class Context(interfaces.context.ContextInterface):
             object_type: The name (or template) of the symbol type on which to construct the object.  If this is a name, it should contain an explicit table name.
             layer_name: The name of the layer on which to construct the object
             offset: The offset within the layer at which the data used to create the object lives
-
+            native_layer_name: The name of the layer the object references (for pointers) if different to layer_name
 
         Returns:
             A fully constructed object
@@ -116,7 +116,16 @@ class Context(interfaces.context.ContextInterface):
                offset: int,
                native_layer_name: Optional[str] = None,
                size: Optional[int] = None) -> interfaces.context.ModuleInterface:
-        """Creates a module object"""
+        """
+        Constructs a new os-independent module
+
+        Args:
+            module_name: The name of the module
+            layer_name: The layer within the context in which the module exists
+            offset: The offset at which the module exists in the layer
+            native_layer_name: The default native layer for objects constructed by the module
+            size: The size, in bytes, that the module occupys from offset location within the layer named layer_name
+        """
         if size:
             return SizedModule(
                 self,

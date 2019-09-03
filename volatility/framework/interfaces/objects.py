@@ -62,6 +62,15 @@ class ObjectInformation(ReadOnlyMapping):
                  member_name: Optional[str] = None,
                  parent: Optional['ObjectInterface'] = None,
                  native_layer_name: Optional[str] = None):
+        """Constructs a container for basic information about an object
+
+        Args:
+            layer_name: Layer from which the data for the object will be read
+            offset: Offset within the layer at which the data for the object will be read
+            member_name: If the object was accessed as a member of a parent object, this was the name used to access it
+            parent: If the object was accessed as a member of a parent object, this is the parent object
+            native_layer_name: If this object references other objects (such as a pointer), what layer those objects live in
+        """
         super().__init__({
             'layer_name': layer_name,
             'offset': offset,
@@ -76,6 +85,13 @@ class ObjectInterface(metaclass = ABCMeta):
 
     def __init__(self, context: 'interfaces_context.ContextInterface', type_name: str, object_info: 'ObjectInformation',
                  **kwargs) -> None:
+        """Constructs an Object adhereing to the ObjectInterface
+
+        Args:
+            context: The context associated with the object
+            type_name: The name of the type structure for the object
+            object_info: Basic information relevant to the object (layer, offset, member_name, parent, etc)
+        """
         # Since objects are likely to be instantiated often,
         # we're reliant on type_checking to ensure correctness of context, offset and parent
         # Everything else may be wrong, but that will get caught later on
@@ -147,7 +163,11 @@ class ObjectInterface(metaclass = ABCMeta):
         return object_template(context = self._context, object_info = object_info)
 
     def has_member(self, member_name: str) -> bool:
-        """Returns whether the object would contain a member called member_name"""
+        """Returns whether the object would contain a member called member_name
+
+        Args:
+            member_name: Name to test whether a member exists within the type structure
+        """
         return False
 
     class VolTemplateProxy(metaclass = abc.ABCMeta):
@@ -213,7 +233,7 @@ class Template:
     """
 
     def __init__(self, type_name: str, **arguments) -> None:
-        """Stores the keyword arguments for later use"""
+        """Stores the keyword arguments for later object creation"""
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
         self._arguments = arguments

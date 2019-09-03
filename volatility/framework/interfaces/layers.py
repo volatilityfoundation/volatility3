@@ -134,7 +134,15 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
 
     @abstractmethod
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        """Returns a boolean based on whether the entire chunk of data (from offset to length) is valid or not"""
+        """Returns a boolean based on whether the entire chunk of data (from offset to length) is valid or not
+
+        Args:
+            offset: The address to start determining whether bytes are readable/valid
+            length: The number of bytes from offset of which to test the validity
+
+        Returns:
+             Whether the bytes are valid and accessible
+        """
 
     @abstractmethod
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
@@ -161,7 +169,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
         """
 
     def destroy(self) -> None:
-        """Allows DataLayers to close any open handles, etc.
+        """Causes a DataLayer to close any open handles, etc.
 
            Systems that make use of Data Layers should call destroy when they are done with them.
            This will close all handles, and make the object unreadable
@@ -175,7 +183,10 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
 
     @property
     def dependencies(self) -> List[str]:
-        """DataLayers must never define on other layers"""
+        """A list of other layer names required by this layer.
+
+        Note:
+            DataLayers must never define other layers"""
         return []
 
     # ## General scanning methods

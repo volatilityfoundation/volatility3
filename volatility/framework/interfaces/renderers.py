@@ -192,4 +192,10 @@ class TreeGrid(object, metaclass = ABCMeta):
            The order of that the nodes are visited is always depth first, however, the order children are traversed can
            be set based on a sort_key function which should accept a node's values and return something that can be
            sorted to receive the desired order (similar to the sort/sorted key).
+
+           Args:
+               node: The initial node to be visited
+               function: The visitor to apply to the nodes under the initial node
+               initial_accumulator: An accumulator that allows data to be transfered between one visitor call to the next
+               sort_key: Information about the sort order of columns in order to determine the ordering of results
         """

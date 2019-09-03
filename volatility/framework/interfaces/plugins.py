@@ -24,6 +24,12 @@ class FileInterface(metaclass = ABCMeta):
     """Class for storing Files in the plugin as a means to output a file or files when necessary"""
 
     def __init__(self, filename: str, data: bytes = None) -> None:
+        """
+
+        Args:
+            filename: The requested name of the filename for the data
+            data: The data to be stored in a file
+        """
         self.preferred_filename = filename
         if data is None:
             data = b''
@@ -38,7 +44,11 @@ class FileConsumerInterface(object):
     """
 
     def consume_file(self, file: FileInterface) -> None:
-        """Consumes a file as passed back to a UI by a plugin"""
+        """Consumes a file as passed back to a UI by a plugin
+
+        Args:
+            file: A FileInterface object with the data to write to a file
+        """
 
 
 #
@@ -70,6 +80,13 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
                  context: interfaces_context.ContextInterface,
                  config_path: str,
                  progress_callback: constants.ProgressCallback = None) -> None:
+        """
+
+        Args:
+            context: The context that the plugin will operate within
+            config_path: The path to configuration data within the context configuration data
+            progress_callback: A callable that can provide feedback at progress points
+        """
         super().__init__(context, config_path)
         self._progress_callback = progress_callback or (lambda f, s: None)
         # Plugins self validate on construction, it makes it more difficult to work with them, but then
@@ -80,6 +97,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
         self._file_consumer = None  # type: Optional[FileConsumerInterface]
 
     def set_file_consumer(self, consumer: FileConsumerInterface) -> None:
+        """Sets the file consumer to be used by this plugin"""
         self._file_consumer = consumer
 
     def produce_file(self, filedata: FileInterface) -> None:

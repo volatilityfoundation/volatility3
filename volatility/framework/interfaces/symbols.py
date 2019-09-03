@@ -20,6 +20,14 @@ class SymbolInterface:
                  address: int,
                  type: Optional[objects.Template] = None,
                  constant_data: Optional[bytes] = None) -> None:
+        """
+
+        Args:
+            name: Name of the symbol
+            address: Numeric address value of the symbol
+            type: Optional type structure information associated with the symbol
+            constant_data: Potential constant data the symbol points at
+        """
         self._name = name
         if constants.BANG in self._name:
             raise ValueError("Symbol names cannot contain the symbol differentiator ({})".format(constants.BANG))
@@ -55,6 +63,7 @@ class SymbolInterface:
 
     @property
     def constant_data(self) -> Optional[bytes]:
+        """Returns any constant data associated with the symbol"""
         return self._constant_data
 
 
@@ -72,6 +81,14 @@ class BaseSymbolTableInterface:
                  native_types: 'NativeTableInterface',
                  table_mapping: Optional[Dict[str, str]] = None,
                  class_types: Optional[Dict[str, Type[objects.ObjectInterface]]] = None) -> None:
+        """
+
+        Args:
+            name: Name of the symbol table
+            native_types: The native symbol table used to resolve any base/native types
+            table_mapping: A dictionary mapping names of tables (which when present within the table will be changed to the mapped table)
+            class_types: A dictionary of types and classes that should be instantiated instead of Struct to construct them
+        """
         self.name = name
         if table_mapping is None:
             table_mapping = {}
@@ -140,6 +157,10 @@ class BaseSymbolTableInterface:
         """Overrides the object class for a specific Symbol type
 
            Name *must* be present in self.types
+
+           Args:
+               name: The name of the type to override the class for
+               clazz: The actual class to override for the provided type name
         """
         raise NotImplementedError("Abstract method set_type_class not implemented yet.")
 
