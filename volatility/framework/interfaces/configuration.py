@@ -483,10 +483,12 @@ class ConfigurableInterface(metaclass = ABCMeta):
 
     @property
     def context(self) -> ContextInterface:
+        """The context object that this configurable belongs to/configuration is stored in"""
         return self._context
 
     @property
     def config_path(self) -> str:
+        """The configuration path on which this configurable lives"""
         return self._config_path
 
     @config_path.setter
@@ -543,7 +545,12 @@ class ConfigurableInterface(metaclass = ABCMeta):
         return result
 
     def make_subconfig(self, *args, **kwargs) -> str:
-        """Constructs a new subconfig, containing each element from kwargs and returns the full config_path to it"""
+        """Convenience function to allow constructing a new randomly generated sub-configuration path,
+        containing each element from kwargs
+         
+        Returns:
+            str: The newly generated full configuration path
+        """
         if args:
             vollog.debug("Non-keyword arguments to make_subconfig are ignored - this is a bug in the calling code")
 

@@ -129,12 +129,12 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
 
     @property
     def address_mask(self) -> int:
-        """Returns a mask which encapsulates all the actives bit of an address for this layer"""
+        """Returns a mask which encapsulates all the active bits of an address for this layer"""
         return (1 << int(math.ceil(math.log2(self.maximum_address)))) - 1
 
     @abstractmethod
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        """Returns a boolean based on whether the offset is valid or not"""
+        """Returns a boolean based on whether the entire chunk of data (from offset to length) is valid or not"""
 
     @abstractmethod
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
@@ -142,6 +142,14 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
 
            If there is a fault of any kind (such as a page fault), an exception will be thrown
            unless pad is set, in which case the read errors will be replaced by null characters.
+
+           Args:
+               offset: The offset at which to being reading within the layer
+               length: The number of bytes to read within the layer
+               pad: A boolean indicating whether exceptions should be raised or bad bytes replaced with null characters
+
+           Returns:
+               The bytes read from the layer, starting at offset for length bytes
         """
 
     @abstractmethod
@@ -149,13 +157,13 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
         """Writes a chunk of data at offset.
 
            Any unavailable sections in the underlying bases will cause an exception to be thrown.
-           Note: Writes are not atomic, therefore some data can be written, even if an exception is thrown.
+           Note: Writes are not guaranteed atomic, therefore some data may have been written, even if an exception is thrown.
         """
 
     def destroy(self) -> None:
         """Allows DataLayers to close any open handles, etc.
 
-           Systems that make use of Data Layers should called destroy when they are done with them.
+           Systems that make use of Data Layers should call destroy when they are done with them.
            This will close all handles, and make the object unreadable
            (exceptions will be thrown using a DataLayer after destruction)"""
         pass
@@ -180,6 +188,15 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
         """Scans a Translation layer by chunk
 
            Note: this will skip missing/unmappable chunks of memory
+
+           Args:
+                context: The context containing the data layer
+                scanner: The constructed Scanner object to be applied
+                progress_callback: Method that is called periodically during scanning to update progress
+                sections: A list of (start, size) tuples defining the portions of the layer to scan
+
+           Returns:
+                The output iterable from the scanner object having been run against the layer 
         """
         if progress_callback is not None and not callable(progress_callback):
             raise TypeError("Progress_callback is not callable")
@@ -426,6 +443,15 @@ class LayerContainer(collections.abc.Mapping):
         """Reads from a particular layer at offset for length bytes
 
            Returns 'bytes' not 'str'
+
+           Args:
+               layer: The name of the layer to read from
+               offset: Where to begin reading within the layer
+               length: How many bytes to read from the layer
+               pad: Whether to raise exceptions or return null bytes when errors occur
+
+           Returns:
+               The result of reading from the requested layer
         """
         return self[layer].read(offset, length, pad)
 
@@ -437,6 +463,9 @@ class LayerContainer(collections.abc.Mapping):
         """Adds a layer to memory model
 
            This will throw an exception if the required dependencies are not met
+
+           Args:
+               layer: the layer to add to the list of layers (based on layer.name)
         """
         if layer.name in self._layers:
             raise exceptions.LayerException(layer.name, "Layer already exists: {}".format(layer.name))
@@ -451,6 +480,9 @@ class LayerContainer(collections.abc.Mapping):
         """Removes the layer called name
 
            This will throw an exception if other layers depend upon this layer
+
+           Args:
+               name: The name of the layer to delete
         """
         for layer in self._layers:
             depend_list = [superlayer for superlayer in self._layers if name in self._layers[layer].dependencies]
@@ -462,7 +494,14 @@ class LayerContainer(collections.abc.Mapping):
         del self._layers[name]
 
     def free_layer_name(self, prefix: str = "layer") -> str:
-        """Returns an unused layer name to ensure no collision occurs when inserting a layer"""
+        """Returns an unused layer name to ensure no collision occurs when inserting a layer
+
+           Args:
+               prefix: A descriptive string with which to prefix the layer name
+
+           Returns:
+               A string containing a name, prefixed with prefix, not currently in use within the LayerContainer
+        """
         count = 1
         while prefix + str(count) in self:
             count += 1
@@ -481,9 +520,11 @@ class LayerContainer(collections.abc.Mapping):
     def check_cycles(self) -> None:
         """Runs through the available layers and identifies if there are cycles in the DAG"""
         # TODO: Is having a cycle check necessary?
+        raise NotImplementedError("Cycle checking has not yet been implemented")
 
 
 class DummyProgress(object):
+    """A class to emulate Multiprocessing/threading Value objects"""
 
     def __init__(self):
         self.value = 0
