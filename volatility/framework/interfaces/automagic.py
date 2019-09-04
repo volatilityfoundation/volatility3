@@ -13,7 +13,7 @@ from volatility.framework.configuration import requirements
 
 
 class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metaclass = ABCMeta):
-    """Class that defines an automagic component that can help fulfill a Requirement
+    """Class that defines an automagic component that can help fulfill `Requirements`
 
     These classes are callable with the following parameters:
 
@@ -60,9 +60,9 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
                           requirement_type: Union[Tuple[Type[interfaces.configuration.RequirementInterface], ...], Type[
                               interfaces.configuration.RequirementInterface]],
                           shortcut: bool = True) -> List[Tuple[str, interfaces.configuration.RequirementInterface]]:
-        """Determines if there is actually an unfulfilled requirement waiting
+        """Determines if there is actually an unfulfilled `Requirement` waiting
 
-        This ensures we do not carry out an expensive search when there is no requirement for a particular requirement
+        This ensures we do not carry out an expensive search when there is no need for a particular `Requirement`
 
         Args:
             context: Context on which to operate
@@ -72,7 +72,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
             shortcut: Only returns requirements that live under unsatisfied requirements
 
         Returns:
-            A list of tuples containing the config_path, sub_config_path and requirement identifying the SymbolTableRequirements
+            A list of tuples containing the config_path, sub_config_path and requirement identifying the unsatisfied `Requirements`
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement_root.name)
         results = []  # type: List[Tuple[str, interfaces.configuration.RequirementInterface]]
@@ -92,7 +92,7 @@ class StackerLayerInterface(metaclass = ABCMeta):
     """Class that takes a lower layer and attempts to build on it
 
        stack_order determines the order (from low to high) that stacking layers
-       should be attempted lower levels should have lower stack_orders
+       should be attempted lower levels should have lower `stack_orders`
     """
 
     stack_order = 0
@@ -105,7 +105,7 @@ class StackerLayerInterface(metaclass = ABCMeta):
         """
         Method to determine whether this builder can operate on the named layer.  If so, modify the context appropriately.
 
-        Returns the name of any new_layer stacked on top of this layer or None.  The stacking is therefore strictly
+        Returns the name of any new layer stacked on top of this layer or None.  The stacking is therefore strictly
         linear rather than tree driven.
 
         Configuration options provided by the context are ignored, and defaults are to be used by this method

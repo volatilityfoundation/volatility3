@@ -9,7 +9,7 @@ import math
 import struct
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from volatility import framework, classproperty
+from volatility import classproperty
 from volatility.framework import exceptions, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import linear

@@ -291,7 +291,7 @@ class RequirementInterface(metaclass = ABCMeta):
         Args:
             name: The name of the requirement
             description: A short textual description of the requirement
-            default: The default value for the requirement is none is provided
+            default: The default value for the requirement if no value is provided
             optional: Whether the requirement must be satisfied or not
         """
         super().__init__()

@@ -85,7 +85,7 @@ class ObjectInterface(metaclass = ABCMeta):
 
     def __init__(self, context: 'interfaces_context.ContextInterface', type_name: str, object_info: 'ObjectInformation',
                  **kwargs) -> None:
-        """Constructs an Object adhereing to the ObjectInterface
+        """Constructs an Object adhering to the ObjectInterface
 
         Args:
             context: The context associated with the object
@@ -267,7 +267,7 @@ class Template:
 
     @abstractmethod
     def has_member(self, member_name: str) -> bool:
-        """Returns whether the object would contain a member called member_name"""
+        """Returns whether the object would contain a member called `member_name`"""
 
     def clone(self) -> 'Template':
         """Returns a copy of the original Template as constructed (without `update_vol` additions having been made)"""
