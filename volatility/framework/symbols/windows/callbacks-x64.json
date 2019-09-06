@@ -1,0 +1,150 @@
+{
+    "symbols": {},
+    "enums": {},
+    "base_types": {
+        "unsigned long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned char": {
+            "kind": "char",
+            "size": 1,
+            "signed": false,
+            "endian": "little"
+        },
+        "pointer": {
+            "kind": "int",
+            "size": 8,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned int": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        },
+        "unsigned short": {
+            "kind": "int",
+            "size": 2,
+            "signed": false,
+            "endian": "little"
+        },
+        "long": {
+            "kind": "int",
+            "size": 4,
+            "signed": false,
+            "endian": "little"
+        }
+    },
+    "user_types": {
+        "_GENERIC_CALLBACK": {
+            "fields": {
+              "Callback": {
+                "type": {
+                  "kind": "pointer",
+                  "subtype": {
+                    "kind": "base",
+                    "name": "void"
+                  }
+                },
+                "offset": 8
+              }
+            },
+            "kind": "struct",
+            "size": 16
+        },
+        "_KBUGCHECK_CALLBACK_RECORD": {
+            "fields": {
+                "Entry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "CallbackRoutine": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 16
+                },
+                "Component": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        }
+                    },
+                    "offset": 40
+                }
+            },
+            "kind": "struct",
+            "size": 64
+        },
+        "_KBUGCHECK_REASON_CALLBACK_RECORD": {
+            "fields": {
+                "Entry": {
+                    "type": {
+                        "kind": "struct",
+                        "name": "nt_symbols!_LIST_ENTRY"
+                    },
+                    "offset": 0
+                },
+                "CallbackRoutine": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 16
+                },
+                "Component": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        }
+                    },
+                    "offset": 40
+                }
+            },
+            "kind": "struct",
+            "size": 64
+        },
+        "_EX_CALLBACK_ROUTINE_BLOCK": {
+            "fields": {
+                "Function": {
+                    "type": {
+                        "kind": "pointer",
+                        "subtype": {
+                            "kind": "base",
+                            "name": "void"
+                        }
+                    },
+                    "offset": 8
+                }
+            },
+            "kind": "struct",
+            "size": 64
+        }
+    },
+    "metadata": {
+        "producer": {
+            "version": "0.0.1",
+            "name": "mhl by hand",
+            "datetime": "2019-08-27T18:17:16.417006"
+        },
+        "format": "4.0.0"
+    }
+}
