@@ -34,10 +34,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def hive_walker(cls,
-                    hive: RegistryHive,
-                    node_path: Sequence[objects.StructType] = None,
-                    key_path: str = None,
+    def hive_walker(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None,
                     recurse: bool = False) -> Generator:
         """Walks through a set of nodes from a given node (last one in node_path).
         Avoids loops by not traversing into nodes already present in the node_path
@@ -50,7 +47,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
         node = node_path[-1]
         if node.vol.type_name.endswith(constants.BANG + '_CELL_DATA'):
             raise RegistryFormatException("Encountered _CELL_DATA instead of _CM_KEY_NODE")
-        key_path = key_path or node.get_key_path()
+        key_path = node.get_key_path()
         last_write_time = conversion.wintime_to_datetime(node.LastWriteTime.QuadPart)
 
         for key_node in node.get_subkeys():
@@ -72,8 +69,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                         vollog.debug(excp)
                         continue
 
-                    yield from cls.hive_walker(
-                        hive, node_path + [key_node], key_path = key_path + "\\" + sub_node_name, recurse = recurse)
+                    yield from cls.hive_walker(hive, node_path + [key_node], recurse = recurse)
 
         for value_node in node.get_values():
             try:
