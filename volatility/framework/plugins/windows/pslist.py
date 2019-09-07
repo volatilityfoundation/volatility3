@@ -91,6 +91,10 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def _generator(self):
 
+        memory = self.context.layers[self.config['primary']]
+        if not isinstance(memory, layers.intel.Intel):
+            raise TypeError("Primary layer is not an intel layer")
+
         for proc in self.list_processes(
                 self.context,
                 self.config['primary'],
@@ -100,10 +104,6 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
             else:
-                layer_name = self.config['primary']
-                memory = self.context.layers[layer_name]
-                if not isinstance(memory, layers.intel.Intel):
-                    raise TypeError("Primary layer is not an intel layer")
                 (_, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
