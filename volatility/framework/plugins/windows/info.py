@@ -25,19 +25,25 @@ class Info(plugins.PluginInterface):
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
-    def get_depends(self, layer_name: str, index: int = 0):
+    @classmethod
+    def get_depends(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                    index: int = 0) -> Iterable[Tuple[int, interfaces.layers.DataLayerInterface]]:
         """List the dependencies of a given layer.
 
         Args:
+            context: The context to retrieve required layers from
             layer_name: the name of the starting layer
             index: the index/order of the layer
+
+        Returns:
+            An iterable containing the levels and layer objects for all dependent layers
         """
-        layer = self.context.layers[layer_name]
+        layer = context.layers[layer_name]
         yield index, layer
         try:
             for depends in layer.dependencies:
-                for j, dep in self.get_depends(depends, index + 1):
-                    yield j, self.context.layers[dep.name]
+                for j, dep in cls.get_depends(context, depends, index + 1):
+                    yield j, context.layers[dep.name]
         except AttributeError:
             # FileLayer won't have dependencies
             pass
@@ -73,12 +79,11 @@ class Info(plugins.PluginInterface):
             offset = kvo + kdbg_offset,
             layer_name = virtual_layer_name)
 
-        yield (0, ("Memory Location", self.config["primary.memory_layer.base_layer.location"]))
         yield (0, ("Kernel Base", hex(self.config["primary.kernel_virtual_offset"])))
         yield (0, ("DTB", hex(self.config["primary.page_map_offset"])))
         yield (0, ("Symbols", self.config["nt_symbols.isf_url"]))
 
-        for i, layer in self.get_depends("primary"):
+        for i, layer in self.get_depends(self.context, "primary"):
             yield (0, (layer.name, "{} {}".format(i, layer.__class__.__name__)))
 
         if kdbg.Header.OwnerTag == 0x4742444B:
