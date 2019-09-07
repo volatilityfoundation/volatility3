@@ -3,7 +3,8 @@
 #
 """Plugins are the `functions` of the volatility framework.
 
-They are called and carry out some algorithms on data stored in layers using objects constructed from symbols.
+They are called and carry out some algorithms on data stored in layers
+using objects constructed from symbols.
 """
 
 # Configuration interfaces must be imported separately, since we're part of interfaces and can't import ourselves
@@ -21,7 +22,8 @@ vollog = logging.getLogger(__name__)
 
 
 class FileInterface(metaclass = ABCMeta):
-    """Class for storing Files in the plugin as a means to output a file or files when necessary"""
+    """Class for storing Files in the plugin as a means to output a file or
+    files when necessary."""
 
     def __init__(self, filename: str, data: bytes = None) -> None:
         """
@@ -37,14 +39,16 @@ class FileInterface(metaclass = ABCMeta):
 
 
 class FileConsumerInterface(object):
-    """Class for consuming files potentially produced by plugins
+    """Class for consuming files potentially produced by plugins.
 
-    We use the producer/consumer model to ensure we can avoid running out of memory by storing every file produced.
-    The downside is, we can't provide much feedback to the producer about what happened to their file (other than exceptions).
+    We use the producer/consumer model to ensure we can avoid running
+    out of memory by storing every file produced. The downside is, we
+    can't provide much feedback to the producer about what happened to
+    their file (other than exceptions).
     """
 
     def consume_file(self, file: FileInterface) -> None:
-        """Consumes a file as passed back to a UI by a plugin
+        """Consumes a file as passed back to a UI by a plugin.
 
         Args:
             file: A FileInterface object with the data to write to a file
@@ -67,9 +71,11 @@ class FileConsumerInterface(object):
 
 class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass = ABCMeta):
     """Class that defines the basic interface that all Plugins must maintain.
-    The constructor must only take a `context` and `config_path`, so that plugins can be launched automatically.  As
-    such all configuration information must be provided through the requirements and configuration information in the
-    context it is passed.
+
+    The constructor must only take a `context` and `config_path`, so
+    that plugins can be launched automatically.  As such all
+    configuration information must be provided through the requirements
+    and configuration information in the context it is passed.
     """
 
     # Be careful with inheritance around this
@@ -97,11 +103,12 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
         self._file_consumer = None  # type: Optional[FileConsumerInterface]
 
     def set_file_consumer(self, consumer: FileConsumerInterface) -> None:
-        """Sets the file consumer to be used by this plugin"""
+        """Sets the file consumer to be used by this plugin."""
         self._file_consumer = consumer
 
     def produce_file(self, filedata: FileInterface) -> None:
-        """Adds a file to the plugin's file store and returns the chosen filename for the file"""
+        """Adds a file to the plugin's file store and returns the chosen
+        filename for the file."""
         if self._file_consumer:
             self._file_consumer.consume_file(filedata)
         else:
@@ -109,7 +116,8 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
 
     @classproperty
     def version(cls) -> Tuple[int, int, int]:
-        """The version of the current interface (classmethods available on the plugin).
+        """The version of the current interface (classmethods available on the
+        plugin).
 
         It is strongly recommended that Semantic Versioning be used (and the default version verification is defined that way):
 
@@ -121,12 +129,12 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
 
     @classmethod
     def get_requirements(cls) -> List[interfaces_configuration.RequirementInterface]:
-        """Returns a list of Requirement objects for this plugin"""
+        """Returns a list of Requirement objects for this plugin."""
         return []
 
     @abstractmethod
     def run(self) -> interfaces_renderers.TreeGrid:
-        """Executes the functionality of the code
+        """Executes the functionality of the code.
 
         .. note:: This method expects `self.validate` to have been called to ensure all necessary options have been provided
 

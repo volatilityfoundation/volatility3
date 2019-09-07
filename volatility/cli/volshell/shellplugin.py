@@ -11,7 +11,7 @@ from volatility.framework.configuration import requirements
 
 
 class Volshell(interfaces.plugins.PluginInterface):
-    """Shell environment to directly interact with a memory image"""
+    """Shell environment to directly interact with a memory image."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -21,11 +21,10 @@ class Volshell(interfaces.plugins.PluginInterface):
         ]
 
     def run(self, additional_locals: Dict[str, Any] = None) -> interfaces.renderers.TreeGrid:
-        """Runs the interactive volshell plugin
+        """Runs the interactive volshell plugin.
 
         Returns:
             Return a TreeGrid but this is always empty since the point of this plugin is to run interactively
-
         """
 
         # Provide some OS-agnostic convenience elements for ease
@@ -65,12 +64,13 @@ class Volshell(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([], None)
 
     def load_functions(self) -> Dict[str, Callable]:
-        """Returns a dictionary listing the functions to be added to the environment"""
+        """Returns a dictionary listing the functions to be added to the
+        environment."""
         return {"dt": self.display_type}
 
     @staticmethod
     def display_type(object: interfaces.objects.ObjectInterface):
-        """Display Type"""
+        """Display Type."""
         longest_member = longest_offset = 0
         for member in object.vol.members:
             relative_offset, member_type = object.vol.members[member]

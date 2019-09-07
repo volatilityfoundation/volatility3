@@ -14,7 +14,8 @@ vollog = logging.getLogger(__name__)
 
 
 class LayerWriter(plugins.PluginInterface):
-    """Runs the automagics and lists out the generated layers if no layer name is specified, otherwise writes out the named layer"""
+    """Runs the automagics and lists out the generated layers if no layer name
+    is specified, otherwise writes out the named layer."""
 
     default_output_name = "output.raw"
     default_block_size = 0x500000

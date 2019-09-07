@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""In-memory artifacts from OSX systems"""
+"""In-memory artifacts from OSX systems."""
 from typing import Iterator, Tuple, Any, Generator, List
 
 from volatility.framework import exceptions, renderers, interfaces
@@ -12,7 +12,7 @@ from volatility.plugins.mac import pslist
 
 
 class Psaux(plugins.PluginInterface):
-    """Recovers program command line arguments"""
+    """Recovers program command line arguments."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

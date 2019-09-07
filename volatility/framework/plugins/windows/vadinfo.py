@@ -32,7 +32,7 @@ winnt_protections = {
 
 
 class VadInfo(interfaces.plugins.PluginInterface):
-    """Lists process memory ranges"""
+    """Lists process memory ranges."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -57,23 +57,38 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 ]
 
     @classmethod
-    def protect_values(cls, context: interfaces.context.ContextInterface, virtual_layer: str,
-                       nt_symbols: str) -> Iterable[int]:
-        """Look up the array of memory protection constants from the memory sample.
-        These don't change often, but if they do in the future, then finding them
-        # dynamically versus hard-coding here will ensure we parse them properly."""
+    def protect_values(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                       symbol_table: str) -> Iterable[int]:
+        """Look up the array of memory protection constants from the memory
+        sample. These don't change often, but if they do in the future, then
+        finding them dynamically versus hard-coding here will ensure we parse
+        them properly.
 
-        kvo = context.layers[virtual_layer].config["kernel_virtual_offset"]
-        ntkrnlmp = context.module(nt_symbols, layer_name = virtual_layer, offset = kvo)
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+        """
+
+        kvo = context.layers[layer_name].config["kernel_virtual_offset"]
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
         addr = ntkrnlmp.get_symbol("MmProtectToValue").address
         values = ntkrnlmp.object(object_type = "array", offset = addr, subtype = ntkrnlmp.get_type("int"), count = 32)
         return values  # type: ignore
 
     @classmethod
     def list_vads(cls, proc: interfaces.objects.ObjectInterface,
-                  filter_func: Callable[[int], bool] = lambda _: False) -> \
+                  filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: False) -> \
             Generator[interfaces.objects.ObjectInterface, None, None]:
+        """Lists the Virtual Address Descriptors of a specific process.
 
+        Args:
+            proc: _EPROCESS object from which to list the VADs
+            filter_func: Function to take a virtual address descriptor value and return True if it should be filtered out
+
+        Returns:
+            A list of virtual address descriptors based on the process and filtered based on the filter function
+        """
         for vad in proc.get_vad_root().traverse():
             if not filter_func(vad):
                 yield vad

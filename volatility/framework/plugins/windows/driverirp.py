@@ -21,7 +21,7 @@ MAJOR_FUNCTIONS = [
 
 
 class DriverIrp(plugins.PluginInterface):
-    """List IRPs for drivers in a particular windows memory image"""
+    """List IRPs for drivers in a particular windows memory image."""
 
     @classmethod
     def get_requirements(cls):

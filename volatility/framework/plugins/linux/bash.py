@@ -1,9 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""A module containing a collection of plugins that produce data
-typically found in Linux's /proc file system.
-"""
+"""A module containing a collection of plugins that produce data typically
+found in Linux's /proc file system."""
 
 import datetime
 import struct
@@ -20,7 +19,7 @@ from volatility.plugins.linux import pslist
 
 
 class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
-    """Recovers bash command history from memory"""
+    """Recovers bash command history from memory."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

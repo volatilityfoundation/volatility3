@@ -16,7 +16,8 @@ cached_validation_filepath = os.path.join(constants.CACHE_PATH, "valid_isf.cache
 
 
 def load_cached_validations() -> Set[str]:
-    """Loads up the list of successfully cached json objects, so we don't need to revalidate them"""
+    """Loads up the list of successfully cached json objects, so we don't need
+    to revalidate them."""
     validhashes = set()  # type: Set
     if os.path.exists(cached_validation_filepath):
         with open(cached_validation_filepath, "r") as f:
@@ -25,7 +26,8 @@ def load_cached_validations() -> Set[str]:
 
 
 def record_cached_validations(validations):
-    """Record the cached validations, so we don't need to revalidate them in future"""
+    """Record the cached validations, so we don't need to revalidate them in
+    future."""
     with open(cached_validation_filepath, "w") as f:
         json.dump(list(validations), f)
 
@@ -34,7 +36,7 @@ cached_validations = load_cached_validations()
 
 
 def validate(input: Dict[str, Any], use_cache: bool = True) -> bool:
-    """Validates an input JSON file based upon """
+    """Validates an input JSON file based upon."""
     format = input.get('metadata', {}).get('format', None)
     if not format:
         vollog.debug("No schema format defined")
@@ -50,12 +52,13 @@ def validate(input: Dict[str, Any], use_cache: bool = True) -> bool:
 
 
 def create_json_hash(input: Dict[str, Any], schema: Dict[str, Any]) -> str:
-    """Constructs the hash of the input and schema to create a unique indentifier for a particular JSON file"""
+    """Constructs the hash of the input and schema to create a unique
+    indentifier for a particular JSON file."""
     return hashlib.sha1(bytes(json.dumps((input, schema), sort_keys = True), 'utf-8')).hexdigest()
 
 
 def valid(input: Dict[str, Any], schema: Dict[str, Any], use_cache: bool = True) -> bool:
-    """Validates a json schema"""
+    """Validates a json schema."""
     input_hash = create_json_hash(input, schema)
     if input_hash in cached_validations and use_cache:
         return True

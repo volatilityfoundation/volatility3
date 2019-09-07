@@ -1,7 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""Module to identify the Directory Table Base and architecture of windows memory images
+"""Module to identify the Directory Table Base and architecture of windows
+memory images.
 
 This module contains a PageMapScanner that scans a physical layer to identify self-referential pointers.
 All windows versions include a self-referential pointer in their Directory Table Base's top table, in order to
@@ -37,10 +38,12 @@ vollog = logging.getLogger(__name__)
 
 
 class DtbTest:
-    """This class generically contains the tests for a page based on a set of class parameters
+    """This class generically contains the tests for a page based on a set of
+    class parameters.
 
-    When constructed it contains all the information necessary to extract a specific index from a page
-    and determine whether it points back to that page's offset.
+    When constructed it contains all the information necessary to
+    extract a specific index from a page and determine whether it points
+    back to that page's offset.
     """
 
     def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, ptr_reference: int, mask: int) -> None:
@@ -55,7 +58,8 @@ class DtbTest:
         return struct.unpack("<" + self.ptr_struct, value)[0]
 
     def __call__(self, data: bytes, data_offset: int, page_offset: int) -> Optional[Tuple[int, Any]]:
-        """Tests a specific page in a chunk of data to see if it contains a self-referential pointer.
+        """Tests a specific page in a chunk of data to see if it contains a
+        self-referential pointer.
 
         Args:
             data: The chunk of data that contains the page to be scanned
@@ -82,7 +86,8 @@ class DtbTest:
         return None
 
     def second_pass(self, dtb: int, data: bytes, data_offset: int) -> Optional[Tuple[int, Any]]:
-        """Re-reads over the whole page to validate other records based on the number of pages marked user vs super
+        """Re-reads over the whole page to validate other records based on the
+        number of pages marked user vs super.
 
         Args:
             dtb: The identified dtb that needs validating
@@ -128,11 +133,14 @@ class DtbTestPae(DtbTest):
             layer_type = layers.intel.WindowsIntelPAE, ptr_struct = "Q", ptr_reference = 0x3, mask = 0x3FFFFFFFFFF000)
 
     def second_pass(self, dtb: int, data: bytes, data_offset: int) -> Optional[Tuple[int, Any]]:
-        """PAE top level directory tables contains four entries and the self-referential pointer occurs in the second
-        level of tables (so as not to use up a full quarter of the space).  This is very high in the space, and occurs
-        in the fourht (last quarter) second-level table.  The second-level tables appear always to come sequentially
-        directly after the real dtb.  The value for the real DTB is therefore four page earlier (and the fourth entry
-        should point back to the `dtb` parameter this function was originally passed.
+        """PAE top level directory tables contains four entries and the self-
+        referential pointer occurs in the second level of tables (so as not to
+        use up a full quarter of the space).  This is very high in the space,
+        and occurs in the fourht (last quarter) second-level table.  The
+        second-level tables appear always to come sequentially directly after
+        the real dtb.  The value for the real DTB is therefore four page
+        earlier (and the fourth entry should point back to the `dtb` parameter
+        this function was originally passed.
 
         Args:
             dtb: The identified self-referential pointer that needs validating
@@ -153,7 +161,8 @@ class DtbTestPae(DtbTest):
 
 
 class DtbSelfReferential(DtbTest):
-    """A generic DTB test which looks for a self-referential pointer at *any* index within the page."""
+    """A generic DTB test which looks for a self-referential pointer at *any*
+    index within the page."""
 
     def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, ptr_reference: int, mask: int) -> None:
         super().__init__(layer_type = layer_type, ptr_struct = ptr_struct, ptr_reference = ptr_reference, mask = mask)
@@ -190,7 +199,8 @@ class DtbSelfRef64bit(DtbSelfReferential):
 
 
 class PageMapScanner(interfaces.layers.ScannerInterface):
-    """Scans through all pages using DTB tests to determine a dtb offset and architecture"""
+    """Scans through all pages using DTB tests to determine a dtb offset and
+    architecture."""
     overlap = 0x4000
     thread_safe = True
     tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
@@ -210,13 +220,14 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
 
 
 class WintelHelper(interfaces.automagic.AutomagicInterface):
-    """Windows DTB finder based on self-referential pointers
+    """Windows DTB finder based on self-referential pointers.
 
     This class adheres to the :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` interface
     and both determines the directory table base of an intel layer if one hasn't been specified, and constructs
     the intel layer if necessary (for example when reconstructing a pre-existing configuration).
 
-    It will scan for existing TranslationLayers that do not have a DTB  using the :class:`PageMapScanner`"""
+    It will scan for existing TranslationLayers that do not have a DTB  using the :class:`PageMapScanner`
+    """
     priority = 20
     tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
 
@@ -272,12 +283,16 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
-        """Attempts to determine and stack an intel layer on a physical layer where possible
+        """Attempts to determine and stack an intel layer on a physical layer
+        where possible.
 
-        Where the DTB scan fails, it attempts a heuristic of checking for the DTB within a specific range.
-        New versions of windows, with randomized self-referential pointers, appear to always load their dtb within
-        a small specific range (`0x1a0000` and `0x1b0000`), so instead we scan for all self-referential pointers in
-        that range, and ignore any that contain multiple self-references (since the DTB is very unlikely to point to
+        Where the DTB scan fails, it attempts a heuristic of checking
+        for the DTB within a specific range. New versions of windows,
+        with randomized self-referential pointers, appear to always load
+        their dtb within a small specific range (`0x1a0000` and
+        `0x1b0000`), so instead we scan for all self-referential
+        pointers in that range, and ignore any that contain multiple
+        self-references (since the DTB is very unlikely to point to
         itself more than once).
         """
         base_layer = context.layers[layer_name]
@@ -348,15 +363,15 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
 
 
 class WinSwapLayers(interfaces.automagic.AutomagicInterface):
-    """Class to read swap_layers filenames from single-swap-layers,
-    create the layers and populate the single-layers swap_layers"""
+    """Class to read swap_layers filenames from single-swap-layers, create the
+    layers and populate the single-layers swap_layers."""
 
     def __call__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
                  progress_callback: constants.ProgressCallback = None) -> None:
-        """Finds translation layers that can have swap layers added"""
+        """Finds translation layers that can have swap layers added."""
         path_join = interfaces.configuration.path_join
         self._translation_requirement = self.find_requirements(
             context, config_path, requirement, requirements.TranslationLayerRequirement, shortcut = False)
@@ -398,7 +413,7 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
     def find_swap_requirement(config: str,
                               requirement: requirements.TranslationLayerRequirement) \
             -> Tuple[str, Optional[requirements.LayerListRequirement]]:
-        """Takes a Translation layer and returns its swap_layer requirement"""
+        """Takes a Translation layer and returns its swap_layer requirement."""
         swap_req = None
         for req_name in requirement.requirements:
             req = requirement.requirements[req_name]
@@ -411,7 +426,7 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        """Returns the requirements of this plugin"""
+        """Returns the requirements of this plugin."""
         return [
             requirements.ListRequirement(
                 name = "single_swap_locations",

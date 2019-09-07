@@ -1,6 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
+from typing import Iterable, Tuple
 
 import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
@@ -13,7 +14,7 @@ from volatility.framework.renderers import format_hints
 
 
 class Malfind(interfaces.plugins.PluginInterface):
-    """Lists process memory ranges that potentially contain injected code"""
+    """Lists process memory ranges that potentially contain injected code."""
 
     @classmethod
     def get_requirements(cls):
@@ -27,16 +28,18 @@ class Malfind(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def is_vad_empty(self, proc_layer, vad):
-        """Check if a VAD region is either entirely unavailable
-        due to paging, entirely consisting of zeros, or a
-        combination of the two. This helps ignore false positives
-        whose VAD flags match task._injection_filter requirements
-        but there's no data and thus not worth reporting it.
+    def is_vad_empty(cls, proc_layer, vad):
+        """Check if a VAD region is either entirely unavailable due to paging,
+        entirely consisting of zeros, or a combination of the two. This helps
+        ignore false positives whose VAD flags match task._injection_filter
+        requirements but there's no data and thus not worth reporting it.
 
         Args:
             proc_layer: the process layer
             vad: the MMVAD structure to test
+
+        Returns:
+            A boolean indicating whether a vad is empty or not
         """
 
         CHUNK_SIZE = 0x1000
@@ -55,12 +58,18 @@ class Malfind(interfaces.plugins.PluginInterface):
 
     @classmethod
     def list_injections(cls, context: interfaces.context.ContextInterface, symbol_table: str,
-                        proc: interfaces.objects.ObjectInterface):
-        """Generate memory regions for a process that may contain
-        injected code.
+                        proc: interfaces.objects.ObjectInterface
+                        ) -> Iterable[Tuple[interfaces.objects.ObjectInterface, bytes]]:
+        """Generate memory regions for a process that may contain injected
+        code.
 
         Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            symbol_table: The name of the table containing the kernel symbols
             proc: an _EPROCESS instance
+
+        Returns:
+            An iterable of VAD instances and the first 64 bytes of data containing in that region
         """
 
         proc_layer_name = proc.add_process_layer()

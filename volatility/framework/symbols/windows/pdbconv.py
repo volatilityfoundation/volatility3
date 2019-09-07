@@ -236,7 +236,7 @@ class ForwardArrayCount:
 
 
 class PdbReader:
-    """Class to read Microsoft PDB files
+    """Class to read Microsoft PDB files.
 
     This reads the various streams according to various sources as to how pdb should be read.
     These sources include:
@@ -254,7 +254,6 @@ class PdbReader:
     particularly when it comes to names.  We must therefore parse it after we've collected other information already.
     This is in comparison to something such as Construct/pdbparse which can use just-parsed data to determine dynamically
     sized data following.
-
     """
 
     def __init__(self,
@@ -287,9 +286,10 @@ class PdbReader:
     @classmethod
     def load_pdb_layer(cls, context: interfaces.context.ContextInterface,
                        location: str) -> Tuple[str, interfaces.context.ContextInterface]:
-        """Loads a PDB file into a layer within the context and returns the name of the new layer
+        """Loads a PDB file into a layer within the context and returns the
+        name of the new layer.
 
-           Note: the context may be changed by this method
+        Note: the context may be changed by this method
         """
         physical_layer_name = context.layers.free_layer_name("FileLayer")
         physical_config_path = interfaces.configuration.path_join("pdbreader", physical_layer_name)
@@ -322,7 +322,8 @@ class PdbReader:
         self._omap_mapping = []
 
     def read_necessary_streams(self):
-        """Read streams to populate the various internal components for a PDB table"""
+        """Read streams to populate the various internal components for a PDB
+        table."""
         if not self.metadata['windows'].get('pdb', None):
             self.read_pdb_info_stream()
         if not self.user_types:
@@ -331,7 +332,7 @@ class PdbReader:
             self.read_symbol_stream()
 
     def read_tpi_stream(self) -> None:
-        """Reads the TPI type steam"""
+        """Reads the TPI type steam."""
         vollog.debug("Reading TPI")
         tpi_layer = self._context.layers.get(self._layer_name + "_stream2", None)
         if not tpi_layer:
@@ -379,7 +380,7 @@ class PdbReader:
         self.process_types(type_references)
 
     def read_dbi_stream(self) -> None:
-        """Reads the DBI Stream"""
+        """Reads the DBI Stream."""
         vollog.debug("Reading DBI stream")
         dbi_layer = self._context.layers.get(self._layer_name + "_stream3", None)
         if not dbi_layer:
@@ -430,7 +431,7 @@ class PdbReader:
                 consumed += section.vol.size
 
     def read_symbol_stream(self):
-        """Reads in the symbol stream"""
+        """Reads in the symbol stream."""
         self.symbols = {}
 
         if not self._dbiheader:
@@ -474,7 +475,7 @@ class PdbReader:
             offset += sym.length + 2  # Add on length itself
 
     def read_pdb_info_stream(self):
-        """Reads in the pdb information stream"""
+        """Reads in the pdb information stream."""
         if not self._dbiheader:
             self.read_dbi_stream()
 
@@ -494,7 +495,7 @@ class PdbReader:
         }
 
     def convert_bytes_to_guid(self, original: bytes) -> str:
-        """Convert the bytes to the correct ordering for a GUID"""
+        """Convert the bytes to the correct ordering for a GUID."""
         orig_guid_list = [x for x in original]
         guid_list = []
         for i in [3, 2, 1, 0, 5, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15]:
@@ -504,7 +505,7 @@ class PdbReader:
     # SYMBOL HANDLING CODE
 
     def omap_lookup(self, address):
-        """Looks up an address using the omap mapping"""
+        """Looks up an address using the omap mapping."""
         pos = bisect(self._omap_mapping, (address, -1))
         if self._omap_mapping[pos][0] > address:
             pos -= 1
@@ -514,7 +515,7 @@ class PdbReader:
         return self._omap_mapping[pos][1] + (address - self._omap_mapping[pos][0])
 
     def name_strip(self, name):
-        """Strips unnecessary components from the start of a symbol name"""
+        """Strips unnecessary components from the start of a symbol name."""
         new_name = name
 
         if new_name[:7] in ["__imp__", "__imp_@"]:
@@ -534,7 +535,7 @@ class PdbReader:
         return new_name
 
     def get_json(self):
-        """Returns the intermediate format JSON data from this pdb file"""
+        """Returns the intermediate format JSON data from this pdb file."""
         self.read_necessary_streams()
 
         # Set the time/datestamp for the output
@@ -553,7 +554,7 @@ class PdbReader:
         }
 
     def get_type_from_index(self, index: int) -> Union[List[Any], Dict[str, Any]]:
-        """Takes a type index and returns appropriate dictionary"""
+        """Takes a type index and returns appropriate dictionary."""
         if index < 0x1000:
             base_name, base = primatives[index & 0xff]
             self.bases[base_name] = base
@@ -607,7 +608,8 @@ class PdbReader:
             return result
 
     def get_size_from_index(self, index: int) -> int:
-        """Returns the size of the structure based on the type index provided"""
+        """Returns the size of the structure based on the type index
+        provided."""
         result = -1
         name = ''
         if index < 0x1000:
@@ -652,7 +654,8 @@ class PdbReader:
     ### TYPE HANDLING CODE
 
     def process_types(self, type_references: Dict[str, int]) -> None:
-        """Reads the TPI and symbol streams to populate the reader's variables"""
+        """Reads the TPI and symbol streams to populate the reader's
+        variables."""
 
         self.bases = {}
         self.user_types = {}
@@ -699,7 +702,8 @@ class PdbReader:
             self, module: interfaces.context.ModuleInterface, offset: int, length: int
     ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Union[None, List, interfaces.objects.
                                                                                         ObjectInterface]], int]:
-        """Returns a (leaf_type, name, object) Tuple for a type, and the number of bytes consumed"""
+        """Returns a (leaf_type, name, object) Tuple for a type, and the number
+        of bytes consumed."""
         result = None, None, None  # type: Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[Union[List, interfaces.objects.ObjectInterface]]]
         leaf_type = self.context.object(
             module.get_enumeration("LEAF_TYPE"), layer_name = module._layer_name, offset = offset)
@@ -782,14 +786,14 @@ class PdbReader:
         return result, consumed
 
     def consume_padding(self, layer_name: str, offset: int) -> int:
-        """Returns the amount of padding used between fields"""
+        """Returns the amount of padding used between fields."""
         val = self.context.layers[layer_name].read(offset, 1)
         if not ((val[0] & 0xf0) == 0xf0):
             return 0
         return (int(val[0]) & 0x0f)
 
     def convert_fields(self, fields: int) -> Dict[Optional[str], Dict[str, Any]]:
-        """Converts a field list into a list of fields"""
+        """Converts a field list into a list of fields."""
         result = {}  # type: Dict[Optional[str], Dict[str, Any]]
         _, _, fields_struct = self.types[fields]
         if not isinstance(fields_struct, list):
@@ -801,7 +805,8 @@ class PdbReader:
         return result
 
     def replace_forward_references(self, types, type_references):
-        """Finds all ForwardArrayCounts and calculates them once ForwardReferences have been resolved"""
+        """Finds all ForwardArrayCounts and calculates them once
+        ForwardReferences have been resolved."""
         if isinstance(types, dict):
             for k, v in types.items():
                 types[k] = self.replace_forward_references(v, type_references)
@@ -836,7 +841,8 @@ class PdbReader:
     @staticmethod
     def parse_string(structure: interfaces.objects.ObjectInterface, parse_as_pascal: bool = False,
                      size: int = 0) -> str:
-        """Consumes either a c-string or a pascal string depending on the leaf_type"""
+        """Consumes either a c-string or a pascal string depending on the
+        leaf_type."""
         if not parse_as_pascal:
             name = structure.cast("string", max_length = size, encoding = "latin-1")
         else:
@@ -847,7 +853,8 @@ class PdbReader:
     def determine_extended_value(self, leaf_type: interfaces.objects.ObjectInterface,
                                  value: interfaces.objects.ObjectInterface, module: interfaces.context.ModuleInterface,
                                  length: int) -> Tuple[str, interfaces.objects.ObjectInterface, int]:
-        """Reads a value and potentially consumes more data to construct the value"""
+        """Reads a value and potentially consumes more data to construct the
+        value."""
         excess = 0
         if value >= leaf_type.LF_CHAR:
             sub_leaf_type = self.context.object(
@@ -878,7 +885,8 @@ class PdbReader:
 class PdbRetreiver:
 
     def get_report_hook(self, progress_callback, url):
-        """Returns a report hook that converts output into a progress_callback"""
+        """Returns a report hook that converts output into a
+        progress_callback."""
 
         if progress_callback is None:
             return lambda x, y, z: None
@@ -918,13 +926,14 @@ if __name__ == '__main__':
     import argparse
 
     class PrintedProgress(object):
-        """A progress handler that prints the progress value and the description onto the command line"""
+        """A progress handler that prints the progress value and the
+        description onto the command line."""
 
         def __init__(self):
             self._max_message_len = 0
 
         def __call__(self, progress: Union[int, float], description: str = None):
-            """ A simple function for providing text-based feedback
+            """A simple function for providing text-based feedback.
 
             .. warning:: Only for development use.
 

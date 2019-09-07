@@ -1,10 +1,12 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""A `Context` maintains the accumulated state required for various plugins and framework functions.
+"""A `Context` maintains the accumulated state required for various plugins and
+framework functions.
 
-This has been made an object to allow quick swapping and changing of contexts, to allow a plugin
-to act on multiple different contexts without them interfering eith each other.
+This has been made an object to allow quick swapping and changing of
+contexts, to allow a plugin to act on multiple different contexts
+without them interfering eith each other.
 """
 import functools
 import hashlib
@@ -14,7 +16,7 @@ from volatility.framework import constants, interfaces, symbols, exceptions
 
 
 class Context(interfaces.context.ContextInterface):
-    """Maintains the context within which to construct objects
+    """Maintains the context within which to construct objects.
 
     The context object is the main method of carrying around state that's been constructed for the purposes of
     investigating memory.  It contains a symbol_space of all the symbols that can be accessed by plugins using the
@@ -37,7 +39,8 @@ class Context(interfaces.context.ContextInterface):
 
     @property
     def config(self) -> interfaces.configuration.HierarchicalDict:
-        """Returns a mutable copy of the configuration, but does not allow the whole configuration to be altered"""
+        """Returns a mutable copy of the configuration, but does not allow the
+        whole configuration to be altered."""
         return self._config
 
     @config.setter
@@ -48,19 +51,20 @@ class Context(interfaces.context.ContextInterface):
 
     @property
     def symbol_space(self) -> interfaces.symbols.SymbolSpaceInterface:
-        """The space of all symbols that can be accessed within this context.
-        """
+        """The space of all symbols that can be accessed within this
+        context."""
         return self._symbol_space
 
     @property
     def layers(self) -> interfaces.layers.LayerContainer:
-        """A LayerContainer object, allowing access to all data and translation layers currently available within the context"""
+        """A LayerContainer object, allowing access to all data and translation
+        layers currently available within the context."""
         return self._memory
 
     # ## Translation Layer Functions
 
     def add_layer(self, layer: interfaces.layers.DataLayerInterface) -> None:
-        """Adds a named translation layer to the context
+        """Adds a named translation layer to the context.
 
         Args:
             layer: The layer to be added to the memory
@@ -79,7 +83,8 @@ class Context(interfaces.context.ContextInterface):
                offset: int,
                native_layer_name: Optional[str] = None,
                **arguments) -> interfaces.objects.ObjectInterface:
-        """Object factory, takes a context, symbol, offset and optional layername
+        """Object factory, takes a context, symbol, offset and optional
+        layername.
 
         Looks up the layername in the context, finds the object template based on the symbol,
         and constructs an object using the object template on the layer at the offset.
@@ -116,8 +121,7 @@ class Context(interfaces.context.ContextInterface):
                offset: int,
                native_layer_name: Optional[str] = None,
                size: Optional[int] = None) -> interfaces.context.ModuleInterface:
-        """
-        Constructs a new os-independent module
+        """Constructs a new os-independent module.
 
         Args:
             module_name: The name of the module
@@ -143,7 +147,7 @@ class Context(interfaces.context.ContextInterface):
 
 
 def get_module_wrapper(method: str) -> Callable:
-    """Returns a symbol using the symbol_table_name of the Module"""
+    """Returns a symbol using the symbol_table_name of the Module."""
 
     def wrapper(self, name: str) -> Callable:
         if constants.BANG not in name:
@@ -168,7 +172,8 @@ class Module(interfaces.context.ModuleInterface):
                native_layer_name: Optional[str] = None,
                absolute: bool = False,
                **kwargs) -> 'interfaces.objects.ObjectInterface':
-        """Returns an object created using the symbol_table_name and layer_name of the Module
+        """Returns an object created using the symbol_table_name and layer_name
+        of the Module.
 
         Args:
             object_type: Name of the type/enumeration (within the module) to construct
@@ -202,9 +207,11 @@ class Module(interfaces.context.ModuleInterface):
                            native_layer_name: Optional[str] = None,
                            absolute: bool = False,
                            **kwargs) -> 'interfaces.objects.ObjectInterface':
-        """Returns an object based on a specific symbol (containing type and offset information) and
-        the layer_name of the Module.  This will throw a ValueError if the symbol does not contain an associated type,
-        or if the symbol name is invalid.  It will throw a SymbolError if the symbol cannot be found.
+        """Returns an object based on a specific symbol (containing type and
+        offset information) and the layer_name of the Module.  This will throw
+        a ValueError if the symbol does not contain an associated type, or if
+        the symbol name is invalid.  It will throw a SymbolError if the symbol
+        cannot be found.
 
         Args:
             symbol_name: Name of the symbol (within the module) to construct
@@ -273,10 +280,12 @@ class SizedModule(Module):
     @property  # type: ignore # FIXME: mypy #5107
     @functools.lru_cache()
     def hash(self) -> str:
-        """Hashes the module for equality checks
+        """Hashes the module for equality checks.
 
-        The mapping should be sorted and should be quicker than reading the data
-        We turn it into JSON to make a common string and use a quick hash, because collissions are unlikely"""
+        The mapping should be sorted and should be quicker than reading
+        the data We turn it into JSON to make a common string and use a
+        quick hash, because collissions are unlikely
+        """
         layer = self._context.layers[self.layer_name]
         if not isinstance(layer, interfaces.layers.TranslationLayerInterface):
             raise TypeError("Hashing modules on non-TranslationLayers is not allowed")
@@ -284,7 +293,8 @@ class SizedModule(Module):
                                  'utf-8')).hexdigest()
 
     def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
-        """Returns the symbols within this module that live at the specified absolute offset provided"""
+        """Returns the symbols within this module that live at the specified
+        absolute offset provided."""
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
         if offset > self._offset + self.size:
@@ -295,15 +305,18 @@ class SizedModule(Module):
 
 
 class ModuleCollection:
-    """Class to contain a collection of SizedModules and reason about their contents"""
+    """Class to contain a collection of SizedModules and reason about their
+    contents."""
 
     def __init__(self, modules: List[SizedModule]) -> None:
         self._modules = modules
 
     def deduplicate(self) -> 'ModuleCollection':
-        """Returns a new deduplicated ModuleCollection featuring no repeated modules (based on data hash)
+        """Returns a new deduplicated ModuleCollection featuring no repeated
+        modules (based on data hash)
 
-        All 0 sized modules will have identical hashes and are therefore included in the deduplicated version
+        All 0 sized modules will have identical hashes and are therefore
+        included in the deduplicated version
         """
         new_modules = []
         seen = set()  # type: Set[str]
@@ -315,7 +328,8 @@ class ModuleCollection:
 
     @property
     def modules(self) -> Dict[str, List[SizedModule]]:
-        """A name indexed dictionary of modules using that name in this collection"""
+        """A name indexed dictionary of modules using that name in this
+        collection."""
         return self._generate_module_dict(self._modules)
 
     @classmethod
@@ -328,7 +342,9 @@ class ModuleCollection:
         return result
 
     def get_module_symbols_by_absolute_location(self, offset: int, size: int = 0) -> Iterable[Tuple[str, List[str]]]:
-        """Returns a tuple of (module_name, list_of_symbol_names) for each module, where symbols live at the absolute offset in memory provided"""
+        """Returns a tuple of (module_name, list_of_symbol_names) for each
+        module, where symbols live at the absolute offset in memory
+        provided."""
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
         for module in self._modules:

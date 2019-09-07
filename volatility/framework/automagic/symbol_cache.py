@@ -19,7 +19,7 @@ BannersType = Dict[bytes, List[str]]
 
 
 class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
-    """Runs through all symbols tables and caches their banners"""
+    """Runs through all symbols tables and caches their banners."""
 
     # Since this is necessary for ConstructionMagic, we set a lower priority
     # The user would run it eventually either way, but running it first means it can be used that run
@@ -70,7 +70,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
             pickle.dump(banners, f)
 
     def __call__(self, context, config_path, configurable, progress_callback = None):
-        """Runs the automagic over the configurable"""
+        """Runs the automagic over the configurable."""
 
         # Bomb out if we're just the generic interface
         if self.os is None:

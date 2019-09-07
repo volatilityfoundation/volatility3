@@ -3,11 +3,11 @@
 #
 
 import time
-from typing import List
+from typing import List, Tuple, Iterable
 
-from volatility.framework.interfaces import plugins
 from volatility.framework import constants, interfaces, layers
 from volatility.framework.configuration import requirements
+from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import TreeGrid
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
@@ -15,7 +15,7 @@ from volatility.framework.symbols.windows.extensions import kdbg
 
 
 class Info(plugins.PluginInterface):
-    """Show OS & kernel details of the memory sample being analyzed"""
+    """Show OS & kernel details of the memory sample being analyzed."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

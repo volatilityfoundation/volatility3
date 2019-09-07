@@ -13,7 +13,7 @@ from volatility.framework.renderers import format_hints
 
 
 class DriverScan(plugins.PluginInterface):
-    """Scans for drivers present in a particular windows memory image"""
+    """Scans for drivers present in a particular windows memory image."""
 
     _version = (1, 0, 0)
 
@@ -31,7 +31,16 @@ class DriverScan(plugins.PluginInterface):
                      layer_name: str,
                      symbol_table: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
-        """Scans for drivers using the poolscanner module and constraints"""
+        """Scans for drivers using the poolscanner module and constraints.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+
+        Returns:
+            A list of Driver objects as found from the `layer_name` layer based on Driver pool signatures
+        """
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Dri\xf6', b'Driv'])
 

@@ -19,8 +19,11 @@ vollog = logging.getLogger(__name__)
 
 
 class _POOL_HEADER(objects.StructType):
-    """A kernel pool allocation header. Exists at the base of the
-    allocation and provides a tag that we can scan for."""
+    """A kernel pool allocation header.
+
+    Exists at the base of the allocation and provides a tag that we can
+    scan for.
+    """
 
     def get_object(self,
                    type_name: str,
@@ -122,8 +125,11 @@ class _KSYSTEM_TIME(objects.StructType):
 
 
 class _MMVAD_SHORT(objects.StructType):
-    """A class that represents process virtual memory ranges. Each instance
-    is a node in a binary tree structure and is pointed to by VadRoot."""
+    """A class that represents process virtual memory ranges.
+
+    Each instance is a node in a binary tree structure and is pointed to
+    by VadRoot.
+    """
 
     @functools.lru_cache(maxsize = None)
     def get_tag(self):
@@ -152,8 +158,9 @@ class _MMVAD_SHORT(objects.StructType):
             return None
 
     def traverse(self, visited = None, depth = 0):
-        """Traverse the VAD tree, determining each underlying VAD node type by looking
-        up the pool tag for the structure and then casting into a new object."""
+        """Traverse the VAD tree, determining each underlying VAD node type by
+        looking up the pool tag for the structure and then casting into a new
+        object."""
 
         # TODO: this is an arbitrary limit chosen based on past observations
         if depth > 100:
@@ -198,7 +205,7 @@ class _MMVAD_SHORT(objects.StructType):
             yield vad_node
 
     def get_right_child(self):
-        """Get the right child member"""
+        """Get the right child member."""
 
         if self.has_member("RightChild"):
             return self.RightChild
@@ -209,7 +216,7 @@ class _MMVAD_SHORT(objects.StructType):
         raise AttributeError("Unable to find the right child member")
 
     def get_left_child(self):
-        """Get the left child member"""
+        """Get the left child member."""
 
         if self.has_member("LeftChild"):
             return self.LeftChild
@@ -220,7 +227,7 @@ class _MMVAD_SHORT(objects.StructType):
         raise AttributeError("Unable to find the left child member")
 
     def get_parent(self):
-        """Get the VAD's parent member"""
+        """Get the VAD's parent member."""
 
         # this is for xp and 2003
         if self.has_member("Parent"):
@@ -251,7 +258,7 @@ class _MMVAD_SHORT(objects.StructType):
         raise AttributeError("Unable to find the parent member")
 
     def get_start(self):
-        """Get the VAD's starting virtual address"""
+        """Get the VAD's starting virtual address."""
 
         if self.has_member("StartingVpn"):
 
@@ -270,7 +277,7 @@ class _MMVAD_SHORT(objects.StructType):
         raise AttributeError("Unable to find the starting VPN member")
 
     def get_end(self):
-        """Get the VAD's ending virtual address"""
+        """Get the VAD's ending virtual address."""
 
         if self.has_member("EndingVpn"):
 
@@ -302,7 +309,7 @@ class _MMVAD_SHORT(objects.StructType):
         raise AttributeError("Unable to find the commit charge member")
 
     def get_private_memory(self):
-        """Get the VAD's private memory setting"""
+        """Get the VAD's private memory setting."""
 
         if self.has_member("u1") and self.u1.has_member("VadFlags1") and self.u1.VadFlags1.has_member("PrivateMemory"):
             return self.u1.VadFlags1.PrivateMemory
@@ -322,7 +329,7 @@ class _MMVAD_SHORT(objects.StructType):
         raise AttributeError("Unable to find the private memory member")
 
     def get_protection(self, protect_values, winnt_protections):
-        """Get the VAD's protection constants as a string"""
+        """Get the VAD's protection constants as a string."""
 
         protect = None
 
@@ -346,7 +353,7 @@ class _MMVAD_SHORT(objects.StructType):
         return "|".join(names)
 
     def get_file_name(self):
-        """Only long(er) vads have mapped files"""
+        """Only long(er) vads have mapped files."""
         return renderers.NotApplicableValue()
 
 
@@ -376,9 +383,11 @@ class _MMVAD(_MMVAD_SHORT):
 
 
 class _EX_FAST_REF(objects.StructType):
-    """This is a standard Windows structure that stores a pointer to an
-    object but also leverages the least significant bits to encode additional
-    details. When dereferencing the pointer, we need to strip off the extra bits."""
+    """This is a standard Windows structure that stores a pointer to an object
+    but also leverages the least significant bits to encode additional details.
+
+    When dereferencing the pointer, we need to strip off the extra bits.
+    """
 
     def dereference(self) -> interfaces.objects.ObjectInterface:
 
@@ -400,8 +409,8 @@ class _EX_FAST_REF(objects.StructType):
 
 
 class ExecutiveObject(interfaces.objects.ObjectInterface):
-    """This is used as a "mixin" that provides all kernel executive
-    objects with a means of finding their own object header."""
+    """This is used as a "mixin" that provides all kernel executive objects
+    with a means of finding their own object header."""
 
     def object_header(self) -> '_OBJECT_HEADER':
         if constants.BANG not in self.vol.type_name:
@@ -432,7 +441,7 @@ class _DRIVER_OBJECT(objects.StructType, ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
     def is_valid(self) -> bool:
-        """Determine if the object is valid"""
+        """Determine if the object is valid."""
         return True
 
 
@@ -444,7 +453,7 @@ class _OBJECT_SYMBOLIC_LINK(objects.StructType, ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
     def is_valid(self) -> bool:
-        """Determine if the object is valid"""
+        """Determine if the object is valid."""
         return True
 
     def get_create_time(self):
@@ -452,10 +461,10 @@ class _OBJECT_SYMBOLIC_LINK(objects.StructType, ExecutiveObject):
 
 
 class _FILE_OBJECT(objects.StructType, ExecutiveObject):
-    """A class for windows file objects"""
+    """A class for windows file objects."""
 
     def is_valid(self) -> bool:
-        """Determine if the object is valid"""
+        """Determine if the object is valid."""
         return self.FileName.Length > 0 and self._context.layers[self.vol.layer_name].is_valid(self.FileName.Buffer)
 
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
@@ -473,14 +482,14 @@ class _FILE_OBJECT(objects.StructType, ExecutiveObject):
 
 
 class _KMUTANT(objects.StructType, ExecutiveObject):
-    """A class for windows mutant objects"""
+    """A class for windows mutant objects."""
 
     def is_valid(self) -> bool:
-        """Determine if the object is valid"""
+        """Determine if the object is valid."""
         return True
 
     def get_name(self) -> str:
-        """Get the object's name from the object header"""
+        """Get the object's name from the object header."""
         header = self.object_header()
         return header.NameInfo.Name.String  # type: ignore
 
@@ -490,7 +499,7 @@ class _OBJECT_HEADER(objects.StructType):
     quota information, ownership details, naming data, and ACLs."""
 
     def is_valid(self) -> bool:
-        """Determine if the object is valid"""
+        """Determine if the object is valid."""
 
         # if self.InfoMask > 0x48:
         #    return False
@@ -504,9 +513,12 @@ class _OBJECT_HEADER(objects.StructType):
         return True
 
     def get_object_type(self, type_map: Dict[int, str], cookie: int = None) -> Optional[str]:
-        """Across all Windows versions, the _OBJECT_HEADER embeds details on the type of
-        object (i.e. process, file) but the way its embedded differs between versions.
-        This API abstracts away those details."""
+        """Across all Windows versions, the _OBJECT_HEADER embeds details on
+        the type of object (i.e. process, file) but the way its embedded
+        differs between versions.
+
+        This API abstracts away those details.
+        """
 
         try:
             # vista and earlier have a Type member
@@ -561,7 +573,7 @@ class _ETHREAD(objects.StructType):
     """A class for executive thread objects."""
 
     def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
-        """Return the EPROCESS that owns this thread"""
+        """Return the EPROCESS that owns this thread."""
         return self.ThreadsProcess.dereference(kernel_layer)
 
 
@@ -582,7 +594,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
     """A class for executive kernel processes objects."""
 
     def is_valid(self) -> bool:
-        """Determine if the object is valid"""
+        """Determine if the object is valid."""
 
         try:
             name = objects.utility.array_to_string(self.ImageFileName)
@@ -620,7 +632,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
         return True
 
     def add_process_layer(self, config_prefix: str = None, preferred_name: str = None):
-        """Constructs a new layer based on the process's DirectoryTableBase"""
+        """Constructs a new layer based on the process's DirectoryTableBase."""
 
         parent_layer = self._context.layers[self.vol.layer_name]
 
@@ -640,7 +652,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
     def load_order_modules(self) -> Iterable[int]:
-        """Generator for DLLs in the order that they were loaded"""
+        """Generator for DLLs in the order that they were loaded."""
 
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
@@ -742,7 +754,7 @@ class _LIST_ENTRY(objects.StructType, collections.abc.Iterable):
                 forward: bool = True,
                 sentinel: bool = True,
                 layer: Optional[str] = None) -> Iterator[interfaces.objects.ObjectInterface]:
-        """Returns an iterator of the entries in the list"""
+        """Returns an iterator of the entries in the list."""
 
         layer = layer or self.vol.layer_name
 

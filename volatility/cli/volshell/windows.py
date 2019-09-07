@@ -10,7 +10,7 @@ from volatility.framework.configuration import requirements
 
 
 class Volshell(shellplugin.Volshell):
-    """Shell environment to directly interact with a windows memory image"""
+    """Shell environment to directly interact with a windows memory image."""
 
     @classmethod
     def get_requirements(cls):
@@ -20,7 +20,7 @@ class Volshell(shellplugin.Volshell):
         ])
 
     def list_processes(self):
-        """Lists all the processes in the primary layer"""
+        """Lists all the processes in the primary layer."""
 
         # We only use the object factory to demonstrate how to use one
         layer_name = self.config['primary']

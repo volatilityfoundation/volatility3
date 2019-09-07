@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""Volatility 3 framework"""
+"""Volatility 3 framework."""
 import importlib
 import inspect
 import logging
@@ -28,7 +28,7 @@ PATCH = 0  # Number of changes that do not change the interface
 
 
 def interface_version():
-    """Provides the so version number of the library"""
+    """Provides the so version number of the library."""
     return MAJOR, MINOR, PATCH
 
 
@@ -36,7 +36,7 @@ vollog = logging.getLogger(__name__)
 
 
 def require_interface_version(*args) -> None:
-    """Checks the required version of a plugin"""
+    """Checks the required version of a plugin."""
     if len(args):
         if args[0] != interface_version()[0]:
             raise RuntimeError("Framework interface version {} is incompatible with required version {}".format(
@@ -71,7 +71,7 @@ T = TypeVar('T')
 
 
 def class_subclasses(cls: Type[T]) -> Generator[Type[T], None, None]:
-    """Returns all the (recursive) subclasses of a given class"""
+    """Returns all the (recursive) subclasses of a given class."""
     if not inspect.isclass(cls):
         raise TypeError("class_subclasses parameter not a valid class: {}".format(cls))
     for clazz in cls.__subclasses__():
@@ -83,7 +83,7 @@ def class_subclasses(cls: Type[T]) -> Generator[Type[T], None, None]:
 
 
 def import_files(base_module, ignore_errors = False) -> List[str]:
-    """Imports all plugins present under plugins module namespace"""
+    """Imports all plugins present under plugins module namespace."""
     failures = []
     if not isinstance(base_module.__path__, list):
         raise TypeError("[base_module].__path__ must be a list of paths")

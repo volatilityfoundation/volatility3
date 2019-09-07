@@ -10,13 +10,15 @@ from volatility.framework.layers import segmented
 
 
 class LimeFormatException(exceptions.LayerException):
-    """Thrown when an error occurs with the underlying Lime file format"""
+    """Thrown when an error occurs with the underlying Lime file format."""
 
 
 class LimeLayer(segmented.SegmentedLayer):
-    """A Lime format TranslationLayer. Lime is generally used to store
-    physical memory images where there are large holes in the physical
-    layer"""
+    """A Lime format TranslationLayer.
+
+    Lime is generally used to store physical memory images where there
+    are large holes in the physical layer
+    """
 
     priority = 21
 

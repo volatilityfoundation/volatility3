@@ -77,7 +77,15 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
     @staticmethod
     def get_vad_maps(task: interfaces.objects.ObjectInterface) -> Iterable[Tuple[int, int]]:
+        """Creates a map of start/end addresses within a virtual address
+        descriptor tree.
 
+        Args:
+            task: The EPROCESS object of which to traverse the vad tree
+
+        Returns:
+            An iterable of tuples containing start and end addresses for each descriptor
+        """
         vad_root = task.get_vad_root()
         for vad in vad_root.traverse():
             end = vad.get_end()

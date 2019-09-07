@@ -22,7 +22,7 @@ vollog = logging.getLogger(__name__)
 
 
 class DllDump(interfaces_plugins.PluginInterface):
-    """Dumps process memory ranges as DLLs"""
+    """Dumps process memory ranges as DLLs."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

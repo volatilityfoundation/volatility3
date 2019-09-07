@@ -92,16 +92,11 @@ def convert_port(port_as_integer):
 
 
 def convert_network_four_tuple(family, four_tuple):
-    """
-    Converts the connection four_tuple:
-        (source ip,
-         source port,
-         dest ip,
-         dest port)
+    """Converts the connection four_tuple: (source ip, source port, dest ip,
+    dest port)
 
-    into their string equivalents. 
-    IP addresses are expected as a tuple of unsigned shorts
-    Ports are converted to proper endianess as well
+    into their string equivalents. IP addresses are expected as a tuple
+    of unsigned shorts Ports are converted to proper endianess as well
     """
 
     if family == socket.AF_INET:

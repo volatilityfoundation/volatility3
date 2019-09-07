@@ -1,9 +1,10 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""All core generic plugins
+"""All core generic plugins.
 
-These modules should only be imported from volatility.plugins NOT volatility.framework.plugins
+These modules should only be imported from volatility.plugins NOT
+volatility.framework.plugins
 """
 
 import logging
@@ -19,7 +20,7 @@ def construct_plugin(context: interfaces.context.ContextInterface,
                      plugin: Type[interfaces.plugins.PluginInterface], base_config_path: str,
                      progress_callback: constants.ProgressCallback,
                      file_consumer: interfaces.plugins.FileConsumerInterface) -> interfaces.plugins.PluginInterface:
-    """Constructs a plugin object based on the parameters
+    """Constructs a plugin object based on the parameters.
 
     Clever magic figures out how to fulfill each requirement that might not be fulfilled
 

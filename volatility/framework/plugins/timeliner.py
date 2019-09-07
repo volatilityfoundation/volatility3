@@ -26,18 +26,21 @@ class TimeLinerType(enum.IntEnum):
 
 
 class TimeLinerInterface(metaclass = abc.ABCMeta):
-    """Interface defining methods that timeliner will use to generate a body file"""
+    """Interface defining methods that timeliner will use to generate a body
+    file."""
 
     @abc.abstractmethod
     def generate_timeline(self) -> Generator[Tuple[str, TimeLinerType, datetime.datetime], None, None]:
         """Method generates Tuples of (description, timestamp_type, timestamp)
 
-        These need not be generated in any particular order, sorting will be done later
+        These need not be generated in any particular order, sorting
+        will be done later
         """
 
 
 class Timeliner(interfaces.plugins.PluginInterface):
-    """Runs all relevant plugins that provide time related information and orders the results by time"""
+    """Runs all relevant plugins that provide time related information and
+    orders the results by time."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -82,7 +85,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
         ]
 
     def _generator(self, runable_plugins: List[TimeLinerInterface]) -> Optional[Iterable[Tuple[int, Tuple]]]:
-        """Takes a timeline, sorts it and output the data from each relevant row from each plugin"""
+        """Takes a timeline, sorts it and output the data from each relevant
+        row from each plugin."""
         # Generate the results for each plugin
         for plugin in runable_plugins:
             plugin_name = plugin.__class__.__name__
@@ -112,7 +116,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
             yield data
 
     def run(self):
-        """Isolate each plugin and run it"""
+        """Isolate each plugin and run it."""
 
         # Use all the plugins if there's no filter
         self.usable_plugins = self.usable_plugins or self.get_usable_plugins()
@@ -153,6 +157,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
             generator = self._generator(runable_plugins))
 
     def build_configuration(self):
-        """Builds the configuration to save for the plugin such that it can be reconstructed"""
+        """Builds the configuration to save for the plugin such that it can be
+        reconstructed."""
         vollog.warning("Unable to record configuration data for the timeliner plugin")
         return []

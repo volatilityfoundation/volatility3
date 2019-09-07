@@ -1,8 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""Objects are the core of volatility, and provide pythonic access to interpreted values of data from a layer.
-"""
+"""Objects are the core of volatility, and provide pythonic access to
+interpreted values of data from a layer."""
 import abc
 import collections
 import collections.abc
@@ -17,16 +17,18 @@ vollog = logging.getLogger(__name__)
 
 
 class ReadOnlyMapping(collections.abc.Mapping):
-    """A read-only mapping of various values that offer attribute access as well
+    """A read-only mapping of various values that offer attribute access as
+    well.
 
-    This ensures that the data stored in the mapping should not be modified, making an immutable mapping.
+    This ensures that the data stored in the mapping should not be
+    modified, making an immutable mapping.
     """
 
     def __init__(self, dictionary: Mapping[str, Any]) -> None:
         self._dict = dictionary
 
     def __getattr__(self, attr: str) -> Any:
-        """Returns the item as an attribute"""
+        """Returns the item as an attribute."""
         if attr == '_dict':
             return super().__getattribute__(attr)
         if attr in self._dict:
@@ -34,20 +36,21 @@ class ReadOnlyMapping(collections.abc.Mapping):
         raise AttributeError("Object has no attribute: {}.{}".format(self.__class__.__name__, attr))
 
     def __getitem__(self, name: str) -> Any:
-        """Returns the item requested"""
+        """Returns the item requested."""
         return self._dict[name]
 
     def __iter__(self):
-        """Returns an iterator of the dictionary items"""
+        """Returns an iterator of the dictionary items."""
         return self._dict.__iter__()
 
     def __len__(self) -> int:
-        """Returns the length of the internal dictionary"""
+        """Returns the length of the internal dictionary."""
         return len(self._dict)
 
 
 class ObjectInformation(ReadOnlyMapping):
-    """Contains common information useful/pertinent only to an individual object (like an instance)
+    """Contains common information useful/pertinent only to an individual
+    object (like an instance)
 
     This typically contains information such as the layer the object belongs to, the offset where it was constructed,
     and if it is a subordinate object, its parent.
@@ -62,7 +65,7 @@ class ObjectInformation(ReadOnlyMapping):
                  member_name: Optional[str] = None,
                  parent: Optional['ObjectInterface'] = None,
                  native_layer_name: Optional[str] = None):
-        """Constructs a container for basic information about an object
+        """Constructs a container for basic information about an object.
 
         Args:
             layer_name: Layer from which the data for the object will be read
@@ -81,11 +84,12 @@ class ObjectInformation(ReadOnlyMapping):
 
 
 class ObjectInterface(metaclass = ABCMeta):
-    """A base object required to be the ancestor of every object used in volatility"""
+    """A base object required to be the ancestor of every object used in
+    volatility."""
 
     def __init__(self, context: 'interfaces_context.ContextInterface', type_name: str, object_info: 'ObjectInformation',
                  **kwargs) -> None:
-        """Constructs an Object adhering to the ObjectInterface
+        """Constructs an Object adhering to the ObjectInterface.
 
         Args:
             context: The context associated with the object
@@ -111,27 +115,30 @@ class ObjectInterface(metaclass = ABCMeta):
         self._context = context
 
     def __getattr__(self, attr: str) -> Any:
-        """Method for ensuring volatility members can be returned"""
+        """Method for ensuring volatility members can be returned."""
         raise AttributeError
 
     @property
     def vol(self) -> ReadOnlyMapping:
-        """Returns the volatility specific object information"""
+        """Returns the volatility specific object information."""
         # Wrap the outgoing vol in a read-only proxy
         return ReadOnlyMapping(self._vol)
 
     @abstractmethod
     def write(self, value: Any):
-        """Writes the new value into the format at the offset the object currently resides at"""
+        """Writes the new value into the format at the offset the object
+        currently resides at."""
 
     def validate(self) -> bool:
-        """A method that can be overridden to validate this object.  It does not return and its return value should not be used.
+        """A method that can be overridden to validate this object.  It does
+        not return and its return value should not be used.
 
-        Raises InvalidDataException on failure to validate the data correctly.
+        Raises InvalidDataException on failure to validate the data
+        correctly.
         """
 
     def get_symbol_table(self) -> 'interfaces.symbols.SymbolTableInterface':
-        """Returns the symbol table for this particular object
+        """Returns the symbol table for this particular object.
 
         Returns none if the symbol table cannot be identified.
         """
@@ -143,9 +150,11 @@ class ObjectInterface(metaclass = ABCMeta):
         return self._context.symbol_space[table_name]
 
     def cast(self, new_type_name: str, **additional) -> 'ObjectInterface':
-        """Returns a new object at the offset and from the layer that the current object inhabits
+        """Returns a new object at the offset and from the layer that the
+        current object inhabits.
 
-        .. note:: If new type name does not include a symbol table, the symbol table for the current object is used
+        .. note:: If new type name does not include a symbol table, the
+        symbol table for the current object is used
         """
         # TODO: Carefully consider the implications of casting and how it should work
         if constants.BANG not in new_type_name:
@@ -163,7 +172,8 @@ class ObjectInterface(metaclass = ABCMeta):
         return object_template(context = self._context, object_info = object_info)
 
     def has_member(self, member_name: str) -> bool:
-        """Returns whether the object would contain a member called member_name
+        """Returns whether the object would contain a member called
+        member_name.
 
         Args:
             member_name: Name to test whether a member exists within the type structure
@@ -171,47 +181,55 @@ class ObjectInterface(metaclass = ABCMeta):
         return False
 
     class VolTemplateProxy(metaclass = abc.ABCMeta):
-        """A container for proxied methods that the ObjectTemplate of this object will call.  This is primarily to keep
-        methods together for easy organization/management, there is no significant need for it to be a separate class.
+        """A container for proxied methods that the ObjectTemplate of this
+        object will call.  This is primarily to keep methods together for easy
+        organization/management, there is no significant need for it to be a
+        separate class.
 
-        The methods of this class *must* be class methods rather than standard methods, to allow for code reuse.
-        Each method also takes a template since the templates may contain the necessary data about the
-        yet-to-be-constructed object.  It allows objects to control how their templates respond without needing to write
-        new templates for each and every potental object type."""
+        The methods of this class *must* be class methods rather than
+        standard methods, to allow for code reuse. Each method also
+        takes a template since the templates may contain the necessary
+        data about the yet-to-be-constructed object.  It allows objects
+        to control how their templates respond without needing to write
+        new templates for each and every potental object type.
+        """
         _methods = []  # type: List[str]
 
         @classmethod
         @abc.abstractmethod
         def size(cls, template: 'Template') -> int:
-            """Returns the size of the template object"""
+            """Returns the size of the template object."""
 
         @classmethod
         @abc.abstractmethod
         def children(cls, template: 'Template') -> List['Template']:
-            """Returns the children of the template"""
+            """Returns the children of the template."""
             return []
 
         @classmethod
         @abc.abstractmethod
         def replace_child(cls, template: 'Template', old_child: 'Template', new_child: 'Template') -> None:
-            """Substitutes the old_child for the new_child"""
+            """Substitutes the old_child for the new_child."""
             raise KeyError("Template does not contain any children to replace: {}".format(template.vol.type_name))
 
         @classmethod
         @abc.abstractmethod
         def relative_child_offset(cls, template: 'Template', child: str) -> int:
-            """Returns the relative offset from the head of the parent data to the child member"""
+            """Returns the relative offset from the head of the parent data to
+            the child member."""
             raise KeyError("Template does not contain any children: {}".format(template.vol.type_name))
 
         @classmethod
         @abc.abstractmethod
         def has_member(cls, template: 'Template', member_name: str) -> bool:
-            """Returns whether the object would contain a member called member_name"""
+            """Returns whether the object would contain a member called
+            member_name."""
             return False
 
 
 class Template:
-    """Class for all Factories that take offsets, and data layers and produce objects
+    """Class for all Factories that take offsets, and data layers and produce
+    objects.
 
     This is effectively a class for currying object calls.  It creates a callable that can be called with the following
     parameters:
@@ -233,7 +251,7 @@ class Template:
     """
 
     def __init__(self, type_name: str, **arguments) -> None:
-        """Stores the keyword arguments for later object creation"""
+        """Stores the keyword arguments for later object creation."""
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
         self._arguments = arguments
@@ -242,12 +260,16 @@ class Template:
 
     @property
     def vol(self) -> ReadOnlyMapping:
-        """Returns a volatility information object, much like the :class:`~volatility.framework.interfaces.objects.ObjectInformation` provides"""
+        """Returns a volatility information object, much like the
+        :class:`~volatility.framework.interfaces.objects.ObjectInformation`
+        provides."""
         return ReadOnlyMapping(self._vol)
 
     @property
     def children(self) -> List['Template']:
-        """The children of this template (such as member types, sub-types and base-types where they are relevant).
+        """The children of this template (such as member types, sub-types and
+        base-types where they are relevant).
+
         Used to traverse the template tree.
         """
         return []
@@ -255,31 +277,36 @@ class Template:
     @property
     @abstractmethod
     def size(self) -> int:
-        """Returns the size of the template"""
+        """Returns the size of the template."""
 
     @abstractmethod
     def relative_child_offset(self, child: str) -> int:
-        """Returns the relative offset of the `child` member from its parent offset"""
+        """Returns the relative offset of the `child` member from its parent
+        offset."""
 
     @abstractmethod
     def replace_child(self, old_child: 'Template', new_child: 'Template') -> None:
-        """Replaces `old_child` with `new_child` in the list of children"""
+        """Replaces `old_child` with `new_child` in the list of children."""
 
     @abstractmethod
     def has_member(self, member_name: str) -> bool:
-        """Returns whether the object would contain a member called `member_name`"""
+        """Returns whether the object would contain a member called
+        `member_name`"""
 
     def clone(self) -> 'Template':
-        """Returns a copy of the original Template as constructed (without `update_vol` additions having been made)"""
+        """Returns a copy of the original Template as constructed (without
+        `update_vol` additions having been made)"""
         clone = self.__class__(**self._vol.parents.new_child())
         return clone
 
     def update_vol(self, **new_arguments) -> None:
-        """Updates the keyword arguments with values that will **not** be carried across to clones"""
+        """Updates the keyword arguments with values that will **not** be
+        carried across to clones."""
         self._vol.update(new_arguments)
 
     def __getattr__(self, attr: str) -> Any:
-        """Exposes any other values stored in ._vol as attributes (for example, enumeration choices)"""
+        """Exposes any other values stored in ._vol as attributes (for example,
+        enumeration choices)"""
         if attr != '_vol':
             if attr in self._vol:
                 return self._vol[attr]
@@ -287,4 +314,4 @@ class Template:
 
     def __call__(self, context: 'interfaces_context.ContextInterface',
                  object_info: ObjectInformation) -> ObjectInterface:
-        """Constructs the object"""
+        """Constructs the object."""

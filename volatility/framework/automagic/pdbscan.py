@@ -1,10 +1,11 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""A module for scanning translation layers looking for Windows PDB records from loaded PE files.
+"""A module for scanning translation layers looking for Windows PDB records
+from loaded PE files.
 
-    This module contains a standalone scanner, and also a :class:`~volatility.framework.interfaces.layers.ScannerInterface`
-    based scanner for use within the framework by calling :func:`~volatility.framework.interfaces.layers.DataLayerInterface.scan`.
+This module contains a standalone scanner, and also a :class:`~volatility.framework.interfaces.layers.ScannerInterface`
+based scanner for use within the framework by calling :func:`~volatility.framework.interfaces.layers.DataLayerInterface.scan`.
 """
 
 import json
@@ -35,7 +36,8 @@ KernelsType = Iterable[Dict[str, Any]]
 
 
 class PdbSignatureScanner(interfaces.layers.ScannerInterface):
-    """A :class:`~volatility.framework.interfaces.layers.ScannerInterface` based scanner use to identify Windows PDB records
+    """A :class:`~volatility.framework.interfaces.layers.ScannerInterface`
+    based scanner use to identify Windows PDB records.
 
     Args:
         pdb_names: A list of bytestrings, used to match pdb signatures against the pdb names within the records.
@@ -79,13 +81,15 @@ def scan(ctx: interfaces.context.ContextInterface,
          progress_callback: constants.ProgressCallback = None,
          start: Optional[int] = None,
          end: Optional[int] = None) -> Generator[Dict[str, Optional[Union[bytes, str, int]]], None, None]:
-    """Scans through `layer_name` at `ctx` looking for RSDS headers that indicate one of four common pdb kernel names
-       (as listed in `self.pdb_names`) and returns the tuple (GUID, age, pdb_name, signature_offset, mz_offset)
+    """Scans through `layer_name` at `ctx` looking for RSDS headers that
+    indicate one of four common pdb kernel names (as listed in
+    `self.pdb_names`) and returns the tuple (GUID, age, pdb_name,
+    signature_offset, mz_offset)
 
-       .. note:: This is automagical and therefore not guaranteed to provide correct results.
+    .. note:: This is automagical and therefore not guaranteed to provide correct results.
 
-       The UI should always provide the user an opportunity to specify the
-       appropriate types and PDB values themselves
+    The UI should always provide the user an opportunity to specify the
+    appropriate types and PDB values themselves
     """
     min_pfn = 0
     pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
@@ -121,7 +125,7 @@ def scan(ctx: interfaces.context.ContextInterface,
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
-    """Windows symbol loader based on PDB signatures
+    """Windows symbol loader based on PDB signatures.
 
     An Automagic object that looks for all Intel translation layers and scans each of them for a pdb signature.
     When found, a search for a corresponding Intermediate Format data file is carried out and if found an appropriate
@@ -138,7 +142,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def find_virtual_layers_from_req(self, context: interfaces.context.ContextInterface, config_path: str,
                                      requirement: interfaces.configuration.RequirementInterface) -> List[str]:
-        """Traverses the requirement tree, rooted at `requirement` looking for virtual layers that might contain a windows PDB.
+        """Traverses the requirement tree, rooted at `requirement` looking for
+        virtual layers that might contain a windows PDB.
 
         Returns a list of possible layers
 
@@ -172,7 +177,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                                  context: interfaces.context.ContextInterface,
                                  valid_kernels: ValidKernelsType,
                                  progress_callback: constants.ProgressCallback = None) -> None:
-        """Fulfills the SymbolTableRequirements in `self._symbol_requirements` found by the `recurse_symbol_requirements`.
+        """Fulfills the SymbolTableRequirements in `self._symbol_requirements`
+        found by the `recurse_symbol_requirements`.
 
         This pass will construct any requirements that may need it in the context it was passed
 
@@ -223,7 +229,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def download_pdb_isf(self, guid: str, age: int, pdb_name: str,
                          progress_callback: constants.ProgressCallback = None) -> None:
-        """Attempts to download the PDB file, convert it to an ISF file and save it to one of the symbol locations"""
+        """Attempts to download the PDB file, convert it to an ISF file and
+        save it to one of the symbol locations."""
         # Check for writability
         filter_string = os.path.join(pdb_name, guid + "-" + str(age))
         for path in symbols.__path__:
@@ -263,8 +270,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
     def set_kernel_virtual_offset(self, context: interfaces.context.ContextInterface,
                                   valid_kernels: ValidKernelsType) -> None:
-        """Traverses the requirement tree, looking for kernel_virtual_offset values that may need setting and sets
-        it based on the previously identified `valid_kernels`.
+        """Traverses the requirement tree, looking for kernel_virtual_offset
+        values that may need setting and sets it based on the previously
+        identified `valid_kernels`.
 
         Args:
             context: Context on which to operate and provide the kernel virtual offset
@@ -326,7 +334,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                              context: interfaces.context.ContextInterface,
                              vlayer: layers.intel.Intel,
                              progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
-        """Method for finding a suitable kernel offset based on a module table"""
+        """Method for finding a suitable kernel offset based on a module
+        table."""
         vollog.debug("Kernel base determination - searching layer module list structure")
         valid_kernels = {}  # type: ValidKernelsType
         # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
@@ -387,7 +396,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                             vlayer: layers.intel.Intel,
                             address: int,
                             progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
-        """Scans a virtual address """
+        """Scans a virtual address."""
         # Scan a few megs of the virtual space at the location to see if they're potential kernels
 
         valid_kernels = {}  # type: ValidKernelsType
@@ -416,7 +425,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                                 context: interfaces.context.ContextInterface,
                                 potential_layers: List[str],
                                 progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
-        """Runs through the identified potential kernels and verifies their suitability
+        """Runs through the identified potential kernels and verifies their
+        suitability.
 
         This carries out a scan using the pdb_signature scanner on a physical layer.  It uses the
         results of the scan to determine the virtual offset of the kernel.  On early windows implementations

@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
 
-from typing import List
+from typing import List, Iterable
 
 from volatility.framework import constants
 from volatility.framework import exceptions, interfaces
@@ -12,7 +12,7 @@ from volatility.framework.renderers import format_hints
 
 
 class Modules(interfaces.plugins.PluginInterface):
-    """Lists the loaded kernel modules"""
+    """Lists the loaded kernel modules."""
 
     _version = (1, 0, 0)
 
@@ -46,8 +46,18 @@ class Modules(interfaces.plugins.PluginInterface):
             ))
 
     @classmethod
-    def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str):
-        """Lists all the modules in the primary layer"""
+    def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                     symbol_table: str) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Lists all the modules in the primary layer.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+
+        Returns:
+            A list of Modules as retrieved from PsLoadedModuleList
+        """
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)

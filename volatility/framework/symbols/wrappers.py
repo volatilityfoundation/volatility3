@@ -8,7 +8,8 @@ from volatility.framework import interfaces
 
 
 class Flags:
-    """Object that converts an integer into a set of flags based on their masks"""
+    """Object that converts an integer into a set of flags based on their
+    masks."""
 
     def __init__(self, choices: Mapping[str, int]) -> None:
         self._choices = interfaces.objects.ReadOnlyMapping(choices)
@@ -18,7 +19,7 @@ class Flags:
         return self._choices
 
     def __call__(self, value: int) -> List[str]:
-        """Return the appropriate Flags """
+        """Return the appropriate Flags."""
         result = []
         for k, v in self.choices.items():
             if value & v:

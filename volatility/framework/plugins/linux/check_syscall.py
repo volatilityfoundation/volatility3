@@ -1,9 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""A module containing a collection of plugins that produce data
-typically found in Linux's /proc file system.
-"""
+"""A module containing a collection of plugins that produce data typically
+found in Linux's /proc file system."""
 import logging
 from typing import List
 
@@ -25,7 +24,7 @@ except ImportError:
 
 
 class Check_syscall(plugins.PluginInterface):
-    """Check system call table for hooks"""
+    """Check system call table for hooks."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -36,9 +35,7 @@ class Check_syscall(plugins.PluginInterface):
         ]
 
     def _get_table_size_next_symbol(self, table_addr, ptr_sz, vmlinux):
-        """
-        Returns the size of the table based on the next symbol
-        """
+        """Returns the size of the table based on the next symbol."""
         ret = 0
 
         sym_table = self.context.symbol_space[vmlinux.name]
@@ -58,10 +55,9 @@ class Check_syscall(plugins.PluginInterface):
         return ret
 
     def _get_table_size_meta(self, vmlinux):
-        """
-        returns the number of symbols that start with __syscall_meta__
-        this is a fast way to determine the number of system calls, but not the most accurate
-        """
+        """returns the number of symbols that start with __syscall_meta__ this
+        is a fast way to determine the number of system calls, but not the most
+        accurate."""
 
         return len(
             [sym for sym in self.context.symbol_space[vmlinux.name].symbols if sym.startswith("__syscall_meta__")])
@@ -77,11 +73,9 @@ class Check_syscall(plugins.PluginInterface):
         return table_size
 
     def _get_table_info_disassembly(self, ptr_sz, vmlinux):
-        """
-        Find the size of the system call table by disassembling functions
-        that immediately reference it in their first isntruction
-        This is in the form 'cmp reg,NR_syscalls'
-        """
+        """Find the size of the system call table by disassembling functions
+        that immediately reference it in their first isntruction This is in the
+        form 'cmp reg,NR_syscalls'."""
         table_size = 0
 
         if not has_capstone:

@@ -31,11 +31,11 @@ class VmwareLayer(segmented.SegmentedLayer):
         super().__init__(context, config_path = config_path, name = name, metadata = metadata)
 
     def _load_segments(self) -> None:
-        """Loads up the segments from the meta_layer"""
+        """Loads up the segments from the meta_layer."""
         self._read_header()
 
     def _read_header(self) -> None:
-        """Checks the vmware header to make sure it's valid"""
+        """Checks the vmware header to make sure it's valid."""
         if "vmware" not in self._context.symbol_space:
             self._context.symbol_space.append(native.NativeTable("vmware", native.std_ctypes))
 
@@ -100,7 +100,8 @@ class VmwareLayer(segmented.SegmentedLayer):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        """This vmware translation layer always requires a separate metadata layer"""
+        """This vmware translation layer always requires a separate metadata
+        layer."""
         return [
             requirements.TranslationLayerRequirement(name = 'base_layer', optional = False),
             requirements.TranslationLayerRequirement(name = 'meta_layer', optional = False)
@@ -114,7 +115,7 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
-        """Attempt to stack this based on the starting information"""
+        """Attempt to stack this based on the starting information."""
         memlayer = context.layers[layer_name]
         if not isinstance(memlayer, physical.FileLayer):
             return None

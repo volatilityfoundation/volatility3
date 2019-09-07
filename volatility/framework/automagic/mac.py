@@ -16,14 +16,14 @@ vollog = logging.getLogger(__name__)
 
 
 class MacBannerCache(symbol_cache.SymbolBannerCache):
-    """Caches the banners found in the Mac symbol files"""
+    """Caches the banners found in the Mac symbol files."""
     os = "mac"
     symbol_name = "version"
     banner_path = constants.MAC_BANNERS_PATH
 
 
 class MacSymbolFinder(symbol_finder.SymbolFinder):
-    """Mac symbol loader based on uname signature strings"""
+    """Mac symbol loader based on uname signature strings."""
 
     banner_config_key = 'kernel_banner'
     banner_cache = MacBannerCache
@@ -38,7 +38,7 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
-        """Attempts to identify mac within this layer"""
+        """Attempts to identify mac within this layer."""
         # Bail out by default unless we can stack properly
         layer = context.layers[layer_name]
         new_layer = None
@@ -116,7 +116,7 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
 
 
 class MacUtilities(object):
-    """Class with multiple useful mac functions"""
+    """Class with multiple useful mac functions."""
 
     @classmethod
     def aslr_mask_symbol_table(cls,
@@ -160,7 +160,8 @@ class MacUtilities(object):
                   compare_banner: str = "",
                   compare_banner_offset: int = 0,
                   progress_callback: constants.ProgressCallback = None) -> int:
-        """Determines the offset of the actual DTB in physical space and its symbol offset"""
+        """Determines the offset of the actual DTB in physical space and its
+        symbol offset."""
         version_symbol = symbol_table + constants.BANG + 'version'
         version_json_address = context.symbol_space.get_symbol(version_symbol).address
 
@@ -208,7 +209,8 @@ class MacUtilities(object):
 
     @classmethod
     def virtual_to_physical_address(cls, addr: int) -> int:
-        """Converts a virtual mac address to a physical one (does not account of ASLR)"""
+        """Converts a virtual mac address to a physical one (does not account
+        of ASLR)"""
         return addr - 0xffffff8000000000
 
     @classmethod

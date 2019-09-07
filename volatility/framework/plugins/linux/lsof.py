@@ -1,9 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""A module containing a collection of plugins that produce data
-typically found in Linux's /proc file system.
-"""
+"""A module containing a collection of plugins that produce data typically
+found in Linux's /proc file system."""
 import logging
 from typing import List
 
@@ -18,7 +17,7 @@ vollog = logging.getLogger(__name__)
 
 
 class Lsof(plugins.PluginInterface):
-    """Lists all memory maps for all processes"""
+    """Lists all memory maps for all processes."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

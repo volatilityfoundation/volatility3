@@ -22,8 +22,8 @@ vollog = logging.getLogger(__name__)
 
 # TODO: When python3.5 is no longer supported, make this enum.IntFlag
 class PoolType(enum.IntEnum):
-    """Class to maintain the different possible PoolTypes
-    The values must be integer powers of 2"""
+    """Class to maintain the different possible PoolTypes The values must be
+    integer powers of 2."""
 
     PAGED = 1
     NONPAGED = 2
@@ -31,7 +31,8 @@ class PoolType(enum.IntEnum):
 
 
 class PoolConstraint:
-    """Class to maintain tag/size/index/type information about Pool header tags"""
+    """Class to maintain tag/size/index/type information about Pool header
+    tags."""
 
     def __init__(self,
                  tag: bytes,
@@ -110,24 +111,42 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
 def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
                      fallback_checks: List[Tuple[str, Optional[str], bool]]
                      ) -> Callable[[interfaces.context.ContextInterface, str], bool]:
-    """Distinguishes a symbol table as being above a particular version or point
+    """Distinguishes a symbol table as being above a particular version or
+    point.
 
-       This will primarily check the version metadata first and foremost.
-       If that metadata isn't available then each item in the fallback_checks is tested.
-       If invert is specified then the result will be true if the version is less than that specified, or in the case of
-       fallback, if any of the fallback checks is successful.
+    This will primarily check the version metadata first and foremost.
+    If that metadata isn't available then each item in the fallback_checks is tested.
+    If invert is specified then the result will be true if the version is less than that specified, or in the case of
+    fallback, if any of the fallback checks is successful.
 
-       A fallback check is made up of:
-        * a symbol or type name
-        * a member name (implying that the value before was a type name)
-        * whether that symbol, type or member must be present or absent for the symbol table to be more above the required point
+    A fallback check is made up of:
+     * a symbol or type name
+     * a member name (implying that the value before was a type name)
+     * whether that symbol, type or member must be present or absent for the symbol table to be more above the required point
 
-        Note: Specifying that a member must not be present includes the whole type not being present too (ie, either will pass the test)
+    Note:
+        Specifying that a member must not be present includes the whole type not being present too (ie, either will pass the test)
+
+    Args:
+        version_check: Function that takes a 4-tuple version and returns whether whether the provided version is above a particular point
+        fallback_checks: A list of symbol/types/members of types, and whether they must be present to be above the required point
+
+    Returns:
+        A function that takes a context and a symbol table name and determines whether that symbol table passes the distinguishing checks
     """
 
     # try the primary method based on the pe version in the ISF
     @functools.wraps(version_check)
     def method(context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
+        """
+        
+        Args:
+            context: The context that contains the symbol table named `symbol_table`  
+            symbol_table: Name of the symbol table within the context to distinguish the version of 
+
+        Returns:
+            True if the symbol table is of the required version
+        """
 
         try:
             pe_version = context.symbol_space[symbol_table].metadata.pe_version
@@ -160,7 +179,7 @@ def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
 
 
 class PoolScanner(plugins.PluginInterface):
-    """A generic pool scanner plugin"""
+    """A generic pool scanner plugin."""
 
     _version = (1, 0, 0)
 
@@ -210,6 +229,13 @@ class PoolScanner(plugins.PluginInterface):
         The tags_filter is a list of pool tags, and the associated
         PoolConstraints are  returned. If tags_filter is empty or
         not supplied, then all builtin constraints are returned.
+
+        Args:
+            symbol_table: The name of the symbol table to prepend to the types used
+            tags_filter: List of tags to return or None to return all
+
+        Returns:
+            A list of well-known constructed PoolConstraints that match the provided tags
         """
 
         builtins = [
@@ -316,6 +342,17 @@ class PoolScanner(plugins.PluginInterface):
                            constraints: List[PoolConstraint]) \
             -> Generator[Tuple[
                              PoolConstraint, interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface], None, None]:
+        """
+        
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            constraints: List of pool constraints used to limit the scan results 
+
+        Returns:
+            Iterable of tuples, containing the constraint that matched, the object from memory, the object header used to determine the object
+        """
 
         # get the object type map
         type_map = handles.Handles.list_objects(context = context, layer_name = layer_name, symbol_table = symbol_table)
@@ -357,8 +394,22 @@ class PoolScanner(plugins.PluginInterface):
                   alignment: int = 8,
                   progress_callback: Optional[constants.ProgressCallback] = None) \
             -> Generator[Tuple[PoolConstraint, interfaces.objects.ObjectInterface], None, None]:
-        """Returns the _POOL_HEADER object (based on the symbol_table template) after scanning through layer_name
-        returning all headers that match any of the constraints provided.  Only one constraint can be provided per tag"""
+        """Returns the _POOL_HEADER object (based on the symbol_table template)
+        after scanning through layer_name returning all headers that match any
+        of the constraints provided.  Only one constraint can be provided per
+        tag.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            pool_constraints: List of pool constraints used to limit the scan results
+            alignment: An optional value that all pool headers will be aligned to
+            progress_callback: An optional function to provide progress feedback whilst scanning
+
+        Returns:
+            An Iterable of pool constraints and the pool headers associated with them
+        """
         # Setup the pattern
         constraint_lookup = {}  # type: Dict[bytes, PoolConstraint]
         for constraint in pool_constraints:

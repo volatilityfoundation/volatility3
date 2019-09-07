@@ -1,10 +1,11 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""Volatility 3 Constants
+"""Volatility 3 Constants.
 
-Stores all the constant values that are generally fixed throughout volatility
-This includes default scanning block sizes, etc."""
+Stores all the constant values that are generally fixed throughout
+volatility This includes default scanning block sizes, etc.
+"""
 import enum
 import os.path
 import sys
@@ -61,7 +62,8 @@ ProgressCallback = Optional[Callable[[float, str], None]]
 
 
 class Parallelism(enum.IntEnum):
-    """An enumeration listing the different types of parallelism applied to volatility"""
+    """An enumeration listing the different types of parallelism applied to
+    volatility."""
     Off = 0
     Threading = 1
     Multiprocessing = 2

@@ -14,7 +14,7 @@ from volatility.plugins import timeliner
 
 
 class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
-    """Lists the processes present in a particular windows memory image"""
+    """Lists the processes present in a particular windows memory image."""
 
     _version = (1, 0, 0)
     PHYSICAL_DEFAULT = False
@@ -37,6 +37,15 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+        """A factory for producing filter functions that filter based on a list
+        of process IDs.
+
+        Args:
+            pid_list: A list of process IDs that are acceptable, all other processes will be filtered out
+
+        Returns:
+            Filter function for passing to the `list_processes` method
+        """
         filter_func = lambda _: False
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
@@ -47,6 +56,15 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def create_name_filter(cls, name_list: List[str] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+        """A factory for producing filter functions that filter based on a list
+        of process names.
+
+        Args:
+            name_list: A list of process names that are acceptable, all other processes will be filtered out
+
+        Returns:
+            Filter function for passing to the `list_processes` method
+        """
         filter_func = lambda _: False
         # FIXME: mypy #4973 or #2608
         name_list = name_list or []
@@ -62,7 +80,18 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
                        symbol_table: str,
                        filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
-        """Lists all the processes in the primary layer that are in the pid config option"""
+        """Lists all the processes in the primary layer that are in the pid
+        config option.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            filter_func: A function which takes an EPROCESS object and returns True if the process should be ignored/filtered
+
+        Returns:
+            The list of EPROCESS objects from the `layer_name` layer's PsActiveProcessHead list after filtering
+        """
 
         # We only use the object factory to demonstrate how to use one
         kvo = context.layers[layer_name].config['kernel_virtual_offset']

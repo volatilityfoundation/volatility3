@@ -15,7 +15,7 @@ from volatility.framework.renderers import format_hints
 
 
 class Malfind(interfaces_plugins.PluginInterface):
-    """Lists process memory ranges that potentially contain injected code"""
+    """Lists process memory ranges that potentially contain injected code."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -26,9 +26,8 @@ class Malfind(interfaces_plugins.PluginInterface):
         ]
 
     def _list_injections(self, task):
-        """Generate memory regions for a process that may contain
-        injected code.
-        """
+        """Generate memory regions for a process that may contain injected
+        code."""
 
         proc_layer_name = task.add_process_layer()
         if not proc_layer_name:

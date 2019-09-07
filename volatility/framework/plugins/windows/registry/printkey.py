@@ -17,7 +17,7 @@ vollog = logging.getLogger(__name__)
 
 
 class PrintKey(interfaces.plugins.PluginInterface):
-    """Lists the registry keys under a hive or specific key value"""
+    """Lists the registry keys under a hive or specific key value."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -36,8 +36,17 @@ class PrintKey(interfaces.plugins.PluginInterface):
     @classmethod
     def hive_walker(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None,
                     recurse: bool = False) -> Generator:
-        """Walks through a set of nodes from a given node (last one in node_path).
-        Avoids loops by not traversing into nodes already present in the node_path
+        """Walks through a set of nodes from a given node (last one in
+        node_path). Avoids loops by not traversing into nodes already present
+        in the node_path.
+
+        Args:
+            hive: The registry hive to walk
+            node_path: The list of nodes that make up the
+            recurse: Traverse down the node tree or stay only on the same level
+
+        Yields:
+            The depth, and a tuple of results (last write time, hive offset, type, path, name, data and volatile)
         """
         if not node_path:
             node_path = [hive.get_node(hive.root_cell_offset)]
@@ -100,7 +109,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                         symbol_table: str,
                         offset: int = None,
                         key: str = None):
-        """Walks through a registry, hive by hive"""
+        """Walks through a registry, hive by hive."""
         if offset is None:
             try:
                 hive_offsets = [

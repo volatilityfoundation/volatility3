@@ -17,7 +17,7 @@ vollog = logging.getLogger(__name__)
 
 
 class SvcScan(interfaces.plugins.PluginInterface):
-    """Scans for windows services"""
+    """Scans for windows services."""
 
     is_vista_or_later = poolscanner.os_distinguisher(
         version_check = lambda x: x >= (6, 0), fallback_checks = [("KdCopyDataBlock", None, True)])
@@ -60,7 +60,17 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
     @staticmethod
     def create_service_table(context: interfaces.context.ContextInterface, symbol_table: str, config_path: str) -> str:
+        """Constructs a symbol table containing the symbols for services
+        depending upon the operating system in use.
 
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            symbol_table: The name of the table containing the kernel symbols
+            config_path: The configuration path for any settings required by the new table
+
+        Returns:
+            A symbol table containing the symbols necessary for services
+        """
         native_types = context.symbol_space[symbol_table].natives
         is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
 

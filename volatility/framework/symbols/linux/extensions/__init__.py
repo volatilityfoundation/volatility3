@@ -43,6 +43,7 @@ class task_struct(generic.GenericIntelProcess):
 
     def add_process_layer(self, config_prefix: str = None, preferred_name: str = None) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
+
         Returns the name of the Layer or None.
         """
 
@@ -63,7 +64,8 @@ class task_struct(generic.GenericIntelProcess):
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
     def get_process_memory_sections(self, heap_only: bool = False) -> Generator[Tuple[int, int], None, None]:
-        """Returns a list of sections based on the memory manager's view of this task's virtual memory"""
+        """Returns a list of sections based on the memory manager's view of
+        this task's virtual memory."""
         for vma in self.mm.get_mmap_iter():
             start = int(vma.vm_start)
             end = int(vma.vm_end)
@@ -173,7 +175,8 @@ class vm_area_struct(objects.StructType):
     }
 
     def _parse_flags(self, vm_flags, parse_flags) -> str:
-        """Returns an string representation of the flags in a vm_area_struct."""
+        """Returns an string representation of the flags in a
+        vm_area_struct."""
 
         retval = ""
 

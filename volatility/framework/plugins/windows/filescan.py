@@ -4,15 +4,16 @@
 
 from typing import Iterable
 
+import volatility.plugins.windows.poolscanner as poolscanner
+
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-import volatility.plugins.windows.poolscanner as poolscanner
 
 
 class FileScan(plugins.PluginInterface):
-    """Scans for file objects present in a particular windows memory image"""
+    """Scans for file objects present in a particular windows memory image."""
 
     @classmethod
     def get_requirements(cls):
@@ -28,7 +29,16 @@ class FileScan(plugins.PluginInterface):
                    layer_name: str,
                    symbol_table: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
-        """Scans for file objects using the poolscanner module and constraints"""
+        """Scans for file objects using the poolscanner module and constraints.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+
+        Returns:
+            A list of File objects as found from the `layer_name` layer based on File pool signatures
+        """
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Fil\xe5', b'File'])
 

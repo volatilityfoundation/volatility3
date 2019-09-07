@@ -25,7 +25,7 @@ from volatility.framework import interfaces, renderers
 
 
 def hex_bytes_as_text(value: bytes) -> str:
-    """Renders HexBytes as text
+    """Renders HexBytes as text.
 
     Args:
         value: A series of bytes to convert to text
@@ -80,14 +80,13 @@ def quoted_optional(func):
 
 
 def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
-    """Renders a disassembly renderer type into string format
+    """Renders a disassembly renderer type into string format.
 
     Args:
         disasm: Input disassembly objects
 
     Returns:
         A string as rendererd by capstone where available, otherwise output as if it were just bytes
-
     """
 
     if CAPSTONE_PRESENT:
@@ -106,7 +105,7 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
 
 
 class CLIRenderer(interfaces.renderers.Renderer):
-    """Class to add specific requirements for CLI renderers"""
+    """Class to add specific requirements for CLI renderers."""
     name = "unnamed"
 
 
@@ -127,14 +126,12 @@ class QuickTextRenderer(CLIRenderer):
         pass
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
-        """
-        Renders each column immediately to stdout.
+        """Renders each column immediately to stdout.
 
         This does not format each line's width appropriately, it merely tab separates each field
 
         Args:
             grid: The TreeGrid object to render
-
         """
         # TODO: Docstrings
         # TODO: Improve text output
@@ -180,12 +177,10 @@ class CSVRenderer(CLIRenderer):
         pass
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
-        """
-        Renders each row immediately to stdout.
+        """Renders each row immediately to stdout.
 
         Args:
             grid: The TreeGrid object to render
-
         """
         outfd = sys.stdout
 
@@ -221,14 +216,12 @@ class PrettyTextRenderer(CLIRenderer):
         pass
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
-        """
-        Renders each column immediately to stdout.
+        """Renders each column immediately to stdout.
 
         This does not format each line's width appropriately, it merely tab separates each field
 
         Args:
             grid: The TreeGrid object to render
-
         """
         # TODO: Docstrings
         # TODO: Improve text output

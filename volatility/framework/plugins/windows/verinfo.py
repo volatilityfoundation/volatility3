@@ -26,7 +26,7 @@ except ImportError:
 
 
 class VerInfo(interfaces_plugins.PluginInterface):
-    """Lists version information from PE files"""
+    """Lists version information from PE files."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -42,7 +42,7 @@ class VerInfo(interfaces_plugins.PluginInterface):
     @classmethod
     def get_version_information(cls, context: interfaces.context.ContextInterface, pe_table_name: str, layer_name: str,
                                 base_address: int) -> Tuple[int, int, int, int]:
-        """Get File and Product version information from PE files
+        """Get File and Product version information from PE files.
 
         Args:
             context: volatility context on which to operate
@@ -85,7 +85,8 @@ class VerInfo(interfaces_plugins.PluginInterface):
     def _generator(self, procs: Generator[interfaces.objects.ObjectInterface, None, None],
                    mods: Generator[interfaces.objects.ObjectInterface, None, None],
                    session_layers: Generator[str, None, None]):
-        """Generates a list of PE file version info for processes, dlls, and modules.
+        """Generates a list of PE file version info for processes, dlls, and
+        modules.
 
         Args:
             procs: <generator> of processes

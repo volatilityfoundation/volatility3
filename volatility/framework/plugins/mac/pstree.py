@@ -10,7 +10,8 @@ from volatility.plugins.mac import pslist
 
 
 class PsTree(plugins.PluginInterface):
-    """Plugin for listing processes in a tree based on their parent process ID """
+    """Plugin for listing processes in a tree based on their parent process
+    ID."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -28,7 +29,7 @@ class PsTree(plugins.PluginInterface):
         ]
 
     def _find_level(self, pid):
-        """Finds how deep the pid is in the processes list"""
+        """Finds how deep the pid is in the processes list."""
         seen = set([])
         seen.add(pid)
         level = 0
@@ -43,7 +44,7 @@ class PsTree(plugins.PluginInterface):
         self._levels[pid] = level
 
     def _generator(self):
-        """Generates the """
+        """Generates the."""
         for proc in pslist.PsList.list_tasks(self.context, self.config['primary'], self.config['darwin']):
             self._processes[proc.p_pid] = proc
 

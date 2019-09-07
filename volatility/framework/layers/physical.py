@@ -10,7 +10,8 @@ from volatility.framework.layers import resources
 
 
 class BufferDataLayer(interfaces.layers.DataLayerInterface):
-    """A DataLayer class backed by a buffer in memory, designed for testing and swift data access"""
+    """A DataLayer class backed by a buffer in memory, designed for testing and
+    swift data access."""
 
     priority = 10
 
@@ -25,21 +26,21 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 
     @property
     def maximum_address(self) -> int:
-        """Returns the largest available address in the space"""
+        """Returns the largest available address in the space."""
         return len(self._buffer) - 1
 
     @property
     def minimum_address(self) -> int:
-        """Returns the smallest available address in the space"""
+        """Returns the smallest available address in the space."""
         return 0
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        """Returns whether the offset is valid or not"""
+        """Returns whether the offset is valid or not."""
         return bool(self.minimum_address <= offset <= self.maximum_address
                     and self.minimum_address <= offset + length - 1 <= self.maximum_address)
 
     def read(self, address: int, length: int, pad: bool = False) -> bytes:
-        """Reads the data from the buffer"""
+        """Reads the data from the buffer."""
         if not self.is_valid(address, length):
             invalid_address = address
             if self.minimum_address < address <= self.maximum_address:
@@ -49,7 +50,7 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
         return self._buffer[address:address + length]
 
     def write(self, address: int, data: bytes):
-        """Writes the data from to the buffer"""
+        """Writes the data from to the buffer."""
         self._buffer = self._buffer[:address] + data + self._buffer[address + len(data):]
 
     @classmethod
@@ -71,7 +72,7 @@ class DummyLock:
 
 
 class FileLayer(interfaces.layers.DataLayerInterface):
-    """a DataLayer backed by a file on the filesystem"""
+    """a DataLayer backed by a file on the filesystem."""
 
     priority = 20
 
@@ -95,12 +96,13 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     @property
     def location(self) -> str:
-        """Returns the location on which this Layer abstracts"""
+        """Returns the location on which this Layer abstracts."""
         return self._location
 
     @property
     def _file(self) -> IO[Any]:
-        """Property to prevent the initializer storing an unserializable open file (for context cloning)"""
+        """Property to prevent the initializer storing an unserializable open
+        file (for context cloning)"""
         # FIXME: Add "+" to the mode once we've determined whether write mode is enabled
         mode = "rb"
         self._file_ = self._file_ or self._accessor.open(self._location, mode)
@@ -108,7 +110,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     @property
     def maximum_address(self) -> int:
-        """Returns the largest available address in the space"""
+        """Returns the largest available address in the space."""
         # Zero based, so we return the size of the file minus 1
         if self._size:
             return self._size
@@ -121,18 +123,18 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
     @property
     def minimum_address(self) -> int:
-        """Returns the smallest available address in the space"""
+        """Returns the smallest available address in the space."""
         return 0
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        """Returns whether the offset is valid or not"""
+        """Returns whether the offset is valid or not."""
         if length <= 0:
             raise TypeError("Length must be positive")
         return bool(self.minimum_address <= offset <= self.maximum_address
                     and self.minimum_address <= offset + length - 1 <= self.maximum_address)
 
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
-        """Reads from the file at offset for length"""
+        """Reads from the file at offset for length."""
         if not self.is_valid(offset, length):
             invalid_address = offset
             if self.minimum_address < offset <= self.maximum_address:
@@ -154,9 +156,9 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         return data
 
     def write(self, offset: int, data: bytes) -> None:
-        """Writes to the file
+        """Writes to the file.
 
-           This will technically allow writes beyond the extent of the file
+        This will technically allow writes beyond the extent of the file
         """
         if not self.is_valid(offset, len(data)):
             invalid_address = offset
@@ -169,15 +171,16 @@ class FileLayer(interfaces.layers.DataLayerInterface):
             self._file.write(data)
 
     def __getstate__(self) -> Dict[str, Any]:
-        """Do not store the open _file_ attribute, our property will ensure the file is open when needed
+        """Do not store the open _file_ attribute, our property will ensure the
+        file is open when needed.
 
-           This is necessary for multi-processing
+        This is necessary for multi-processing
         """
         self._file_ = None
         return self.__dict__
 
     def destroy(self) -> None:
-        """Closes the file handle"""
+        """Closes the file handle."""
         self._file.close()
 
     @classmethod

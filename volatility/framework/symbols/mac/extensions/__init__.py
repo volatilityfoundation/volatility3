@@ -18,6 +18,7 @@ class proc(generic.GenericIntelProcess):
 
     def add_process_layer(self, config_prefix: str = None, preferred_name: str = None) -> Optional[str]:
         """Constructs a new layer based on the process's DTB.
+
         Returns the name of the Layer or None.
         """
         parent_layer = self._context.layers[self.vol.layer_name]
@@ -65,7 +66,8 @@ class proc(generic.GenericIntelProcess):
                                     config_prefix: str,
                                     rw_no_file: bool = False) -> \
             Generator[Tuple[int, int], None, None]:
-        """Returns a list of sections based on the memory manager's view of this task's virtual memory"""
+        """Returns a list of sections based on the memory manager's view of
+        this task's virtual memory."""
         for vma in self.get_map_iter():
             start = int(vma.links.start)
             end = int(vma.links.end)
@@ -141,7 +143,8 @@ class vnode(objects.StructType):
 class vm_map_entry(objects.StructType):
 
     def is_suspicious(self, context, config_prefix):
-        """Flags memory regions that are mapped rwx or that map an executable not back from a file on disk"""
+        """Flags memory regions that are mapped rwx or that map an executable
+        not back from a file on disk."""
         ret = False
 
         perms = self.get_perms()

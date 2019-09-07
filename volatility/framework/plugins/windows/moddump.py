@@ -18,7 +18,7 @@ vollog = logging.getLogger(__name__)
 
 
 class ModDump(interfaces.plugins.PluginInterface):
-    """Dumps kernel modules"""
+    """Dumps kernel modules."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -41,8 +41,14 @@ class ModDump(interfaces.plugins.PluginInterface):
         the primary/kernel layer. Then keep one layer per session by cycling
         through the process list.
 
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            pids: A list of process identifiers to include exclusively or None for no filter
+
         Returns:
-            <list> of layer names
+            A list of session layer names
         """
         seen_ids = []  # type: List[interfaces.objects.ObjectInterface]
         filter_func = pslist.PsList.create_pid_filter(pids or [])
@@ -72,15 +78,18 @@ class ModDump(interfaces.plugins.PluginInterface):
     @classmethod
     def find_session_layer(cls, context: interfaces.context.ContextInterface, session_layers: Iterable[str],
                            base_address: int):
-        """Given a base address and a list of layer names, find a
-        layer that can access the specified address.
+        """Given a base address and a list of layer names, find a layer that
+        can access the specified address.
 
         Args:
-            session_layers: <list> of layer names
-            base_address: <int> the base address
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            session_layers: A list of session layer names
+            base_address: The base address to identify the layers that can access it
 
         Returns:
-            layer name (or None)
+            Layer name or None if no layers that contain the base address can be found
         """
 
         for layer_name in session_layers:

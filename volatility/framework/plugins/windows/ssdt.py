@@ -17,7 +17,7 @@ from volatility.plugins.windows import modules
 
 
 class SSDT(plugins.PluginInterface):
-    """Lists the system call table"""
+    """Lists the system call table."""
 
     _version = (1, 0, 0)
 
@@ -33,7 +33,16 @@ class SSDT(plugins.PluginInterface):
     @classmethod
     def build_module_collection(cls, context: interfaces.context.ContextInterface, layer_name: str,
                                 symbol_table: str) -> contexts.ModuleCollection:
-        """Builds a collection of modules"""
+        """Builds a collection of modules.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+
+        Returns:
+            A Module collection of available modules based on `Modules.list_modules`
+        """
 
         mods = modules.Modules.list_modules(context, layer_name, symbol_table)
         context_modules = []

@@ -1,9 +1,11 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""Defines the automagic interfaces for populating the context before a plugin runs
+"""Defines the automagic interfaces for populating the context before a plugin
+runs.
 
-Automagic objects attempt to automatically fill configuration values that a user has not filled.
+Automagic objects attempt to automatically fill configuration values
+that a user has not filled.
 """
 from abc import ABCMeta
 from typing import Any, List, Optional, Tuple, Union, Type
@@ -13,7 +15,8 @@ from volatility.framework.configuration import requirements
 
 
 class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metaclass = ABCMeta):
-    """Class that defines an automagic component that can help fulfill `Requirements`
+    """Class that defines an automagic component that can help fulfill
+    `Requirements`
 
     These classes are callable with the following parameters:
 
@@ -47,7 +50,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
                  progress_callback: constants.ProgressCallback = None) -> Optional[List[Any]]:
-        """Runs the automagic over the configurable"""
+        """Runs the automagic over the configurable."""
         return []
 
     # TODO: requirement_type can be made UnionType[Type[T], Tuple[Type[T], ...]]
@@ -60,7 +63,8 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
                           requirement_type: Union[Tuple[Type[interfaces.configuration.RequirementInterface], ...], Type[
                               interfaces.configuration.RequirementInterface]],
                           shortcut: bool = True) -> List[Tuple[str, interfaces.configuration.RequirementInterface]]:
-        """Determines if there is actually an unfulfilled `Requirement` waiting
+        """Determines if there is actually an unfulfilled `Requirement`
+        waiting.
 
         This ensures we do not carry out an expensive search when there is no need for a particular `Requirement`
 
@@ -89,10 +93,11 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
 
 
 class StackerLayerInterface(metaclass = ABCMeta):
-    """Class that takes a lower layer and attempts to build on it
+    """Class that takes a lower layer and attempts to build on it.
 
-       stack_order determines the order (from low to high) that stacking layers
-       should be attempted lower levels should have lower `stack_orders`
+    stack_order determines the order (from low to high) that stacking
+    layers should be attempted lower levels should have lower
+    `stack_orders`
     """
 
     stack_order = 0
@@ -102,8 +107,8 @@ class StackerLayerInterface(metaclass = ABCMeta):
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
-        """
-        Method to determine whether this builder can operate on the named layer.  If so, modify the context appropriately.
+        """Method to determine whether this builder can operate on the named
+        layer.  If so, modify the context appropriately.
 
         Returns the name of any new layer stacked on top of this layer or None.  The stacking is therefore strictly
         linear rather than tree driven.

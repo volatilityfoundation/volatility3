@@ -37,12 +37,13 @@ vollog = logging.getLogger(__name__)
 
 
 class ResourceAccessor(object):
-    """Object for openning URLs as files (downloading locally first if necessary)"""
+    """Object for openning URLs as files (downloading locally first if
+    necessary)"""
 
     def __init__(self,
                  progress_callback: Optional[constants.ProgressCallback] = None,
                  context: Optional[ssl.SSLContext] = None) -> None:
-        """Creates a resource accessor
+        """Creates a resource accessor.
 
         Note: context is an SSL context, not a volatility context
         """
@@ -54,7 +55,7 @@ class ResourceAccessor(object):
                    "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
 
     def open(self, url, mode = "rb"):
-        """Returns a file-like object for a particular URL opened in mode"""
+        """Returns a file-like object for a particular URL opened in mode."""
         urllib.request.install_opener(urllib.request.build_opener(*self._handlers))
 
         with contextlib.closing(urllib.request.urlopen(url, context = self._context)) as fp:
@@ -148,7 +149,7 @@ class ResourceAccessor(object):
 
 
 class JarHandler(urllib.request.BaseHandler):
-    """Handles the jar scheme for URIs
+    """Handles the jar scheme for URIs.
 
     Reference used for the schema syntax:
     http://docs.netkernel.org/book/view/book:mod:reference/doc:layer1:schemes:jar
@@ -159,7 +160,7 @@ class JarHandler(urllib.request.BaseHandler):
 
     @staticmethod
     def default_open(req):
-        """Handles the request if it's the jar scheme"""
+        """Handles the request if it's the jar scheme."""
         if req.type == 'jar':
             subscheme, remainder = req.full_url.split(":")[1], ":".join(req.full_url.split(":")[2:])
             if subscheme != 'file':

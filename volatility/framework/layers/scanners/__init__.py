@@ -17,8 +17,8 @@ class BytesScanner(layers.ScannerInterface):
         self.needle = needle
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[int, None, None]:
-        """Runs through the data looking for the needle, and yields all offsets where the needle is found
-        """
+        """Runs through the data looking for the needle, and yields all offsets
+        where the needle is found."""
         find_pos = data.find(self.needle)
         while find_pos >= 0:
             if find_pos < self.chunk_size:
@@ -34,8 +34,8 @@ class RegExScanner(layers.ScannerInterface):
         self.regex = re.compile(pattern, flags)
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[int, None, None]:
-        """Runs through the data looking for the needle, and yields all offsets where the needle is found
-        """
+        """Runs through the data looking for the needle, and yields all offsets
+        where the needle is found."""
         find_pos = self.regex.finditer(data)
         for match in find_pos:
             offset = match.start()
@@ -54,7 +54,7 @@ class MultiStringScanner(layers.ScannerInterface):
         self._patterns.preprocess()
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[int, Union[str, bytes]], None, None]:
-        """Runs through the data looking for the needles"""
+        """Runs through the data looking for the needles."""
         for offset, pattern in self._patterns.search(data):
             if offset < self.chunk_size:
                 yield offset + data_offset, pattern

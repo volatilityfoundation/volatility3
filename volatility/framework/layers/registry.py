@@ -17,11 +17,11 @@ vollog = logging.getLogger(__name__)
 
 
 class RegistryFormatException(exceptions.LayerException):
-    """Thrown when an error occurs with the underlying Registry file format"""
+    """Thrown when an error occurs with the underlying Registry file format."""
 
 
 class RegistryInvalidIndex(exceptions.LayerException):
-    """Thrown when an index that doesn't exist or can't be found occurs"""
+    """Thrown when an index that doesn't exist or can't be found occurs."""
 
 
 class RegistryHive(linear.LinearlyMappedLayer):
@@ -85,12 +85,12 @@ class RegistryHive(linear.LinearlyMappedLayer):
 
     @property
     def address_mask(self) -> int:
-        """Return a mask that allows for the volatile bit to be set"""
+        """Return a mask that allows for the volatile bit to be set."""
         return super().address_mask | 0x80000000
 
     @property
     def root_cell_offset(self) -> int:
-        """Returns the offset for the root cell in this hive"""
+        """Returns the offset for the root cell in this hive."""
         try:
             if self._base_block.Signature.cast("string", max_length = 4, encoding = "latin-1") == 'regf':
                 return self._base_block.RootCell
@@ -99,7 +99,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         return 0x20
 
     def get_cell(self, cell_offset: int) -> 'objects.StructType':
-        """Returns the appropriate Cell value for a cell offset"""
+        """Returns the appropriate Cell value for a cell offset."""
         # This would be an _HCELL containing CELL_DATA, but to save time we skip the size of the HCELL
         cell = self._context.object(
             object_type = self._table_name + constants.BANG + "_CELL_DATA",
@@ -108,7 +108,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
         return cell
 
     def get_node(self, cell_offset: int) -> 'objects.StructType':
-        """Returns the appropriate Node, interpreted from the Cell based on its Signature"""
+        """Returns the appropriate Node, interpreted from the Cell based on its
+        Signature."""
         cell = self.get_cell(cell_offset)
         signature = cell.cast('string', max_length = 2, encoding = 'latin-1')
         if signature == 'nk':
@@ -130,10 +131,11 @@ class RegistryHive(linear.LinearlyMappedLayer):
             return cell
 
     def get_key(self, key: str, return_list: bool = False) -> Union[List[objects.StructType], objects.StructType]:
-        """Gets a specific registry key by key path
+        """Gets a specific registry key by key path.
 
-        return_list specifies whether the return result will be a single node (default) or a list of nodes from
-        root to the current node (if return_list is true).
+        return_list specifies whether the return result will be a single
+        node (default) or a list of nodes from root to the current node
+        (if return_list is true).
         """
         node_key = [self.get_node(self.root_cell_offset)]
         if key.endswith("\\"):
@@ -159,7 +161,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
 
     def visit_nodes(self, visitor: Callable[[objects.StructType], None],
                     node: Optional[objects.StructType] = None) -> None:
-        """Applies a callable (visitor) to all nodes within the registry tree from a given node"""
+        """Applies a callable (visitor) to all nodes within the registry tree
+        from a given node."""
         if not node:
             node = self.get_node(self.root_cell_offset)
         visitor(node)
@@ -168,7 +171,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
 
     @staticmethod
     def _mask(value: int, high_bit: int, low_bit: int) -> int:
-        """Returns the bits of a value between highbit and lowbit inclusive"""
+        """Returns the bits of a value between highbit and lowbit inclusive."""
         high_mask = (2 ** (high_bit + 1)) - 1
         low_mask = (2 ** low_bit) - 1
         mask = (high_mask ^ low_mask)
@@ -189,7 +192,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
         ]
 
     def _translate(self, offset: int) -> int:
-        """Translates a single cell index to a cell memory offset and the suboffset within it"""
+        """Translates a single cell index to a cell memory offset and the
+        suboffset within it."""
 
         # Ignore the volatile bit when determining maxaddr validity
         volatile = self._mask(offset, 31, 31) >> 31
@@ -219,11 +223,11 @@ class RegistryHive(linear.LinearlyMappedLayer):
 
     @property
     def dependencies(self) -> List[str]:
-        """Returns a list of layer names that this layer translates onto"""
+        """Returns a list of layer names that this layer translates onto."""
         return [self.config['base_layer']]
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        """Returns a boolean based on whether the offset is valid or not"""
+        """Returns a boolean based on whether the offset is valid or not."""
         # TODO: Fix me
         return True
 

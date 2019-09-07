@@ -4,15 +4,16 @@
 
 from typing import Iterable
 
+import volatility.plugins.windows.poolscanner as poolscanner
+
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-import volatility.plugins.windows.poolscanner as poolscanner
 
 
 class MutantScan(plugins.PluginInterface):
-    """Scans for mutexes present in a particular windows memory image"""
+    """Scans for mutexes present in a particular windows memory image."""
 
     @classmethod
     def get_requirements(cls):
@@ -28,7 +29,16 @@ class MutantScan(plugins.PluginInterface):
                      layer_name: str,
                      symbol_table: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
-        """Scans for mutants using the poolscanner module and constraints"""
+        """Scans for mutants using the poolscanner module and constraints.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+
+        Returns:
+              A list of Mutant objects found by scanning memory for the Mutant pool signatures
+        """
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Mut\xe1', b'Muta'])
 

@@ -13,7 +13,8 @@ from volatility.framework.renderers import format_hints
 
 
 class HiveScan(plugins.PluginInterface):
-    """Scans for registry hives present in a particular windows memory image"""
+    """Scans for registry hives present in a particular windows memory
+    image."""
 
     @classmethod
     def get_requirements(cls):
@@ -29,7 +30,16 @@ class HiveScan(plugins.PluginInterface):
                    layer_name: str,
                    symbol_table: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
-        """Scans for hives using the poolscanner module and constraints"""
+        """Scans for hives using the poolscanner module and constraints.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+
+        Returns:
+            A list of Hive objects as found from the `layer_name` layer based on Hive pool signatures
+        """
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'CM10'])
 

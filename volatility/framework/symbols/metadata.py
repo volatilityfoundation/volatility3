@@ -8,7 +8,7 @@ from volatility.framework import interfaces
 
 
 class WindowsMetadata(interfaces.symbols.MetadataInterface):
-    """Class to handle the metadata from a Windows symbol table"""
+    """Class to handle the metadata from a Windows symbol table."""
 
     @property
     def pe_version(self) -> Optional[Tuple]:
@@ -38,4 +38,4 @@ class WindowsMetadata(interfaces.symbols.MetadataInterface):
 
 
 class LinuxMetadata(interfaces.symbols.MetadataInterface):
-    """Class to handle the etadata from a Linux symbol table"""
+    """Class to handle the etadata from a Linux symbol table."""

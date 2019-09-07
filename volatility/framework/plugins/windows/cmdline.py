@@ -12,7 +12,7 @@ from volatility.plugins.windows import pslist
 
 
 class CmdLine(interfaces_plugins.PluginInterface):
-    """Lists process command line arguments"""
+    """Lists process command line arguments."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

@@ -17,7 +17,7 @@ vollog = logging.getLogger(__name__)
 
 
 class Check_sysctl(plugins.PluginInterface):
-    """Check sysctl handlers for hooks"""
+    """Check sysctl handlers for hooks."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

@@ -1,9 +1,11 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""Renderers
+"""Renderers.
 
-Renderers display the unified output format in some manner (be it text or file or graphical output"""
+Renderers display the unified output format in some manner (be it text
+or file or graphical output
+"""
 import collections
 import datetime
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
@@ -13,29 +15,35 @@ from volatility.framework.interfaces import renderers
 
 
 class UnreadableValue(interfaces.renderers.BaseAbsentValue):
-    """Class that represents values which are empty because the data cannot be read"""
+    """Class that represents values which are empty because the data cannot be
+    read."""
 
 
 class UnparsableValue(interfaces.renderers.BaseAbsentValue):
-    """Class that represents values which are empty because the data cannot be interpreted correctly"""
+    """Class that represents values which are empty because the data cannot be
+    interpreted correctly."""
 
 
 class NotApplicableValue(interfaces.renderers.BaseAbsentValue):
-    """Class that represents values which are empty because they don't make sense for this node"""
+    """Class that represents values which are empty because they don't make
+    sense for this node."""
 
 
 class NotAvailableValue(interfaces.renderers.BaseAbsentValue):
-    """Class that represents values which cannot be provided now (but might in a future run)
+    """Class that represents values which cannot be provided now (but might in
+    a future run)
 
-    This might occur when information packed with volatility (such as symbol information) is not available,
-    but a future version or a different run may later have that information available (ie, it could be applicable,
-    but we can't get it and it's not because it's unreadable or unparsable).
-    Unreadable and Unparsable should be used in preference, and only if neither fits should this be used.
+    This might occur when information packed with volatility (such as
+    symbol information) is not available, but a future version or a
+    different run may later have that information available (ie, it
+    could be applicable, but we can't get it and it's not because it's
+    unreadable or unparsable). Unreadable and Unparsable should be used
+    in preference, and only if neither fits should this be used.
     """
 
 
 class TreeNode(interfaces.renderers.TreeNode):
-    """Class representing a particular node in a tree grid"""
+    """Class representing a particular node in a tree grid."""
 
     def __init__(self, path: str, treegrid: 'TreeGrid', parent: Optional['TreeNode'],
                  values: List[interfaces.renderers.BaseTypes]) -> None:
@@ -57,7 +65,8 @@ class TreeNode(interfaces.renderers.TreeNode):
         return len(self._treegrid.children(self))
 
     def _validate_values(self, values: List[interfaces.renderers.BaseTypes]) -> None:
-        """A function for raising exceptions if a given set of values is invalid according to the column properties."""
+        """A function for raising exceptions if a given set of values is
+        invalid according to the column properties."""
         if not (isinstance(values, collections.Sequence) and len(values) == len(self._treegrid.columns)):
             raise TypeError(
                 "Values must be a list of objects made up of simple types and number the same as the columns")
@@ -74,32 +83,36 @@ class TreeNode(interfaces.renderers.TreeNode):
 
     @property
     def values(self) -> Iterable[interfaces.renderers.BaseTypes]:
-        """Returns the list of values from the particular node, based on column index"""
+        """Returns the list of values from the particular node, based on column
+        index."""
         return self._values
 
     @property
     def path(self) -> str:
-        """Returns a path identifying string
+        """Returns a path identifying string.
 
-        This should be seen as opaque by external classes,
-        Parsing of path locations based on this string are not guaranteed to remain stable.
+        This should be seen as opaque by external classes, Parsing of
+        path locations based on this string are not guaranteed to remain
+        stable.
         """
         return self._path
 
     @property
     def parent(self) -> Optional['TreeNode']:
-        """Returns the parent node of this node or None"""
+        """Returns the parent node of this node or None."""
         return self._parent
 
     @property
     def path_depth(self) -> int:
-        """Return the path depth of the current node"""
+        """Return the path depth of the current node."""
         return len(self.path.split(TreeGrid.path_sep))
 
     def path_changed(self, path: str, added: bool = False) -> None:
-        """Updates the path based on the addition or removal of a node higher up in the tree
+        """Updates the path based on the addition or removal of a node higher
+        up in the tree.
 
-           This should only be called by the containing TreeGrid and expects to only be called for affected nodes.
+        This should only be called by the containing TreeGrid and
+        expects to only be called for affected nodes.
         """
         components = self._path.split(TreeGrid.path_sep)
         changed = path.split(TreeGrid.path_sep)
@@ -126,7 +139,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
     def __init__(self, columns: List[Tuple[str, interfaces.renderers.BaseTypes]],
                  generator: Optional[Iterable[Tuple[int, Tuple]]]) -> None:
-        """Constructs a TreeGrid object using a specific set of columns
+        """Constructs a TreeGrid object using a specific set of columns.
 
         The TreeGrid itself is a root element, that can have children but no values.
         The TreeGrid does *not* contain any information about formatting,
@@ -166,10 +179,11 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         return output
 
     def populate(self, func: interfaces.renderers.VisitorSignature = None, initial_accumulator: Any = None) -> None:
-        """Populates the tree by consuming the TreeGrid's construction generator
-           Func is called on every node, so can be used to create output on demand
+        """Populates the tree by consuming the TreeGrid's construction
+        generator Func is called on every node, so can be used to create output
+        on demand.
 
-           This is equivalent to a one-time visit.
+        This is equivalent to a one-time visit.
         """
         accumulator = initial_accumulator
         if func is None:
@@ -191,27 +205,28 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
     @property
     def populated(self):
-        """Indicates that population has completed and the tree may now be manipulated separately"""
+        """Indicates that population has completed and the tree may now be
+        manipulated separately."""
         return self._populated
 
     @property
     def columns(self) -> List[interfaces.renderers.Column]:
-        """Returns the available columns and their ordering and types"""
+        """Returns the available columns and their ordering and types."""
         return self._columns
 
     @property
     def row_count(self) -> int:
-        """Returns the number of rows populated"""
+        """Returns the number of rows populated."""
         return self._row_count
 
     def children(self, node) -> List[interfaces.renderers.TreeNode]:
-        """Returns the subnodes of a particular node in order"""
+        """Returns the subnodes of a particular node in order."""
         return [node for node, _ in self._find_children(node)]
 
     def _find_children(self, node):
-        """Returns the children list associated with a particular node
+        """Returns the children list associated with a particular node.
 
-           Returns None if the node does not exist
+        Returns None if the node does not exist
         """
         children = self._children
         try:
@@ -223,21 +238,22 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         return children
 
     def values(self, node):
-        """Returns the values for a particular node
+        """Returns the values for a particular node.
 
-           The values returned are mutable,
+        The values returned are mutable,
         """
         if node is None:
             raise ValueError("Node must be a valid node within the TreeGrid")
         return node.values
 
     def _append(self, parent, values):
-        """Adds a new node at the top level if parent is None, or under the parent node otherwise, after all other children."""
+        """Adds a new node at the top level if parent is None, or under the
+        parent node otherwise, after all other children."""
         children = self.children(parent)
         return self._insert(parent, len(children), values)
 
     def _insert(self, parent, position, values):
-        """Inserts an element into the tree at a specific position"""
+        """Inserts an element into the tree at a specific position."""
         parent_path = ""
         children = self._find_children(parent)
         if parent is not None:
@@ -250,11 +266,11 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         return tree_item
 
     def is_ancestor(self, node, descendant):
-        """Returns true if descendent is a child, grandchild, etc of node"""
+        """Returns true if descendent is a child, grandchild, etc of node."""
         return descendant.path.startswith(node.path)
 
     def max_depth(self):
-        """Returns the maximum depth of the tree"""
+        """Returns the maximum depth of the tree."""
         return self.visit(None, lambda n, a: max(a, self.path_depth(n)), 0)
 
     _T = TypeVar("_T")
@@ -266,15 +282,15 @@ class TreeGrid(interfaces.renderers.TreeGrid):
               sort_key: Optional[interfaces.renderers.ColumnSortKey] = None):
         """Visits all the nodes in a tree, calling function on each one.
 
-           function should have the signature function(node, accumulator) and return new_accumulator
-           If accumulators are not needed, the function must still accept a second parameter.
+        function should have the signature function(node, accumulator) and return new_accumulator
+        If accumulators are not needed, the function must still accept a second parameter.
 
-           The order of that the nodes are visited is always depth first, however, the order children are traversed can
-           be set based on a sort_key function which should accept a node's values and return something that can be
-           sorted to receive the desired order (similar to the sort/sorted key).
+        The order of that the nodes are visited is always depth first, however, the order children are traversed can
+        be set based on a sort_key function which should accept a node's values and return something that can be
+        sorted to receive the desired order (similar to the sort/sorted key).
 
-           We use the private _find_children function so that we don't have to re-traverse the tree
-           for every node we descend further down
+        We use the private _find_children function so that we don't have to re-traverse the tree
+        for every node we descend further down
         """
         if not self.populated:
             self.populate()
@@ -299,7 +315,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                function: Callable,
                accumulator: _T,
                sort_key: Optional[interfaces.renderers.ColumnSortKey] = None) -> _T:
-        """Visits all the nodes in a tree, calling function on each one"""
+        """Visits all the nodes in a tree, calling function on each one."""
         if list_of_children is not None:
             for n, children in list_of_children:
                 accumulator = function(n, accumulator)
@@ -327,7 +343,7 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
         self._index = _index
 
     def __call__(self, values: List[Any]) -> Any:
-        """The key function passed as the sort key"""
+        """The key function passed as the sort key."""
         value = values[self._index]
         if isinstance(value, interfaces.renderers.BaseAbsentValue):
             if self._type == datetime.datetime:

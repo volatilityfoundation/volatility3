@@ -1,14 +1,18 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""The configuration module contains classes and functions for interacting with the
-configuration and requirement trees.
+"""The configuration module contains classes and functions for interacting with
+the configuration and requirement trees.
 
-Volatility plugins can specify a list of requirements (which may have subrequirements, thus forming a requirement tree).
-These requirement trees can contain values, which are contained in a complementary configuration tree.  These two trees
-act as a protocol between the plugins and users.  The plugins provide requirements that must be fulfilled, and the users
-provide configurations values that fulfill those requirements.  Where the user does not provide sufficient configuration
-values, automagic modules may extend the configuration tree themselves.
+Volatility plugins can specify a list of requirements (which may have
+subrequirements, thus forming a requirement tree). These requirement
+trees can contain values, which are contained in a complementary
+configuration tree.  These two trees act as a protocol between the
+plugins and users.  The plugins provide requirements that must be
+fulfilled, and the users provide configurations values that fulfill
+those requirements.  Where the user does not provide sufficient
+configuration values, automagic modules may extend the configuration
+tree themselves.
 """
 
 import collections.abc
@@ -35,30 +39,29 @@ ConfigSimpleType = Union[SimpleTypes, List[SimpleTypes]]
 
 
 def path_join(*args) -> str:
-    """Joins configuration paths together"""
+    """Joins configuration paths together."""
     # If a path element (particularly the first) is empty, then remove it from the list
     args = tuple([arg for arg in args if arg])
     return CONFIG_SEPARATOR.join(args)
 
 
 def parent_path(value: str) -> str:
-    """Returns the parent configuration path from a configuration path"""
+    """Returns the parent configuration path from a configuration path."""
     return CONFIG_SEPARATOR.join(value.split(CONFIG_SEPARATOR)[:-1])
 
 
 def path_depth(path: str, depth: int = 1) -> str:
-    """Returns the `path` up to a certain depth
+    """Returns the `path` up to a certain depth.
 
-       Note that `depth` can be negative (such as `-x`) and will return all elements except for the last `x` components
+    Note that `depth` can be negative (such as `-x`) and will return all
+    elements except for the last `x` components
     """
     return path_join(path.split(CONFIG_SEPARATOR)[:depth])
 
 
 class HierarchicalDict(collections.abc.Mapping):
-    """The core of configuration data, it is a mapping class that stores keys within itself, and also stores lower
-    hierarchies.
-
-    """
+    """The core of configuration data, it is a mapping class that stores keys
+    within itself, and also stores lower hierarchies."""
 
     def __init__(self, initial_dict: Dict[str, 'SimpleTypeRequirement'] = None,
                  separator: str = CONFIG_SEPARATOR) -> None:
@@ -83,37 +86,37 @@ class HierarchicalDict(collections.abc.Mapping):
 
     @property
     def separator(self) -> str:
-        """Specifies the hierarchy separator in use in this HierarchyDict"""
+        """Specifies the hierarchy separator in use in this HierarchyDict."""
         return self._separator
 
     @property
     def data(self) -> Dict:
-        """Returns just the data-containing mappings on this level of the Hierarchy"""
+        """Returns just the data-containing mappings on this level of the
+        Hierarchy."""
         return self._data.copy()
 
     def _key_head(self, key: str) -> str:
-        """Returns the first division of a key based on the dict separator,
-           or the full key if the separator is not present
-        """
+        """Returns the first division of a key based on the dict separator, or
+        the full key if the separator is not present."""
         if self.separator in key:
             return key[:key.index(self.separator)]
         else:
             return key
 
     def _key_tail(self, key: str) -> str:
-        """Returns all but the first division of a key based on the dict separator,
-           or None if the separator is not in the key
-        """
+        """Returns all but the first division of a key based on the dict
+        separator, or None if the separator is not in the key."""
         if self.separator in key:
             return key[key.index(self.separator) + 1:]
         return ''
 
     def __iter__(self):
-        """Returns an iterator object that supports the iterator protocol"""
+        """Returns an iterator object that supports the iterator protocol."""
         return self.generator()
 
     def generator(self) -> Generator[str, None, None]:
-        """A generator for the data in this level and lower levels of this mapping
+        """A generator for the data in this level and lower levels of this
+        mapping.
 
         Returns:
             Returns each item in the top level data, and then all subkeys in a depth first order
@@ -125,7 +128,8 @@ class HierarchicalDict(collections.abc.Mapping):
                 yield subdict_key + self.separator + key
 
     def __getitem__(self, key):
-        """Gets an item, traversing down the trees to get to the final value"""
+        """Gets an item, traversing down the trees to get to the final
+        value."""
         try:
             if self.separator in key:
                 subdict = self._subdict[self._key_head(key)]
@@ -136,11 +140,11 @@ class HierarchicalDict(collections.abc.Mapping):
             raise KeyError(key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        """Sets an item or creates a subdict and sets the item within that"""
+        """Sets an item or creates a subdict and sets the item within that."""
         self._setitem(key, value)
 
     def _setitem(self, key: str, value: Any, is_data: bool = True) -> None:
-        """Set an item or appends a whole subtree at a key location"""
+        """Set an item or appends a whole subtree at a key location."""
         if self.separator in key:
             subdict = self._subdict.get(self._key_head(key), HierarchicalDict(separator = self.separator))
             subdict._setitem(self._key_tail(key), value, is_data)
@@ -156,7 +160,8 @@ class HierarchicalDict(collections.abc.Mapping):
                 self._subdict[key] = value
 
     def _sanitize_value(self, value: Any) -> ConfigSimpleType:
-        """Method to ensure all values are standard values and not volatility objects containing contexts"""
+        """Method to ensure all values are standard values and not volatility
+        objects containing contexts."""
         if isinstance(value, bool):
             return bool(value)
         elif isinstance(value, int):
@@ -177,7 +182,7 @@ class HierarchicalDict(collections.abc.Mapping):
             raise TypeError("Invalid type stored in configuration")
 
     def __delitem__(self, key: str) -> None:
-        """Deletes an item from the hierarchical dict"""
+        """Deletes an item from the hierarchical dict."""
         try:
             if self.separator in key:
                 subdict = self._subdict[self._key_head(key)]
@@ -188,7 +193,7 @@ class HierarchicalDict(collections.abc.Mapping):
             raise KeyError(key)
 
     def __contains__(self, key: Any) -> bool:
-        """Determines whether the key is present in the hierarchy"""
+        """Determines whether the key is present in the hierarchy."""
         if self.separator in key:
             try:
                 subdict = self._subdict[self._key_head(key)]
@@ -199,11 +204,11 @@ class HierarchicalDict(collections.abc.Mapping):
             return key in self._data
 
     def __len__(self) -> int:
-        """Returns the length of all items"""
+        """Returns the length of all items."""
         return len(self._data) + sum([len(subdict) for subdict in self._subdict])
 
     def branch(self, key: str) -> 'HierarchicalDict':
-        """Returns the HierarchicalDict housed under the key
+        """Returns the HierarchicalDict housed under the key.
 
         This differs from the data property, in that it is directed by the `key`, and all layers under that key are
         returned, not just those in that level.
@@ -227,17 +232,18 @@ class HierarchicalDict(collections.abc.Mapping):
         return HierarchicalDict()
 
     def splice(self, key: str, value: 'HierarchicalDict') -> None:
-        """Splices an existing HierarchicalDictionary under a specific key
+        """Splices an existing HierarchicalDictionary under a specific key.
 
-        This can be thought of as an inverse of :func:`branch`, although `branch` does not remove the requested
-        hierarchy, it simply returns it.
+        This can be thought of as an inverse of :func:`branch`, although
+        `branch` does not remove the requested hierarchy, it simply
+        returns it.
         """
         if not isinstance(key, str) or not isinstance(value, HierarchicalDict):
             raise TypeError("Splice requires a string key and HierarchicalDict value")
         self._setitem(key, value, False)
 
     def merge(self, key: str, value: 'HierarchicalDict', overwrite: bool = False) -> None:
-        """Acts similarly to splice, but maintains previous values
+        """Acts similarly to splice, but maintains previous values.
 
         If overwrite is true, then entries in the new value are used over those that exist within key already
 
@@ -245,7 +251,6 @@ class HierarchicalDict(collections.abc.Mapping):
             key: The location within the hierarchy at which to merge the `value`
             value: HierarchicalDict to be merged under the key node
             overwrite: A boolean defining whether the value will be overwritten if it already exists
-
         """
         if not isinstance(key, str) or not isinstance(value, HierarchicalDict):
             raise TypeError("Splice requires a string key and HierarchicalDict value")
@@ -257,7 +262,8 @@ class HierarchicalDict(collections.abc.Mapping):
                 self[key + self._separator + item] = value[item]
 
     def clone(self) -> 'HierarchicalDict':
-        """Duplicates the configuration, allowing changes without affecting the original
+        """Duplicates the configuration, allowing changes without affecting the
+        original.
 
         Returns:
             A duplicate HierarchicalDict of this object
@@ -265,12 +271,12 @@ class HierarchicalDict(collections.abc.Mapping):
         return copy.deepcopy(self)
 
     def __str__(self) -> str:
-        """Turns the Hierarchical dict into a string representation"""
+        """Turns the Hierarchical dict into a string representation."""
         return json.dumps(dict([(key, self[key]) for key in sorted(self.generator())]), indent = 2)
 
 
 class RequirementInterface(metaclass = ABCMeta):
-    """Class that defines a requirement
+    """Class that defines a requirement.
 
     A requirement is a means for plugins and other framework components to request specific configuration data.
     Requirements can either be simple types (such as
@@ -308,33 +314,37 @@ class RequirementInterface(metaclass = ABCMeta):
 
     @property
     def name(self) -> str:
-        """The name of the Requirement.  Names cannot contain CONFIG_SEPARATOR ('.' by default) since this
-        is used within the configuration hierarchy."""
+        """The name of the Requirement.
+
+        Names cannot contain CONFIG_SEPARATOR ('.' by default) since
+        this is used within the configuration hierarchy.
+        """
         return self._name
 
     @property
     def description(self) -> str:
-        """A short description of what the Requirement is designed to affect or achieve."""
+        """A short description of what the Requirement is designed to affect or
+        achieve."""
         return self._description
 
     @property
     def default(self) -> Optional[ConfigSimpleType]:
-        """Returns the default value if one is set"""
+        """Returns the default value if one is set."""
         return self._default
 
     @property
     def optional(self) -> bool:
-        """Whether the Requirement is optional or not"""
+        """Whether the Requirement is optional or not."""
         return self._optional
 
     @optional.setter
     def optional(self, value) -> None:
-        """Sets the optional value for a requirement"""
+        """Sets the optional value for a requirement."""
         self._optional = bool(value)
 
     def config_value(self, context: ContextInterface, config_path: str,
                      default: ConfigSimpleType = None) -> ConfigSimpleType:
-        """Returns the value for this Requirement from its config path
+        """Returns the value for this Requirement from its config path.
 
         Args:
             context: the configuration store to find the value for this requirement
@@ -346,20 +356,20 @@ class RequirementInterface(metaclass = ABCMeta):
     # Child operations
     @property
     def requirements(self) -> Dict[str, 'RequirementInterface']:
-        """Returns a dictionary of all the child requirements, indexed by name"""
+        """Returns a dictionary of all the child requirements, indexed by
+        name."""
         return self._requirements.copy()
 
     def add_requirement(self, requirement: 'RequirementInterface') -> None:
-        """Adds a child to the list of requirements
+        """Adds a child to the list of requirements.
 
         Args:
             requirement: The requirement to add as a child-requirement
-        
         """
         self._requirements[requirement.name] = requirement
 
     def remove_requirement(self, requirement: 'RequirementInterface') -> None:
-        """Removes a child from the list of requirements
+        """Removes a child from the list of requirements.
 
         Args:
             requirement: The requirement to remove as a child-requirement
@@ -367,7 +377,7 @@ class RequirementInterface(metaclass = ABCMeta):
         del self._requirements[requirement.name]
 
     def unsatisfied_children(self, context: ContextInterface, config_path: str) -> Dict[str, 'RequirementInterface']:
-        """Method that will validate all child requirements
+        """Method that will validate all child requirements.
 
         Args:
             context: the context containing the configuration data for this requirement
@@ -386,33 +396,38 @@ class RequirementInterface(metaclass = ABCMeta):
     # Validation routines
     @abstractmethod
     def unsatisfied(self, context: ContextInterface, config_path: str) -> Dict[str, 'RequirementInterface']:
-        """Method to validate the value stored at config_path for the configuration object against a context
+        """Method to validate the value stored at config_path for the
+        configuration object against a context.
 
-           Returns a list containing its own name (or multiple unsatisfied requirement names) when invalid
+        Returns a list containing its own name (or multiple unsatisfied requirement names) when invalid
 
-           Args:
-               context: The context object containing the configuration for this requirement
-               config_path: The configuration path for this requirement to test satisfaction
+        Args:
+            context: The context object containing the configuration for this requirement
+            config_path: The configuration path for this requirement to test satisfaction
 
-           Returns:
-               A dictionary of configuration-paths to requirements that could not be satisfied
+        Returns:
+            A dictionary of configuration-paths to requirements that could not be satisfied
         """
 
 
 class SimpleTypeRequirement(RequirementInterface):
-    """Class to represent a single simple type (such as a boolean, a string, an integer or a series of bytes)"""
+    """Class to represent a single simple type (such as a boolean, a string, an
+    integer or a series of bytes)"""
     instance_type = bool  # type: ClassVar[Type]
 
     def add_requirement(self, requirement: RequirementInterface):
-        """Always raises a TypeError as instance requirements cannot have children"""
+        """Always raises a TypeError as instance requirements cannot have
+        children."""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
     def remove_requirement(self, requirement: RequirementInterface):
-        """Always raises a TypeError as instance requirements cannot have children"""
+        """Always raises a TypeError as instance requirements cannot have
+        children."""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
     def unsatisfied(self, context: ContextInterface, config_path: str) -> Dict[str, RequirementInterface]:
-        """Validates the instance requirement based upon its `instance_type`."""
+        """Validates the instance requirement based upon its
+        `instance_type`."""
         config_path = path_join(config_path, self.name)
 
         value = self.config_value(context, config_path, None)
@@ -426,8 +441,12 @@ class SimpleTypeRequirement(RequirementInterface):
 
 
 class ClassRequirement(RequirementInterface):
-    """Requires a specific class.  This is used as means to serialize specific classes for :class:`TranslationLayerRequirement`
-    and :class:`SymbolTableRequirement` classes."""
+    """Requires a specific class.
+
+    This is used as means to serialize specific classes for
+    :class:`TranslationLayerRequirement` and
+    :class:`SymbolTableRequirement` classes.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -435,11 +454,12 @@ class ClassRequirement(RequirementInterface):
 
     @property
     def cls(self) -> Type:
-        """Contains the actual chosen class based on the configuration value's class name"""
+        """Contains the actual chosen class based on the configuration value's
+        class name."""
         return self._cls
 
     def unsatisfied(self, context: ContextInterface, config_path: str) -> Dict[str, RequirementInterface]:
-        """Checks to see if a class can be recovered"""
+        """Checks to see if a class can be recovered."""
         config_path = path_join(config_path, self.name)
 
         value = self.config_value(context, config_path, None)
@@ -460,13 +480,18 @@ class ClassRequirement(RequirementInterface):
 
 
 class ConstructableRequirementInterface(RequirementInterface):
-    """Defines a Requirement that can be constructed based on their own requirements.
+    """Defines a Requirement that can be constructed based on their own
+    requirements.
 
-    This effectively offers a means for serializing specific python types, to be reconstructed based on simple
-    configuration data.  Each constructable records a `class` requirement, which indicates the object that will be
-    constructed.  That class may have its own requirements (which is why validation of a ConstructableRequirement
-    must happen after the class configuration value has been provided).  These values are then provided to the object's
-    constructor by name as arguments (as well as the standard `context` and `config_path` arguments.
+    This effectively offers a means for serializing specific python
+    types, to be reconstructed based on simple configuration data.  Each
+    constructable records a `class` requirement, which indicates the
+    object that will be constructed.  That class may have its own
+    requirements (which is why validation of a ConstructableRequirement
+    must happen after the class configuration value has been provided).
+    These values are then provided to the object's constructor by name
+    as arguments (as well as the standard `context` and `config_path`
+    arguments.
     """
 
     def __init__(self, *args, **kwargs):
@@ -476,7 +501,8 @@ class ConstructableRequirementInterface(RequirementInterface):
 
     @abstractmethod
     def construct(self, context: ContextInterface, config_path: str) -> None:
-        """Method for constructing within the context any required elements from subrequirements
+        """Method for constructing within the context any required elements
+        from subrequirements.
 
         Args:
             context: The context object containing the configuration data for the constructable
@@ -484,12 +510,13 @@ class ConstructableRequirementInterface(RequirementInterface):
         """
 
     def _validate_class(self, context: ContextInterface, config_path: str) -> None:
-        """Method to check if the class Requirement is valid and if so populate the other requirements
-           (but no need to validate, since we're invalid already)
+        """Method to check if the class Requirement is valid and if so populate
+        the other requirements (but no need to validate, since we're invalid
+        already)
 
-           Args:
-                context: The context object containing the configuration data for the constructable
-                config_path: The configuration path for the specific instance of this constructable
+        Args:
+             context: The context object containing the configuration data for the constructable
+             config_path: The configuration path for the specific instance of this constructable
         """
         class_req = self.requirements['class']
         subreq_config_path = path_join(config_path, self.name)
@@ -507,7 +534,8 @@ class ConstructableRequirementInterface(RequirementInterface):
 
     def _construct_class(self, context: ContextInterface, config_path: str,
                          requirement_dict: Dict[str, object] = None) -> Optional['interfaces.objects.ObjectInterface']:
-        """Constructs the class, handing args and the subrequirements as parameters to __init__"""
+        """Constructs the class, handing args and the subrequirements as
+        parameters to __init__"""
         if self.requirements["class"].unsatisfied(context, config_path):
             return None
 
@@ -533,17 +561,19 @@ class ConstructableRequirementInterface(RequirementInterface):
 
 
 class ConfigurableRequirementInterface(RequirementInterface):
-    """Simple Abstract class to provide build_required_config"""
+    """Simple Abstract class to provide build_required_config."""
 
     def build_configuration(self, context: ContextInterface, config_path: str, value: Any) -> HierarchicalDict:
-        """Proxies to a ConfigurableInterface if necessary"""
+        """Proxies to a ConfigurableInterface if necessary."""
 
 
 class ConfigurableInterface(metaclass = ABCMeta):
-    """Class to allow objects to have requirements and read configuration data from the context config tree"""
+    """Class to allow objects to have requirements and read configuration data
+    from the context config tree."""
 
     def __init__(self, context: ContextInterface, config_path: str) -> None:
-        """Basic initializer that allows configurables to access their own config settings"""
+        """Basic initializer that allows configurables to access their own
+        config settings."""
         super().__init__()
         self._context = context
         self._config_path = config_path
@@ -551,32 +581,37 @@ class ConfigurableInterface(metaclass = ABCMeta):
 
     @property
     def context(self) -> ContextInterface:
-        """The context object that this configurable belongs to/configuration is stored in"""
+        """The context object that this configurable belongs to/configuration
+        is stored in."""
         return self._context
 
     @property
     def config_path(self) -> str:
-        """The configuration path on which this configurable lives"""
+        """The configuration path on which this configurable lives."""
         return self._config_path
 
     @config_path.setter
     def config_path(self, value: str) -> None:
-        """The configuration path on which this configurable lives"""
+        """The configuration path on which this configurable lives."""
         self._config_path = value
         self._config_cache = None
 
     @property
     def config(self) -> HierarchicalDict:
-        """The Hierarchical configuration Dictionary for this Configurable object"""
+        """The Hierarchical configuration Dictionary for this Configurable
+        object."""
         if not hasattr(self, "_config_cache") or self._config_cache is None:
             self._config_cache = self._context.config.branch(self._config_path)
         return self._config_cache
 
     def build_configuration(self) -> HierarchicalDict:
-        """Constructs a HierarchicalDictionary of all the options required to build this component in the current context.
+        """Constructs a HierarchicalDictionary of all the options required to
+        build this component in the current context.
 
-           Ensures that if the class has been created, it can be recreated using the configuration built
-           Inheriting classes must override this to ensure any dependent classes update their configurations too
+        Ensures that if the class has been created, it can be recreated
+        using the configuration built Inheriting classes must override
+        this to ensure any dependent classes update their configurations
+        too
         """
         result = HierarchicalDict()
         for req in self.get_requirements():
@@ -591,12 +626,13 @@ class ConfigurableInterface(metaclass = ABCMeta):
 
     @classmethod
     def get_requirements(cls) -> List[RequirementInterface]:
-        """Returns a list of RequirementInterface objects required by this object"""
+        """Returns a list of RequirementInterface objects required by this
+        object."""
         return []
 
     @classmethod
     def unsatisfied(cls, context: ContextInterface, config_path: str) -> Dict[str, RequirementInterface]:
-        """Returns a list of the names of all unsatisfied requirements
+        """Returns a list of the names of all unsatisfied requirements.
 
         Since a satisfied set of requirements will return [], it can be used in tests as follows:
 
@@ -614,9 +650,9 @@ class ConfigurableInterface(metaclass = ABCMeta):
         return result
 
     def make_subconfig(self, *args, **kwargs) -> str:
-        """Convenience function to allow constructing a new randomly generated sub-configuration path,
-        containing each element from kwargs
-         
+        """Convenience function to allow constructing a new randomly generated
+        sub-configuration path, containing each element from kwargs.
+
         Returns:
             str: The newly generated full configuration path
         """

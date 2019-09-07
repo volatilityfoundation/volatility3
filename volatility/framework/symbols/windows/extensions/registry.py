@@ -38,8 +38,11 @@ class RegValueTypes(enum.Enum):
 
     @classmethod
     def get(cls, value):
-        """An alternative method for using this enum when the value may be unknown.
-        This is used to support unknown value requests in Python <3.6."""
+        """An alternative method for using this enum when the value may be
+        unknown.
+
+        This is used to support unknown value requests in Python <3.6.
+        """
         try:
             return cls(value)
         except ValueError:
@@ -70,9 +73,12 @@ class _HMAP_ENTRY(objects.StructType):
 class _CMHIVE(objects.StructType):
 
     def get_name(self) -> Optional[interfaces.objects.ObjectInterface]:
-        """Determine a name for the hive. Note that some attributes are
-        unpredictably blank across different OS versions while others are populated,
-        so we check all possibilities and take the first one that's not empty"""
+        """Determine a name for the hive.
+
+        Note that some attributes are unpredictably blank across
+        different OS versions while others are populated, so we check
+        all possibilities and take the first one that's not empty
+        """
 
         for attr in ["FileFullPath", "FileUserName", "HiveRootPath"]:
             try:
@@ -86,12 +92,12 @@ class _CMHIVE(objects.StructType):
 
 
 class _CM_KEY_BODY(objects.StructType):
-    """This represents an open handle to a registry key and
-    is not tied to the registry hive file format on disk."""
+    """This represents an open handle to a registry key and is not tied to the
+    registry hive file format on disk."""
 
     def _skip_key_hive_entry_path(self, kcb_flags):
-        """Win10 14393 introduced an extra path element that it skips
-        over by checking for Flags that contain KEY_HIVE_ENTRY"""
+        """Win10 14393 introduced an extra path element that it skips over by
+        checking for Flags that contain KEY_HIVE_ENTRY."""
 
         # _CM_KEY_BODY.Trans introduced in Win10 14393
         if hasattr(self, "Trans") and RegKeyFlags.KEY_HIVE_ENTRY & kcb_flags == RegKeyFlags.KEY_HIVE_ENTRY:
@@ -119,7 +125,7 @@ class _CM_KEY_BODY(objects.StructType):
 
 
 class _CM_KEY_NODE(objects.StructType):
-    """Extension to allow traversal of registry keys"""
+    """Extension to allow traversal of registry keys."""
 
     def get_volatile(self) -> bool:
         if not isinstance(self._context.layers[self.vol.layer_name], RegistryHive):
@@ -127,7 +133,7 @@ class _CM_KEY_NODE(objects.StructType):
         return bool(self.vol.offset & 0x80000000)
 
     def get_subkeys(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns a list of the key nodes"""
+        """Returns a list of the key nodes."""
         hive = self._context.layers[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
@@ -138,7 +144,7 @@ class _CM_KEY_NODE(objects.StructType):
 
     def _get_subkeys_recursive(self, hive: RegistryHive, node: interfaces.objects.ObjectInterface
                                ) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Recursively descend a node returning subkeys"""
+        """Recursively descend a node returning subkeys."""
         # The keylist appears to include 4 bytes of key name after each value
         # We can either double the list and only use the even items, or
         # We could change the array type to a struct with both parts
@@ -174,7 +180,7 @@ class _CM_KEY_NODE(objects.StructType):
                     yield from self._get_subkeys_recursive(hive, subnode)
 
     def get_values(self) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Returns a list of the Value nodes for a key"""
+        """Returns a list of the Value nodes for a key."""
         hive = self._context.layers[self.vol.layer_name]
         if not isinstance(hive, RegistryHive):
             raise TypeError("CM_KEY_NODE was not instantiated on a RegistryHive layer")
@@ -196,7 +202,7 @@ class _CM_KEY_NODE(objects.StructType):
             return
 
     def get_name(self) -> interfaces.objects.ObjectInterface:
-        """Since this is just a casting convenience, it can be a property"""
+        """Since this is just a casting convenience, it can be a property."""
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
 
     def get_key_path(self) -> interfaces.objects.ObjectInterface:
@@ -212,15 +218,15 @@ class _CM_KEY_NODE(objects.StructType):
 
 
 class _CM_KEY_VALUE(objects.StructType):
-    """Extensions to extract data from CM_KEY_VALUE nodes"""
+    """Extensions to extract data from CM_KEY_VALUE nodes."""
 
     def get_name(self) -> interfaces.objects.ObjectInterface:
-        """Since this is just a casting convenience, it can be a property"""
+        """Since this is just a casting convenience, it can be a property."""
         self.Name.count = self.NameLength
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
 
     def decode_data(self) -> Union[str, bytes]:
-        """Since this is just a casting convenience, it can be a property"""
+        """Since this is just a casting convenience, it can be a property."""
         # Determine if the data is stored inline
         datalen = self.DataLength & 0x7fffffff
         data = b""

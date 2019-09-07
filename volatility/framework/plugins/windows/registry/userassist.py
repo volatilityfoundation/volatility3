@@ -20,7 +20,7 @@ vollog = logging.getLogger(__name__)
 
 
 class UserAssist(interfaces.plugins.PluginInterface):
-    """Print userassist registry keys and information"""
+    """Print userassist registry keys and information."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -41,7 +41,8 @@ class UserAssist(interfaces.plugins.PluginInterface):
         ]
 
     def parse_userassist_data(self, reg_val):
-        """Reads the raw data of a _CM_KEY_VALUE and returns a dict of userassist fields"""
+        """Reads the raw data of a _CM_KEY_VALUE and returns a dict of
+        userassist fields."""
 
         item = {
             "id": renderers.UnparsableValue(),
@@ -95,7 +96,8 @@ class UserAssist(interfaces.plugins.PluginInterface):
         return item
 
     def _determine_userassist_type(self) -> None:
-        """Determine the userassist type and size depending on the OS version"""
+        """Determine the userassist type and size depending on the OS
+        version."""
 
         if self._win7 is True:
             self._userassist_type_name = "_VOL_USERASSIST_TYPES_7"

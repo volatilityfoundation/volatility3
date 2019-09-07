@@ -1,11 +1,10 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""A module containing a collection of plugins that produce data
-typically found in Linux's /proc file system.
-"""
+"""A module containing a collection of plugins that produce data typically
+found in Linux's /proc file system."""
 
-from typing import List
+from typing import List, Generator, Iterable
 
 from volatility.framework import contexts
 from volatility.framework import renderers, constants, interfaces
@@ -17,7 +16,7 @@ from volatility.framework.renderers import format_hints
 
 
 class Lsmod(plugins.PluginInterface):
-    """Lists loaded kernel modules"""
+    """Lists loaded kernel modules."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -28,8 +27,18 @@ class Lsmod(plugins.PluginInterface):
         ]
 
     @classmethod
-    def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str, vmlinux_symbols: str):
-        """Lists all the modules in the primary layer"""
+    def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                     vmlinux_symbols: str) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Lists all the modules in the primary layer.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            vmlinux_symbols: The name of the table containing the kernel symbols
+
+        Yields:
+            The modules present in the `layer_name` layer's modules list
+        """
         linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
         vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)

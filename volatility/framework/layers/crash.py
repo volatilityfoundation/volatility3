@@ -11,13 +11,15 @@ from volatility.framework.symbols import intermed
 
 
 class WindowsCrashDump32FormatException(exceptions.LayerException):
-    """Thrown when an error occurs with the underlying Crash file format"""
+    """Thrown when an error occurs with the underlying Crash file format."""
 
 
 class WindowsCrashDump32Layer(segmented.SegmentedLayer):
-    """A Windows crash format TranslationLayer. This TranslationLayer supports
-    Microsoft complete memory dump files. It currently does not support
-    kernel or small memory dump files."""
+    """A Windows crash format TranslationLayer.
+
+    This TranslationLayer supports Microsoft complete memory dump files.
+    It currently does not support kernel or small memory dump files.
+    """
 
     provides = {"type": "physical"}
     priority = 23
@@ -56,7 +58,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         super().__init__(context, config_path, name)
 
     def _load_segments(self) -> None:
-        """Loads up the segments from the meta_layer"""
+        """Loads up the segments from the meta_layer."""
 
         segments = []
 

@@ -60,9 +60,10 @@ def _construct_delegate_function(name: str, is_property: bool = False) -> Any:
 
 
 class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
-    """The IntermediateSymbolTable class reads a JSON file and conducts common tasks such as validation, construction
-    by looking up a JSON file from the available files and ensuring the appropriate version of the schema and proxy are
-    chosen.
+    """The IntermediateSymbolTable class reads a JSON file and conducts common
+    tasks such as validation, construction by looking up a JSON file from the
+    available files and ensuring the appropriate version of the schema and
+    proxy are chosen.
 
     The JSON format itself is made up of various groups (symbols, user_types, base_types, enums and metadata)
         * Symbols link a name to a particular offset relative to the start of a section of memory
@@ -128,11 +129,14 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
     @staticmethod
     def _closest_version(version: str, versions: Dict[Tuple[int, int, int], Type['ISFormatTable']]) \
             -> Type['ISFormatTable']:
-        """Determines the highest suitable handler for specified version format
+        """Determines the highest suitable handler for specified version
+        format.
 
-        An interface version such as Major.Minor.Patch means that Major of the provider must be equal to that of the
-          consumer, and the provider (the JSON in this instance) must have a greater minor (indicating that only additive
-          changes have been made) than the consumer (in this case, the file reader).
+        An interface version such as Major.Minor.Patch means that Major
+        of the provider must be equal to that of the   consumer, and the
+        provider (the JSON in this instance) must have a greater minor
+        (indicating that only additive   changes have been made) than
+        the consumer (in this case, the file reader).
         """
         major, minor, patch = [int(x) for x in version.split(".")]
         supported_versions = [x for x in versions if x[0] == major and x[1] >= minor]
@@ -154,9 +158,11 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
     @classmethod
     def file_symbol_url(cls, sub_path: str, filename: Optional[str] = None) -> Generator[str, None, None]:
-        """Returns an iterator of appropriate file-scheme symbol URLs that can be opened by a ResourceAccessor class
+        """Returns an iterator of appropriate file-scheme symbol URLs that can
+        be opened by a ResourceAccessor class.
 
-        Filter reduces the number of results returned to only those URLs containing that string
+        Filter reduces the number of results returned to only those URLs
+        containing that string
         """
 
         # Check user-modifiable files first, then compressed ones
@@ -203,7 +209,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                native_types: Optional[interfaces.symbols.NativeTableInterface] = None,
                table_mapping: Optional[Dict[str, str]] = None,
                class_types: Optional[Dict[str, Type[interfaces.objects.ObjectInterface]]] = None) -> str:
-        """Takes a context and loads an intermediate symbol table based on a filename.
+        """Takes a context and loads an intermediate symbol table based on a
+        filename.
 
         Args:
             context: The context that the current plugin is being run within
@@ -214,7 +221,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             table_mapping: a dictionary of table names mentioned within the ISF file, and the tables within the context which they map to
 
         Returns:
-             the name of the added symbol table"""
+             the name of the added symbol table
+        """
         urls = list(cls.file_symbol_url(sub_path, filename))
         if not urls:
             raise ValueError("No symbol files found at provided filename: {}", filename)
@@ -239,7 +247,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta):
-    """Provide a base class to identify all subclasses"""
+    """Provide a base class to identify all subclasses."""
     version = (0, 0, 0)
 
     def __init__(self,
@@ -261,7 +269,8 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
         self._symbol_cache = {}  # type: Dict[str, interfaces.symbols.SymbolInterface]
 
     def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
-        """Determines the appropriate native_types to use from the JSON data"""
+        """Determines the appropriate native_types to use from the JSON
+        data."""
         # TODO: Consider how to generate the natives entirely from the ISF
         classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
         for nc in sorted(classes):
@@ -288,16 +297,17 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
 
     @property
     def metadata(self) -> Optional[interfaces.symbols.MetadataInterface]:
-        """Returns a metadata object containing information about the symbol table"""
+        """Returns a metadata object containing information about the symbol
+        table."""
         return None
 
 
 class Version1Format(ISFormatTable):
-    """Class for storing intermediate debugging data as objects and classes"""
+    """Class for storing intermediate debugging data as objects and classes."""
     version = (0, 0, 1)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
-        """Returns the location offset given by the symbol name"""
+        """Returns the location offset given by the symbol name."""
         # TODO: Add the ability to add/remove/change symbols after creation
         # note that this should invalidate/update the cache
         if self._symbol_cache.get(name, None):
@@ -310,17 +320,17 @@ class Version1Format(ISFormatTable):
 
     @property
     def symbols(self) -> Iterable[str]:
-        """Returns an iterator of the symbol names"""
+        """Returns an iterator of the symbol names."""
         return list(self._json_object.get('symbols', {}))
 
     @property
     def enumerations(self) -> Iterable[str]:
-        """Returns an iterator of the available enumerations"""
+        """Returns an iterator of the available enumerations."""
         return list(self._json_object.get('enums', {}))
 
     @property
     def types(self) -> Iterable[str]:
-        """Returns an iterator of the symbol type names"""
+        """Returns an iterator of the symbol type names."""
         return list(self._json_object.get('user_types', {})) + list(self.natives.types)
 
     def get_type_class(self, name: str) -> Type[interfaces.objects.ObjectInterface]:
@@ -336,7 +346,7 @@ class Version1Format(ISFormatTable):
             del self._overrides[name]
 
     def _interdict_to_template(self, dictionary: Dict[str, Any]) -> interfaces.objects.Template:
-        """Converts an intermediate format dict into an object template"""
+        """Converts an intermediate format dict into an object template."""
         if not dictionary:
             raise exceptions.SymbolSpaceError("Invalid intermediate dictionary: {}".format(dictionary))
 
@@ -383,7 +393,8 @@ class Version1Format(ISFormatTable):
         return objects.templates.ReferenceTemplate(type_name = reference_name)
 
     def _lookup_enum(self, name: str) -> Dict[str, Any]:
-        """Looks up an enumeration and returns a dictionary of __init__ parameters for an Enum"""
+        """Looks up an enumeration and returns a dictionary of __init__
+        parameters for an Enum."""
         lookup = self._json_object['enums'].get(name, None)
         if not lookup:
             raise exceptions.SymbolSpaceError("Unknown enumeration: {}".format(name))
@@ -391,7 +402,7 @@ class Version1Format(ISFormatTable):
         return result
 
     def get_enumeration(self, enum_name: str) -> interfaces.objects.Template:
-        """Resolves an individual enumeration"""
+        """Resolves an individual enumeration."""
         if constants.BANG in enum_name:
             raise exceptions.SymbolError("Enumeration for a different table requested: {}".format(enum_name))
         if enum_name not in self._json_object['enums']:
@@ -407,7 +418,7 @@ class Version1Format(ISFormatTable):
             choices = curdict['constants'])
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:
-        """Resolves an individual symbol"""
+        """Resolves an individual symbol."""
         if constants.BANG in type_name:
             raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
         if type_name not in self._json_object['user_types']:
@@ -432,11 +443,12 @@ class Version1Format(ISFormatTable):
 
 
 class Version2Format(Version1Format):
-    """Class for storing intermediate debugging data as objects and classes"""
+    """Class for storing intermediate debugging data as objects and classes."""
     version = (2, 0, 0)
 
     def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
-        """Determines the appropriate native_types to use from the JSON data"""
+        """Determines the appropriate native_types to use from the JSON
+        data."""
         classes = {"x64": native.x64NativeTable, "x86": native.x86NativeTable}
         for nc in sorted(classes):
             native_class = classes[nc]
@@ -453,7 +465,7 @@ class Version2Format(Version1Format):
         return None
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:
-        """Resolves an individual symbol"""
+        """Resolves an individual symbol."""
         if constants.BANG in type_name:
             raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
         if type_name not in self._json_object['user_types']:
@@ -481,11 +493,11 @@ class Version2Format(Version1Format):
 
 
 class Version3Format(Version2Format):
-    """Class for storing intermediate debugging data as objects and classes"""
+    """Class for storing intermediate debugging data as objects and classes."""
     version = (2, 1, 0)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
-        """Returns the symbol given by the symbol name"""
+        """Returns the symbol given by the symbol name."""
         if self._symbol_cache.get(name, None):
             return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
@@ -500,7 +512,7 @@ class Version3Format(Version2Format):
 
 
 class Version4Format(Version3Format):
-    """Class for storing intermediate debugging data as objects and classes"""
+    """Class for storing intermediate debugging data as objects and classes."""
     version = (4, 0, 0)
 
     format_mapping = {
@@ -512,7 +524,8 @@ class Version4Format(Version3Format):
     }
 
     def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
-        """Determines the appropriate native_types to use from the JSON data"""
+        """Determines the appropriate native_types to use from the JSON
+        data."""
         native_dict = {}
         base_types = self._json_object['base_types']
         for base_type in base_types:
@@ -531,11 +544,11 @@ class Version4Format(Version3Format):
 
 
 class Version5Format(Version4Format):
-    """Class for storing intermediate debugging data as objects and classes"""
+    """Class for storing intermediate debugging data as objects and classes."""
     version = (4, 1, 0)
 
     def get_symbol(self, name: str) -> interfaces.symbols.SymbolInterface:
-        """Returns the symbol given by the symbol name"""
+        """Returns the symbol given by the symbol name."""
         if self._symbol_cache.get(name, None):
             return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
@@ -553,12 +566,12 @@ class Version5Format(Version4Format):
 
 
 class Version6Format(Version5Format):
-    """Class for storing intermediate debugging data as objects and classes"""
+    """Class for storing intermediate debugging data as objects and classes."""
     version = (6, 0, 0)
 
     @property
     def metadata(self) -> Optional[interfaces.symbols.MetadataInterface]:
-        """Returns a MetadataInterface object"""
+        """Returns a MetadataInterface object."""
         if self._json_object.get('metadata', {}).get('windows'):
             return metadata.WindowsMetadata(self._json_object['metadata']['windows'])
         if self._json_object.get('metadata', {}).get('linux'):
@@ -567,5 +580,5 @@ class Version6Format(Version5Format):
 
 
 class Version7Format(Version6Format):
-    """Class for storing intermediate debugging data as objects and classes"""
+    """Class for storing intermediate debugging data as objects and classes."""
     version = (6, 1, 0)

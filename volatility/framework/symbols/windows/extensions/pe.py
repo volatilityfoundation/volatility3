@@ -60,9 +60,9 @@ class _IMAGE_DOS_HEADER(objects.StructType):
         return result
 
     def fix_image_base(self, raw_data: bytes, nt_header: interfaces.objects.ObjectInterface) -> bytes:
-        """Fix the _OPTIONAL_HEADER.ImageBase value (which is either an unsigned long
-        for 32-bit PE's or unsigned long long for 64-bit PE's) to match the address
-        where the PE file was carved out of memory.
+        """Fix the _OPTIONAL_HEADER.ImageBase value (which is either an
+        unsigned long for 32-bit PE's or unsigned long long for 64-bit PE's) to
+        match the address where the PE file was carved out of memory.
 
         Args:
             raw_data: a bytes object of the PE's data
@@ -79,9 +79,9 @@ class _IMAGE_DOS_HEADER(objects.StructType):
         return raw_data[:image_base_offset] + newval + raw_data[image_base_offset + member_size:]
 
     def reconstruct(self) -> Generator[Tuple[int, bytes], None, None]:
-        """This method generates the content necessary to reconstruct a PE
-        file from memory. It preserves slack space (similar to the old --memory)
-        and automatically fixes the ImageBase in the output PE file.
+        """This method generates the content necessary to reconstruct a PE file
+        from memory. It preserves slack space (similar to the old --memory) and
+        automatically fixes the ImageBase in the output PE file.
 
         Returns:
             <tuple> of (<int> offset, <bytes> data)

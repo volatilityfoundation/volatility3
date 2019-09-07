@@ -9,10 +9,10 @@ from volatility.framework import renderers
 from typing import Union
 
 class _SERVICE_RECORD(objects.StructType):
-    """A service record structure"""
+    """A service record structure."""
 
     def is_valid(self) -> bool:
-        """Determine if the structure is valid"""
+        """Determine if the structure is valid."""
         if self.Order < 0 or self.Order > 0xFFFF:
             return False
 
@@ -25,7 +25,7 @@ class _SERVICE_RECORD(objects.StructType):
         return True
 
     def get_pid(self) -> Union[int, interfaces.renderers.BaseAbsentValue]:
-        """Return the pid of the process, if any"""
+        """Return the pid of the process, if any."""
         if self.State.description != "SERVICE_RUNNING" or "PROCESS" not in self.get_type():
             return renderers.NotApplicableValue()
 
@@ -35,7 +35,7 @@ class _SERVICE_RECORD(objects.StructType):
             return renderers.UnreadableValue()
 
     def get_binary(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
-        """Returns the binary associated with the service"""
+        """Returns the binary associated with the service."""
         if self.State.description != "SERVICE_RUNNING":
             return renderers.NotApplicableValue()
 
@@ -56,7 +56,7 @@ class _SERVICE_RECORD(objects.StructType):
             return renderers.UnreadableValue()
 
     def get_name(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
-        """Returns the service name"""
+        """Returns the service name."""
         try:
             return self.ServiceName.dereference().cast("string",
                                                        encoding = "utf-16",
@@ -66,7 +66,7 @@ class _SERVICE_RECORD(objects.StructType):
             return renderers.UnreadableValue()
 
     def get_display(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
-        """Returns the service display"""
+        """Returns the service display."""
         try:
             return self.DisplayName.dereference().cast("string",
                                                        encoding = "utf-16",
@@ -76,7 +76,7 @@ class _SERVICE_RECORD(objects.StructType):
             return renderers.UnreadableValue()
 
     def get_type(self) -> str:
-        """Returns the binary types"""
+        """Returns the binary types."""
 
         SERVICE_TYPE_FLAGS = {
             'SERVICE_KERNEL_DRIVER': 1,
@@ -92,7 +92,7 @@ class _SERVICE_RECORD(objects.StructType):
         return "|".join(type_flags(self.Type))
 
     def traverse(self):
-        """Generator that enumerates other services"""
+        """Generator that enumerates other services."""
 
         try:
             if hasattr(self, "PrevEntry"):
@@ -113,10 +113,10 @@ class _SERVICE_RECORD(objects.StructType):
             raise StopIteration
 
 class _SERVICE_HEADER(objects.StructType):
-    """A service header structure"""
+    """A service header structure."""
 
     def is_valid(self) -> bool:
-        """Determine if the structure is valid"""
+        """Determine if the structure is valid."""
         try:
             return self.ServiceRecord.is_valid()
         except exceptions.InvalidAddressException:

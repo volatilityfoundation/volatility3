@@ -18,7 +18,7 @@ vollog = logging.getLogger(__name__)
 
 
 class Intel(linear.LinearlyMappedLayer):
-    """Translation Layer for the Intel IA32 memory mapping"""
+    """Translation Layer for the Intel IA32 memory mapping."""
 
     priority = 40
     _entry_format = "<I"
@@ -53,14 +53,16 @@ class Intel(linear.LinearlyMappedLayer):
 
     @classproperty
     def page_size(cls) -> int:
-        """Page size for the intel memory layers
+        """Page size for the intel memory layers.
 
-        All Intel layers work on 4096 byte pages"""
+        All Intel layers work on 4096 byte pages
+        """
         return 1 << cls._page_size_in_bits
 
     @classproperty
     def bits_per_register(cls) -> int:
-        """Returns the bits_per_register to determine the range of an IntelTranslationLayer"""
+        """Returns the bits_per_register to determine the range of an
+        IntelTranslationLayer."""
         return cls._bits_per_register
 
     @classproperty
@@ -77,7 +79,7 @@ class Intel(linear.LinearlyMappedLayer):
 
     @staticmethod
     def _mask(value: int, high_bit: int, low_bit: int) -> int:
-        """Returns the bits of a value between highbit and lowbit inclusive"""
+        """Returns the bits of a value between highbit and lowbit inclusive."""
         high_mask = (1 << (high_bit + 1)) - 1
         low_mask = (1 << low_bit) - 1
         mask = (high_mask ^ low_mask)
@@ -86,13 +88,15 @@ class Intel(linear.LinearlyMappedLayer):
 
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
-        """Returns whether a particular page is valid based on its entry"""
+        """Returns whether a particular page is valid based on its entry."""
         return bool(entry & 1)
 
     def _translate(self, offset: int) -> Tuple[int, int, str]:
-        """Translates a specific offset based on paging tables
+        """Translates a specific offset based on paging tables.
 
-           Returns the translated offset, the contiguous pagesize that the translated address lives in and the layer_name that the address lives in
+        Returns the translated offset, the contiguous pagesize that the
+        translated address lives in and the layer_name that the address
+        lives in
         """
         entry, position = self._translate_entry(offset)
 
@@ -105,9 +109,9 @@ class Intel(linear.LinearlyMappedLayer):
         return page, 1 << (position + 1), self._base_layer
 
     def _translate_entry(self, offset):
-        """Translates a specific offset based on paging tables
+        """Translates a specific offset based on paging tables.
 
-           Returns the translated entry value
+        Returns the translated entry value
         """
         # Setup the entry and how far we are through the offset
         # Position maintains the number of bits left to process
@@ -149,7 +153,7 @@ class Intel(linear.LinearlyMappedLayer):
 
     @functools.lru_cache(1025)
     def _get_valid_table(self, base_address: int) -> Optional[bytes]:
-        """Extracts the table, validates it and returns it if it's valid"""
+        """Extracts the table, validates it and returns it if it's valid."""
         table = self._context.layers.read(self._base_layer, base_address, self.page_size)
 
         # If the table is entirely duplicates, then mark the whole table as bad
@@ -158,7 +162,8 @@ class Intel(linear.LinearlyMappedLayer):
         return table
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        """Returns whether the address offset can be translated to a valid address"""
+        """Returns whether the address offset can be translated to a valid
+        address."""
         try:
             # TODO: Consider reimplementing this, since calls to mapping can call is_valid
             return all([
@@ -169,9 +174,11 @@ class Intel(linear.LinearlyMappedLayer):
             return False
 
     def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
-        """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
+        """Returns a sorted iterable of (offset, mapped_offset, length, layer)
+        mappings.
 
-           This allows translation layers to provide maps of contiguous regions in one layer
+        This allows translation layers to provide maps of contiguous
+        regions in one layer
         """
         if length == 0:
             try:
@@ -208,7 +215,8 @@ class Intel(linear.LinearlyMappedLayer):
 
     @property
     def dependencies(self) -> List[str]:
-        """Returns a list of the lower layer names that this layer is dependent upon"""
+        """Returns a list of the lower layer names that this layer is dependent
+        upon."""
         return [self._base_layer] + self._swap_layers
 
     @classmethod
@@ -223,7 +231,8 @@ class Intel(linear.LinearlyMappedLayer):
 
 
 class IntelPAE(Intel):
-    """Class for handling Physical Address Extensions for Intel architectures"""
+    """Class for handling Physical Address Extensions for Intel
+    architectures."""
 
     priority = 35
     _entry_format = "<Q"
@@ -234,7 +243,8 @@ class IntelPAE(Intel):
 
 
 class Intel32e(Intel):
-    """Class for handling 64-bit (32-bit extensions) for Intel architectures"""
+    """Class for handling 64-bit (32-bit extensions) for Intel
+    architectures."""
 
     priority = 30
     _direct_metadata = collections.ChainMap({'architecture': 'Intel64'}, Intel._direct_metadata)
@@ -250,14 +260,14 @@ class WindowsMixin(Intel):
 
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
-        """Returns whether a particular page is valid based on its entry
+        """Returns whether a particular page is valid based on its entry.
 
-           Windows uses additional "available" bits to store flags
-           These flags allow windows to determine whether a page is still valid
+        Windows uses additional "available" bits to store flags
+        These flags allow windows to determine whether a page is still valid
 
-           Bit 11 is the transition flag, and Bit 10 is the prototype flag
+        Bit 11 is the transition flag, and Bit 10 is the prototype flag
 
-           For more information, see Windows Internals (6th Ed, Part 2, pages 268-269)
+        For more information, see Windows Internals (6th Ed, Part 2, pages 268-269)
         """
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 

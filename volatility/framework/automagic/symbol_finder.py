@@ -14,7 +14,7 @@ vollog = logging.getLogger(__name__)
 
 
 class SymbolFinder(interfaces.automagic.AutomagicInterface):
-    """Symbol loader based on signature strings"""
+    """Symbol loader based on signature strings."""
     priority = 40
 
     banner_config_key = "banner"  # type: str
@@ -28,7 +28,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
 
     @property
     def banners(self) -> symbol_cache.BannersType:
-        """Creates a cached copy of the results, but only it's been requested"""
+        """Creates a cached copy of the results, but only it's been
+        requested."""
         if not self._banners:
             if not self.banner_cache:
                 raise RuntimeError("Cache has not been properly defined for {}".format(self.__class__.__name__))
@@ -40,7 +41,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
                  progress_callback: constants.ProgressCallback = None) -> None:
-        """Searches for SymbolTableRequirements and attempt to populate them"""
+        """Searches for SymbolTableRequirements and attempt to populate
+        them."""
 
         # Bomb out early if our details haven't been configured
         if self.symbol_class is None:
@@ -73,8 +75,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                      requirement: interfaces.configuration.ConstructableRequirementInterface,
                      layer_name: str,
                      progress_callback: constants.ProgressCallback = None) -> None:
-        """Accepts a context, config_path and SymbolTableRequirement, with a constructed layer_name
-        and scans the layer for banners"""
+        """Accepts a context, config_path and SymbolTableRequirement, with a
+        constructed layer_name and scans the layer for banners."""
 
         # Bomb out early if there's no banners
         if not self.banners:

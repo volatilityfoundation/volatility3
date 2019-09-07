@@ -1,8 +1,11 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""Defines layers for containing data.  One layer may combine other layers, map data based on the data itself,
- or map a procedure (such as decryption) across another layer of data."""
+"""Defines layers for containing data.
+
+One layer may combine other layers, map data based on the data itself,
+or map a procedure (such as decryption) across another layer of data.
+"""
 import collections.abc
 import functools
 import logging
@@ -31,7 +34,8 @@ IteratorValue = Tuple[List[Tuple[str, int, int]], int]
 
 
 class ScannerInterface(metaclass = ABCMeta):
-    """Class for layer scanners that return locations of particular values from within the data
+    """Class for layer scanners that return locations of particular values from
+    within the data.
 
     These are designed to be given a chunk of data and return a generator which yields
     any found items.  They should NOT perform complex/time-consuming tasks, these should
@@ -69,7 +73,8 @@ class ScannerInterface(metaclass = ABCMeta):
 
     @context.setter
     def context(self, ctx: 'interfaces.context.ContextInterface') -> None:
-        """Stores the context locally in case the scanner needs to access the layer"""
+        """Stores the context locally in case the scanner needs to access the
+        layer."""
         self._context = ctx
 
     @property
@@ -78,22 +83,27 @@ class ScannerInterface(metaclass = ABCMeta):
 
     @layer_name.setter
     def layer_name(self, layer_name: str) -> None:
-        """Stores the layer_name being scanned locally in case the scanner needs to access the layer"""
+        """Stores the layer_name being scanned locally in case the scanner
+        needs to access the layer."""
         self._layer_name = layer_name
 
     @abstractmethod
     def __call__(self, data: bytes, data_offset: int) -> Iterable[Any]:
         """Searches through a chunk of data for a particular value/pattern/etc
-           Always returns an iterator of the same type of object (need not be a volatility object)
+        Always returns an iterator of the same type of object (need not be a
+        volatility object)
 
-           data is the chunk of data to search through
-           data_offset is the offset within the layer that the data being searched starts at
+        data is the chunk of data to search through data_offset is the
+        offset within the layer that the data being searched starts at
         """
 
 
 class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metaclass = ABCMeta):
-    """A Layer that directly holds data (and does not translate it).  This is effectively a leaf node in a layer tree.
-    It directly accesses a data source and exposes it within volatility."""
+    """A Layer that directly holds data (and does not translate it).
+
+    This is effectively a leaf node in a layer tree. It directly
+    accesses a data source and exposes it within volatility.
+    """
 
     _direct_metadata = collections.ChainMap({}, {
         'architecture': 'Unknown',
@@ -114,27 +124,29 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
 
     @property
     def name(self) -> str:
-        """Returns the layer name"""
+        """Returns the layer name."""
         return self._name
 
     @property
     @abstractmethod
     def maximum_address(self) -> int:
-        """Returns the maximum valid address of the space"""
+        """Returns the maximum valid address of the space."""
 
     @property
     @abstractmethod
     def minimum_address(self) -> int:
-        """Returns the minimum valid address of the space"""
+        """Returns the minimum valid address of the space."""
 
     @property
     def address_mask(self) -> int:
-        """Returns a mask which encapsulates all the active bits of an address for this layer"""
+        """Returns a mask which encapsulates all the active bits of an address
+        for this layer."""
         return (1 << int(math.ceil(math.log2(self.maximum_address)))) - 1
 
     @abstractmethod
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        """Returns a boolean based on whether the entire chunk of data (from offset to length) is valid or not
+        """Returns a boolean based on whether the entire chunk of data (from
+        offset to length) is valid or not.
 
         Args:
             offset: The address to start determining whether bytes are readable/valid
@@ -146,39 +158,42 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
 
     @abstractmethod
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
-        """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size
+        """Reads an offset for length bytes and returns 'bytes' (not 'str') of
+        length size.
 
-           If there is a fault of any kind (such as a page fault), an exception will be thrown
-           unless pad is set, in which case the read errors will be replaced by null characters.
+        If there is a fault of any kind (such as a page fault), an exception will be thrown
+        unless pad is set, in which case the read errors will be replaced by null characters.
 
-           Args:
-               offset: The offset at which to being reading within the layer
-               length: The number of bytes to read within the layer
-               pad: A boolean indicating whether exceptions should be raised or bad bytes replaced with null characters
+        Args:
+            offset: The offset at which to being reading within the layer
+            length: The number of bytes to read within the layer
+            pad: A boolean indicating whether exceptions should be raised or bad bytes replaced with null characters
 
-           Returns:
-               The bytes read from the layer, starting at offset for length bytes
+        Returns:
+            The bytes read from the layer, starting at offset for length bytes
         """
 
     @abstractmethod
     def write(self, offset: int, data: bytes) -> None:
         """Writes a chunk of data at offset.
 
-           Any unavailable sections in the underlying bases will cause an exception to be thrown.
-           Note: Writes are not guaranteed atomic, therefore some data may have been written, even if an exception is thrown.
+        Any unavailable sections in the underlying bases will cause an exception to be thrown.
+        Note: Writes are not guaranteed atomic, therefore some data may have been written, even if an exception is thrown.
         """
 
     def destroy(self) -> None:
         """Causes a DataLayer to close any open handles, etc.
 
-           Systems that make use of Data Layers should call destroy when they are done with them.
-           This will close all handles, and make the object unreadable
-           (exceptions will be thrown using a DataLayer after destruction)"""
+        Systems that make use of Data Layers should call destroy when
+        they are done with them. This will close all handles, and make
+        the object unreadable (exceptions will be thrown using a
+        DataLayer after destruction)
+        """
         pass
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        """Returns a list of Requirement objects for this type of layer"""
+        """Returns a list of Requirement objects for this type of layer."""
         return []
 
     @property
@@ -186,7 +201,8 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
         """A list of other layer names required by this layer.
 
         Note:
-            DataLayers must never define other layers"""
+            DataLayers must never define other layers
+        """
         return []
 
     # ## General scanning methods
@@ -196,18 +212,18 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
              scanner: ScannerInterface,
              progress_callback: constants.ProgressCallback = None,
              sections: Iterable[Tuple[int, int]] = None) -> Iterable[Any]:
-        """Scans a Translation layer by chunk
+        """Scans a Translation layer by chunk.
 
-           Note: this will skip missing/unmappable chunks of memory
+        Note: this will skip missing/unmappable chunks of memory
 
-           Args:
-                context: The context containing the data layer
-                scanner: The constructed Scanner object to be applied
-                progress_callback: Method that is called periodically during scanning to update progress
-                sections: A list of (start, size) tuples defining the portions of the layer to scan
+        Args:
+             context: The context containing the data layer
+             scanner: The constructed Scanner object to be applied
+             progress_callback: Method that is called periodically during scanning to update progress
+             sections: A list of (start, size) tuples defining the portions of the layer to scan
 
-           Returns:
-                The output iterable from the scanner object having been run against the layer 
+        Returns:
+             The output iterable from the scanner object having been run against the layer
         """
         if progress_callback is not None and not callable(progress_callback):
             raise TypeError("Progress_callback is not callable")
@@ -261,7 +277,8 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                        "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
 
     def _coalesce_sections(self, sections: Iterable[Tuple[int, int]]) -> Iterable[Tuple[int, int]]:
-        """Take a list of (start, length) sections and coalesce any adjacent sections"""
+        """Take a list of (start, length) sections and coalesce any adjacent
+        sections."""
         result = []  # type: List[Tuple[int, int]]
         position = 0
         for (start, length) in sorted(sections):
@@ -288,11 +305,13 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
 
     def _scan_iterator(self, scanner: 'ScannerInterface',
                        sections: Iterable[Tuple[int, int]]) -> Iterable[IteratorValue]:
-        """Iterator that indicates which blocks in the layer are to be read by for the scanning
+        """Iterator that indicates which blocks in the layer are to be read by
+        for the scanning.
 
-        Returns a list of blocks (potentially in lower layers) that make up this chunk contiguously.
-        Chunks can be no bigger than scanner.chunk_size + scanner.overlap
-        DataLayers by default are assumed to have no holes
+        Returns a list of blocks (potentially in lower layers) that make
+        up this chunk contiguously. Chunks can be no bigger than
+        scanner.chunk_size + scanner.overlap DataLayers by default are
+        assumed to have no holes
         """
         for section_start, section_length in sections:
             offset, mapped_offset, length, layer_name = section_start, section_start, section_length, self.name
@@ -345,44 +364,51 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
 
     @property
     def metadata(self) -> Mapping:
-        """Returns a ReadOnly copy of the metadata published by this layer"""
+        """Returns a ReadOnly copy of the metadata published by this layer."""
         maps = [self.context.layers[layer_name].metadata for layer_name in self.dependencies]
         return interfaces.objects.ReadOnlyMapping(collections.ChainMap({}, self._direct_metadata, *maps))
 
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
-    """Provides a layer that translates or transforms another layer or layers.  Translation layers always depend on
-    another layer (typically translating offsets in a virtual offset space into a smaller physical offset space).
+    """Provides a layer that translates or transforms another layer or layers.
+
+    Translation layers always depend on another layer (typically
+    translating offsets in a virtual offset space into a smaller
+    physical offset space).
     """
 
     @abstractmethod
     def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
-        """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings
+        """Returns a sorted iterable of (offset, mapped_offset, length, layer)
+        mappings.
 
-           ignore_errors will provide all available maps with gaps, but their total length may not add up to the requested length
-           This allows translation layers to provide maps of contiguous regions in one layer
+        ignore_errors will provide all available maps with gaps, but
+        their total length may not add up to the requested length This
+        allows translation layers to provide maps of contiguous regions
+        in one layer
         """
         return []
 
     @property
     @abstractmethod
     def dependencies(self) -> List[str]:
-        """Returns a list of layer names that this layer translates onto"""
+        """Returns a list of layer names that this layer translates onto."""
         return []
 
     def _decode(self, data: bytes, mapped_offset: int, offset: int) -> bytes:
-        """Decodes any necessary data"""
+        """Decodes any necessary data."""
         return data
 
     def _encode(self, data: bytes, mapped_offset: int, offset: int) -> bytes:
-        """Encodes any necessary data"""
+        """Encodes any necessary data."""
         return data
 
     # ## Read/Write functions for mapped pages
 
     @functools.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
-        """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
+        """Reads an offset for length bytes and returns 'bytes' (not 'str') of
+        length size."""
         current_offset = offset
         output = []  # type: List[bytes]
         for (layer_offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
@@ -407,7 +433,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         return recovered_data + b"\x00" * (length - len(recovered_data))
 
     def write(self, offset: int, value: bytes) -> None:
-        """Writes a value at offset, distributing the writing across any underlying mapping"""
+        """Writes a value at offset, distributing the writing across any
+        underlying mapping."""
         current_offset = offset
         length = len(value)
         for (layer_offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length):
@@ -445,38 +472,38 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
 
 class LayerContainer(collections.abc.Mapping):
-    """Container for multiple layers of data"""
+    """Container for multiple layers of data."""
 
     def __init__(self) -> None:
         self._layers = {}  # type: Dict[str, DataLayerInterface]
 
     def read(self, layer: str, offset: int, length: int, pad: bool = False) -> bytes:
-        """Reads from a particular layer at offset for length bytes
+        """Reads from a particular layer at offset for length bytes.
 
-           Returns 'bytes' not 'str'
+        Returns 'bytes' not 'str'
 
-           Args:
-               layer: The name of the layer to read from
-               offset: Where to begin reading within the layer
-               length: How many bytes to read from the layer
-               pad: Whether to raise exceptions or return null bytes when errors occur
+        Args:
+            layer: The name of the layer to read from
+            offset: Where to begin reading within the layer
+            length: How many bytes to read from the layer
+            pad: Whether to raise exceptions or return null bytes when errors occur
 
-           Returns:
-               The result of reading from the requested layer
+        Returns:
+            The result of reading from the requested layer
         """
         return self[layer].read(offset, length, pad)
 
     def write(self, layer: str, offset: int, data: bytes) -> None:
-        """Writes to a particular layer at offset for length bytes"""
+        """Writes to a particular layer at offset for length bytes."""
         self[layer].write(offset, data)
 
     def add_layer(self, layer: DataLayerInterface) -> None:
-        """Adds a layer to memory model
+        """Adds a layer to memory model.
 
-           This will throw an exception if the required dependencies are not met
+        This will throw an exception if the required dependencies are not met
 
-           Args:
-               layer: the layer to add to the list of layers (based on layer.name)
+        Args:
+            layer: the layer to add to the list of layers (based on layer.name)
         """
         if layer.name in self._layers:
             raise exceptions.LayerException(layer.name, "Layer already exists: {}".format(layer.name))
@@ -488,12 +515,12 @@ class LayerContainer(collections.abc.Mapping):
         self._layers[layer.name] = layer
 
     def del_layer(self, name: str) -> None:
-        """Removes the layer called name
+        """Removes the layer called name.
 
-           This will throw an exception if other layers depend upon this layer
+        This will throw an exception if other layers depend upon this layer
 
-           Args:
-               name: The name of the layer to delete
+        Args:
+            name: The name of the layer to delete
         """
         for layer in self._layers:
             depend_list = [superlayer for superlayer in self._layers if name in self._layers[layer].dependencies]
@@ -505,13 +532,14 @@ class LayerContainer(collections.abc.Mapping):
         del self._layers[name]
 
     def free_layer_name(self, prefix: str = "layer") -> str:
-        """Returns an unused layer name to ensure no collision occurs when inserting a layer
+        """Returns an unused layer name to ensure no collision occurs when
+        inserting a layer.
 
-           Args:
-               prefix: A descriptive string with which to prefix the layer name
+        Args:
+            prefix: A descriptive string with which to prefix the layer name
 
-           Returns:
-               A string containing a name, prefixed with prefix, not currently in use within the LayerContainer
+        Returns:
+            A string containing a name, prefixed with prefix, not currently in use within the LayerContainer
         """
         count = 1
         while prefix + str(count) in self:
@@ -519,7 +547,7 @@ class LayerContainer(collections.abc.Mapping):
         return prefix + str(count)
 
     def __getitem__(self, name: str) -> DataLayerInterface:
-        """Returns the layer of specified name"""
+        """Returns the layer of specified name."""
         return self._layers[name]
 
     def __len__(self) -> int:
@@ -529,13 +557,14 @@ class LayerContainer(collections.abc.Mapping):
         return iter(self._layers)
 
     def check_cycles(self) -> None:
-        """Runs through the available layers and identifies if there are cycles in the DAG"""
+        """Runs through the available layers and identifies if there are cycles
+        in the DAG."""
         # TODO: Is having a cycle check necessary?
         raise NotImplementedError("Cycle checking has not yet been implemented")
 
 
 class DummyProgress(object):
-    """A class to emulate Multiprocessing/threading Value objects"""
+    """A class to emulate Multiprocessing/threading Value objects."""
 
     def __init__(self):
         self.value = 0

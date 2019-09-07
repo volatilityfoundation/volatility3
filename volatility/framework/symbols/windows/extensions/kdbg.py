@@ -9,7 +9,7 @@ from volatility.framework import objects
 class _KDDEBUGGER_DATA64(objects.StructType):
 
     def get_build_lab(self):
-        """Returns the NT build lab string from the KDBG"""
+        """Returns the NT build lab string from the KDBG."""
 
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table().name

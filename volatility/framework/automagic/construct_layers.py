@@ -1,8 +1,9 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""An automagic module to use configuration data to configure and then construct classes that fulfill the descendants
-of a :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`."""
+"""An automagic module to use configuration data to configure and then
+construct classes that fulfill the descendants of a :class:`~volatility.framewo
+rk.interfaces.configuration.ConfigurableInterface`."""
 
 import logging
 from typing import List
@@ -14,7 +15,7 @@ vollog = logging.getLogger(__name__)
 
 
 class ConstructionMagic(interfaces.automagic.AutomagicInterface):
-    """Constructs underlying layers
+    """Constructs underlying layers.
 
     Class to run through the requirement tree of the :class:`~volatility.framework.interfaces.configuration.ConfigurableInterface`
     and from the bottom of the tree upwards, attempt to construct all

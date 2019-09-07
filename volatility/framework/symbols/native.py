@@ -9,7 +9,7 @@ from volatility.framework import constants, interfaces, objects
 
 
 class NativeTable(interfaces.symbols.NativeTableInterface):
-    """Symbol List that handles Native types"""
+    """Symbol List that handles Native types."""
 
     # FIXME: typing the native_dictionary as Tuple[interfaces.objects.ObjectInterface, str] throws many errors
     def __init__(self, name: str, native_dictionary: Dict[str, Any]) -> None:
@@ -29,14 +29,16 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
 
     @property
     def types(self) -> Iterable[str]:
-        """Returns an iterator of the symbol type names"""
+        """Returns an iterator of the symbol type names."""
         return self._types
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:
-        """Resolves a symbol name into an object template
+        """Resolves a symbol name into an object template.
 
-           This always construct a new python object, rather than using a cached value otherwise changes made later may
-           affect the cached copy.  Calling clone after every native type construction was extremely slow.
+        This always construct a new python object, rather than using a
+        cached value otherwise changes made later may affect the cached
+        copy.  Calling clone after every native type construction was
+        extremely slow.
         """
         # NOTE: These need updating whenever the object init signatures change
         prefix = ""

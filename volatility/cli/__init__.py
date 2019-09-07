@@ -1,14 +1,14 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""A CommandLine User Interface for the volatility framework
+"""A CommandLine User Interface for the volatility framework.
 
-   User interfaces make use of the framework to:
-    * determine available plugins
-    * request necessary information for those plugins from the user
-    * determine what "automagic" modules will be used to populate information the user does not provide
-    * run the plugin
-    * display the results
+User interfaces make use of the framework to:
+ * determine available plugins
+ * request necessary information for those plugins from the user
+ * determine what "automagic" modules will be used to populate information the user does not provide
+ * run the plugin
+ * display the results
 """
 
 import argparse
@@ -39,13 +39,14 @@ vollog.addHandler(console)
 
 
 class PrintedProgress(object):
-    """A progress handler that prints the progress value and the description onto the command line"""
+    """A progress handler that prints the progress value and the description
+    onto the command line."""
 
     def __init__(self):
         self._max_message_len = 0
 
     def __call__(self, progress: Union[int, float], description: str = None):
-        """ A simple function for providing text-based feedback
+        """A simple function for providing text-based feedback.
 
         .. warning:: Only for development use.
 
@@ -59,20 +60,21 @@ class PrintedProgress(object):
 
 
 class MuteProgress(PrintedProgress):
-    """A dummy progress handler that produces no output when called"""
+    """A dummy progress handler that produces no output when called."""
 
     def __call__(self, progress: Union[int, float], description: str = None):
         pass
 
 
 class CommandLine(interfaces.plugins.FileConsumerInterface):
-    """Constructs a command-line interface object for users to run plugins"""
+    """Constructs a command-line interface object for users to run plugins."""
 
     def __init__(self):
         self.output_dir = None
 
     def run(self):
-        """Executes the command line module, taking the system arguments, determining the plugin to run and then running it"""
+        """Executes the command line module, taking the system arguments,
+        determining the plugin to run and then running it."""
         sys.stdout.write("Volatility Framework {}\n".format(constants.PACKAGE_VERSION))
 
         volatility.framework.require_interface_version(0, 0, 0)
@@ -268,7 +270,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
 
     def process_exceptions(self, excp):
-        """Provide useful feedback if an exception occurs"""
+        """Provide useful feedback if an exception occurs."""
         # Add a blank newline
         print("")
         translation_failed = False
@@ -295,7 +297,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
     def populate_config(self, context: interfaces.context.ContextInterface,
                         configurables_list: Dict[str, interfaces.configuration.ConfigurableInterface],
                         args: argparse.Namespace, plugin_config_path: str) -> None:
-        """Populate the context config based on the returned args
+        """Populate the context config based on the returned args.
 
         We have already determined these elements must be descended from ConfigurableInterface
 
@@ -329,7 +331,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                     context.config[extended_path] = value
 
     def consume_file(self, filedata: interfaces.plugins.FileInterface):
-        """Consumes a file as produced by a plugin"""
+        """Consumes a file as produced by a plugin."""
         if self.output_dir is None:
             raise ValueError("Output directory has not been correctly specified")
         os.makedirs(self.output_dir, exist_ok = True)
@@ -347,7 +349,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
     def populate_requirements_argparse(self, parser: Union[argparse.ArgumentParser, argparse._ArgumentGroup],
                                        configurable: Type[interfaces.configuration.ConfigurableInterface]):
-        """Adds the plugin's simple requirements to the provided parser
+        """Adds the plugin's simple requirements to the provided parser.
 
         Args:
             parser: The parser to add the plugin's (simple) requirements to
@@ -390,7 +392,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
 class HelpfulSubparserAction(argparse._SubParsersAction):
-    """Class to either select a unique plugin based on a substring, or identify the alternatives"""
+    """Class to either select a unique plugin based on a substring, or identify
+    the alternatives."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -433,5 +436,6 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
 
 
 def main():
-    """A convenience function for constructing and running the :class:`CommandLine`'s run method"""
+    """A convenience function for constructing and running the
+    :class:`CommandLine`'s run method."""
     CommandLine().run()

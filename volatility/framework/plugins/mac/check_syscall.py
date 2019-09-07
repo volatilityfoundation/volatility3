@@ -15,7 +15,7 @@ vollog = logging.getLogger(__name__)
 
 
 class Check_syscall(plugins.PluginInterface):
-    """Check system call table for hooks"""
+    """Check system call table for hooks."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

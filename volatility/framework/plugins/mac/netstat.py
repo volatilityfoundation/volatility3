@@ -16,7 +16,7 @@ vollog = logging.getLogger(__name__)
 
 
 class Netstat(plugins.PluginInterface):
-    """Lists all network connections for all processes"""
+    """Lists all network connections for all processes."""
 
     @classmethod
     def get_requirements(cls):

@@ -9,7 +9,7 @@ from volatility.framework import interfaces, objects, constants
 
 def array_to_string(array: 'objects.Array', count: Optional[int] = None,
                     errors: str = 'replace') -> interfaces.objects.ObjectInterface:
-    """Takes a volatility Array of characters and returns a string"""
+    """Takes a volatility Array of characters and returns a string."""
     # TODO: Consider checking the Array's target is a native char
     if count is None:
         count = array.vol.count
@@ -20,7 +20,7 @@ def array_to_string(array: 'objects.Array', count: Optional[int] = None,
 
 
 def pointer_to_string(pointer: 'objects.Pointer', count: int, errors: str = 'replace'):
-    """Takes a volatility Pointer to characters and returns a string"""
+    """Takes a volatility Pointer to characters and returns a string."""
     if not isinstance(pointer, objects.Pointer):
         raise TypeError("pointer_to_string takes a Pointer")
     if count < 1:
@@ -32,7 +32,7 @@ def pointer_to_string(pointer: 'objects.Pointer', count: int, errors: str = 'rep
 def array_of_pointers(array: interfaces.objects.ObjectInterface, count: int,
                       subtype: Union[str, interfaces.objects.Template],
                       context: interfaces.context.ContextInterface) -> interfaces.objects.ObjectInterface:
-    """Takes an object, and recasts it as an array of pointers to subtype"""
+    """Takes an object, and recasts it as an array of pointers to subtype."""
     symbol_table = array.vol.type_name.split(constants.BANG)[0]
     if isinstance(subtype, str) and context is not None:
         subtype = context.symbol_space.get_type(subtype)

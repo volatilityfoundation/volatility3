@@ -14,7 +14,7 @@ import volatility.plugins.windows.poolscanner as poolscanner
 
 
 class PsScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
-    """Scans for processes present in a particular windows memory image"""
+    """Scans for processes present in a particular windows memory image."""
 
     @classmethod
     def get_requirements(cls):
@@ -30,7 +30,16 @@ class PsScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
                        layer_name: str,
                        symbol_table: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
-        """Scans for processes using the poolscanner module and constraints"""
+        """Scans for processes using the poolscanner module and constraints.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+
+        Returns:
+            A list of processes found by scanning the `layer_name` layer for process pool signatures
+        """
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Pro\xe3', b'Proc'])
 

@@ -95,7 +95,8 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
         return layer_name
 
     def _check_header(self) -> Optional[Tuple[str, interfaces.objects.ObjectInterface]]:
-        """Verifies the header of the PDB file and returns the version of the file"""
+        """Verifies the header of the PDB file and returns the version of the
+        file."""
         for header in self._headers:
             header_type = self.pdb_symbol_table + constants.BANG + header
             current_header = self.context.object(header_type, self._base_layer, 0)
@@ -110,7 +111,8 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
 
     @property
     def dependencies(self) -> List[str]:
-        """Returns a list of the lower layers that this layer is dependent upon"""
+        """Returns a list of the lower layers that this layer is dependent
+        upon."""
         return [self._base_layer]
 
     @classmethod

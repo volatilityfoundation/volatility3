@@ -5,7 +5,8 @@ from volatility.framework import exceptions, interfaces
 
 
 class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
-    """Class to differentiate Linearly Mapped layers (where a => b implies that a + c => b + c)"""
+    """Class to differentiate Linearly Mapped layers (where a => b implies that
+    a + c => b + c)"""
 
     ### Translation layer convenience function
 
@@ -29,7 +30,8 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
 
     @functools.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
-        """Reads an offset for length bytes and returns 'bytes' (not 'str') of length size"""
+        """Reads an offset for length bytes and returns 'bytes' (not 'str') of
+        length size."""
         current_offset = offset
         output = []  # type: List[bytes]
         for (offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
@@ -48,7 +50,8 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
         return recovered_data + b"\x00" * (length - len(recovered_data))
 
     def write(self, offset: int, value: bytes) -> None:
-        """Writes a value at offset, distributing the writing across any underlying mapping"""
+        """Writes a value at offset, distributing the writing across any
+        underlying mapping."""
         current_offset = offset
         length = len(value)
         for (offset, mapped_offset, length, layer) in self.mapping(offset, length):

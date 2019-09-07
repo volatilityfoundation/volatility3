@@ -28,17 +28,19 @@ vollog.addHandler(console)
 
 
 class VolShell(cli.CommandLine):
-    """Program to allow interactive interaction with a memory image
+    """Program to allow interactive interaction with a memory image.
 
-    This allows a memory image to be examined through an interactive python terminal with all the volatility support
-    calls available."""
+    This allows a memory image to be examined through an interactive
+    python terminal with all the volatility support calls available.
+    """
 
     def __init__(self):
         super().__init__()
         self.output_dir = None
 
     def run(self):
-        """Executes the command line module, taking the system arguments, determining the plugin to run and then running it"""
+        """Executes the command line module, taking the system arguments,
+        determining the plugin to run and then running it."""
         sys.stdout.write("Volshell (Volatility Framework) {}\n".format(constants.PACKAGE_VERSION))
 
         framework.require_interface_version(0, 0, 0)
@@ -219,5 +221,6 @@ class VolShell(cli.CommandLine):
 
 
 def main():
-    """A convenience function for constructing and running the :class:`CommandLine`'s run method"""
+    """A convenience function for constructing and running the
+    :class:`CommandLine`'s run method."""
     VolShell().run()

@@ -16,7 +16,7 @@ class GenericIntelProcess(objects.StructType):
                            dtb: Union[int, interfaces.objects.ObjectInterface],
                            config_prefix: str = None,
                            preferred_name: str = None) -> str:
-        """Constructs a new layer based on the process's DirectoryTableBase"""
+        """Constructs a new layer based on the process's DirectoryTableBase."""
 
         if config_prefix is None:
             # TODO: Ensure collisions can't happen by verifying the config_prefix is empty

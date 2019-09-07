@@ -13,7 +13,7 @@ vollog = logging.getLogger(__name__)
 
 
 class VirtMap(interfaces.plugins.PluginInterface):
-    """Lists virtual mapped sections"""
+    """Lists virtual mapped sections."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -35,7 +35,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
     @classmethod
     def determine_map(cls, module: interfaces.context.ModuleInterface) -> \
             Dict[int, List[Tuple[int, int]]]:
-        """Returns the virtual map from a windows kernel module"""
+        """Returns the virtual map from a windows kernel module."""
         result = {}
         system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
         large_page_size = (module.context.layers[module.layer_name].page_size ** 2) // module.get_type("_MMPTE").size

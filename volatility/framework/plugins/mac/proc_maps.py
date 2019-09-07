@@ -12,7 +12,7 @@ from volatility.framework.renderers import format_hints
 
 
 class Maps(interfaces_plugins.PluginInterface):
-    """Lists process memory ranges that potentially contain injected code"""
+    """Lists process memory ranges that potentially contain injected code."""
 
     @classmethod
     def get_requirements(cls):

@@ -12,7 +12,7 @@ from volatility.framework.objects import utility
 
 
 class PsList(interfaces_plugins.PluginInterface):
-    """Lists the processes present in a particular linux memory image"""
+    """Lists the processes present in a particular linux memory image."""
 
     _version = (1, 0, 0)
 
@@ -26,6 +26,14 @@ class PsList(interfaces_plugins.PluginInterface):
 
     @classmethod
     def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[Any], bool]:
+        """Constructs a filter function for process IDs.
+
+        Args:
+            pid_list: List of process IDs that are acceptable (or None if all are acceptable)
+
+        Returns:
+            Function which, when provided a process object, returns True if the process is to be filtered out of the list
+        """
         # FIXME: mypy #4973 or #2608
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
@@ -58,7 +66,16 @@ class PsList(interfaces_plugins.PluginInterface):
                    vmlinux_symbols: str,
                    filter_func: Callable[[int], bool] = lambda _: False
                    ) -> Iterable[interfaces.objects.ObjectInterface]:
-        """Lists all the tasks in the primary layer"""
+        """Lists all the tasks in the primary layer.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            vmlinux_symbols: The name of the table containing the kernel symbols
+
+        Yields:
+            Process objects
+        """
         linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
         vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)

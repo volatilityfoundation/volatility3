@@ -21,7 +21,7 @@ vollog = logging.getLogger(__name__)
 
 
 class ProcDump(interfaces_plugins.PluginInterface):
-    """Dumps process executable images"""
+    """Dumps process executable images."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

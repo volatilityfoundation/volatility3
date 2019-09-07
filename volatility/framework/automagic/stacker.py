@@ -24,7 +24,7 @@ vollog = logging.getLogger(__name__)
 
 
 class LayerStacker(interfaces.automagic.AutomagicInterface):
-    """Builds up layers in a single stack
+    """Builds up layers in a single stack.
 
     This class mimics the volatility 2 style of stacking address spaces.  It builds up various layers based on
     separate :class:`~volatility.framework.interfaces.automagic.StackerLayerInterface` classes.  These classes are
@@ -46,7 +46,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                  config_path: str,
                  requirement: interfaces.configuration.RequirementInterface,
                  progress_callback: constants.ProgressCallback = None) -> Optional[List[str]]:
-        """Runs the automagic over the configurable"""
+        """Runs the automagic over the configurable."""
 
         # Quick exit if we're not needed
         if not requirement.unsatisfied(context, config_path):
@@ -68,7 +68,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     def stack(self, context: interfaces.context.ContextInterface, config_path: str,
               requirement: interfaces.configuration.RequirementInterface,
               progress_callback: constants.ProgressCallback) -> None:
-        """Stacks the various layers and attaches these to a specific requirement
+        """Stacks the various layers and attaches these to a specific
+        requirement.
 
         Args:
             context: Context on which to operate
@@ -152,8 +153,9 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     def find_suitable_requirements(self, context: interfaces.context.ContextInterface, config_path: str,
                                    requirement: interfaces.configuration.RequirementInterface,
                                    stacked_layers: List[str]) -> Optional[Tuple[str, str]]:
-        """Looks for translation layer requirements and attempts to apply the stacked layers to it.  If it succeeds
-        it returns the configuration path and layer name where the stacked nodes were spliced into the tree.
+        """Looks for translation layer requirements and attempts to apply the
+        stacked layers to it.  If it succeeds it returns the configuration path
+        and layer name where the stacked nodes were spliced into the tree.
 
         Returns:
             A tuple of a configuration path and layer name for the top of the stacked layers

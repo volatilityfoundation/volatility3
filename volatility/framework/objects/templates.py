@@ -11,14 +11,15 @@ vollog = logging.getLogger(__name__)
 
 
 class ObjectTemplate(interfaces.objects.Template):
-    """Factory class that produces objects that adhere to the Object interface on demand
+    """Factory class that produces objects that adhere to the Object interface
+    on demand.
 
-       This is effectively a method of currying, but adds more structure to avoid abuse.
-       It also allows inspection of information that should already be known:
+    This is effectively a method of currying, but adds more structure to avoid abuse.
+    It also allows inspection of information that should already be known:
 
-         * Type size
-         * Members
-         * etc
+      * Type size
+      * Members
+      * etc
     """
 
     def __init__(self, object_class: Type[interfaces.objects.ObjectInterface], type_name: str, **arguments) -> None:
@@ -31,35 +32,38 @@ class ObjectTemplate(interfaces.objects.Template):
 
     @property
     def size(self) -> int:
-        """Returns the children of the templated object (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)"""
+        """Returns the children of the templated object (see :class:`~volatilit
+        y.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)"""
         return self.vol.object_class.VolTemplateProxy.size(self)
 
     @property
     def children(self) -> List[interfaces.objects.Template]:
-        """Returns the children of the templated object (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)
-        """
+        """Returns the children of the templated object (see :class:`~volatilit
+        y.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)"""
         return self.vol.object_class.VolTemplateProxy.children(self)
 
     def relative_child_offset(self, child: str) -> int:
-        """Returns the relative offset of a child of the templated object (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)
-        """
+        """Returns the relative offset of a child of the templated object (see 
+        :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTem
+        plateProxy`)"""
         return self.vol.object_class.VolTemplateProxy.relative_child_offset(self, child)
 
     def replace_child(self, old_child: interfaces.objects.Template, new_child: interfaces.objects.Template) -> None:
-        """Replaces `old_child` for `new_child` in the templated object's child list (see :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy`)
-        """
+        """Replaces `old_child` for `new_child` in the templated object's child
+        list (see :class:`~volatility.framework.interfaces.objects.ObjectInterf
+        ace.VolTemplateProxy`)"""
         return self.vol.object_class.VolTemplateProxy.replace_child(self, old_child, new_child)
 
     def has_member(self, member_name: str) -> bool:
-        """Returns whether the object would contain a member called member_name
-        """
+        """Returns whether the object would contain a member called
+        member_name."""
         return self.vol.object_class.VolTemplateProxy.has_member(self, member_name)
 
     def __call__(self, context: interfaces.context.ContextInterface,
                  object_info: interfaces.objects.ObjectInformation) -> interfaces.objects.ObjectInterface:
-        """Constructs the object
+        """Constructs the object.
 
-           Returns: an object adhereing to the :class:`~volatility.framework.interfaces.objects.ObjectInterface`
+        Returns: an object adhereing to the :class:`~volatility.framework.interfaces.objects.ObjectInterface`
         """
         arguments = {}  # type: Dict[str, Any]
         for arg in self.vol:
@@ -69,7 +73,7 @@ class ObjectTemplate(interfaces.objects.Template):
 
 
 class ReferenceTemplate(interfaces.objects.Template):
-    """Factory class that produces objects based on a delayed reference type
+    """Factory class that produces objects based on a delayed reference type.
 
     Attempts to access any standard attributes of a resolved template will result in a
     :class:`~volatility.framework.exceptions.SymbolError`.
@@ -80,9 +84,9 @@ class ReferenceTemplate(interfaces.objects.Template):
         return []
 
     def _unresolved(self, *args, **kwargs) -> Any:
-        """Referenced symbols must be appropriately resolved before they can provide information such as size
-           This is because the size request has no context within which to determine the actual symbol structure.
-        """
+        """Referenced symbols must be appropriately resolved before they can
+        provide information such as size This is because the size request has
+        no context within which to determine the actual symbol structure."""
         raise exceptions.SymbolError("Template contains no information about its structure: {}".format(
             self.vol.type_name))
 

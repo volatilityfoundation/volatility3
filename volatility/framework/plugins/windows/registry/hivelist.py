@@ -13,7 +13,7 @@ vollog = logging.getLogger(__name__)
 
 
 class HiveList(plugins.PluginInterface):
-    """Lists the registry hives present in a particular memory image"""
+    """Lists the registry hives present in a particular memory image."""
 
     _version = (1, 0, 0)
 
@@ -41,8 +41,18 @@ class HiveList(plugins.PluginInterface):
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
                    symbol_table: str,
-                   filter_string: None = None) -> Iterator[interfaces.objects.ObjectInterface]:
-        """Lists all the hives in the primary layer"""
+                   filter_string: str = None) -> Iterator[interfaces.objects.ObjectInterface]:
+        """Lists all the hives in the primary layer.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            filter_string: A string which must be present in the hive name if specified
+
+        Returns:
+            The list of registry hives from the `layer_name` layer as filtered against using the `filter_string`
+        """
 
         # We only use the object factory to demonstrate how to use one
         kvo = context.layers[layer_name].config['kernel_virtual_offset']

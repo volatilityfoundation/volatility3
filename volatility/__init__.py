@@ -11,9 +11,10 @@ _S = TypeVar("_S")
 
 
 class classproperty(object):
-    """Class property decorator
+    """Class property decorator.
 
-    Note this will change the return type """
+    Note this will change the return type
+    """
 
     def __init__(self, func: Callable[[_S], _T]) -> None:
         self._func = func
@@ -23,11 +24,13 @@ class classproperty(object):
 
 
 class WarningFindSpec(abc.MetaPathFinder):
-    """Checks import attempts and throws a warning if the name shouldn't be used"""
+    """Checks import attempts and throws a warning if the name shouldn't be
+    used."""
 
     @staticmethod
     def find_spec(fullname: str, path, target = None):
-        """Mock find_spec method that just checks the name, this must go first"""
+        """Mock find_spec method that just checks the name, this must go
+        first."""
         if fullname.startswith("volatility.framework.plugins."):
             warning = "Please do not use the volatility.framework.plugins namespace directly, only use volatility.plugins"
             # Pyinstaller uses pkgutil to import, but needs to read the modules to figure out dependencies

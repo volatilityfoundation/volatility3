@@ -15,7 +15,7 @@ vollog = logging.getLogger(__name__)
 
 
 class LinuxBannerCache(symbol_cache.SymbolBannerCache):
-    """Caches the banners found in the Linux symbol files"""
+    """Caches the banners found in the Linux symbol files."""
 
     os = "linux"
     symbol_name = "linux_banner"
@@ -23,7 +23,7 @@ class LinuxBannerCache(symbol_cache.SymbolBannerCache):
 
 
 class LinuxSymbolFinder(symbol_finder.SymbolFinder):
-    """Linux symbol loader based on uname signature strings"""
+    """Linux symbol loader based on uname signature strings."""
 
     banner_config_key = "kernel_banner"
     banner_cache = LinuxBannerCache
@@ -38,7 +38,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
               context: interfaces.context.ContextInterface,
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
-        """Attempts to identify linux within this layer"""
+        """Attempts to identify linux within this layer."""
         # Bail out by default unless we can stack properly
         layer = context.layers[layer_name]
         join = interfaces.configuration.path_join
@@ -95,7 +95,7 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
 
 
 class LinuxUtilities(object):
-    """Class with multiple useful linux functions"""
+    """Class with multiple useful linux functions."""
 
     # based on __d_path from the Linux kernel
     @classmethod
@@ -275,7 +275,8 @@ class LinuxUtilities(object):
                   layer_name: str,
                   progress_callback: constants.ProgressCallback = None) \
             -> Tuple[int, int]:
-        """Determines the offset of the actual DTB in physical space and its symbol offset"""
+        """Determines the offset of the actual DTB in physical space and its
+        symbol offset."""
         init_task_symbol = symbol_table + constants.BANG + 'init_task'
         init_task_json_address = context.symbol_space.get_symbol(init_task_symbol).address
         swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
@@ -309,7 +310,8 @@ class LinuxUtilities(object):
 
     @classmethod
     def virtual_to_physical_address(cls, addr: int) -> int:
-        """Converts a virtual linux address to a physical one (does not account of ASLR)"""
+        """Converts a virtual linux address to a physical one (does not account
+        of ASLR)"""
         if addr > 0xffffffff80000000:
             return addr - 0xffffffff80000000
         return addr - 0xc0000000

@@ -1,9 +1,13 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""All plugins output a TreeGrid object which must then be rendered (eithe by a GUI, or as text output, html output
-or in some other form.  This module defines both the output format (:class:`TreeGrid`) and the renderer interface
-which can interact with a TreeGrid to produce suitable output."""
+"""All plugins output a TreeGrid object which must then be rendered (eithe by a
+GUI, or as text output, html output or in some other form.
+
+This module defines both the output format (:class:`TreeGrid`) and the
+renderer interface which can interact with a TreeGrid to produce
+suitable output.
+"""
 
 import collections
 import datetime
@@ -16,19 +20,21 @@ RenderOption = Any
 
 
 class Renderer(metaclass = ABCMeta):
-    """Class that defines the interface that all output renderers must support"""
+    """Class that defines the interface that all output renderers must
+    support."""
 
     def __init__(self, options: Optional[List[RenderOption]] = None) -> None:
-        """Accepts an options object to configure the renderers"""
+        """Accepts an options object to configure the renderers."""
         # FIXME: Once the config option objects are in place, put the _type_check in place
 
     @abstractmethod
     def get_render_options(self) -> List[RenderOption]:
-        """Returns a list of rendering options"""
+        """Returns a list of rendering options."""
 
     @abstractmethod
     def render(self, grid: 'TreeGrid') -> None:
-        """Takes a grid object and renders it based on the object's preferences"""
+        """Takes a grid object and renders it based on the object's
+        preferences."""
 
 
 class ColumnSortKey(metaclass = ABCMeta):
@@ -36,52 +42,58 @@ class ColumnSortKey(metaclass = ABCMeta):
 
     @abstractmethod
     def __call__(self, values: List[Any]) -> Any:
-        """The key function passed as a sort key to the TreeGrid's visit function"""
+        """The key function passed as a sort key to the TreeGrid's visit
+        function."""
 
 
 class TreeNode(collections.Sequence, metaclass = ABCMeta):
 
     def __init__(self, path, treegrid, parent, values):
-        """Initializes the TreeNode"""
+        """Initializes the TreeNode."""
 
     @property
     @abstractmethod
     def values(self) -> Iterable['BaseTypes']:
-        """Returns the list of values from the particular node, based on column index"""
+        """Returns the list of values from the particular node, based on column
+        index."""
 
     @property
     @abstractmethod
     def path(self) -> str:
-        """Returns a path identifying string
+        """Returns a path identifying string.
 
-        This should be seen as opaque by external classes,
-        Parsing of path locations based on this string are not guaranteed to remain stable.
+        This should be seen as opaque by external classes, Parsing of
+        path locations based on this string are not guaranteed to remain
+        stable.
         """
 
     @property
     @abstractmethod
     def parent(self) -> Optional['TreeNode']:
-        """Returns the parent node of this node or None"""
+        """Returns the parent node of this node or None."""
 
     @property
     @abstractmethod
     def path_depth(self) -> int:
-        """Return the path depth of the current node"""
+        """Return the path depth of the current node."""
 
     @abstractmethod
     def path_changed(self, path: str, added: bool = False) -> None:
-        """Updates the path based on the addition or removal of a node higher up in the tree
+        """Updates the path based on the addition or removal of a node higher
+        up in the tree.
 
-           This should only be called by the containing TreeGrid and expects to only be called for affected nodes.
+        This should only be called by the containing TreeGrid and
+        expects to only be called for affected nodes.
         """
 
 
 class BaseAbsentValue(object):
-    """Class that represents values which are not present for some reason"""
+    """Class that represents values which are not present for some reason."""
 
 
 class Disassembly(object):
-    """A class to indicate that the bytes provided should be disassembled (based on the architecture)"""
+    """A class to indicate that the bytes provided should be disassembled
+    (based on the architecture)"""
     possible_architectures = ['intel', 'intel64', 'arm', 'arm64']
 
     def __init__(self, data: bytes, offset: int = 0, architecture: str = 'intel64') -> None:
@@ -120,7 +132,7 @@ class TreeGrid(object, metaclass = ABCMeta):
     base_types = (int, str, float, bytes, datetime.datetime, Disassembly)  # type: ClassVar[Tuple]
 
     def __init__(self, columns: ColumnsType, generator: Generator) -> None:
-        """Constructs a TreeGrid object using a specific set of columns
+        """Constructs a TreeGrid object using a specific set of columns.
 
         The TreeGrid itself is a root element, that can have children but no values.
         The TreeGrid does *not* contain any information about formatting,
@@ -134,48 +146,50 @@ class TreeGrid(object, metaclass = ABCMeta):
     @staticmethod
     @abstractmethod
     def sanitize_name(text: str) -> str:
-        """Method used to sanitize column names for TreeNodes"""
+        """Method used to sanitize column names for TreeNodes."""
 
     @abstractmethod
     def populate(self, func: VisitorSignature = None, initial_accumulator: Any = None) -> None:
-        """Populates the tree by consuming the TreeGrid's construction generator
-           Func is called on every node, so can be used to create output on demand
+        """Populates the tree by consuming the TreeGrid's construction
+        generator Func is called on every node, so can be used to create output
+        on demand.
 
-           This is equivalent to a one-time visit.
+        This is equivalent to a one-time visit.
         """
 
     @property
     @abstractmethod
     def populated(self) -> bool:
-        """Indicates that population has completed and the tree may now be manipulated separately"""
+        """Indicates that population has completed and the tree may now be
+        manipulated separately."""
 
     @property
     @abstractmethod
     def columns(self) -> List[Column]:
-        """Returns the available columns and their ordering and types"""
+        """Returns the available columns and their ordering and types."""
 
     @abstractmethod
     def children(self, node: TreeNode) -> List[TreeNode]:
-        """Returns the subnodes of a particular node in order"""
+        """Returns the subnodes of a particular node in order."""
 
     @abstractmethod
     def values(self, node: TreeNode) -> Tuple[BaseTypes, ...]:
-        """Returns the values for a particular node
+        """Returns the values for a particular node.
 
-           The values returned are mutable,
+        The values returned are mutable,
         """
 
     @abstractmethod
     def is_ancestor(self, node: TreeNode, descendant: TreeNode) -> bool:
-        """Returns true if descendent is a child, grandchild, etc of node"""
+        """Returns true if descendent is a child, grandchild, etc of node."""
 
     @abstractmethod
     def max_depth(self) -> int:
-        """Returns the maximum depth of the tree"""
+        """Returns the maximum depth of the tree."""
 
     @staticmethod
     def path_depth(node: TreeNode) -> int:
-        """Returns the path depth of a particular node"""
+        """Returns the path depth of a particular node."""
         return node.path_depth
 
     @abstractmethod
@@ -186,16 +200,16 @@ class TreeGrid(object, metaclass = ABCMeta):
               sort_key: ColumnSortKey = None) -> None:
         """Visits all the nodes in a tree, calling function on each one.
 
-           function should have the signature function(node, accumulator) and return new_accumulator
-           If accumulators are not needed, the function must still accept a second parameter.
+        function should have the signature function(node, accumulator) and return new_accumulator
+        If accumulators are not needed, the function must still accept a second parameter.
 
-           The order of that the nodes are visited is always depth first, however, the order children are traversed can
-           be set based on a sort_key function which should accept a node's values and return something that can be
-           sorted to receive the desired order (similar to the sort/sorted key).
+        The order of that the nodes are visited is always depth first, however, the order children are traversed can
+        be set based on a sort_key function which should accept a node's values and return something that can be
+        sorted to receive the desired order (similar to the sort/sorted key).
 
-           Args:
-               node: The initial node to be visited
-               function: The visitor to apply to the nodes under the initial node
-               initial_accumulator: An accumulator that allows data to be transfered between one visitor call to the next
-               sort_key: Information about the sort order of columns in order to determine the ordering of results
+        Args:
+            node: The initial node to be visited
+            function: The visitor to apply to the nodes under the initial node
+            initial_accumulator: An accumulator that allows data to be transfered between one visitor call to the next
+            sort_key: Information about the sort order of columns in order to determine the ordering of results
         """

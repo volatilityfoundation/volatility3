@@ -23,10 +23,10 @@ class SymbolType(enum.Enum):
 
 
 class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
-    """Handles an ordered collection of SymbolTables
+    """Handles an ordered collection of SymbolTables.
 
-       This collection is ordered so that resolution of symbols can
-       proceed down through the ranks if a namespace isn't specified.
+    This collection is ordered so that resolution of symbols can proceed
+    down through the ranks if a namespace isn't specified.
     """
 
     def __init__(self) -> None:
@@ -37,7 +37,8 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         self._resolved_symbols = {}  # type: Dict[str, interfaces.objects.Template]
 
     def free_table_name(self, prefix: str = "layer") -> str:
-        """Returns an unused table name to ensure no collision occurs when inserting a symbol table"""
+        """Returns an unused table name to ensure no collision occurs when
+        inserting a symbol table."""
         count = 1
         while prefix + str(count) in self:
             count += 1
@@ -46,13 +47,13 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
     ### Symbol functions
 
     def get_symbols_by_type(self, type_name: str) -> Iterable[str]:
-        """Returns all symbols based on the type of the symbol"""
+        """Returns all symbols based on the type of the symbol."""
         for table in self._dict:
             for symbol_name in self._dict[table].get_symbols_by_type(type_name):
                 yield table + constants.BANG + symbol_name
 
     def get_symbols_by_location(self, offset: int, size: int = 0, table_name: str = None) -> Iterable[str]:
-        """Returns all symbols that exist at a specific relative address"""
+        """Returns all symbols that exist at a specific relative address."""
         table_list = self._dict.values()  # type: Iterable[interfaces.symbols.BaseSymbolTableInterface]
         if table_name is not None:
             if table_name in self._dict:
@@ -66,19 +67,19 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
     ### Space functions
 
     def __len__(self) -> int:
-        """Returns the number of tables within the space"""
+        """Returns the number of tables within the space."""
         return len(self._dict)
 
     def __getitem__(self, i: str) -> Any:
-        """Returns a specific table from the space"""
+        """Returns a specific table from the space."""
         return self._dict[i]
 
     def __iter__(self) -> Iterator[str]:
-        """Iterates through all available tables in the symbol space"""
+        """Iterates through all available tables in the symbol space."""
         return iter(self._dict)
 
     def append(self, value: interfaces.symbols.BaseSymbolTableInterface) -> None:
-        """Adds a symbol_list to the end of the space"""
+        """Adds a symbol_list to the end of the space."""
         if not isinstance(value, interfaces.symbols.BaseSymbolTableInterface):
             raise TypeError(value)
         if value.name in self._dict:
@@ -86,7 +87,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         self._dict[value.name] = value
 
     def remove(self, key: str) -> None:
-        """Removes a named symbol_list from the space"""
+        """Removes a named symbol_list from the space."""
         # Reset the resolved list, since we're removing some symbols
         self._resolved = {}
         del self._dict[key]
@@ -94,14 +95,14 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
     ### Resolution functions
 
     class _UnresolvedTemplate(objects.templates.ReferenceTemplate):
-        """Class to highlight when missing symbols are present
+        """Class to highlight when missing symbols are present.
 
-           This class is identical to a reference template, but differentiable by its classname.
-           It will output a debug log to indicate when it has been instantiated and with what name.
+        This class is identical to a reference template, but differentiable by its classname.
+        It will output a debug log to indicate when it has been instantiated and with what name.
 
-           This class is designed to be output ONLY as part of the SymbolSpace resolution system.
-           Individual SymbolTables that cannot resolve a symbol should still return a SymbolError to
-           indicate this failure in resolution.
+        This class is designed to be output ONLY as part of the SymbolSpace resolution system.
+        Individual SymbolTables that cannot resolve a symbol should still return a SymbolError to
+        indicate this failure in resolution.
         """
 
         def __init__(self, type_name: str, **kwargs) -> None:
@@ -109,7 +110,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             super().__init__(type_name = type_name, **kwargs)
 
     def _weak_resolve(self, resolve_type: SymbolType, name: str) -> SymbolSpaceReturnType:
-        """Takes a symbol name and resolves it with ReferentialTemplates"""
+        """Takes a symbol name and resolves it with ReferentialTemplates."""
         if resolve_type == SymbolType.TYPE:
             get_function = 'get_type'
         elif resolve_type == SymbolType.SYMBOL:
@@ -130,7 +131,8 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         raise exceptions.SymbolError("Malformed name: {}".format(name))
 
     def _iterative_resolve(self, traverse_list):
-        """Iteratively resolves a type, populating linked child ReferenceTemplates with their properly resolved counterparts"""
+        """Iteratively resolves a type, populating linked child
+        ReferenceTemplates with their properly resolved counterparts."""
         replacements = set()
         # Whole Symbols that still need traversing
         while traverse_list:
@@ -157,10 +159,10 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             parent.replace_child(child, self._resolved[child.vol.type_name])
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:
-        """Takes a symbol name and resolves it
+        """Takes a symbol name and resolves it.
 
-           This method ensures that all referenced templates (including self-referential templates)
-           are satisfied as ObjectTemplates
+        This method ensures that all referenced templates (including
+        self-referential templates) are satisfied as ObjectTemplates
         """
         # Traverse down any resolutions
         if type_name not in self._resolved:
@@ -171,7 +173,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         return self._resolved[type_name]
 
     def get_symbol(self, symbol_name: str) -> interfaces.symbols.SymbolInterface:
-        """Look-up a symbol name across all the contained symbol spaces"""
+        """Look-up a symbol name across all the contained symbol spaces."""
         retval = self._weak_resolve(SymbolType.SYMBOL, symbol_name)
         if symbol_name not in self._resolved_symbols and retval.type is not None:
             # Stash the old resolved type if it exists
@@ -191,14 +193,15 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         return retval
 
     def get_enumeration(self, enum_name: str) -> interfaces.objects.Template:
-        """Look-up a set of enumeration choices from a specific symbol table"""
+        """Look-up a set of enumeration choices from a specific symbol
+        table."""
         retval = self._weak_resolve(SymbolType.ENUM, enum_name)
         if not isinstance(retval, interfaces.objects.Template):
             raise exceptions.SymbolError("Unresolvable Enumeration: {}".format(enum_name))
         return retval
 
     def _membership(self, member_type: SymbolType, name: str) -> bool:
-        """Test for membership of a component within a table"""
+        """Test for membership of a component within a table."""
 
         name_array = name.split(constants.BANG)
         if len(name_array) == 2:
@@ -232,7 +235,8 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
                       address_mask: int = 0,
                       table_aslr_shift: int = 0):
-    """Alters a symbol table, such that all symbols returned have their address masked by the address mask"""
+    """Alters a symbol table, such that all symbols returned have their address
+    masked by the address mask."""
     original_get_symbol = symbol_table.get_symbol
     cached_symbols = {}  # type: Dict[interfaces.symbols.SymbolInterface, interfaces.symbols.SymbolInterface]
 
@@ -255,5 +259,6 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
 
 
 def symbol_table_is_64bit(context: interfaces.context.ContextInterface, symbol_table_name: str) -> bool:
-    """Returns a boolean as to whether a particular symbol table within a context is 64-bit or not"""
+    """Returns a boolean as to whether a particular symbol table within a
+    context is 64-bit or not."""
     return context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer").size == 8

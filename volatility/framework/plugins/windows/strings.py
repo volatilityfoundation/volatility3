@@ -33,7 +33,7 @@ class Strings(interfaces.plugins.PluginInterface):
                                   self._generator())
 
     def _generator(self) -> Generator[Tuple, None, None]:
-        """Generates results from a strings file"""
+        """Generates results from a strings file."""
         revmap = self.generate_mapping(self.config['primary'])
 
         accessor = resources.ResourceAccessor()
@@ -52,7 +52,14 @@ class Strings(interfaces.plugins.PluginInterface):
 
     @staticmethod
     def _parse_line(line: bytes) -> Tuple[int, bytes]:
-        """Parses a single line from a strings file"""
+        """Parses a single line from a strings file.
+
+        Args:
+            line: bytes of the line of a strings file (an offset and a string)
+
+        Returns:
+            Tuple of the offset and the string found at that offset
+        """
         pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)")
         match = pattern.search(line)
         if not match:
@@ -61,7 +68,15 @@ class Strings(interfaces.plugins.PluginInterface):
         return int(offset), string
 
     def generate_mapping(self, layer_name: str) -> Dict[int, Set[Tuple[str, int]]]:
-        """Creates a reverse mapping between virtual addresses and physical addresses"""
+        """Creates a reverse mapping between virtual addresses and physical
+        addresses.
+
+        Args:
+            layer_name: the layer to map against the string lines
+
+        Returns:
+            A mapping of virtual offsets to strings and physical offsets
+        """
         layer = self._context.layers[layer_name]
         reverse_map = dict()  # type: Dict[int, Set[Tuple[str, int]]]
         if isinstance(layer, intel.Intel):

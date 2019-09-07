@@ -14,7 +14,7 @@ vollog = logging.getLogger(__name__)
 
 
 class lsof(plugins.PluginInterface):
-    """Lists all open file descriptors for all processes"""
+    """Lists all open file descriptors for all processes."""
 
     @classmethod
     def get_requirements(cls):

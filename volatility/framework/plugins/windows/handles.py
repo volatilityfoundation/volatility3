@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import volatility.plugins.windows.pslist as pslist
 
@@ -24,7 +24,7 @@ except ImportError:
 
 
 class Handles(interfaces_plugins.PluginInterface):
-    """Lists process open handles"""
+    """Lists process open handles."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -46,8 +46,11 @@ class Handles(interfaces_plugins.PluginInterface):
 
     def _decode_pointer(self, value, magic):
         """Windows encodes pointers to objects and decodes them on the fly
-        before using them. This function mimics the decoding routine so we
-        can generate the proper pointer values as well."""
+        before using them.
+
+        This function mimics the decoding routine so we can generate the
+        proper pointer values as well.
+        """
 
         value = value & 0xFFFFFFFFFFFFFFF8
         value = value >> magic
@@ -57,8 +60,8 @@ class Handles(interfaces_plugins.PluginInterface):
         return value
 
     def _get_item(self, handle_table_entry, handle_value):
-        """Given  a handle table entry (_HANDLE_TABLE_ENTRY) structure from
-        a process' handle table, determine where the corresponding object's
+        """Given  a handle table entry (_HANDLE_TABLE_ENTRY) structure from a
+        process' handle table, determine where the corresponding object's
         _OBJECT_HEADER can be found."""
 
         virtual = self.config["primary"]
@@ -91,10 +94,12 @@ class Handles(interfaces_plugins.PluginInterface):
         return object_header
 
     def find_sar_value(self):
-        """Locate ObpCaptureHandleInformationEx if it exists in the
-        sample. Once found, parse it for the SAR value that we need
-        to decode pointers in the _HANDLE_TABLE_ENTRY which allows us
-        to find the associated _OBJECT_HEADER."""
+        """Locate ObpCaptureHandleInformationEx if it exists in the sample.
+
+        Once found, parse it for the SAR value that we need to decode
+        pointers in the _HANDLE_TABLE_ENTRY which allows us to find the
+        associated _OBJECT_HEADER.
+        """
 
         if self._sar_value is None:
 
@@ -128,14 +133,25 @@ class Handles(interfaces_plugins.PluginInterface):
         return self._sar_value
 
     @classmethod
-    def list_objects(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str) -> dict:
+    def list_objects(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                     symbol_table: str) -> Dict[int, str]:
         """List the executive object types (_OBJECT_TYPE) using the
-        ObTypeIndexTable or ObpObjectTypes symbol (differs per OS).
-        This method will be necessary for determining what type of
-        object we have given an object header.
+        ObTypeIndexTable or ObpObjectTypes symbol (differs per OS). This method
+        will be necessary for determining what type of object we have given an
+        object header.
 
-        Note: The object type index map was hard coded into profiles
-        in vol2, but we generate it dynamically now."""
+        Note:
+            The object type index map was hard coded into profiles in previous versions of volatility.
+            It is now generated dynamically.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+
+        Returns:
+            A mapping of type indicies to type names
+        """
 
         type_map = {}
 
@@ -150,7 +166,7 @@ class Handles(interfaces_plugins.PluginInterface):
         ptrs = ntkrnlmp.object(
             object_type = "array", offset = table_addr, subtype = ntkrnlmp.get_type("pointer"), count = 100)
 
-        for i, ptr in enumerate(ptrs):  #type: ignore
+        for i, ptr in enumerate(ptrs):  # type: ignore
             # the first entry in the table is always null. break the
             # loop when we encounter the first null entry after that
             if i > 0 and ptr == 0:
@@ -182,8 +198,8 @@ class Handles(interfaces_plugins.PluginInterface):
         return context.object(symbol_table + constants.BANG + "unsigned int", layer_name, offset = kvo + offset)
 
     def _make_handle_array(self, offset, level, depth = 0):
-        """Parse a process' handle table and yield valid handle table
-        entries, going as deep into the table "levels" as necessary."""
+        """Parse a process' handle table and yield valid handle table entries,
+        going as deep into the table "levels" as necessary."""
 
         virtual = self.config["primary"]
         kvo = self.context.layers[virtual].config['kernel_virtual_offset']

@@ -6,7 +6,7 @@ from typing import Generator, List, Optional, Set, Tuple, Union
 
 
 class WuManber(object):
-    """Algorithm for multi-string matching"""
+    """Algorithm for multi-string matching."""
 
     def __init__(self, block_size: int = 3) -> None:
         # Set a suitably large minimum
@@ -29,7 +29,7 @@ class WuManber(object):
         self._patterns.append(pattern)
 
     def preprocess(self) -> None:
-        """Preprocesses the patterns by populating the three arrays"""
+        """Preprocesses the patterns by populating the three arrays."""
 
         if not self._patterns:
             raise ValueError("No Linux symbols/banner patterns available")
@@ -50,15 +50,17 @@ class WuManber(object):
                     self._hashes[hashval].add(pattern)
 
     def _hash_function(self, value_bytes: bytes) -> int:
-        """Hash function to bucket _block_size number of bytes into sets
+        """Hash function to bucket _block_size number of bytes into sets.
 
-        If this hash_function changes, the maximum number of responses must be set in self._maximum_hash
+        If this hash_function changes, the maximum number of responses
+        must be set in self._maximum_hash
         """
         return (value_bytes[0] << 5) + (value_bytes[1] << 3) + value_bytes[2]
 
     def search(self, haystack: bytes) \
             -> Generator[Tuple[int, Union[str, bytes]], None, None]:
-        """Search through a large body of data for patterns previously added with add_pattern"""
+        """Search through a large body of data for patterns previously added
+        with add_pattern."""
         if not isinstance(haystack, bytes):
             raise TypeError("Search haystack must be a byte string")
         if self._shift is None:

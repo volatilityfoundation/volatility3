@@ -1,7 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""Automagic modules allow the framework to populate configuration elements that a user has not provided.
+"""Automagic modules allow the framework to populate configuration elements
+that a user has not provided.
 
 Automagic objects accept a `context` and a `configurable`, and will make appropriate changes to the `context` in an
 attempt to fulfill the requirements of the `configurable` object (or objects upon which that configurable may rely).
@@ -29,7 +30,8 @@ mac_automagic = ['ConstructionMagic', 'LayerStacker', 'MacBannerCache', 'MacSymb
 
 
 def available(context: interfaces.context.ContextInterface) -> List[interfaces.automagic.AutomagicInterface]:
-    """Returns an ordered list of all subclasses of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface`.
+    """Returns an ordered list of all subclasses of
+    :class:`~volatility.framework.interfaces.automagic.AutomagicInterface`.
 
     The order is based on the priority attributes of the subclasses, in order to ensure the automagics are listed in
     an appropriate order.
@@ -47,7 +49,8 @@ def available(context: interfaces.context.ContextInterface) -> List[interfaces.a
 
 
 def choose_automagic(automagics, plugin):
-    """Chooses which automagics to run, maintaining the order they were handed in"""
+    """Chooses which automagics to run, maintaining the order they were handed
+    in."""
     plugin_category = plugin.__module__.split('.')[2]
     vollog.info("Detected a {} category plugin".format(plugin_category))
     output = []
@@ -73,7 +76,8 @@ def run(automagics: List[interfaces.automagic.AutomagicInterface],
                                                                                  ConfigurableInterface]],
         config_path: str,
         progress_callback: constants.ProgressCallback = None) -> List[traceback.TracebackException]:
-    """Runs through the list of `automagics` in order, allowing them to make changes to the context
+    """Runs through the list of `automagics` in order, allowing them to make
+    changes to the context.
 
     Args:
         automagics: A list of :class:`~volatility.framework.interfaces.automagic.AutomagicInterface` objects

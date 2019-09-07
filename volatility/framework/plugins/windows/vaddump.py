@@ -17,7 +17,7 @@ vollog = logging.getLogger(__name__)
 
 
 class VadDump(interfaces_plugins.PluginInterface):
-    """Dumps process memory ranges"""
+    """Dumps process memory ranges."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

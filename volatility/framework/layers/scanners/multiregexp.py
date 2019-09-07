@@ -7,7 +7,7 @@ from typing import Generator, List, Tuple, Union
 
 
 class MultiRegexp(object):
-    """Algorithm for multi-string matching"""
+    """Algorithm for multi-string matching."""
 
     def __init__(self) -> None:
         self._pattern_strings = []  # type: List[bytes]

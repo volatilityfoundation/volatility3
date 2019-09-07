@@ -12,9 +12,10 @@ from volatility.framework.layers import linear
 
 
 class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
-    """A class to handle a single run-based layer-to-layer mapping
+    """A class to handle a single run-based layer-to-layer mapping.
 
-       In the documentation "mapped address" or "mapped offset" refers to an offset once it has been mapped to the underlying layer
+    In the documentation "mapped address" or "mapped offset" refers to
+    an offset once it has been mapped to the underlying layer
     """
 
     def __init__(self,
@@ -33,13 +34,15 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
 
     @abstractmethod
     def _load_segments(self) -> None:
-        """Populates the _segments variable
+        """Populates the _segments variable.
 
-           Segments must be (address, mapped address, length) and must be sorted by address when this method exits
+        Segments must be (address, mapped address, length) and must be
+        sorted by address when this method exits
         """
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        """Returns whether the address offset can be translated to a valid address"""
+        """Returns whether the address offset can be translated to a valid
+        address."""
         try:
             base_layer = self._context.layers[self._base_layer]
             return all(
@@ -48,9 +51,9 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
             return False
 
     def _find_segment(self, offset: int, next: bool = False) -> Tuple[int, int, int]:
-        """Finds the segment containing a given offset
+        """Finds the segment containing a given offset.
 
-           Returns the segment tuple (offset, mapped_offset, length)
+        Returns the segment tuple (offset, mapped_offset, length)
         """
 
         if not self._segments:
@@ -68,7 +71,8 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
         raise exceptions.InvalidAddressException(self.name, offset, "Invalid address at {:0x}".format(offset))
 
     def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
-        """Returns a sorted iterable of (offset, mapped_offset, length, layer) mappings"""
+        """Returns a sorted iterable of (offset, mapped_offset, length, layer)
+        mappings."""
         done = False
         current_offset = offset
         while not done:
@@ -123,7 +127,8 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
 
     @property
     def dependencies(self) -> List[str]:
-        """Returns a list of the lower layers that this layer is dependent upon"""
+        """Returns a list of the lower layers that this layer is dependent
+        upon."""
         return [self._base_layer]
 
     @classmethod

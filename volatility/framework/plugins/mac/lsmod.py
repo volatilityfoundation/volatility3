@@ -1,9 +1,8 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
-"""A module containing a collection of plugins that produce data
-typically found in Mac's lsmod command.
-"""
+"""A module containing a collection of plugins that produce data typically
+found in Mac's lsmod command."""
 from volatility.framework import renderers, interfaces, contexts
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
@@ -13,7 +12,7 @@ from volatility.framework.renderers import format_hints
 
 
 class Lsmod(plugins.PluginInterface):
-    """Lists loaded kernel modules"""
+    """Lists loaded kernel modules."""
 
     _version = (1, 0, 0)
 
@@ -27,7 +26,16 @@ class Lsmod(plugins.PluginInterface):
 
     @classmethod
     def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str, darwin_symbols: str):
-        """Lists all the modules in the primary layer"""
+        """Lists all the modules in the primary layer.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            darwin_symbols: The name of the table containing the kernel symbols
+
+        Returns:
+            A list of modules from the `layer_name` layer
+        """
         mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
