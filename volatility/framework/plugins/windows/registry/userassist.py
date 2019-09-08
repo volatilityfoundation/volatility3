@@ -230,7 +230,11 @@ class UserAssist(interfaces.plugins.PluginInterface):
         for hive_offset in hive_offsets:
             # Construct the hive
             reg_config_path = self.make_subconfig(
-                hive_offset = hive_offset, base_layer = self.config['primary'], nt_symbols = self.config['nt_symbols'])
+                context = self.context,
+                base_config_path = self.config_path,
+                base_layer = self.config['primary'],
+                nt_symbols = self.config['nt_symbols'],
+                hive_offset = hive_offset)
 
             hive_name = None
             try:

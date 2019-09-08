@@ -649,19 +649,22 @@ class ConfigurableInterface(metaclass = ABCMeta):
                 result.update(subresult)
         return result
 
-    def make_subconfig(self, *args, **kwargs) -> str:
+    @classmethod
+    def make_subconfig(cls, context: interfaces.context.ContextInterface, base_config_path: str, **kwargs) -> str:
         """Convenience function to allow constructing a new randomly generated
         sub-configuration path, containing each element from kwargs.
+
+        Args:
+            context: The context in which to store the new configuration
+            base_config_path: The base configuration path on which to build the new configuration
+            kwargs: Keyword arguments that are used to populate the new configuration path
 
         Returns:
             str: The newly generated full configuration path
         """
-        if args:
-            vollog.debug("Non-keyword arguments to make_subconfig are ignored - this is a bug in the calling code")
-
         random_config_dict = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                      for _ in range(8))
-        new_config_path = path_join(self.config_path, random_config_dict)
+        new_config_path = path_join(base_config_path, random_config_dict)
         # TODO: Check that the new_config_path is empty, although it's not critical if it's not since the values are merged in
 
         # This should check that each k corresponds to a requirement and each v is of the appropriate type
@@ -670,6 +673,6 @@ class ConfigurableInterface(metaclass = ABCMeta):
         for k, v in kwargs.items():
             if not isinstance(v, (int, str, bool, float, bytes)):
                 raise TypeError("Config values passed to make_subconfig can only be simple types")
-            self.context.config[path_join(new_config_path, k)] = v
+            context.config[path_join(new_config_path, k)] = v
 
         return new_config_path

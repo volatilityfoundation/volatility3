@@ -103,12 +103,15 @@ class PrintKey(interfaces.plugins.PluginInterface):
                                        key_path, value_node_name, value_data, node.get_volatile()))
             yield result
 
-    def registry_walker(self,
+    @classmethod
+    def registry_walker(cls,
                         context: interfaces.context.ContextInterface,
+                        base_config_path: str,
                         layer_name: str,
                         symbol_table: str,
                         offset: int = None,
-                        key: str = None):
+                        key: str = None,
+                        recurse: bool = False):
         """Walks through a registry, hive by hive."""
         if offset is None:
             try:
@@ -123,8 +126,12 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
         for hive_offset in hive_offsets:
             # Construct the hive
-            reg_config_path = self.make_subconfig(
-                hive_offset = hive_offset, base_layer = layer_name, nt_symbols = symbol_table)
+            reg_config_path = cls.make_subconfig(
+                context = context,
+                base_config_path = base_config_path,
+                hive_offset = hive_offset,
+                base_layer = layer_name,
+                nt_symbols = symbol_table)
             try:
                 hive = RegistryHive(context, reg_config_path, name = 'hive' + hex(hive_offset))
                 context.layers.add_layer(hive)
@@ -134,7 +141,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     node_path = hive.get_key(key, return_list = True)
                 else:
                     node_path = [hive.get_node(hive.root_cell_offset)]
-                for (x, y) in self.hive_walker(hive, node_path, recurse = self.config.get('recurse', None)):
+                for (x, y) in cls.hive_walker(hive, node_path, recurse = recurse):
                     yield (x - len(node_path), y)
 
             except (exceptions.InvalidAddressException, KeyError, RegistryFormatException) as excp:
@@ -153,5 +160,6 @@ class PrintKey(interfaces.plugins.PluginInterface):
         return TreeGrid(
             columns = [('Last Write Time', datetime.datetime), ('Hive Offset', format_hints.Hex), ('Type', str),
                        ('Key', str), ('Name', str), ('Data', str), ('Volatile', bool)],
-            generator = self.registry_walker(self._context, self.config['primary'], self.config['nt_symbols'],
-                                             self.config.get('offset', None), self.config.get('key', None)))
+            generator = self.registry_walker(self._context, self.config_path, self.config['primary'],
+                                             self.config['nt_symbols'], self.config.get('offset', None),
+                                             self.config.get('key', None), self.config.get('recurse', None)))

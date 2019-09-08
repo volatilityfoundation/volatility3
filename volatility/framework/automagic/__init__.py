@@ -89,7 +89,8 @@ def run(automagics: List[interfaces.automagic.AutomagicInterface],
 
     Returns a list of traceback objects that occurred during the autorun procedure
 
-    .. note:: The order of the `automagics` list is important.  An `automagic` that populates configurations may be necessary
+    Note:
+        The order of the `automagics` list is important.  An `automagic` that populates configurations may be necessary
         for an `automagic` that populates the context based on the configuration information.
     """
     for automagic in automagics:
