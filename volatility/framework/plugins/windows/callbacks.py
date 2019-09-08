@@ -22,8 +22,9 @@ class Callbacks(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
@@ -39,13 +40,12 @@ class Callbacks(interfaces_plugins.PluginInterface):
         else:
             symbol_filename = "callbacks-x86"
 
-        return intermed.IntermediateSymbolTable.create(
-            context,
-            config_path,
-            "windows",
-            symbol_filename,
-            native_types = native_types,
-            table_mapping = table_mapping)
+        return intermed.IntermediateSymbolTable.create(context,
+                                                       config_path,
+                                                       "windows",
+                                                       symbol_filename,
+                                                       native_types = native_types,
+                                                       table_mapping = table_mapping)
 
     @classmethod
     def list_notify_routines(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
@@ -74,10 +74,10 @@ class Callbacks(interfaces_plugins.PluginInterface):
             else:
                 count = 8
 
-            fast_refs = ntkrnlmp.object(object_type="array",
-                                        offset=symbol_offset,
-                                        subtype=ntkrnlmp.get_type("_EX_FAST_REF"),
-                                        count=count)
+            fast_refs = ntkrnlmp.object(object_type = "array",
+                                        offset = symbol_offset,
+                                        subtype = ntkrnlmp.get_type("_EX_FAST_REF"),
+                                        count = count)
 
             for fast_ref in fast_refs:
                 try:
@@ -104,16 +104,15 @@ class Callbacks(interfaces_plugins.PluginInterface):
             vollog.debug("Cannot find CmpCallBackVector or CmpCallBackCount")
             return
 
-        callback_count = ntkrnlmp.object(object_type="unsigned int",
-                                         offset=symbol_count_offset)
+        callback_count = ntkrnlmp.object(object_type = "unsigned int", offset = symbol_count_offset)
 
         if callback_count == 0:
             return
 
-        fast_refs = ntkrnlmp.object(object_type="array",
-                                    offset=symbol_offset,
-                                    subtype=ntkrnlmp.get_type("_EX_FAST_REF"),
-                                    count=callback_count)
+        fast_refs = ntkrnlmp.object(object_type = "array",
+                                    offset = symbol_offset,
+                                    subtype = ntkrnlmp.get_type("_EX_FAST_REF"),
+                                    count = callback_count)
 
         for fast_ref in fast_refs:
             try:
@@ -140,8 +139,9 @@ class Callbacks(interfaces_plugins.PluginInterface):
             return
 
         full_type_name = callback_table_name + constants.BANG + "_KBUGCHECK_REASON_CALLBACK_RECORD"
-        callback_record = context.object(
-            object_type = full_type_name, offset = kvo + list_offset, layer_name = layer_name)
+        callback_record = context.object(object_type = full_type_name,
+                                         offset = kvo + list_offset,
+                                         layer_name = layer_name)
 
         for callback in callback_record.Entry:
 
@@ -149,12 +149,11 @@ class Callbacks(interfaces_plugins.PluginInterface):
                 continue
 
             try:
-                component = context.object(
-                    symbol_table + constants.BANG + "string",
-                    layer_name = layer_name,
-                    offset = callback.Component,
-                    max_length = 64,
-                    errors = "replace")
+                component = context.object(symbol_table + constants.BANG + "string",
+                                           layer_name = layer_name,
+                                           offset = callback.Component,
+                                           max_length = 64,
+                                           errors = "replace")
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 
@@ -183,12 +182,11 @@ class Callbacks(interfaces_plugins.PluginInterface):
                 continue
 
             try:
-                component = context.object(
-                    symbol_table + constants.BANG + "string",
-                    layer_name = layer_name,
-                    offset = callback.Component,
-                    max_length = 64,
-                    errors = "replace")
+                component = context.object(symbol_table + constants.BANG + "string",
+                                           layer_name = layer_name,
+                                           offset = callback.Component,
+                                           max_length = 64,
+                                           errors = "replace")
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 
