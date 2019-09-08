@@ -17,7 +17,6 @@ import traceback
 from typing import List, Type, Union
 
 from volatility.framework import class_subclasses, import_files, interfaces, constants
-from volatility.framework.automagic import construct_layers, stacker, windows, pdbscan
 from volatility.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
