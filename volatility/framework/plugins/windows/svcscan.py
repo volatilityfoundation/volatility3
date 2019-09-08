@@ -19,6 +19,8 @@ vollog = logging.getLogger(__name__)
 class SvcScan(interfaces.plugins.PluginInterface):
     """Scans for windows services"""
 
+    _version = (1, 0, 0)
+
     is_vista_or_later = poolscanner.os_distinguisher(
         version_check = lambda x: x >= (6, 0), fallback_checks = [("KdCopyDataBlock", None, True)])
 

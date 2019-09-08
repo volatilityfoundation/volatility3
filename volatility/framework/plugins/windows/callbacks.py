@@ -25,7 +25,9 @@ class Callbacks(interfaces_plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'ssdt', plugin = ssdt.SSDT, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'svcscan', plugin = svcscan.SvcScan, version = (1, 0, 0))
         ]
 
     @staticmethod
