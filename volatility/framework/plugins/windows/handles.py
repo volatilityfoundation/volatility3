@@ -216,7 +216,8 @@ class Handles(interfaces_plugins.PluginInterface):
         if not self.context.layers[virtual].is_valid(offset):
             return
 
-        table = ntkrnlmp.object(object_type = "array", offset = offset, subtype = subtype, count = int(count))
+        table = ntkrnlmp.object(
+            object_type = "array", offset = offset, subtype = subtype, count = int(count), absolute = True)
 
         layer_object = self.context.layers[virtual]
         masked_offset = (offset & layer_object.maximum_address)
