@@ -11,11 +11,12 @@ once a layer successfully stacks on top of the existing layers, it is removed fr
 """
 
 import logging
+import sys
 import traceback
 from typing import List, Optional, Tuple
 
 from volatility import framework
-from volatility.framework import interfaces, constants
+from volatility.framework import interfaces, constants, import_files
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical
@@ -103,6 +104,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
         stacked_layers = [current_layer_name]
+        framework.import_files(sys.modules['volatility.framework.layers'])
         stack_set = sorted(
             framework.class_subclasses(interfaces.automagic.StackerLayerInterface), key = lambda x: x.stack_order)
         while stacked:
