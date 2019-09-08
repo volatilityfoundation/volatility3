@@ -49,7 +49,7 @@ class Callbacks(interfaces_plugins.PluginInterface):
 
     @classmethod
     def list_notify_routines(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
-                             config_path: str, callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
+                             callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
         """Lists all kernel notification routines"""
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
@@ -90,7 +90,7 @@ class Callbacks(interfaces_plugins.PluginInterface):
 
     @classmethod
     def list_registry_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
-                                config_path: str, callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
+                                callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
         """Lists all registry callbacks"""
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
@@ -125,8 +125,7 @@ class Callbacks(interfaces_plugins.PluginInterface):
 
     @classmethod
     def list_bugcheck_reason_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                                       symbol_table: str, config_path: str,
-                                       callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
+                                       symbol_table: str, callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
         """Lists all kernel bugcheck reason callbacks"""
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
@@ -149,11 +148,11 @@ class Callbacks(interfaces_plugins.PluginInterface):
                 continue
 
             try:
-                component = context.object(symbol_table + constants.BANG + "string",
-                                           layer_name = layer_name,
-                                           offset = callback.Component,
-                                           max_length = 64,
-                                           errors = "replace")
+                component = ntkrnlmp.object("string",
+                                            absolute = True,
+                                            offset = callback.Component,
+                                            max_length = 64,
+                                            errors = "replace")
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 
@@ -161,7 +160,7 @@ class Callbacks(interfaces_plugins.PluginInterface):
 
     @classmethod
     def list_bugcheck_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
-                                config_path: str, callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
+                                callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
         """Lists all kernel bugcheck callbacks"""
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
@@ -202,9 +201,10 @@ class Callbacks(interfaces_plugins.PluginInterface):
                             self.list_bugcheck_reason_callbacks, self.list_registry_callbacks)
 
         for callback_method in callback_methods:
-            for callback_type, callback_address, callback_detail in callback_method(
-                    self.context, self.config['primary'], self.config['nt_symbols'], self.config_path,
-                    callback_table_name):
+            for callback_type, callback_address, callback_detail in callback_method(self.context,
+                                                                                    self.config['primary'],
+                                                                                    self.config['nt_symbols'],
+                                                                                    callback_table_name):
 
                 if callback_detail is None:
                     detail = renderers.NotApplicableValue()
