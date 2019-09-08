@@ -355,7 +355,7 @@ class PoolScanner(plugins.PluginInterface):
         """
 
         # get the object type map
-        type_map = handles.Handles.list_objects(context = context, layer_name = layer_name, symbol_table = symbol_table)
+        type_map = handles.Handles.get_type_map(context = context, layer_name = layer_name, symbol_table = symbol_table)
 
         cookie = handles.Handles.find_cookie(context = context, layer_name = layer_name, symbol_table = symbol_table)
 

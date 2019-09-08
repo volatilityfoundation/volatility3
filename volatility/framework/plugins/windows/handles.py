@@ -133,7 +133,7 @@ class Handles(interfaces_plugins.PluginInterface):
         return self._sar_value
 
     @classmethod
-    def list_objects(cls, context: interfaces.context.ContextInterface, layer_name: str,
+    def get_type_map(cls, context: interfaces.context.ContextInterface, layer_name: str,
                      symbol_table: str) -> Dict[int, str]:
         """List the executive object types (_OBJECT_TYPE) using the
         ObTypeIndexTable or ObpObjectTypes symbol (differs per OS). This method
@@ -263,7 +263,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        type_map = self.list_objects(
+        type_map = self.get_type_map(
             context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
         cookie = self.find_cookie(
             context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
