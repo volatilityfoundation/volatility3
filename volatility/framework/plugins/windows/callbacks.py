@@ -2,29 +2,30 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
 
-from typing import List, Iterable, Tuple
 import logging
+from typing import List, Iterable, Tuple
+
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import constants, exceptions, renderers, interfaces, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
+from volatility.framework.symbols import intermed
 from volatility.plugins.windows import ssdt
 from volatility.plugins.windows import svcscan
-from volatility.framework.symbols import intermed
+
 vollog = logging.getLogger(__name__)
 
 
 class Callbacks(interfaces_plugins.PluginInterface):
-    """Lists kernel callbacks and notification routines"""
+    """Lists kernel callbacks and notification routines."""
 
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'ssdt', plugin = ssdt.SSDT, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'svcscan', plugin = svcscan.SvcScan, version = (1, 0, 0))
@@ -32,7 +33,16 @@ class Callbacks(interfaces_plugins.PluginInterface):
 
     @staticmethod
     def create_callback_table(context: interfaces.context.ContextInterface, symbol_table: str, config_path: str) -> str:
+        """Creates a symbol table for a set of callbacks.
 
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            symbol_table: The name of an existing symbol table containing the kernel symbols
+            config_path: The configuration path within the context of the symbol table to create
+
+        Returns:
+            The name of the constructed callback table
+        """
         native_types = context.symbol_space[symbol_table].natives
         is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
         table_mapping = {"nt_symbols": symbol_table}
@@ -42,17 +52,28 @@ class Callbacks(interfaces_plugins.PluginInterface):
         else:
             symbol_filename = "callbacks-x86"
 
-        return intermed.IntermediateSymbolTable.create(context,
-                                                       config_path,
-                                                       "windows",
-                                                       symbol_filename,
-                                                       native_types = native_types,
-                                                       table_mapping = table_mapping)
+        return intermed.IntermediateSymbolTable.create(
+            context,
+            config_path,
+            "windows",
+            symbol_filename,
+            native_types = native_types,
+            table_mapping = table_mapping)
 
     @classmethod
     def list_notify_routines(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
                              callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
-        """Lists all kernel notification routines"""
+        """Lists all kernel notification routines.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            callback_table_name: The nae of the table containing the callback symbols
+
+        Yields:
+            A name, location and optional detail string
+        """
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
@@ -76,10 +97,11 @@ class Callbacks(interfaces_plugins.PluginInterface):
             else:
                 count = 8
 
-            fast_refs = ntkrnlmp.object(object_type = "array",
-                                        offset = symbol_offset,
-                                        subtype = ntkrnlmp.get_type("_EX_FAST_REF"),
-                                        count = count)
+            fast_refs = ntkrnlmp.object(
+                object_type = "array",
+                offset = symbol_offset,
+                subtype = ntkrnlmp.get_type("_EX_FAST_REF"),
+                count = count)
 
             for fast_ref in fast_refs:
                 try:
@@ -93,7 +115,17 @@ class Callbacks(interfaces_plugins.PluginInterface):
     @classmethod
     def list_registry_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
                                 callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
-        """Lists all registry callbacks"""
+        """Lists all registry callbacks.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            callback_table_name: The nae of the table containing the callback symbols
+
+        Yields:
+            A name, location and optional detail string
+        """
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
@@ -111,10 +143,11 @@ class Callbacks(interfaces_plugins.PluginInterface):
         if callback_count == 0:
             return
 
-        fast_refs = ntkrnlmp.object(object_type = "array",
-                                    offset = symbol_offset,
-                                    subtype = ntkrnlmp.get_type("_EX_FAST_REF"),
-                                    count = callback_count)
+        fast_refs = ntkrnlmp.object(
+            object_type = "array",
+            offset = symbol_offset,
+            subtype = ntkrnlmp.get_type("_EX_FAST_REF"),
+            count = callback_count)
 
         for fast_ref in fast_refs:
             try:
@@ -128,7 +161,17 @@ class Callbacks(interfaces_plugins.PluginInterface):
     @classmethod
     def list_bugcheck_reason_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str,
                                        symbol_table: str, callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
-        """Lists all kernel bugcheck reason callbacks"""
+        """Lists all kernel bugcheck reason callbacks.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            callback_table_name: The nae of the table containing the callback symbols
+
+        Yields:
+            A name, location and optional detail string
+        """
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
@@ -140,9 +183,8 @@ class Callbacks(interfaces_plugins.PluginInterface):
             return
 
         full_type_name = callback_table_name + constants.BANG + "_KBUGCHECK_REASON_CALLBACK_RECORD"
-        callback_record = context.object(object_type = full_type_name,
-                                         offset = kvo + list_offset,
-                                         layer_name = layer_name)
+        callback_record = context.object(
+            object_type = full_type_name, offset = kvo + list_offset, layer_name = layer_name)
 
         for callback in callback_record.Entry:
 
@@ -150,11 +192,8 @@ class Callbacks(interfaces_plugins.PluginInterface):
                 continue
 
             try:
-                component = ntkrnlmp.object("string",
-                                            absolute = True,
-                                            offset = callback.Component,
-                                            max_length = 64,
-                                            errors = "replace")
+                component = ntkrnlmp.object(
+                    "string", absolute = True, offset = callback.Component, max_length = 64, errors = "replace")
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 
@@ -163,7 +202,17 @@ class Callbacks(interfaces_plugins.PluginInterface):
     @classmethod
     def list_bugcheck_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
                                 callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
-        """Lists all kernel bugcheck callbacks"""
+        """Lists all kernel bugcheck callbacks.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            callback_table_name: The nae of the table containing the callback symbols
+
+        Yields:
+            A name, location and optional detail string
+        """
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
@@ -183,11 +232,12 @@ class Callbacks(interfaces_plugins.PluginInterface):
                 continue
 
             try:
-                component = context.object(symbol_table + constants.BANG + "string",
-                                           layer_name = layer_name,
-                                           offset = callback.Component,
-                                           max_length = 64,
-                                           errors = "replace")
+                component = context.object(
+                    symbol_table + constants.BANG + "string",
+                    layer_name = layer_name,
+                    offset = callback.Component,
+                    max_length = 64,
+                    errors = "replace")
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 
