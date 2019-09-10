@@ -3,7 +3,6 @@ from typing import List, Iterator, Tuple
 
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.layers import registry
 from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
 from volatility.plugins.windows.registry import printkey
 
@@ -33,15 +32,11 @@ class Certificates(interfaces.plugins.PluginInterface):
         return (name, certificate_data)
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
-        for hive_name in printkey.PrintKey.hive_iterator(
+        for hive in printkey.PrintKey.hive_iterator(
                 self.context,
                 base_config_path = self.config_path,
                 layer_name = self.config['primary'],
                 symbol_table = self.config['nt_symbols']):
-
-            hive = self.context.layers[hive_name]
-            if not isinstance(hive, registry.RegistryHive):
-                pass
 
             try:
                 # Walk it
