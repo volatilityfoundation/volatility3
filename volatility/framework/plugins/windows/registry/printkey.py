@@ -4,7 +4,7 @@
 
 import datetime
 import logging
-from typing import Generator, List, Sequence
+from typing import Generator, List, Sequence, Iterable
 
 from volatility.framework import objects, renderers, exceptions, interfaces, constants
 from volatility.framework.configuration import requirements
@@ -37,7 +37,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     @classmethod
     def key_iterator(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None,
-                     recurse: bool = False) -> Generator:
+                     recurse: bool = False) -> Iterable[int, bool, datetime.datetime, str, bool, bytes]:
         """Walks through a set of nodes from a given node (last one in
         node_path). Avoids loops by not traversing into nodes already present
         in the node_path.
@@ -85,7 +85,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                       base_config_path: str,
                       layer_name: str,
                       symbol_table: str,
-                      hive_offsets: List[int] = None):
+                      hive_offsets: List[int] = None) -> Iterable[RegistryHive]:
         """Walks through a registry, hive by hive returning the constructed
         registry layer name.
 
@@ -118,7 +118,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
             hive = RegistryHive(context, reg_config_path, name = 'hive' + hex(hive_offset))
             context.layers.add_layer(hive)
-            yield hive.name
+            yield hive
 
     def _printkey_iterator(self,
                            hive: RegistryHive,
@@ -172,16 +172,12 @@ class PrintKey(interfaces.plugins.PluginInterface):
                          key: str = None,
                          recurse: bool = False):
 
-        for hive_name in self.hive_iterator(
+        for hive in self.hive_iterator(
                 self.context,
                 self.config_path,
                 layer_name = layer_name,
                 symbol_table = symbol_table,
                 hive_offsets = hive_offsets):
-
-            hive = self.context.layers[hive_name]
-            if not isinstance(hive, RegistryHive):
-                continue
 
             try:
                 # Walk it
