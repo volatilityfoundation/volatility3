@@ -4,7 +4,7 @@ from typing import List, Iterator, Tuple
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
-from volatility.plugins.windows.registry import printkey
+from volatility.plugins.windows.registry import hivelist, printkey
 
 
 class Certificates(interfaces.plugins.PluginInterface):
@@ -16,6 +16,7 @@ class Certificates(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'printkey', plugin = printkey.PrintKey, version = (1, 0, 0))
         ]
 
@@ -32,7 +33,7 @@ class Certificates(interfaces.plugins.PluginInterface):
         return (name, certificate_data)
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
-        for hive in printkey.PrintKey.hive_iterator(
+        for hive in hivelist.HiveList.list_hives(
                 self.context,
                 base_config_path = self.config_path,
                 layer_name = self.config['primary'],

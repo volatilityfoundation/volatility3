@@ -9,7 +9,7 @@ import logging
 import os
 from typing import Any, List, Tuple, Generator
 
-import volatility.plugins.windows.registry.printkey as printkey
+import volatility.plugins.windows.registry.hivelist as hivelist
 
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
@@ -39,7 +39,8 @@ class UserAssist(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True)
+            requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
+            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
 
     def parse_userassist_data(self, reg_val):
@@ -209,14 +210,18 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
     def _generator(self):
 
+        hive_offsets = None
+        if self.config.get('offset', None) is not None:
+            hive_offsets = [self.config.get('offset', None)]
+
         # get all the user hive offsets or use the one specified
-        for hive in printkey.PrintKey.hive_iterator(
+        for hive in hivelist.HiveList.list_hives(
                 context = self.context,
                 base_config_path = self.config_path,
                 layer_name = self.config['primary'],
                 symbol_table = self.config['nt_symbols'],
-                filter_string = 'ntuser.data',
-                offsets = [self.config.get('offset', None)]):
+                filter_string = 'ntuser.dat',
+                hive_offsets = hive_offsets):
             try:
                 yield from self.list_userassist(hive)
                 continue
@@ -235,6 +240,8 @@ class UserAssist(interfaces.plugins.PluginInterface):
             yield result
 
     def run(self):
+        self._reg_table_name = intermed.IntermediateSymbolTable.create(self.context, self._config_path, 'windows',
+                                                                       'registry')
 
         return renderers.TreeGrid([("Hive Offset", renderers.format_hints.Hex), ("Hive Name", str), ("Path", str),
                                    ("Last Write Time", datetime.datetime), ("Type", str), ("Name", str), ("ID", int),
