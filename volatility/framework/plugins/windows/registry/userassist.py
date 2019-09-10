@@ -9,6 +9,8 @@ import logging
 import os
 from typing import Any, List, Tuple, Generator
 
+import volatility.plugins.windows.registry.printkey as printkey
+
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.physical import BufferDataLayer
@@ -208,50 +210,25 @@ class UserAssist(interfaces.plugins.PluginInterface):
     def _generator(self):
 
         # get all the user hive offsets or use the one specified
-        if self.config.get('offset', None) is None:
-            try:
-                import volatility.plugins.windows.registry.hivelist as hivelist
-                hive_offsets = [
-                    hive.vol.offset for hive in hivelist.HiveList.list_hives(
-                        context = self.context,
-                        layer_name = self.config['primary'],
-                        symbol_table = self.config['nt_symbols'],
-                        filter_string = "ntuser.dat")
-                ]
-            except ImportError:
-                vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")
-                raise ValueError("Unable to import windows.hivelist plugin, please provide a hive offset")
-        else:
-            hive_offsets = [self.config['offset']]
-
-        self._reg_table_name = intermed.IntermediateSymbolTable.create(self.context, self._config_path, 'windows',
-                                                                       'registry')
-
-        for hive_offset in hive_offsets:
-            # Construct the hive
-            reg_config_path = self.make_subconfig(
+        for hive in printkey.PrintKey.hive_iterator(
                 context = self.context,
                 base_config_path = self.config_path,
-                base_layer = self.config['primary'],
-                nt_symbols = self.config['nt_symbols'],
-                hive_offset = hive_offset)
-
-            hive_name = None
+                layer_name = self.config['primary'],
+                symbol_table = self.config['nt_symbols'],
+                filter_string = 'ntuser.data',
+                offsets = [self.config.get('offset', None)]):
             try:
-                hive = RegistryHive(self.context, reg_config_path, name = 'hive' + hex(hive_offset))
-                hive_name = hive.hive.cast(self.config["nt_symbols"] + constants.BANG + "_CMHIVE").get_name()
-                self.context.layers.add_layer(hive)
                 yield from self.list_userassist(hive)
                 continue
             except exceptions.PagedInvalidAddressException as excp:
                 vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
             except KeyError:
                 vollog.debug("Key '{}' not found in Hive at offset {}.".format(
-                    "software\\microsoft\\windows\\currentversion\\explorer\\userassist", hex(hive_offset)))
+                    "software\\microsoft\\windows\\currentversion\\explorer\\userassist", hex(hive.hive_offset)))
 
             # yield UnreadableValues when an exception occurs for a given hive_offset
-            result = (0, (renderers.format_hints.Hex(hive_offset),
-                          hive_name if hive_name else renderers.UnreadableValue(), renderers.UnreadableValue(),
+            result = (0, (renderers.format_hints.Hex(hive.hive_offset),
+                          hive.name if hive.name else renderers.UnreadableValue(), renderers.UnreadableValue(),
                           renderers.UnreadableValue(), renderers.UnreadableValue(), renderers.UnreadableValue(),
                           renderers.UnreadableValue(), renderers.UnreadableValue(), renderers.UnreadableValue(),
                           renderers.UnreadableValue(), renderers.UnreadableValue(), renderers.UnreadableValue()))

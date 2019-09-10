@@ -4,7 +4,7 @@
 
 import datetime
 import logging
-from typing import Generator, List, Sequence, Iterable
+from typing import Generator, List, Sequence, Iterable, Optional
 
 from volatility.framework import objects, renderers, exceptions, interfaces, constants
 from volatility.framework.configuration import requirements
@@ -85,6 +85,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                       base_config_path: str,
                       layer_name: str,
                       symbol_table: str,
+                      filter_string: Optional[str] = None,
                       hive_offsets: List[int] = None) -> Iterable[RegistryHive]:
         """Walks through a registry, hive by hive returning the constructed
         registry layer name.
@@ -93,7 +94,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            offset: An optional offset to specify a specific hive to iterator over
+            filter_string: An optional string which must be present in the hive name if specified 
+            offset: An optional offset to specify a specific hive to iterate over (takes precedence over filter_string)
 
         Yields:
             A registry hive layer name
@@ -101,7 +103,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
         if hive_offsets is None:
             try:
                 hive_offsets = [
-                    hive.vol.offset for hive in hivelist.HiveList.list_hives(context, layer_name, symbol_table)
+                    hive.vol.offset
+                    for hive in hivelist.HiveList.list_hives(context, layer_name, symbol_table, filter_string)
                 ]
             except ImportError:
                 vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")
