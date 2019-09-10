@@ -1,0 +1,69 @@
+import struct
+from typing import List, Iterator, Tuple
+
+from volatility.framework import interfaces, renderers
+from volatility.framework.configuration import requirements
+from volatility.framework.layers import registry
+from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
+from volatility.plugins.windows.registry import printkey
+
+
+class Certificates(interfaces.plugins.PluginInterface):
+    """Lists the registry keys under a hive or specific key value."""
+
+    @classmethod
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        return [
+            requirements.TranslationLayerRequirement(
+                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'printkey', plugin = printkey.PrintKey, version = (1, 0, 0))
+        ]
+
+    def parse_data(self, data: bytes):
+        name = renderers.NotAvailableValue()
+        certificate_data = renderers.NotAvailableValue()
+        while len(data) > 12:
+            ctype, clength = struct.unpack("<QI", data[0:12])
+            cvalue, data = data[12:12 + clength], data[12 + clength:]
+            if ctype == 0x10000000b:
+                name = str(cvalue, 'utf-16').strip("\x00")
+            elif ctype == 0x100000020:
+                certificate_data = cvalue
+        return (name, certificate_data)
+
+    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
+        for hive_name in printkey.PrintKey.hive_iterator(
+                self.context,
+                base_config_path = self.config_path,
+                layer_name = self.config['primary'],
+                symbol_table = self.config['nt_symbols']):
+
+            hive = self.context.layers[hive_name]
+            if not isinstance(hive, registry.RegistryHive):
+                pass
+
+            try:
+                # Walk it
+                top_key = "Microsoft\\SystemCertificates"
+                node_path = hive.get_key(top_key, return_list = True)
+                for (depth, is_key, last_write_time, key_path, volatility, node) in printkey.PrintKey.key_iterator(
+                        hive, node_path, recurse = True):
+                    if not is_key and RegValueTypes.get(node.Type).name == "REG_BINARY":
+                        name, certificate_data = self.parse_data(node.decode_data())
+                        unique_key_offset = key_path.index(top_key) + len(top_key) + 1
+                        reg_section = key_path[unique_key_offset:key_path.index("\\", unique_key_offset)]
+                        key_hash = key_path[key_path.rindex("\\") + 1:]
+
+                        if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
+                            filedata = interfaces.plugins.FileInterface("{} - {}.crt".format(reg_section, key_hash))
+                            filedata.data.write(certificate_data)
+                            self.produce_file(filedata)
+                        yield (0, (top_key, reg_section, key_hash, name))
+            except KeyError:
+                # Key wasn't found in this hive, carry on
+                pass
+
+    def run(self) -> renderers.TreeGrid:
+        return renderers.TreeGrid([("Certificate path", str), ("Certificate section", str), ("Certificate ID", str),
+                                   ("Certificate name", str)], self._generator())
