@@ -2,11 +2,12 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
 import logging
-from typing import Iterator, List, Tuple
+from typing import Iterator, List, Tuple, Iterable, Optional
 
 import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
+from volatility.framework.layers import registry
 from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class HiveList(plugins.PluginInterface):
         ]
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
-        for hive in self.list_hives(
+        for hive in self.list_hive_objects(
                 context = self.context,
                 layer_name = self.config["primary"],
                 symbol_table = self.config["nt_symbols"],
@@ -39,9 +40,52 @@ class HiveList(plugins.PluginInterface):
     @classmethod
     def list_hives(cls,
                    context: interfaces.context.ContextInterface,
+                   base_config_path: str,
                    layer_name: str,
                    symbol_table: str,
-                   filter_string: str = None) -> Iterator[interfaces.objects.ObjectInterface]:
+                   filter_string: Optional[str] = None,
+                   hive_offsets: List[int] = None) -> Iterable[registry.RegistryHive]:
+        """Walks through a registry, hive by hive returning the constructed
+        registry layer name.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+            filter_string: An optional string which must be present in the hive name if specified 
+            offset: An optional offset to specify a specific hive to iterate over (takes precedence over filter_string)
+
+        Yields:
+            A registry hive layer name
+        """
+        if hive_offsets is None:
+            try:
+                hive_offsets = [
+                    hive.vol.offset for hive in cls.list_hive_objects(context, layer_name, symbol_table, filter_string)
+                ]
+            except ImportError:
+                vollog.warning("Unable to import windows.hivelist plugin, please provide a hive offset")
+                raise ValueError("Unable to import windows.hivelist plugin, please provide a hive offset")
+
+        for hive_offset in hive_offsets:
+            # Construct the hive
+            reg_config_path = cls.make_subconfig(
+                context = context,
+                base_config_path = base_config_path,
+                hive_offset = hive_offset,
+                base_layer = layer_name,
+                nt_symbols = symbol_table)
+
+            hive = registry.RegistryHive(context, reg_config_path, name = 'hive' + hex(hive_offset))
+            context.layers.add_layer(hive)
+            yield hive
+
+    @classmethod
+    def list_hive_objects(cls,
+                          context: interfaces.context.ContextInterface,
+                          layer_name: str,
+                          symbol_table: str,
+                          filter_string: str = None) -> Iterator[interfaces.objects.ObjectInterface]:
         """Lists all the hives in the primary layer.
 
         Args:
