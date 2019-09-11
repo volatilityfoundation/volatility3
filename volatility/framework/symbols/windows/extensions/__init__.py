@@ -6,7 +6,8 @@ import collections.abc
 import datetime
 import functools
 import logging
-from typing import Iterable, Iterator, Optional, Union, Dict
+import struct
+from typing import Iterable, Iterator, Optional, Union, Dict, Tuple, List
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
@@ -65,7 +66,10 @@ class _POOL_HEADER(objects.StructType):
             # use the top down approach for windows 8 and later
             if use_top_down:
                 infomask_offset = object_header_type.relative_child_offset('InfoMask')
-                lengths_of_optional_headers = self._calculate_optional_header_lengths(self._context, symbol_table_name)
+                optional_headers, lengths_of_optional_headers = self._calculate_optional_header_lengths(
+                    self._context, symbol_table_name)
+                padding_available = None if 'PADDING_INFO' not in optional_headers else optional_headers.index(
+                    'PADDING_INFO')
                 max_optional_headers_length = sum(lengths_of_optional_headers)
 
                 # define the starting and ending bounds for the scan
@@ -79,17 +83,22 @@ class _POOL_HEADER(objects.StructType):
                 infomask_data = self._context.layers[self.vol.layer_name].read(
                     start_offset, addr_limit + infomask_offset, pad = True)
 
-                for addr in range(infomask_offset, addr_limit + infomask_offset, alignment):
-                    infomask_value = infomask_data[addr]
+                # Addr stores the offset to the potential start of the OBJECT_HEADER from just after the POOL_HEADER
+                # It will always be aligned to a particular alignment
+                for addr in range(0, addr_limit, alignment):
+                    infomask_value = infomask_data[addr + infomask_offset]
 
+                    padding_present = False
                     optional_headers_length = 0
                     for i in range(len(lengths_of_optional_headers)):
                         if infomask_value & (1 << i):
                             optional_headers_length += lengths_of_optional_headers[i]
+                            if i == padding_available:
+                                padding_present = True
 
                     # PADDING_INFO is a special case (4 bytes that contain the total padding length)
                     padding_length = 0
-                    if 0x80 & infomask_value:
+                    if padding_present:
                         # Read the four bytes from just before the next optional_headers_length minus the padding_info size
                         #
                         #  ---------------
@@ -102,13 +111,13 @@ class _POOL_HEADER(objects.StructType):
                         #  ---------------
                         #  OBJECT_HEADER
                         #  ---------------
-                        optional_headers_length -= lengths_of_optional_headers[7]
-                        if optional_headers_length < 4:
+                        if addr - optional_headers_length < 0:
                             continue
                         padding_length = struct.unpack(
-                            "<I", infomask_data[optional_headers_length - 4:optional_headers_length])[0]
+                            "<I", infomask_data[addr - optional_headers_length:addr - optional_headers_length + 4])[0]
+                        padding_length -= lengths_of_optional_headers[7]
 
-                    if optional_headers_length + padding_length != addr - infomask_offset:
+                    if optional_headers_length + padding_length != addr:
                         continue
 
                     try:
@@ -116,7 +125,7 @@ class _POOL_HEADER(objects.StructType):
                         object_header = self._context.object(
                             symbol_table_name + constants.BANG + "_OBJECT_HEADER",
                             layer_name = self.vol.layer_name,
-                            offset = addr - infomask_offset + start_offset,
+                            offset = addr + start_offset,
                             native_layer_name = native_layer_name)
 
                         if not object_header.is_valid():
@@ -157,7 +166,8 @@ class _POOL_HEADER(objects.StructType):
     @classmethod
     @functools.lru_cache()
     def _calculate_optional_header_lengths(cls, context: interfaces.context.ContextInterface,
-                                           symbol_table_name: str) -> List[int]:
+                                           symbol_table_name: str) -> Tuple[List[str], List[int]]:
+        headers = []
         sizes = []
         for header in [
                 'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
@@ -166,6 +176,7 @@ class _POOL_HEADER(objects.StructType):
             try:
                 type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)
                 header_type = context.symbol_space.get_type(type_name)
+                headers.append(header)
                 sizes.append(header_type.size)
             except:
                 # Some of these may not exist, for example:
@@ -173,7 +184,7 @@ class _POOL_HEADER(objects.StructType):
                 #   if build == 10586: HANDLE_REVOCATION_INFO else EXTENDED_INFO
                 # based on what's present and what's not, this list should be the right order and the right length
                 pass
-        return sizes
+        return headers, sizes
 
 class _KSYSTEM_TIME(objects.StructType):
     """A system time structure that stores a high and low part."""
