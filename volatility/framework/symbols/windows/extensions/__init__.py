@@ -140,8 +140,8 @@ class _POOL_HEADER(objects.StructType):
                                            symbol_table_name: str) -> List[int]:
         sizes = []
         for header in [
-                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
-                'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
+                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'PADDING_INFO',
+                'EXTENDED_INFO', 'HANDLE_REVOCATION_INFO'
         ]:
             try:
                 type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)
