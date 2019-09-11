@@ -77,9 +77,9 @@ class _POOL_HEADER(objects.StructType):
                 # were no optional headers in the first place (ie, if we read too much for headers that don't exist,
                 # but the bit we could read were valid)
                 infomask_data = self._context.layers[self.vol.layer_name].read(
-                    start_offset + infomask_offset, addr_limit, pad = True)
+                    start_offset, addr_limit + infomask_offset, pad = True)
 
-                for addr in range(0, addr_limit, alignment):
+                for addr in range(infomask_offset, addr_limit + infomask_offset, alignment):
                     infomask_value = infomask_data[addr]
 
                     optional_headers_length = 0
@@ -87,7 +87,28 @@ class _POOL_HEADER(objects.StructType):
                         if infomask_value & (1 << i):
                             optional_headers_length += lengths_of_optional_headers[i]
 
-                    if optional_headers_length != addr:
+                    # PADDING_INFO is a special case (4 bytes that contain the total padding length)
+                    padding_length = 0
+                    if 0x80 & infomask_value:
+                        # Read the four bytes from just before the next optional_headers_length minus the padding_info size
+                        #
+                        #  ---------------
+                        #  POOL_HEADER
+                        #  ---------------
+                        #
+                        #  start of PADDING_INFO
+                        #  ---------------
+                        #  End of other optional headers
+                        #  ---------------
+                        #  OBJECT_HEADER
+                        #  ---------------
+                        optional_headers_length -= lengths_of_optional_headers[7]
+                        if optional_headers_length < 4:
+                            continue
+                        padding_length = struct.unpack(
+                            "<I", infomask_data[optional_headers_length - 4:optional_headers_length])[0]
+
+                    if optional_headers_length + padding_length != addr - infomask_offset:
                         continue
 
                     try:
@@ -95,7 +116,7 @@ class _POOL_HEADER(objects.StructType):
                         object_header = self._context.object(
                             symbol_table_name + constants.BANG + "_OBJECT_HEADER",
                             layer_name = self.vol.layer_name,
-                            offset = addr + start_offset,
+                            offset = addr - infomask_offset + start_offset,
                             native_layer_name = native_layer_name)
 
                         if not object_header.is_valid():
@@ -139,8 +160,8 @@ class _POOL_HEADER(objects.StructType):
                                            symbol_table_name: str) -> List[int]:
         sizes = []
         for header in [
-                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'PADDING_INFO',
-                'EXTENDED_INFO', 'HANDLE_REVOCATION_INFO'
+                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
+                'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
         ]:
             try:
                 type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)
