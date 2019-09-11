@@ -45,8 +45,6 @@ class _POOL_HEADER(objects.StructType):
             symbol_table_name, type_name = type_name.split(constants.BANG)[0:2]
 
         object_header_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_OBJECT_HEADER")
-        infomask_offset = object_header_type.relative_child_offset('InfoMask')
-
         pool_header_size = self.vol.size
 
         # if there is no object type, then just instantiate a structure
@@ -64,11 +62,12 @@ class _POOL_HEADER(objects.StructType):
             else:
                 alignment = 8
 
-            lengths_of_optional_headers = self._calculate_optional_header_lengths(self._context, symbol_table_name)
-            max_optional_headers_length = sum(lengths_of_optional_headers)
-
             # use the top down approach for windows 8 and later
             if use_top_down:
+                infomask_offset = object_header_type.relative_child_offset('InfoMask')
+                lengths_of_optional_headers = self._calculate_optional_header_lengths(self._context, symbol_table_name)
+                max_optional_headers_length = sum(lengths_of_optional_headers)
+
                 # define the starting and ending bounds for the scan
                 start_offset = self.vol.offset + pool_header_size
                 addr_limit = min(max_optional_headers_length, self.BlockSize * alignment)
