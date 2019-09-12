@@ -8,7 +8,7 @@ from volatility.plugins.windows.registry import hivelist, printkey
 
 
 class Certificates(interfaces.plugins.PluginInterface):
-    """Lists the registry keys under a hive or specific key value."""
+    """Lists the certificates in the registry's Certificate Store."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
