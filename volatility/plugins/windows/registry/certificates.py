@@ -39,26 +39,28 @@ class Certificates(interfaces.plugins.PluginInterface):
                 layer_name = self.config['primary'],
                 symbol_table = self.config['nt_symbols']):
 
-            try:
-                # Walk it
-                top_key = "Microsoft\\SystemCertificates"
-                node_path = hive.get_key(top_key, return_list = True)
-                for (depth, is_key, last_write_time, key_path, volatility, node) in printkey.PrintKey.key_iterator(
-                        hive, node_path, recurse = True):
-                    if not is_key and RegValueTypes.get(node.Type).name == "REG_BINARY":
-                        name, certificate_data = self.parse_data(node.decode_data())
-                        unique_key_offset = key_path.index(top_key) + len(top_key) + 1
-                        reg_section = key_path[unique_key_offset:key_path.index("\\", unique_key_offset)]
-                        key_hash = key_path[key_path.rindex("\\") + 1:]
+            for top_key in ["Microsoft\\SystemCertificates",
+                            "Software\\Microsoft\\SystemCertificates",
+                            ]:
+                try:
+                    # Walk it
+                    node_path = hive.get_key(top_key, return_list = True)
+                    for (depth, is_key, last_write_time, key_path, volatility, node) in printkey.PrintKey.key_iterator(
+                            hive, node_path, recurse = True):
+                        if not is_key and RegValueTypes.get(node.Type).name == "REG_BINARY":
+                            name, certificate_data = self.parse_data(node.decode_data())
+                            unique_key_offset = key_path.index(top_key) + len(top_key) + 1
+                            reg_section = key_path[unique_key_offset:key_path.index("\\", unique_key_offset)]
+                            key_hash = key_path[key_path.rindex("\\") + 1:]
 
-                        if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
-                            filedata = interfaces.plugins.FileInterface("{} - {}.crt".format(reg_section, key_hash))
-                            filedata.data.write(certificate_data)
-                            self.produce_file(filedata)
-                        yield (0, (top_key, reg_section, key_hash, name))
-            except KeyError:
-                # Key wasn't found in this hive, carry on
-                pass
+                            if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
+                                filedata = interfaces.plugins.FileInterface("{} - {}.crt".format(reg_section, key_hash))
+                                filedata.data.write(certificate_data)
+                                self.produce_file(filedata)
+                            yield (0, (top_key, reg_section, key_hash, name))
+                except KeyError:
+                    # Key wasn't found in this hive, carry on
+                    pass
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Certificate path", str), ("Certificate section", str), ("Certificate ID", str),
