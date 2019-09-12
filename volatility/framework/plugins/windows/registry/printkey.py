@@ -48,7 +48,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
             recurse: Traverse down the node tree or stay only on the same level
 
         Yields:
-            The depth, and a tuple of results (last write time, hive offset, type, path, name, data and volatile)
+            A tuple of results (depth, is_key, last write time, path, volatile, and the node).
         """
         if not node_path:
             node_path = [hive.get_node(hive.root_cell_offset)]
@@ -90,6 +90,9 @@ class PrintKey(interfaces.plugins.PluginInterface):
             hive: The registry hive to walk
             node_path: The list of nodes that make up the
             recurse: Traverse down the node tree or stay only on the same level
+
+        Yields:
+            The depth, and a tuple of results (last write time, hive offset, type, path, name, data and volatile)
         """
         for depth, is_key, last_write_time, key_path, volatile, node in self.key_iterator(hive, node_path, recurse):
             if is_key:
