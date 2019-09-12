@@ -76,7 +76,11 @@ class HiveList(plugins.PluginInterface):
                 base_layer = layer_name,
                 nt_symbols = symbol_table)
 
-            hive = registry.RegistryHive(context, reg_config_path, name = 'hive' + hex(hive_offset))
+            try:
+                hive = registry.RegistryHive(context, reg_config_path, name = 'hive' + hex(hive_offset))
+            except exceptions.InvalidAddressException:
+                vollog.warning("Couldn't create RegistryHive layer at offset {}, skipping".format(hex(hive_offset)))
+                continue
             context.layers.add_layer(hive)
             yield hive
 
