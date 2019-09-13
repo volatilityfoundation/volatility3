@@ -54,7 +54,8 @@ class Certificates(interfaces.plugins.PluginInterface):
                             key_hash = key_path[key_path.rindex("\\") + 1:]
 
                             if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
-                                filedata = interfaces.plugins.FileInterface("{} - {}.crt".format(reg_section, key_hash))
+                                filedata = interfaces.plugins.FileInterface(
+                                    "{} - {} - {}.crt".format(hex(hive.hive_offset), reg_section, key_hash))
                                 filedata.data.write(certificate_data)
                                 self.produce_file(filedata)
                             yield (0, (top_key, reg_section, key_hash, name))
