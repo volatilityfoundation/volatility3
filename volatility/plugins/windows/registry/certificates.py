@@ -39,8 +39,9 @@ class Certificates(interfaces.plugins.PluginInterface):
                 layer_name = self.config['primary'],
                 symbol_table = self.config['nt_symbols']):
 
-            for key_type, top_key in [("Machine", "Microsoft\\SystemCertificates"),
-                                      ("User", "Software\\Microsoft\\SystemCertificates")]:
+            for top_key in ["Microsoft\\SystemCertificates",
+                            "Software\\Microsoft\\SystemCertificates",
+                            ]:
                 try:
                     # Walk it
                     node_path = hive.get_key(top_key, return_list = True)
@@ -53,8 +54,8 @@ class Certificates(interfaces.plugins.PluginInterface):
                             key_hash = key_path[key_path.rindex("\\") + 1:]
 
                             if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
-                                filedata = interfaces.plugins.FileInterface("{} - {} - {}.crt".format(
-                                    key_type, reg_section, key_hash))
+                                filedata = interfaces.plugins.FileInterface(
+                                    "{} - {} - {}.crt".format(hex(hive.hive_offset), reg_section, key_hash))
                                 filedata.data.write(certificate_data)
                                 self.produce_file(filedata)
                             yield (0, (top_key, reg_section, key_hash, name))
