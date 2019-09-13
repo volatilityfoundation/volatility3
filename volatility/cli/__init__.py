@@ -71,6 +71,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
     def __init__(self):
         self.output_dir = None
+        self.consume_files = True
 
     def run(self):
         """Executes the command line module, taking the system arguments,
@@ -119,6 +120,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             help = "Directory in which to output any generated files",
             default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')),
             type = str)
+        parser.add_argument(
+            "-n", "--no-files", help = "Do not produce files for any plugins", default = False, action = "store_true")
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument(
             "-r",
@@ -247,6 +250,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
         automagics = automagic.choose_automagic(automagics, plugin)
         self.output_dir = args.output_dir
+        self.consume_files = not args.no_files
 
         ###
         # BACK TO THE FRAMEWORK
@@ -334,18 +338,22 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         """Consumes a file as produced by a plugin."""
         if self.output_dir is None:
             raise ValueError("Output directory has not been correctly specified")
-        os.makedirs(self.output_dir, exist_ok = True)
 
         pref_name_array = filedata.preferred_filename.split('.')
         filename, extension = os.path.join(self.output_dir, '.'.join(pref_name_array[:-1])), pref_name_array[-1]
         output_filename = "{}.{}".format(filename, extension)
 
-        if not os.path.exists(output_filename):
-            with open(output_filename, "wb") as current_file:
-                current_file.write(filedata.data.getvalue())
-                vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
+        if self.consume_files:
+            os.makedirs(self.output_dir, exist_ok = True)
+
+            if not os.path.exists(output_filename):
+                with open(output_filename, "wb") as current_file:
+                    current_file.write(filedata.data.getvalue())
+                    vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
+            else:
+                vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
         else:
-            vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
+            vollog.log(logging.INFO, "Due to --no-files, not storing file {}".format(output_filename))
 
     def populate_requirements_argparse(self, parser: Union[argparse.ArgumentParser, argparse._ArgumentGroup],
                                        configurable: Type[interfaces.configuration.ConfigurableInterface]):
