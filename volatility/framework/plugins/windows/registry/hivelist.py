@@ -111,7 +111,7 @@ class HiveList(plugins.PluginInterface):
         reloff = ntkrnlmp.get_type("_CMHIVE").relative_child_offset("HiveList")
         cmhive = ntkrnlmp.object(object_type = "_CMHIVE", offset = list_entry.vol.offset - reloff, absolute = True)
 
-        # Run through the list fowards
+        # Run through the list forwards
         seen = set()
         traverse_backwards = False
         try:
