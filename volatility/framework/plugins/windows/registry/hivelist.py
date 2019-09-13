@@ -117,8 +117,9 @@ class HiveList(plugins.PluginInterface):
         try:
             for hive in cmhive.HiveList:
                 if filter_string is None or filter_string.lower() in str(hive.get_name() or "").lower():
-                    seen.add(hive.vol.offset)
-                    yield hive
+                    if context.layers[layer_name].is_valid(hive.vol.offset):
+                        seen.add(hive.vol.offset)
+                        yield hive
         except exceptions.InvalidAddressException:
             vollog.warning("Hivelist failed traversing the list forwards, traversing backwards")
             traverse_backwards = True
@@ -128,7 +129,8 @@ class HiveList(plugins.PluginInterface):
                 for hive in cmhive.HiveList.to_list(cmhive.vol.type_name, "HiveList", forward = False):
                     if filter_string is None or filter_string.lower() in str(
                             hive.get_name() or "").lower() and hive.vol.offset not in seen:
-                        yield hive
+                        if context.layers[layer_name].is_valid(hive.vol.offset):
+                            yield hive
             except exceptions.InvalidAddressException:
                 vollog.warning("Hivelist failed traversing the list backwards, giving up")
 
