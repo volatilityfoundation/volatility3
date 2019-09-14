@@ -17,7 +17,9 @@ class Certificates(interfaces.plugins.PluginInterface):
                 name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'printkey', plugin = printkey.PrintKey, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'printkey', plugin = printkey.PrintKey, version = (1, 0, 0)),
+            requirements.BooleanRequirement(
+                name = 'no_dump', description = "Do not output certificate files", default = False, optional = True)
         ]
 
     def parse_data(self, data: bytes):
@@ -32,16 +34,14 @@ class Certificates(interfaces.plugins.PluginInterface):
                 certificate_data = cvalue
         return (name, certificate_data)
 
-    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
+    def _generator(self, dump_files = True) -> Iterator[Tuple[int, Tuple[int, str]]]:
         for hive in hivelist.HiveList.list_hives(
                 self.context,
                 base_config_path = self.config_path,
                 layer_name = self.config['primary'],
                 symbol_table = self.config['nt_symbols']):
 
-            for top_key in ["Microsoft\\SystemCertificates",
-                            "Software\\Microsoft\\SystemCertificates",
-                            ]:
+            for top_key in ["Microsoft\\SystemCertificates", "Software\\Microsoft\\SystemCertificates"]:
                 try:
                     # Walk it
                     node_path = hive.get_key(top_key, return_list = True)
@@ -53,9 +53,9 @@ class Certificates(interfaces.plugins.PluginInterface):
                             reg_section = key_path[unique_key_offset:key_path.index("\\", unique_key_offset)]
                             key_hash = key_path[key_path.rindex("\\") + 1:]
 
-                            if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
-                                filedata = interfaces.plugins.FileInterface(
-                                    "{} - {} - {}.crt".format(hex(hive.hive_offset), reg_section, key_hash))
+                            if dump_files and not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
+                                filedata = interfaces.plugins.FileInterface("{} - {} - {}.crt".format(
+                                    hex(hive.hive_offset), reg_section, key_hash))
                                 filedata.data.write(certificate_data)
                                 self.produce_file(filedata)
                             yield (0, (top_key, reg_section, key_hash, name))
@@ -65,4 +65,4 @@ class Certificates(interfaces.plugins.PluginInterface):
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Certificate path", str), ("Certificate section", str), ("Certificate ID", str),
-                                   ("Certificate name", str)], self._generator())
+                                   ("Certificate name", str)], self._generator(not self.config['no_dump']))
