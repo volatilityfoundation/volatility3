@@ -376,7 +376,7 @@ class PluginRequirement(interfaces.configuration.RequirementInterface):
                  description: str = None,
                  default: None = None,
                  optional: bool = False,
-                 plugin: interfaces.plugins.PluginInterface = None,
+                 plugin: Type[interfaces.plugins.PluginInterface] = None,
                  version: Optional[Tuple[int, ...]] = None) -> None:
         super().__init__(name = name, description = description, default = default, optional = optional)
         if plugin is None:
