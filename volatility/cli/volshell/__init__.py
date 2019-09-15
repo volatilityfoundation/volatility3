@@ -214,7 +214,7 @@ class VolShell(cli.CommandLine):
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
             # Construct and run the plugin
-            text_renderer.QuickTextRenderer().render(constructed.run())
+            constructed.run()
         except exceptions.UnsatisfiedException as excp:
             self.process_exceptions(excp)
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
