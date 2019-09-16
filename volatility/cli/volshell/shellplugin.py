@@ -61,6 +61,20 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         return renderers.TreeGrid([("Terminating", str)], None)
 
+    def help(self):
+        """Describes the available commands"""
+        variables = []
+        print("Methods:")
+        for name, item in self.construct_locals().items():
+            if item.__doc__ and callable(item):
+                print("{} - {}".format(name, item.__doc__))
+            else:
+                variables.append(name)
+
+        print("Variables:")
+        for var in variables:
+            print(var)
+
     def construct_locals(self) -> Dict[str, Any]:
         """Returns a dictionary listing the functions to be added to the
         environment."""
@@ -80,7 +94,9 @@ class Volshell(interfaces.plugins.PluginInterface):
             'cl': self.change_layer,
             'change_layer': self.change_layer,
             'context': self.context,
-            'self': self
+            'self': self,
+            'hh': self.help,
+            'help': self.help,
         }
 
     def _read_data(self, offset, count = 128, layer_name = None):
@@ -130,10 +146,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         sys.ps1 = "({}) >>> ".format(self.current_layer)
 
     def display_bytes(self, offset, count = 128, layer_name = None):
-        """Displays byte values and ASCII characters. Each display line shows the address of the
-        first byte in the line, followed by up to 16 hexadecimal byte values. The byte
-        values are immediately followed by the corresponding ASCII values.
-        """
+        """Displays byte values and ASCII characters"""
         remaining_data = self._read_data(offset, count = count, layer_name = layer_name)
         self._display_data(offset, remaining_data)
 
@@ -174,7 +187,7 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     @staticmethod
     def display_type(object: interfaces.objects.ObjectInterface):
-        """Display Type."""
+        """Display Type describes the members of a particular object in alphabetical order"""
         longest_member = longest_offset = 0
         for member in object.vol.members:
             relative_offset, member_type = object.vol.members[member]
