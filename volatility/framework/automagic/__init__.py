@@ -50,22 +50,31 @@ def available(context: interfaces.context.ContextInterface) -> List[interfaces.a
 def choose_automagic(automagics, plugin):
     """Chooses which automagics to run, maintaining the order they were handed
     in."""
-    plugin_category = plugin.__module__.split('.')[2]
+
+    plugin_category = "None"
+    plugin_categories = plugin.__module__.split('.')
+    lowest_index = len(plugin_categories)
+
+    automagic_categories = {'windows': windows_automagic, 'linux': linux_automagic, 'mac': mac_automagic}
+
+    for os in automagic_categories:
+        try:
+            if plugin_categories.index(os) < lowest_index:
+                lowest_index = plugin_categories.index(os)
+                plugin_category = os
+        except ValueError:
+            # The value wasn't found, try the next one
+            pass
+
+    if plugin_category not in automagic_categories:
+        vollog.info("No plugin category detected")
+        return automagics
+
     vollog.info("Detected a {} category plugin".format(plugin_category))
     output = []
     for amagic in automagics:
-        if plugin_category == 'windows':
-            if amagic.__class__.__name__ in windows_automagic:
-                output += [amagic]
-        elif plugin_category == 'linux':
-            if amagic.__class__.__name__ in linux_automagic:
-                output += [amagic]
-        elif plugin_category == 'mac':
-            if amagic.__class__.__name__ in mac_automagic:
-                output += [amagic]
-        else:
-            return automagics
-    vollog.info("Restricting automagics to: {}".format([x.__class__.__name__ for x in output]))
+        if amagic.__class__.__name__ in automagic_categories[plugin_category]:
+            output += [amagic]
     return output
 
 
