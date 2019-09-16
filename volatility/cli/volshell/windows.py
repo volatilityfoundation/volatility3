@@ -12,9 +12,6 @@ from volatility.plugins.windows import pslist
 class Volshell(shellplugin.Volshell):
     """Shell environment to directly interact with a windows memory image."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     @classmethod
     def get_requirements(cls):
         return (super().get_requirements() + [
@@ -35,7 +32,7 @@ class Volshell(shellplugin.Volshell):
 
     def list_processes(self):
         """Returns a list of EPROCESS objects from the primary layer"""
-        # We always use the main kernel memory and the symbols
+        # We always use the main kernel memory and associated symbols
         return list(pslist.PsList.list_processes(self.context, self.config['primary'], self.config['nt_symbols']))
 
     def construct_locals(self) -> Dict[str, Any]:
@@ -43,9 +40,11 @@ class Volshell(shellplugin.Volshell):
         result.update({
             'cp': self.change_process,
             'change_process': self.change_process,
-            'ps': self.list_processes,
+            'lp': self.list_processes,
             'list_processes': self.list_processes,
-            'symbols': self.context.symbol_space[self.config['nt_symbols']]
+            'symbols': self.context.symbol_space[self.config['nt_symbols']],
+            # windbg compatibility aliases
+            'ps': self.list_processes,
         })
         if self.config.get('pid', None) is not None:
             self.change_process(self.config['pid'])

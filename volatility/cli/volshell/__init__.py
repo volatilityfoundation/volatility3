@@ -13,7 +13,7 @@ import volatility.plugins
 import volatility.symbols
 from volatility import cli, framework
 from volatility.cli import text_renderer
-from volatility.cli.volshell import shellplugin, windows
+from volatility.cli.volshell import shellplugin, windows, linux, mac
 from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins
 
 # Make sure we log everything
@@ -90,8 +90,11 @@ class VolShell(cli.CommandLine):
             action = 'store_true')
 
         # Volshell specific flags
-        parser.add_argument("-w", "--windows", default = False, action = "store_true", help = "Run a Windows volshell")
-        parser.add_argument("-l", "--linux", default = False, action = "store_true", help = "Run a Linux volshell")
+        os_specific = parser.add_mutually_exclusive_group(required = False)
+        os_specific.add_argument(
+            "-w", "--windows", default = False, action = "store_true", help = "Run a Windows volshell")
+        os_specific.add_argument("-l", "--linux", default = False, action = "store_true", help = "Run a Linux volshell")
+        os_specific.add_argument("-m", "--mac", default = False, action = "store_true", help = "Run a Mac volshell")
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -163,6 +166,10 @@ class VolShell(cli.CommandLine):
         plugin = shellplugin.Volshell
         if args.windows:
             plugin = windows.Volshell
+        if args.linux:
+            plugin = linux.Volshell
+        if args.mac:
+            plugin = mac.Volshell
 
         base_config_path = "plugins"
         plugin_config_path = interfaces.configuration.path_join(base_config_path, plugin.__name__)
