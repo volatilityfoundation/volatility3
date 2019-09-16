@@ -24,7 +24,7 @@ class Volshell(shellplugin.Volshell):
         """Change the current process and layer, based on a process ID"""
         tasks = self.list_tasks()
         for task in tasks:
-            if task.pid == pid:
+            if task.p_pid == pid:
                 process_layer = task.add_process_layer()
                 if process_layer is not None:
                     self.change_layer(process_layer)
