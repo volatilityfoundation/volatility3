@@ -154,7 +154,7 @@ class ObjectInterface(metaclass = ABCMeta):
         current object inhabits.
 
         .. note:: If new type name does not include a symbol table, the
-        symbol table for the current object is used
+           symbol table for the current object is used
         """
         # TODO: Carefully consider the implications of casting and how it should work
         if constants.BANG not in new_type_name:

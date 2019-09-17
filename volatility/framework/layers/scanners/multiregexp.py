@@ -29,9 +29,3 @@ class MultiRegexp(object):
             raise ValueError("MultiRegexp cannot be used with an empty set of search strings")
         for match in re.finditer(self._regex, haystack):
             yield (match.start(0), match.group())
-
-
-if __name__ == '__main__':
-    import multistring_testrig
-
-    multistring_testrig.tester(MultiRegexp())
