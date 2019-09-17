@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Callable, Iterable
+from typing import Callable, Dict, Iterable
 
 from volatility.framework import interfaces, contexts
 from volatility.framework.automagic import mac
@@ -40,7 +40,7 @@ class Tasks(pslist.PsList):
 
         queue_entry = kernel.object_from_symbol(symbol_name = "tasks")
 
-        seen = {}
+        seen = {}  # type: Dict[int, int]
         for task in queue_entry.walk_list(queue_entry, "tasks", "task"):
             if task.vol.offset in seen:
                 vollog.log(logging.INFO, "Recursive process list detected (a result of non-atomic acquisition).")

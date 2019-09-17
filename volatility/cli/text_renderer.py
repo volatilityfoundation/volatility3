@@ -8,8 +8,9 @@ import random
 import string
 import sys
 from functools import wraps
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Dict
 
+from volatility.framework.interfaces.renderers import Column
 from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -235,7 +236,7 @@ class PrettyTextRenderer(CLIRenderer):
         tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
         max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
 
-        def visitor(node, accumulator):
+        def visitor(node, accumulator: List[Tuple[int, Dict[Column, bytes]]]) -> List[Tuple[int, Dict[Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
             line = {}
@@ -249,7 +250,7 @@ class PrettyTextRenderer(CLIRenderer):
             accumulator.append((node.path_depth, line))
             return accumulator
 
-        final_output = []  # type: List[Tuple[int, List]]
+        final_output = []  # type: List[Tuple[int, Dict[Column, bytes]]]
         grid.populate(visitor, final_output)
 
         # Always align the tree to the left

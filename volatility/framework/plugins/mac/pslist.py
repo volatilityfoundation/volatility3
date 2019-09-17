@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Callable, Iterable, List
+from typing import Callable, Iterable, List, Dict
 
 from volatility.framework import renderers, interfaces, contexts
 from volatility.framework.automagic import mac
@@ -77,7 +77,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
         proc = kernel.object_from_symbol(symbol_name = "allproc").lh_first
 
-        seen = {}
+        seen = {}  # type: Dict[int, int]
         while proc is not None and proc.vol.offset != 0:
             if proc.vol.offset in seen:
                 vollog.log(logging.INFO, "Recursive process list detected (a result of non-atomic acquisition).")

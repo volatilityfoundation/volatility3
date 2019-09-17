@@ -359,8 +359,8 @@ class PoolScanner(plugins.PluginInterface):
 
         cookie = handles.Handles.find_cookie(context = context, layer_name = layer_name, symbol_table = symbol_table)
 
-        is_windows_10 = cls.is_windows_10(context = context, symbol_table = symbol_table)
-        is_windows_8_or_later = cls.is_windows_8_or_later(context = context, symbol_table = symbol_table)
+        is_windows_10 = cls.is_windows_10(context, symbol_table)
+        is_windows_8_or_later = cls.is_windows_8_or_later(context, symbol_table)
 
         # start off with the primary virtual layer
         scan_layer = layer_name
@@ -434,7 +434,7 @@ class PoolScanner(plugins.PluginInterface):
             # We have to manually load a symbol table
 
             if symbols.symbol_table_is_64bit(context, symbol_table):
-                is_win_7 = cls.is_windows_7(context = context, symbol_table = symbol_table)
+                is_win_7 = cls.is_windows_7(context, symbol_table)
                 if is_win_7:
                     pool_header_json_filename = "poolheader-x64-win7"
                 else:

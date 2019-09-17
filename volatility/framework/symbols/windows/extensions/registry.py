@@ -70,6 +70,7 @@ class _HMAP_ENTRY(objects.StructType):
         except AttributeError:
             return self.BlockAddress
 
+
 class _CMHIVE(objects.StructType):
 
     def get_name(self) -> Optional[interfaces.objects.ObjectInterface]:
@@ -205,7 +206,7 @@ class _CM_KEY_NODE(objects.StructType):
         """Since this is just a casting convenience, it can be a property."""
         return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
 
-    def get_key_path(self) -> interfaces.objects.ObjectInterface:
+    def get_key_path(self) -> str:
         reg = self._context.layers[self.vol.layer_name]
         if not isinstance(reg, RegistryHive):
             raise TypeError("Key was not instantiated on a RegistryHive layer")
@@ -277,10 +278,10 @@ class _CM_KEY_VALUE(objects.StructType):
             return output
         if self_type == RegValueTypes.REG_MULTI_SZ:
             return str(data, encoding = "utf-16-le").split("\x00")[0]
-        if self_type in [RegValueTypes.REG_BINARY,
-                         RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR,
-                         RegValueTypes.REG_RESOURCE_LIST,
-                         RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST]:
+        if self_type in [
+                RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
+                RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
+        ]:
             return data
         if self_type == RegValueTypes.REG_NONE:
             return ''

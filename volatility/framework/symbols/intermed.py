@@ -11,7 +11,7 @@ import os
 import pathlib
 import zipfile
 from abc import ABCMeta
-from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Tuple
+from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Tuple, Mapping
 
 import volatility
 import volatility.framework.layers.resources
@@ -208,7 +208,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                filename: str,
                native_types: Optional[interfaces.symbols.NativeTableInterface] = None,
                table_mapping: Optional[Dict[str, str]] = None,
-               class_types: Optional[Dict[str, Type[interfaces.objects.ObjectInterface]]] = None) -> str:
+               class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None) -> str:
         """Takes a context and loads an intermediate symbol table based on a
         filename.
 

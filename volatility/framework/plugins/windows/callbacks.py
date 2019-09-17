@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import List, Iterable, Tuple
+from typing import List, Iterable, Tuple, Optional, Union
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import constants, exceptions, renderers, interfaces, symbols
@@ -62,7 +62,7 @@ class Callbacks(interfaces_plugins.PluginInterface):
 
     @classmethod
     def list_notify_routines(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
-                             callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
+                             callback_table_name: str) -> Iterable[Tuple[str, int, Optional[str]]]:
         """Lists all kernel notification routines.
 
         Args:
@@ -114,7 +114,7 @@ class Callbacks(interfaces_plugins.PluginInterface):
 
     @classmethod
     def list_registry_callbacks(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
-                                callback_table_name: str) -> Iterable[Tuple[str, int, str]]:
+                                callback_table_name: str) -> Iterable[Tuple[str, int, None]]:
         """Lists all registry callbacks.
 
         Args:
@@ -193,7 +193,8 @@ class Callbacks(interfaces_plugins.PluginInterface):
 
             try:
                 component = ntkrnlmp.object(
-                    "string", absolute = True, offset = callback.Component, max_length = 64, errors = "replace")
+                    "string", absolute = True, offset = callback.Component, max_length = 64, errors = "replace"
+                )  # type: Union[interfaces.renderers.BaseAbsentValue, interfaces.objects.ObjectInterface]
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 

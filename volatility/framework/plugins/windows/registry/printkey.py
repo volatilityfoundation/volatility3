@@ -4,7 +4,7 @@
 
 import datetime
 import logging
-from typing import List, Sequence, Iterable, Tuple
+from typing import List, Sequence, Iterable, Tuple, Union
 
 from volatility.framework import objects, renderers, exceptions, interfaces, constants
 from volatility.framework.configuration import requirements
@@ -36,8 +36,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def key_iterator(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None,
-                     recurse: bool = False) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, bytes]]:
+    def key_iterator(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = False
+                     ) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
         """Walks through a set of nodes from a given node (last one in
         node_path). Avoids loops by not traversing into nodes already present
         in the node_path.
@@ -112,7 +112,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     value_node_name = renderers.UnreadableValue()
 
                 try:
-                    value_data = str(node.decode_data())
+                    value_data = str(node.decode_data())  # type: Union[interfaces.renderers.BaseAbsentValue, str]
                 except (ValueError, exceptions.InvalidAddressException, RegistryFormatException) as excp:
                     vollog.debug(excp)
                     value_data = renderers.UnreadableValue()
