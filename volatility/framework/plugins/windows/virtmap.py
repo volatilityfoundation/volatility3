@@ -7,6 +7,7 @@ from typing import List, Tuple, Dict, Generator
 
 from volatility.framework import interfaces, renderers, exceptions
 from volatility.framework.configuration import requirements
+from volatility.framework.layers import intel
 from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -34,11 +35,18 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
     @classmethod
     def determine_map(cls, module: interfaces.context.ModuleInterface) -> \
-            Dict[int, List[Tuple[int, int]]]:
+            Dict[str, List[Tuple[int, int]]]:
         """Returns the virtual map from a windows kernel module."""
-        result = {}
-        system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
-        large_page_size = (module.context.layers[module.layer_name].page_size ** 2) // module.get_type("_MMPTE").size
+        layer = module.context.layers[module.layer_name]
+        if not isinstance(layer, intel.Intel):
+            raise
+
+        result = {}  # type: Dict[str, List[Tuple[int, int]]]
+        try:
+            system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
+            large_page_size = (layer.page_size ** 2) // module.get_type("_MMPTE").size
+        except exceptions.SymbolError:
+            raise exceptions.SymbolError("Required structures not found")
 
         if module.has_symbol('MiVisibleState'):
             symbol = module.get_symbol('MiVisibleState')
@@ -58,7 +66,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
                 result = cls._enumerate_system_va_type(large_page_size, system_range_start, module,
                                                        visible_state.SystemVaType)
             else:
-                raise exceptions.MissingStructureException("Required structures not found")
+                raise exceptions.SymbolError("Required structures not found")
         elif module.has_symbol('MiSystemVaType'):
             system_range_start = module.object(
                 object_type = "pointer", offset = module.get_symbol("MmSystemRangeStart").address)
@@ -69,15 +77,15 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
             result = cls._enumerate_system_va_type(large_page_size, system_range_start, module, type_array)
         else:
-            raise exceptions.MissingStructureException("Required structures not found")
+            raise exceptions.SymbolError("Required structures not found")
 
         return result
 
     @classmethod
     def _enumerate_system_va_type(cls, large_page_size: int, system_range_start: int,
                                   module: interfaces.context.ContextInterface,
-                                  type_array: interfaces.objects.ObjectInterface):
-        result = {}
+                                  type_array: interfaces.objects.ObjectInterface) -> Dict[str, List[Tuple[int, int]]]:
+        result = {}  # type: Dict[str, List[Tuple[int, int]]]
         system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
         start = system_range_start
         prev_entry = -1
