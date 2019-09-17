@@ -23,6 +23,12 @@ import sphinx.ext.apidoc
 def setup(app):
     volatility_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'volatility'))
 
+    # Ensure autodoc regenerates based on the current tree
+    for dir, _, files in os.walk(os.path.dirname(__file__)):
+        for filename in files:
+            if filename.startswith('volatility.'):
+                os.unlink(os.path.join(dir, filename))
+
     sphinx.ext.apidoc.main(argv = ['-e', '-M', '-f', '-T', '-o', 'source', volatility_directory])
 
     # Go through the volatility.framework.plugins files and change them to volatility.plugins
