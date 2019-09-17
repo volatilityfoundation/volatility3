@@ -57,23 +57,24 @@ class Volshell(interfaces.plugins.PluginInterface):
         # TODO: provide help, consider generic functions (pslist?) and/or providing windows/linux functions
 
         sys.ps1 = "({}) >>> ".format(self.current_layer)
-        code.interact(local = self.construct_locals())
+        code.interact(banner = "\nCall help() to see available functions\n", local = self.construct_locals())
 
         return renderers.TreeGrid([("Terminating", str)], None)
 
     def help(self):
         """Describes the available commands"""
         variables = []
-        print("Methods:")
+        print("\nMethods:")
         for name, item in self.construct_locals().items():
             if item.__doc__ and callable(item):
-                print("{} - {}".format(name, item.__doc__))
+                print("* {}".format(name))
+                print("    {}".format(item.__doc__))
             else:
                 variables.append(name)
 
-        print("Variables:")
+        print("\nVariables:")
         for var in variables:
-            print(var)
+            print("  {}".format(var))
 
     def construct_locals(self) -> Dict[str, Any]:
         """Returns a dictionary listing the functions to be added to the
