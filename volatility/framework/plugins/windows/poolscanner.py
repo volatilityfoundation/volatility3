@@ -65,8 +65,9 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
 
     def __call__(self, data: bytes, data_offset: int):
         for offset, pattern in self._subscanner(data, data_offset):
-            header = self._module.object(
-                object_type = "_POOL_HEADER", offset = offset - self._header_offset, absolute = True)
+            header = self._module.object(object_type = "_POOL_HEADER",
+                                         offset = offset - self._header_offset,
+                                         absolute = True)
             constraint = self._constraint_lookup[pattern]
             try:
                 # Size check
@@ -184,19 +185,20 @@ class PoolScanner(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
-    is_windows_10 = os_distinguisher(
-        version_check = lambda x: x >= (10, 0), fallback_checks = [("ObHeaderCookie", None, True)])
-    is_windows_8_or_later = os_distinguisher(
-        version_check = lambda x: x >= (6, 2), fallback_checks = [("_HANDLE_TABLE", "HandleCount", False)])
+    is_windows_10 = os_distinguisher(version_check = lambda x: x >= (10, 0),
+                                     fallback_checks = [("ObHeaderCookie", None, True)])
+    is_windows_8_or_later = os_distinguisher(version_check = lambda x: x >= (6, 2),
+                                             fallback_checks = [("_HANDLE_TABLE", "HandleCount", False)])
     # Technically, this is win7 or less
-    is_windows_7 = os_distinguisher(
-        version_check = lambda x: x == (6, 1),
-        fallback_checks = [("_OBJECT_HEADER", "TypeIndex", True), ("_HANDLE_TABLE", "HandleCount", True)])
+    is_windows_7 = os_distinguisher(version_check = lambda x: x == (6, 1),
+                                    fallback_checks = [("_OBJECT_HEADER", "TypeIndex", True),
+                                                       ("_HANDLE_TABLE", "HandleCount", True)])
 
     def _generator(self):
 
@@ -207,8 +209,9 @@ class PoolScanner(plugins.PluginInterface):
                                                                       symbol_table, constraints):
             # generate some type-specific info for sanity checking
             if constraint.object_type == "Process":
-                name = mem_object.ImageFileName.cast(
-                    "string", max_length = mem_object.ImageFileName.vol.count, errors = "replace")
+                name = mem_object.ImageFileName.cast("string",
+                                                     max_length = mem_object.ImageFileName.vol.count,
+                                                     errors = "replace")
             elif constraint.object_type == "File":
                 try:
                     name = mem_object.FileName.String
@@ -238,93 +241,80 @@ class PoolScanner(plugins.PluginInterface):
 
         builtins = [
             # atom tables
-            PoolConstraint(
-                b'AtmT',
-                type_name = symbol_table + constants.BANG + "_RTL_ATOM_TABLE",
-                size = (200, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'AtmT',
+                           type_name = symbol_table + constants.BANG + "_RTL_ATOM_TABLE",
+                           size = (200, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows before windows 8
-            PoolConstraint(
-                b'Pro\xe3',
-                type_name = symbol_table + constants.BANG + "_EPROCESS",
-                object_type = "Process",
-                size = (600, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'Pro\xe3',
+                           type_name = symbol_table + constants.BANG + "_EPROCESS",
+                           object_type = "Process",
+                           size = (600, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows starting with windows 8
-            PoolConstraint(
-                b'Proc',
-                type_name = symbol_table + constants.BANG + "_EPROCESS",
-                object_type = "Process",
-                size = (600, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'Proc',
+                           type_name = symbol_table + constants.BANG + "_EPROCESS",
+                           object_type = "Process",
+                           size = (600, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # files on windows before windows 8
-            PoolConstraint(
-                b'Fil\xe5',
-                type_name = symbol_table + constants.BANG + "_FILE_OBJECT",
-                object_type = "File",
-                size = (150, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'Fil\xe5',
+                           type_name = symbol_table + constants.BANG + "_FILE_OBJECT",
+                           object_type = "File",
+                           size = (150, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # files on windows starting with windows 8
-            PoolConstraint(
-                b'File',
-                type_name = symbol_table + constants.BANG + "_FILE_OBJECT",
-                object_type = "File",
-                size = (150, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'File',
+                           type_name = symbol_table + constants.BANG + "_FILE_OBJECT",
+                           object_type = "File",
+                           size = (150, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # mutants on windows before windows 8
-            PoolConstraint(
-                b'Mut\xe1',
-                type_name = symbol_table + constants.BANG + "_KMUTANT",
-                object_type = "Mutant",
-                size = (64, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'Mut\xe1',
+                           type_name = symbol_table + constants.BANG + "_KMUTANT",
+                           object_type = "Mutant",
+                           size = (64, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # mutants on windows starting with windows 8
-            PoolConstraint(
-                b'Muta',
-                type_name = symbol_table + constants.BANG + "_KMUTANT",
-                object_type = "Mutant",
-                size = (64, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'Muta',
+                           type_name = symbol_table + constants.BANG + "_KMUTANT",
+                           object_type = "Mutant",
+                           size = (64, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # drivers on windows before windows 8
-            PoolConstraint(
-                b'Dri\xf6',
-                type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
-                object_type = "Driver",
-                size = (248, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'Dri\xf6',
+                           type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
+                           object_type = "Driver",
+                           size = (248, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # drivers on windows starting with windows 8
-            PoolConstraint(
-                b'Driv',
-                type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
-                object_type = "Driver",
-                size = (248, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'Driv',
+                           type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
+                           object_type = "Driver",
+                           size = (248, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # kernel modules
-            PoolConstraint(
-                b'MmLd',
-                type_name = symbol_table + constants.BANG + "_LDR_DATA_TABLE_ENTRY",
-                size = (76, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'MmLd',
+                           type_name = symbol_table + constants.BANG + "_LDR_DATA_TABLE_ENTRY",
+                           size = (76, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # symlinks on windows before windows 8
-            PoolConstraint(
-                b'Sym\xe2',
-                type_name = symbol_table + constants.BANG + "_OBJECT_SYMBOLIC_LINK",
-                object_type = "SymbolicLink",
-                size = (72, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'Sym\xe2',
+                           type_name = symbol_table + constants.BANG + "_OBJECT_SYMBOLIC_LINK",
+                           object_type = "SymbolicLink",
+                           size = (72, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # symlinks on windows starting with windows 8
-            PoolConstraint(
-                b'Symb',
-                type_name = symbol_table + constants.BANG + "_OBJECT_SYMBOLIC_LINK",
-                object_type = "SymbolicLink",
-                size = (72, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'Symb',
+                           type_name = symbol_table + constants.BANG + "_OBJECT_SYMBOLIC_LINK",
+                           object_type = "SymbolicLink",
+                           size = (72, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # registry hives
-            PoolConstraint(
-                b'CM10',
-                type_name = symbol_table + constants.BANG + "_CMHIVE",
-                size = (800, None),
-                page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+            PoolConstraint(b'CM10',
+                           type_name = symbol_table + constants.BANG + "_CMHIVE",
+                           size = (800, None),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
         ]
 
         if not tags_filter:
@@ -369,13 +359,12 @@ class PoolScanner(plugins.PluginInterface):
 
         for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = 8):
 
-            mem_object = header.get_object(
-                type_name = constraint.type_name,
-                type_map = type_map,
-                use_top_down = is_windows_8_or_later,
-                object_type = constraint.object_type,
-                native_layer_name = 'primary',
-                cookie = cookie)
+            mem_object = header.get_object(type_name = constraint.type_name,
+                                           type_map = type_map,
+                                           use_top_down = is_windows_8_or_later,
+                                           object_type = constraint.object_type,
+                                           native_layer_name = 'primary',
+                                           cookie = cookie)
 
             if mem_object is None:
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))

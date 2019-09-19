@@ -46,8 +46,10 @@ def convert_value_to_data(value: TUnion[int, float, bytes, str, bool],
 
     if struct_type == int and isinstance(value, int):
         # Doubling up on the isinstance is for mypy
-        return int.to_bytes(
-            value, length = data_format.length, byteorder = data_format.byteorder, signed = data_format.signed)
+        return int.to_bytes(value,
+                            length = data_format.length,
+                            byteorder = data_format.byteorder,
+                            signed = data_format.signed)
     if struct_type == bool:
         struct_format = "?"
     elif struct_type == float:
@@ -102,7 +104,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         """Creates the appropriate class and returns it so that the native type
         is inherited.
 
-        The only reason the **kwargs is added, is so that the inherriting types can override __init__
+        The only reason the kwargs is added, is so that the inherriting types can override __init__
         without needing to override __new__
 
         We also sneak in new_value, so that we don't have to do expensive (read: impossible) context reads
@@ -176,11 +178,10 @@ class Bytes(PrimitiveObject, bytes):
                  type_name: str,
                  object_info: interfaces.objects.ObjectInformation,
                  length: int = 1) -> None:
-        super().__init__(
-            context = context,
-            type_name = type_name,
-            object_info = object_info,
-            data_format = DataFormatInfo(length, "big", False))
+        super().__init__(context = context,
+                         type_name = type_name,
+                         object_info = object_info,
+                         data_format = DataFormatInfo(length, "big", False))
         self._vol['length'] = length
 
     def __new__(cls: Type,
@@ -192,13 +193,13 @@ class Bytes(PrimitiveObject, bytes):
         """Creates the appropriate class and returns it so that the native type
         is inherritted.
 
-        The only reason the **kwargs is added, is so that the
+        The only reason the kwargs is added, is so that the
         inherriting types can override __init__ without needing to
         override __new__
         """
         return cls._struct_type.__new__(
-            cls,
-            cls._unmarshall(context, data_format = DataFormatInfo(length, "big", False), object_info = object_info))
+            cls, cls._unmarshall(context, data_format = DataFormatInfo(length, "big", False),
+                                 object_info = object_info))
 
 
 class String(PrimitiveObject, str):
@@ -217,11 +218,10 @@ class String(PrimitiveObject, str):
                  max_length: int = 1,
                  encoding: str = "utf-8",
                  errors: str = "strict") -> None:
-        super().__init__(
-            context = context,
-            type_name = type_name,
-            object_info = object_info,
-            data_format = DataFormatInfo(max_length, "big", False))
+        super().__init__(context = context,
+                         type_name = type_name,
+                         object_info = object_info,
+                         data_format = DataFormatInfo(max_length, "big", False))
         self._vol["max_length"] = max_length
         self._vol['encoding'] = encoding
         self._vol['errors'] = errors
@@ -237,7 +237,7 @@ class String(PrimitiveObject, str):
         """Creates the appropriate class and returns it so that the native type
         is inherited.
 
-        The only reason the **kwargs is added, is so that the
+        The only reason the kwargs is added, is so that the
         inherriting types can override __init__ without needing to
         override __new__
         """
@@ -297,9 +297,10 @@ class Pointer(Integer):
         layer_name = layer_name or self.vol.native_layer_name
         mask = self._context.layers[layer_name].address_mask
         offset = self & mask
-        return self.vol.subtype(
-            context = self._context,
-            object_info = interfaces.objects.ObjectInformation(layer_name = layer_name, offset = offset, parent = self))
+        return self.vol.subtype(context = self._context,
+                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
+                                                                                   offset = offset,
+                                                                                   parent = self))
 
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from
@@ -559,11 +560,10 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
             return_list = False
             series = [series]
         for index in series:
-            object_info = ObjectInformation(
-                layer_name = self.vol.layer_name,
-                offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
-                parent = self,
-                native_layer_name = self.vol.native_layer_name)
+            object_info = ObjectInformation(layer_name = self.vol.layer_name,
+                                            offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
+                                            parent = self,
+                                            native_layer_name = self.vol.native_layer_name)
             result += [self.vol.subtype(context = self._context, object_info = object_info)]
         if not return_list:
             return result[0]
@@ -587,8 +587,11 @@ class AggregateType(interfaces.objects.ObjectInterface):
     def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
                  object_info: interfaces.objects.ObjectInformation, size: int,
                  members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
-        super().__init__(
-            context = context, type_name = type_name, object_info = object_info, size = size, members = members)
+        super().__init__(context = context,
+                         type_name = type_name,
+                         object_info = object_info,
+                         size = size,
+                         members = members)
         # self._check_members(members)
         self._concrete_members = {}  # type: Dict[str, Dict]
 
@@ -669,14 +672,13 @@ class AggregateType(interfaces.objects.ObjectInterface):
         elif attr in self.vol.members:
             mask = self._context.layers[self.vol.layer_name].address_mask
             relative_offset, member = self.vol.members[attr]
-            member = member(
-                context = self._context,
-                object_info = interfaces.objects.ObjectInformation(
-                    layer_name = self.vol.layer_name,
-                    offset = mask & (self.vol.offset + relative_offset),
-                    member_name = attr,
-                    parent = self,
-                    native_layer_name = self.vol.native_layer_name))
+            member = member(context = self._context,
+                            object_info = interfaces.objects.ObjectInformation(
+                                layer_name = self.vol.layer_name,
+                                offset = mask & (self.vol.offset + relative_offset),
+                                member_name = attr,
+                                parent = self,
+                                native_layer_name = self.vol.native_layer_name))
             self._concrete_members[attr] = member
             return member
         # We duplicate this code to avoid polluting the methodspace
