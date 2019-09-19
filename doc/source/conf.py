@@ -32,11 +32,24 @@ def setup(app):
                 # Change all volatility.framework.plugins to volatility.plugins in the file
                 # Rename the file
                 new_filename = filename.replace('volatility.framework.plugins', 'volatility.plugins')
+
+                replace_string = b"Submodules\n----------\n\n.. toctree::\n\n"
+                submodules = replace_string
+
+                # If file already exists, read out the subpackages entries from it add them to the new list
+                if os.path.exists(os.path.join(dir, new_filename)):
+                    with open(os.path.join(dir, new_filename), 'rb') as newfile:
+                        data = newfile.read()
+                        index = data.find(replace_string)
+                        if index > -1:
+                            submodules = data[index:]
+
                 with open(os.path.join(dir, new_filename), 'wb') as newfile:
                     with open(os.path.join(dir, filename), "rb") as oldfile:
-                        for line in oldfile.readlines():
-                            newline = line.replace(b'volatility.framework.plugins', b'volatility.plugins')
-                            newfile.write(newline)
+                        line = oldfile.read()
+                        correct_plugins = line.replace(b'volatility.framework.plugins', b'volatility.plugins')
+                        correct_submodules = correct_plugins.replace(replace_string, submodules)
+                        newfile.write(correct_submodules)
                     os.remove(os.path.join(dir, filename))
             elif filename == 'volatility.framework.rst':
                 with open(os.path.join(dir, filename), "rb") as contents:
