@@ -23,8 +23,9 @@ class Check_syscall(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
         ]
@@ -36,11 +37,10 @@ class Check_syscall(plugins.PluginInterface):
 
         policy_list = kernel.object_from_symbol(symbol_name = "_mac_policy_list").cast("mac_policy_list")
 
-        entries = kernel.object(
-            object_type = "array",
-            offset = policy_list.entries.dereference().vol.offset,
-            subtype = kernel.get_type('mac_policy_list_element'),
-            count = policy_list.staticmax + 1)
+        entries = kernel.object(object_type = "array",
+                                offset = policy_list.entries.dereference().vol.offset,
+                                subtype = kernel.get_type('mac_policy_list_element'),
+                                count = policy_list.staticmax + 1)
 
         mask = self.context.layers[self.config['primary']].address_mask
         mods_list = [(mod.name, mod.address & mask, (mod.address & mask) + mod.size) for mod in mods]

@@ -21,4 +21,3 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('socket', extensions.socket)
         self.set_type_class('inpcb', extensions.inpcb)
         self.set_type_class('queue_entry', extensions.queue_entry)
-

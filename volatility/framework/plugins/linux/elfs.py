@@ -20,8 +20,9 @@ class Elfs(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
@@ -51,8 +52,7 @@ class Elfs(plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
                                    ("End", format_hints.Hex), ("File Path", str)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(
-                                          self.context,
-                                          self.config['primary'],
-                                          self.config['vmlinux'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_tasks(self.context,
+                                                               self.config['primary'],
+                                                               self.config['vmlinux'],
+                                                               filter_func = filter_func)))

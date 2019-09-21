@@ -24,8 +24,9 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
@@ -58,24 +59,23 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             bang_addrs = []
 
             # find '#' values on the heap
-            for address in proc_layer.scan(
-                    self.context,
-                    scanners.BytesScanner(b"#"),
-                    sections = task.get_process_memory_sections(self.context, self.config['darwin'],
-                                                                rw_no_file = True)):
+            for address in proc_layer.scan(self.context,
+                                           scanners.BytesScanner(b"#"),
+                                           sections = task.get_process_memory_sections(self.context,
+                                                                                       self.config['darwin'],
+                                                                                       rw_no_file = True)):
                 bang_addrs.append(struct.pack(pack_format, address))
 
             history_entries = []
 
-            for address, _ in proc_layer.scan(
-                    self.context,
-                    scanners.MultiStringScanner(bang_addrs),
-                    sections = task.get_process_memory_sections(self.context, self.config['darwin'],
-                                                                rw_no_file = True)):
-                hist = self.context.object(
-                    bash_table_name + constants.BANG + "hist_entry",
-                    offset = address - ts_offset,
-                    layer_name = proc_layer_name)
+            for address, _ in proc_layer.scan(self.context,
+                                              scanners.MultiStringScanner(bang_addrs),
+                                              sections = task.get_process_memory_sections(self.context,
+                                                                                          self.config['darwin'],
+                                                                                          rw_no_file = True)):
+                hist = self.context.object(bash_table_name + constants.BANG + "hist_entry",
+                                           offset = address - ts_offset,
+                                           layer_name = proc_layer_name)
 
                 if hist.is_valid():
                     history_entries.append(hist)
@@ -89,18 +89,19 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("CommandTime", datetime.datetime),
                                    ("Command", str)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(
-                                          self.context,
-                                          self.config['primary'],
-                                          self.config['darwin'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_tasks(self.context,
+                                                               self.config['primary'],
+                                                               self.config['darwin'],
+                                                               filter_func = filter_func)))
 
     def generate_timeline(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         for row in self._generator(
-                pslist.PsList.list_tasks(
-                    self.context, self.config['primary'], self.config['darwin'], filter_func = filter_func)):
+                pslist.PsList.list_tasks(self.context,
+                                         self.config['primary'],
+                                         self.config['darwin'],
+                                         filter_func = filter_func)):
             _depth, row_data = row
             description = "{} ({}): \"{}\"".format(row_data[0], row_data[1], row_data[3])
             yield (description, timeliner.TimeLinerType.CREATED, row_data[2])

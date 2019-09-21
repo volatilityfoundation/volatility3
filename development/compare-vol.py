@@ -205,74 +205,66 @@ class VolatilityTester:
 
 if __name__ == '__main__':
     plugins = [
-        VolatilityPlugin(
-            name = "pslist", vol2_plugin_parameters = ["pslist"], vol3_plugin_parameters = ["windows.pslist"]),
-        VolatilityPlugin(
-            name = "psscan",
-            vol2_plugin_parameters = ["psscan"],
-            vol3_plugin_parameters = ["windows.psscan"],
-            rekall_plugin_parameters = ["psscan", "--scan_kernel"]),
-        VolatilityPlugin(
-            name = "driverscan",
-            vol2_plugin_parameters = ["driverscan"],
-            vol3_plugin_parameters = ["windows.driverscan"],
-            rekall_plugin_parameters = ["driverscan", "--scan_kernel"]),
-        VolatilityPlugin(
-            name = "handles", vol2_plugin_parameters = ["handles"], vol3_plugin_parameters = ["windows.handles"]),
-        VolatilityPlugin(
-            name = "modules", vol2_plugin_parameters = ["modules"], vol3_plugin_parameters = ["windows.modules"]),
-        VolatilityPlugin(
-            name = "hivelist",
-            vol2_plugin_parameters = ["hivelist"],
-            vol3_plugin_parameters = ["registry.hivelist"],
-            rekall_plugin_parameters = ["hives"]),
-        VolatilityPlugin(
-            name = "vadinfo",
-            vol2_plugin_parameters = ["vadinfo"],
-            vol3_plugin_parameters = ["windows.vadinfo"],
-            rekall_plugin_parameters = ["vad"]),
-        VolatilityPlugin(
-            name = "modscan",
-            vol2_plugin_parameters = ["modscan"],
-            vol3_plugin_parameters = ["windows.modscan"],
-            rekall_plugin_parameters = ["modscan", "--scan_kernel"]),
-        VolatilityPlugin(
-            name = "svcscan",
-            vol2_plugin_parameters = ["svcscan"],
-            vol3_plugin_parameters = ["windows.svcscan"],
-            rekall_plugin_parameters = ["svcscan"]),
+        VolatilityPlugin(name = "pslist",
+                         vol2_plugin_parameters = ["pslist"],
+                         vol3_plugin_parameters = ["windows.pslist"]),
+        VolatilityPlugin(name = "psscan",
+                         vol2_plugin_parameters = ["psscan"],
+                         vol3_plugin_parameters = ["windows.psscan"],
+                         rekall_plugin_parameters = ["psscan", "--scan_kernel"]),
+        VolatilityPlugin(name = "driverscan",
+                         vol2_plugin_parameters = ["driverscan"],
+                         vol3_plugin_parameters = ["windows.driverscan"],
+                         rekall_plugin_parameters = ["driverscan", "--scan_kernel"]),
+        VolatilityPlugin(name = "handles",
+                         vol2_plugin_parameters = ["handles"],
+                         vol3_plugin_parameters = ["windows.handles"]),
+        VolatilityPlugin(name = "modules",
+                         vol2_plugin_parameters = ["modules"],
+                         vol3_plugin_parameters = ["windows.modules"]),
+        VolatilityPlugin(name = "hivelist",
+                         vol2_plugin_parameters = ["hivelist"],
+                         vol3_plugin_parameters = ["registry.hivelist"],
+                         rekall_plugin_parameters = ["hives"]),
+        VolatilityPlugin(name = "vadinfo",
+                         vol2_plugin_parameters = ["vadinfo"],
+                         vol3_plugin_parameters = ["windows.vadinfo"],
+                         rekall_plugin_parameters = ["vad"]),
+        VolatilityPlugin(name = "modscan",
+                         vol2_plugin_parameters = ["modscan"],
+                         vol3_plugin_parameters = ["windows.modscan"],
+                         rekall_plugin_parameters = ["modscan", "--scan_kernel"]),
+        VolatilityPlugin(name = "svcscan",
+                         vol2_plugin_parameters = ["svcscan"],
+                         vol3_plugin_parameters = ["windows.svcscan"],
+                         rekall_plugin_parameters = ["svcscan"]),
         VolatilityPlugin(name = "ssdt", vol2_plugin_parameters = ["ssdt"], vol3_plugin_parameters = ["windows.ssdt"]),
-        VolatilityPlugin(
-            name = "printkey",
-            vol2_plugin_parameters = ["printkey", "-K", "Classes"],
-            vol3_plugin_parameters = ["registry.printkey", "--key", "Classes"],
-            rekall_plugin_parameters = ["printkey", "--key", "Classes"])
+        VolatilityPlugin(name = "printkey",
+                         vol2_plugin_parameters = ["printkey", "-K", "Classes"],
+                         vol3_plugin_parameters = ["registry.printkey", "--key", "Classes"],
+                         rekall_plugin_parameters = ["printkey", "--key", "Classes"])
     ]
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type = str, default = os.getcwd(), help = "Directory to store all results")
-    parser.add_argument(
-        "--vol3path",
-        type = str,
-        default = os.path.join(os.getcwd(), 'volatility3'),
-        help = "Path ot the volatility 3 directory")
-    parser.add_argument(
-        "--vol2path",
-        type = str,
-        default = os.path.join(os.getcwd(), 'volatility'),
-        help = "Path to the volatility 2 directory")
-    parser.add_argument(
-        "--rekallpath",
-        type = str,
-        default = os.path.join(os.getcwd(), 'rekall'),
-        help = "Path to the rekall directory")
-    parser.add_argument(
-        "--frameworks",
-        nargs = "+",
-        type = str,
-        choices = [x.short_name.lower() for x in VolatilityTest.__subclasses__()],
-        default = [x.short_name.lower() for x in VolatilityTest.__subclasses__()],
-        help = "A comma separated list of frameworks to test")
+    parser.add_argument("--vol3path",
+                        type = str,
+                        default = os.path.join(os.getcwd(), 'volatility3'),
+                        help = "Path ot the volatility 3 directory")
+    parser.add_argument("--vol2path",
+                        type = str,
+                        default = os.path.join(os.getcwd(), 'volatility'),
+                        help = "Path to the volatility 2 directory")
+    parser.add_argument("--rekallpath",
+                        type = str,
+                        default = os.path.join(os.getcwd(), 'rekall'),
+                        help = "Path to the rekall directory")
+    parser.add_argument("--frameworks",
+                        nargs = "+",
+                        type = str,
+                        choices = [x.short_name.lower() for x in VolatilityTest.__subclasses__()],
+                        default = [x.short_name.lower() for x in VolatilityTest.__subclasses__()],
+                        help = "A comma separated list of frameworks to test")
     parser.add_argument('images', metavar = 'IMAGE', type = str, nargs = '+', help = 'The list of images to compare')
     args = parser.parse_args()
 

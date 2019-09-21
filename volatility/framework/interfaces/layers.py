@@ -246,9 +246,8 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                 scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
                 for value in scan_iterator():
                     if progress_callback:
-                        progress_callback(
-                            scan_metric(progress.value),
-                            "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
+                        progress_callback(scan_metric(progress.value),
+                                          "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
                     yield from scan_chunk(value)
             else:
                 progress = multiprocessing.Manager().Value("Q", 0)
@@ -262,9 +261,8 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                     while not result.ready():
                         if progress_callback:
                             # Run the progress_callback
-                            progress_callback(
-                                scan_metric(progress.value),
-                                "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
+                            progress_callback(scan_metric(progress.value),
+                                              "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
                         # Ensures we don't burn CPU cycles going round in a ready waiting loop
                         # without delaying the user too long between progress updates/results
                         result.wait(0.1)
@@ -421,8 +419,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
             # The layer_offset can be less than the current_offset in non-linearly mapped layers
             # it does not suggest an overlap, but that the data is in an encoded block
             if mapped_length > 0:
-                processed_data = self._decode(
-                    self._context.layers.read(layer, mapped_offset, mapped_length, pad), mapped_offset, layer_offset)
+                processed_data = self._decode(self._context.layers.read(layer, mapped_offset, mapped_length, pad),
+                                              mapped_offset, layer_offset)
                 # Chop off anything unnecessary at the start
                 processed_data = processed_data[current_offset - layer_offset:]
                 # Chop off anything unnecessary at the end

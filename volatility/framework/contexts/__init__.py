@@ -110,10 +110,9 @@ class Context(interfaces.context.ContextInterface):
 
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
-        return object_template(
-            context = self,
-            object_info = interfaces.objects.ObjectInformation(
-                layer_name = layer_name, offset = offset, native_layer_name = native_layer_name))
+        return object_template(context = self,
+                               object_info = interfaces.objects.ObjectInformation(
+                                   layer_name = layer_name, offset = offset, native_layer_name = native_layer_name))
 
     def module(self,
                module_name: str,
@@ -131,19 +130,17 @@ class Context(interfaces.context.ContextInterface):
             size: The size, in bytes, that the module occupys from offset location within the layer named layer_name
         """
         if size:
-            return SizedModule(
-                self,
-                module_name = module_name,
-                layer_name = layer_name,
-                offset = offset,
-                size = size,
-                native_layer_name = native_layer_name)
-        return Module(
-            self,
-            module_name = module_name,
-            layer_name = layer_name,
-            offset = offset,
-            native_layer_name = native_layer_name)
+            return SizedModule(self,
+                               module_name = module_name,
+                               layer_name = layer_name,
+                               offset = offset,
+                               size = size,
+                               native_layer_name = native_layer_name)
+        return Module(self,
+                      module_name = module_name,
+                      layer_name = layer_name,
+                      offset = offset,
+                      native_layer_name = native_layer_name)
 
 
 def get_module_wrapper(method: str) -> Callable:
@@ -195,12 +192,11 @@ class Module(interfaces.context.ModuleInterface):
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
         if 'layer_name' in kwargs:
             del kwargs['layer_name']
-        return self._context.object(
-            object_type = object_type,
-            layer_name = self._layer_name,
-            offset = offset,
-            native_layer_name = native_layer_name or self._native_layer_name,
-            **kwargs)
+        return self._context.object(object_type = object_type,
+                                    layer_name = self._layer_name,
+                                    offset = offset,
+                                    native_layer_name = native_layer_name or self._native_layer_name,
+                                    **kwargs)
 
     def object_from_symbol(self,
                            symbol_name: str,
@@ -238,12 +234,11 @@ class Module(interfaces.context.ModuleInterface):
             del kwargs['layer_name']
 
         # Since type may be a template, we don't just call our own module method
-        return self._context.object(
-            object_type = symbol_val.type,
-            layer_name = self._layer_name,
-            offset = offset,
-            native_layer_name = native_layer_name or self._native_layer_name,
-            **kwargs)
+        return self._context.object(object_type = symbol_val.type,
+                                    layer_name = self._layer_name,
+                                    offset = offset,
+                                    native_layer_name = native_layer_name or self._native_layer_name,
+                                    **kwargs)
 
     get_symbol = get_module_wrapper('get_symbol')
     get_type = get_module_wrapper('get_type')
@@ -263,13 +258,12 @@ class SizedModule(Module):
                  size: int,
                  symbol_table_name: Optional[str] = None,
                  native_layer_name: Optional[str] = None) -> None:
-        super().__init__(
-            context,
-            module_name = module_name,
-            layer_name = layer_name,
-            offset = offset,
-            native_layer_name = native_layer_name,
-            symbol_table_name = symbol_table_name)
+        super().__init__(context,
+                         module_name = module_name,
+                         layer_name = layer_name,
+                         offset = offset,
+                         native_layer_name = native_layer_name,
+                         symbol_table_name = symbol_table_name)
         self._size = size
 
     @property
@@ -300,8 +294,9 @@ class SizedModule(Module):
         if offset > self._offset + self.size:
             return []
         return list(
-            self._context.symbol_space.get_symbols_by_location(
-                offset = offset - self._offset, size = size, table_name = self.symbol_table_name))
+            self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset,
+                                                               size = size,
+                                                               table_name = self.symbol_table_name))
 
 
 class ModuleCollection:

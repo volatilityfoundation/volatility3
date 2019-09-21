@@ -20,11 +20,13 @@ class Malfind(interfaces.plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.IntRequirement(
-                name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
+            requirements.IntRequirement(name = 'pid',
+                                        description = "Process ID to include (all other processes are excluded)",
+                                        optional = True)
         ]
 
     @classmethod
@@ -125,8 +127,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                                    ("CommitCharge", int), ("PrivateMemory", int), ("Hexdump", format_hints.HexBytes),
                                    ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(
-                                      pslist.PsList.list_processes(
-                                          context = self.context,
-                                          layer_name = self.config['primary'],
-                                          symbol_table = self.config['nt_symbols'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))

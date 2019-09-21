@@ -72,11 +72,10 @@ class Timeliner(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.StringRequirement(
-                name = 'plugins',
-                description = "Comma separated list of plugins to run",
-                optional = True,
-                default = None),
+            requirements.StringRequirement(name = 'plugins',
+                                           description = "Comma separated list of plugins to run",
+                                           optional = True,
+                                           default = None),
             requirements.BooleanRequirement(
                 name = 'record-config',
                 description = "Whether to record the state of all the plugins once complete",
@@ -150,11 +149,10 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 json.dump(total_config, fp, sort_keys = True, indent = 2)
                 self.produce_file(filedata)
 
-        return renderers.TreeGrid(
-            columns = [("Plugin", str), ("Description", str), ("Created Date", datetime.datetime),
-                       ("Modified Date", datetime.datetime), ("Accessed Date", datetime.datetime),
-                       ("Changed Date", datetime.datetime)],
-            generator = self._generator(runable_plugins))
+        return renderers.TreeGrid(columns = [("Plugin", str), ("Description", str), ("Created Date", datetime.datetime),
+                                             ("Modified Date", datetime.datetime), ("Accessed Date", datetime.datetime),
+                                             ("Changed Date", datetime.datetime)],
+                                  generator = self._generator(runable_plugins))
 
     def build_configuration(self):
         """Builds the configuration to save for the plugin such that it can be

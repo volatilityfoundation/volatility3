@@ -45,8 +45,9 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self._check_header(hdr_layer, hdr_offset)
 
         # Need to create a header object
-        self.header = self.context.object(
-            self._crash_table_name + constants.BANG + "_DMP_HEADER", offset = hdr_offset, layer_name = self._base_layer)
+        self.header = self.context.object(self._crash_table_name + constants.BANG + "_DMP_HEADER",
+                                          offset = hdr_offset,
+                                          layer_name = self._base_layer)
 
         # Extract the DTB
         self.dtb = self.header.DirectoryTableBase

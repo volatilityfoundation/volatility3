@@ -37,11 +37,13 @@ class Handles(interfaces_plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.IntRequirement(
-                name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
+            requirements.IntRequirement(name = 'pid',
+                                        description = "Process ID to include (all other processes are excluded)",
+                                        optional = True)
         ]
 
     def _decode_pointer(self, value, magic):
@@ -86,8 +88,9 @@ class Handles(interfaces_plugins.PluginInterface):
 
             offset = self._decode_pointer(handle_table_entry.LowValue, magic)
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
-            object_header = self.context.object(
-                self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER", virtual, offset = offset)
+            object_header = self.context.object(self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER",
+                                                virtual,
+                                                offset = offset)
             object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
 
         object_header.HandleValue = handle_value
@@ -163,8 +166,10 @@ class Handles(interfaces_plugins.PluginInterface):
         except exceptions.SymbolError:
             table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
 
-        ptrs = ntkrnlmp.object(
-            object_type = "array", offset = table_addr, subtype = ntkrnlmp.get_type("pointer"), count = 100)
+        ptrs = ntkrnlmp.object(object_type = "array",
+                               offset = table_addr,
+                               subtype = ntkrnlmp.get_type("pointer"),
+                               count = 100)
 
         for i, ptr in enumerate(ptrs):  # type: ignore
             # the first entry in the table is always null. break the
@@ -216,8 +221,11 @@ class Handles(interfaces_plugins.PluginInterface):
         if not self.context.layers[virtual].is_valid(offset):
             return
 
-        table = ntkrnlmp.object(
-            object_type = "array", offset = offset, subtype = subtype, count = int(count), absolute = True)
+        table = ntkrnlmp.object(object_type = "array",
+                                offset = offset,
+                                subtype = subtype,
+                                count = int(count),
+                                absolute = True)
 
         layer_object = self.context.layers[virtual]
         masked_offset = (offset & layer_object.maximum_address)
@@ -232,8 +240,8 @@ class Handles(interfaces_plugins.PluginInterface):
                 handle_multiplier = 4
                 handle_level_base = depth * count * handle_multiplier
 
-                handle_value = (
-                    (entry.vol.offset - masked_offset) / (subtype.size / handle_multiplier)) + handle_level_base
+                handle_value = ((entry.vol.offset - masked_offset) /
+                                (subtype.size / handle_multiplier)) + handle_level_base
 
                 item = self._get_item(entry, handle_value)
 
@@ -263,10 +271,12 @@ class Handles(interfaces_plugins.PluginInterface):
 
     def _generator(self, procs):
 
-        type_map = self.get_type_map(
-            context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
-        cookie = self.find_cookie(
-            context = self.context, layer_name = self.config["primary"], symbol_table = self.config["nt_symbols"])
+        type_map = self.get_type_map(context = self.context,
+                                     layer_name = self.config["primary"],
+                                     symbol_table = self.config["nt_symbols"])
+        cookie = self.find_cookie(context = self.context,
+                                  layer_name = self.config["primary"],
+                                  symbol_table = self.config["nt_symbols"])
 
         for proc in procs:
 
@@ -321,8 +331,7 @@ class Handles(interfaces_plugins.PluginInterface):
                                    ("HandleValue", format_hints.Hex), ("Type", str),
                                    ("GrantedAccess", format_hints.Hex), ("Name", str)],
                                   self._generator(
-                                      pslist.PsList.list_processes(
-                                          self.context,
-                                          self.config['primary'],
-                                          self.config['nt_symbols'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_processes(self.context,
+                                                                   self.config['primary'],
+                                                                   self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))

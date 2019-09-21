@@ -118,13 +118,12 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                                                                table_mapping)
 
         # Inherit
-        super().__init__(
-            context,
-            config_path,
-            name,
-            native_types or self._delegate.natives,
-            table_mapping = table_mapping,
-            class_types = class_types)
+        super().__init__(context,
+                         config_path,
+                         name,
+                         native_types or self._delegate.natives,
+                         table_mapping = table_mapping,
+                         class_types = class_types)
 
     @staticmethod
     def _closest_version(version: str, versions: Dict[Tuple[int, int, int], Type['ISFormatTable']]) \
@@ -227,14 +226,13 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         if not urls:
             raise ValueError("No symbol files found at provided filename: {}", filename)
         table_name = context.symbol_space.free_table_name(filename)
-        table = cls(
-            context = context,
-            config_path = config_path,
-            name = table_name,
-            isf_url = urls[0],
-            native_types = native_types,
-            table_mapping = table_mapping,
-            class_types = class_types)
+        table = cls(context = context,
+                    config_path = config_path,
+                    name = table_name,
+                    isf_url = urls[0],
+                    native_types = native_types,
+                    table_mapping = table_mapping,
+                    class_types = class_types)
         context.symbol_space.append(table)
         return table_name
 
@@ -411,11 +409,10 @@ class Version1Format(ISFormatTable):
         curdict = self._json_object['enums'][enum_name]
         base_type = self.natives.get_type(curdict['base'])
         # The size isn't actually used, the base-type defines it.
-        return objects.templates.ObjectTemplate(
-            type_name = self.name + constants.BANG + enum_name,
-            object_class = objects.Enumeration,
-            base_type = base_type,
-            choices = curdict['constants'])
+        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + enum_name,
+                                                object_class = objects.Enumeration,
+                                                base_type = base_type,
+                                                choices = curdict['constants'])
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:
         """Resolves an individual symbol."""
@@ -435,11 +432,10 @@ class Version1Format(ISFormatTable):
             for clazz in objects.AggregateTypes:
                 if objects.AggregateTypes[clazz] == curdict['kind']:
                     object_class = clazz
-        return objects.templates.ObjectTemplate(
-            type_name = self.name + constants.BANG + type_name,
-            object_class = object_class,
-            size = curdict['length'],
-            members = members)
+        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
+                                                object_class = object_class,
+                                                size = curdict['length'],
+                                                members = members)
 
 
 class Version2Format(Version1Format):
@@ -485,11 +481,10 @@ class Version2Format(Version1Format):
             for clazz in objects.AggregateTypes:
                 if objects.AggregateTypes[clazz] == curdict['kind']:
                     object_class = clazz
-        return objects.templates.ObjectTemplate(
-            type_name = self.name + constants.BANG + type_name,
-            object_class = object_class,
-            size = curdict['size'],
-            members = members)
+        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
+                                                object_class = object_class,
+                                                size = curdict['size'],
+                                                members = members)
 
 
 class Version3Format(Version2Format):
@@ -506,8 +501,9 @@ class Version3Format(Version2Format):
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
-            name = name, address = symbol['address'], type = symbol_type)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
+                                                                      address = symbol['address'],
+                                                                      type = symbol_type)
         return self._symbol_cache[name]
 
 
@@ -560,8 +556,10 @@ class Version5Format(Version4Format):
         symbol_constant_data = None
         if 'constant_data' in symbol:
             symbol_constant_data = base64.b64decode(symbol.get('constant_data'))
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
-            name = name, address = symbol['address'], type = symbol_type, constant_data = symbol_constant_data)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
+                                                                      address = symbol['address'],
+                                                                      type = symbol_type,
+                                                                      constant_data = symbol_constant_data)
         return self._symbol_cache[name]
 
 

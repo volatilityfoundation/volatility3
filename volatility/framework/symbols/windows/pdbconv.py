@@ -404,10 +404,9 @@ class PdbReader:
             section_orig_layer_name = self._layer_name + "_stream" + str(self._dbidbgheader.snSectionHdrOrig)
             consumed, length = 0, self.context.layers[section_orig_layer_name].maximum_address
             while consumed < length:
-                section = self.context.object(
-                    dbi_layer.pdb_symbol_table + constants.BANG + "IMAGE_SECTION_HEADER",
-                    offset = consumed,
-                    layer_name = section_orig_layer_name)
+                section = self.context.object(dbi_layer.pdb_symbol_table + constants.BANG + "IMAGE_SECTION_HEADER",
+                                              offset = consumed,
+                                              layer_name = section_orig_layer_name)
                 self._sections.append(section)
                 consumed += section.vol.size
 
@@ -417,16 +416,16 @@ class PdbReader:
                 data = self.context.layers[omap_layer_name].read(0, length)
                 # For speed we don't use the framework to read this (usually sizeable) data
                 for i in range(0, length, 8):
-                    self._omap_mapping.append((int.from_bytes(data[i:i + 4], byteorder = 'little'),
-                                               int.from_bytes(data[i + 4:i + 8], byteorder = 'little')))
+                    self._omap_mapping.append(
+                        (int.from_bytes(data[i:i + 4],
+                                        byteorder = 'little'), int.from_bytes(data[i + 4:i + 8], byteorder = 'little')))
         elif self._dbidbgheader.snSectionHdr != -1:
             section_layer_name = self._layer_name + "_stream" + str(self._dbidbgheader.snSectionHdr)
             consumed, length = 0, self.context.layers[section_layer_name].maximum_address
             while consumed < length:
-                section = self.context.object(
-                    dbi_layer.pdb_symbol_table + constants.BANG + "IMAGE_SECTION_HEADER",
-                    offset = consumed,
-                    layer_name = section_layer_name)
+                section = self.context.object(dbi_layer.pdb_symbol_table + constants.BANG + "IMAGE_SECTION_HEADER",
+                                              offset = consumed,
+                                              layer_name = section_layer_name)
                 self._sections.append(section)
                 consumed += section.vol.size
 
@@ -442,8 +441,9 @@ class PdbReader:
         symrec_layer = self._context.layers.get(self._layer_name + "_stream" + str(self._dbiheader.symrecStream), None)
         if not symrec_layer:
             raise ValueError("No SymRec stream available")
-        module = self._context.module(
-            module_name = symrec_layer.pdb_symbol_table, layer_name = symrec_layer.name, offset = 0)
+        module = self._context.module(module_name = symrec_layer.pdb_symbol_table,
+                                      layer_name = symrec_layer.name,
+                                      offset = 0)
 
         offset = 0
         max_address = symrec_layer.maximum_address
@@ -483,8 +483,9 @@ class PdbReader:
         pdb_info_layer = self._context.layers.get(self._layer_name + "_stream1", None)
         if not pdb_info_layer:
             raise ValueError("No PDB Info Stream available")
-        module = self._context.module(
-            module_name = pdb_info_layer.pdb_symbol_table, layer_name = pdb_info_layer.name, offset = 0)
+        module = self._context.module(module_name = pdb_info_layer.pdb_symbol_table,
+                                      layer_name = pdb_info_layer.name,
+                                      offset = 0)
         pdb_info = module.object(object_type = "PDB_INFORMATION", offset = 0)
 
         self.metadata['windows']['pdb'] = {
@@ -705,8 +706,9 @@ class PdbReader:
         """Returns a (leaf_type, name, object) Tuple for a type, and the number
         of bytes consumed."""
         result = None, None, None  # type: Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[Union[List, interfaces.objects.ObjectInterface]]]
-        leaf_type = self.context.object(
-            module.get_enumeration("LEAF_TYPE"), layer_name = module._layer_name, offset = offset)
+        leaf_type = self.context.object(module.get_enumeration("LEAF_TYPE"),
+                                        layer_name = module._layer_name,
+                                        offset = offset)
         consumed = leaf_type.vol.base_type.size
         remaining = length - consumed
 
@@ -857,10 +859,9 @@ class PdbReader:
         value."""
         excess = 0
         if value >= leaf_type.LF_CHAR:
-            sub_leaf_type = self.context.object(
-                self.context.symbol_space.get_enumeration(leaf_type.vol.type_name),
-                layer_name = leaf_type.vol.layer_name,
-                offset = value.vol.offset)
+            sub_leaf_type = self.context.object(self.context.symbol_space.get_enumeration(leaf_type.vol.type_name),
+                                                layer_name = leaf_type.vol.layer_name,
+                                                offset = value.vol.offset)
             # Set the offset at just after the previous size type
             offset = value.vol.offset + value.vol.data_format.length
             if sub_leaf_type in [leaf_type.LF_CHAR]:
@@ -952,10 +953,16 @@ if __name__ == '__main__':
     file_group.add_argument("-f", "--file", metavar = "FILE", help = "PDB file to translate to ISF")
     data_group = parser.add_argument_group("data", description = "Convert based on a GUID and filename pattern")
     data_group.add_argument("-p", "--pattern", metavar = "PATTERN", help = "Filename pattern to recover PDB file")
-    data_group.add_argument(
-        "-g", "--guid", metavar = "GUID", help = "GUID + Age string for the required PDB file", default = None)
-    data_group.add_argument(
-        "-k", "--keep", action = "store_true", default = False, help = "Keep the downloaded PDB file")
+    data_group.add_argument("-g",
+                            "--guid",
+                            metavar = "GUID",
+                            help = "GUID + Age string for the required PDB file",
+                            default = None)
+    data_group.add_argument("-k",
+                            "--keep",
+                            action = "store_true",
+                            default = False,
+                            help = "Keep the downloaded PDB file")
     args = parser.parse_args()
 
     pg_cb = PrintedProgress()

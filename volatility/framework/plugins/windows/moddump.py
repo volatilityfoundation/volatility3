@@ -26,8 +26,9 @@ class ModDump(interfaces.plugins.PluginInterface):
         return [
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
@@ -53,15 +54,18 @@ class ModDump(interfaces.plugins.PluginInterface):
         seen_ids = []  # type: List[interfaces.objects.ObjectInterface]
         filter_func = pslist.PsList.create_pid_filter(pids or [])
 
-        for proc in pslist.PsList.list_processes(
-                context = context, layer_name = layer_name, symbol_table = symbol_table, filter_func = filter_func):
+        for proc in pslist.PsList.list_processes(context = context,
+                                                 layer_name = layer_name,
+                                                 symbol_table = symbol_table,
+                                                 filter_func = filter_func):
             proc_layer_name = proc.add_process_layer()
 
             try:
                 # create the session space object in the process' own layer.
                 # not all processes have a valid session pointer.
-                session_space = context.object(
-                    symbol_table + constants.BANG + "_MM_SESSION_SPACE", layer_name = layer_name, offset = proc.Session)
+                session_space = context.object(symbol_table + constants.BANG + "_MM_SESSION_SPACE",
+                                               layer_name = layer_name,
+                                               offset = proc.Session)
 
                 if session_space.SessionId in seen_ids:
                     continue
@@ -101,8 +105,11 @@ class ModDump(interfaces.plugins.PluginInterface):
     def _generator(self, mods):
 
         session_layers = list(self.get_session_layers(self.context, self.config['primary'], self.config['nt_symbols']))
-        pe_table_name = intermed.IntermediateSymbolTable.create(
-            self.context, self.config_path, "windows", "pe", class_types = pe.class_types)
+        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                self.config_path,
+                                                                "windows",
+                                                                "pe",
+                                                                class_types = pe.class_types)
 
         for mod in mods:
             try:
@@ -115,10 +122,9 @@ class ModDump(interfaces.plugins.PluginInterface):
                 result_text = "Cannot find a viable session layer for {0:#x}".format(mod.DllBase)
             else:
                 try:
-                    dos_header = self.context.object(
-                        pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
-                        offset = mod.DllBase,
-                        layer_name = session_layer_name)
+                    dos_header = self.context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
+                                                     offset = mod.DllBase,
+                                                     layer_name = session_layer_name)
 
                     filedata = interfaces.plugins.FileInterface("module.{0:#x}.dmp".format(mod.DllBase))
 
@@ -143,7 +149,6 @@ class ModDump(interfaces.plugins.PluginInterface):
     def run(self):
         return renderers.TreeGrid([("Base", format_hints.Hex), ("Name", str), ("Result", str)],
                                   self._generator(
-                                      modules.Modules.list_modules(
-                                          context = self.context,
-                                          layer_name = self.config['primary'],
-                                          symbol_table = self.config['nt_symbols'])))
+                                      modules.Modules.list_modules(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'])))

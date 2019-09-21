@@ -322,10 +322,16 @@ if __name__ == '__main__':
     file_group.add_argument("-f", "--file", metavar = "FILE", help = "PDB file to translate to ISF")
     data_group = parser.add_argument_group("data", description = "Convert based on a GUID and filename pattern")
     data_group.add_argument("-p", "--pattern", metavar = "PATTERN", help = "Filename pattern to recover PDB file")
-    data_group.add_argument(
-        "-g", "--guid", metavar = "GUID", help = "GUID + Age string for the required PDB file", default = None)
-    data_group.add_argument(
-        "-k", "--keep", action = "store_true", default = False, help = "Keep the downloaded PDB file")
+    data_group.add_argument("-g",
+                            "--guid",
+                            metavar = "GUID",
+                            help = "GUID + Age string for the required PDB file",
+                            default = None)
+    data_group.add_argument("-k",
+                            "--keep",
+                            action = "store_true",
+                            default = False,
+                            help = "Keep the downloaded PDB file")
     args = parser.parse_args()
 
     delfile = False

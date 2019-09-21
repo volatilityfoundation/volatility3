@@ -119,8 +119,10 @@ class _CM_KEY_BODY(objects.StructType):
                     break
 
             output.append(
-                kcb.NameBlock.Name.cast(
-                    "string", encoding = "utf8", max_length = kcb.NameBlock.NameLength, errors = "replace"))
+                kcb.NameBlock.Name.cast("string",
+                                        encoding = "utf8",
+                                        max_length = kcb.NameBlock.NameLength,
+                                        errors = "replace"))
             kcb = kcb.ParentKcb
         return "\\".join(reversed(output))
 

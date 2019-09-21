@@ -18,12 +18,14 @@ class DllList(interfaces_plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-            requirements.IntRequirement(
-                name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
+            requirements.IntRequirement(name = 'pid',
+                                        description = "Process ID to include (all other processes are excluded)",
+                                        optional = True)
         ]
 
     def _generator(self, procs):
@@ -41,10 +43,10 @@ class DllList(interfaces_plugins.PluginInterface):
                     pass
 
                 yield (0, (proc.UniqueProcessId,
-                           proc.ImageFileName.cast(
-                               "string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
-                           format_hints.Hex(entry.DllBase), format_hints.Hex(entry.SizeOfImage), BaseDllName,
-                           FullDllName))
+                           proc.ImageFileName.cast("string",
+                                                   max_length = proc.ImageFileName.vol.count,
+                                                   errors = 'replace'), format_hints.Hex(entry.DllBase),
+                           format_hints.Hex(entry.SizeOfImage), BaseDllName, FullDllName))
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
@@ -52,8 +54,7 @@ class DllList(interfaces_plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex),
                                    ("Size", format_hints.Hex), ("Name", str), ("Path", str)],
                                   self._generator(
-                                      pslist.PsList.list_processes(
-                                          context = self.context,
-                                          layer_name = self.config['primary'],
-                                          symbol_table = self.config['nt_symbols'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))

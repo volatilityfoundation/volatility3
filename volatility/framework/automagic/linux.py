@@ -63,11 +63,15 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
             if symbol_files:
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('LintelStacker')
-                table = linux.LinuxKernelIntermedSymbols(
-                    context, 'temporary.' + table_name, name = table_name, isf_url = isf_path)
+                table = linux.LinuxKernelIntermedSymbols(context,
+                                                         'temporary.' + table_name,
+                                                         name = table_name,
+                                                         isf_url = isf_path)
                 context.symbol_space.append(table)
-                kaslr_shift, _ = LinuxUtilities.find_aslr(
-                    context, table_name, layer_name, progress_callback = progress_callback)
+                kaslr_shift, _ = LinuxUtilities.find_aslr(context,
+                                                          table_name,
+                                                          layer_name,
+                                                          progress_callback = progress_callback)
 
                 layer_class = intel.Intel  # type: Type
                 if 'init_level4_pgt' in table.symbols:
@@ -282,10 +286,9 @@ class LinuxUtilities(object):
         swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
         module = context.module(symbol_table, layer_name, 0)
 
-        for offset in context.layers[layer_name].scan(
-                scanner = scanners.RegExScanner(swapper_signature),
-                context = context,
-                progress_callback = progress_callback):
+        for offset in context.layers[layer_name].scan(scanner = scanners.RegExScanner(swapper_signature),
+                                                      context = context,
+                                                      progress_callback = progress_callback):
             task_symbol = module.get_type('task_struct')
             init_task_address = offset - task_symbol.relative_child_offset('comm')
             init_task = module.object(object_type = 'task_struct', offset = init_task_address, absolute = True)

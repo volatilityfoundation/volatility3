@@ -23,8 +23,9 @@ class VirtMap(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
@@ -50,30 +51,32 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
         if module.has_symbol('MiVisibleState'):
             symbol = module.get_symbol('MiVisibleState')
-            visible_state = module.object(
-                object_type = 'pointer', offset = symbol.address,
-                subtype = module.get_type('_MI_VISIBLE_STATE')).dereference()
+            visible_state = module.object(object_type = 'pointer',
+                                          offset = symbol.address,
+                                          subtype = module.get_type('_MI_VISIBLE_STATE')).dereference()
             if hasattr(visible_state, 'SystemVaRegions'):
                 for i in range(visible_state.SystemVaRegions.count):
                     lookup = system_va_type.lookup(i)
                     region_range = result.get(lookup, [])
-                    region_range.append((visible_state.SystemVaRegions[i].BaseAddress,
-                                         visible_state.SystemVaRegions[i].NumberOfBytes))
+                    region_range.append(
+                        (visible_state.SystemVaRegions[i].BaseAddress, visible_state.SystemVaRegions[i].NumberOfBytes))
                     result[lookup] = region_range
             elif hasattr(visible_state, 'SystemVaType'):
-                system_range_start = module.object(
-                    object_type = "pointer", offset = module.get_symbol("MmSystemRangeStart").address)
+                system_range_start = module.object(object_type = "pointer",
+                                                   offset = module.get_symbol("MmSystemRangeStart").address)
                 result = cls._enumerate_system_va_type(large_page_size, system_range_start, module,
                                                        visible_state.SystemVaType)
             else:
                 raise exceptions.SymbolError("Required structures not found")
         elif module.has_symbol('MiSystemVaType'):
-            system_range_start = module.object(
-                object_type = "pointer", offset = module.get_symbol("MmSystemRangeStart").address)
+            system_range_start = module.object(object_type = "pointer",
+                                               offset = module.get_symbol("MmSystemRangeStart").address)
             symbol = module.get_symbol('MiSystemVaType')
             array_count = (0xFFFFFFFF + 1 - system_range_start) // large_page_size
-            type_array = module.object(
-                object_type = 'array', offset = symbol.address, count = array_count, subtype = module.get_type('char'))
+            type_array = module.object(object_type = 'array',
+                                       offset = symbol.address,
+                                       count = array_count,
+                                       subtype = module.get_type('char'))
 
             result = cls._enumerate_system_va_type(large_page_size, system_range_start, module, type_array)
         else:
@@ -114,8 +117,9 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
     def run(self):
         layer = self.context.layers[self.config['primary']]
-        module = self.context.module(
-            self.config['nt_symbols'], layer_name = layer.name, offset = layer.config['kernel_virtual_offset'])
+        module = self.context.module(self.config['nt_symbols'],
+                                     layer_name = layer.name,
+                                     offset = layer.config['kernel_virtual_offset'])
 
         return renderers.TreeGrid([("Region", str), ("Start offset", format_hints.Hex),
                                    ("End offset", format_hints.Hex)],

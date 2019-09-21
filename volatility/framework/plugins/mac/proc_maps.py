@@ -17,8 +17,9 @@ class Maps(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Linux kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
@@ -42,8 +43,7 @@ class Maps(interfaces_plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
                                    ("End", format_hints.Hex), ("Protection", str), ("Map Name", str)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(
-                                          self.context,
-                                          self.config['primary'],
-                                          self.config['darwin'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_tasks(self.context,
+                                                               self.config['primary'],
+                                                               self.config['darwin'],
+                                                               filter_func = filter_func)))

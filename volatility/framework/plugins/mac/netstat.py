@@ -21,8 +21,9 @@ class Netstat(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Kernel Address Space', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Kernel Address Space',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
@@ -78,8 +79,7 @@ class Netstat(plugins.PluginInterface):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),
                                    ("Remote IP", str), ("Remote Port", int), ("State", str), ("Process", str)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(
-                                          self.context,
-                                          self.config['primary'],
-                                          self.config['darwin'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_tasks(self.context,
+                                                               self.config['primary'],
+                                                               self.config['darwin'],
+                                                               filter_func = filter_func)))

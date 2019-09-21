@@ -68,23 +68,23 @@ class VmwareLayer(segmented.SegmentedLayer):
             name_len = ord(meta_layer.read(offset + 1, 1))
             tags_read = (flags == 0) and (name_len == 0)
             if not tags_read:
-                name = self._context.object(
-                    "vmware!string", layer_name = self._meta_layer, offset = offset + 2, max_length = name_len)
+                name = self._context.object("vmware!string",
+                                            layer_name = self._meta_layer,
+                                            offset = offset + 2,
+                                            max_length = name_len)
                 indicies_len = (flags >> 6) & 3
                 indicies = []
                 for index in range(indicies_len):
                     indicies.append(
-                        self._context.object(
-                            "vmware!unsigned int",
-                            offset = offset + name_len + 2 + (index * index_len),
-                            layer_name = self._meta_layer))
-                data = self._context.object(
-                    "vmware!unsigned int",
-                    layer_name = self._meta_layer,
-                    offset = offset + 2 + name_len + (indicies_len * index_len))
+                        self._context.object("vmware!unsigned int",
+                                             offset = offset + name_len + 2 + (index * index_len),
+                                             layer_name = self._meta_layer))
+                data = self._context.object("vmware!unsigned int",
+                                            layer_name = self._meta_layer,
+                                            offset = offset + 2 + name_len + (indicies_len * index_len))
                 tags[(name, tuple(indicies))] = (flags, data)
-                offset += 2 + name_len + (
-                    indicies_len * index_len) + self._context.symbol_space.get_type("vmware!unsigned int").size
+                offset += 2 + name_len + (indicies_len *
+                                          index_len) + self._context.symbol_space.get_type("vmware!unsigned int").size
 
         if tags[("regionsCount", ())][1] == 0:
             raise ValueError("VMware VMEM is not split into regions")

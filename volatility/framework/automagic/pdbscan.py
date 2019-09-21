@@ -99,9 +99,10 @@ def scan(ctx: interfaces.context.ContextInterface,
     if end is None:
         end = ctx.layers[layer_name].maximum_address
 
-    for (GUID, age, pdb_name, signature_offset) in ctx.layers[layer_name].scan(
-            ctx, PdbSignatureScanner(pdb_names), progress_callback = progress_callback, sections = [(start,
-                                                                                                     end - start)]):
+    for (GUID, age, pdb_name, signature_offset) in ctx.layers[layer_name].scan(ctx,
+                                                                               PdbSignatureScanner(pdb_names),
+                                                                               progress_callback = progress_callback,
+                                                                               sections = [(start, end - start)]):
         mz_offset = None
         sig_pfn = signature_offset // page_size
 
@@ -243,8 +244,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 data_written = False
                 with lzma.open(potential_output_filename, "w") as of:
                     # Once we haven't thrown an error, do the computation
-                    filename = pdbconv.PdbRetreiver().retreive_pdb(
-                        guid + str(age), file_name = pdb_name, progress_callback = progress_callback)
+                    filename = pdbconv.PdbRetreiver().retreive_pdb(guid + str(age),
+                                                                   file_name = pdb_name,
+                                                                   progress_callback = progress_callback)
                     if filename:
                         tmp_files.append(filename)
                         location = "file:" + request.pathname2url(tmp_files[-1])
@@ -303,11 +305,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         kvo_path = interfaces.configuration.path_join(vlayer.config_path, 'kernel_virtual_offset')
 
-        kernels = scan(
-            ctx = context,
-            layer_name = physical_layer_name,
-            page_size = vlayer.page_size,
-            progress_callback = progress_callback)
+        kernels = scan(ctx = context,
+                       layer_name = physical_layer_name,
+                       page_size = vlayer.page_size,
+                       progress_callback = progress_callback)
         for kernel in kernels:
             # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
             if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
@@ -346,16 +347,16 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         physical_layer = context.layers[physical_layer_name]
         # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
-        results = physical_layer.scan(
-            context, scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"), progress_callback = progress_callback)
+        results = physical_layer.scan(context,
+                                      scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
+                                      progress_callback = progress_callback)
         seen = set()  # type: Set[int]
         # Because this will launch a scan of the virtual layer, we want to be careful
         for result in results:
             # TODO: Identify the specific structure we're finding and document this a bit better
-            pointer = context.object(
-                "pdbscan!unsigned long long",
-                offset = (result - 16 - int(vlayer.bits_per_register / 8)),
-                layer_name = physical_layer_name)
+            pointer = context.object("pdbscan!unsigned long long",
+                                     offset = (result - 16 - int(vlayer.bits_per_register / 8)),
+                                     layer_name = physical_layer_name)
             address = pointer & vlayer.address_mask
             if address in seen:
                 continue
@@ -380,8 +381,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         seen = set()  # type: Set[int]
         for result in results:
             # TODO: Identify the specific structure we're finding and document this a bit better
-            pointer = context.object(
-                "pdbscan!unsigned long long", offset = result + 8, layer_name = physical_layer_name)
+            pointer = context.object("pdbscan!unsigned long long",
+                                     offset = result + 8,
+                                     layer_name = physical_layer_name)
             address = pointer & vlayer.address_mask
             if address in seen:
                 continue
@@ -408,13 +410,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         try:
             if vlayer.read(address, 0x2) == b'MZ':
                 res = list(
-                    scan(
-                        ctx = context,
-                        layer_name = vlayer.name,
-                        page_size = vlayer.page_size,
-                        progress_callback = progress_callback,
-                        start = address,
-                        end = address + self.max_pdb_size))
+                    scan(ctx = context,
+                         layer_name = vlayer.name,
+                         page_size = vlayer.page_size,
+                         progress_callback = progress_callback,
+                         start = address,
+                         end = address + self.max_pdb_size))
                 if res:
                     valid_kernels[virtual_layer_name] = (address, res[0])
         except exceptions.InvalidAddressException:
@@ -467,8 +468,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             # TODO: check if this is a windows symbol requirement, otherwise ignore it
             self._symbol_requirements = self.find_requirements(context, config_path, requirement,
                                                                requirements.SymbolTableRequirement)
-            potential_layers = self.find_virtual_layers_from_req(
-                context = context, config_path = config_path, requirement = requirement)
+            potential_layers = self.find_virtual_layers_from_req(context = context,
+                                                                 config_path = config_path,
+                                                                 requirement = requirement)
             for sub_config_path, symbol_req in self._symbol_requirements:
                 parent_path = interfaces.configuration.parent_path(sub_config_path)
                 if symbol_req.unsatisfied(context, parent_path):

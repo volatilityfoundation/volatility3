@@ -69,8 +69,8 @@ class DtbTest:
         Returns:
             A valid DTB within this page (and an additional parameter for data)
         """
-        value = data[page_offset + (self.ptr_reference * self.ptr_size):page_offset + (
-            (self.ptr_reference + 1) * self.ptr_size)]
+        value = data[page_offset + (self.ptr_reference * self.ptr_size):page_offset +
+                     ((self.ptr_reference + 1) * self.ptr_size)]
         try:
             ptr = self._unpack(value)
         except struct.error:
@@ -115,22 +115,28 @@ class DtbTest:
 class DtbTest32bit(DtbTest):
 
     def __init__(self):
-        super().__init__(
-            layer_type = layers.intel.WindowsIntel, ptr_struct = "I", ptr_reference = 0x300, mask = 0xFFFFF000)
+        super().__init__(layer_type = layers.intel.WindowsIntel,
+                         ptr_struct = "I",
+                         ptr_reference = 0x300,
+                         mask = 0xFFFFF000)
 
 
 class DtbTest64bit(DtbTest):
 
     def __init__(self):
-        super().__init__(
-            layer_type = layers.intel.WindowsIntel32e, ptr_struct = "Q", ptr_reference = 0x1ED, mask = 0x3FFFFFFFFFF000)
+        super().__init__(layer_type = layers.intel.WindowsIntel32e,
+                         ptr_struct = "Q",
+                         ptr_reference = 0x1ED,
+                         mask = 0x3FFFFFFFFFF000)
 
 
 class DtbTestPae(DtbTest):
 
     def __init__(self):
-        super().__init__(
-            layer_type = layers.intel.WindowsIntelPAE, ptr_struct = "Q", ptr_reference = 0x3, mask = 0x3FFFFFFFFFF000)
+        super().__init__(layer_type = layers.intel.WindowsIntelPAE,
+                         ptr_struct = "Q",
+                         ptr_reference = 0x3,
+                         mask = 0x3FFFFFFFFFF000)
 
     def second_pass(self, dtb: int, data: bytes, data_offset: int) -> Optional[Tuple[int, Any]]:
         """PAE top level directory tables contains four entries and the self-
@@ -187,15 +193,19 @@ class DtbSelfReferential(DtbTest):
 class DtbSelfRef32bit(DtbSelfReferential):
 
     def __init__(self):
-        super().__init__(
-            layer_type = layers.intel.WindowsIntel, ptr_struct = "I", ptr_reference = 0x300, mask = 0xFFFFF000)
+        super().__init__(layer_type = layers.intel.WindowsIntel,
+                         ptr_struct = "I",
+                         ptr_reference = 0x300,
+                         mask = 0xFFFFF000)
 
 
 class DtbSelfRef64bit(DtbSelfReferential):
 
     def __init__(self):
-        super().__init__(
-            layer_type = layers.intel.WindowsIntel32e, ptr_struct = "Q", ptr_reference = 0x1ED, mask = 0x3FFFFFFFFFF000)
+        super().__init__(layer_type = layers.intel.WindowsIntel32e,
+                         ptr_struct = "Q",
+                         ptr_reference = 0x1ED,
+                         mask = 0x3FFFFFFFFFF000)
 
 
 class PageMapScanner(interfaces.layers.ScannerInterface):
@@ -331,19 +341,20 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
                 config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
                 context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
                 context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = dtb
-                layer = test.layer_type(
-                    context, config_path = config_path, name = new_layer_name, metadata = {'os': 'Windows'})
+                layer = test.layer_type(context,
+                                        config_path = config_path,
+                                        name = new_layer_name,
+                                        metadata = {'os': 'Windows'})
                 break
 
         # Fall back to a heuristic for finding the Windows DTB
         if layer is None:
             vollog.debug("Self-referential pointer not in well-known location, moving to recent windows heuristic")
             # There is a very high chance that the DTB will live in this narrow segment, assuming we couldn't find it previously
-            hits = context.layers[layer_name].scan(
-                context,
-                PageMapScanner([DtbSelfRef64bit()]),
-                sections = [(0x1a0000, 0x50000)],
-                progress_callback = progress_callback)
+            hits = context.layers[layer_name].scan(context,
+                                                   PageMapScanner([DtbSelfRef64bit()]),
+                                                   sections = [(0x1a0000, 0x50000)],
+                                                   progress_callback = progress_callback)
             # Flatten the generator
             hits = list(hits)
             if hits:
@@ -354,8 +365,10 @@ class WintelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
                 context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
                 # TODO: Need to determine the layer type (chances are high it's x64, hence this default)
-                layer = layers.intel.WindowsIntel32e(
-                    context, config_path = config_path, name = new_layer_name, metadata = {'os': 'Windows'})
+                layer = layers.intel.WindowsIntel32e(context,
+                                                     config_path = config_path,
+                                                     name = new_layer_name,
+                                                     metadata = {'os': 'Windows'})
         if layer is not None and config_path:
             vollog.debug("DTB was found at: 0x{:0x}".format(context.config[interfaces.configuration.path_join(
                 config_path, "page_map_offset")]))
@@ -373,8 +386,11 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                  progress_callback: constants.ProgressCallback = None) -> None:
         """Finds translation layers that can have swap layers added."""
         path_join = interfaces.configuration.path_join
-        self._translation_requirement = self.find_requirements(
-            context, config_path, requirement, requirements.TranslationLayerRequirement, shortcut = False)
+        self._translation_requirement = self.find_requirements(context,
+                                                               config_path,
+                                                               requirement,
+                                                               requirements.TranslationLayerRequirement,
+                                                               shortcut = False)
         for trans_sub_config, trans_req in self._translation_requirement:
             if not isinstance(trans_req, requirements.TranslationLayerRequirement):
                 # We need this so the type-checker knows we're a TranslationLayerRequirement
@@ -400,8 +416,9 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
                         context.config[layer_class_path] = 'volatility.framework.layers.physical.FileLayer'
 
                     # Add the requirement
-                    new_req = requirements.TranslationLayerRequirement(
-                        name = current_layer_name, description = "Swap Layer", optional = False)
+                    new_req = requirements.TranslationLayerRequirement(name = current_layer_name,
+                                                                       description = "Swap Layer",
+                                                                       optional = False)
                     swap_req.add_requirement(new_req)
 
                 context.config[path_join(swap_sub_config, 'number_of_elements')] = counter

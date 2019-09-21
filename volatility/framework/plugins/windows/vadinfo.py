@@ -126,8 +126,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                    ("Protection", str), ("CommitCharge", int), ("PrivateMemory", int),
                                    ("Parent", format_hints.Hex), ("File", str)],
                                   self._generator(
-                                      pslist.PsList.list_processes(
-                                          context = self.context,
-                                          layer_name = self.config['primary'],
-                                          symbol_table = self.config['nt_symbols'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))

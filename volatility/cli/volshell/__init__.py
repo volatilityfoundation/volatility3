@@ -45,54 +45,54 @@ class VolShell(cli.CommandLine):
 
         framework.require_interface_version(0, 0, 0)
 
-        parser = argparse.ArgumentParser(
-            prog = 'volshell', description = "A tool for interactivate forensic analysis of memory images")
-        parser.add_argument(
-            "-c", "--config", help = "Load the configuration from a json file", default = None, type = str)
-        parser.add_argument(
-            "-e",
-            "--extend",
-            help = "Extend the configuration with a new (or changed) setting",
-            default = None,
-            action = 'append')
-        parser.add_argument(
-            "-p",
-            "--plugin-dirs",
-            help = "Semi-colon separated list of paths to find plugins",
-            default = "",
-            type = str)
-        parser.add_argument(
-            "-s",
-            "--symbol-dirs",
-            help = "Semi-colon separated list of paths to find symbols",
-            default = "",
-            type = str)
+        parser = argparse.ArgumentParser(prog = 'volshell',
+                                         description = "A tool for interactivate forensic analysis of memory images")
+        parser.add_argument("-c",
+                            "--config",
+                            help = "Load the configuration from a json file",
+                            default = None,
+                            type = str)
+        parser.add_argument("-e",
+                            "--extend",
+                            help = "Extend the configuration with a new (or changed) setting",
+                            default = None,
+                            action = 'append')
+        parser.add_argument("-p",
+                            "--plugin-dirs",
+                            help = "Semi-colon separated list of paths to find plugins",
+                            default = "",
+                            type = str)
+        parser.add_argument("-s",
+                            "--symbol-dirs",
+                            help = "Semi-colon separated list of paths to find symbols",
+                            default = "",
+                            type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
-        parser.add_argument(
-            "-o",
-            "--output-dir",
-            help = "Directory in which to output any generated files",
-            default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')),
-            type = str)
+        parser.add_argument("-o",
+                            "--output-dir",
+                            help = "Directory in which to output any generated files",
+                            default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')),
+                            type = str)
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument("--log", help = "Log output to a file as well as the console", default = None, type = str)
-        parser.add_argument(
-            "-f",
-            "--file",
-            metavar = 'FILE',
-            default = None,
-            type = str,
-            help = "Shorthand for --single-location=file:// if single-location is not defined")
-        parser.add_argument(
-            "--write-config",
-            help = "Write configuration JSON file out to config.json",
-            default = False,
-            action = 'store_true')
+        parser.add_argument("-f",
+                            "--file",
+                            metavar = 'FILE',
+                            default = None,
+                            type = str,
+                            help = "Shorthand for --single-location=file:// if single-location is not defined")
+        parser.add_argument("--write-config",
+                            help = "Write configuration JSON file out to config.json",
+                            default = False,
+                            action = 'store_true')
 
         # Volshell specific flags
         os_specific = parser.add_mutually_exclusive_group(required = False)
-        os_specific.add_argument(
-            "-w", "--windows", default = False, action = "store_true", help = "Run a Windows volshell")
+        os_specific.add_argument("-w",
+                                 "--windows",
+                                 default = False,
+                                 action = "store_true",
+                                 help = "Run a Windows volshell")
         os_specific.add_argument("-l", "--linux", default = False, action = "store_true", help = "Run a Linux volshell")
         os_specific.add_argument("-m", "--mac", default = False, action = "store_true", help = "Run a Mac volshell")
 
@@ -111,8 +111,8 @@ class VolShell(cli.CommandLine):
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
             file_logger.setLevel(0)
-            file_formatter = logging.Formatter(
-                datefmt = '%y-%m-%d %H:%M:%S', fmt = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+            file_formatter = logging.Formatter(datefmt = '%y-%m-%d %H:%M:%S',
+                                               fmt = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
             file_logger.setFormatter(file_formatter)
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
@@ -147,9 +147,9 @@ class VolShell(cli.CommandLine):
         # We don't list plugin arguments, because they can be provided within python
         volshell_plugin_list = {'generic': shellplugin.Volshell, 'windows': windows.Volshell}
         for plugin in volshell_plugin_list:
-            subparser = parser.add_argument_group(
-                title = plugin.capitalize(),
-                description = "Configuration options based on {} options".format(plugin.capitalize()))
+            subparser = parser.add_argument_group(title = plugin.capitalize(),
+                                                  description = "Configuration options based on {} options".format(
+                                                      plugin.capitalize()))
             self.populate_requirements_argparse(subparser, volshell_plugin_list[plugin])
             configurables_list[plugin] = volshell_plugin_list[plugin]
 

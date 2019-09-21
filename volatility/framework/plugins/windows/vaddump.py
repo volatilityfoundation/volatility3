@@ -79,8 +79,7 @@ class VadDump(interfaces_plugins.PluginInterface):
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Result", str)],
                                   self._generator(
-                                      pslist.PsList.list_processes(
-                                          context = self.context,
-                                          layer_name = self.config['primary'],
-                                          symbol_table = self.config['nt_symbols'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))

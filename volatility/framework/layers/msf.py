@@ -47,24 +47,27 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
 
         root_table_num_pages = math.ceil(self._header.StreamInfo.StreamInfoSize / self._header.PageSize)
         root_index_size = math.ceil((root_table_num_pages * entry_size) / self._header.PageSize)
-        root_index = module.object(
-            object_type = "array",
-            offset = self._header.vol.size,
-            count = root_index_size,
-            subtype = module.get_type("unsigned long"))
+        root_index = module.object(object_type = "array",
+                                   offset = self._header.vol.size,
+                                   count = root_index_size,
+                                   subtype = module.get_type("unsigned long"))
         root_index_layer_name = self.create_stream_from_pages("root_index", self._header.StreamInfo.StreamInfoSize,
                                                               [x for x in root_index])
 
         module = self.context.module(self.pdb_symbol_table, root_index_layer_name, offset = 0)
-        root_pages = module.object(
-            object_type = "array", offset = 0, count = root_table_num_pages, subtype = module.get_type("unsigned long"))
+        root_pages = module.object(object_type = "array",
+                                   offset = 0,
+                                   count = root_table_num_pages,
+                                   subtype = module.get_type("unsigned long"))
         root_layer_name = self.create_stream_from_pages("root", self._header.StreamInfo.StreamInfoSize,
                                                         [x for x in root_pages])
 
         module = self.context.module(self.pdb_symbol_table, root_layer_name, offset = 0)
         num_streams = module.object(object_type = "unsigned long", offset = 0)
-        stream_sizes = module.object(
-            object_type = "array", offset = entry_size, count = num_streams, subtype = module.get_type("unsigned long"))
+        stream_sizes = module.object(object_type = "array",
+                                     offset = entry_size,
+                                     count = num_streams,
+                                     subtype = module.get_type("unsigned long"))
 
         current_offset = (num_streams + 1) * entry_size
 
@@ -73,11 +76,10 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
             if list_size == 0 or stream_sizes[stream] == 0xffffffff:
                 self._streams[stream] = None
             else:
-                stream_page_list = module.object(
-                    object_type = "array",
-                    offset = current_offset,
-                    count = list_size,
-                    subtype = module.get_type("unsigned long"))
+                stream_page_list = module.object(object_type = "array",
+                                                 offset = current_offset,
+                                                 count = list_size,
+                                                 subtype = module.get_type("unsigned long"))
                 current_offset += (list_size * entry_size)
                 self._streams[stream] = self.create_stream_from_pages("stream" + str(stream), stream_sizes[stream],
                                                                       [x for x in stream_page_list])
@@ -185,8 +187,8 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
             chunk_size = min(page_size - page_position, length)
             if page >= self._pages_len:
                 if not ignore_errors:
-                    raise exceptions.InvalidAddressException(
-                        layer_name = self.name, invalid_address = offset + returned)
+                    raise exceptions.InvalidAddressException(layer_name = self.name,
+                                                             invalid_address = offset + returned)
             else:
                 yield (offset + returned, (self._pages[page] * page_size) + page_position, chunk_size, self._base_layer)
             returned += chunk_size

@@ -28,9 +28,8 @@ class Intel(linear.LinearlyMappedLayer):
     _maxphyaddr = 32
     _maxvirtaddr = _maxphyaddr
     _structure = [('page directory', 10, False), ('page table', 10, True)]
-    _direct_metadata = collections.ChainMap({
-        'architecture': 'Intel32'
-    }, interfaces.layers.TranslationLayerInterface._direct_metadata)
+    _direct_metadata = collections.ChainMap({'architecture': 'Intel32'},
+                                            interfaces.layers.TranslationLayerInterface._direct_metadata)
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -289,12 +288,11 @@ class WindowsMixin(Intel):
                         interfaces.configuration.path_join('swap_layers', 'swap_layers' + str(n)), None)
                     if swap_layer_name:
                         return swap_offset, 1 << excp.invalid_bits, swap_layer_name
-                raise exceptions.SwappedInvalidAddressException(
-                    layer_name = excp.layer_name,
-                    invalid_address = excp.invalid_address,
-                    invalid_bits = excp.invalid_bits,
-                    entry = excp.entry,
-                    swap_offset = swap_offset)
+                raise exceptions.SwappedInvalidAddressException(layer_name = excp.layer_name,
+                                                                invalid_address = excp.invalid_address,
+                                                                invalid_bits = excp.invalid_bits,
+                                                                entry = excp.entry,
+                                                                swap_offset = swap_offset)
             raise
 
 

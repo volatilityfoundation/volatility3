@@ -245,11 +245,10 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
         # This is speedy, but may not be very efficient from a memory perspective
         if symbol in cached_symbols:
             return cached_symbols[symbol]
-        new_symbol = interfaces.symbols.SymbolInterface(
-            name = symbol.name,
-            address = address_mask & (symbol.address + table_aslr_shift),
-            type = symbol.type,
-            constant_data = symbol.constant_data)
+        new_symbol = interfaces.symbols.SymbolInterface(name = symbol.name,
+                                                        address = address_mask & (symbol.address + table_aslr_shift),
+                                                        type = symbol.type,
+                                                        constant_data = symbol.constant_data)
         cached_symbols[symbol] = new_symbol
         return new_symbol
 

@@ -26,22 +26,26 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = "Memory layer for the kernel", architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = "Memory layer for the kernel",
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.BooleanRequirement(
-                name = "wide", description = "Match wide (unicode) strings", default = False, optional = True),
-            requirements.StringRequirement(
-                name = "yara_rules", description = "Yara rules (as a string)", optional = True),
+            requirements.BooleanRequirement(name = "wide",
+                                            description = "Match wide (unicode) strings",
+                                            default = False,
+                                            optional = True),
+            requirements.StringRequirement(name = "yara_rules",
+                                           description = "Yara rules (as a string)",
+                                           optional = True),
             requirements.URIRequirement(name = "yara_file", description = "Yara rules (as a file)", optional = True),
-            requirements.IntRequirement(
-                name = "max_size",
-                default = 0x40000000,
-                description = "Set the maximum size (default is 1GB)",
-                optional = True),
+            requirements.IntRequirement(name = "max_size",
+                                        default = 0x40000000,
+                                        description = "Set the maximum size (default is 1GB)",
+                                        optional = True),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-            requirements.IntRequirement(
-                name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
+            requirements.IntRequirement(name = 'pid',
+                                        description = "Process ID to include (all other processes are excluded)",
+                                        optional = True)
         ]
 
     def _generator(self):
@@ -64,15 +68,13 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
-        for task in pslist.PsList.list_processes(
-                context = self.context,
-                layer_name = self.config['primary'],
-                symbol_table = self.config['nt_symbols'],
-                filter_func = filter_func):
-            for offset, name in layer.scan(
-                    context = self.context,
-                    scanner = yarascan.YaraScanner(rules = rules),
-                    sections = self.get_vad_maps(task)):
+        for task in pslist.PsList.list_processes(context = self.context,
+                                                 layer_name = self.config['primary'],
+                                                 symbol_table = self.config['nt_symbols'],
+                                                 filter_func = filter_func):
+            for offset, name in layer.scan(context = self.context,
+                                           scanner = yarascan.YaraScanner(rules = rules),
+                                           sections = self.get_vad_maps(task)):
                 yield format_hints.Hex(offset), name
 
     @staticmethod

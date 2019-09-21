@@ -21,8 +21,9 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols")
         ]
 
@@ -42,11 +43,10 @@ class PsList(interfaces.plugins.PluginInterface):
         return filter_func
 
     def _generator(self):
-        for task in self.list_tasks(
-                self.context,
-                self.config['primary'],
-                self.config['darwin'],
-                filter_func = self.create_pid_filter([self.config.get('pid', None)])):
+        for task in self.list_tasks(self.context,
+                                    self.config['primary'],
+                                    self.config['darwin'],
+                                    filter_func = self.create_pid_filter([self.config.get('pid', None)])):
             pid = task.p_pid
             ppid = task.p_ppid
             name = utility.array_to_string(task.p_comm)

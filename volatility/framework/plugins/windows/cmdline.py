@@ -18,12 +18,14 @@ class CmdLine(interfaces_plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-            requirements.IntRequirement(
-                name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
+            requirements.IntRequirement(name = 'pid',
+                                        description = "Process ID to include (all other processes are excluded)",
+                                        optional = True)
         ]
 
     def _generator(self, procs):
@@ -34,10 +36,9 @@ class CmdLine(interfaces_plugins.PluginInterface):
             proc_layer_name = proc.add_process_layer()
 
             try:
-                peb = self._context.object(
-                    self.config["nt_symbols"] + constants.BANG + "_PEB",
-                    layer_name = proc_layer_name,
-                    offset = proc.Peb)
+                peb = self._context.object(self.config["nt_symbols"] + constants.BANG + "_PEB",
+                                           layer_name = proc_layer_name,
+                                           offset = proc.Peb)
 
                 result_text = peb.ProcessParameters.CommandLine.get_string()
 
@@ -54,8 +55,7 @@ class CmdLine(interfaces_plugins.PluginInterface):
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Args", str)],
                                   self._generator(
-                                      pslist.PsList.list_processes(
-                                          context = self.context,
-                                          layer_name = self.config['primary'],
-                                          symbol_table = self.config['nt_symbols'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))

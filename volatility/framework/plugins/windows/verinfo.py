@@ -34,8 +34,9 @@ class VerInfo(interfaces_plugins.PluginInterface):
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
         ]
 
@@ -56,8 +57,9 @@ class VerInfo(interfaces_plugins.PluginInterface):
 
         pe_data = io.BytesIO()
 
-        dos_header = context.object(
-            pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER", offset = base_address, layer_name = layer_name)
+        dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
+                                    offset = base_address,
+                                    layer_name = layer_name)
 
         for offset, data in dos_header.reconstruct():
             pe_data.seek(offset)
@@ -94,8 +96,11 @@ class VerInfo(interfaces_plugins.PluginInterface):
             session_layers: <generator> of layers in the session to be checked
         """
 
-        pe_table_name = intermed.IntermediateSymbolTable.create(
-            self.context, self.config_path, "windows", "pe", class_types = extensions.pe.class_types)
+        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                self.config_path,
+                                                                "windows",
+                                                                "pe",
+                                                                class_types = extensions.pe.class_types)
 
         for mod in mods:
             try:
@@ -136,9 +141,10 @@ class VerInfo(interfaces_plugins.PluginInterface):
                     (major, minor, product, build) = [renderers.UnreadableValue()] * 4
 
                 yield (0, (proc.UniqueProcessId,
-                           proc.ImageFileName.cast(
-                               "string", max_length = proc.ImageFileName.vol.count, errors = "replace"),
-                           format_hints.Hex(entry.DllBase), BaseDllName, major, minor, product, build))
+                           proc.ImageFileName.cast("string",
+                                                   max_length = proc.ImageFileName.vol.count,
+                                                   errors = "replace"), format_hints.Hex(entry.DllBase), BaseDllName,
+                           major, minor, product, build))
 
     def run(self):
         procs = pslist.PsList.list_processes(self.context, self.config["primary"], self.config["nt_symbols"])

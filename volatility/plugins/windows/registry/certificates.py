@@ -13,8 +13,9 @@ class Certificates(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'printkey', plugin = printkey.PrintKey, version = (1, 0, 0))
@@ -33,20 +34,20 @@ class Certificates(interfaces.plugins.PluginInterface):
         return (name, certificate_data)
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
-        for hive in hivelist.HiveList.list_hives(
-                self.context,
-                base_config_path = self.config_path,
-                layer_name = self.config['primary'],
-                symbol_table = self.config['nt_symbols']):
+        for hive in hivelist.HiveList.list_hives(self.context,
+                                                 base_config_path = self.config_path,
+                                                 layer_name = self.config['primary'],
+                                                 symbol_table = self.config['nt_symbols']):
 
-            for top_key in ["Microsoft\\SystemCertificates",
-                            "Software\\Microsoft\\SystemCertificates",
-                            ]:
+            for top_key in [
+                    "Microsoft\\SystemCertificates",
+                    "Software\\Microsoft\\SystemCertificates",
+            ]:
                 try:
                     # Walk it
                     node_path = hive.get_key(top_key, return_list = True)
-                    for (depth, is_key, last_write_time, key_path, volatility, node) in printkey.PrintKey.key_iterator(
-                            hive, node_path, recurse = True):
+                    for (depth, is_key, last_write_time, key_path, volatility,
+                         node) in printkey.PrintKey.key_iterator(hive, node_path, recurse = True):
                         if not is_key and RegValueTypes.get(node.Type).name == "REG_BINARY":
                             name, certificate_data = self.parse_data(node.decode_data())
                             unique_key_offset = key_path.index(top_key) + len(top_key) + 1
@@ -54,8 +55,8 @@ class Certificates(interfaces.plugins.PluginInterface):
                             key_hash = key_path[key_path.rindex("\\") + 1:]
 
                             if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
-                                filedata = interfaces.plugins.FileInterface(
-                                    "{} - {} - {}.crt".format(hex(hive.hive_offset), reg_section, key_hash))
+                                filedata = interfaces.plugins.FileInterface("{} - {} - {}.crt".format(
+                                    hex(hive.hive_offset), reg_section, key_hash))
                                 filedata.data.write(certificate_data)
                                 self.produce_file(filedata)
                             yield (0, (top_key, reg_section, key_hash, name))

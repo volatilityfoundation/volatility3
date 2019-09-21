@@ -19,8 +19,9 @@ class Maps(plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
@@ -60,8 +61,7 @@ class Maps(plugins.PluginInterface):
                                    ("PgOff", format_hints.Hex), ("Major", int), ("Minor", int), ("Inode", int),
                                    ("File Path", str)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(
-                                          self.context,
-                                          self.config['primary'],
-                                          self.config['vmlinux'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_tasks(self.context,
+                                                               self.config['primary'],
+                                                               self.config['vmlinux'],
+                                                               filter_func = filter_func)))

@@ -20,8 +20,9 @@ class Info(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
@@ -57,16 +58,18 @@ class Info(plugins.PluginInterface):
 
         native_types = self.context.symbol_space[self.config["nt_symbols"]].natives
 
-        kdbg_table_name = intermed.IntermediateSymbolTable.create(
-            self.context,
-            self.config_path,
-            "windows",
-            "kdbg",
-            native_types = native_types,
-            class_types = extensions.kdbg.class_types)
+        kdbg_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                  self.config_path,
+                                                                  "windows",
+                                                                  "kdbg",
+                                                                  native_types = native_types,
+                                                                  class_types = extensions.kdbg.class_types)
 
-        pe_table_name = intermed.IntermediateSymbolTable.create(
-            self.context, self.config_path, "windows", "pe", class_types = extensions.pe.class_types)
+        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                self.config_path,
+                                                                "windows",
+                                                                "pe",
+                                                                class_types = extensions.pe.class_types)
 
         kvo = virtual_layer.config["kernel_virtual_offset"]
 
@@ -74,10 +77,9 @@ class Info(plugins.PluginInterface):
 
         kdbg_offset = ntkrnlmp.get_symbol("KdDebuggerDataBlock").address
 
-        kdbg = self.context.object(
-            kdbg_table_name + constants.BANG + "_KDDEBUGGER_DATA64",
-            offset = kvo + kdbg_offset,
-            layer_name = virtual_layer_name)
+        kdbg = self.context.object(kdbg_table_name + constants.BANG + "_KDDEBUGGER_DATA64",
+                                   offset = kvo + kdbg_offset,
+                                   layer_name = virtual_layer_name)
 
         yield (0, ("Kernel Base", hex(self.config["primary.kernel_virtual_offset"])))
         yield (0, ("DTB", hex(self.config["primary.page_map_offset"])))
@@ -94,8 +96,9 @@ class Info(plugins.PluginInterface):
 
         vers_offset = ntkrnlmp.get_symbol("KdVersionBlock").address
 
-        vers = ntkrnlmp.object(
-            object_type = "_DBGKD_GET_VERSION64", layer_name = virtual_layer_name, offset = vers_offset)
+        vers = ntkrnlmp.object(object_type = "_DBGKD_GET_VERSION64",
+                               layer_name = virtual_layer_name,
+                               offset = vers_offset)
 
         yield (0, ("KdVersionBlock", hex(vers.vol.offset)))
         yield (0, ("Major/Minor", "{0}.{1}".format(vers.MajorVersion, vers.MinorVersion)))
@@ -103,8 +106,9 @@ class Info(plugins.PluginInterface):
 
         cpu_count_offset = ntkrnlmp.get_symbol("KeNumberProcessors").address
 
-        cpu_count = ntkrnlmp.object(
-            object_type = "unsigned int", layer_name = virtual_layer_name, offset = cpu_count_offset)
+        cpu_count = ntkrnlmp.object(object_type = "unsigned int",
+                                    layer_name = virtual_layer_name,
+                                    offset = cpu_count_offset)
 
         yield (0, ("KeNumberProcessors", str(cpu_count)))
 
@@ -114,8 +118,10 @@ class Info(plugins.PluginInterface):
         else:
             kuser_addr = 0xFFFFF78000000000
 
-        kuser = ntkrnlmp.object(
-            object_type = "_KUSER_SHARED_DATA", layer_name = virtual_layer_name, offset = kuser_addr, absolute = True)
+        kuser = ntkrnlmp.object(object_type = "_KUSER_SHARED_DATA",
+                                layer_name = virtual_layer_name,
+                                offset = kuser_addr,
+                                absolute = True)
 
         yield (0, ("SystemTime", str(kuser.SystemTime.get_time())))
         yield (0, ("NtSystemRoot",
@@ -126,8 +132,9 @@ class Info(plugins.PluginInterface):
         # yield (0, ("KdDebuggerEnabled", "True" if kuser.KdDebuggerEnabled else "False"))
         # yield (0, ("SafeBootMode", "True" if kuser.SafeBootMode else "False"))
 
-        dos_header = self.context.object(
-            pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER", offset = kvo, layer_name = virtual_layer_name)
+        dos_header = self.context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
+                                         offset = kvo,
+                                         layer_name = virtual_layer_name)
 
         nt_header = dos_header.get_nt_header()
 

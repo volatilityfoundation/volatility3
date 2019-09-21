@@ -19,8 +19,9 @@ class PsList(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols")
         ]
 
@@ -47,11 +48,10 @@ class PsList(interfaces_plugins.PluginInterface):
             return lambda _: False
 
     def _generator(self):
-        for task in self.list_tasks(
-                self.context,
-                self.config['primary'],
-                self.config['vmlinux'],
-                filter_func = self.create_pid_filter([self.config.get('pid', None)])):
+        for task in self.list_tasks(self.context,
+                                    self.config['primary'],
+                                    self.config['vmlinux'],
+                                    filter_func = self.create_pid_filter([self.config.get('pid', None)])):
             pid = task.pid
             ppid = 0
             if task.parent:

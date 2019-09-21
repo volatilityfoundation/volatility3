@@ -83,63 +83,61 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
 
         parser = argparse.ArgumentParser(prog = 'volatility', description = "An open-source memory forensics framework")
-        parser.add_argument(
-            "-c", "--config", help = "Load the configuration from a json file", default = None, type = str)
-        parser.add_argument(
-            "--parallelism",
-            help = "Enables parallelism (defaults to processes if no argument given)",
-            nargs = '?',
-            choices = ['processes', 'threads', 'off'],
-            const = 'processes',
-            default = None,
-            type = str)
-        parser.add_argument(
-            "-e",
-            "--extend",
-            help = "Extend the configuration with a new (or changed) setting",
-            default = None,
-            action = 'append')
-        parser.add_argument(
-            "-p",
-            "--plugin-dirs",
-            help = "Semi-colon separated list of paths to find plugins",
-            default = "",
-            type = str)
-        parser.add_argument(
-            "-s",
-            "--symbol-dirs",
-            help = "Semi-colon separated list of paths to find symbols",
-            default = "",
-            type = str)
+        parser.add_argument("-c",
+                            "--config",
+                            help = "Load the configuration from a json file",
+                            default = None,
+                            type = str)
+        parser.add_argument("--parallelism",
+                            help = "Enables parallelism (defaults to processes if no argument given)",
+                            nargs = '?',
+                            choices = ['processes', 'threads', 'off'],
+                            const = 'processes',
+                            default = None,
+                            type = str)
+        parser.add_argument("-e",
+                            "--extend",
+                            help = "Extend the configuration with a new (or changed) setting",
+                            default = None,
+                            action = 'append')
+        parser.add_argument("-p",
+                            "--plugin-dirs",
+                            help = "Semi-colon separated list of paths to find plugins",
+                            default = "",
+                            type = str)
+        parser.add_argument("-s",
+                            "--symbol-dirs",
+                            help = "Semi-colon separated list of paths to find symbols",
+                            default = "",
+                            type = str)
         parser.add_argument("-v", "--verbosity", help = "Increase output verbosity", default = 0, action = "count")
-        parser.add_argument(
-            "-l", "--log", help = "Log output to a file as well as the console", default = None, type = str)
-        parser.add_argument(
-            "-o",
-            "--output-dir",
-            help = "Directory in which to output any generated files",
-            default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')),
-            type = str)
+        parser.add_argument("-l",
+                            "--log",
+                            help = "Log output to a file as well as the console",
+                            default = None,
+                            type = str)
+        parser.add_argument("-o",
+                            "--output-dir",
+                            help = "Directory in which to output any generated files",
+                            default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')),
+                            type = str)
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
-        parser.add_argument(
-            "-r",
-            "--renderer",
-            metavar = 'RENDERER',
-            help = "Determines how to render the output ({})".format(", ".join(list(renderers))),
-            default = "quick",
-            choices = list(renderers))
-        parser.add_argument(
-            "-f",
-            "--file",
-            metavar = 'FILE',
-            default = None,
-            type = str,
-            help = "Shorthand for --single-location=file:// if single-location is not defined")
-        parser.add_argument(
-            "--write-config",
-            help = "Write configuration JSON file out to config.json",
-            default = False,
-            action = 'store_true')
+        parser.add_argument("-r",
+                            "--renderer",
+                            metavar = 'RENDERER',
+                            help = "Determines how to render the output ({})".format(", ".join(list(renderers))),
+                            default = "quick",
+                            choices = list(renderers))
+        parser.add_argument("-f",
+                            "--file",
+                            metavar = 'FILE',
+                            default = None,
+                            type = str,
+                            help = "Shorthand for --single-location=file:// if single-location is not defined")
+        parser.add_argument("--write-config",
+                            help = "Write configuration JSON file out to config.json",
+                            default = False,
+                            action = 'store_true')
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -156,8 +154,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
             file_logger.setLevel(1)
-            file_formatter = logging.Formatter(
-                datefmt = '%y-%m-%d %H:%M:%S', fmt = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+            file_formatter = logging.Formatter(datefmt = '%y-%m-%d %H:%M:%S',
+                                               fmt = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
             file_logger.setFormatter(file_formatter)
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
@@ -385,13 +383,12 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 additional["choices"] = requirement.choices
             else:
                 continue
-            parser.add_argument(
-                "--" + requirement.name.replace('_', '-'),
-                help = requirement.description,
-                default = requirement.default,
-                dest = requirement.name,
-                required = not requirement.optional,
-                **additional)
+            parser.add_argument("--" + requirement.name.replace('_', '-'),
+                                help = requirement.description,
+                                default = requirement.default,
+                                dest = requirement.name,
+                                required = not requirement.optional,
+                                **additional)
 
 
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code

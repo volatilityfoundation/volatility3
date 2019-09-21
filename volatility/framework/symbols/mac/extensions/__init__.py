@@ -256,10 +256,9 @@ class vm_map_entry(objects.StructType):
                 break
 
         if found:
-            vpager = context.object(
-                config_prefix + constants.BANG + "vnode_pager",
-                layer_name = vnode_object.vol.layer_name,
-                offset = vnode_object.pager)
+            vpager = context.object(config_prefix + constants.BANG + "vnode_pager",
+                                    layer_name = vnode_object.vol.layer_name,
+                                    offset = vnode_object.pager)
             ret = vpager.vnode_handle
         else:
             ret = None

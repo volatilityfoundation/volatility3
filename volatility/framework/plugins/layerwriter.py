@@ -23,20 +23,21 @@ class LayerWriter(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.StringRequirement(
-                name = 'layer_name', description = 'Name of the layer to write out', default = None, optional = True),
-            requirements.StringRequirement(
-                name = 'output',
-                description = 'Filename to output the chosen layer',
-                optional = True,
-                default = cls.default_output_name),
-            requirements.IntRequirement(
-                name = 'block_size',
-                description = "Size of blocks to copy over",
-                default = cls.default_block_size,
-                optional = True)
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.StringRequirement(name = 'layer_name',
+                                           description = 'Name of the layer to write out',
+                                           default = None,
+                                           optional = True),
+            requirements.StringRequirement(name = 'output',
+                                           description = 'Filename to output the chosen layer',
+                                           optional = True,
+                                           default = cls.default_output_name),
+            requirements.IntRequirement(name = 'block_size',
+                                        description = "Size of blocks to copy over",
+                                        default = cls.default_block_size,
+                                        optional = True)
         ]
 
     def _generator(self):

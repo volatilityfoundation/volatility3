@@ -24,8 +24,9 @@ class SSDT(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
         ]
@@ -61,8 +62,12 @@ class SSDT(plugins.PluginInterface):
             if module_name in windows_constants.KERNEL_MODULE_NAMES:
                 symbol_table_name = symbol_table
 
-            context_module = contexts.SizedModule(
-                context, module_name, layer_name, mod.DllBase, mod.SizeOfImage, symbol_table_name = symbol_table_name)
+            context_module = contexts.SizedModule(context,
+                                                  module_name,
+                                                  layer_name,
+                                                  mod.DllBase,
+                                                  mod.SizeOfImage,
+                                                  symbol_table_name = symbol_table_name)
 
             context_modules.append(context_module)
 
@@ -102,11 +107,10 @@ class SSDT(plugins.PluginInterface):
 
             find_address = passthrough
 
-        functions = ntkrnlmp.object(
-            object_type = "array",
-            offset = service_table_address,
-            subtype = ntkrnlmp.get_type(array_subtype),
-            count = service_limit)
+        functions = ntkrnlmp.object(object_type = "array",
+                                    offset = service_table_address,
+                                    subtype = ntkrnlmp.get_type(array_subtype),
+                                    count = service_limit)
 
         for idx, function_obj in enumerate(functions):
 

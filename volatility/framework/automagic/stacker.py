@@ -105,8 +105,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         stacked = True
         stacked_layers = [current_layer_name]
         framework.import_files(sys.modules['volatility.framework.layers'])
-        stack_set = sorted(
-            framework.class_subclasses(interfaces.automagic.StackerLayerInterface), key = lambda x: x.stack_order)
+        stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
+                           key = lambda x: x.stack_order)
         while stacked:
             stacked = False
             new_layer = None
@@ -189,6 +189,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
         return [
-            requirements.URIRequirement(
-                "single_location", description = "Specifies a base location on which to stack", optional = True)
+            requirements.URIRequirement("single_location",
+                                        description = "Specifies a base location on which to stack",
+                                        optional = True)
         ]

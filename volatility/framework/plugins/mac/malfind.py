@@ -18,8 +18,9 @@ class Malfind(interfaces_plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Linux kernel symbols")
         ]
 
@@ -66,8 +67,7 @@ class Malfind(interfaces_plugins.PluginInterface):
                                    ("End", format_hints.Hex), ("Protection", str), ("Hexdump", format_hints.HexBytes),
                                    ("Disasm", interfaces_renderers.Disassembly)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(
-                                          self.context,
-                                          self.config['primary'],
-                                          self.config['darwin'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_tasks(self.context,
+                                                               self.config['primary'],
+                                                               self.config['darwin'],
+                                                               filter_func = filter_func)))

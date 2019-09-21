@@ -57,8 +57,9 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # No real requirements (only the buffer).  Need to figure out if there's a better way of representing this
         return [
-            requirements.BytesRequirement(
-                name = 'buffer', description = "The direct bytes to interact with", optional = False)
+            requirements.BytesRequirement(name = 'buffer',
+                                          description = "The direct bytes to interact with",
+                                          optional = False)
         ]
 
 

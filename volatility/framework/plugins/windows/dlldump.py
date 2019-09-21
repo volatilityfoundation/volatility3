@@ -43,8 +43,11 @@ class DllDump(interfaces_plugins.PluginInterface):
                 ]
 
     def _generator(self, procs):
-        pe_table_name = intermed.IntermediateSymbolTable.create(
-            self.context, self.config_path, "windows", "pe", class_types = extensions.pe.class_types)
+        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                self.config_path,
+                                                                "windows",
+                                                                "pe",
+                                                                class_types = extensions.pe.class_types)
 
         filter_func = lambda _: False
         if self.config.get('address', None) is not None:
@@ -80,10 +83,9 @@ class DllDump(interfaces_plugins.PluginInterface):
                     filedata = interfaces_plugins.FileInterface("pid.{0}.{1}.{2:#x}.dmp".format(
                         proc.UniqueProcessId, ntpath.basename(vad.get_file_name()), vad.get_start()))
 
-                    dos_header = self.context.object(
-                        pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
-                        offset = vad.get_start(),
-                        layer_name = proc_layer_name)
+                    dos_header = self.context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
+                                                     offset = vad.get_start(),
+                                                     layer_name = proc_layer_name)
 
                     for offset, data in dos_header.reconstruct():
                         filedata.data.seek(offset)
@@ -101,8 +103,7 @@ class DllDump(interfaces_plugins.PluginInterface):
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Result", str)],
                                   self._generator(
-                                      pslist.PsList.list_processes(
-                                          context = self.context,
-                                          layer_name = self.config['primary'],
-                                          symbol_table = self.config['nt_symbols'],
-                                          filter_func = filter_func)))
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))

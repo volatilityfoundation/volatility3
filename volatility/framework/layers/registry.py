@@ -101,10 +101,9 @@ class RegistryHive(linear.LinearlyMappedLayer):
     def get_cell(self, cell_offset: int) -> 'objects.StructType':
         """Returns the appropriate Cell value for a cell offset."""
         # This would be an _HCELL containing CELL_DATA, but to save time we skip the size of the HCELL
-        cell = self._context.object(
-            object_type = self._table_name + constants.BANG + "_CELL_DATA",
-            offset = cell_offset + 4,
-            layer_name = self.name)
+        cell = self._context.object(object_type = self._table_name + constants.BANG + "_CELL_DATA",
+                                    offset = cell_offset + 4,
+                                    layer_name = self.name)
         return cell
 
     def get_node(self, cell_offset: int) -> 'objects.StructType':
@@ -181,14 +180,14 @@ class RegistryHive(linear.LinearlyMappedLayer):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            IntRequirement(
-                name = 'hive_offset',
-                description = 'Offset within the base layer at which the hive lives',
-                default = 0,
-                optional = False),
+            IntRequirement(name = 'hive_offset',
+                           description = 'Offset within the base layer at which the hive lives',
+                           default = 0,
+                           optional = False),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            TranslationLayerRequirement(
-                name = 'base_layer', description = 'Layer in which the registry hive lives', optional = False)
+            TranslationLayerRequirement(name = 'base_layer',
+                                        description = 'Layer in which the registry hive lives',
+                                        optional = False)
         ]
 
     def _translate(self, offset: int) -> int:

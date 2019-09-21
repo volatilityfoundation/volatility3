@@ -22,17 +22,18 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             # TODO: Convert this to a ListRequirement so that people can filter on sets of pids
-            requirements.BooleanRequirement(
-                name = 'physical',
-                description = 'Display physical offsets instead of virtual',
-                default = cls.PHYSICAL_DEFAULT,
-                optional = True),
-            requirements.IntRequirement(
-                name = 'pid', description = "Process ID to include (all other processes are excluded)", optional = True)
+            requirements.BooleanRequirement(name = 'physical',
+                                            description = 'Display physical offsets instead of virtual',
+                                            default = cls.PHYSICAL_DEFAULT,
+                                            optional = True),
+            requirements.IntRequirement(name = 'pid',
+                                        description = "Process ID to include (all other processes are excluded)",
+                                        optional = True)
         ]
 
     @classmethod
@@ -124,11 +125,10 @@ class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
         if not isinstance(memory, layers.intel.Intel):
             raise TypeError("Primary layer is not an intel layer")
 
-        for proc in self.list_processes(
-                self.context,
-                self.config['primary'],
-                self.config['nt_symbols'],
-                filter_func = self.create_pid_filter([self.config.get('pid', None)])):
+        for proc in self.list_processes(self.context,
+                                        self.config['primary'],
+                                        self.config['nt_symbols'],
+                                        filter_func = self.create_pid_filter([self.config.get('pid', None)])):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset

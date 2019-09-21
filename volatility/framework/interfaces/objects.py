@@ -163,12 +163,11 @@ class ObjectInterface(metaclass = ABCMeta):
         object_template = self._context.symbol_space.get_type(new_type_name)
         object_template = object_template.clone()
         object_template.update_vol(**additional)
-        object_info = ObjectInformation(
-            layer_name = self.vol.layer_name,
-            offset = self.vol.offset,
-            member_name = self.vol.member_name,
-            parent = self.vol.parent,
-            native_layer_name = self.vol.native_layer_name)
+        object_info = ObjectInformation(layer_name = self.vol.layer_name,
+                                        offset = self.vol.offset,
+                                        member_name = self.vol.member_name,
+                                        parent = self.vol.parent,
+                                        native_layer_name = self.vol.native_layer_name)
         return object_template(context = self._context, object_info = object_info)
 
     def has_member(self, member_name: str) -> bool:

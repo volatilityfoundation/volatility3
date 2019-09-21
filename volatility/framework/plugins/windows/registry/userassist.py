@@ -36,8 +36,9 @@ class UserAssist(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
@@ -130,8 +131,8 @@ class UserAssist(interfaces.plugins.PluginInterface):
 
         self._determine_userassist_type()
 
-        userassist_node_path = hive.get_key(
-            "software\\microsoft\\windows\\currentversion\\explorer\\userassist", return_list = True)
+        userassist_node_path = hive.get_key("software\\microsoft\\windows\\currentversion\\explorer\\userassist",
+                                            return_list = True)
 
         if not userassist_node_path:
             vollog.warning("list_userassist did not find a valid node_path (or None)")
@@ -215,13 +216,12 @@ class UserAssist(interfaces.plugins.PluginInterface):
             hive_offsets = [self.config.get('offset', None)]
 
         # get all the user hive offsets or use the one specified
-        for hive in hivelist.HiveList.list_hives(
-                context = self.context,
-                base_config_path = self.config_path,
-                layer_name = self.config['primary'],
-                symbol_table = self.config['nt_symbols'],
-                filter_string = 'ntuser.dat',
-                hive_offsets = hive_offsets):
+        for hive in hivelist.HiveList.list_hives(context = self.context,
+                                                 base_config_path = self.config_path,
+                                                 layer_name = self.config['primary'],
+                                                 symbol_table = self.config['nt_symbols'],
+                                                 filter_string = 'ntuser.dat',
+                                                 hive_offsets = hive_offsets):
             try:
                 yield from self.list_userassist(hive)
                 continue

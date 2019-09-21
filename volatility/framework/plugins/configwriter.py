@@ -20,10 +20,13 @@ class ConfigWriter(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
-            requirements.BooleanRequirement(
-                name = 'extra', description = 'Outputs whole configuration tree', default = False, optional = True)
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.BooleanRequirement(name = 'extra',
+                                            description = 'Outputs whole configuration tree',
+                                            default = False,
+                                            optional = True)
         ]
 
     def _generator(self):

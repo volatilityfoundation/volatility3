@@ -8,6 +8,7 @@ from volatility.framework.symbols.wrappers import Flags
 from volatility.framework import renderers
 from typing import Union
 
+
 class _SERVICE_RECORD(objects.StructType):
     """A service record structure."""
 
@@ -112,6 +113,7 @@ class _SERVICE_RECORD(objects.StructType):
         except exceptions.InvalidAddressException:
             raise StopIteration
 
+
 class _SERVICE_HEADER(objects.StructType):
     """A service header structure."""
 
@@ -122,7 +124,5 @@ class _SERVICE_HEADER(objects.StructType):
         except exceptions.InvalidAddressException:
             return False
 
-class_types = {
-    '_SERVICE_RECORD': _SERVICE_RECORD,
-    '_SERVICE_HEADER': _SERVICE_HEADER
-}
+
+class_types = {'_SERVICE_RECORD': _SERVICE_RECORD, '_SERVICE_HEADER': _SERVICE_HEADER}

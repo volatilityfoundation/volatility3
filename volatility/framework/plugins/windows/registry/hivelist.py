@@ -21,19 +21,21 @@ class HiveList(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.StringRequirement(
-                name = 'filter', description = "String to filter hive names returned", optional = True, default = None)
+            requirements.StringRequirement(name = 'filter',
+                                           description = "String to filter hive names returned",
+                                           optional = True,
+                                           default = None)
         ]
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
-        for hive in self.list_hive_objects(
-                context = self.context,
-                layer_name = self.config["primary"],
-                symbol_table = self.config["nt_symbols"],
-                filter_string = self.config.get('filter', None)):
+        for hive in self.list_hive_objects(context = self.context,
+                                           layer_name = self.config["primary"],
+                                           symbol_table = self.config["nt_symbols"],
+                                           filter_string = self.config.get('filter', None)):
 
             yield (0, (format_hints.Hex(hive.vol.offset), hive.get_name() or ""))
 
@@ -69,12 +71,11 @@ class HiveList(plugins.PluginInterface):
 
         for hive_offset in hive_offsets:
             # Construct the hive
-            reg_config_path = cls.make_subconfig(
-                context = context,
-                base_config_path = base_config_path,
-                hive_offset = hive_offset,
-                base_layer = layer_name,
-                nt_symbols = symbol_table)
+            reg_config_path = cls.make_subconfig(context = context,
+                                                 base_config_path = base_config_path,
+                                                 hive_offset = hive_offset,
+                                                 base_layer = layer_name,
+                                                 nt_symbols = symbol_table)
 
             try:
                 hive = registry.RegistryHive(context, reg_config_path, name = 'hive' + hex(hive_offset))

@@ -163,8 +163,9 @@ class ComplexListRequirement(MultiRequirement, configuration.ConfigurableRequire
     def get_requirements(cls) -> List[configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
         return [
-            IntRequirement(
-                "number_of_elements", description = "Determines how many layers are in this list", optional = False)
+            IntRequirement("number_of_elements",
+                           description = "Determines how many layers are in this list",
+                           optional = False)
         ]
 
     @abc.abstractmethod
@@ -212,8 +213,9 @@ class LayerListRequirement(ComplexListRequirement):
 
     def new_requirement(self, index) -> configuration.RequirementInterface:
         """Constructs a new requirement based on the specified index."""
-        return TranslationLayerRequirement(
-            name = self.name + str(index), description = "Layer for swap space", optional = False)
+        return TranslationLayerRequirement(name = self.name + str(index),
+                                           description = "Layer for swap space",
+                                           optional = False)
 
 
 class TranslationLayerRequirement(configuration.ConstructableRequirementInterface,

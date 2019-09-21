@@ -56,8 +56,8 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
             return None
 
         mss = scanners.MultiStringScanner([x for x in mac_banners if x])
-        for banner_offset, banner in layer.scan(
-                context = context, scanner = mss, progress_callback = progress_callback):
+        for banner_offset, banner in layer.scan(context = context, scanner = mss,
+                                                progress_callback = progress_callback):
             dtb = None
             vollog.debug("Identified banner: {}".format(repr(banner)))
 
@@ -65,19 +65,17 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
             if symbol_files:
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('MacintelStacker')
-                table = mac.MacKernelIntermedSymbols(
-                    context = context,
-                    config_path = join('temporary', table_name),
-                    name = table_name,
-                    isf_url = isf_path)
+                table = mac.MacKernelIntermedSymbols(context = context,
+                                                     config_path = join('temporary', table_name),
+                                                     name = table_name,
+                                                     isf_url = isf_path)
                 context.symbol_space.append(table)
-                kaslr_shift = MacUtilities.find_aslr(
-                    context = context,
-                    symbol_table = table_name,
-                    layer_name = layer_name,
-                    compare_banner = banner,
-                    compare_banner_offset = banner_offset,
-                    progress_callback = progress_callback)
+                kaslr_shift = MacUtilities.find_aslr(context = context,
+                                                     symbol_table = table_name,
+                                                     layer_name = layer_name,
+                                                     compare_banner = banner,
+                                                     compare_banner_offset = banner_offset,
+                                                     progress_callback = progress_callback)
 
                 if kaslr_shift == 0:
                     vollog.debug("Invalid kalsr_shift found at offset: {}".format(banner_offset))
@@ -91,8 +89,10 @@ class MacintelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[join(config_path, "memory_layer")] = layer_name
                 context.config[join(config_path, "page_map_offset")] = bootpml4_addr
 
-                layer = layers.intel.Intel32e(
-                    context, config_path = config_path, name = new_layer_name, metadata = {'os': 'Mac'})
+                layer = layers.intel.Intel32e(context,
+                                              config_path = config_path,
+                                              name = new_layer_name,
+                                              metadata = {'os': 'Mac'})
 
                 idlepml4_ptr = table.get_symbol("IdlePML4").address + kaslr_shift
                 idlepml4_str = layer.read(idlepml4_ptr, 4)
@@ -140,9 +140,9 @@ class MacUtilities(object):
     def _scan_generator(cls, context, layer_name, progress_callback):
         darwin_signature = rb"Darwin Kernel Version \d{1,3}\.\d{1,3}\.\d{1,3}: [^\x00]+\x00"
 
-        for offset in context.layers[layer_name].scan(
-                scanner = scanners.RegExScanner(darwin_signature), context = context,
-                progress_callback = progress_callback):
+        for offset in context.layers[layer_name].scan(scanner = scanners.RegExScanner(darwin_signature),
+                                                      context = context,
+                                                      progress_callback = progress_callback):
 
             banner = context.layers[layer_name].read(offset, 128)
 

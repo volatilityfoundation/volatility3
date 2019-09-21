@@ -24,15 +24,20 @@ class PrintKey(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
-            requirements.StringRequirement(
-                name = 'key', description = "Key to start from", default = None, optional = True),
-            requirements.BooleanRequirement(
-                name = 'recurse', description = 'Recurses through keys', default = False, optional = True)
+            requirements.StringRequirement(name = 'key',
+                                           description = "Key to start from",
+                                           default = None,
+                                           optional = True),
+            requirements.BooleanRequirement(name = 'recurse',
+                                            description = 'Recurses through keys',
+                                            default = False,
+                                            optional = True)
         ]
 
     @classmethod
@@ -134,12 +139,11 @@ class PrintKey(interfaces.plugins.PluginInterface):
                          key: str = None,
                          recurse: bool = False):
 
-        for hive in hivelist.HiveList.list_hives(
-                self.context,
-                self.config_path,
-                layer_name = layer_name,
-                symbol_table = symbol_table,
-                hive_offsets = hive_offsets):
+        for hive in hivelist.HiveList.list_hives(self.context,
+                                                 self.config_path,
+                                                 layer_name = layer_name,
+                                                 symbol_table = symbol_table,
+                                                 hive_offsets = hive_offsets):
 
             try:
                 # Walk it
@@ -164,12 +168,10 @@ class PrintKey(interfaces.plugins.PluginInterface):
     def run(self):
         offset = self.config.get('offset', None)
 
-        return TreeGrid(
-            columns = [('Last Write Time', datetime.datetime), ('Hive Offset', format_hints.Hex), ('Type', str),
-                       ('Key', str), ('Name', str), ('Data', str), ('Volatile', bool)],
-            generator = self._registry_walker(
-                self.config['primary'],
-                self.config['nt_symbols'],
-                hive_offsets = None if offset is None else [offset],
-                key = self.config.get('key', None),
-                recurse = self.config.get('recurse', None)))
+        return TreeGrid(columns = [('Last Write Time', datetime.datetime), ('Hive Offset', format_hints.Hex),
+                                   ('Type', str), ('Key', str), ('Name', str), ('Data', str), ('Volatile', bool)],
+                        generator = self._registry_walker(self.config['primary'],
+                                                          self.config['nt_symbols'],
+                                                          hive_offsets = None if offset is None else [offset],
+                                                          key = self.config.get('key', None),
+                                                          recurse = self.config.get('recurse', None)))

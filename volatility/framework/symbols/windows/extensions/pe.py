@@ -25,10 +25,9 @@ class _IMAGE_DOS_HEADER(objects.StructType):
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table().name
 
-        nt_header = self._context.object(
-            symbol_table_name + constants.BANG + "_IMAGE_NT_HEADERS",
-            layer_name = layer_name,
-            offset = self.vol.offset + self.e_lfanew)
+        nt_header = self._context.object(symbol_table_name + constants.BANG + "_IMAGE_NT_HEADERS",
+                                         layer_name = layer_name,
+                                         offset = self.vol.offset + self.e_lfanew)
 
         if nt_header.Signature != 0x4550:
             raise ValueError("NT header signature {0:04X} is not a valid".format(nt_header.Signature))
@@ -163,10 +162,9 @@ class _IMAGE_NT_HEADERS(objects.StructType):
 
         for i in range(self.FileHeader.NumberOfSections):
             sect_addr = start_addr + (i * sect_header_size)
-            yield self._context.object(
-                symbol_table_name + constants.BANG + "_IMAGE_SECTION_HEADER",
-                offset = sect_addr,
-                layer_name = layer_name)
+            yield self._context.object(symbol_table_name + constants.BANG + "_IMAGE_SECTION_HEADER",
+                                       offset = sect_addr,
+                                       layer_name = layer_name)
 
 
 class_types = {
