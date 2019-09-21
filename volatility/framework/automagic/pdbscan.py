@@ -263,7 +263,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     os.remove(potential_output_filename)
                 # Clear out all the temporary file if we constructed one
                 for filename in tmp_files:
-                    os.remove(filename)
+                    try:
+                        os.remove(filename)
+                    except PermissionError:
+                        vollog.warning("Temporary file could not be removed: {}".format(filename))
         else:
             vollog.warning("Cannot write downloaded symbols, please add the appropriate symbols"
                            " or add/modify a symbols directory that is writable")

@@ -26,6 +26,11 @@ SYMBOL_BASEPATHS = [
 ]
 """Default list of paths to load symbols from (volatility/symbols and volatility/framework/symbols)"""
 
+if hasattr(sys, 'frozen') and sys.frozen:
+    # Ensure we include the executable's directory as the base for plugins and symbols
+    PLUGINS_PATH = [os.path.abspath(os.path.join(os.path.dirname(sys.executable), 'plugins'))] + PLUGINS_PATH
+    SYMBOL_BASEPATHS = [os.path.abspath(os.path.join(os.path.dirname(sys.executable), 'symbols'))] + SYMBOL_BASEPATHS
+
 BANG = "!"
 """Constant used to delimit table names from type names when referring to a symbol"""
 

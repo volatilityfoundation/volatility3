@@ -21,6 +21,7 @@ from typing import Any, Dict, Type, Union
 from urllib import parse, request
 
 import volatility.plugins
+import volatility.symbols
 from volatility import framework
 from volatility.cli import text_renderer
 from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins, configuration
@@ -164,6 +165,9 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             console.setLevel(30 - (partial_args.verbosity * 10))
         else:
             console.setLevel(10 - (partial_args.verbosity - 2))
+
+        vollog.debug("Volatility plugins path: {}".format(volatility.plugins.__path__))
+        vollog.debug("Volatility symbols path: {}".format(volatility.symbols.__path__))
 
         # Set the PARALLELISM
         if partial_args.parallelism == 'processes':
