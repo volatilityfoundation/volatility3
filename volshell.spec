@@ -7,7 +7,7 @@ import sys
 
 from PyInstaller.building.api import PYZ, EXE
 from PyInstaller.building.build_main import Analysis
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_dynamic_libs
 
 block_cipher = None
 
@@ -16,6 +16,13 @@ block_cipher = None
 #   - https://github.com/pyinstaller/pyinstaller/issues/4100
 #   - https://github.com/pyinstaller/pyinstaller/pull/4168
 
+binaries = []
+try:
+    import capstone
+
+    binaries = collect_dynamic_libs('capstone')
+except ImportError:
+    pass
 
 # Volatility must be findable in sys.path in order for collect_submodules to work
 # This adds the current working directory, which should usually do the trick
@@ -23,7 +30,7 @@ sys.path.append(os.getcwd())
 
 vol_analysis = Analysis(['volshell.py'],
                         pathex = [],
-                        binaries = [],
+                        binaries = binaries,
                         datas = collect_data_files('volatility.framework') + \
                                 collect_data_files('volatility.framework.automagic', include_py_files = True) + \
                                 collect_data_files('volatility.framework.plugins', include_py_files = True) + \
