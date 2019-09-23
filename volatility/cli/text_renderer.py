@@ -156,7 +156,10 @@ class QuickTextRenderer(CLIRenderer):
             accumulator.write("{}".format("\t".join(line)))
             return accumulator
 
-        grid.populate(visitor, outfd)
+        if not grid.populated:
+            grid.populate(visitor, outfd)
+        else:
+            grid.visit(node = None, function = visitor, initial_accumulator = outfd)
 
         outfd.write("\n")
 
@@ -203,7 +206,10 @@ class CSVRenderer(CLIRenderer):
             accumulator.write("{}".format(",".join(line)))
             return accumulator
 
-        grid.populate(visitor, outfd)
+        if not grid.populated:
+            grid.populate(visitor, outfd)
+        else:
+            grid.visit(node = None, function = visitor, initial_accumulator = outfd)
 
         outfd.write("\n")
 
@@ -251,7 +257,10 @@ class PrettyTextRenderer(CLIRenderer):
             return accumulator
 
         final_output = []  # type: List[Tuple[int, Dict[Column, bytes]]]
-        grid.populate(visitor, final_output)
+        if not grid.populated:
+            grid.populate(visitor, final_output)
+        else:
+            grid.visit(node = None, function = visitor, initial_accumulator = final_output)
 
         # Always align the tree to the left
         format_string_list = ["{0:<" + str(max_column_widths[tree_indent_column]) + "s}"]

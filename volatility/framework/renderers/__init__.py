@@ -178,7 +178,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 output += (letter if letter in 'abcdefghiljklmnopqrstuvwxyz_0123456789' else '_')
         return output
 
-    def populate(self, func: interfaces.renderers.VisitorSignature = None, initial_accumulator: Any = None) -> None:
+    def populate(self, function: interfaces.renderers.VisitorSignature = None, initial_accumulator: Any = None) -> None:
         """Populates the tree by consuming the TreeGrid's construction
         generator Func is called on every node, so can be used to create output
         on demand.
@@ -186,9 +186,9 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         This is equivalent to a one-time visit.
         """
         accumulator = initial_accumulator
-        if func is None:
+        if function is None:
 
-            def func(_x: interfaces.renderers.TreeNode, _y: Any) -> Any:
+            def function(_x: interfaces.renderers.TreeNode, _y: Any) -> Any:
                 return None
 
         if not self.populated:
@@ -198,8 +198,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
                 treenode = self._append(parent, item)
                 prev_nodes = prev_nodes[0:parent_index] + [treenode]
-                if func is not None:
-                    accumulator = func(treenode, accumulator)
+                if function is not None:
+                    accumulator = function(treenode, accumulator)
                 self._row_count += 1
         self._populated = True
 

@@ -149,7 +149,7 @@ class TreeGrid(object, metaclass = ABCMeta):
         """Method used to sanitize column names for TreeNodes."""
 
     @abstractmethod
-    def populate(self, func: VisitorSignature = None, initial_accumulator: Any = None) -> None:
+    def populate(self, function: VisitorSignature = None, initial_accumulator: Any = None) -> None:
         """Populates the tree by consuming the TreeGrid's construction
         generator Func is called on every node, so can be used to create output
         on demand.
