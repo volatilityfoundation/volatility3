@@ -3,11 +3,14 @@
 #
 import binascii
 import code
+import random
+import string
 import struct
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, Type
 
-from volatility.framework import renderers, interfaces, objects
+from volatility.cli import text_renderer
+from volatility.framework import renderers, interfaces, objects, plugins, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel
 
@@ -19,7 +22,7 @@ except ImportError:
     has_capstone = False
 
 
-class Volshell(interfaces.plugins.PluginInterface):
+class Volshell(interfaces.plugins.PluginInterface, interfaces.plugins.FileConsumerInterface):
     """Shell environment to directly interact with a memory image."""
 
     def __init__(self, *args, **kwargs):
@@ -96,7 +99,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                                                                  'display_doublewords'], self.display_doublewords),
                 (['dq', 'display_quadwords'], self.display_quadwords), (['dis', 'disassemble'], self.disassemble),
                 (['cl', 'change_layer'], self.change_layer), (['context'], self.context), (['self'], self),
-                (['hh', 'help'], self.help)]
+                (['rp', 'run_plugin'], self.run_plugin), (['hh', 'help'], self.help)]
 
     def _construct_locals_dict(self) -> Dict[str, Any]:
         """Returns a dictionary of the locals """
@@ -238,3 +241,23 @@ class Volshell(interfaces.plugins.PluginInterface):
             return repr([self._display_value(val) for val in value])
         else:
             return hex(value.vol.offset)
+
+    def consume_file(self, file: interfaces.plugins.FileInterface) -> None:
+        pass
+
+    def run_plugin(self, plugin: Type[interfaces.plugins.PluginInterface], **kwargs):
+        """Runs a specific plugin passing in kwarg values"""
+        path_join = interfaces.configuration.path_join
+
+        plugin_config_suffix = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(32))
+        plugin_path = path_join(self.config_path, plugin_config_suffix)
+
+        for name, value in kwargs.items():
+            self.config[path_join(plugin_config_suffix, plugin.__name__, name)] = value
+
+        try:
+            constructed = plugins.construct_plugin(self.context, [], plugin, plugin_path, None, self)
+
+            text_renderer.QuickTextRenderer().render(constructed.run())
+        except exceptions.UnsatisfiedException as excp:
+            print("Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
