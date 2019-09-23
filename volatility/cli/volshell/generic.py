@@ -103,7 +103,8 @@ class Volshell(interfaces.plugins.PluginInterface, interfaces.plugins.FileConsum
                                                                  'display_doublewords'], self.display_doublewords),
                 (['dq', 'display_quadwords'], self.display_quadwords), (['dis', 'disassemble'], self.disassemble),
                 (['cl', 'change_layer'], self.change_layer), (['context'], self.context), (['self'], self),
-                (['rp', 'run_plugin'], self.run_plugin), (['hh', 'help'], self.help)]
+                (['dpo', 'display_plugin_output'], self.display_plugin_output), (['rp', 'run_plugin'], self.run_plugin),
+                (['rt', 'render_treegrid'], self.render_treegrid), (['hh', 'help'], self.help)]
 
     def _construct_locals_dict(self) -> Dict[str, Any]:
         """Returns a dictionary of the locals """
@@ -249,8 +250,8 @@ class Volshell(interfaces.plugins.PluginInterface, interfaces.plugins.FileConsum
     def consume_file(self, file: interfaces.plugins.FileInterface) -> None:
         pass
 
-    def run_plugin(self, plugin: Type[interfaces.plugins.PluginInterface], **kwargs):
-        """Runs a specific plugin passing in kwarg values"""
+    def run_plugin(self, plugin: Type[interfaces.plugins.PluginInterface], **kwargs) -> interfaces.renderers.TreeGrid:
+        """Runs a specific plugin passing in kwarg values returning a TreeGrid"""
         path_join = interfaces.configuration.path_join
 
         # Generate a temporary configuration path
@@ -263,11 +264,17 @@ class Volshell(interfaces.plugins.PluginInterface, interfaces.plugins.FileConsum
 
         try:
             constructed = plugins.construct_plugin(self.context, [], plugin, plugin_path, None, self)
-
-            text_renderer.QuickTextRenderer().render(constructed.run())
+            return constructed.run()
         except exceptions.UnsatisfiedException as excp:
             print("Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
 
-        # Clear out the configuration values so we don't pollute the configuration space
-        for name in kwargs:
-            del self.config[path_join(plugin_config_suffix, plugin.__name__, name)]
+    def render_treegrid(self,
+                        treegrid: interfaces.renderers.TreeGrid,
+                        renderer: Optional[interfaces.renderers.Renderer] = None) -> None:
+        """Renders a treegrid as produced by run_plugin"""
+        if renderer is None:
+            renderer = text_renderer.QuickTextRenderer()
+        renderer.render(treegrid)
+
+    def display_plugin_output(self, plugin: Type[interfaces.plugins.PluginInterface], **kwargs) -> None:
+        self.render_treegrid(self.run_plugin(plugin, **kwargs))
