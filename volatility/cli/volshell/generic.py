@@ -5,7 +5,7 @@ import binascii
 import code
 import struct
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
@@ -50,15 +50,25 @@ class Volshell(interfaces.plugins.PluginInterface):
             pass
         else:
             import rlcompleter
-            completer = rlcompleter.Completer(namespace = self.construct_locals())
+            completer = rlcompleter.Completer(namespace = self._construct_locals_dict())
             readline.set_completer(completer.complete)
             readline.parse_and_bind("tab: complete")
             print("Readline imported successfully")
 
         # TODO: provide help, consider generic functions (pslist?) and/or providing windows/linux functions
 
+        mode = self.__module__.split('.')[-1]
+        mode = mode[0].upper() + mode[1:]
+
+        banner = """
+    Call help() to see available functions
+
+    Volshell mode: {}
+    Current Layer: {}
+        """.format(mode, self.current_layer)
+
         sys.ps1 = "({}) >>> ".format(self.current_layer)
-        code.interact(banner = "\nCall help() to see available functions\n", local = self.construct_locals())
+        code.interact(banner = banner, local = self._construct_locals_dict())
 
         return renderers.TreeGrid([("Terminating", str)], None)
 
@@ -66,7 +76,8 @@ class Volshell(interfaces.plugins.PluginInterface):
         """Describes the available commands"""
         variables = []
         print("\nMethods:")
-        for name, item in self.construct_locals().items():
+        for aliases, item in self.construct_locals():
+            name = ", ".join(aliases)
             if item.__doc__ and callable(item):
                 print("* {}".format(name))
                 print("    {}".format(item.__doc__))
@@ -77,29 +88,23 @@ class Volshell(interfaces.plugins.PluginInterface):
         for var in variables:
             print("  {}".format(var))
 
-    def construct_locals(self) -> Dict[str, Any]:
+    def construct_locals(self) -> List[Tuple[List[str], Any]]:
         """Returns a dictionary listing the functions to be added to the
         environment."""
-        return {
-            'dt': self.display_type,
-            'display_type': self.display_type,
-            'db': self.display_bytes,
-            'display_bytes': self.display_bytes,
-            'dw': self.display_words,
-            'display_words': self.display_words,
-            'dd': self.display_doublewords,
-            'display_doublewords': self.display_doublewords,
-            'dq': self.display_quadwords,
-            'display_quadwords': self.display_quadwords,
-            'dis': self.disassemble,
-            'disassemble': self.disassemble,
-            'cl': self.change_layer,
-            'change_layer': self.change_layer,
-            'context': self.context,
-            'self': self,
-            'hh': self.help,
-            'help': self.help,
-        }
+        return [(['dt', 'display_type'], self.display_type), (['db', 'display_bytes'], self.display_bytes),
+                (['dw', 'display_words'], self.display_words), (['dd',
+                                                                 'display_doublewords'], self.display_doublewords),
+                (['dq', 'display_quadwords'], self.display_quadwords), (['dis', 'disassemble'], self.disassemble),
+                (['cl', 'change_layer'], self.change_layer), (['context'], self.context), (['self'], self),
+                (['hh', 'help'], self.help)]
+
+    def _construct_locals_dict(self) -> Dict[str, Any]:
+        """Returns a dictionary of the locals """
+        result = {}
+        for aliases, value in self.construct_locals():
+            for alias in aliases:
+                result[alias] = value
+        return result
 
     def _read_data(self, offset, count = 128, layer_name = None):
         """Reads the bytes necessary for the display_* methods"""

@@ -2,14 +2,14 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
 
-from typing import Dict, Any
+from typing import Any, List, Tuple
 
-from volatility.cli.volshell import shellplugin
+from volatility.cli.volshell import generic
 from volatility.framework.configuration import requirements
 from volatility.plugins.linux import pslist
 
 
-class Volshell(shellplugin.Volshell):
+class Volshell(generic.Volshell):
     """Shell environment to directly interact with a linux memory image."""
 
     @classmethod
@@ -38,18 +38,13 @@ class Volshell(shellplugin.Volshell):
         # We always use the main kernel memory and associated symbols
         return list(pslist.PsList.list_tasks(self.context, self.config['primary'], self.config['vmlinux']))
 
-    def construct_locals(self) -> Dict[str, Any]:
+    def construct_locals(self) -> List[Tuple[List[str], Any]]:
         result = super().construct_locals()
-        result.update({
-            'ct': self.change_task,
-            'change_task': self.change_task,
-            'lt': self.list_tasks,
-            'list_tasks': self.list_tasks,
-            'symbols': self.context.symbol_space[self.config['vmlinux']],
-            # windows/windbg compatibility aliases
-            'cp': self.change_task,
-            'ps': self.list_tasks,
-        })
+        result += [
+            (['ct', 'change_task', 'cp'], self.change_task),
+            (['lt', 'list_tasks', 'ps'], self.list_tasks),
+            (['symbols'], self.context.symbol_space[self.config['vmlinux']]),
+        ]
         if self.config.get('pid', None) is not None:
             self.change_task(self.config['pid'])
         return result

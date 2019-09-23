@@ -13,7 +13,7 @@ import volatility.plugins
 import volatility.symbols
 from volatility import cli, framework
 from volatility.cli import text_renderer
-from volatility.cli.volshell import shellplugin, windows, linux, mac
+from volatility.cli.volshell import generic, windows, linux, mac
 from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins
 
 # Make sure we log everything
@@ -145,7 +145,7 @@ class VolShell(cli.CommandLine):
                 configurables_list[amagic.__class__.__name__] = amagic
 
         # We don't list plugin arguments, because they can be provided within python
-        volshell_plugin_list = {'generic': shellplugin.Volshell, 'windows': windows.Volshell}
+        volshell_plugin_list = {'generic': generic.Volshell, 'windows': windows.Volshell}
         for plugin in volshell_plugin_list:
             subparser = parser.add_argument_group(title = plugin.capitalize(),
                                                   description = "Configuration options based on {} options".format(
@@ -163,7 +163,7 @@ class VolShell(cli.CommandLine):
 
         vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
 
-        plugin = shellplugin.Volshell
+        plugin = generic.Volshell
         if args.windows:
             plugin = windows.Volshell
         if args.linux:

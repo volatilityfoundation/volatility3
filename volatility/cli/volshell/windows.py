@@ -2,14 +2,14 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
 
-from typing import Dict, Any
+from typing import Dict, Any, List, Tuple
 
-from volatility.cli.volshell import shellplugin
+from volatility.cli.volshell import generic
 from volatility.framework.configuration import requirements
 from volatility.plugins.windows import pslist
 
 
-class Volshell(shellplugin.Volshell):
+class Volshell(generic.Volshell):
     """Shell environment to directly interact with a windows memory image."""
 
     @classmethod
@@ -35,17 +35,13 @@ class Volshell(shellplugin.Volshell):
         # We always use the main kernel memory and associated symbols
         return list(pslist.PsList.list_processes(self.context, self.config['primary'], self.config['nt_symbols']))
 
-    def construct_locals(self) -> Dict[str, Any]:
+    def construct_locals(self) -> List[Tuple[List[str], Any]]:
         result = super().construct_locals()
-        result.update({
-            'cp': self.change_process,
-            'change_process': self.change_process,
-            'lp': self.list_processes,
-            'list_processes': self.list_processes,
-            'symbols': self.context.symbol_space[self.config['nt_symbols']],
-            # windbg compatibility aliases
-            'ps': self.list_processes,
-        })
+        result += [
+            (['cp', 'change_process'], self.change_process),
+            (['lp', 'list_processes', 'ps'], self.list_processes),
+            (['symbols'], self.context.symbol_space[self.config['nt_symbols']]),
+        ]
         if self.config.get('pid', None) is not None:
             self.change_process(self.config['pid'])
         return result
