@@ -192,31 +192,43 @@ class Volshell(interfaces.plugins.PluginInterface):
                 for i in disasm_types[architecture].disasm(remaining_data, offset):
                     print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))
 
-    def display_type(self, object: Union[str, interfaces.objects.ObjectInterface]):
+    def display_type(self, object: Union[str, interfaces.objects.ObjectInterface, interfaces.objects.Template]):
         """Display Type describes the members of a particular object in alphabetical order"""
+        if not isinstance(object, (str, interfaces.objects.ObjectInterface, interfaces.objects.Template)):
+            print("Cannot display information about non-type object")
+            return
+
         if isinstance(object, str):
             object = self.context.symbol_space.get_type(object)
 
-        longest_member = longest_offset = longest_typename = 0
-        for member in object.vol.members:
-            relative_offset, member_type = object.vol.members[member]
-            longest_member = max(len(member), longest_member)
-            longest_offset = max(len(hex(relative_offset)), longest_offset)
-            longest_typename = max(len(member_type.vol.type_name), longest_typename)
+        if hasattr(object.vol, 'size'):
+            print("{} ({} bytes)".format(object.vol.type_name, object.vol.size))
+        elif hasattr(object.vol, 'data_format'):
+            data_format = object.vol.data_format
+            print("{} ({} bytes, {} endian, {})".format(object.vol.type_name, data_format.length, data_format.byteorder,
+                                                        'signed' if data_format.signed else 'unsigned'))
 
-        for member in sorted(object.vol.members, key = lambda x: (object.vol.members[x][0], x)):
-            relative_offset, member_type = object.vol.members[member]
-            len_offset = len(hex(relative_offset))
-            len_member = len(member)
-            len_typename = len(member_type.vol.type_name)
-            if isinstance(object, interfaces.objects.ObjectInterface):
-                # We're an instance, so also display the data
-                print(" " * (longest_offset - len_offset), hex(relative_offset), ":  ", member,
-                      " " * (longest_member - len_member), "  ", member_type.vol.type_name,
-                      " " * (longest_typename - len_typename), "  ", self._display_value(getattr(object, member)))
-            else:
-                print(" " * (longest_offset - len_offset), hex(relative_offset), ":  ", member,
-                      " " * (longest_member - len_member), "  ", member_type.vol.type_name)
+        if hasattr(object.vol, 'members'):
+            longest_member = longest_offset = longest_typename = 0
+            for member in object.vol.members:
+                relative_offset, member_type = object.vol.members[member]
+                longest_member = max(len(member), longest_member)
+                longest_offset = max(len(hex(relative_offset)), longest_offset)
+                longest_typename = max(len(member_type.vol.type_name), longest_typename)
+
+            for member in sorted(object.vol.members, key = lambda x: (object.vol.members[x][0], x)):
+                relative_offset, member_type = object.vol.members[member]
+                len_offset = len(hex(relative_offset))
+                len_member = len(member)
+                len_typename = len(member_type.vol.type_name)
+                if isinstance(object, interfaces.objects.ObjectInterface):
+                    # We're an instance, so also display the data
+                    print(" " * (longest_offset - len_offset), hex(relative_offset), ":  ", member,
+                          " " * (longest_member - len_member), "  ", member_type.vol.type_name,
+                          " " * (longest_typename - len_typename), "  ", self._display_value(getattr(object, member)))
+                else:
+                    print(" " * (longest_offset - len_offset), hex(relative_offset), ":  ", member,
+                          " " * (longest_member - len_member), "  ", member_type.vol.type_name)
 
     @classmethod
     def _display_value(self, value: Any) -> str:
