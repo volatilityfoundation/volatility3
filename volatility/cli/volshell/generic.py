@@ -211,12 +211,12 @@ class Volshell(interfaces.plugins.PluginInterface):
             len_typename = len(member_type.vol.type_name)
             if isinstance(object, interfaces.objects.ObjectInterface):
                 # We're an instance, so also display the data
-                print(" " * (longest_offset - len_offset), hex(relative_offset), "\t\t", member,
-                      " " * (longest_member - len_member), "\t\t", member_type.vol.type_name,
-                      " " * (longest_typename - len_typename), "\t\t", cls._display_value(getattr(object, member)))
+                print(" " * (longest_offset - len_offset), hex(relative_offset), ":  ", member,
+                      " " * (longest_member - len_member), "  ", member_type.vol.type_name,
+                      " " * (longest_typename - len_typename), "  ", self._display_value(getattr(object, member)))
             else:
-                print(" " * (longest_offset - len_offset), hex(relative_offset), "\t\t", member,
-                      " " * (longest_member - len_member), "\t\t", member_type.vol.type_name)
+                print(" " * (longest_offset - len_offset), hex(relative_offset), ":  ", member,
+                      " " * (longest_member - len_member), "  ", member_type.vol.type_name)
 
     @classmethod
     def _display_value(self, value: Any) -> str:
