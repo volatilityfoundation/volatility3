@@ -2,9 +2,10 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
 #
 
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Union
 
 from volatility.cli.volshell import generic
+from volatility.framework import interfaces, constants
 from volatility.framework.configuration import requirements
 from volatility.plugins.linux import pslist
 
@@ -48,3 +49,10 @@ class Volshell(generic.Volshell):
         if self.config.get('pid', None) is not None:
             self.change_task(self.config['pid'])
         return result
+
+    def display_type(self, object: Union[str, interfaces.objects.ObjectInterface]):
+        """Display Type describes the members of a particular object in alphabetical order"""
+        if isinstance(object, str):
+            if constants.BANG not in object:
+                object = self.config['vmlinux'] + constants.BANG + object
+        return super().display_type(object)

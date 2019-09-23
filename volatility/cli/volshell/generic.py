@@ -5,9 +5,9 @@ import binascii
 import code
 import struct
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from volatility.framework import renderers, interfaces
+from volatility.framework import renderers, interfaces, objects
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel
 
@@ -192,18 +192,37 @@ class Volshell(interfaces.plugins.PluginInterface):
                 for i in disasm_types[architecture].disasm(remaining_data, offset):
                     print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))
 
-    @staticmethod
-    def display_type(object: interfaces.objects.ObjectInterface):
+    def display_type(self, object: Union[str, interfaces.objects.ObjectInterface]):
         """Display Type describes the members of a particular object in alphabetical order"""
-        longest_member = longest_offset = 0
+        if isinstance(object, str):
+            object = self.context.symbol_space.get_type(object)
+
+        longest_member = longest_offset = longest_typename = 0
         for member in object.vol.members:
             relative_offset, member_type = object.vol.members[member]
             longest_member = max(len(member), longest_member)
             longest_offset = max(len(hex(relative_offset)), longest_offset)
+            longest_typename = max(len(member_type.vol.type_name), longest_typename)
 
-        for member in object.vol.members:
+        for member in sorted(object.vol.members, key = lambda x: (object.vol.members[x][0], x)):
             relative_offset, member_type = object.vol.members[member]
             len_offset = len(hex(relative_offset))
             len_member = len(member)
-            print(" " * (longest_offset - len_offset), hex(relative_offset), "\t\t", member,
-                  " " * (longest_member - len_member), "\t\t", member_type.vol.type_name)
+            len_typename = len(member_type.vol.type_name)
+            if isinstance(object, interfaces.objects.ObjectInterface):
+                # We're an instance, so also display the data
+                print(" " * (longest_offset - len_offset), hex(relative_offset), "\t\t", member,
+                      " " * (longest_member - len_member), "\t\t", member_type.vol.type_name,
+                      " " * (longest_typename - len_typename), "\t\t", cls._display_value(getattr(object, member)))
+            else:
+                print(" " * (longest_offset - len_offset), hex(relative_offset), "\t\t", member,
+                      " " * (longest_member - len_member), "\t\t", member_type.vol.type_name)
+
+    @classmethod
+    def _display_value(self, value: Any) -> str:
+        if isinstance(value, objects.PrimitiveObject):
+            return repr(value)
+        elif isinstance(value, objects.Array):
+            return repr([self._display_value(val) for val in value])
+        else:
+            return hex(value.vol.offset)
