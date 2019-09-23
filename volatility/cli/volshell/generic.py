@@ -75,8 +75,12 @@ class Volshell(interfaces.plugins.PluginInterface, interfaces.plugins.FileConsum
 
         return renderers.TreeGrid([("Terminating", str)], None)
 
-    def help(self):
+    def help(self, *args):
         """Describes the available commands"""
+        if args:
+            help(*args)
+            return
+
         variables = []
         print("\nMethods:")
         for aliases, item in self.construct_locals():
