@@ -249,9 +249,11 @@ class Volshell(interfaces.plugins.PluginInterface, interfaces.plugins.FileConsum
         """Runs a specific plugin passing in kwarg values"""
         path_join = interfaces.configuration.path_join
 
+        # Generate a temporary configuration path
         plugin_config_suffix = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(32))
         plugin_path = path_join(self.config_path, plugin_config_suffix)
 
+        # Populate the configuration
         for name, value in kwargs.items():
             self.config[path_join(plugin_config_suffix, plugin.__name__, name)] = value
 
@@ -261,3 +263,7 @@ class Volshell(interfaces.plugins.PluginInterface, interfaces.plugins.FileConsum
             text_renderer.QuickTextRenderer().render(constructed.run())
         except exceptions.UnsatisfiedException as excp:
             print("Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
+
+        # Clear out the configuration values so we don't pollute the configuration space
+        for name in kwargs:
+            del self.config[path_join(plugin_config_suffix, plugin.__name__, name)]
