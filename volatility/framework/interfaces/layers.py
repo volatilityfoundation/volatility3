@@ -539,10 +539,12 @@ class LayerContainer(collections.abc.Mapping):
         Returns:
             A string containing a name, prefixed with prefix, not currently in use within the LayerContainer
         """
+        if prefix not in self:
+            return prefix
         count = 1
-        while prefix + str(count) in self:
+        while "{}_{}".format(prefix, count) in self:
             count += 1
-        return prefix + str(count)
+        return "{}_{}".format(prefix, count)
 
     def __getitem__(self, name: str) -> DataLayerInterface:
         """Returns the layer of specified name."""

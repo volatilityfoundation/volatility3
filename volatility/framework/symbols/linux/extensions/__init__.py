@@ -6,7 +6,6 @@ import collections.abc
 import logging
 from typing import Generator, Iterable, Iterator, Optional, Tuple
 
-import volatility.framework.objects.utility
 from volatility.framework import constants
 from volatility.framework import exceptions, objects, interfaces
 from volatility.framework.automagic import linux

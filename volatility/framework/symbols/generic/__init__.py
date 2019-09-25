@@ -26,7 +26,7 @@ class GenericIntelProcess(objects.StructType):
 
         # Figure out a suitable name we can use for the new layer
         if preferred_name is None:
-            preferred_name = context.layers.free_layer_name(prefix = self.vol.layer_name + "_Process_")
+            preferred_name = context.layers.free_layer_name(prefix = self.vol.layer_name + "_Process")
         else:
             if preferred_name in context.layers:
                 preferred_name = context.layers.free_layer_name(prefix = preferred_name)
