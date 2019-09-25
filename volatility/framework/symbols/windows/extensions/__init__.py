@@ -1,5 +1,5 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
-# which is available at https://www.volatilityfoundation.org/license/vsl_v1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
 import collections.abc
@@ -80,8 +80,9 @@ class _POOL_HEADER(objects.StructType):
                 # We're ok padding this, because the byte we'd check would be 0 which would only be valid if there
                 # were no optional headers in the first place (ie, if we read too much for headers that don't exist,
                 # but the bit we could read were valid)
-                infomask_data = self._context.layers[self.vol.layer_name].read(
-                    start_offset, addr_limit + infomask_offset, pad = True)
+                infomask_data = self._context.layers[self.vol.layer_name].read(start_offset,
+                                                                               addr_limit + infomask_offset,
+                                                                               pad = True)
 
                 # Addr stores the offset to the potential start of the OBJECT_HEADER from just after the POOL_HEADER
                 # It will always be aligned to a particular alignment
@@ -122,11 +123,10 @@ class _POOL_HEADER(objects.StructType):
 
                     try:
 
-                        object_header = self._context.object(
-                            symbol_table_name + constants.BANG + "_OBJECT_HEADER",
-                            layer_name = self.vol.layer_name,
-                            offset = addr + start_offset,
-                            native_layer_name = native_layer_name)
+                        object_header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER",
+                                                             layer_name = self.vol.layer_name,
+                                                             offset = addr + start_offset,
+                                                             native_layer_name = native_layer_name)
 
                         if not object_header.is_valid():
                             continue
@@ -185,6 +185,7 @@ class _POOL_HEADER(objects.StructType):
                 # based on what's present and what's not, this list should be the right order and the right length
                 pass
         return headers, sizes
+
 
 class _KSYSTEM_TIME(objects.StructType):
     """A system time structure that stores a high and low part."""

@@ -68,7 +68,7 @@ Copyright (C) 2007-2019 Volatility Foundation
 
 All Rights Reserved
 
-https://www.volatilityfoundation.org/license/vsl_v1.0
+https://www.volatilityfoundation.org/license/vsl-v1.0
 
 Bugs and Support
 ================
