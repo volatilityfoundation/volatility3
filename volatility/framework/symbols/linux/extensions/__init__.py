@@ -60,6 +60,9 @@ class task_struct(generic.GenericIntelProcess):
         if not dtb:
             return None
 
+        if preferred_name is None:
+            preferred_name = self.vol.layer_name + "_Process{}".format(self.pid)
+
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 

@@ -642,6 +642,9 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
             dtb = self.Pcb.DirectoryTableBase
         dtb = dtb & ((1 << parent_layer.bits_per_register) - 1)
 
+        if preferred_name is None:
+            preferred_name = self.vol.layer_name + "_Process{}".format(self.UniqueProcessId)
+
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 

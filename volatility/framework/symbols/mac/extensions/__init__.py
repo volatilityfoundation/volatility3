@@ -31,6 +31,9 @@ class proc(generic.GenericIntelProcess):
         except exceptions.PagedInvalidAddressException:
             return None
 
+        if preferred_name is None:
+            preferred_name = self.vol.layer_name + "_Process{}".format(self.p_pid)
+
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
 
