@@ -1,0 +1,59 @@
+Volatility Software License
+Version 1.0 dated September 12, 2019.
+This license covers the Volatility software, Copyright 2019 Volatility Foundation. 
+
+Software
+The software referred to in this license includes the software named above, and any data (such as operating system profiles or configuration information), and documentation provided with the software.
+
+Purpose
+This license gives you permission to use, share, and build with this software for free, but requires you to share source code for changes, additions, and software that you build with it.
+
+Acceptance
+In order to receive this license, you must agree to its rules. The rules of this license are both obligations under that agreement and conditions to your license. You must not do anything with this software that triggers a rule that you cannot or will not follow.
+
+Copyright
+Each contributor licenses you to do everything with this software that would otherwise infringe that contributor's copyright in it.
+
+Notices
+You must ensure that everyone who gets a copy of any part of this software from you, with or without changes, also gets the text of this license or a link to https://www.volatilityfoundation.org/license/vsl_v1.0. You must not remove any copyright notice in the Software.
+
+Patent
+Each contributor licenses you to do everything with this software that would otherwise infringe any patent claims they can license or become able to license.
+
+Reliability
+No contributor can revoke this license.
+
+Copyleft
+If you make any Additions available to others, such as by providing copies of them or providing access to them over the Internet, you must make them publicly available, according to this paragraph.  "Additions" includes changes or additions to the software, and any content or materials, including any training materials, you create that contain any portion of the software. "Additions" also includes any translations or ports of the software. "Additions" also includes any software designed to execute the software and parse its results, such as a wrapper written for the software, but does not include shell or execution menu software designed to execute software generally. When this license requires you to make Additions available:
+
+- You must publish all source code for software under this license, in the preferred form for making changes, through a freely accessible distribution system widely used for similar source code, so the developer and others can find and copy it. 
+- You must publish all data or content, in a format customarily used to make changes to it, through a freely accessible distribution system, so others can find and copy it. You may do so under the Creative Commons Zero Public Domain Dedication, or this license. 
+- You are responsible to ensure you have rights in Additions necessary to comply with this section.
+
+Contributing
+If you contribute (or offer to contribute) any materials to Volatility Foundation for the software, such as by submitting a pull request to the repository for the software or related content run by Volatility Foundation, you agree to contribute them under the under the BSD 2-Clause Plus Patent License (in the case of software) or the Creative Commons Zero Public Domain Dedication (in the case of content), unless you clearly mark them "Not a Contribution."
+
+Trademarks
+This license grants you no rights to any trademarks or service marks.
+
+Termination
+If you violate any term of this license, your license ends immediately.
+
+No Liability
+As far as the law allows, the software comes as is, without any warranty or condition, and no contributor will be liable to anyone for any damages related to this software or this license, under any kind of legal claim.
+
+Versions
+Volatility Foundation is the steward of this license and may publish new versions of this license with new version numbers. You may use the software under the version of this license under which you received the software, or, at your choice, any later version. 
+
+
+
+
+
+
+
+
+
+
+
+
+
