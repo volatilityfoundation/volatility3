@@ -106,7 +106,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                 (['dpo', 'display_plugin_output'], self.display_plugin_output),
                 (['gt', 'generate_treegrid'], self.generate_treegrid), (['rt',
                                                                          'render_treegrid'], self.render_treegrid),
-                (['hh', 'help'], self.help)]
+                (['ds', 'display_symbols'], self.display_symbols), (['hh', 'help'], self.help)]
 
     def _construct_locals_dict(self) -> Dict[str, Any]:
         """Returns a dictionary of the locals """
@@ -281,7 +281,26 @@ class Volshell(interfaces.plugins.PluginInterface):
         renderer.render(treegrid)
 
     def display_plugin_output(self, plugin: Type[interfaces.plugins.PluginInterface], **kwargs) -> None:
+        """Displays the output for a particular plugin (with keyword arguments)"""
         self.render_treegrid(self.generate_treegrid(plugin, **kwargs))
+
+    def display_symbols(self, symbol_table: str = None):
+        """Prints an alphabetical list of symbols for a symbol table"""
+        if symbol_table is None:
+            print("No symbol table provided")
+            return
+        longest_offset = longest_name = 0
+
+        table = self.context.symbol_space[symbol_table]
+        for symbol_name in table.symbols:
+            symbol = table.get_symbol(symbol_name)
+            longest_offset = max(longest_offset, len(hex(symbol.address)))
+            longest_name = max(longest_name, len(symbol.name))
+
+        for symbol_name in sorted(table.symbols):
+            symbol = table.get_symbol(symbol_name)
+            len_offset = len(hex(symbol.address))
+            print(" " * (longest_offset - len_offset), hex(symbol.address), " ", symbol.name)
 
 
 class NullFileConsumer(interfaces.plugins.FileConsumerInterface):

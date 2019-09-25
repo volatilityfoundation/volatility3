@@ -56,3 +56,9 @@ class Volshell(generic.Volshell):
             if constants.BANG not in object:
                 object = self.config['darwin'] + constants.BANG + object
         return super().display_type(object)
+
+    def display_symbols(self, symbol_table: str = None):
+        """Prints an alphabetical list of symbols for a symbol table"""
+        if symbol_table is None:
+            symbol_table = self.config['darwin']
+        return super().display_symbols(symbol_table)
