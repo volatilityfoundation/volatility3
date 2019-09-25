@@ -202,14 +202,20 @@ class Volshell(interfaces.plugins.PluginInterface):
                 for i in disasm_types[architecture].disasm(remaining_data, offset):
                     print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))
 
-    def display_type(self, object: Union[str, interfaces.objects.ObjectInterface, interfaces.objects.Template]):
+    def display_type(self,
+                     object: Union[str, interfaces.objects.ObjectInterface, interfaces.objects.Template],
+                     offset: int = None):
         """Display Type describes the members of a particular object in alphabetical order"""
         if not isinstance(object, (str, interfaces.objects.ObjectInterface, interfaces.objects.Template)):
             print("Cannot display information about non-type object")
             return
 
-        if isinstance(object, str):
+        if isinstance(object, str) and offset is None:
             object = self.context.symbol_space.get_type(object)
+        elif isinstance(object, str) and offset is not None:
+            object = self.context.object(object, layer_name = self.current_layer, offset = offset)
+        elif offset is not None:
+            object = self.context.object(object.vol.type_name, layer_name = self.current_layer, offset = offset)
 
         if hasattr(object.vol, 'size'):
             print("{} ({} bytes)".format(object.vol.type_name, object.vol.size))

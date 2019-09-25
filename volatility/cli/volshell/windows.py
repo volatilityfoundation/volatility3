@@ -47,12 +47,12 @@ class Volshell(generic.Volshell):
             self.change_process(self.config['pid'])
         return result
 
-    def display_type(self, object: Union[str, interfaces.objects.ObjectInterface]):
+    def display_type(self, object: Union[str, interfaces.objects.ObjectInterface], offset: int = None):
         """Display Type describes the members of a particular object in alphabetical order"""
         if isinstance(object, str):
             if constants.BANG not in object:
                 object = self.config['nt_symbols'] + constants.BANG + object
-        return super().display_type(object)
+        return super().display_type(object, offset)
 
     def display_symbols(self, symbol_table: str = None):
         """Prints an alphabetical list of symbols for a symbol table"""
