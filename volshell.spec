@@ -34,6 +34,7 @@ vol_analysis = Analysis(['volshell.py'],
                         datas = collect_data_files('volatility.framework') + \
                                 collect_data_files('volatility.framework.automagic', include_py_files = True) + \
                                 collect_data_files('volatility.framework.plugins', include_py_files = True) + \
+                                collect_data_files('volatility.framework.layers', include_py_files = True) + \
                                 collect_data_files('volatility.cli', include_py_files = True) + \
                                 collect_data_files('volatility.schemas') + \
                                 collect_data_files('volatility.plugins', include_py_files = True),
