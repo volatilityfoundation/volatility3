@@ -383,12 +383,85 @@ class inpcb(objects.StructType):
 
 class queue_entry(objects.StructType):
 
-    def walk_list(self, list_head, member_name, type_name):
-        n = self.next.dereference().cast(type_name)
+    def walk_list(self, list_head: interfaces.objects.ObjectInterface, member_name: str, type_name: str, max_size: int = 4096) -> interfaces.objects.ObjectInterface:
+        yielded = 0
+
+        try:
+            n = self.next.dereference().cast(type_name)
+        except exceptions.PagedInvalidAddressException:
+            return
         while n is not None and n.vol.offset != list_head:
             yield n
+            yielded = yielded + 1
+            if yielded == max_size:
+                return
             n = n.member(attr = member_name).next.dereference().cast(type_name)
-        p = self.prev.dereference().cast(type_name)
+        
+        try:
+            p = self.prev.dereference().cast(type_name)
+        except exceptions.PagedInvalidAddressException:
+            return
         while p is not None and p.vol.offset != list_head:
             yield p
+            yielded = yielded + 1
+            if yielded == max_size:
+                return
             p = p.member(attr = member_name).prev.dereference().cast(type_name)
+
+class ifnet(objects.StructType):
+    def sockaddr_dl(self):
+        if self.has_member("if_lladdr"):
+            try:
+                val = self.member(attr = "if_lladdr").ifa_addr.dereference().cast("sockaddr_dl")
+            except exceptions.PagedInvalidAddressException:
+                val = None
+        else:
+            try:
+                val = self.if_addrhead.tqh_first.ifa_addr.dereference().cast("sockaddr_dl")
+            except exceptions.PagedInvalidAddressException:
+                val = None
+
+        return val
+
+# this is used for MAC addresses
+class sockaddr_dl(objects.StructType):
+    def __str__(self):
+        ret = ""
+
+        if self.sdl_alen > 14:
+            return ret
+
+        for i in range(self.sdl_alen):
+            try:
+                e = self.sdl_data[self.sdl_nlen + i]
+            except IndexError:
+                break
+
+            e = e.cast("unsigned char")
+
+            ret = ret + "{:02X}:".format(e)
+
+        if ret and ret[-1] == ":":
+            ret = ret[:-1]
+
+        return ret
+
+class sockaddr(objects.StructType):
+    def get_address(self):
+        ip = ""
+
+        family = self.sa_family
+        if family == 2: # AF_INET
+            addr_in = self.cast("sockaddr_in")
+            ip = conversion.convert_ipv4(addr_in.sin_addr.s_addr)
+
+        elif family == 30: # AF_INET6
+            addr_in6 = self.cast("sockaddr_in6")
+            ip = conversion.convert_ipv6(addr_in6.sin6_addr.member(attr = "__u6_addr").member(attr = "__u6_addr32"))
+
+        elif family == 18: # AF_LINK
+            addr_dl = self.cast("sockaddr_dl")
+            ip = str(addr_dl)
+
+        return ip
+
