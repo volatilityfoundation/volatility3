@@ -164,8 +164,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         else:
             console.setLevel(10 - (partial_args.verbosity - 2))
 
-        vollog.debug("Volatility plugins path: {}".format(volatility.plugins.__path__))
-        vollog.debug("Volatility symbols path: {}".format(volatility.symbols.__path__))
+        vollog.info("Volatility plugins path: {}".format(volatility.plugins.__path__))
+        vollog.info("Volatility symbols path: {}".format(volatility.symbols.__path__))
 
         # Set the PARALLELISM
         if partial_args.parallelism == 'processes':

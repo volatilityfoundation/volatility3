@@ -108,6 +108,9 @@ class VolShell(cli.CommandLine):
             volatility.symbols.__path__ = [os.path.abspath(p)
                                            for p in partial_args.symbol_dirs.split(";")] + constants.SYMBOL_BASEPATHS
 
+        vollog.info("Volatility plugins path: {}".format(volatility.plugins.__path__))
+        vollog.info("Volatility symbols path: {}".format(volatility.symbols.__path__))
+
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
             file_logger.setLevel(0)

@@ -45,7 +45,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
             for path in banners[banner]:
                 url = urllib.parse.urlparse(path)
                 if url.scheme == 'file' and not os.path.exists(urllib.request.url2pathname(url.path)):
-                    vollog.log(constants.LOGLEVEL_V,
+                    vollog.log(constants.LOGLEVEL_VV,
                                "Removing cached path {} for banner {}: file does not exist".format(path, banner))
                     banners[banner].remove(path)
                 # This is probably excessive, but it's here if we need it
@@ -53,7 +53,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                 #     zip_file, zip_path = url.path.split("!")
                 #     zip_file = urllib.parse.urlparse(zip_file).path
                 #     if ((not os.path.exists(zip_file)) or (zip_path not in zipfile.ZipFile(zip_file).namelist())):
-                #         vollog.log(constants.LOGLEVEL_V,
+                #         vollog.log(constants.LOGLEVEL_VV,
                 #                    "Removing cached path {} for banner {}: file does not exist".format(path, banner))
                 #         banners[banner].remove(path)
 
@@ -102,7 +102,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                 # We don't bother with the hash (it'll likely take too long to validate)
                 # but we should check at least that the banner matches on load.
                 banner = isf.get_symbol(self.symbol_name).constant_data
-                vollog.log(constants.LOGLEVEL_V, "Caching banner {} for file {}".format(banner, isf_url))
+                vollog.log(constants.LOGLEVEL_VV, "Caching banner {} for file {}".format(banner, isf_url))
 
                 bannerlist = banners.get(banner, [])
                 bannerlist.append(isf_url)

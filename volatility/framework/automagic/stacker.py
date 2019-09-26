@@ -114,11 +114,11 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             for stacker_cls in stack_set:
                 stacker = stacker_cls()
                 try:
-                    vollog.log(constants.LOGLEVEL_VVVV, "Attempting to stack using {}".format(stacker_cls.__name__))
+                    vollog.log(constants.LOGLEVEL_VV, "Attempting to stack using {}".format(stacker_cls.__name__))
                     new_layer = stacker.stack(new_context, current_layer_name, progress_callback)
                     if new_layer:
                         new_context.layers.add_layer(new_layer)
-                        vollog.log(constants.LOGLEVEL_VVVV,
+                        vollog.log(constants.LOGLEVEL_VV,
                                    "Stacked {} using {}".format(new_layer.name, stacker_cls.__name__))
                         break
                 except Exception as excp:
