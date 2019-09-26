@@ -77,7 +77,7 @@ class InvalidDataException(VolatilityException):
 
 
 class SymbolSpaceError(VolatilityException):
-    """Thrown when an error occurs dealing with Symbols and Symbolspaces."""
+    """Thrown when an error occurs dealing with Symbolspaces and SymbolTables."""
 
 
 class LayerException(VolatilityException):

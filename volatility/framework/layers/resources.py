@@ -13,7 +13,7 @@ import ssl
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import List, Optional
+from typing import Optional
 
 from volatility import framework
 from volatility.framework import constants
@@ -49,7 +49,6 @@ class ResourceAccessor(object):
         """
         self._progress_callback = progress_callback
         self._context = context
-        self._cached_files = []  # type: List[str]
         self._handlers = list(framework.class_subclasses(urllib.request.BaseHandler))
         vollog.log(constants.LOGLEVEL_VVV,
                    "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
@@ -71,8 +70,8 @@ class ResourceAccessor(object):
                 temp_filename = os.path.join(constants.CACHE_PATH,
                                              "data_" + hashlib.sha512(bytes(url, 'latin-1')).hexdigest())
 
-                if temp_filename not in self._cached_files or not os.path.exists(temp_filename):
-                    vollog.info("Caching file at: {}".format(temp_filename))
+                if not os.path.exists(temp_filename):
+                    vollog.debug("Caching file at: {}".format(temp_filename))
 
                     try:
                         content_length = fp.info().get('Content-Length', -1)
@@ -92,8 +91,6 @@ class ResourceAccessor(object):
                                                     "Reading file {}".format(url))
                         cache_file.write(block)
                     cache_file.close()
-                    # Globally stash the file as cached this python session
-                    self._cached_files += [temp_filename]
                 # Re-open the cache with a different mode
                 curfile = open(temp_filename, mode = "rb")
 
