@@ -104,11 +104,6 @@ class LinuxUtilities(object):
     # based on __d_path from the Linux kernel
     @classmethod
     def _do_get_path(cls, rdentry, rmnt, dentry, vfsmnt) -> str:
-        try:
-            rdentry.validate()
-            dentry.validate()
-        except exceptions.InvalidDataException:
-            return ""
 
         ret_path = []  # type: List[str]
 
