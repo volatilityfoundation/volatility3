@@ -88,10 +88,6 @@ class LayerException(VolatilityException):
         self.layer_name = layer_name
 
 
-class StructureException(VolatilityException):
-    """Thrown when an error occurs dealing with an expected structure type."""
-
-
 class UnsatisfiedException(VolatilityException):
 
     def __init__(self, unsatisfied: Dict[str, interfaces.configuration.RequirementInterface]) -> None:

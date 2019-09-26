@@ -62,7 +62,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
             return
         node = node_path[-1]
         if node.vol.type_name.endswith(constants.BANG + '_CELL_DATA'):
-            raise RegistryFormatException("Encountered _CELL_DATA instead of _CM_KEY_NODE")
+            raise RegistryFormatException(hive.name, "Encountered _CELL_DATA instead of _CM_KEY_NODE")
         key_path = node.get_key_path()
         last_write_time = conversion.wintime_to_datetime(node.LastWriteTime.QuadPart)
 

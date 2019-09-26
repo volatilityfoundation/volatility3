@@ -54,7 +54,8 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         # Verify that it is a supported format
         if self.header.DumpType != 0x1:
-            raise WindowsCrashDump32FormatException("unsupported dump format 0x{:x}".format(self.header.DumpType))
+            raise WindowsCrashDump32FormatException(self.name,
+                                                    "unsupported dump format 0x{:x}".format(self.header.DumpType))
 
         super().__init__(context, config_path, name)
 
@@ -72,7 +73,8 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             offset += x.PageCount
 
         if len(segments) == 0:
-            raise WindowsCrashDump32FormatException("No Crash segments defined in {}".format(self._base_layer))
+            raise WindowsCrashDump32FormatException(self.name,
+                                                    "No Crash segments defined in {}".format(self._base_layer))
 
         self._segments = segments
 
@@ -83,15 +85,16 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         try:
             header_data = base_layer.read(offset, cls._magic_struct.size)
         except exceptions.InvalidAddressException:
-            raise WindowsCrashDump32FormatException("Crashdump header not found at offset {}".format(offset))
+            raise WindowsCrashDump32FormatException(base_layer.name,
+                                                    "Crashdump header not found at offset {}".format(offset))
         (signature, validdump) = cls._magic_struct.unpack(header_data)
 
         if signature != cls.SIGNATURE:
-            raise WindowsCrashDump32FormatException("bad signature 0x{:x} at file offset 0x{:x}".format(
-                signature, offset))
+            raise WindowsCrashDump32FormatException(
+                base_layer.name, "Bad signature 0x{:x} at file offset 0x{:x}".format(signature, offset))
         if validdump != cls.VALIDDUMP:
-            raise WindowsCrashDump32FormatException("invalid dump 0x{:x} at file offset 0x{:x}".format(
-                validdump, offset))
+            raise WindowsCrashDump32FormatException(
+                base_layer.name, "Invalid dump 0x{:x} at file offset 0x{:x}".format(validdump, offset))
 
         return (signature, validdump)
 

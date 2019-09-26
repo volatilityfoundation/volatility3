@@ -46,8 +46,8 @@ class LimeLayer(segmented.SegmentedLayer):
             start, end = self._check_header(base_layer, offset)
 
             if start < maxaddr or end < start:
-                raise LimeFormatException("bad start/end 0x{:x}/0x{:x} at file offset 0x{:x}".format(
-                    start, end, offset))
+                raise LimeFormatException(
+                    self.name, "Bad start/end 0x{:x}/0x{:x} at file offset 0x{:x}".format(start, end, offset))
 
             segment_length = end - start + 1
             segments.append((start, offset + header_size, segment_length))
@@ -55,7 +55,7 @@ class LimeLayer(segmented.SegmentedLayer):
             offset = offset + header_size + segment_length
 
         if len(segments) == 0:
-            raise LimeFormatException("No LiME segments defined in {}".format(self._base_layer))
+            raise LimeFormatException(self.name, "No LiME segments defined in {}".format(self._base_layer))
 
         self._segments = segments
 
@@ -64,12 +64,14 @@ class LimeLayer(segmented.SegmentedLayer):
         try:
             header_data = base_layer.read(offset, cls._header_struct.size)
         except exceptions.InvalidAddressException:
-            raise LimeFormatException("Offset 0x{:0x} does not exist within the base layer".format(offset))
+            raise LimeFormatException(base_layer.name,
+                                      "Offset 0x{:0x} does not exist within the base layer".format(offset))
         (magic, version, start, end, reserved) = cls._header_struct.unpack(header_data)
         if magic != cls.MAGIC:
-            raise LimeFormatException("bad magic 0x{:x} at file offset 0x{:x}".format(magic, offset))
+            raise LimeFormatException(base_layer.name, "Bad magic 0x{:x} at file offset 0x{:x}".format(magic, offset))
         if version != cls.VERSION:
-            raise LimeFormatException("unexpected version {:d} at file offset 0x{:x}".format(version, offset))
+            raise LimeFormatException(base_layer.name,
+                                      "Unexpected version {:d} at file offset 0x{:x}".format(version, offset))
         return start, end
 
 
