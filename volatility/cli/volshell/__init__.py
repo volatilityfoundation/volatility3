@@ -12,7 +12,6 @@ from urllib import request
 import volatility.plugins
 import volatility.symbols
 from volatility import cli, framework
-from volatility.cli import text_renderer
 from volatility.cli.volshell import generic, windows, linux, mac
 from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins
 

@@ -39,7 +39,7 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
             subreq_config_path = interfaces.configuration.path_join(config_path, requirement.name)
             for subreq in requirement.requirements.values():
                 try:
-                    self(context, subreq_config_path, subreq, optional or subreq.optional)
+                    self(context, subreq_config_path, subreq, optional = optional or subreq.optional)
                 except Exception as e:
                     # We don't really care if this fails, it tends to mean the configuration isn't complete for that item
                     vollog.log(constants.LOGLEVEL_VVVV, "Construction Exception occurred: {}".format(e))
