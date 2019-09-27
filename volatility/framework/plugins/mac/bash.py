@@ -13,7 +13,7 @@ from volatility.framework.interfaces import plugins
 from volatility.framework.layers import scanners
 from volatility.framework.objects import utility
 from volatility.plugins import timeliner
-from volatility.plugins.mac import pslist
+from volatility.plugins.mac import tasks
 
 from volatility.framework.symbols.linux.bash import BashIntermedSymbols
 
@@ -28,7 +28,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'tasks', plugin = tasks.Tasks, version = (1, 0, 0))
         ]
 
     def _generator(self, tasks):
@@ -84,21 +84,21 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield (0, (int(task.p_pid), task_name, hist.get_time_object(), hist.get_command()))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("CommandTime", datetime.datetime),
                                    ("Command", str)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(self.context,
+                                      tasks.Tasks.list_tasks(self.context,
                                                                self.config['primary'],
                                                                self.config['darwin'],
                                                                filter_func = filter_func)))
 
     def generate_timeline(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
 
         for row in self._generator(
-                pslist.PsList.list_tasks(self.context,
+                tasks.Tasks.list_tasks(self.context,
                                          self.config['primary'],
                                          self.config['darwin'],
                                          filter_func = filter_func)):
