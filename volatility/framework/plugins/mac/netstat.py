@@ -10,7 +10,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
-from volatility.plugins.mac import pslist
+from volatility.plugins.mac import tasks
 
 vollog = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class Netstat(plugins.PluginInterface):
                                                      description = 'Kernel Address Space',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'tasks', plugin = tasks.Tasks, version = (1, 0, 0))
         ]
 
     def _generator(self, tasks):
@@ -74,12 +74,12 @@ class Netstat(plugins.PluginInterface):
     def run(self):
         # mac.MacUtilities.aslr_mask_symbol_table(self.config, self.context)
 
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),
                                    ("Remote IP", str), ("Remote Port", int), ("State", str), ("Process", str)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(self.context,
+                                      tasks.Tasks.list_tasks(self.context,
                                                                self.config['primary'],
                                                                self.config['darwin'],
                                                                filter_func = filter_func)))
