@@ -5,7 +5,7 @@
 import logging
 from typing import Callable, Iterable, List, Dict
 
-from volatility.framework import renderers, interfaces, contexts
+from volatility.framework import renderers, interfaces, contexts, exceptions
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -74,6 +74,8 @@ class PsList(interfaces.plugins.PluginInterface):
         mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        
+        kernel_as = context.layers[layer_name]
 
         proc = kernel.object_from_symbol(symbol_name = "allproc").lh_first
 
@@ -85,10 +87,13 @@ class PsList(interfaces.plugins.PluginInterface):
             else:
                 seen[proc.vol.offset] = 1
 
-            if not filter_func(proc):
+            if not filter_func(proc) and kernel_as.is_valid(proc.vol.offset):
                 yield proc
 
-            proc = proc.p_list.le_next.dereference()
+            try:
+                proc = proc.p_list.le_next.dereference()
+            except exceptions.PagedInvalidAddressException:
+                break
 
     def run(self):
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())
