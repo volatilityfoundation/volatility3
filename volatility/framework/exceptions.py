@@ -39,13 +39,12 @@ class LayerException(VolatilityException):
         self.layer_name = layer_name
 
 
-class InvalidAddressException(VolatilityException):
+class InvalidAddressException(LayerException):
     """Thrown when an address is not valid in the layer it was requested."""
 
     def __init__(self, layer_name: str, invalid_address: int, *args) -> None:
-        super().__init__(*args)
+        super().__init__(layer_name, *args)
         self.invalid_address = invalid_address
-        self.layer_name = layer_name
 
 
 class PagedInvalidAddressException(InvalidAddressException):
