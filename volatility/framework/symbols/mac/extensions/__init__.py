@@ -4,7 +4,7 @@
 
 from typing import Generator, Iterable, Optional, Set, Tuple
 
-from volatility.framework import constants, objects
+from volatility.framework import constants, objects, renderers
 from volatility.framework import exceptions, interfaces
 from volatility.framework.objects import utility
 from volatility.framework.renderers import conversion
@@ -347,19 +347,35 @@ class inpcb(objects.StructType):
         return state
 
     def get_ipv4_info(self):
-        lip = self.inp_dependladdr.inp46_local.ia46_addr4.s_addr
+        try:
+            lip = self.inp_dependladdr.inp46_local.ia46_addr4.s_addr
+        except exceptions.PagedInvalidAddressException:
+            return None
+
         lport = self.inp_lport
 
-        rip = self.inp_dependfaddr.inp46_foreign.ia46_addr4.s_addr
+        try:
+            rip = self.inp_dependfaddr.inp46_foreign.ia46_addr4.s_addr
+        except exceptions.PagedInvalidAddressException:
+            return None
+        
         rport = self.inp_fport
 
         return [lip, lport, rip, rport]
 
     def get_ipv6_info(self):
-        lip = self.inp_dependladdr.inp6_local.member(attr = '__u6_addr').member(attr = '__u6_addr32')
+        try:
+            lip = self.inp_dependladdr.inp6_local.member(attr = '__u6_addr').member(attr = '__u6_addr32')
+        except exceptions.PagedInvalidAddressException:
+            return None
+        
         lport = self.inp_lport
 
-        rip = self.inp_dependfaddr.inp6_foreign.member(attr = '__u6_addr').member(attr = '__u6_addr32')
+        try:
+            rip = self.inp_dependfaddr.inp6_foreign.member(attr = '__u6_addr').member(attr = '__u6_addr32')
+        except exceptions.PagedInvalidAddressException:
+            return None
+        
         rport = self.inp_fport
 
         return [lip, lport, rip, rport]
@@ -376,3 +392,4 @@ class queue_entry(objects.StructType):
         while p is not None and p.vol.offset != list_head:
             yield p
             p = p.member(attr = member_name).prev.dereference().cast(type_name)
+
