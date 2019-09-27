@@ -4,7 +4,7 @@
 
 import logging
 import struct
-from typing import Optional
+from typing import Optional, Iterable
 
 from volatility.framework import interfaces, constants, layers, exceptions, objects
 from volatility.framework import symbols
@@ -257,3 +257,30 @@ class MacUtilities(object):
                     path = "<{}>".format(ftype.replace("DTYPE_", "").lower())
 
                 yield f, path, fd_num
+
+    def walk_tailq(queue: interfaces.objects.ObjectInterface, next_member: str, max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
+        seen = set()
+
+        try:
+            current = queue.tqh_first
+        except exceptions.InvalidAddressException:
+            return
+
+        while current:
+            if current.vol.offset in seen:
+                break
+
+            seen.add(current.vol.offset)
+            
+            if len(seen) == max_elements:
+                break
+
+            yield current
+
+            try:
+                current = current.member(attr = next_member).tqe_next
+            except exceptions.InvalidAddressException:
+                break
+
+
+    
