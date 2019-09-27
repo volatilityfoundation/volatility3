@@ -88,7 +88,7 @@ class fileglob(objects.StructType):
     def get_fg_type(self):
         ret = "INVALID"
         if self.has_member("fg_type"):
-            ret = self.member(attr = 'fg_type')
+            ret = self.fg_type
         elif self.fg_ops != 0:
             try:
                 ret = self.fg_ops.fo_type
@@ -367,7 +367,7 @@ class inpcb(objects.StructType):
 
 class queue_entry(objects.StructType):
 
-    def walk_list(self, list_head: interfaces.objects.ObjectInterface, member_name: str, type_name: str, max_size: int = 4096) -> interfaces.objects.ObjectInterface:
+    def walk_list(self, list_head: interfaces.objects.ObjectInterface, member_name: str, type_name: str, max_size: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
         yielded = 0
 
         try:
@@ -396,7 +396,7 @@ class ifnet(objects.StructType):
     def sockaddr_dl(self):
         if self.has_member("if_lladdr"):
             try:
-                val = self.member(attr = "if_lladdr").ifa_addr.dereference().cast("sockaddr_dl")
+                val = self.if_lladdr.ifa_addr.dereference().cast("sockaddr_dl")
             except exceptions.PagedInvalidAddressException:
                 val = None
         else:
