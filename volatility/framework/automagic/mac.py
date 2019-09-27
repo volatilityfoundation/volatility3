@@ -218,8 +218,15 @@ class MacUtilities(object):
                                       context: interfaces.context.ContextInterface,
                                       task: interfaces.objects.ObjectInterface):
 
-        num_fds = task.p_fd.fd_lastfile
-        nfiles = task.p_fd.fd_nfiles
+        try:
+            num_fds = task.p_fd.fd_lastfile
+        except exceptions.PagedInvalidAddressException:
+            num_fds = 1024
+        
+        try:
+            nfiles = task.p_fd.fd_nfiles
+        except exceptions.PagedInvalidAddressException:
+            nfiles = 1024
 
         if nfiles > num_fds:
             num_fds = nfiles
