@@ -153,9 +153,6 @@ def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
         except (AttributeError, ValueError, TypeError):
             vollog.log(constants.LOGLEVEL_VVV, "Windows PE version data is not available")
 
-        if not fallback_checks:
-            raise ValueError("No fallback methods for os_distinguishing provided")
-
         # fall back to the backup method, if necessary
         for name, member, response in fallback_checks:
             if member is None:

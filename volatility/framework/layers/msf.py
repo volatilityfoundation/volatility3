@@ -11,6 +11,10 @@ from volatility.framework.objects import utility
 from volatility.framework.symbols import intermed
 
 
+class PDBFormatException(exceptions.LayerException):
+    """Thrown when an error occurs with the underlying MSF file format."""
+
+
 class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
     _headers = {
         "MSF_HDR": "Microsoft C/C++ program database 2.00\r\n\x1a\x4a\x47",
@@ -28,7 +32,7 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
         self._pdb_symbol_table = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows', 'pdb')
         response = self._check_header()
         if response is None:
-            raise ValueError("Could not find a suitable header")
+            raise PDBFormatException(name, "Could not find a suitable header")
         self._version, self._header = response
         self._streams = {}  # type: Dict[int, str]
 
@@ -138,7 +142,7 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
     def get_stream(self, index) -> Optional['PdbMSFStream']:
         self.read_streams()
         if index not in self._streams:
-            raise ValueError("Stream not present")
+            raise PDBFormatException(self.name, "Stream not present")
         if self._streams[index]:
             layer = self.context.layers[self._streams[index]]
             if isinstance(layer, PdbMSFStream):
@@ -158,7 +162,7 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
         self._pages = self.config.get("pages", None)
         self._pages_len = len(self._pages)
         if not self._pages:
-            raise ValueError("Invalid/no pages specified")
+            raise PDBFormatException(name, "Invalid/no pages specified")
         if not isinstance(self._pdb_layer, PdbMultiStreamFormat):
             raise TypeError("Base Layer must be a PdbMultiStreamFormat layer")
 
@@ -212,8 +216,9 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
     @property
     def _pdb_layer(self) -> PdbMultiStreamFormat:
         if self._base_layer not in self._context.layers:
-            raise ValueError("No PdbMultiStreamFormat layer found: {}".format(self._base_layer))
+            raise PDBFormatException(self._base_layer,
+                                     "No PdbMultiStreamFormat layer found: {}".format(self._base_layer))
         result = self._context.layers[self._base_layer]
         if isinstance(result, PdbMultiStreamFormat):
             return result
-        raise ValueError("Base layer is not PdbMultiStreamFormat")
+        raise TypeError("Base layer is not PdbMultiStreamFormat")

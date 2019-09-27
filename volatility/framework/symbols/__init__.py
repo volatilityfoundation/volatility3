@@ -118,7 +118,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         elif resolve_type == SymbolType.ENUM:
             get_function = 'get_enumeration'
         else:
-            raise ValueError("Weak_resolve called without a proper SymbolType")
+            raise TypeError("Weak_resolve called without a proper SymbolType")
 
         name_array = name.split(constants.BANG)
         if len(name_array) == 2:

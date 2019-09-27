@@ -224,7 +224,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         """
         urls = list(cls.file_symbol_url(sub_path, filename))
         if not urls:
-            raise ValueError("No symbol files found at provided filename: {}", filename)
+            raise FileNotFoundError("No symbol files found at provided filename: {}", filename)
         table_name = context.symbol_space.free_table_name(filename)
         table = cls(context = context,
                     config_path = config_path,
@@ -260,7 +260,7 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
         self.name = name
         nt = native_types or self._get_natives()
         if nt is None:
-            raise ValueError("Native table not provided")
+            raise TypeError("Native table not provided")
         nt.name = name + "_natives"
         super().__init__(context, config_path, name, nt, table_mapping = table_mapping)
         self._overrides = {}  # type: Dict[str, Type[interfaces.objects.ObjectInterface]]

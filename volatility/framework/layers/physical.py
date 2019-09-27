@@ -130,7 +130,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns whether the offset is valid or not."""
         if length <= 0:
-            raise TypeError("Length must be positive")
+            raise ValueError("Length must be positive")
         return bool(self.minimum_address <= offset <= self.maximum_address
                     and self.minimum_address <= offset + length - 1 <= self.maximum_address)
 
