@@ -4,7 +4,7 @@
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.framework.interfaces.renderers as interfaces_renderers
-import volatility.plugins.mac.pslist as pslist
+import volatility.plugins.mac.tasks as tasks
 from volatility.framework import constants
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
@@ -35,7 +35,7 @@ class Malfind(interfaces_plugins.PluginInterface):
         proc_layer = self.context.layers[proc_layer_name]
 
         for vma in task.get_map_iter():
-            if vma.is_suspicious(self.context, self.config['darwin']):
+            if not vma.is_suspicious(self.context, self.config['darwin']):
                 data = proc_layer.read(vma.links.start, 64, pad = True)
                 yield vma, data
 
@@ -61,13 +61,13 @@ class Malfind(interfaces_plugins.PluginInterface):
                            vma.get_perms(), format_hints.HexBytes(data), disasm))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
                                    ("End", format_hints.Hex), ("Protection", str), ("Hexdump", format_hints.HexBytes),
                                    ("Disasm", interfaces_renderers.Disassembly)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(self.context,
+                                      tasks.Tasks.list_tasks(self.context,
                                                                self.config['primary'],
                                                                self.config['darwin'],
                                                                filter_func = filter_func)))
