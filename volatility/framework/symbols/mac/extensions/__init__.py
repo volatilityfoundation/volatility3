@@ -349,16 +349,16 @@ class inpcb(objects.StructType):
     def get_ipv4_info(self):
         try:
             lip = self.inp_dependladdr.inp46_local.ia46_addr4.s_addr
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return None
 
         lport = self.inp_lport
 
         try:
             rip = self.inp_dependfaddr.inp46_foreign.ia46_addr4.s_addr
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return None
-        
+
         rport = self.inp_fport
 
         return [lip, lport, rip, rport]
@@ -366,16 +366,16 @@ class inpcb(objects.StructType):
     def get_ipv6_info(self):
         try:
             lip = self.inp_dependladdr.inp6_local.member(attr = '__u6_addr').member(attr = '__u6_addr32')
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return None
-        
+
         lport = self.inp_lport
 
         try:
             rip = self.inp_dependfaddr.inp6_foreign.member(attr = '__u6_addr').member(attr = '__u6_addr32')
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return None
-        
+
         rport = self.inp_fport
 
         return [lip, lport, rip, rport]
@@ -392,4 +392,3 @@ class queue_entry(objects.StructType):
         while p is not None and p.vol.offset != list_head:
             yield p
             p = p.member(attr = member_name).prev.dereference().cast(type_name)
-

@@ -220,12 +220,12 @@ class MacUtilities(object):
 
         try:
             num_fds = task.p_fd.fd_lastfile
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             num_fds = 1024
-        
+
         try:
             nfiles = task.p_fd.fd_nfiles
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             nfiles = 1024
 
         if nfiles > num_fds:

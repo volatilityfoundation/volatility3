@@ -74,7 +74,7 @@ class PsList(interfaces.plugins.PluginInterface):
         mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
-        
+
         kernel_as = context.layers[layer_name]
 
         proc = kernel.object_from_symbol(symbol_name = "allproc").lh_first
@@ -92,7 +92,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
             try:
                 proc = proc.p_list.le_next.dereference()
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 break
 
     def run(self):
