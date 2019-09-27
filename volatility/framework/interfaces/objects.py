@@ -129,14 +129,6 @@ class ObjectInterface(metaclass = ABCMeta):
         """Writes the new value into the format at the offset the object
         currently resides at."""
 
-    def validate(self) -> bool:
-        """A method that can be overridden to validate this object.  It does
-        not return and its return value should not be used.
-
-        Raises InvalidDataException on failure to validate the data
-        correctly.
-        """
-
     def get_symbol_table(self) -> 'interfaces.symbols.SymbolTableInterface':
         """Returns the symbol table for this particular object.
 

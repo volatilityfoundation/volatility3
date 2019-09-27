@@ -67,15 +67,6 @@ class SwappedInvalidAddressException(PagedInvalidAddressException):
         self.swap_offset = swap_offset
 
 
-class InvalidDataException(VolatilityException):
-    """Thrown when an object contains some data known to be invalid for that
-    structure."""
-
-    def __init__(self, invalid_object: object, *args) -> None:
-        super().__init__(invalid_object, *args)
-        self._invalid_object = invalid_object
-
-
 class SymbolSpaceError(VolatilityException):
     """Thrown when an error occurs dealing with Symbolspaces and SymbolTables."""
 
