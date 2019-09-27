@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import volatility.plugins.mac.pslist as pslist
+import volatility.plugins.mac.tasks as tasks
 
 import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers
@@ -21,7 +21,7 @@ class Maps(interfaces_plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'tasks', plugin = tasks.Tasks, version = (1, 0, 0))
         ]
 
     def _generator(self, tasks):
@@ -38,12 +38,12 @@ class Maps(interfaces_plugins.PluginInterface):
                            format_hints.Hex(vma.links.end), vma.get_perms(), path))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
                                    ("End", format_hints.Hex), ("Protection", str), ("Map Name", str)],
                                   self._generator(
-                                      pslist.PsList.list_tasks(self.context,
+                                      tasks.Tasks.list_tasks(self.context,
                                                                self.config['primary'],
                                                                self.config['darwin'],
                                                                filter_func = filter_func)))
