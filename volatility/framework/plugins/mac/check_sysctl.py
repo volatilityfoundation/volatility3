@@ -58,13 +58,13 @@ class Check_sysctl(plugins.PluginInterface):
         if recursive != 0:
             try:
                 sysctl = sysctl.oid_link.sle_next.dereference()
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 return
 
         while sysctl:
             try:
                 name = utility.pointer_to_string(sysctl.oid_name, 128)
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 name = ""
 
             if len(name) == 0:
@@ -74,7 +74,7 @@ class Check_sysctl(plugins.PluginInterface):
 
             try:
                 arg1_ptr = sysctl.oid_arg1.dereference().vol.offset
-            except exceptions.InvalidPagedAddressException:
+            except exceptions.InvalidAddressException:
                 arg1_ptr = 0
 
             arg1 = sysctl.oid_arg1
@@ -91,13 +91,13 @@ class Check_sysctl(plugins.PluginInterface):
             elif ctltype in ['CTLTYPE_INT', 'CTLTYPE_QUAD', 'CTLTYPE_OPAQUE']:
                 try:
                     val = str(arg1.dereference().cast("int"))
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     val = "-1"
 
             elif ctltype == 'CTLTYPE_STRING':
                 try:
                     val = utility.pointer_to_string(sysctl.oid_arg1, 64)
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     val = ""
             else:
                 val = ctltype
@@ -106,7 +106,7 @@ class Check_sysctl(plugins.PluginInterface):
 
             try:
                 sysctl = sysctl.oid_link.sle_next
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 break
 
     def _generator(self):

@@ -180,7 +180,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
             try:
                 type_name = objt.Name.String
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
                            "Cannot access _OBJECT_HEADER.Name at {0:#x}".format(objt.Name.vol.offset))
                 continue
@@ -254,7 +254,7 @@ class Handles(interfaces_plugins.PluginInterface):
                 except AttributeError:
                     if item.Type.Name:
                         yield item
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     continue
 
     def handles(self, handle_table):
@@ -262,7 +262,7 @@ class Handles(interfaces_plugins.PluginInterface):
         try:
             TableCode = handle_table.TableCode & ~self._level_mask
             table_levels = handle_table.TableCode & self._level_mask
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             vollog.log(constants.LOGLEVEL_VVV, "Handle table parsing was aborted due to an invalid address exception")
             return
 
@@ -282,7 +282,7 @@ class Handles(interfaces_plugins.PluginInterface):
 
             try:
                 object_table = proc.ObjectTable
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
                            "Cannot access _EPROCESS.ObjectType at {0:#x}".format(proc.ObjectTable.vol.offset))
                 continue

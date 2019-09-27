@@ -49,7 +49,7 @@ class task_struct(generic.GenericIntelProcess):
         parent_layer = self._context.layers[self.vol.layer_name]
         try:
             pgd = self.mm.pgd
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return None
 
         if not isinstance(parent_layer, linear.LinearlyMappedLayer):

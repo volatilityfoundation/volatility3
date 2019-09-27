@@ -238,7 +238,7 @@ class MacUtilities(object):
 
         try:
             table_addr = task.p_fd.fd_ofiles.dereference()
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return
 
         fds = objects.utility.array_of_pointers(table_addr, count = num_fds, subtype = file_type, context = context)
@@ -247,7 +247,7 @@ class MacUtilities(object):
             if f != 0:
                 try:
                     ftype = f.f_fglob.get_fg_type()
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     continue
 
                 if ftype == 'DTYPE_VNODE':

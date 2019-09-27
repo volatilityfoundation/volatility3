@@ -28,7 +28,7 @@ class proc(generic.GenericIntelProcess):
 
         try:
             dtb = self.get_task().map.pmap.pm_cr3
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return None
 
         if preferred_name is None:
@@ -40,12 +40,12 @@ class proc(generic.GenericIntelProcess):
     def get_map_iter(self) -> Iterable[interfaces.objects.ObjectInterface]:
         try:
             task = self.get_task()
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return
 
         try:
             current_map = task.map.hdr.links.next
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return
 
         seen = set()  # type: Set[int]
@@ -92,7 +92,7 @@ class fileglob(objects.StructType):
         elif self.fg_ops != 0:
             try:
                 ret = self.fg_ops.fo_type
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 pass
 
         return ret.description
@@ -239,7 +239,7 @@ class vm_map_entry(objects.StructType):
         while not found_end:
             try:
                 tmp_vnode_object = vnode_object.shadow.dereference()
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 break
 
             if tmp_vnode_object.vol.offset == 0:
@@ -249,7 +249,7 @@ class vm_map_entry(objects.StructType):
 
         try:
             ops = vnode_object.pager.mo_pager_ops.dereference()
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return None
 
         found = False
@@ -274,7 +274,7 @@ class socket(objects.StructType):
     def get_inpcb(self):
         try:
             ret = self.so_pcb.dereference().cast("inpcb")
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             ret = None
 
         return ret
@@ -335,7 +335,7 @@ class inpcb(objects.StructType):
 
         try:
             tcpcb = self.inp_ppcb.dereference().cast("tcpcb")
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return ""
 
         state_type = tcpcb.t_state

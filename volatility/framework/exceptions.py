@@ -31,8 +31,16 @@ class SymbolError(VolatilityException):
     """Thrown when a symbol lookup has failed."""
 
 
+class LayerException(VolatilityException):
+    """Thrown when an error occurs dealing with memory and layers."""
+
+    def __init__(self, layer_name: str, *args) -> None:
+        super().__init__(*args)
+        self.layer_name = layer_name
+
+
 class InvalidAddressException(VolatilityException):
-    """Thrown when an address is not valid in the space it was requested."""
+    """Thrown when an address is not valid in the layer it was requested."""
 
     def __init__(self, layer_name: str, invalid_address: int, *args) -> None:
         super().__init__(*args)
@@ -42,7 +50,10 @@ class InvalidAddressException(VolatilityException):
 
 class PagedInvalidAddressException(InvalidAddressException):
     """Thrown when an address is not valid in the paged space in which it was
-    request.
+    request.  This is a subclass of InvalidAddressException and is only
+    thrown from a paged layer.  In most circumstances :class:`InvalidAddressException`
+    is the correct exception to throw, since this will catch all invalid
+    mappings (including paged ones).
 
     Includes the invalid address and the number of bits of the address
     that are invalid
@@ -55,10 +66,11 @@ class PagedInvalidAddressException(InvalidAddressException):
 
 
 class SwappedInvalidAddressException(PagedInvalidAddressException):
-    """Thrown when an address is not valid in the paged space in which it was
-    requested, but expected to be in swap space.
+    """Thrown when an address is not valid in the paged layer in which it was
+    requested, but expected to be in an associated swap layer.
 
-    Includes the swap lookup
+    Includes the swap lookup, as well as the invalid address and the bits of
+    the lookup that were invalid.
     """
 
     def __init__(self, layer_name: str, invalid_address: int, invalid_bits: int, entry: int, swap_offset: int,
@@ -69,14 +81,6 @@ class SwappedInvalidAddressException(PagedInvalidAddressException):
 
 class SymbolSpaceError(VolatilityException):
     """Thrown when an error occurs dealing with Symbolspaces and SymbolTables."""
-
-
-class LayerException(VolatilityException):
-    """Thrown when an error occurs dealing with memory and layers."""
-
-    def __init__(self, layer_name: str, *args) -> None:
-        super().__init__(*args)
-        self.layer_name = layer_name
 
 
 class UnsatisfiedException(VolatilityException):

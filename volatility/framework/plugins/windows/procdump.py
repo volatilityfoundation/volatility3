@@ -5,17 +5,17 @@
 import logging
 from typing import List
 
+import volatility.plugins.windows.pslist as pslist
+
 import volatility.framework.constants as constants
 import volatility.framework.exceptions as exceptions
 import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.framework.renderers as renderers
-import volatility.plugins.windows.pslist as pslist
 from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
-from volatility.framework.symbols.windows.extensions import pe
-
 from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows.extensions import pe
 
 vollog = logging.getLogger(__name__)
 
@@ -76,6 +76,10 @@ class ProcDump(interfaces_plugins.PluginInterface):
 
             except exceptions.PagedInvalidAddressException as exp:
                 result_text = "Required memory at {0:#x} is not valid (process exited?)".format(exp.invalid_address)
+
+            except exceptions.InvalidAddressException as exp:
+                result_text = "Required memory at {0:#x} is not valid (incomplete layer {1}?)".format(
+                    exp.invalid_address, exp.layer_name)
 
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 

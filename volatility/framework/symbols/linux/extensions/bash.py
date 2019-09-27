@@ -14,7 +14,7 @@ class hist_entry(objects.StructType):
         try:
             cmd = self.get_command()
             ts = utility.array_to_string(self.timestamp.dereference())
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             return False
 
         if not cmd or len(cmd) == 0:

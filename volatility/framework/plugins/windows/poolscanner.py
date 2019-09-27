@@ -215,7 +215,7 @@ class PoolScanner(plugins.PluginInterface):
             elif constraint.object_type == "File":
                 try:
                     name = mem_object.FileName.String
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     vollog.log(constants.LOGLEVEL_VVV, "Skipping file at {0:#x}".format(mem_object.vol.offset))
                     continue
             else:

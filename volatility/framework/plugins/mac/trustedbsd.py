@@ -51,12 +51,12 @@ class Check_syscall(plugins.PluginInterface):
             try:
                 mpc = ent.mpc.dereference()
                 ops = mpc.mpc_ops.dereference()
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 continue
 
             try:
                 ent_name = utility.pointer_to_string(mpc.mpc_name, 255)
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 ent_name = "N/A"
 
             for check in ops.vol.members:

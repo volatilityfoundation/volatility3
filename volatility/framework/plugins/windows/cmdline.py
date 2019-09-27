@@ -48,6 +48,10 @@ class CmdLine(interfaces_plugins.PluginInterface):
             except exceptions.PagedInvalidAddressException as exp:
                 result_text = "Required memory at {0:#x} is not valid (process exited?)".format(exp.invalid_address)
 
+            except exceptions.InvalidAddressException as exp:
+                result_text = "Required memory at {0:#x} is not valid (incomplete layer {1}?)".format(
+                    exp.invalid_address, exp.layer_name)
+
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):

@@ -36,7 +36,7 @@ class Netstat(plugins.PluginInterface):
             for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(self.config, self.context, task):
                 try:
                     ftype = filp.f_fglob.get_fg_type()
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     continue
 
                 if ftype != 'DTYPE_SOCKET':
@@ -44,7 +44,7 @@ class Netstat(plugins.PluginInterface):
 
                 try:
                     socket = filp.f_fglob.fg_data.dereference().cast("socket")
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     continue
 
                 family = socket.get_family()
@@ -53,7 +53,7 @@ class Netstat(plugins.PluginInterface):
                     try:
                         upcb = socket.so_pcb.dereference().cast("unpcb")
                         path = utility.array_to_string(upcb.unp_addr.sun_path)
-                    except exceptions.PagedInvalidAddressException:
+                    except exceptions.InvalidAddressException:
                         continue
 
                     yield (0, (format_hints.Hex(socket.vol.offset), "UNIX", path, 0, "", 0, "",

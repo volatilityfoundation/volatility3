@@ -227,6 +227,9 @@ class UserAssist(interfaces.plugins.PluginInterface):
                 continue
             except exceptions.PagedInvalidAddressException as excp:
                 vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
+            except exceptions.InvalidAddressException as excp:
+                vollog.debug("Invalid address identified in lower layer {}: {}".format(
+                    excp.layer_name, excp.invalid_address))
             except KeyError:
                 vollog.debug("Key '{}' not found in Hive at offset {}.".format(
                     "software\\microsoft\\windows\\currentversion\\explorer\\userassist", hex(hive.hive_offset)))

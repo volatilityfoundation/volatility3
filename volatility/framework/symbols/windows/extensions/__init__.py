@@ -449,7 +449,7 @@ class _MMVAD(_MMVAD_SHORT):
                 file_name = self.Subsection.ControlArea.FilePointer.dereference().cast(
                     "_FILE_OBJECT").FileName.get_string()
 
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             pass
 
         return file_name
@@ -546,7 +546,7 @@ class _FILE_OBJECT(objects.StructType, ExecutiveObject):
 
         try:
             name += self.FileName.String
-        except (TypeError, exceptions.PagedInvalidAddressException):
+        except (TypeError, exceptions.InvalidAddressException):
             pass
 
         return name
@@ -756,7 +756,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                 if self.ObjectTable.has_member("HandleCount"):
                     return self.ObjectTable.HandleCount
 
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             vollog.log(constants.LOGLEVEL_VVV,
                        "Cannot access _EPROCESS.ObjectTable.HandleCount at {0:#x}".format(self.vol.offset))
 
@@ -779,7 +779,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                 if session.has_member("SessionId"):
                     return session.SessionId
 
-        except exceptions.PagedInvalidAddressException:
+        except exceptions.InvalidAddressException:
             vollog.log(constants.LOGLEVEL_VVV,
                        "Cannot access _EPROCESS.Session.SessionId at {0:#x}".format(self.vol.offset))
 

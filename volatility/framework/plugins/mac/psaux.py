@@ -51,7 +51,7 @@ class Psaux(plugins.PluginInterface):
             while argc > 0:
                 try:
                     arg = proc_layer.read(argsstart, 256)
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     break
 
                 idx = arg.find(b'\x00')
@@ -65,7 +65,7 @@ class Psaux(plugins.PluginInterface):
                     while argsstart < task.user_stack:
                         try:
                             check = proc_layer.read(argsstart, 1)
-                        except exceptions.PagedInvalidAddressException:
+                        except exceptions.InvalidAddressException:
                             break
 
                         if check != b"\x00":
