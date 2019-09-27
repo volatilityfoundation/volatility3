@@ -103,7 +103,7 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
             return {config_path: self}
         if not isinstance(value, list):
             # TODO: Check this is the correct response for an error
-            raise ValueError("Unexpected config value found: {}".format(repr(value)))
+            raise TypeError("Unexpected config value found: {}".format(repr(value)))
         if not (self.min_elements <= len(value)):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too few values provided to list option.")
             return {config_path: self}
@@ -352,7 +352,7 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
 
         # Fill out the parameter for class creation
         if not isinstance(self.requirements["class"], interfaces.configuration.ClassRequirement):
-            raise ValueError("Class requirement is not of type ClassRequirement: {}".format(
+            raise TypeError("Class requirement is not of type ClassRequirement: {}".format(
                 repr(self.requirements["class"])))
         cls = self.requirements["class"].cls
         node_config = context.config.branch(config_path)
@@ -383,10 +383,10 @@ class PluginRequirement(interfaces.configuration.RequirementInterface):
                  version: Optional[Tuple[int, ...]] = None) -> None:
         super().__init__(name = name, description = description, default = default, optional = optional)
         if plugin is None:
-            raise ValueError("Plugin cannot be None")
+            raise TypeError("Plugin cannot be None")
         self._plugin = plugin
         if version is None:
-            raise ValueError("Version cannot be None")
+            raise TypeError("Version cannot be None")
         self._version = version
 
     def unsatisfied(self, context: interfaces.context.ContextInterface,

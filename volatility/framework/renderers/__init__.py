@@ -243,7 +243,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         The values returned are mutable,
         """
         if node is None:
-            raise ValueError("Node must be a valid node within the TreeGrid")
+            raise TypeError("Node must be a valid node within the TreeGrid")
         return node.values
 
     def _append(self, parent, values):

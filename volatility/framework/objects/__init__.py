@@ -26,7 +26,7 @@ def convert_data_to_value(data: bytes, struct_type: Type[TUnion[int, float, byte
     elif struct_type == float:
         float_vals = "zzezfzzzd"
         if data_format.length > len(float_vals) or float_vals[data_format.length] not in "efd":
-            raise TypeError("Invalid float size")
+            raise ValueError("Invalid float size")
         struct_format = ("<" if data_format.byteorder == 'little' else ">") + float_vals[data_format.length]
     elif struct_type in [bytes, str]:
         struct_format = str(data_format.length) + "s"
@@ -54,7 +54,7 @@ def convert_value_to_data(value: TUnion[int, float, bytes, str, bool],
     elif struct_type == float:
         float_vals = "zzezfzzzd"
         if data_format.length > len(float_vals) or float_vals[data_format.length] not in "efd":
-            raise TypeError("Invalid float size")
+            raise ValueError("Invalid float size")
         struct_format = ("<" if data_format.byteorder == 'little' else ">") + float_vals[data_format.length]
     elif struct_type in [bytes, str]:
         struct_format = str(data_format.length) + "s"
@@ -279,7 +279,7 @@ class Pointer(Integer):
         """
         length, endian, signed = data_format
         if signed:
-            raise TypeError("Pointers cannot have signed values")
+            raise ValueError("Pointers cannot have signed values")
         mask = context.layers[object_info.native_layer_name].address_mask
         data = context.layers.read(object_info.layer_name, object_info.offset, length)
         value = int.from_bytes(data, byteorder = endian, signed = signed)
@@ -514,7 +514,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
             """Returns the size of the array, based on the count and the
             subtype."""
             if 'subtype' not in template.vol and 'count' not in template.vol:
-                raise TypeError("Array ObjectTemplate must be provided a count and subtype")
+                raise ValueError("Array ObjectTemplate must be provided a count and subtype")
             return template.vol.get('subtype', None).size * template.vol.get('count', 0)
 
         @classmethod
@@ -606,7 +606,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
         def size(cls, template: interfaces.objects.Template) -> int:
             """Method to return the size of this type."""
             if template.vol.get('size', None) is None:
-                raise TypeError("ObjectTemplate not provided with a size")
+                raise ValueError("ObjectTemplate not provided with a size")
             return template.vol.size
 
         @classmethod

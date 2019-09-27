@@ -5,10 +5,14 @@
 import struct
 from typing import Any, Dict, List, Optional
 
-from volatility.framework import interfaces, constants
+from volatility.framework import interfaces, constants, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical, segmented, resources
 from volatility.framework.symbols import native
+
+
+class VmwareFormatException(exceptions.LayerException):
+    """Thrown when an error occurs with the underlying Crash file format."""
 
 
 class VmwareLayer(segmented.SegmentedLayer):
@@ -44,7 +48,7 @@ class VmwareLayer(segmented.SegmentedLayer):
         data = meta_layer.read(0, header_size)
         magic, unknown, groupCount = struct.unpack(self.header_structure, data)
         if magic not in [b"\xD2\xBE\xD2\xBE"]:
-            raise ValueError("Wrong magic bytes for Vmware layer: {}".format(repr(magic)))
+            raise VmwareFormatException(self.name, "Wrong magic bytes for Vmware layer: {}".format(repr(magic)))
 
         # TODO: Change certain structure sizes based on the version
         version = magic[1] & 0xf
@@ -87,7 +91,7 @@ class VmwareLayer(segmented.SegmentedLayer):
                                           index_len) + self._context.symbol_space.get_type("vmware!unsigned int").size
 
         if tags[("regionsCount", ())][1] == 0:
-            raise ValueError("VMware VMEM is not split into regions")
+            raise VmwareFormatException(self.name, "VMware VMEM is not split into regions")
         for region in range(tags[("regionsCount", ())][1]):
             offset = tags[("regionPPN", (region, ))][1] * self._page_size
             mapped_offset = tags[("regionPageNum", (region, ))][1] * self._page_size

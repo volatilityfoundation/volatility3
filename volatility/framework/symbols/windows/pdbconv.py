@@ -362,7 +362,7 @@ class PdbReader:
             self._progress_callback(offset * 100 / tpi_layer.maximum_address, "Reading TPI layer")
             length = module.object(object_type = length_type, offset = offset)
             if not isinstance(length, int):
-                raise ValueError("Non-integer length provided")
+                raise TypeError("Non-integer length provided")
             offset += length_len
             output, consumed = self.consume_type(module, offset, length)
             leaf_type, name, value = output
@@ -783,7 +783,7 @@ class PdbReader:
             result = leaf_type, None, bitfield
             consumed += remaining
         else:
-            raise ValueError("Unhandled leaf_type: {}".format(leaf_type))
+            raise TypeError("Unhandled leaf_type: {}".format(leaf_type))
 
         return result, consumed
 

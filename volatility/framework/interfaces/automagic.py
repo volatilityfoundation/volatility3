@@ -42,7 +42,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
         for requirement in self.get_requirements():
             if not isinstance(requirement, (interfaces.configuration.SimpleTypeRequirement,
                                             requirements.ChoiceRequirement, requirements.ListRequirement)):
-                raise ValueError(
+                raise TypeError(
                     "Automagic requirements must be a SimpleTypeRequirement, ChoiceRequirement or ListRequirement")
 
     def __call__(self,

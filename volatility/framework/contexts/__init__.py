@@ -184,7 +184,7 @@ class Module(interfaces.context.ModuleInterface):
             raise ValueError("Cannot reference another module when constructing an object")
 
         if offset is None:
-            raise ValueError("Offset must not be None for non-symbol objects")
+            raise TypeError("Offset must not be None for non-symbol objects")
 
         if not absolute:
             offset += self._offset
@@ -227,7 +227,7 @@ class Module(interfaces.context.ModuleInterface):
             offset += self._offset
 
         if symbol_val.type is None:
-            raise ValueError("Symbol {} has no associated type".format(symbol_val.name))
+            raise TypeError("Symbol {} has no associated type".format(symbol_val.name))
 
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
         if 'layer_name' in kwargs:

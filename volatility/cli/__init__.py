@@ -393,7 +393,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                         if isinstance(value, str):
                             if not parse.urlparse(value).scheme:
                                 if not os.path.exists(value):
-                                    raise TypeError("Non-existant file {} passed to URIRequirement".format(value))
+                                    raise FileNotFoundError(
+                                        "Non-existant file {} passed to URIRequirement".format(value))
                                 value = "file://" + request.pathname2url(os.path.abspath(value))
                     if isinstance(requirement, requirements.ListRequirement):
                         if not isinstance(value, list):
@@ -410,7 +411,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
     def consume_file(self, filedata: interfaces.plugins.FileInterface):
         """Consumes a file as produced by a plugin."""
         if self.output_dir is None:
-            raise ValueError("Output directory has not been correctly specified")
+            raise TypeError("Output directory is not a string")
         os.makedirs(self.output_dir, exist_ok = True)
 
         pref_name_array = filedata.preferred_filename.split('.')
