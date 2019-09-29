@@ -20,7 +20,7 @@ primatives = {
         "endian": "little",
         "kind": "void",
         "signed": True,
-        "size": 4
+        "size": 0
     }),
     0x08: ("HRESULT", {
         "endian": "little",
