@@ -83,7 +83,8 @@ class Handles(interfaces.plugins.PluginInterface):
 
             # is this the right thing to raise here?
             if magic == None:
-                raise AttributeError("Unable to find the SAR value for decoding handle table pointers")
+                raise AttributeError(
+                    "Unable to find the SAR value for decoding handle table pointers (Is capstone installed?)")
 
             offset = self._decode_pointer(handle_table_entry.LowValue, magic)
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
