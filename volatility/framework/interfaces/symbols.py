@@ -7,8 +7,8 @@ import collections.abc
 from abc import abstractmethod, ABC
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type
 
-from volatility.framework import constants, exceptions
-from volatility.framework.interfaces import configuration, objects, context as interfaces_context
+from volatility.framework import constants, exceptions, interfaces
+from volatility.framework.interfaces import configuration, objects
 
 
 class SymbolInterface:
@@ -261,7 +261,7 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
 
     # FIXME: native_types and table_mapping aren't recorded in the configuration
     def __init__(self,
-                 context: 'interfaces_context.ContextInterface',
+                 context: 'interfaces.context.ContextInterface',
                  config_path: str,
                  name: str,
                  native_types: 'NativeTableInterface',

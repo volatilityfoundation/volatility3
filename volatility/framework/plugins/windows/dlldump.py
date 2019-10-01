@@ -9,9 +9,7 @@ from typing import List
 import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
 
-import volatility.framework.constants as constants
-import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import interfaces
+from volatility.framework import interfaces, constants
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -21,7 +19,7 @@ from volatility.framework.symbols.windows import extensions
 vollog = logging.getLogger(__name__)
 
 
-class DllDump(interfaces_plugins.PluginInterface):
+class DllDump(interfaces.plugins.PluginInterface):
     """Dumps process memory ranges as DLLs."""
 
     @classmethod
@@ -80,7 +78,7 @@ class DllDump(interfaces_plugins.PluginInterface):
                         continue
 
                 try:
-                    filedata = interfaces_plugins.FileInterface("pid.{0}.{1}.{2:#x}.dmp".format(
+                    filedata = interfaces.plugins.FileInterface("pid.{0}.{1}.{2:#x}.dmp".format(
                         proc.UniqueProcessId, ntpath.basename(vad.get_file_name()), vad.get_start()))
 
                     dos_header = self.context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",

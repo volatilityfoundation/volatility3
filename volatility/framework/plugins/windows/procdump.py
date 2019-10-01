@@ -7,11 +7,7 @@ from typing import List
 
 import volatility.plugins.windows.pslist as pslist
 
-import volatility.framework.constants as constants
-import volatility.framework.exceptions as exceptions
-import volatility.framework.interfaces.plugins as interfaces_plugins
-import volatility.framework.renderers as renderers
-from volatility.framework import interfaces
+from volatility.framework import interfaces, exceptions, constants, renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.symbols import intermed
@@ -20,7 +16,7 @@ from volatility.framework.symbols.windows.extensions import pe
 vollog = logging.getLogger(__name__)
 
 
-class ProcDump(interfaces_plugins.PluginInterface):
+class ProcDump(interfaces.plugins.PluginInterface):
     """Dumps process executable images."""
 
     @classmethod
@@ -58,7 +54,7 @@ class ProcDump(interfaces_plugins.PluginInterface):
                                                  offset = peb.ImageBaseAddress,
                                                  layer_name = proc_layer_name)
 
-                filedata = interfaces_plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(
+                filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(
                     proc.UniqueProcessId, peb.ImageBaseAddress))
 
                 for offset, data in dos_header.reconstruct():

@@ -14,9 +14,7 @@ from abc import ABCMeta, abstractmethod
 from typing import List, Optional, Tuple
 
 from volatility import classproperty
-from volatility.framework import exceptions, constants
-from volatility.framework.interfaces import configuration as interfaces_configuration, \
-    renderers as interfaces_renderers, context as interfaces_context
+from volatility.framework import exceptions, constants, interfaces
 
 vollog = logging.getLogger(__name__)
 
@@ -69,7 +67,7 @@ class FileConsumerInterface(object):
 #  The plugin runs and produces a TreeGrid output
 
 
-class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass = ABCMeta):
+class PluginInterface(interfaces.configuration.ConfigurableInterface, metaclass = ABCMeta):
     """Class that defines the basic interface that all Plugins must maintain.
 
     The constructor must only take a `context` and `config_path`, so
@@ -83,7 +81,7 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
     """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
 
     def __init__(self,
-                 context: interfaces_context.ContextInterface,
+                 context: interfaces.context.ContextInterface,
                  config_path: str,
                  progress_callback: constants.ProgressCallback = None) -> None:
         """
@@ -128,12 +126,12 @@ class PluginInterface(interfaces_configuration.ConfigurableInterface, metaclass 
         return cls._version
 
     @classmethod
-    def get_requirements(cls) -> List[interfaces_configuration.RequirementInterface]:
+    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         """Returns a list of Requirement objects for this plugin."""
         return []
 
     @abstractmethod
-    def run(self) -> interfaces_renderers.TreeGrid:
+    def run(self) -> interfaces.renderers.TreeGrid:
         """Executes the functionality of the code.
 
         .. note:: This method expects `self.validate` to have been called to ensure all necessary options have been provided

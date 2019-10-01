@@ -5,7 +5,6 @@
 import logging
 from typing import List, Iterable, Tuple, Optional, Union
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import constants, exceptions, renderers, interfaces, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
@@ -16,7 +15,7 @@ from volatility.plugins.windows import svcscan
 vollog = logging.getLogger(__name__)
 
 
-class Callbacks(interfaces_plugins.PluginInterface):
+class Callbacks(interfaces.plugins.PluginInterface):
     """Lists kernel callbacks and notification routines."""
 
     _version = (1, 0, 0)

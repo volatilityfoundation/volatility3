@@ -11,7 +11,6 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, List, Mapping, Optional
 
 from volatility.framework import constants, interfaces
-from volatility.framework.interfaces import context as interfaces_context
 
 vollog = logging.getLogger(__name__)
 
@@ -87,7 +86,7 @@ class ObjectInterface(metaclass = ABCMeta):
     """A base object required to be the ancestor of every object used in
     volatility."""
 
-    def __init__(self, context: 'interfaces_context.ContextInterface', type_name: str, object_info: 'ObjectInformation',
+    def __init__(self, context: 'interfaces.context.ContextInterface', type_name: str, object_info: 'ObjectInformation',
                  **kwargs) -> None:
         """Constructs an Object adhering to the ObjectInterface.
 
@@ -303,6 +302,6 @@ class Template:
                 return self._vol[attr]
         raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, attr))
 
-    def __call__(self, context: 'interfaces_context.ContextInterface',
+    def __call__(self, context: 'interfaces.context.ContextInterface',
                  object_info: ObjectInformation) -> ObjectInterface:
         """Constructs the object."""

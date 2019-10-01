@@ -4,14 +4,13 @@
 
 import volatility.plugins.mac.tasks as tasks
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
-from volatility.framework import renderers
+from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 
 
-class Maps(interfaces_plugins.PluginInterface):
+class Maps(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
 
     @classmethod
@@ -44,6 +43,6 @@ class Maps(interfaces_plugins.PluginInterface):
                                    ("End", format_hints.Hex), ("Protection", str), ("Map Name", str)],
                                   self._generator(
                                       tasks.Tasks.list_tasks(self.context,
-                                                               self.config['primary'],
-                                                               self.config['darwin'],
-                                                               filter_func = filter_func)))
+                                                             self.config['primary'],
+                                                             self.config['darwin'],
+                                                             filter_func = filter_func)))

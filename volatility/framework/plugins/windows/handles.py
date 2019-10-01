@@ -7,7 +7,6 @@ from typing import List, Optional, Dict
 
 import volatility.plugins.windows.pslist as pslist
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import constants, exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -23,7 +22,7 @@ except ImportError:
     has_capstone = False
 
 
-class Handles(interfaces_plugins.PluginInterface):
+class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
 
     def __init__(self, *args, **kwargs):

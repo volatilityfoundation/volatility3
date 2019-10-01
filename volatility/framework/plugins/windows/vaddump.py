@@ -8,7 +8,6 @@ from typing import List
 import volatility.plugins.windows.pslist as pslist
 import volatility.plugins.windows.vadinfo as vadinfo
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -16,7 +15,7 @@ from volatility.framework.objects import utility
 vollog = logging.getLogger(__name__)
 
 
-class VadDump(interfaces_plugins.PluginInterface):
+class VadDump(interfaces.plugins.PluginInterface):
     """Dumps process memory ranges."""
 
     @classmethod
@@ -54,7 +53,7 @@ class VadDump(interfaces_plugins.PluginInterface):
 
             for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):
                 try:
-                    filedata = interfaces_plugins.FileInterface("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
+                    filedata = interfaces.plugins.FileInterface("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
                         proc.UniqueProcessId, vad.get_start(), vad.get_end()))
 
                     offset = vad.get_start()

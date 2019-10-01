@@ -4,8 +4,6 @@
 
 from typing import List
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
-import volatility.framework.interfaces.renderers as interfaces_renderers
 import volatility.plugins.linux.pslist as pslist
 from volatility.framework import constants, interfaces
 from volatility.framework import renderers
@@ -14,7 +12,7 @@ from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 
 
-class Malfind(interfaces_plugins.PluginInterface):
+class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
 
     @classmethod
@@ -57,7 +55,7 @@ class Malfind(interfaces_plugins.PluginInterface):
                 else:
                     architecture = "intel64"
 
-                disasm = interfaces_renderers.Disassembly(data, vma.vm_start, architecture)
+                disasm = interfaces.renderers.Disassembly(data, vma.vm_start, architecture)
 
                 yield (0, (task.pid, process_name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end),
                            vma.get_protection(), format_hints.HexBytes(data), disasm))
@@ -67,7 +65,7 @@ class Malfind(interfaces_plugins.PluginInterface):
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
                                    ("End", format_hints.Hex), ("Protection", str), ("Hexdump", format_hints.HexBytes),
-                                   ("Disasm", interfaces_renderers.Disassembly)],
+                                   ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
                                                                self.config['primary'],

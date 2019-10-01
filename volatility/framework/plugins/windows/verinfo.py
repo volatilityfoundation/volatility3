@@ -6,9 +6,9 @@ import io
 import logging
 from typing import Generator, List, Tuple, Union
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
 import volatility.plugins.windows.moddump as moddump
 import volatility.plugins.windows.modules as modules
+
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
@@ -25,7 +25,7 @@ except ImportError:
     raise
 
 
-class VerInfo(interfaces_plugins.PluginInterface):
+class VerInfo(interfaces.plugins.PluginInterface):
     """Lists version information from PE files."""
 
     @classmethod

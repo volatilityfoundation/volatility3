@@ -4,14 +4,13 @@
 
 from typing import List
 
-import volatility.framework.interfaces.plugins as interfaces_plugins
 from volatility.framework import constants, exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.plugins.windows import pslist
 
 
-class CmdLine(interfaces_plugins.PluginInterface):
+class CmdLine(interfaces.plugins.PluginInterface):
     """Lists process command line arguments."""
 
     @classmethod
