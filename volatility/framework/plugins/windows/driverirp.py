@@ -2,9 +2,8 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import constants
-from volatility.framework import renderers, exceptions
+from volatility.framework import renderers, exceptions, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import ssdt, driverscan
@@ -20,7 +19,7 @@ MAJOR_FUNCTIONS = [
 ]
 
 
-class DriverIrp(plugins.PluginInterface):
+class DriverIrp(interfaces.plugins.PluginInterface):
     """List IRPs for drivers in a particular windows memory image."""
 
     @classmethod

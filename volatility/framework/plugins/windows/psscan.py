@@ -5,15 +5,14 @@
 import datetime
 from typing import Iterable
 
-import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins import timeliner
-import volatility.plugins.windows.poolscanner as poolscanner
+from volatility.plugins.windows import poolscanner
 
 
-class PsScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
+class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image."""
 
     @classmethod

@@ -9,7 +9,6 @@ from collections import abc
 from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
 
 from volatility.framework import interfaces
-from volatility.framework.interfaces.objects import ObjectInformation
 from volatility.framework.objects import templates, utility
 
 vollog = logging.getLogger(__name__)
@@ -132,7 +131,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
-                    object_info: ObjectInformation) -> TUnion[int, float, bool, bytes, str]:
+                    object_info: interfaces.objects.ObjectInformation) -> TUnion[int, float, bool, bytes, str]:
         data = context.layers.read(object_info.layer_name, object_info.offset, data_format.length)
         return convert_data_to_value(data, cls._struct_type, data_format)
 
@@ -270,7 +269,7 @@ class Pointer(Integer):
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
-                    object_info: ObjectInformation) -> Any:
+                    object_info: interfaces.objects.ObjectInformation) -> Any:
         """Ensure that pointer values always fall within the domain of the
         layer they're constructed on.
 
@@ -560,10 +559,11 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
             return_list = False
             series = [series]
         for index in series:
-            object_info = ObjectInformation(layer_name = self.vol.layer_name,
-                                            offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
-                                            parent = self,
-                                            native_layer_name = self.vol.native_layer_name)
+            object_info = interfaces.objects.ObjectInformation(
+                layer_name = self.vol.layer_name,
+                offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
+                parent = self,
+                native_layer_name = self.vol.native_layer_name)
             result += [self.vol.subtype(context = self._context, object_info = object_info)]
         if not return_list:
             return result[0]

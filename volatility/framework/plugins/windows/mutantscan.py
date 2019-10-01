@@ -6,13 +6,12 @@ from typing import Iterable
 
 import volatility.plugins.windows.poolscanner as poolscanner
 
-import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 
 
-class MutantScan(plugins.PluginInterface):
+class MutantScan(interfaces.plugins.PluginInterface):
     """Scans for mutexes present in a particular windows memory image."""
 
     @classmethod

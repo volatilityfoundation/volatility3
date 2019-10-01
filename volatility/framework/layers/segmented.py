@@ -1,7 +1,6 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import functools
 from abc import ABCMeta, abstractmethod
 from bisect import bisect_right
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -19,7 +18,7 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
     """
 
     def __init__(self,
-                 context: interfaces.configuration.ContextInterface,
+                 context: interfaces.context.ContextInterface,
                  config_path: str,
                  name: str,
                  metadata: Optional[Dict[str, Any]] = None) -> None:

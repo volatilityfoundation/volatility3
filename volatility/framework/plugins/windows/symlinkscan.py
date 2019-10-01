@@ -2,17 +2,17 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from typing import Iterable
 import datetime
-import volatility.framework.interfaces.plugins as plugins
-from volatility.framework import renderers, interfaces, exceptions
+from typing import Iterable
+
+from volatility.framework import renderers, exceptions, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-import volatility.plugins.windows.poolscanner as poolscanner
 from volatility.plugins import timeliner
+from volatility.plugins.windows import poolscanner
 
 
-class SymlinkScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
+class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for links present in a particular windows memory image."""
 
     @classmethod
@@ -26,9 +26,9 @@ class SymlinkScan(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def scan_symlinks(cls,
-                     context: interfaces.context.ContextInterface,
-                     layer_name: str,
-                     symbol_table: str) -> \
+                      context: interfaces.context.ContextInterface,
+                      layer_name: str,
+                      symbol_table: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Scans for links using the poolscanner module and constraints.
 

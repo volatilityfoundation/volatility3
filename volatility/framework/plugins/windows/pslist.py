@@ -5,7 +5,6 @@
 import datetime
 from typing import Callable, Iterable, List
 
-import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -13,7 +12,7 @@ from volatility.framework.renderers import format_hints
 from volatility.plugins import timeliner
 
 
-class PsList(plugins.PluginInterface, timeliner.TimeLinerInterface):
+class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular windows memory image."""
 
     _version = (1, 0, 0)

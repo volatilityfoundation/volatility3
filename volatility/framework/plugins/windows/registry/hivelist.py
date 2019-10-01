@@ -4,7 +4,6 @@
 import logging
 from typing import Iterator, List, Tuple, Iterable, Optional
 
-import volatility.framework.interfaces.plugins as plugins
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import registry
@@ -13,7 +12,7 @@ from volatility.framework.renderers import format_hints
 vollog = logging.getLogger(__name__)
 
 
-class HiveList(plugins.PluginInterface):
+class HiveList(interfaces.plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image."""
 
     _version = (1, 0, 0)

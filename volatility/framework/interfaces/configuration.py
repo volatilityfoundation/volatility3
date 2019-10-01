@@ -26,7 +26,6 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, ClassVar, Dict, Generator, List, Optional, Type, Union
 
 from volatility.framework import constants, interfaces
-from volatility.framework.interfaces.context import ContextInterface
 
 CONFIG_SEPARATOR = "."
 """Use to specify the separator between configuration hierarchies"""
@@ -342,7 +341,9 @@ class RequirementInterface(metaclass = ABCMeta):
         """Sets the optional value for a requirement."""
         self._optional = bool(value)
 
-    def config_value(self, context: ContextInterface, config_path: str,
+    def config_value(self,
+                     context: 'interfaces.context.ContextInterface',
+                     config_path: str,
                      default: ConfigSimpleType = None) -> ConfigSimpleType:
         """Returns the value for this Requirement from its config path.
 
@@ -376,7 +377,8 @@ class RequirementInterface(metaclass = ABCMeta):
         """
         del self._requirements[requirement.name]
 
-    def unsatisfied_children(self, context: ContextInterface, config_path: str) -> Dict[str, 'RequirementInterface']:
+    def unsatisfied_children(self, context: 'interfaces.context.ContextInterface',
+                             config_path: str) -> Dict[str, 'RequirementInterface']:
         """Method that will validate all child requirements.
 
         Args:
@@ -395,7 +397,8 @@ class RequirementInterface(metaclass = ABCMeta):
 
     # Validation routines
     @abstractmethod
-    def unsatisfied(self, context: ContextInterface, config_path: str) -> Dict[str, 'RequirementInterface']:
+    def unsatisfied(self, context: 'interfaces.context.ContextInterface',
+                    config_path: str) -> Dict[str, 'RequirementInterface']:
         """Method to validate the value stored at config_path for the
         configuration object against a context.
 
@@ -425,7 +428,8 @@ class SimpleTypeRequirement(RequirementInterface):
         children."""
         raise TypeError("Instance Requirements cannot have subrequirements")
 
-    def unsatisfied(self, context: ContextInterface, config_path: str) -> Dict[str, RequirementInterface]:
+    def unsatisfied(self, context: 'interfaces.context.ContextInterface',
+                    config_path: str) -> Dict[str, RequirementInterface]:
         """Validates the instance requirement based upon its
         `instance_type`."""
         config_path = path_join(config_path, self.name)
@@ -458,7 +462,8 @@ class ClassRequirement(RequirementInterface):
         class name."""
         return self._cls
 
-    def unsatisfied(self, context: ContextInterface, config_path: str) -> Dict[str, RequirementInterface]:
+    def unsatisfied(self, context: 'interfaces.context.ContextInterface',
+                    config_path: str) -> Dict[str, RequirementInterface]:
         """Checks to see if a class can be recovered."""
         config_path = path_join(config_path, self.name)
 
@@ -500,7 +505,7 @@ class ConstructableRequirementInterface(RequirementInterface):
         self._current_class_requirements = set()
 
     @abstractmethod
-    def construct(self, context: ContextInterface, config_path: str) -> None:
+    def construct(self, context: 'interfaces.context.ContextInterface', config_path: str) -> None:
         """Method for constructing within the context any required elements
         from subrequirements.
 
@@ -509,7 +514,7 @@ class ConstructableRequirementInterface(RequirementInterface):
             config_path: The configuration path for the specific instance of this constructable
         """
 
-    def _validate_class(self, context: ContextInterface, config_path: str) -> None:
+    def _validate_class(self, context: 'interfaces.context.ContextInterface', config_path: str) -> None:
         """Method to check if the class Requirement is valid and if so populate
         the other requirements (but no need to validate, since we're invalid
         already)
@@ -532,7 +537,9 @@ class ConstructableRequirementInterface(RequirementInterface):
                     self._current_class_requirements.add(requirement.name)
                     self.add_requirement(requirement)
 
-    def _construct_class(self, context: ContextInterface, config_path: str,
+    def _construct_class(self,
+                         context: 'interfaces.context.ContextInterface',
+                         config_path: str,
                          requirement_dict: Dict[str, object] = None) -> Optional['interfaces.objects.ObjectInterface']:
         """Constructs the class, handing args and the subrequirements as
         parameters to __init__"""
@@ -563,7 +570,8 @@ class ConstructableRequirementInterface(RequirementInterface):
 class ConfigurableRequirementInterface(RequirementInterface):
     """Simple Abstract class to provide build_required_config."""
 
-    def build_configuration(self, context: ContextInterface, config_path: str, value: Any) -> HierarchicalDict:
+    def build_configuration(self, context: 'interfaces.context.ContextInterface', config_path: str,
+                            value: Any) -> HierarchicalDict:
         """Proxies to a ConfigurableInterface if necessary."""
 
 
@@ -571,7 +579,7 @@ class ConfigurableInterface(metaclass = ABCMeta):
     """Class to allow objects to have requirements and read configuration data
     from the context config tree."""
 
-    def __init__(self, context: ContextInterface, config_path: str) -> None:
+    def __init__(self, context: 'interfaces.context.ContextInterface', config_path: str) -> None:
         """Basic initializer that allows configurables to access their own
         config settings."""
         super().__init__()
@@ -580,7 +588,7 @@ class ConfigurableInterface(metaclass = ABCMeta):
         self._config_cache = None  # type: Optional[HierarchicalDict]
 
     @property
-    def context(self) -> ContextInterface:
+    def context(self) -> 'interfaces.context.ContextInterface':
         """The context object that this configurable belongs to/configuration
         is stored in."""
         return self._context
@@ -631,7 +639,8 @@ class ConfigurableInterface(metaclass = ABCMeta):
         return []
 
     @classmethod
-    def unsatisfied(cls, context: ContextInterface, config_path: str) -> Dict[str, RequirementInterface]:
+    def unsatisfied(cls, context: 'interfaces.context.ContextInterface',
+                    config_path: str) -> Dict[str, RequirementInterface]:
         """Returns a list of the names of all unsatisfied requirements.
 
         Since a satisfied set of requirements will return [], it can be used in tests as follows:
@@ -650,7 +659,7 @@ class ConfigurableInterface(metaclass = ABCMeta):
         return result
 
     @classmethod
-    def make_subconfig(cls, context: interfaces.context.ContextInterface, base_config_path: str, **kwargs) -> str:
+    def make_subconfig(cls, context: 'interfaces.context.ContextInterface', base_config_path: str, **kwargs) -> str:
         """Convenience function to allow constructing a new randomly generated
         sub-configuration path, containing each element from kwargs.
 
