@@ -435,7 +435,7 @@ class PoolScanner(plugins.PluginInterface):
                 sub_path = "windows",
                 filename = pool_header_json_filename,
                 table_mapping = {'nt_symbols': symbol_table},
-                class_types = {'_POOL_HEADER': extensions._POOL_HEADER})
+                class_types = {'_POOL_HEADER': extensions.POOL_HEADER})
             module = context.module(new_table_name, layer_name, offset = 0)
         return module
 

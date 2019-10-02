@@ -94,7 +94,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 
     ### Resolution functions
 
-    class _UnresolvedTemplate(objects.templates.ReferenceTemplate):
+    class UnresolvedTemplate(objects.templates.ReferenceTemplate):
         """Class to highlight when missing symbols are present.
 
         This class is identical to a reference template, but differentiable by its classname.
@@ -150,7 +150,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
                                 self._resolved[child.vol.type_name] = self._weak_resolve(
                                     SymbolType.TYPE, child.vol.type_name)
                             except exceptions.SymbolError:
-                                self._resolved[child.vol.type_name] = self._UnresolvedTemplate(child.vol.type_name)
+                                self._resolved[child.vol.type_name] = self.UnresolvedTemplate(child.vol.type_name)
                         # Stash the replacement
                         replacements.add((traverser, child))
                     elif child.children:
