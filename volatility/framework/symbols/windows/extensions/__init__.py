@@ -19,7 +19,7 @@ vollog = logging.getLogger(__name__)
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
 
-class _POOL_HEADER(objects.StructType):
+class POOL_HEADER(objects.StructType):
     """A kernel pool allocation header.
 
     Exists at the base of the allocation and provides a tag that we can
@@ -190,7 +190,7 @@ class _POOL_HEADER(objects.StructType):
         return headers, sizes
 
 
-class _KSYSTEM_TIME(objects.StructType):
+class KSYSTEM_TIME(objects.StructType):
     """A system time structure that stores a high and low part."""
 
     def get_time(self):
@@ -198,7 +198,7 @@ class _KSYSTEM_TIME(objects.StructType):
         return conversion.wintime_to_datetime(wintime)
 
 
-class _MMVAD_SHORT(objects.StructType):
+class MMVAD_SHORT(objects.StructType):
     """A class that represents process virtual memory ranges.
 
     Each instance is a node in a binary tree structure and is pointed to
@@ -430,7 +430,7 @@ class _MMVAD_SHORT(objects.StructType):
         return renderers.NotApplicableValue()
 
 
-class _MMVAD(_MMVAD_SHORT):
+class MMVAD(MMVAD_SHORT):
     """A version of the process virtual memory range structure that contains
     additional fields necessary to map files from disk."""
 
@@ -455,7 +455,7 @@ class _MMVAD(_MMVAD_SHORT):
         return file_name
 
 
-class _EX_FAST_REF(objects.StructType):
+class EX_FAST_REF(objects.StructType):
     """This is a standard Windows structure that stores a pointer to an object
     but also leverages the least significant bits to encode additional details.
 
@@ -484,7 +484,7 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
     """This is used as a "mixin" that provides all kernel executive objects
     with a means of finding their own object header."""
 
-    def object_header(self) -> '_OBJECT_HEADER':
+    def object_header(self) -> 'OBJECT_HEADER':
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
@@ -496,7 +496,7 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
                                     native_layer_name = self.vol.native_layer_name)
 
 
-class _DEVICE_OBJECT(objects.StructType, ExecutiveObject):
+class DEVICE_OBJECT(objects.StructType, ExecutiveObject):
     """A class for kernel device objects."""
 
     def get_device_name(self) -> str:
@@ -504,7 +504,7 @@ class _DEVICE_OBJECT(objects.StructType, ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
 
-class _DRIVER_OBJECT(objects.StructType, ExecutiveObject):
+class DRIVER_OBJECT(objects.StructType, ExecutiveObject):
     """A class for kernel driver objects."""
 
     def get_driver_name(self) -> str:
@@ -516,7 +516,7 @@ class _DRIVER_OBJECT(objects.StructType, ExecutiveObject):
         return True
 
 
-class _OBJECT_SYMBOLIC_LINK(objects.StructType, ExecutiveObject):
+class OBJECT_SYMBOLIC_LINK(objects.StructType, ExecutiveObject):
     """A class for kernel link objects."""
 
     def get_link_name(self) -> str:
@@ -531,7 +531,7 @@ class _OBJECT_SYMBOLIC_LINK(objects.StructType, ExecutiveObject):
         return conversion.wintime_to_datetime(self.CreationTime.QuadPart)
 
 
-class _FILE_OBJECT(objects.StructType, ExecutiveObject):
+class FILE_OBJECT(objects.StructType, ExecutiveObject):
     """A class for windows file objects."""
 
     def is_valid(self) -> bool:
@@ -552,7 +552,7 @@ class _FILE_OBJECT(objects.StructType, ExecutiveObject):
         return name
 
 
-class _KMUTANT(objects.StructType, ExecutiveObject):
+class KMUTANT(objects.StructType, ExecutiveObject):
     """A class for windows mutant objects."""
 
     def is_valid(self) -> bool:
@@ -565,7 +565,7 @@ class _KMUTANT(objects.StructType, ExecutiveObject):
         return header.NameInfo.Name.String  # type: ignore
 
 
-class _OBJECT_HEADER(objects.StructType):
+class OBJECT_HEADER(objects.StructType):
     """A class for the headers for executive kernel objects, which contains
     quota information, ownership details, naming data, and ACLs."""
 
@@ -642,7 +642,7 @@ class _OBJECT_HEADER(objects.StructType):
         return header
 
 
-class _ETHREAD(objects.StructType):
+class ETHREAD(objects.StructType):
     """A class for executive thread objects."""
 
     def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
@@ -650,7 +650,7 @@ class _ETHREAD(objects.StructType):
         return self.ThreadsProcess.dereference(kernel_layer)
 
 
-class _UNICODE_STRING(objects.StructType):
+class UNICODE_STRING(objects.StructType):
     """A class for Windows unicode string structures."""
 
     def get_string(self) -> interfaces.objects.ObjectInterface:
@@ -665,7 +665,7 @@ class _UNICODE_STRING(objects.StructType):
     String = property(get_string)
 
 
-class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
+class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
     """A class for executive kernel processes objects."""
 
     def is_valid(self) -> bool:
@@ -823,7 +823,7 @@ class _EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
             return self.VadRoot.dereference().cast("_MMVAD")
 
 
-class _LIST_ENTRY(objects.StructType, collections.abc.Iterable):
+class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
     """A class for double-linked lists on Windows."""
 
     def to_list(self,

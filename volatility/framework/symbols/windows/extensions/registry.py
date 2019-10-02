@@ -62,7 +62,7 @@ class RegKeyFlags(enum.IntEnum):
     KEY_VIRTUAL_STORE = 0x200
 
 
-class _HMAP_ENTRY(objects.StructType):
+class HMAP_ENTRY(objects.StructType):
 
     def get_block_offset(self) -> int:
         try:
@@ -71,7 +71,7 @@ class _HMAP_ENTRY(objects.StructType):
             return self.BlockAddress
 
 
-class _CMHIVE(objects.StructType):
+class CMHIVE(objects.StructType):
 
     def get_name(self) -> Optional[interfaces.objects.ObjectInterface]:
         """Determine a name for the hive.
@@ -92,7 +92,7 @@ class _CMHIVE(objects.StructType):
     name = property(get_name)
 
 
-class _CM_KEY_BODY(objects.StructType):
+class CM_KEY_BODY(objects.StructType):
     """This represents an open handle to a registry key and is not tied to the
     registry hive file format on disk."""
 
@@ -127,7 +127,7 @@ class _CM_KEY_BODY(objects.StructType):
         return "\\".join(reversed(output))
 
 
-class _CM_KEY_NODE(objects.StructType):
+class CM_KEY_NODE(objects.StructType):
     """Extension to allow traversal of registry keys."""
 
     def get_volatile(self) -> bool:
@@ -220,7 +220,7 @@ class _CM_KEY_NODE(objects.StructType):
         return reg.get_node(self.Parent).get_key_path() + '\\' + self.get_name()
 
 
-class _CM_KEY_VALUE(objects.StructType):
+class CM_KEY_VALUE(objects.StructType):
     """Extensions to extract data from CM_KEY_VALUE nodes."""
 
     def get_name(self) -> interfaces.objects.ObjectInterface:
