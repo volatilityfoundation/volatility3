@@ -3,14 +3,12 @@
 #
 from typing import Iterable, Tuple
 
-import volatility.plugins.windows.pslist as pslist
-import volatility.plugins.windows.vadinfo as vadinfo
-
 from volatility.framework import interfaces, symbols
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
+from volatility.plugins.windows import pslist, vadinfo
 
 
 class Malfind(interfaces.plugins.PluginInterface):
@@ -26,7 +24,9 @@ class Malfind(interfaces.plugins.PluginInterface):
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
-                                        optional = True)
+                                        optional = True),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'vadinfo', plugin = vadinfo.VadInfo, version = (1, 0, 0)),
         ]
 
     @classmethod

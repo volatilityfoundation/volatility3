@@ -6,8 +6,6 @@ import enum
 import logging
 from typing import Dict, Generator, List, Optional, Tuple, Callable
 
-import volatility.plugins.windows.handles as handles
-
 from volatility.framework import constants, interfaces, renderers, exceptions, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins, configuration
@@ -15,6 +13,7 @@ from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
+from volatility.plugins.windows import handles
 
 vollog = logging.getLogger(__name__)
 
@@ -188,7 +187,8 @@ class PoolScanner(plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'handles', plugin = handles.Handles, version = (1, 0, 0)),
         ]
 
     is_windows_10 = os_distinguisher(version_check = lambda x: x >= (10, 0),

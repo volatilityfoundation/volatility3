@@ -10,7 +10,6 @@ from volatility.framework import contexts
 from volatility.framework import exceptions, symbols
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.constants import windows as windows_constants
 from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import modules
@@ -59,7 +58,7 @@ class SSDT(plugins.PluginInterface):
             module_name = os.path.splitext(module_name_with_ext)[0]
 
             symbol_table_name = None
-            if module_name in windows_constants.KERNEL_MODULE_NAMES:
+            if module_name in constants.windows.KERNEL_MODULE_NAMES:
                 symbol_table_name = symbol_table
 
             context_module = contexts.SizedModule(context,

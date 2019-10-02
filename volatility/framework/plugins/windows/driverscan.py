@@ -4,11 +4,10 @@
 
 from typing import Iterable
 
-import volatility.plugins.windows.poolscanner as poolscanner
-
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
+from volatility.plugins.windows import poolscanner
 
 
 class DriverScan(interfaces.plugins.PluginInterface):
@@ -23,6 +22,7 @@ class DriverScan(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
         ]
 
     @classmethod

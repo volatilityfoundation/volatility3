@@ -4,12 +4,12 @@
 
 from typing import List
 
-import volatility.plugins.linux.pslist as pslist
 from volatility.framework import constants, interfaces
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
+from volatility.plugins.linux import pslist
 
 
 class Malfind(interfaces.plugins.PluginInterface):
@@ -21,7 +21,8 @@ class Malfind(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols")
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
         ]
 
     def _list_injections(self, task):

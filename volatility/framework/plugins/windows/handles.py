@@ -5,12 +5,11 @@
 import logging
 from typing import List, Optional, Dict
 
-import volatility.plugins.windows.pslist as pslist
-
 from volatility.framework import constants, exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
+from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -24,6 +23,8 @@ except ImportError:
 
 class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
+
+    _version = (1, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -42,7 +43,8 @@ class Handles(interfaces.plugins.PluginInterface):
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
-                                        optional = True)
+                                        optional = True),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
 
     def _decode_pointer(self, value, magic):

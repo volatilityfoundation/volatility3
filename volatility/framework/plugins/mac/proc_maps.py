@@ -2,12 +2,11 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import volatility.plugins.mac.tasks as tasks
-
 from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
+from volatility.plugins.mac import tasks
 
 
 class Maps(interfaces.plugins.PluginInterface):

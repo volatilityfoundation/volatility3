@@ -6,15 +6,12 @@ import io
 import logging
 from typing import Generator, List, Tuple, Union
 
-import volatility.plugins.windows.moddump as moddump
-import volatility.plugins.windows.modules as modules
-
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
-from volatility.plugins.windows import pslist
+from volatility.plugins.windows import pslist, moddump, modules
 
 vollog = logging.getLogger(__name__)
 
@@ -34,6 +31,8 @@ class VerInfo(interfaces.plugins.PluginInterface):
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'moddump', plugin = moddump.ModDump, version = (1, 0, 0)),
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),

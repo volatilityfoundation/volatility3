@@ -5,12 +5,11 @@
 import logging
 from typing import Callable, List, Generator, Iterable
 
-import volatility.plugins.windows.pslist as pslist
-
 from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
+from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -34,6 +33,8 @@ winnt_protections = {
 class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
+    _version = (1, 0, 0)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._protect_values = None
@@ -53,7 +54,8 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                             optional = True),
                 requirements.IntRequirement(
                     name = 'pid', description = "Process ID to include (all other processes are excluded)",
-                    optional = True)
+                    optional = True),
+                requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
                 ]
 
     @classmethod

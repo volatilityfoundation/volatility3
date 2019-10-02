@@ -5,12 +5,10 @@
 import logging
 from typing import List
 
-import volatility.plugins.windows.pslist as pslist
-import volatility.plugins.windows.vadinfo as vadinfo
-
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
+from volatility.plugins.windows import pslist, vadinfo
 
 vollog = logging.getLogger(__name__)
 
@@ -33,7 +31,9 @@ class VadDump(interfaces.plugins.PluginInterface):
                                             optional = True),
                 requirements.IntRequirement(
                     name = 'pid', description = "Process ID to include (all other processes are excluded)",
-                    optional = True)
+                    optional = True),
+                requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+                requirements.PluginRequirement(name = 'vadinfo', plugin = vadinfo.VadInfo, version = (1, 0, 0)),
                 ]
 
     def _generator(self, procs):

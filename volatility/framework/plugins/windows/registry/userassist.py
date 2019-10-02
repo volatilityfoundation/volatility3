@@ -9,14 +9,13 @@ import logging
 import os
 from typing import Any, List, Tuple, Generator
 
-import volatility.plugins.windows.registry.hivelist as hivelist
-
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.layers.physical import BufferDataLayer
 from volatility.framework.layers.registry import RegistryHive
 from volatility.framework.renderers import format_hints, conversion
 from volatility.framework.symbols import intermed
+from volatility.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
 

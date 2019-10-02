@@ -20,6 +20,8 @@ vollog = logging.getLogger(__name__)
 class ModDump(interfaces.plugins.PluginInterface):
     """Dumps kernel modules."""
 
+    _version = (1, 0, 0)
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Reuse the requirements from the plugins we use

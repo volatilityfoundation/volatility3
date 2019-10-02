@@ -2,14 +2,13 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import volatility.plugins.mac.tasks as tasks
-
 from volatility.framework import constants
 from volatility.framework import interfaces
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
+from volatility.plugins.mac import tasks
 
 
 class Malfind(interfaces.plugins.PluginInterface):
@@ -21,7 +20,8 @@ class Malfind(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Linux kernel symbols")
+            requirements.SymbolTableRequirement(name = "darwin", description = "Linux kernel symbols"),
+            requirements.PluginRequirement(name = 'tasks', plugin = tasks.Tasks, version = (1, 0, 0)),
         ]
 
     def _list_injections(self, task):

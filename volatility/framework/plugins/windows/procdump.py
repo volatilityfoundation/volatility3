@@ -5,13 +5,12 @@
 import logging
 from typing import List
 
-import volatility.plugins.windows.pslist as pslist
-
 from volatility.framework import interfaces, exceptions, constants, renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows.extensions import pe
+from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -29,7 +28,8 @@ class ProcDump(interfaces.plugins.PluginInterface):
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
-                                        optional = True)
+                                        optional = True),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
         ]
 
     def _generator(self, procs):
