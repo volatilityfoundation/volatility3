@@ -7,7 +7,7 @@ Volatility 3 is Open Source.
 
 :doc:`List of plugins <volatility.plugins>`
 
-Here are some guidelines for using volatility 3 effectively:
+Here are some guidelines for using Volatility 3 effectively:
 
 .. toctree::
 

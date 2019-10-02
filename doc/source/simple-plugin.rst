@@ -1,7 +1,7 @@
 How to Write a Simple Plugin
 ============================
 
-This guide will step through how to construct a simple plugin using volatility 3.
+This guide will step through how to construct a simple plugin using Volatility 3.
 
 The example plugin we'll use is :py:class:`~volatility.plugins.windows.dlllist.DllList`, which features the main traits
 of a normal plugin, and reuses other plugins appropriately.
@@ -35,8 +35,11 @@ to be able to run properly.  Any that are defined as optional need not necessari
             return [requirements.TranslationLayerRequirement(name = 'primary',
                                                              description = 'Memory layer for the kernel',
                                                              architectures = ["Intel32", "Intel64"]),
-                    requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows OS"),
-                    requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+                    requirements.SymbolTableRequirement(name = "nt_symbols",
+                                                        description = "Windows kernel symbols"),
+                    requirements.PluginRequirement(name = 'pslist',
+                                                   plugin = pslist.PsList,
+                                                   version = (1, 0, 0)),
                     requirements.IntRequirement(name = 'pid',
                                                 description = "Process ID to include (all other processes are excluded)",
                                                 optional = True)]
@@ -53,7 +56,7 @@ to instantiate the plugin).  At the moment these requirements are fairly straigh
 
 This requirement indicates that the plugin will operate on a single
 :py:class:`TranslationLayer <volatility.framework.interfaces.layers.TranslationLayerInterface>`.  The name of the
-loaded layer will appear in the plugin's configuration under the name `primary`
+loaded layer will appear in the plugin's configuration under the name ``primary``
 
 .. note:: The name itself is dynamic depending on the other layers already present in the Context.  Always use the value
     from the configuration rather than attempting to guess what the layer will be called.
@@ -71,7 +74,8 @@ layers, for example a plugin that carries out some form of difference or statist
 
 ::
 
-    requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows OS"),
+    requirements.SymbolTableRequirement(name = "nt_symbols",
+                                        description = "Windows kernel symbols"),
 
 This requirement specifies the need for a particular
 :py:class:`SymbolTable <volatility.framework.interfaces.symbols.SymbolTableInterface>`
@@ -87,12 +91,14 @@ This requirement is also a Complex Requirement and therefore will not be request
 
 ::
 
-    requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+    requirements.PluginRequirement(name = 'pslist',
+                                   plugin = pslist.PsList,
+                                   version = (1, 0, 0)),
 
 This requirement indicates that the plugin will make use of another plugin's code, and specifies the version requirements
 on that plugin.  The version is specified in terms of Semantic Versioning, meaning that to be compatible, the major
 versions must be identical and the minor version must be equal to or higher than the one provided.  This requirement
-does make use of any data from the configuration, even if it were provided, it is merely a functional check before
+does not make use of any data from the configuration, even if it were provided, it is merely a functional check before
 running the plugin.
 
 ::
@@ -102,7 +108,7 @@ running the plugin.
                                 optional = True)]
 
 The final requirement is a Simple Requirement, populated by an integer.  The description will be presented to the user to
-describe what the value represents.  The optional flag indicates that the plugin can function without the `pid` value
+describe what the value represents.  The optional flag indicates that the plugin can function without the ``pid`` value
 being defined within the configuration tree at all.
 
 Define the `run` method
@@ -132,24 +138,24 @@ that will be output as part of the :py:class:`~volatility.framework.interfaces.r
                                                                                    self.config['nt_symbols'],
                                                                                    filter_func = filter_func)))
 
-In this instance, the plugin constructs a filter (using the PsList plugin's `classmethod` for creating filters).
-It passes checks the plugin's configuration for the `pid` value, and passes it in as a list if it finds it, or None if
+In this instance, the plugin constructs a filter (using the PsList plugin's *classmethod* for creating filters).
+It checks the plugin's configuration for the ``pid`` value, and passes it in as a list if it finds it, or None if
 it does not.  The :py:func:`~volatility.plugins.windows.pslist.PsList.create_pid_filter` method accepts a list of process
-identifiers that are included in the list, if the list is empty all processes are returned.
+identifiers that are included in the list. If the list is empty, all processes are returned.
 
-The next line specifies the columns by their name and type.  The types are simple types (`int`, `str`, `bytes`, `float`, `bool`)
+The next line specifies the columns by their name and type.  The types are simple types (int, str, bytes, float, and bool)
 but can also provide hints as to how the output should be displayed (such as a hexidecimal number, using
 :py:class:`volatility.framework.renderers.format_hints.Hex`).
 This indicates to user interfaces that the value should be displayed in a particular way, but does not guarantee that the value
 will be displayed that way (for example, if it doesn't make sense to do so in a particular interface).
 
-Finally the generator is provided.  The generator accepts a list of processes, which is gathered using a different plugin,
-the :py:class:`~volatility.plugins.windows.pslist.PsList` plugin.  That plugin features a `classmethod`,
-so that other plugins can call it.  As such it, takes all the necessary parameters rather than accessing them
+Finally, the generator is provided.  The generator accepts a list of processes, which is gathered using a different plugin,
+the :py:class:`~volatility.plugins.windows.pslist.PsList` plugin.  That plugin features a *classmethod*,
+so that other plugins can call it.  As such, it takes all the necessary parameters rather than accessing them
 from a configuration.  Since it must be portable code, it takes a context, as well as the layer name,
 symbol table and optionally a filter.  In this instance we unconditionally
-pass it the values from the configuration for the `primary` and `nt_symbols` requirements.  This will generate a list
-of `_EPROCESS` objects, as provided by the :py:class:`~volatility.plugins.windows.pslist.PsList` plugin,
+pass it the values from the configuration for the ``primary`` and ``nt_symbols`` requirements.  This will generate a list
+of :py:class:`~volatility.framework.symbols.windows.extensions.EPROCESS` objects, as provided by the :py:class:`~volatility.plugins.windows.pslist.PsList` plugin,
 and is not covered here but is used as an example for how to share code across plugins
 (both as the provider and the consumer of the shared code).
 
@@ -180,46 +186,46 @@ but it is quite a common model to use.  This is where the main processing for th
                                format_hints.Hex(entry.DllBase), format_hints.Hex(entry.SizeOfImage),
                                BaseDllName, FullDllName))
 
-This iterates through the list of processes and for each one calls the `load_order_modules` method on it.  This provides
+This iterates through the list of processes and for each one calls the :py:meth:`~volatility.framework.symbols.windows.extensions.EPROCESS.load_order_modules` method on it.  This provides
 a list of the loaded modules within the process.
 
-The plugin then defaults the BaseDllName and FullDllName variables to an :py:class:`~volatility.framework.renderers.UnreadableValue`,
+The plugin then defaults the ``BaseDllName`` and ``FullDllName`` variables to an :py:class:`~volatility.framework.renderers.UnreadableValue`,
 which is a way of indicating to the user interface that the value couldn't be read for some reason (but that it isn't fatal).
 There are currently four different reasons a value may be unreadable:
 
-* Unreadble: values which are empty because the data cannot be read
-* Unparsable: values which are empty because the data cannot be interpreted correctly
-* NotApplicable: values which are empty because they don't make sense for this particular entry
-* NotAvailable: values which cannot be provided now (but might in a future run, via new symbols or an updated plugin)
+* **Unreadble**: values which are empty because the data cannot be read
+* **Unparsable**: values which are empty because the data cannot be interpreted correctly
+* **NotApplicable**: values which are empty because they don't make sense for this particular entry
+* **NotAvailable**: values which cannot be provided now (but might in a future run, via new symbols or an updated plugin)
 
-This is a safety provision to ensure that the data returned by the volatility library is accurate and describes why
+This is a safety provision to ensure that the data returned by the Volatility library is accurate and describes why
 information may not be provided.
 
-The plugin then takes the process's BaseDllName value, and calls :py:func:`get_string()` on it.  All structure attributes
+The plugin then takes the process's ``BaseDllName`` value, and calls :py:meth:`~volatility.framework.symbols.windows.extensions.UNICODE_STRING.get_string` on it.  All structure attributes,
 as defined by the symbols, are directly accessible and use the case-style of the symbol library it came from (in Windows,
-attributes are CamelCase), such as `entry.BaseDllName` in this instance.  Any attribtues not defined by the symbol but added
-by volatility extensions cannot be properties (in case they overlap with the attributes defined in the symbol libraries)
-and are therefore always methods and prepended with `get_`, in this example :py:func:`BaseDllName.get_string()`.
+attributes are CamelCase), such as ``entry.BaseDllName`` in this instance.  Any attribtues not defined by the symbol but added
+by Volatility extensions cannot be properties (in case they overlap with the attributes defined in the symbol libraries)
+and are therefore always methods and prepended with ``get_``, in this example ``BaseDllName.get_string()``.
 
-Finally, `FullDllName` is populated.  These operations read from memory, and as such, the memory image may be unable to
-read the data at a particular offset.  This will cause an exception to be thrown.  In volatility 3, exceptions are thrown
+Finally, ``FullDllName`` is populated.  These operations read from memory, and as such, the memory image may be unable to
+read the data at a particular offset.  This will cause an exception to be thrown.  In Volatility 3, exceptions are thrown
 as a means of communicating when something exceptional happens.  It is the responsibility of the plugin developer to
 appropriately catch and handle any non-fatal exceptions and otherwise allow the exception to be thrown by the user interface.
 
 In this instance, the :py:class:`~volatility.framework.exceptions.InvalidAddressException` class is caught, which is thrown
-by any layer which cannot access an offset requested of it.  Since we have already populated both values with `UnreadableValue`
+by any layer which cannot access an offset requested of it.  Since we have already populated both values with ``UnreadableValue``
 we do not need to write code for the exception handler.
 
 Finally, we yield the record in the format required by the :py:class:`~volatility.framework.interfaces.renderers.TreeGrid`,
 a tuple, listing the indentation level (for trees) and then the list of values for each column.
-This plugin demonstrates casting a value `ImageFileName` to ensure it's returned
-as a `string` with a specific maximum length, rather than its original type (potentially an array of characters, etc).
-This is carried out using the `cast` method which takes a type (either a native type, such as `string` or `pointer`, or a
+This plugin demonstrates casting a value ``ImageFileName`` to ensure it's returned
+as a string with a specific maximum length, rather than its original type (potentially an array of characters, etc).
+This is carried out using the :py:meth:`~volatility.framework.interfaces.objects.ObjectInterface.cast` method which takes a type (either a native type, such as string or pointer, or a
 structure type defined in a :py:class:`SymbolTable <volatility.framework.interfaces.symbols.SymbolTableInterface>`
-such as `<table>!_UNICODE`) and the parameters to that type.
+such as ``<table>!_UNICODE``) and the parameters to that type.
 
-Since the cast value must populate a string typed column, it had to be a python string (such as being cast to the native
-type `string`) and could not have been a special Structure such as `_UNICODE`.  For the format hint columns, the format
+Since the cast value must populate a string typed column, it had to be a Python string (such as being cast to the native
+type string) and could not have been a special Structure such as ``_UNICODE``.  For the format hint columns, the format
 hint type must be used to ensure the error checking does not fail.
 
 
