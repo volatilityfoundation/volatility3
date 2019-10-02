@@ -15,6 +15,7 @@ Here are some guidelines for using volatility 3 effectively:
     simple-plugin
     vol2to3
     complex-plugin
+    symbol-tables
 
 Python Packages
 ===============
