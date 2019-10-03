@@ -16,6 +16,7 @@ vollog = logging.getLogger(__name__)
 
 
 class Strings(interfaces.plugins.PluginInterface):
+    """Reads output from the strings command and indicates which process(es) each string belongs to."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

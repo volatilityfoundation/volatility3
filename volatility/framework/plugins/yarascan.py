@@ -34,8 +34,7 @@ class YaraScanner(interfaces.layers.ScannerInterface):
 
 
 class YaraScan(plugins.PluginInterface):
-    """Runs all relevant plugins that provide time related information and
-    orders the results by time."""
+    """Scans memory using yara rules (string or file)."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
