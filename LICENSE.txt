@@ -1,5 +1,5 @@
 Volatility Software License
-Version 1.0 dated September 12, 2019.
+Version 1.0 dated October 3, 2019.
 This license covers the Volatility software, Copyright 2019 Volatility Foundation. 
 
 Software
@@ -26,8 +26,8 @@ No contributor can revoke this license.
 Copyleft
 If you make any Additions available to others, such as by providing copies of them or providing access to them over the Internet, you must make them publicly available, according to this paragraph.  "Additions" includes changes or additions to the software, and any content or materials, including any training materials, you create that contain any portion of the software. "Additions" also includes any translations or ports of the software. "Additions" also includes any software designed to execute the software and parse its results, such as a wrapper written for the software, but does not include shell or execution menu software designed to execute software generally. When this license requires you to make Additions available:
 
-- You must publish all source code for software under this license, in the preferred form for making changes, through a freely accessible distribution system widely used for similar source code, so the developer and others can find and copy it. 
-- You must publish all data or content, in a format customarily used to make changes to it, through a freely accessible distribution system, so others can find and copy it. You may do so under the Creative Commons Zero Public Domain Dedication, or this license. 
+- You must publish all source code for software under this license, in the preferred form for making changes, through a freely accessible distribution system widely used for similar source code, so the developer and others can find and copy it.
+- You must publish all data or content under this license, in a format customarily used to make changes to it, through a freely accessible distribution system, so the developer and others can find and copy it. 
 - You are responsible to ensure you have rights in Additions necessary to comply with this section.
 
 Contributing
