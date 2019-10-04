@@ -17,7 +17,8 @@ Symbol table JSON files live, by default, under the :file:`volatility/symbols`, 
 usually be set within the user interface.
 
 These files can also be compressed into ZIP files, which volatility will process in order to locate symbol files.
-Inside the ZIP file, the directory structure should match the uncompressed directory, starting :file:`/symbols/<os>/`.
+The ZIP file must be named after the appropriate operating system (such as `linux.zip`, `mac.zip` or `windows.zip`).
+Inside the ZIP file, the directory structure should match the uncompressed operating system directory.
 
 Windows symbol tables
 ---------------------
