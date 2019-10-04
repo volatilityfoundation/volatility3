@@ -1,6 +1,6 @@
 Volatility Software License
 Version 1.0 dated October 3, 2019.
-This license covers the Volatility software, Copyright 2019 Volatility Foundation. 
+This license covers the Volatility software, Copyright 2019 Volatility Foundation.
 
 Software
 The software referred to in this license includes the software named above, and any data (such as operating system profiles or configuration information), and documentation provided with the software.
@@ -27,7 +27,7 @@ Copyleft
 If you make any Additions available to others, such as by providing copies of them or providing access to them over the Internet, you must make them publicly available, according to this paragraph.  "Additions" includes changes or additions to the software, and any content or materials, including any training materials, you create that contain any portion of the software. "Additions" also includes any translations or ports of the software. "Additions" also includes any software designed to execute the software and parse its results, such as a wrapper written for the software, but does not include shell or execution menu software designed to execute software generally. When this license requires you to make Additions available:
 
 - You must publish all source code for software under this license, in the preferred form for making changes, through a freely accessible distribution system widely used for similar source code, so the developer and others can find and copy it.
-- You must publish all data or content under this license, in a format customarily used to make changes to it, through a freely accessible distribution system, so the developer and others can find and copy it. 
+- You must publish all data or content under this license, in a format customarily used to make changes to it, through a freely accessible distribution system, so the developer and others can find and copy it.
 - You are responsible to ensure you have rights in Additions necessary to comply with this section.
 
 Contributing
@@ -43,17 +43,4 @@ No Liability
 As far as the law allows, the software comes as is, without any warranty or condition, and no contributor will be liable to anyone for any damages related to this software or this license, under any kind of legal claim.
 
 Versions
-Volatility Foundation is the steward of this license and may publish new versions of this license with new version numbers. You may use the software under the version of this license under which you received the software, or, at your choice, any later version. 
-
-
-
-
-
-
-
-
-
-
-
-
-
+Volatility Foundation is the steward of this license and may publish new versions of this license with new version numbers. You may use the software under the version of this license under which you received the software, or, at your choice, any later version.
