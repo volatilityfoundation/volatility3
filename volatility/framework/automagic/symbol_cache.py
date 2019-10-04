@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import gc
+import json
 import logging
 import os
 import pickle
@@ -109,6 +110,8 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                 banners[banner] = bannerlist
             except exceptions.SymbolError:
                 pass
+            except json.JSONDecodeError:
+                vollog.log(constants.LOGLEVEL_VV, "Caching file {} failed due to JSON error".format(isf_url))
             finally:
                 # Get rid of the loaded file, in case it sits in memory
                 if isf:
