@@ -49,6 +49,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                  progress_callback: constants.ProgressCallback = None) -> Optional[List[str]]:
         """Runs the automagic over the configurable."""
 
+        framework.import_files(sys.modules['volatility.framework.layers'])
+
         # Quick exit if we're not needed
         if not requirement.unsatisfied(context, config_path):
             return None
@@ -104,7 +106,6 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
         stacked_layers = [current_layer_name]
-        framework.import_files(sys.modules['volatility.framework.layers'])
         stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
                            key = lambda x: x.stack_order)
         while stacked:
