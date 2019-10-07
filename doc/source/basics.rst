@@ -32,6 +32,20 @@ the data is stored and that will be returned.
 
 .. note:: Volatility 2 had a similar concept, called address spaces, but these could only stack linearly one on top of another.
 
+Volatility currently supports the following physical formats:
+
+* Buffered data
+* Flat/Raw files
+* LiME files
+* Crashdump files
+* VMware snapshots (vmem and vmss)
+
+It also supports the mappings based on the following architectures:
+
+* Intel (x86)
+* Intel PAE
+* Intel 32e (x86_64)
+
 Templates and Objects
 ---------------------
 
