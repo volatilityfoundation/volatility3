@@ -194,7 +194,7 @@ class TreeGrid(object, metaclass = ABCMeta):
 
     @abstractmethod
     def visit(self,
-              node: TreeNode,
+              node: Optional[TreeNode],
               function: VisitorSignature,
               initial_accumulator: _Type,
               sort_key: ColumnSortKey = None) -> None:
@@ -206,6 +206,8 @@ class TreeGrid(object, metaclass = ABCMeta):
         The order of that the nodes are visited is always depth first, however, the order children are traversed can
         be set based on a sort_key function which should accept a node's values and return something that can be
         sorted to receive the desired order (similar to the sort/sorted key).
+
+        If node is None, then the root node is used.
 
         Args:
             node: The initial node to be visited
