@@ -3,13 +3,15 @@
 #
 
 import datetime
+import json
 import logging
 import random
 import string
 import sys
 from functools import wraps
-from typing import Any, List, Tuple, Dict
+from typing import Any, List, Tuple, Dict, Optional
 
+from volatility.framework.interfaces.renderers import RenderOption
 from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -278,3 +280,57 @@ class PrettyTextRenderer(CLIRenderer):
         outfd.write(format_string.format(*column_titles))
         for (depth, line) in final_output:
             outfd.write(format_string.format("*" * depth, *[line[column] for column in grid.columns]))
+
+
+class JsonRenderer(CLIRenderer):
+    _type_renderers = {
+        format_hints.HexBytes:
+        quoted_optional(hex_bytes_as_text),
+        interfaces.renderers.Disassembly:
+        quoted_optional(display_disassembly),
+        datetime.datetime:
+        lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
+        if not isinstance(x, interfaces.renderers.BaseAbsentValue) else None,
+        'default':
+        lambda x: x
+    }
+
+    name = 'JSON'
+
+    def get_render_options(self) -> List[RenderOption]:
+        pass
+
+    def render(self, grid: interfaces.renderers.TreeGrid):
+        outfd = sys.stdout
+
+        outfd.write("\n")
+        final_output = ({}, [])
+
+        def visitor(
+                node: Optional[interfaces.renderers.TreeNode],
+                accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]],
+        ) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
+            # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
+            acc_map, final_tree = accumulator
+            node_dict = {'__children': []}
+            for column_index in range(len(grid.columns)):
+                column = grid.columns[column_index]
+                renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
+                data = renderer(list(node.values)[column_index])
+                if isinstance(data, interfaces.renderers.BaseAbsentValue):
+                    data = None
+                node_dict[column.name] = data
+            if node.parent:
+                acc_map[node.parent.path]['__children'].append(node_dict)
+            else:
+                final_tree.append(node_dict)
+            acc_map[node.path] = node_dict
+
+            return (acc_map, final_tree)
+
+        if not grid.populated:
+            grid.populate(visitor, final_output)
+        else:
+            grid.visit(node = None, function = visitor, initial_accumulator = final_output)
+
+        outfd.write(json.dumps(final_output[1], indent = 2, sort_keys = True))
