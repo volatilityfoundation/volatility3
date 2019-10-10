@@ -29,8 +29,8 @@ pattern of :file:`<pdb-name>/<GUID>-<AGE>.json` (or any compressed variant) will
 the associated PDB file will be downloaded from Microsoft's Symbol Server and converted into the appropriate JSON
 format, and will be saved in the correct location.
 
-Windows symbol tables can be manually constructed from an appropriate PDB file using a couple of different tools.  The
-first is built into Volatility 3, called :file:`pdbconv.py`.  It can be run from the top-level Volatility path, using the
+Windows symbol tables can be manually constructed from an appropriate PDB file.  The primary tool for doing this
+is built into Volatility 3, called :file:`pdbconv.py`.  It can be run from the top-level Volatility path, using the
 following command:
 
 :command:`PYTHONPATH="." python volatility/framework/symbols/windows/pdbconv.py`
