@@ -86,6 +86,10 @@ please include the following information when filing a bug:
 * The suspected operating system of the memory sample
 * The complete command line you used to run Volatility
 
+For community support, please join us on slack:
+
+https://volatilitycommunity.slack.com/
+
 Contact
 =======
 
