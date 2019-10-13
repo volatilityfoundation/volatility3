@@ -61,6 +61,14 @@ required, but most plugins expect a single sample. Some also
 require/accept other options.  Run "python vol.py <plugin> -h"
 for more information on a particular command.
 
+Documentation
+=============
+
+The framework is documented through doc strings and can be built using sphinx.
+
+The latest generated copy of the documentation can be found at:
+https://volatility3.readthedocs.io/en/latest/
+
 Licensing and Copyright
 =======================
 
