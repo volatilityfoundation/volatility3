@@ -76,7 +76,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
     def run(self):
         """Executes the command line module, taking the system arguments,
         determining the plugin to run and then running it."""
-        sys.stdout.write("Volatility Framework {}\n".format(constants.PACKAGE_VERSION))
+        sys.stdout.write("Volatility 3 Framework {}\n".format(constants.PACKAGE_VERSION))
 
         volatility.framework.require_interface_version(0, 0, 0)
 

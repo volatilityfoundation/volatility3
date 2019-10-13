@@ -21,15 +21,10 @@ from volatility.framework import constants, interfaces
 #     MINOR version when you add functionality in a backwards compatible manner, and
 #     PATCH version when you make backwards compatible bug fixes.
 
-# We use the SemVer 2.0.0 versioning scheme
-MAJOR = 0  # Number of releases of the library with a breaking change
-MINOR = 0  # Number of changes that only add to the interface
-PATCH = 0  # Number of changes that do not change the interface
-
 
 def interface_version():
     """Provides the so version number of the library."""
-    return MAJOR, MINOR, PATCH
+    return constants.VERSION_MAJOR, constants.VERSION_MINOR, constants.VERSION_PATCH
 
 
 vollog = logging.getLogger(__name__)

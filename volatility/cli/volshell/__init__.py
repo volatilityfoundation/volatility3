@@ -40,7 +40,7 @@ class VolShell(cli.CommandLine):
     def run(self):
         """Executes the command line module, taking the system arguments,
         determining the plugin to run and then running it."""
-        sys.stdout.write("Volshell (Volatility Framework) {}\n".format(constants.PACKAGE_VERSION))
+        sys.stdout.write("Volshell (Volatility 3 Framework) {}\n".format(constants.PACKAGE_VERSION))
 
         framework.require_interface_version(0, 0, 0)
 
