@@ -78,7 +78,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         determining the plugin to run and then running it."""
         sys.stdout.write("Volatility 3 Framework {}\n".format(constants.PACKAGE_VERSION))
 
-        volatility.framework.require_interface_version(0, 0, 0)
+        volatility.framework.require_interface_version(1, 0, 0)
 
         renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
 

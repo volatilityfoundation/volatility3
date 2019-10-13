@@ -35,7 +35,7 @@ BANG = "!"
 """Constant used to delimit table names from type names when referring to a symbol"""
 
 # We use the SemVer 2.0.0 versioning scheme
-VERSION_MAJOR = 0  # Number of releases of the library with a breaking change
+VERSION_MAJOR = 1  # Number of releases of the library with a breaking change
 VERSION_MINOR = 0  # Number of changes that only add to the interface
 VERSION_PATCH = 0  # Number of changes that do not change the interface
 VERSION_SUFFIX = "-beta.1"
