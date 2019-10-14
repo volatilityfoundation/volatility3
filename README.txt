@@ -96,7 +96,7 @@ please include the following information when filing a bug:
 
 For community support, please join us on slack:
 
-https://volatilitycommunity.slack.com/
+https://www.volatilityfoundation.org/slack
 
 Contact
 =======
