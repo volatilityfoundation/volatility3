@@ -185,8 +185,9 @@ class Callbacks(interfaces.plugins.PluginInterface):
                                          layer_name = layer_name)
 
         for callback in callback_record.Entry:
-
-            if not context.layers[layer_name].is_valid(callback.CallbackRoutine):
+            try:
+                context.layers[layer_name].is_valid(callback.CallbackRoutine)
+            except exceptions.InvalidAddressException:
                 continue
 
             try:
@@ -227,7 +228,9 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
         for callback in callback_record.Entry:
 
-            if not context.layers[layer_name].is_valid(callback.CallbackRoutine):
+            try:
+                context.layers[layer_name].is_valid(callback.CallbackRoutine)
+            except exceptions.InvalidAddressException:
                 continue
 
             try:
