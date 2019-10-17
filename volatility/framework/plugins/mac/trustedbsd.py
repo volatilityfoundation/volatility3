@@ -17,8 +17,8 @@ from volatility.plugins.mac import lsmod
 vollog = logging.getLogger(__name__)
 
 
-class Check_syscall(plugins.PluginInterface):
-    """Check system call table for hooks."""
+class trustedbsd(plugins.PluginInterface):
+    """Checks for malicious trustedbsd modules"""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -35,7 +35,7 @@ class Check_syscall(plugins.PluginInterface):
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
-        policy_list = kernel.object_from_symbol(symbol_name = "_mac_policy_list").cast("mac_policy_list")
+        policy_list = kernel.object_from_symbol(symbol_name = "mac_policy_list").cast("mac_policy_list")
 
         entries = kernel.object(object_type = "array",
                                 offset = policy_list.entries.dereference().vol.offset,
