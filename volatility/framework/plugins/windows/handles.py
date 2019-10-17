@@ -167,6 +167,11 @@ class Handles(interfaces.plugins.PluginInterface):
             table_addr = ntkrnlmp.get_symbol("ObTypeIndexTable").address
         except exceptions.SymbolError:
             table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
+        
+        trans_layer = context.layers[layer_name] 
+        
+        if not trans_layer.is_valid(kvo + table_addr):
+            return type_map
 
         ptrs = ntkrnlmp.object(object_type = "array",
                                offset = table_addr,
@@ -178,13 +183,17 @@ class Handles(interfaces.plugins.PluginInterface):
             # loop when we encounter the first null entry after that
             if i > 0 and ptr == 0:
                 break
-            objt = ptr.dereference().cast(symbol_table + constants.BANG + "_OBJECT_TYPE")
+            
+            try:
+                objt = ptr.dereference().cast(symbol_table + constants.BANG + "_OBJECT_TYPE")
+            except exceptions.InvalidAddressException:
+                continue
 
             try:
                 type_name = objt.Name.String
             except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
-                           "Cannot access _OBJECT_HEADER.Name at {0:#x}".format(objt.Name.vol.offset))
+                           "Cannot access _OBJECT_HEADER Name at {0:#x}".format(objt.vol.offset))
                 continue
 
             type_map[i] = type_name
@@ -276,28 +285,31 @@ class Handles(interfaces.plugins.PluginInterface):
         type_map = self.get_type_map(context = self.context,
                                      layer_name = self.config["primary"],
                                      symbol_table = self.config["nt_symbols"])
+
         cookie = self.find_cookie(context = self.context,
                                   layer_name = self.config["primary"],
                                   symbol_table = self.config["nt_symbols"])
 
         for proc in procs:
-
             try:
                 object_table = proc.ObjectTable
             except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
-                           "Cannot access _EPROCESS.ObjectType at {0:#x}".format(proc.ObjectTable.vol.offset))
+                           "Cannot access _EPROCESS.ObjectType at {0:#x}".format(proc.vol.offset))
                 continue
 
             process_name = utility.array_to_string(proc.ImageFileName)
 
             for entry in self.handles(object_table):
                 try:
-                    obj_type = entry.get_object_type(type_map, cookie)
+                    self.context.layers[self.config["primary"]].is_valid(entry.vol.offset)
+                except exceptions.InvalidAddressException:
+                    continue                
 
+                try:
+                    obj_type = entry.get_object_type(type_map, cookie)
                     if obj_type == None:
                         continue
-
                     if obj_type == "File":
                         item = entry.Body.cast("_FILE_OBJECT")
                         obj_name = item.file_name_with_device()
