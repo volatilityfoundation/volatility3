@@ -47,8 +47,11 @@ class VadDump(interfaces.plugins.PluginInterface):
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
 
-            # TODO: what kind of exceptions could this raise and what should we do?
-            proc_layer_name = proc.add_process_layer()
+            try:
+                proc_layer_name = proc.add_process_layer()
+            except exceptions.InvalidAddressException:
+                continue
+
             proc_layer = self.context.layers[proc_layer_name]
 
             for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):
@@ -58,6 +61,7 @@ class VadDump(interfaces.plugins.PluginInterface):
 
                     offset = vad.get_start()
                     out_of_range = vad.get_start() + vad.get_end()
+                    print("walking from {:x} to {:x} | {:x}".format(offset, out_of_range, out_of_range-offset))
                     while offset < out_of_range:
                         to_read = min(chunk_size, out_of_range - offset)
                         data = proc_layer.read(offset, to_read, pad = True)

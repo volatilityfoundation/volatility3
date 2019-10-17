@@ -42,8 +42,11 @@ class ProcDump(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
-            # TODO: what kind of exceptions could this raise and what should we do?
-            proc_layer_name = proc.add_process_layer()
+            
+            try:
+                proc_layer_name = proc.add_process_layer()
+            except exceptions.InvalidAddressException:
+                continue
 
             try:
                 peb = self._context.object(self.config["nt_symbols"] + constants.BANG + "_PEB",

@@ -60,7 +60,10 @@ class ModDump(interfaces.plugins.PluginInterface):
                                                  layer_name = layer_name,
                                                  symbol_table = symbol_table,
                                                  filter_func = filter_func):
-            proc_layer_name = proc.add_process_layer()
+            try:
+                proc_layer_name = proc.add_process_layer()
+            except exceptions.InvalidAddressException:
+                continue
 
             try:
                 # create the session space object in the process' own layer.

@@ -95,7 +95,11 @@ class Strings(interfaces.plugins.PluginInterface):
 
             for process in pslist.PsList.list_processes(self.context, self.config['primary'],
                                                         self.config['nt_symbols']):
-                proc_layer_name = process.add_process_layer()
+                try:
+                    proc_layer_name = process.add_process_layer()
+                except exceptions.InvalidAddressException:
+                    continue
+
                 proc_layer = self.context.layers[proc_layer_name]
                 if isinstance(proc_layer, linear.LinearlyMappedLayer):
                     for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):

@@ -123,7 +123,11 @@ class VerInfo(interfaces.plugins.PluginInterface):
 
         # now go through the process and dll lists
         for proc in procs:
-            proc_layer_name = proc.add_process_layer()
+            try:
+                proc_layer_name = proc.add_process_layer()
+            except exceptions.InvalidAddressException:
+                continue            
+
             for entry in proc.load_order_modules():
 
                 try:

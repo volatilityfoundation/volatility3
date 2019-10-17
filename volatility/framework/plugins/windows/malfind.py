@@ -73,8 +73,11 @@ class Malfind(interfaces.plugins.PluginInterface):
         Returns:
             An iterable of VAD instances and the first 64 bytes of data containing in that region
         """
+        try:
+            proc_layer_name = proc.add_process_layer()
+        except exceptions.InvalidAddressException:
+            return
 
-        proc_layer_name = proc.add_process_layer()
         proc_layer = context.layers[proc_layer_name]
 
         for vad in proc.get_vad_root().traverse():

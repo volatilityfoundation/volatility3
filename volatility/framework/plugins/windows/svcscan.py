@@ -131,7 +131,11 @@ class SvcScan(interfaces.plugins.PluginInterface):
                                                  symbol_table = self.config['nt_symbols'],
                                                  filter_func = filter_func):
 
-            proc_layer_name = task.add_process_layer()
+            try:
+                proc_layer_name = task.add_process_layer()
+            except exceptions.InvalidAddressException:
+                continue
+
             layer = self.context.layers[proc_layer_name]
 
             for offset in layer.scan(context = self.context,
