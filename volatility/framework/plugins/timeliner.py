@@ -101,9 +101,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
                     times[timestamp_type] = timestamp
                     self.timeline[(plugin_name, item)] = times
             except Exception:
-                # FIXME: traceback shouldn't be printed directly, but logged instead
-                traceback.print_exc()
                 vollog.log(logging.INFO, "Exception occurred running plugin: {}".format(plugin_name))
+                vollog.log(logging.DEBUG, traceback.format_exc())
 
         for (plugin_name, item) in self.timeline:
             times = self.timeline[(plugin_name, item)]
