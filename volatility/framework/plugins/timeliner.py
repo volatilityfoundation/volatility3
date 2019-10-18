@@ -112,6 +112,20 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 vollog.log(logging.INFO, "Exception occurred running plugin: {}".format(plugin_name))
                 vollog.log(logging.DEBUG, traceback.format_exc())
 
+        # Write out a body file if necessary, at the moment write-bodyfile isn't exposed as a configurable option
+        if self.config.get('write-bodyfile', True):
+            filedata = interfaces.plugins.FileInterface("volatility.body")
+            with io.TextIOWrapper(filedata.data, write_through = True) as fp:
+                for (plugin_name, item) in self.timeline:
+                    times = self.timeline[(plugin_name, item)]
+                    # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
+                    filedata.data.write("|{}: {}||||||{}|{}|{}|{}".format(plugin_name, item,
+                                                                          times.get(TimeLinerType.ACCESSED, ""),
+                                                                          times.get(TimeLinerType.MODIFIED, ""),
+                                                                          times.get(TimeLinerType.CHANGED, ""),
+                                                                          times.get(TimeLinerType.CREATED, "")))
+                self.produce_file(filedata)
+
     def run(self):
         """Isolate each plugin and run it."""
 
