@@ -167,9 +167,9 @@ class Handles(interfaces.plugins.PluginInterface):
             table_addr = ntkrnlmp.get_symbol("ObTypeIndexTable").address
         except exceptions.SymbolError:
             table_addr = ntkrnlmp.get_symbol("ObpObjectTypes").address
-        
-        trans_layer = context.layers[layer_name] 
-        
+
+        trans_layer = context.layers[layer_name]
+
         if not trans_layer.is_valid(kvo + table_addr):
             return type_map
 
@@ -183,13 +183,9 @@ class Handles(interfaces.plugins.PluginInterface):
             # loop when we encounter the first null entry after that
             if i > 0 and ptr == 0:
                 break
-            
-            try:
-                objt = ptr.dereference().cast(symbol_table + constants.BANG + "_OBJECT_TYPE")
-            except exceptions.InvalidAddressException:
-                continue
 
             try:
+                objt = ptr.dereference().cast(symbol_table + constants.BANG + "_OBJECT_TYPE")
                 type_name = objt.Name.String
             except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
@@ -303,10 +299,6 @@ class Handles(interfaces.plugins.PluginInterface):
             for entry in self.handles(object_table):
                 try:
                     self.context.layers[self.config["primary"]].is_valid(entry.vol.offset)
-                except exceptions.InvalidAddressException:
-                    continue                
-
-                try:
                     obj_type = entry.get_object_type(type_map, cookie)
                     if obj_type == None:
                         continue
