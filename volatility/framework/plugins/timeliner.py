@@ -100,20 +100,17 @@ class Timeliner(interfaces.plugins.PluginInterface):
                             plugin_name, item))
                     times[timestamp_type] = timestamp
                     self.timeline[(plugin_name, item)] = times
+                    data = (0, [
+                        plugin_name, item,
+                        times.get(TimeLinerType.CREATED, renderers.NotApplicableValue()),
+                        times.get(TimeLinerType.MODIFIED, renderers.NotApplicableValue()),
+                        times.get(TimeLinerType.ACCESSED, renderers.NotApplicableValue()),
+                        times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())
+                    ])
+                    yield data
             except Exception:
                 vollog.log(logging.INFO, "Exception occurred running plugin: {}".format(plugin_name))
                 vollog.log(logging.DEBUG, traceback.format_exc())
-
-        for (plugin_name, item) in self.timeline:
-            times = self.timeline[(plugin_name, item)]
-            data = (0, [
-                plugin_name, item,
-                times.get(TimeLinerType.CREATED, renderers.NotApplicableValue()),
-                times.get(TimeLinerType.MODIFIED, renderers.NotApplicableValue()),
-                times.get(TimeLinerType.ACCESSED, renderers.NotApplicableValue()),
-                times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())
-            ])
-            yield data
 
     def run(self):
         """Isolate each plugin and run it."""
