@@ -1,20 +1,20 @@
 # Volatility 3: The volatile memory extraction framework
 
-Volatility is the world’s most widely used framework for extracting digital <br>
-artifacts from volatile memory (RAM) samples. The extraction techniques are <br>
-performed completely independent of the system being investigated but offer <br>
-visibility into the runtime state of the system. The framework is intended <br>
-to introduce people to the techniques and complexities associated with <br>
-extracting digital artifacts from volatile memory samples and provide a <br>
-platform for further work into this exciting area of research. <br>
+Volatility is the world’s most widely used framework for extracting digital
+artifacts from volatile memory (RAM) samples. The extraction techniques are
+performed completely independent of the system being investigated but offer
+visibility into the runtime state of the system. The framework is intended
+to introduce people to the techniques and complexities associated with
+extracting digital artifacts from volatile memory samples and provide a
+platform for further work into this exciting area of research.
 <br>
-In 2019, the Volatility Foundation released a complete rewrite of the <br>
-framework, Volatility 3. The project was intended to address many of the <br>
-technical and performance challenges associated with the original <br>
-code base that became apparent over the previous 10 years. Another benefit <br>
-of the rewrite is that Volatility 3 could be released under a custom <br>
-license that was more aligned with the goals of the Volatility community, <br>
-the Volatility Software License (VSL). See the LICENSE file for more details. <br>
+In 2019, the Volatility Foundation released a complete rewrite of the
+framework, Volatility 3. The project was intended to address many of the
+technical and performance challenges associated with the original
+code base that became apparent over the previous 10 years. Another benefit
+of the rewrite is that Volatility 3 could be released under a custom
+license that was more aligned with the goals of the Volatility community,
+the Volatility Software License (VSL). See the LICENSE file for more details.
 
 ## Requirements
 
@@ -47,9 +47,9 @@ Volatility supports that sample type, run
 'python -f <imagepath> windows.info’
 
    Example:
-
+    ```shell
     $ python vol.py —f /home/user/samples/stuxnet.vmem windows.info
-
+    ```
 4. Run some other plugins. The -f or —-single-location is not strictly
 required, but most plugins expect a single sample. Some also
 require/accept other options.  Run "python vol.py <plugin> -h"
@@ -93,7 +93,7 @@ https://www.volatilityfoundation.org/license/vsl-v1.0
 
 If you think you've found a bug, please report it at:
 
-    https://github.com/volatilityfoundation/volatility3/issues
+https://github.com/volatilityfoundation/volatility3/issues
 
 In order to help us solve your issues as quickly as possible,
 please include the following information when filing a bug:
