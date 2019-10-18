@@ -61,7 +61,7 @@ class VadDump(interfaces.plugins.PluginInterface):
 
                     offset = vad.get_start()
                     out_of_range = vad.get_start() + vad.get_end()
-                    print("walking from {:x} to {:x} | {:x}".format(offset, out_of_range, out_of_range-offset))
+                    # print("walking from {:x} to {:x} | {:x}".format(offset, out_of_range, out_of_range-offset))
                     while offset < out_of_range:
                         to_read = min(chunk_size, out_of_range - offset)
                         data = proc_layer.read(offset, to_read, pad = True)
