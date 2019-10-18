@@ -50,7 +50,7 @@ Quick Start
 
 3. To get more information on a Windows memory sample and to make sure
 Volatility supports that sample type, run
-'python -f <imagepath> windows.info’
+'python vol.py -f <imagepath> windows.info’
 
    Example:
 
