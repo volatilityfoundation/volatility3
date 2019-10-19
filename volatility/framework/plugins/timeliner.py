@@ -119,12 +119,34 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 for (plugin_name, item) in self.timeline:
                     times = self.timeline[(plugin_name, item)]
                     # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
-                    filedata.data.write("|{}: {}||||||{}|{}|{}|{}".format(plugin_name, item,
-                                                                          times.get(TimeLinerType.ACCESSED, ""),
-                                                                          times.get(TimeLinerType.MODIFIED, ""),
-                                                                          times.get(TimeLinerType.CHANGED, ""),
-                                                                          times.get(TimeLinerType.CREATED, "")))
+
+                    if self._any_time_present(times):
+                        filedata.data.write(
+                            bytes(
+                                "|{} - {}||||||{}|{}|{}|{}\n".format(
+                                    plugin_name, self._sanitize_body_format(item),
+                                    self._text_format(times.get(TimeLinerType.ACCESSED, "")),
+                                    self._text_format(times.get(TimeLinerType.MODIFIED, "")),
+                                    self._text_format(times.get(TimeLinerType.CHANGED, "")),
+                                    self._text_format(times.get(TimeLinerType.CREATED, ""))), "latin-1"))
                 self.produce_file(filedata)
+
+    def _sanitize_body_format(self, value):
+        return value.replace("|", "_")
+
+    def _any_time_present(self, times):
+        for time in TimeLinerType:
+            if not isinstance(times.get(time, renderers.NotApplicableValue), interfaces.renderers.BaseAbsentValue):
+                return True
+        return False
+
+    def _text_format(self, value):
+        """Formats a value as text, in case it is an AbsentValue"""
+        if isinstance(value, interfaces.renderers.BaseAbsentValue):
+            return ""
+        if isinstance(value, datetime.datetime):
+            return int(value.timestamp())
+        return value
 
     def run(self):
         """Isolate each plugin and run it."""
