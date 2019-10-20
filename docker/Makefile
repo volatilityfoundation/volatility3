@@ -8,7 +8,7 @@ DOCKER_TAG:=latest
 all: build
 
 build:
-	@$(DOCKER_BIN) build $(DOCKER_FLAGS) -t $(DOCKER_REPOSITORY)/pdb2json:$(DOCKER_TAG) ./pdb2json
+	@$(DOCKER_BIN) build $(DOCKER_FLAGS) -t $(DOCKER_REPOSITORY)/pdbconv:$(DOCKER_TAG) ./pdbconv
 	@$(DOCKER_BIN) build $(DOCKER_FLAGS) -t $(DOCKER_REPOSITORY)/volatility:$(DOCKER_TAG) ./volatility
 	@$(DOCKER_BIN) build $(DOCKER_FLAGS) -t $(DOCKER_REPOSITORY)/volshell:$(DOCKER_TAG) ./volshell
 
