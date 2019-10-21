@@ -1,0 +1,323 @@
+{
+  "symbols": {
+  },
+  "user_types": {
+    "Elf64_Ehdr": {
+      "fields": {
+        "e_ident": {
+          "offset": 0,
+          "type": {
+            "count": 16,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "e_type": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_machine": {
+          "offset": 18,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_version": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "e_entry": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "e_phoff": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "e_shoff": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "e_flags": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "e_ehsize": {
+          "offset": 52,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_phentsize": {
+          "offset": 54,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_phnum": {
+          "offset": 56,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_shentsize": {
+          "offset": 58,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_shnum": {
+          "offset": 60,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_shstrndx": {
+          "offset": 62,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 64
+    },
+    "Elf64_Shdr": {
+      "fields": {
+        "sh_name": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_type": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_flags": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "sh_addr": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "sh_offset": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "sh_size": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "sh_link": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_info": {
+          "offset": 44,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_addralign": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "sh_entsize": {
+          "offset": 56,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 64
+    },
+    "Elf64_Phdr": {
+      "fields": {
+        "p_type": {
+          "offset": 0,
+          "type": {
+            "kind": "enum",
+            "name": "PtypeEnum"
+          }
+        },
+        "p_flags": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "p_offset": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "p_vaddr": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "p_paddr": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "p_filesz": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "p_memsz": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "p_align": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 56
+    }
+  },
+  "enums": {
+    "PtypeEnum": {
+      "base": "unsigned long",
+      "constants": {
+        "PT_NULL": 0,
+        "PT_LOAD": 1,
+        "PT_DYNAMIC": 2,
+        "PT_INTERP": 3,
+        "PT_NOTE": 4,
+        "PT_SHLIB": 5,
+        "PT_PHDR": 6,
+        "PT_LOOS": 1610612736,
+        "PT_HIOS": 1879048191,
+        "PT_LOWPROC": 1879048192,
+        "PT_HIPROC": 2147483647
+      },
+      "size": 4
+    }
+  },
+  "base_types": {
+    "unsigned char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": false,
+      "size": 1
+    },
+    "unsigned short": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 2
+    },
+    "long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 4
+    },
+    "char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": true,
+      "size": 1
+    },
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 8
+    },
+    "unsigned long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    }
+  },
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "ikelos-by-hand",
+      "datetime": "2019-10-21T22:52:00"
+    },
+    "format": "6.1.0"
+  }
+}
