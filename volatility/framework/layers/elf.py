@@ -1,13 +1,15 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import logging
 import struct
-from typing import Tuple, Optional
+from typing import Optional
 
 from volatility.framework import exceptions, interfaces, constants
 from volatility.framework.layers import segmented
 from volatility.framework.symbols import intermed
+
+vollog = logging.getLogger(__name__)
 
 
 class ElfFormatException(exceptions.LayerException):
@@ -48,7 +50,7 @@ class Elf64Layer(segmented.SegmentedLayer):
         self._segments = segments
 
     @classmethod
-    def _check_header(cls, base_layer: interfaces.layers.DataLayerInterface, offset: int = 0) -> Tuple[int, int]:
+    def _check_header(cls, base_layer: interfaces.layers.DataLayerInterface, offset: int = 0) -> bool:
         try:
             header_data = base_layer.read(offset, cls._header_struct.size)
         except exceptions.InvalidAddressException:
@@ -59,9 +61,8 @@ class Elf64Layer(segmented.SegmentedLayer):
             raise ElfFormatException(base_layer.name, "Bad magic 0x{:x} at file offset 0x{:x}".format(magic, offset))
         if elf_class != cls.ELF_CLASS:
             raise ElfFormatException(base_layer.name, "ELF class is not 64-bit (2): {:d}".format(elf_class, offset))
-        if elf_version != 1:
-            raise ElfFormatException(base_layer.name, "ELF version is not 1: {:d}".format(elf_class, offset))
-        return 0, 0
+        # Virtualbox uses an ELF version of 0, which isn't to specification, but is ok to deal with
+        return True
 
 
 class Elf64Stacker(interfaces.automagic.StackerLayerInterface):
@@ -73,8 +74,10 @@ class Elf64Stacker(interfaces.automagic.StackerLayerInterface):
               layer_name: str,
               progress_callback: constants.ProgressCallback = None) -> Optional[interfaces.layers.DataLayerInterface]:
         try:
-            Elf64Layer._check_header(context.layers[layer_name])
-        except ElfFormatException:
+            if not Elf64Layer._check_header(context.layers[layer_name]):
+                return None
+        except ElfFormatException as excp:
+            vollog.log(constants.LOGLEVEL_VVVV, "Exception: {}".format(excp))
             return None
         new_name = context.layers.free_layer_name("Elf64Layer")
         context.config[interfaces.configuration.path_join(new_name, "base_layer")] = layer_name
