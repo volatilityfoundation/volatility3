@@ -629,7 +629,7 @@ class PdbReader:
                     result = value.size
             elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
                 result = value.size
-            elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_ENUM]:
+            elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_ENUM, leaf_type.LF_ARGLIST]:
                 result = self.get_size_from_index(value.subtype_index)
             elif leaf_type in [leaf_type.LF_MEMBER]:
                 result = self.get_size_from_index(value.field_type)
