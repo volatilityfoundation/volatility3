@@ -91,7 +91,8 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
         if total > 0:
             vollog.info("Building {} caches...".format(self.os))
         for current in range(total):
-            progress_callback(current * 100 / total, "Building {} caches".format(self.os))
+            if progress_callback is not None:
+                progress_callback(current * 100 / total, "Building {} caches".format(self.os))
             isf_url = cacheables[current]
 
             isf = None
