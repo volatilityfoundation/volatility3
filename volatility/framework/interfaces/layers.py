@@ -455,18 +455,25 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     def _scan_iterator(self, scanner: 'ScannerInterface',
                        sections: Iterable[Tuple[int, int]]) -> Iterable[IteratorValue]:
+        """Essentially, for paged systems we take a bunch of pages and chunk them up into scanner.page_size or
+        as large a chunk as possible (if there are gaps)."""
         for (section_start, section_length) in sections:
-            for mapped in self.mapping(section_start, section_length, ignore_errors = True):
-                offset, mapped_offset, length, layer_name = mapped
-                while length > 0:
-                    chunk_size = min(length, scanner.chunk_size + scanner.overlap)
-                    yield [(layer_name, mapped_offset, chunk_size)], offset + chunk_size
-                    # It we've got more than the scanner's chunk_size, only move up by the chunk_size
-                    if chunk_size > scanner.chunk_size:
-                        chunk_size -= scanner.overlap
-                    length -= chunk_size
-                    mapped_offset += chunk_size
-                    offset += chunk_size
+            for chunk_start in range(section_start, section_start + section_length, scanner.chunk_size):
+                chunk_length = min(section_start + section_length - chunk_start, scanner.chunk_size + scanner.overlap)
+
+                prev_offset = chunk_start
+                output = []
+                length = 0
+                for mapped in self.mapping(chunk_start, chunk_length, ignore_errors = True):
+                    offset, mapped_offset, length, layer_name = mapped
+                    if offset != prev_offset:
+                        if len(output):
+                            yield output, prev_offset + length
+                        output = []
+                    prev_offset = offset + length
+                    output += [(layer_name, mapped_offset, length)]
+                if len(output):
+                    yield output, prev_offset + length
 
 
 class LayerContainer(collections.abc.Mapping):
