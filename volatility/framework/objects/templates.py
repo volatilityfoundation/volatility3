@@ -5,7 +5,7 @@ import functools
 import logging
 from typing import Any, ClassVar, Dict, List, Type
 
-from volatility.framework import interfaces, exceptions
+from volatility.framework import interfaces, exceptions, constants
 
 vollog = logging.getLogger(__name__)
 
@@ -87,8 +87,14 @@ class ReferenceTemplate(interfaces.objects.Template):
         """Referenced symbols must be appropriately resolved before they can
         provide information such as size This is because the size request has
         no context within which to determine the actual symbol structure."""
-        raise exceptions.SymbolError("Template contains no information about its structure: {}".format(
-            self.vol.type_name))
+        type_name = self.vol.type_name.split(constants.BANG)
+        table_name = None
+        if len(type_name) == 2:
+            table_name = type_name[0]
+        symbol_name = type_name[-1]
+        raise exceptions.SymbolError(
+            symbol_name, table_name,
+            "Template contains no information about its structure: {}".format(self.vol.type_name))
 
     size = property(_unresolved)  # type: ClassVar[Any]
     replace_child = _unresolved  # type: ClassVar[Any]

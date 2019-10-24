@@ -127,8 +127,9 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             try:
                 return getattr(self._dict[table_name], get_function)(component_name)
             except KeyError as e:
-                raise exceptions.SymbolError('Type {} references missing Type/Symbol/Enum: {}'.format(name, e))
-        raise exceptions.SymbolError("Malformed name: {}".format(name))
+                raise exceptions.SymbolError(component_name, table_name,
+                                             'Type {} references missing Type/Symbol/Enum: {}'.format(name, e))
+        raise exceptions.SymbolError(name, None, "Malformed name: {}".format(name))
 
     def _iterative_resolve(self, traverse_list):
         """Iteratively resolves a type, populating linked child
@@ -169,7 +170,11 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             self._resolved[type_name] = self._weak_resolve(SymbolType.TYPE, type_name)  # type: ignore
             self._iterative_resolve([type_name])
         if isinstance(self._resolved[type_name], objects.templates.ReferenceTemplate):
-            raise exceptions.SymbolError("Unresolvable symbol requested: {}".format(type_name))
+            table_name = None
+            index = type_name.find(constants.BANG)
+            if index > 0:
+                table_name, type_name = type_name[:index], type_name[index + 1:]
+            raise exceptions.SymbolError(type_name, table_name, "Unresolvable symbol requested: {}".format(type_name))
         return self._resolved[type_name]
 
     def get_symbol(self, symbol_name: str) -> interfaces.symbols.SymbolInterface:
@@ -189,7 +194,11 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
                 if old_resolved is not None:
                     self._resolved_symbols[symbol_name] = old_resolved
         if not isinstance(retval, interfaces.symbols.SymbolInterface):
-            raise exceptions.SymbolError("Unresolvable Symbol: {}".format(symbol_name))
+            table_name = None
+            index = symbol_name.find(constants.BANG)
+            if index > 0:
+                table_name, symbol_name = symbol_name[:index], symbol_name[index + 1:]
+            raise exceptions.SymbolError(symbol_name, table_name, "Unresolvable Symbol: {}".format(symbol_name))
         return retval
 
     def get_enumeration(self, enum_name: str) -> interfaces.objects.Template:
@@ -197,7 +206,11 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         table."""
         retval = self._weak_resolve(SymbolType.ENUM, enum_name)
         if not isinstance(retval, interfaces.objects.Template):
-            raise exceptions.SymbolError("Unresolvable Enumeration: {}".format(enum_name))
+            table_name = None
+            index = enum_name.find(constants.BANG)
+            if index > 0:
+                table_name, enum_name = enum_name[:index], enum_name[index + 1:]
+            raise exceptions.SymbolError(enum_name, table_name, "Unresolvable Enumeration: {}".format(enum_name))
         return retval
 
     def _membership(self, member_type: SymbolType, name: str) -> bool:

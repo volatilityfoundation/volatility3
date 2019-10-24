@@ -312,7 +312,7 @@ class Version1Format(ISFormatTable):
             return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise exceptions.SymbolError("Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError(name, self.name, "Unknown symbol: {}".format(name))
         self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = symbol['address'])
         return self._symbol_cache[name]
 
@@ -402,10 +402,12 @@ class Version1Format(ISFormatTable):
     def get_enumeration(self, enum_name: str) -> interfaces.objects.Template:
         """Resolves an individual enumeration."""
         if constants.BANG in enum_name:
-            raise exceptions.SymbolError("Enumeration for a different table requested: {}".format(enum_name))
+            raise exceptions.SymbolError(enum_name, self.name,
+                                         "Enumeration for a different table requested: {}".format(enum_name))
         if enum_name not in self._json_object['enums']:
             # Fall back to the natives table
-            raise exceptions.SymbolError("Enumeration not found in {} table: {}".format(self.name, enum_name))
+            raise exceptions.SymbolError(enum_name, self.name,
+                                         "Enumeration not found in {} table: {}".format(self.name, enum_name))
         curdict = self._json_object['enums'][enum_name]
         base_type = self.natives.get_type(curdict['base'])
         # The size isn't actually used, the base-type defines it.
@@ -417,7 +419,13 @@ class Version1Format(ISFormatTable):
     def get_type(self, type_name: str) -> interfaces.objects.Template:
         """Resolves an individual symbol."""
         if constants.BANG in type_name:
-            raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
+            table_name = None
+            index = type_name.find(constants.BANG)
+            if index > 0:
+                table_name, type_name = type_name[:index], type_name[index + 1:]
+            raise exceptions.SymbolError(
+                type_name, table_name,
+                "Symbol for a different table requested: {}".format(table_name + constants.BANG + type_name))
         if type_name not in self._json_object['user_types']:
             # Fall back to the natives table
             return self.natives.get_type(self.name + constants.BANG + type_name)
@@ -463,13 +471,19 @@ class Version2Format(Version1Format):
     def get_type(self, type_name: str) -> interfaces.objects.Template:
         """Resolves an individual symbol."""
         if constants.BANG in type_name:
-            raise exceptions.SymbolError("Symbol for a different table requested: {}".format(type_name))
+            table_name = None
+            index = type_name.find(constants.BANG)
+            if index > 0:
+                table_name, type_name = type_name[:index], type_name[index + 1:]
+            raise exceptions.SymbolError(
+                type_name, table_name,
+                "Symbol for a different table requested: {}".format(table_name + constants.BANG + type_name))
         if type_name not in self._json_object['user_types']:
             # Fall back to the natives table
             if type_name in self.natives.types:
                 return self.natives.get_type(self.name + constants.BANG + type_name)
             else:
-                raise exceptions.SymbolError("Unknown symbol: {}".format(type_name))
+                raise exceptions.SymbolError(type_name, self.name, "Unknown symbol: {}".format(type_name))
         curdict = self._json_object['user_types'][type_name]
         members = {}
         for member_name in curdict['fields']:
@@ -497,7 +511,7 @@ class Version3Format(Version2Format):
             return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise exceptions.SymbolError("Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError(name, self.name, "Unknown symbol: {}".format(name))
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
@@ -549,7 +563,7 @@ class Version5Format(Version4Format):
             return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise exceptions.SymbolError("Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError(name, self.name, "Unknown symbol: {}".format(name))
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])

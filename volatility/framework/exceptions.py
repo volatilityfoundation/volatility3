@@ -8,7 +8,7 @@ space or symbol tables, and by layers when an address is invalid.  The
 :class:`PagedInvalidAddressException` contains information about the
 size of the invalid page.
 """
-from typing import Dict
+from typing import Dict, Optional
 
 from volatility.framework import interfaces
 
@@ -29,6 +29,11 @@ class PluginRequirementException(VolatilityException):
 
 class SymbolError(VolatilityException):
     """Thrown when a symbol lookup has failed."""
+
+    def __init__(self, symbol_name: Optional[str], table_name: Optional[str], *args) -> None:
+        super().__init__(*args)
+        self.symbol_name = symbol_name
+        self.table_name = table_name
 
 
 class LayerException(VolatilityException):

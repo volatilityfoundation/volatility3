@@ -295,14 +295,14 @@ class NativeTableInterface(BaseSymbolTableInterface):
     """Class to distinguish NativeSymbolLists from other symbol lists."""
 
     def get_symbol(self, name: str) -> SymbolInterface:
-        raise exceptions.SymbolError("NativeTables never hold symbols")
+        raise exceptions.SymbolError(name, self.name, "NativeTables never hold symbols")
 
     @property
     def symbols(self) -> Iterable[str]:
         return []
 
     def get_enumeration(self, name: str) -> objects.Template:
-        raise exceptions.SymbolError("NativeTables never hold enumerations")
+        raise exceptions.SymbolError(name, self.name, "NativeTables never hold enumerations")
 
     @property
     def enumerations(self) -> Iterable[str]:

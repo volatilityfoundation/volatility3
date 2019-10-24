@@ -43,11 +43,8 @@ class VirtMap(interfaces.plugins.PluginInterface):
             raise
 
         result = {}  # type: Dict[str, List[Tuple[int, int]]]
-        try:
-            system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
-            large_page_size = (layer.page_size ** 2) // module.get_type("_MMPTE").size
-        except exceptions.SymbolError:
-            raise exceptions.SymbolError("Required structures not found")
+        system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')
+        large_page_size = (layer.page_size ** 2) // module.get_type("_MMPTE").size
 
         if module.has_symbol('MiVisibleState'):
             symbol = module.get_symbol('MiVisibleState')
@@ -67,7 +64,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
                 result = cls._enumerate_system_va_type(large_page_size, system_range_start, module,
                                                        visible_state.SystemVaType)
             else:
-                raise exceptions.SymbolError("Required structures not found")
+                raise exceptions.SymbolError(None, module.name, "Required structures not found")
         elif module.has_symbol('MiSystemVaType'):
             system_range_start = module.object(object_type = "pointer",
                                                offset = module.get_symbol("MmSystemRangeStart").address)
@@ -80,7 +77,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
             result = cls._enumerate_system_va_type(large_page_size, system_range_start, module, type_array)
         else:
-            raise exceptions.SymbolError("Required structures not found")
+            raise exceptions.SymbolError(None, module.name, "Required structures not found")
 
         return result
 
