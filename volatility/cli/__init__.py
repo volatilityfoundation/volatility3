@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import sys
+import traceback
 from typing import Any, Dict, Type, Union
 from urllib import parse, request
 
@@ -253,6 +254,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         ###
         # BACK TO THE FRAMEWORK
         ###
+        constructed = None
         try:
             progress_callback = PrintedProgress()
             if args.quiet:
@@ -264,15 +266,77 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 vollog.debug("Writing out configuration data to config.json")
                 with open("config.json", "w") as f:
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
-
-            # Construct and run the plugin
-            renderers[args.renderer]().render(constructed.run())
         except exceptions.UnsatisfiedException as excp:
-            self.process_exceptions(excp)
+            self.process_unsatisfied_exceptions(excp)
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
 
+        try:
+            # Construct and run the plugin
+            if constructed:
+                renderers[args.renderer]().render(constructed.run())
+        except (exceptions.InvalidAddressException) as excp:
+            self.process_exceptions(excp)
+
     def process_exceptions(self, excp):
-        """Provide useful feedback if an exception occurs."""
+        """Provide useful feedback if an exception occurs during a run of a plugin."""
+        # Log the full exception at a high level for easy access
+        fulltrace = traceback.TracebackException.from_exception(excp).format(chain = True)
+        vollog.debug("\n".join(fulltrace))
+
+        # Add a blank newline
+        print("")
+        if isinstance(excp, exceptions.InvalidAddressException):
+            if isinstance(excp, exceptions.SwappedInvalidAddressException):
+                print("\nVolatility was unable to read a requested page from swap:\n"
+                      "{} in layer {}\n\n"
+                      "This is likely caused by:\n"
+                      "\tNo suitable swap file having been provided (locate and provide the correct swap file)\n"
+                      "\tAn intentionally invalid page (operating system protection)".format(
+                          hex(excp.invalid_address), excp.layer_name))
+            elif isinstance(excp, exceptions.PagedInvalidAddressException):
+                print("\nVolatility was unable to read a requested page:\n"
+                      "{} in layer {}\n\n"
+                      "This could be caused by:\n"
+                      "\tMemory smear during acquisition (try re-acquiring if possible)\n"
+                      "\tAn intentionally invalid page lookup (operating system protection)\n"
+                      "\tA bug in the plugin/volatility (re-run with -vvv and file a bug)".format(
+                          hex(excp.invalid_address), excp.layer_name))
+            else:
+                print("\nVolatility was unable to read a requested page:\n"
+                      "{} in layer {}\n\n"
+                      "This could be caused by:\n"
+                      "\tThe base memory file being incomplete (try re-acquiring if possible)\n"
+                      "\tMemory smear during acquisition (try re-acquiring if possible)\n"
+                      "\tAn intentionally invalid page lookup (operating system protection)\n"
+                      "\tA bug in the plugin/volatility (re-run with -vvv and file a bug)".format(
+                          hex(excp.invalid_address), excp.layer_name))
+        elif isinstance(excp, exceptions.SymbolError):
+            print("\nVolatility experienced a symbol-related issue:\n"
+                  "{}\n\n"
+                  "This is likely caused by:\n"
+                  "\tAn invalid symbol table\n"
+                  "\tA plugin requesting a bad symbol\n"
+                  "\tA plugin requesting a symbol from the wrong table\n".format(excp))
+        elif isinstance(excp, exceptions.SymbolSpaceError):
+            print("\nVolatility experienced an issue related to a symbol table:\n "
+                  "{}\n\n"
+                  "This is likely caused by:\n"
+                  "\tAn invalid symbol table\n"
+                  "\tA plugin requesting a bad symbol\n"
+                  "\tA plugin requesting a symbol from the wrong table\n".format(excp))
+        elif isinstance(excp, exceptions.LayerException):
+            print("\nVolatility experienced a layer-related issue: {}\n "
+                  "{}\n\n"
+                  "This is likely caused by:\n"
+                  "\tA faulty layer implementation (re-run with -vvv and file a bug)\n".format(excp.layer_name, excp))
+        else:
+            print("\nVolatilty encountered an unexpected situation.\n\n"
+                  "\tPlease re-run using with -vvv and file a bug with the output\n"
+                  "\tat {}".format(constants.BUG_URL))
+        print("No further results will be produced")
+
+    def process_unsatisfied_exceptions(self, excp):
+        """Provide useful feedback if an exception occurs during requirement fulfillment."""
         # Add a blank newline
         print("")
         translation_failed = False
