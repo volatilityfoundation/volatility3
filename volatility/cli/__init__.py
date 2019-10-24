@@ -288,35 +288,36 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         if isinstance(excp, exceptions.InvalidAddressException):
             if isinstance(excp, exceptions.SwappedInvalidAddressException):
                 print("\nVolatility was unable to read a requested page from swap:\n"
-                      "{} in layer {}\n\n"
+                      "{} in layer {}: {}\n\n"
                       "This is likely caused by:\n"
                       "\tNo suitable swap file having been provided (locate and provide the correct swap file)\n"
                       "\tAn intentionally invalid page (operating system protection)".format(
-                          hex(excp.invalid_address), excp.layer_name))
+                          hex(excp.invalid_address), excp.layer_name, excp))
             elif isinstance(excp, exceptions.PagedInvalidAddressException):
                 print("\nVolatility was unable to read a requested page:\n"
-                      "{} in layer {}\n\n"
+                      "{} in layer {}: {}\n\n"
                       "This could be caused by:\n"
                       "\tMemory smear during acquisition (try re-acquiring if possible)\n"
                       "\tAn intentionally invalid page lookup (operating system protection)\n"
                       "\tA bug in the plugin/volatility (re-run with -vvv and file a bug)".format(
-                          hex(excp.invalid_address), excp.layer_name))
+                          hex(excp.invalid_address), excp.layer_name, excp))
             else:
                 print("\nVolatility was unable to read a requested page:\n"
-                      "{} in layer {}\n\n"
+                      "{} in layer {}: {}\n\n"
                       "This could be caused by:\n"
                       "\tThe base memory file being incomplete (try re-acquiring if possible)\n"
                       "\tMemory smear during acquisition (try re-acquiring if possible)\n"
                       "\tAn intentionally invalid page lookup (operating system protection)\n"
                       "\tA bug in the plugin/volatility (re-run with -vvv and file a bug)".format(
-                          hex(excp.invalid_address), excp.layer_name))
+                          hex(excp.invalid_address), excp.layer_name, excp))
         elif isinstance(excp, exceptions.SymbolError):
             print("\nVolatility experienced a symbol-related issue:\n"
-                  "{}\n\n"
+                  "{}{}{}: {}\n\n"
                   "This is likely caused by:\n"
                   "\tAn invalid symbol table\n"
                   "\tA plugin requesting a bad symbol\n"
-                  "\tA plugin requesting a symbol from the wrong table\n".format(excp))
+                  "\tA plugin requesting a symbol from the wrong table\n".format(excp.table_name, constants.BANG,
+                                                                                 excp.symbol_name, excp))
         elif isinstance(excp, exceptions.SymbolSpaceError):
             print("\nVolatility experienced an issue related to a symbol table:\n "
                   "{}\n\n"
