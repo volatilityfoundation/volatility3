@@ -692,11 +692,17 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
             if self.UniqueProcessId % 4 != 0:
                 return False
 
-            if self.Pcb.DirectoryTableBase == 0:
+            # check for all 0s besides the PCID entries
+            if isinstance(self.Pcb.DirectoryTableBase, objects.Array):
+                dtb = self.Pcb.DirectoryTableBase.cast("unsigned long long")
+            else:
+                dtb = self.Pcb.DirectoryTableBase
+
+            if dtb == 0:
                 return False
 
             # check for all 0s besides the PCID entries
-            if self.Pcb.DirectoryTableBase[0] & ~0xfff == 0:
+            if dtb & ~0xfff == 0:
                 return False
 
             ## TODO: we can also add the thread Flink and Blink tests if necessary
