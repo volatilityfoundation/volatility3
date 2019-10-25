@@ -756,6 +756,48 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                 "{}{}_LDR_DATA_TABLE_ENTRY".format(sym_table, constants.BANG), "InLoadOrderLinks"):
             yield entry
 
+    def init_order_modules(self) -> Iterable[int]:
+        """Generator for DLLs in the order that they were loaded."""
+
+        if constants.BANG not in self.vol.type_name:
+            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
+
+        proc_layer_name = self.add_process_layer()
+
+        proc_layer = self._context.layers[proc_layer_name]
+        if not proc_layer.is_valid(self.Peb):
+            return
+
+        sym_table = self.vol.type_name.split(constants.BANG)[0]
+        peb = self._context.object("{}{}_PEB".format(sym_table, constants.BANG),
+                                   layer_name = proc_layer_name,
+                                   offset = self.Peb)
+
+        for entry in peb.Ldr.InInitializationOrderModuleList.to_list(
+                "{}{}_LDR_DATA_TABLE_ENTRY".format(sym_table, constants.BANG), "InInitializationOrderLinks"):
+            yield entry
+
+    def mem_order_modules(self) -> Iterable[int]:
+        """Generator for DLLs in the order that they were loaded."""
+
+        if constants.BANG not in self.vol.type_name:
+            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
+
+        proc_layer_name = self.add_process_layer()
+
+        proc_layer = self._context.layers[proc_layer_name]
+        if not proc_layer.is_valid(self.Peb):
+            return
+
+        sym_table = self.vol.type_name.split(constants.BANG)[0]
+        peb = self._context.object("{}{}_PEB".format(sym_table, constants.BANG),
+                                   layer_name = proc_layer_name,
+                                   offset = self.Peb)
+
+        for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
+                "{}{}_LDR_DATA_TABLE_ENTRY".format(sym_table, constants.BANG), "InMemoryOrderLinks"):
+            yield entry
+
     def get_handle_count(self):
         try:
             if self.has_member("ObjectTable"):
