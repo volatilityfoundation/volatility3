@@ -706,7 +706,6 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
 
         return True
 
-
     def add_process_layer(self, config_prefix: str = None, preferred_name: str = None):
         """Constructs a new layer based on the process's DirectoryTableBase."""
 
