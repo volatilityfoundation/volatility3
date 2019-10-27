@@ -15,6 +15,7 @@ vollog = logging.getLogger(__name__)
 
 class VadDump(interfaces.plugins.PluginInterface):
     """Dumps process memory ranges."""
+    _version = (1,1,0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -36,13 +37,14 @@ class VadDump(interfaces.plugins.PluginInterface):
                 requirements.PluginRequirement(name = 'vadinfo', plugin = vadinfo.VadInfo, version = (1, 0, 0)),
                 ]
 
-    @staticmethod
-    def vad_dump(vad, proc_layer):
+    @classmethod
+    def vad_dump(cls, context: interfaces.context.ContextInterface, layer_name: str, vad: interfaces.objects.ObjectInterface) -> bytes:
         """
             Returns VAD content
         """
 
         tmp_data = b""
+        proc_layer = context.layers[layer_name]
         chunk_size = 1024 * 1024 * 10
         offset = vad.get_start()
         out_of_range = vad.get_start() + vad.get_end()
@@ -82,7 +84,7 @@ class VadDump(interfaces.plugins.PluginInterface):
                     filedata = interfaces.plugins.FileInterface("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
                         proc.UniqueProcessId, vad.get_start(), vad.get_end()))
 
-                    data = self.vad_dump(vad, proc_layer)
+                    data = self.vad_dump(self.context, proc_layer_name, vad)
                     filedata.data.write(data)
 
                     self.produce_file(filedata)
