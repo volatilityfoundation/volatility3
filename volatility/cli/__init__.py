@@ -279,62 +279,72 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
     def process_exceptions(self, excp):
         """Provide useful feedback if an exception occurs during a run of a plugin."""
+        # Ensure there's nothing in the cache
+        sys.stdout.write("\n\n")
+        sys.stdout.flush()
+        sys.stderr.flush()
+
         # Log the full exception at a high level for easy access
         fulltrace = traceback.TracebackException.from_exception(excp).format(chain = True)
-        vollog.debug("\n".join(fulltrace))
+        vollog.debug("".join(fulltrace))
 
-        # Add a blank newline
-        print("")
         if isinstance(excp, exceptions.InvalidAddressException):
+            general = "Volatility was unable to read a requested page:"
             if isinstance(excp, exceptions.SwappedInvalidAddressException):
-                print("\nVolatility was unable to read a requested page from swap:\n"
-                      "{} in layer {}: {}\n\n"
-                      "This is likely caused by:\n"
-                      "\tNo suitable swap file having been provided (locate and provide the correct swap file)\n"
-                      "\tAn intentionally invalid page (operating system protection)".format(
-                          hex(excp.invalid_address), excp.layer_name, excp))
+                detail = "Swap error {} in layer {} ({})".format(hex(excp.invalid_address), excp.layer_name, excp)
+                caused_by = [
+                    "No suitable swap file having been provided (locate and provide the correct swap file)",
+                    "An intentionally invalid page (operating system protection)"
+                ]
             elif isinstance(excp, exceptions.PagedInvalidAddressException):
-                print("\nVolatility was unable to read a requested page:\n"
-                      "{} in layer {}: {}\n\n"
-                      "This could be caused by:\n"
-                      "\tMemory smear during acquisition (try re-acquiring if possible)\n"
-                      "\tAn intentionally invalid page lookup (operating system protection)\n"
-                      "\tA bug in the plugin/volatility (re-run with -vvv and file a bug)".format(
-                          hex(excp.invalid_address), excp.layer_name, excp))
+                detail = "Page error {} in layer {} ({})".format(hex(excp.invalid_address), excp.layer_name, excp)
+                caused_by = [
+                    "Memory smear during acquisition (try re-acquiring if possible)",
+                    "An intentionally invalid page lookup (operating system protection)",
+                    "A bug in the plugin/volatility (re-run with -vvv and file a bug)"
+                ]
             else:
-                print("\nVolatility was unable to read a requested page:\n"
-                      "{} in layer {}: {}\n\n"
-                      "This could be caused by:\n"
-                      "\tThe base memory file being incomplete (try re-acquiring if possible)\n"
-                      "\tMemory smear during acquisition (try re-acquiring if possible)\n"
-                      "\tAn intentionally invalid page lookup (operating system protection)\n"
-                      "\tA bug in the plugin/volatility (re-run with -vvv and file a bug)".format(
-                          hex(excp.invalid_address), excp.layer_name, excp))
+                detail = "{} in layer {} ({})".format(hex(excp.invalid_address), excp.layer_name, excp)
+                caused_by = [
+                    "The base memory file being incomplete (try re-acquiring if possible)",
+                    "Memory smear during acquisition (try re-acquiring if possible)",
+                    "An intentionally invalid page lookup (operating system protection)",
+                    "A bug in the plugin/volatility (re-run with -vvv and file a bug)"
+                ]
         elif isinstance(excp, exceptions.SymbolError):
-            print("\nVolatility experienced a symbol-related issue:\n"
-                  "{}{}{}: {}\n\n"
-                  "This is likely caused by:\n"
-                  "\tAn invalid symbol table\n"
-                  "\tA plugin requesting a bad symbol\n"
-                  "\tA plugin requesting a symbol from the wrong table\n".format(excp.table_name, constants.BANG,
-                                                                                 excp.symbol_name, excp))
+            general = "Volatility experienced a symbol-related issue:"
+            detail = "{}{}{}: {}".format(excp.table_name, constants.BANG, excp.symbol_name, excp)
+            caused_by = [
+                "An invalid symbol table"
+                "A plugin requesting a bad symbol"
+                "A plugin requesting a symbol from the wrong table"
+            ]
         elif isinstance(excp, exceptions.SymbolSpaceError):
-            print("\nVolatility experienced an issue related to a symbol table:\n "
-                  "{}\n\n"
-                  "This is likely caused by:\n"
-                  "\tAn invalid symbol table\n"
-                  "\tA plugin requesting a bad symbol\n"
-                  "\tA plugin requesting a symbol from the wrong table\n".format(excp))
+            general = "Volatility experienced an issue related to a symbol table:"
+            detail = "{}".format(excp)
+            caused_by = [
+                "An invalid symbol table", "A plugin requesting a bad symbol"
+                "A plugin requesting a symbol from the wrong table"
+            ]
         elif isinstance(excp, exceptions.LayerException):
-            print("\nVolatility experienced a layer-related issue: {}\n "
-                  "{}\n\n"
-                  "This is likely caused by:\n"
-                  "\tA faulty layer implementation (re-run with -vvv and file a bug)\n".format(excp.layer_name, excp))
+            general = "Volatility experienced a layer-related issue: {}".format(excp.layer_name)
+            detail = "{}".format(excp)
+            caused_by = ["A faulty layer implementation (re-run with -vvv and file a bug)"]
         else:
-            print("\nVolatilty encountered an unexpected situation.\n\n"
-                  "\tPlease re-run using with -vvv and file a bug with the output\n"
-                  "\tat {}".format(constants.BUG_URL))
-        print("No further results will be produced")
+            general = "Volatilty encountered an unexpected situation."
+            detail = ""
+            caused_by = [
+                "Please re-run using with -vvv and file a bug with the output", "at {}".format(constants.BUG_URL)
+            ]
+
+        # Code that actually renders the exception
+        output = sys.stderr
+        output.write(general + "\n")
+        output.write(detail + "\n\n")
+        for cause in caused_by:
+            output.write("\t* " + cause + "\n")
+        output.write("\nNo further results will be produced\n")
+        sys.exit(1)
 
     def process_unsatisfied_exceptions(self, excp):
         """Provide useful feedback if an exception occurs during requirement fulfillment."""
