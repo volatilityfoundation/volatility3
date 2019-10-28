@@ -146,7 +146,7 @@ class QuickTextRenderer(CLIRenderer):
         def visitor(node, accumulator):
             accumulator.write("\n")
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
-            accumulator.write("*" * max(0, node.path_depth - 1))
+            accumulator.write("*" * max(0, node.path_depth - 1) + ("" if (node.path_depth <= 1) else " "))
             line = []
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
