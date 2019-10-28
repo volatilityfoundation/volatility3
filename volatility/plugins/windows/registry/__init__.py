@@ -8,12 +8,12 @@ are dependent upon, please DO NOT alter or remove this file unless you know the 
 
 The framework is configured this way to allow plugin developers/users to override any plugin functionality whether
 existing or new.
+
+When overriding the plugins directory, you must include a file like this in any subdirectories that may be necessary.
 """
-
 import os
-
-from volatility.framework import constants
+import sys
 
 # This is necessary to ensure the core plugins are available, whilst still be overridable
-plugin_path_components = __name__.split('.')[2:]
-__path__ = [os.path.join(x, *plugin_path_components) for x in constants.PLUGINS_PATH]
+parent_module, module_name = ".".join(__name__.split(".")[:-1]), __name__.split(".")[-1]
+__path__ = [os.path.join(x, module_name) for x in sys.modules[parent_module].__path__]
