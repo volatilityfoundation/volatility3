@@ -734,7 +734,10 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
 
-        proc_layer_name = self.add_process_layer()
+        try:
+            proc_layer_name = self.add_process_layer()
+        except exceptions.InvalidAddressException:
+            return
 
         proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
@@ -746,7 +749,7 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                                    offset = self.Peb)
         return peb
 
-    def load_order_modules(self) -> Iterable[int]:
+    def load_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they were loaded."""
 
         peb = self.get_peb()
@@ -754,16 +757,16 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                 "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG), "InLoadOrderLinks"):
             yield entry
 
-    def init_order_modules(self) -> Iterable[int]:
-        """Generator for DLLs in the order that they were loaded."""
+    def init_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Generator for DLLs in the order that they were initialized"""
 
         peb = self.get_peb()
         for entry in peb.Ldr.InInitializationOrderModuleList.to_list(
                 "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG), "InInitializationOrderLinks"):
             yield entry
 
-    def mem_order_modules(self) -> Iterable[int]:
-        """Generator for DLLs in the order that they were loaded."""
+    def mem_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Generator for DLLs in the order that they appear in memory"""
 
         peb = self.get_peb()
         for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
