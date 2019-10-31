@@ -58,6 +58,7 @@ class PDBConvertor:
         "T_ULONG": "unsigned long",
         "T_UQUAD": "unsigned long long",
         "T_USHORT": "unsigned short",
+        "T_HRESULT": "HRESULT",
         "T_WCHAR": "wchar",
         "T_VOID": "void",
     }
@@ -104,6 +105,7 @@ class PDBConvertor:
         "T_UQUAD": 8,
         "T_USHORT": 2,
         "T_WCHAR": 2,
+        "T_HRESULT": 4,
         "PTR_64": 8,
         "PTR_32": 4,
         "PTR_NEAR32": 4,
