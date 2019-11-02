@@ -366,8 +366,9 @@ class PdbReader:
             offset += length_len
             output, consumed = self.consume_type(module, offset, length)
             leaf_type, name, value = output
-            if name == '<unnamed-tag>' or name == '__unnamed':
-                name = '__unnamed_' + hex(len(self.types) + 0x1000)[2:]
+            for tag_type in ['unnamed', 'anonymous']:
+                if name == '<{}-tag>'.format(tag_type) or name == '__{}'.format(tag_type):
+                    name = '__{}_'.format(tag_type) + hex(len(self.types) + 0x1000)[2:]
             type_references[name] = len(self.types)
             self.types.append((leaf_type, name, value))
             offset += length
@@ -820,11 +821,11 @@ class PdbReader:
         elif isinstance(types, ForwardArrayCount):
             element_type = types.element_type
             # If we're a forward array count, we need to do the calculation now after all the types have been processed
-            if element_type > 0x1000:
-                loop = True
-                while loop:
+            loop = True
+            while loop:
+                loop = False
+                if element_type > 0x1000:
                     _, name, toplevel_type = self.types[element_type - 0x1000]
-                    loop = False
                     # If there's no name, the original size is probably fine as long as we're not indirect (LF_MODIFIER)
                     if not name and isinstance(
                             toplevel_type,
