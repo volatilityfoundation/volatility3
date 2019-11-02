@@ -24,7 +24,7 @@ setuptools.setup(name = "volatility",
                      '': ['development', 'development.*'],
                      'development': ['*']
                  },
-                 packages = setuptools.find_packages(exclude = ["developement", "development.*"]),
+                 packages = setuptools.find_packages(exclude = ["development", "development.*"]),
                  entry_points = {
                      'console_scripts': [
                          'vol = volatility.cli:main',
