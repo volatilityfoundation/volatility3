@@ -5,7 +5,7 @@
 import logging
 from typing import List
 
-from volatility.framework import interfaces, renderers, constants, symbols
+from volatility.framework import interfaces, renderers, constants, symbols, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
@@ -131,9 +131,13 @@ class SvcScan(interfaces.plugins.PluginInterface):
                                                  symbol_table = self.config['nt_symbols'],
                                                  filter_func = filter_func):
 
+            proc_id = "Unknown"
             try:
+                proc_id = task.UniqueProcessId
                 proc_layer_name = task.add_process_layer()
-            except exceptions.InvalidAddressException:
+            except exceptions.InvalidAddressException as excp:
+                vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
+                                                                                 excp.layer_name))
                 continue
 
             layer = self.context.layers[proc_layer_name]

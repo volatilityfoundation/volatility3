@@ -1,13 +1,15 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import logging
 from typing import List
 
 from volatility.framework import constants, exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.plugins.windows import pslist
+
+vollog = logging.getLogger(__name__)
 
 
 class CmdLine(interfaces.plugins.PluginInterface):
@@ -31,9 +33,13 @@ class CmdLine(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
+            proc_id = "Unknown"
             try:
+                proc_id = proc.UniqueProcessId
                 proc_layer_name = proc.add_process_layer()
-            except exceptions.InvalidAddressException:
+            except exceptions.InvalidAddressException as excp:
+                vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
+                                                                                 excp.layer_name))
                 continue
 
             try:

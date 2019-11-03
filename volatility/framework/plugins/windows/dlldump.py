@@ -6,7 +6,7 @@ import logging
 import ntpath
 from typing import List
 
-from volatility.framework import interfaces, constants
+from volatility.framework import interfaces, constants, exceptions
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -53,10 +53,14 @@ class DllDump(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
-            
+
+            proc_id = "Unknown"
             try:
+                proc_id = proc.UniqueProcessId
                 proc_layer_name = proc.add_process_layer()
-            except exceptions.InvalidAddressException:
+            except exceptions.InvalidAddressException as excp:
+                vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
+                                                                                 excp.layer_name))
                 continue
 
             for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):

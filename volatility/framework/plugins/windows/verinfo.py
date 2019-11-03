@@ -123,10 +123,14 @@ class VerInfo(interfaces.plugins.PluginInterface):
 
         # now go through the process and dll lists
         for proc in procs:
+            proc_id = "Unknown"
             try:
+                proc_id = proc.UniqueProcessId
                 proc_layer_name = proc.add_process_layer()
-            except exceptions.InvalidAddressException:
-                continue            
+            except exceptions.InvalidAddressException as excp:
+                vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
+                                                                                 excp.layer_name))
+                continue
 
             for entry in proc.load_order_modules():
 
@@ -135,8 +139,6 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     BaseDllName = renderers.UnreadableValue()
 
-                session_layer_name = moddump.ModDump.find_session_layer(self.context, session_layers, mod.DllBase)
-                (major, minor, product, build) = [renderers.NotAvailableValue()] * 4
                 try:
                     (major, minor, product, build) = self.get_version_information(self._context, pe_table_name,
                                                                                   proc_layer_name, entry.DllBase)

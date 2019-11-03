@@ -47,9 +47,13 @@ class VadDump(interfaces.plugins.PluginInterface):
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
 
+            proc_id = "Unknown"
             try:
+                proc_id = proc.UniqueProcessId
                 proc_layer_name = proc.add_process_layer()
-            except exceptions.InvalidAddressException:
+            except exceptions.InvalidAddressException as excp:
+                vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
+                                                                                 excp.layer_name))
                 continue
 
             proc_layer = self.context.layers[proc_layer_name]

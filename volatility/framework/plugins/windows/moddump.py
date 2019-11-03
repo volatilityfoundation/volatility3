@@ -5,14 +5,13 @@
 import logging
 from typing import List, Generator, Iterable
 
-from volatility.plugins.windows import pslist, modules
-
 from volatility.framework import constants, exceptions, renderers
 from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows.extensions import pe
+from volatility.plugins.windows import pslist, modules
 
 vollog = logging.getLogger(__name__)
 
@@ -60,12 +59,11 @@ class ModDump(interfaces.plugins.PluginInterface):
                                                  layer_name = layer_name,
                                                  symbol_table = symbol_table,
                                                  filter_func = filter_func):
+            proc_id = "Unknown"
             try:
+                proc_id = proc.UniqueProcessId
                 proc_layer_name = proc.add_process_layer()
-            except exceptions.InvalidAddressException:
-                continue
 
-            try:
                 # create the session space object in the process' own layer.
                 # not all processes have a valid session pointer.
                 session_space = context.object(symbol_table + constants.BANG + "_MM_SESSION_SPACE",
@@ -76,8 +74,10 @@ class ModDump(interfaces.plugins.PluginInterface):
                     continue
 
             except exceptions.InvalidAddressException:
-                vollog.log(constants.LOGLEVEL_VVV,
-                           "Process {} does not have a valid Session".format(proc.UniqueProcessId))
+                vollog.log(
+                    constants.LOGLEVEL_VVV,
+                    "Process {} does not have a valid Session or a layer could not be constructed for it".format(
+                        proc_id))
                 continue
 
             # save the layer if we haven't seen the session yet
