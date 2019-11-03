@@ -110,7 +110,7 @@ class CM_KEY_BODY(objects.StructType):
         output = []
         kcb = self.KeyControlBlock
         while kcb.ParentKcb:
-            if kcb.NameBlock.Name == None:
+            if kcb.NameBlock.Name is None:
                 break
 
             if self._skip_key_hive_entry_path(kcb.Flags):

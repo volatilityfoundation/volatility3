@@ -51,7 +51,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 continue
 
             proc_layer_name = task.add_process_layer()
-            if proc_layer_name == None:
+            if proc_layer_name is None:
                 continue
 
             proc_layer = self.context.layers[proc_layer_name]

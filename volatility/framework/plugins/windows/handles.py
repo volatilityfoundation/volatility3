@@ -84,7 +84,7 @@ class Handles(interfaces.plugins.PluginInterface):
             magic = self.find_sar_value()
 
             # is this the right thing to raise here?
-            if magic == None:
+            if magic is None:
                 raise AttributeError(
                     "Unable to find the SAR value for decoding handle table pointers (Is capstone installed?)")
 
@@ -121,7 +121,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 return None
 
             data = self.context.layers.read(virtual_layer_name, kvo + func_addr, 0x200)
-            if data == None:
+            if data is None:
                 return None
 
             md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
@@ -252,7 +252,7 @@ class Handles(interfaces.plugins.PluginInterface):
 
                 item = self._get_item(entry, handle_value)
 
-                if item == None:
+                if item is None:
                     continue
 
                 try:
@@ -300,7 +300,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 try:
                     self.context.layers[self.config["primary"]].is_valid(entry.vol.offset)
                     obj_type = entry.get_object_type(type_map, cookie)
-                    if obj_type == None:
+                    if obj_type is None:
                         continue
                     if obj_type == "File":
                         item = entry.Body.cast("_FILE_OBJECT")

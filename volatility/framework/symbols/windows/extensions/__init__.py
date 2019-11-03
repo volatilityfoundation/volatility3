@@ -240,7 +240,7 @@ class MMVAD_SHORT(objects.StructType):
             vollog.log(constants.LOGLEVEL_VVV, "Vad tree is too deep, something went wrong!")
             raise RuntimeError("Vad tree is too deep")
 
-        if visited == None:
+        if visited is None:
             visited = set()
 
         vad_address = self.vol.offset
@@ -624,7 +624,7 @@ class OBJECT_HEADER(objects.StructType):
             layer = self._context.layers[self.vol.native_layer_name]
             kvo = layer.config.get("kernel_virtual_offset", None)
 
-            if kvo == None:
+            if kvo is None:
                 raise AttributeError("Could not find kernel_virtual_offset for layer: {}".format(self.vol.layer_name))
 
             ntkrnlmp = self._context.module(symbol_table_name, layer_name = self.vol.layer_name, offset = kvo)
