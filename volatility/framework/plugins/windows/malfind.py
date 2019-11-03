@@ -1,14 +1,17 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import logging
 from typing import Iterable, Tuple
 
-from volatility.framework import interfaces, symbols
+from volatility.framework import interfaces, symbols, exceptions
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist, vadinfo
+
+vollog = logging.getLogger(__name__)
 
 
 class Malfind(interfaces.plugins.PluginInterface):
@@ -73,9 +76,13 @@ class Malfind(interfaces.plugins.PluginInterface):
         Returns:
             An iterable of VAD instances and the first 64 bytes of data containing in that region
         """
+        proc_id = "Unknown"
         try:
+            proc_id = proc.UniqueProcessId
             proc_layer_name = proc.add_process_layer()
-        except exceptions.InvalidAddressException:
+        except exceptions.InvalidAddressException as excp:
+            vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
+                                                                             excp.layer_name))
             return
 
         proc_layer = context.layers[proc_layer_name]

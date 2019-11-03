@@ -42,13 +42,12 @@ class ProcDump(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
-            
-            try:
-                proc_layer_name = proc.add_process_layer()
-            except exceptions.InvalidAddressException:
-                continue
 
+            proc_id = "Unknown"
             try:
+                proc_id = proc.UniqueProcessId
+                proc_layer_name = proc.add_process_layer()
+
                 peb = self._context.object(self.config["nt_symbols"] + constants.BANG + "_PEB",
                                            layer_name = proc_layer_name,
                                            offset = proc.Peb)
@@ -71,14 +70,16 @@ class ProcDump(interfaces.plugins.PluginInterface):
                 result_text = "PE parsing error"
 
             except exceptions.SwappedInvalidAddressException as exp:
-                result_text = "Required memory at {0:#x} is inaccessible (swapped)".format(exp.invalid_address)
+                result_text = "Process {}: Required memory at {:#x} is inaccessible (swapped)".format(
+                    proc_id, exp.invalid_address)
 
             except exceptions.PagedInvalidAddressException as exp:
-                result_text = "Required memory at {0:#x} is not valid (process exited?)".format(exp.invalid_address)
+                result_text = "Process {}: Required memory at {:#x} is not valid (process exited?)".format(
+                    proc_id, exp.invalid_address)
 
             except exceptions.InvalidAddressException as exp:
-                result_text = "Required memory at {0:#x} is not valid (incomplete layer {1}?)".format(
-                    exp.invalid_address, exp.layer_name)
+                result_text = "Process {}: Required memory at {:#x} is not valid (incomplete layer {}?)".format(
+                    proc_id, exp.invalid_address, exp.layer_name)
 
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 

@@ -6,7 +6,7 @@ import logging
 import re
 from typing import Dict, Generator, List, Set, Tuple
 
-from volatility.framework import interfaces, renderers
+from volatility.framework import interfaces, renderers, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, resources, linear
 from volatility.framework.renderers import format_hints
@@ -95,9 +95,13 @@ class Strings(interfaces.plugins.PluginInterface):
 
             for process in pslist.PsList.list_processes(self.context, self.config['primary'],
                                                         self.config['nt_symbols']):
+                proc_id = "Unknown"
                 try:
+                    proc_id = process.UniqueProcessId
                     proc_layer_name = process.add_process_layer()
-                except exceptions.InvalidAddressException:
+                except exceptions.InvalidAddressException as excp:
+                    vollog.debug("Process {}: invalid address {} in layer {}".format(
+                        proc_id, excp.invalid_address, excp.layer_name))
                     continue
 
                 proc_layer = self.context.layers[proc_layer_name]
