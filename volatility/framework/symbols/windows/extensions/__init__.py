@@ -841,15 +841,14 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         direction = 'Blink'
         if forward:
             direction = 'Flink'
-       
+
         trans_layer = self._context.layers[layer]
 
         try:
-            trans_layer.is_valid(self.vol.offset)
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
             return
-        
+
         if not sentinel:
             yield self._context.object(symbol_type,
                                        layer,
@@ -860,10 +859,8 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
         while link.vol.offset not in seen:
             obj_offset = link.vol.offset - relative_offset
 
-            try:
-                trans_layer.is_valid(obj_offset)
-            except exceptions.InvalidAddressException:
-                return 
+            if not trans_layer.is_valid(obj_offset):
+                return
 
             obj = self._context.object(symbol_type,
                                        layer,

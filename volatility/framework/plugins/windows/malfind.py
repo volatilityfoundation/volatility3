@@ -55,7 +55,7 @@ class Malfind(interfaces.plugins.PluginInterface):
 
         while offset < vad_length:
             next_addr = vad.get_start() + offset
-            if proc_layer.is_valid(next_addr) and proc_layer.read(next_addr, CHUNK_SIZE) != all_zero_page:
+            if proc_layer.is_valid(next_addr, CHUNK_SIZE) and proc_layer.read(next_addr, CHUNK_SIZE) != all_zero_page:
                 return False
             offset += CHUNK_SIZE
 

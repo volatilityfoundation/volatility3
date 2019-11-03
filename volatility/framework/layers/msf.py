@@ -199,7 +199,7 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
         return [self._base_layer]
 
     def is_valid(self, offset: int, length: int = 1) -> bool:
-        return self.minimum_address <= offset and offset + length < self.maximum_address
+        return self.context.layers[self._base_layer].is_valid(offset, length)
 
     @property
     def minimum_address(self) -> int:

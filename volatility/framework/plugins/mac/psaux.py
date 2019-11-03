@@ -91,6 +91,6 @@ class Psaux(plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
                                   self._generator(
                                       tasks.Tasks.list_tasks(self.context,
-                                                               self.config['primary'],
-                                                               self.config['darwin'],
-                                                               filter_func = filter_func)))
+                                                             self.config['primary'],
+                                                             self.config['darwin'],
+                                                             filter_func = filter_func)))

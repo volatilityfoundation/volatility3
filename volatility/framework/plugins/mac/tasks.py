@@ -50,7 +50,7 @@ class Tasks(pslist.PsList):
 
             proc = task.bsd_info.dereference().cast("proc")
 
-            if not context.layers[layer_name].is_valid(proc.vol.offset):
+            if not context.layers[layer_name].is_valid(proc.vol.offset, proc.vol.size):
                 break
 
             if not filter_func(proc):
