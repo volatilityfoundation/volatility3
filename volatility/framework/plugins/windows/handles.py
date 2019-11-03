@@ -298,7 +298,6 @@ class Handles(interfaces.plugins.PluginInterface):
 
             for entry in self.handles(object_table):
                 try:
-                    self.context.layers[self.config["primary"]].is_valid(entry.vol.offset)
                     obj_type = entry.get_object_type(type_map, cookie)
                     if obj_type is None:
                         continue

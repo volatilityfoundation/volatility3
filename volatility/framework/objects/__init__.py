@@ -305,7 +305,7 @@ class Pointer(Integer):
         """Determines whether the address of this pointer can be read from
         memory."""
         layer_name = layer_name or self.vol.layer_name
-        return self._context.layers[layer_name].is_valid(self)
+        return self._context.layers[layer_name].is_valid(self, self.vol.size)
 
     def __getattr__(self, attr: str) -> Any:
         """Convenience function to access unknown attributes by getting them

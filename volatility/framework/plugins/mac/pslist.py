@@ -87,7 +87,7 @@ class PsList(interfaces.plugins.PluginInterface):
             else:
                 seen[proc.vol.offset] = 1
 
-            if not filter_func(proc) and kernel_as.is_valid(proc.vol.offset):
+            if not filter_func(proc) and kernel_as.is_valid(proc.vol.offset, proc.vol.size):
                 yield proc
 
             try:

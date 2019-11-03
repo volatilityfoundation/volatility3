@@ -228,7 +228,12 @@ class RegistryHive(linear.LinearlyMappedLayer):
     def is_valid(self, offset: int, length: int = 1) -> bool:
         """Returns a boolean based on whether the offset is valid or not."""
         # TODO: Fix me
-        return True
+
+        # Pass this to the lower layers for now
+        return all([
+            self.context.layers[layer].is_valid(offset, length)
+            for (_, offset, length, layer) in self.mapping(offset, length)
+        ])
 
     @property
     def minimum_address(self) -> int:
