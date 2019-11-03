@@ -17,7 +17,7 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Dict, Type, Union
+from typing import Any, Dict, Type, Union, TypeVar, ClassVar
 from urllib import parse, request
 
 import volatility.plugins
@@ -203,6 +203,10 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
             configurables_list[plugin] = plugin_list[plugin]
 
+        # Set-up the renderer with any additional options they may have
+        renderer = renderers[partial_args.renderer]
+        self.populate_render_options_argparse(parser, renderer)
+
         ###
         # PASS TO UI
         ###
@@ -239,6 +243,12 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         self.populate_config(ctx, configurables_list, args, plugin_config_path)
 
+        # Populate the options
+        renderer_options = []
+        for option in renderer.get_render_options():
+            option.set_value(getattr(args, '--render-{}'.format(option.name.replace('_', '-'))))
+            renderer_options.append(option)
+
         if args.extend:
             for extension in args.extend:
                 if '=' not in extension:
@@ -266,7 +276,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
 
             # Construct and run the plugin
-            renderers[args.renderer]().render(constructed.run())
+            renderer(renderer_options).render(constructed.run())
         except exceptions.UnsatisfiedException as excp:
             self.process_exceptions(excp)
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
@@ -388,6 +398,23 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                                 default = requirement.default,
                                 dest = requirement.name,
                                 required = not requirement.optional,
+                                **additional)
+
+    def populate_render_options_argparse(self, parser: Union[argparse.ArgumentParser, argparse._ArgumentGroup],
+                                         renderer: ClassVar[interfaces.renderers.Renderer]):
+        options = renderer.get_render_options()
+        for option in options:
+            additional = {}
+            if option.option_type == bool:
+                additional['action'] = 'store_true'
+            elif option.option_type == int:
+                additional['type'] = int
+            elif option.option_type == float:
+                additional['type'] = float
+            parser.add_argument('--render-' + option.name.replace('_', '-'),
+                                help = option.description,
+                                default = option.default,
+                                dest = option.name,
                                 **additional)
 
 

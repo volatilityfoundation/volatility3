@@ -14,9 +14,38 @@ import datetime
 from abc import abstractmethod, ABCMeta
 from typing import Any, Callable, ClassVar, Generator, Iterable, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union
 
+from volatility.framework.interfaces import configuration
+
 Column = NamedTuple('Column', [('name', str), ('type', Any)])
 
-RenderOption = Any
+
+class RenderOption:
+
+    def __init__(self,
+                 name: str,
+                 description: Optional[str] = None,
+                 option_type: TypeVar = int,
+                 default: Optional[Any] = None) -> None:
+        self.name = name
+        self.description = description
+        self.option_type = option_type
+        self.default = default
+        if option_type not in configuration.BasicTypes:
+            raise TypeError("Invalid type specified for render option {}".format(self.name))
+        if not isinstance(self.default, self.option_type):
+            raise TypeError("Defaults of the correct type must be provided for render options")
+        self._value = None
+
+    def set_value(self, value: configuration.SimpleTypes) -> None:
+        """Sets the value of the option"""
+        if not isinstance(value, self.option_type):
+            raise TypeError("Value for render option {} must be of type {}".format(self.name, self.option_type))
+        self._value = value
+
+    def get_value(self) -> configuration.SimpleTypes:
+        if self._value is None:
+            raise ValueError("Value for render option has not yet been set: {}".format(self.name))
+        return self._value
 
 
 class Renderer(metaclass = ABCMeta):
@@ -27,8 +56,9 @@ class Renderer(metaclass = ABCMeta):
         """Accepts an options object to configure the renderers."""
         # FIXME: Once the config option objects are in place, put the _type_check in place
 
+    @classmethod
     @abstractmethod
-    def get_render_options(self) -> List[RenderOption]:
+    def get_render_options(cls) -> List[RenderOption]:
         """Returns a list of rendering options."""
 
     @abstractmethod

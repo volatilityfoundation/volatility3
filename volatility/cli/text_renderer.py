@@ -108,6 +108,10 @@ class CLIRenderer(interfaces.renderers.Renderer):
     """Class to add specific requirements for CLI renderers."""
     name = "unnamed"
 
+    @classmethod
+    def get_render_options(cls):
+        return []
+
 
 class QuickTextRenderer(CLIRenderer):
     _type_renderers = {
@@ -121,9 +125,6 @@ class QuickTextRenderer(CLIRenderer):
     }
 
     name = "quick"
-
-    def get_render_options(self):
-        pass
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         """Renders each column immediately to stdout.
@@ -176,9 +177,6 @@ class CSVRenderer(CLIRenderer):
 
     name = "csv"
 
-    def get_render_options(self):
-        pass
-
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         """Renders each row immediately to stdout.
 
@@ -217,9 +215,6 @@ class PrettyTextRenderer(CLIRenderer):
     _type_renderers = QuickTextRenderer._type_renderers
 
     name = "pretty"
-
-    def get_render_options(self):
-        pass
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         """Renders each column immediately to stdout.
