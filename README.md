@@ -50,7 +50,7 @@ git clone https://github.com/volatilityfoundation/volatility3.git
 
 3. To get more information on a Windows memory sample and to make sure
 Volatility supports that sample type, run
-`python3 -f <imagepath> windows.info`
+`python3 vol.py -f <imagepath> windows.info`
 
    Example:
 
