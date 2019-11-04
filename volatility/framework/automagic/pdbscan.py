@@ -239,9 +239,9 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             # Store any temporary files created by downloading PDB files
             tmp_files = []
             potential_output_filename = os.path.join(path, "windows", filter_string + ".json.xz")
+            data_written = False
             try:
                 os.makedirs(os.path.dirname(potential_output_filename), exist_ok = True)
-                data_written = False
                 with lzma.open(potential_output_filename, "w") as of:
                     # Once we haven't thrown an error, do the computation
                     filename = pdbconv.PdbRetreiver().retreive_pdb(guid + str(age),
@@ -258,6 +258,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         vollog.warning("Symbol file could not be found on remote server" + (" " * 100))
                 break
             except PermissionError:
+                vollog.warning("Cannot write necessary symbol file, please check permissions on {}".format(
+                    potential_output_filename))
                 continue
             finally:
                 # If something else failed, removed the symbol file so we don't pick it up in the future
