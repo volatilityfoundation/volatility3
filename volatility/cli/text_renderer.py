@@ -153,6 +153,7 @@ class QuickTextRenderer(CLIRenderer):
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
                 line.append(renderer(node.values[column_index]))
             accumulator.write("{}".format("\t".join(line)))
+            accumulator.flush()
             return accumulator
 
         if not grid.populated:
