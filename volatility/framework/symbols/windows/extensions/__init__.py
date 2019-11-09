@@ -696,7 +696,7 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
                 return False
 
             # check for all 0s besides the PCID entries
-            if self.Pcb.DirectoryTableBase.cast("unsigned long long") & ~0xfff == 0:
+            if self.Pcb.DirectoryTableBase & ~0xfff == 0:
                 return False
 
             ## TODO: we can also add the thread Flink and Blink tests if necessary
