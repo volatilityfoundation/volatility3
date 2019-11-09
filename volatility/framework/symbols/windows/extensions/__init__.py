@@ -314,7 +314,7 @@ class DEVICE_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel device objects."""
 
     def get_device_name(self) -> str:
-        header = self.object_header()
+        header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
 
 
@@ -322,7 +322,7 @@ class DRIVER_OBJECT(objects.StructType, pool.ExecutiveObject):
     """A class for kernel driver objects."""
 
     def get_driver_name(self) -> str:
-        header = self.object_header()
+        header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
 
     def is_valid(self) -> bool:
@@ -334,7 +334,7 @@ class OBJECT_SYMBOLIC_LINK(objects.StructType, pool.ExecutiveObject):
     """A class for kernel link objects."""
 
     def get_link_name(self) -> str:
-        header = self.object_header()
+        header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
 
     def is_valid(self) -> bool:
@@ -375,7 +375,7 @@ class KMUTANT(objects.StructType, pool.ExecutiveObject):
 
     def get_name(self) -> str:
         """Get the object's name from the object header."""
-        header = self.object_header()
+        header = self.get_object_header()
         return header.NameInfo.Name.String  # type: ignore
 
 
