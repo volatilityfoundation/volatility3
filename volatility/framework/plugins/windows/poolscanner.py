@@ -94,10 +94,10 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
 
                 if constraint.index is not None:
                     if constraint.index[0]:
-                        if header.index < constraint.index[0]:
+                        if header.PoolIndex < constraint.index[0]:
                             continue
                     if constraint.index[1]:
-                        if header.index > constraint.index[1]:
+                        if header.PoolIndex > constraint.index[1]:
                             continue
             except exceptions.InvalidAddressException:
                 # The tested object's header doesn't point to valid addresses, ignore it
