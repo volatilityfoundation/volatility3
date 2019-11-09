@@ -13,6 +13,7 @@ from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
+from volatility.framework.symbols.windows.extensions import pool
 from volatility.plugins.windows import handles
 
 vollog = logging.getLogger(__name__)
@@ -433,7 +434,7 @@ class PoolScanner(plugins.PluginInterface):
                 sub_path = "windows",
                 filename = pool_header_json_filename,
                 table_mapping = {'nt_symbols': symbol_table},
-                class_types = {'_POOL_HEADER': extensions.POOL_HEADER})
+                class_types = {'_POOL_HEADER': extensions.pool.POOL_HEADER})
             module = context.module(new_table_name, layer_name, offset = 0)
         return module
 
