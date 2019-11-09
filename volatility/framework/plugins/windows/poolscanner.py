@@ -371,7 +371,12 @@ class PoolScanner(plugins.PluginInterface):
                 continue
 
             if not constraint.skip_type_test:
-                if mem_object.get_object_header().get_object_type(type_map, cookie) != constraint.object_type:
+                try:
+                    if mem_object.get_object_header().get_object_type(type_map, cookie) != constraint.object_type:
+                        continue
+                except exceptions.InvalidAddressException:
+                    vollog.log(constants.LOGLEVEL_VVV,
+                               "Cannot test instance type check for {}".format(constraint.type_name))
                     continue
 
             yield constraint, mem_object, header
