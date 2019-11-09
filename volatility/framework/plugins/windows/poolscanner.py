@@ -13,7 +13,6 @@ from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
-from volatility.framework.symbols.windows.extensions import pool
 from volatility.plugins.windows import handles
 
 vollog = logging.getLogger(__name__)
@@ -41,7 +40,8 @@ class PoolConstraint:
                  page_type: Optional[int] = None,
                  size: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  index: Optional[Tuple[Optional[int], Optional[int]]] = None,
-                 alignment: Optional[int] = 1) -> None:
+                 alignment: Optional[int] = 1,
+                 skip_type_test: bool = False) -> None:
         self.tag = tag
         self.type_name = type_name
         self.object_type = object_type
@@ -49,6 +49,7 @@ class PoolConstraint:
         self.size = size
         self.index = index
         self.alignment = alignment
+        self.skip_type_test = skip_type_test
 
 
 class PoolHeaderScanner(interfaces.layers.ScannerInterface):
@@ -101,6 +102,7 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
                     if constraint.index[1]:
                         if header.PoolIndex > constraint.index[1]:
                             continue
+
             except exceptions.InvalidAddressException:
                 # The tested object's header doesn't point to valid addresses, ignore it
                 continue
@@ -139,10 +141,10 @@ def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
     # try the primary method based on the pe version in the ISF
     def method(context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
         """
-        
+
         Args:
-            context: The context that contains the symbol table named `symbol_table`  
-            symbol_table: Name of the symbol table within the context to distinguish the version of 
+            context: The context that contains the symbol table named `symbol_table`
+            symbol_table: Name of the symbol table within the context to distinguish the version of
 
         Returns:
             True if the symbol table is of the required version
@@ -249,6 +251,7 @@ class PoolScanner(plugins.PluginInterface):
                            type_name = symbol_table + constants.BANG + "_EPROCESS",
                            object_type = "Process",
                            size = (600, None),
+                           skip_type_test = True,
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows starting with windows 8
             PoolConstraint(b'Proc',
@@ -330,12 +333,12 @@ class PoolScanner(plugins.PluginInterface):
             -> Generator[Tuple[
                              PoolConstraint, interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface], None, None]:
         """
-        
+
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            constraints: List of pool constraints used to limit the scan results 
+            constraints: List of pool constraints used to limit the scan results
 
         Returns:
             Iterable of tuples, containing the constraint that matched, the object from memory, the object header used to determine the object
@@ -359,15 +362,17 @@ class PoolScanner(plugins.PluginInterface):
         for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = 8):
 
             mem_object = header.get_object(type_name = constraint.type_name,
-                                           type_map = type_map,
                                            use_top_down = is_windows_8_or_later,
-                                           object_type = constraint.object_type,
-                                           native_layer_name = 'primary',
-                                           cookie = cookie)
+                                           executive = constraint.object_type is not None,
+                                           native_layer_name = 'primary')
 
             if mem_object is None:
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
                 continue
+
+            if not constraint.skip_type_test:
+                if mem_object.get_object_header().get_object_type(type_map, cookie) != constraint.object_type:
+                    continue
 
             yield constraint, mem_object, header
 

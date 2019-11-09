@@ -15,17 +15,18 @@ class POOL_HEADER(objects.StructType):
 
     def get_object(self,
                    type_name: str,
-                   type_map: dict,
                    use_top_down: bool,
-                   native_layer_name: Optional[str] = None,
-                   object_type: Optional[str] = None,
-                   cookie: Optional[int] = None) -> Optional[interfaces.objects.ObjectInterface]:
-        """Carve an object or data structure from a kernel pool allocation.
+                   executive: bool = False,
+                   native_layer_name: Optional[str] = None) -> Optional[interfaces.objects.ObjectInterface]:
+        """Carve an object or data structure from a kernel pool allocation
 
-        :param type_name: the data structure type name
-        :param native_layer_name: the name of the layer where the data originally lived
-        :param object_type: the object type (executive kernel objects only)
-        :return:
+        Args:
+            type_name: the data structure type name
+            native_layer_name: the name of the layer where the data originally lived
+            object_type: the object type (executive kernel objects only)
+
+        Returns:
+            An object as found from a POOL_HEADER
         """
 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
@@ -36,7 +37,7 @@ class POOL_HEADER(objects.StructType):
         pool_header_size = self.vol.size
 
         # if there is no object type, then just instantiate a structure
-        if object_type is None:
+        if not executive:
             mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
                                               layer_name = self.vol.layer_name,
                                               offset = self.vol.offset + pool_header_size,
@@ -52,6 +53,7 @@ class POOL_HEADER(objects.StructType):
 
             # use the top down approach for windows 8 and later
             if use_top_down:
+                body_offset = object_header_type.relative_child_offset('Body')
                 infomask_offset = object_header_type.relative_child_offset('InfoMask')
                 optional_headers, lengths_of_optional_headers = self._calculate_optional_header_lengths(
                     self._context, symbol_table_name)
@@ -112,21 +114,13 @@ class POOL_HEADER(objects.StructType):
                         continue
 
                     try:
+                        mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
+                                                          layer_name = self.vol.layer_name,
+                                                          offset = addr + body_offset + start_offset,
+                                                          native_layer_name = native_layer_name)
 
-                        object_header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER",
-                                                             layer_name = self.vol.layer_name,
-                                                             offset = addr + start_offset,
-                                                             native_layer_name = native_layer_name)
-
-                        if not object_header.is_valid():
-                            continue
-
-                        object_type_string = object_header.get_object_type(type_map, cookie)
-                        if object_type_string == object_type:
-
-                            mem_object = object_header.Body.cast(symbol_table_name + constants.BANG + type_name)
-                            if mem_object.is_valid():
-                                return mem_object
+                        if mem_object.is_valid():
+                            return mem_object
 
                     except (TypeError, exceptions.InvalidAddressException):
                         pass
@@ -141,14 +135,9 @@ class POOL_HEADER(objects.StructType):
                                                   offset = self.vol.offset + self.BlockSize * alignment - rounded_size,
                                                   native_layer_name = native_layer_name)
 
-                object_header = mem_object.object_header()
-
                 try:
-                    object_type_string = object_header.get_object_type(type_map, cookie)
-                    if object_type_string == object_type:
+                    if mem_object.is_valid():
                         return mem_object
-                    else:
-                        return None
                 except (TypeError, exceptions.InvalidAddressException):
                     return None
         return None
@@ -181,7 +170,7 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
     """This is used as a "mixin" that provides all kernel executive objects
     with a means of finding their own object header."""
 
-    def object_header(self) -> 'OBJECT_HEADER':
+    def get_object_header(self) -> 'OBJECT_HEADER':
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
