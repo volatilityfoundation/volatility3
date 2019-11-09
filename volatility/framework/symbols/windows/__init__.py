@@ -1,11 +1,11 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import volatility.framework.symbols.windows.extensions.pool
 from volatility.framework import interfaces
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
-from volatility.framework.symbols.windows.extensions import registry
+from volatility.framework.symbols.windows.extensions import registry, pool
 
 
 class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
@@ -19,7 +19,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_EPROCESS', extensions.EPROCESS)
         self.set_type_class('_UNICODE_STRING', extensions.UNICODE_STRING)
         self.set_type_class('_EX_FAST_REF', extensions.EX_FAST_REF)
-        self.set_type_class('_OBJECT_HEADER', extensions.OBJECT_HEADER)
+        self.set_type_class('_OBJECT_HEADER', pool.OBJECT_HEADER)
         self.set_type_class('_FILE_OBJECT', extensions.FILE_OBJECT)
         self.set_type_class('_DEVICE_OBJECT', extensions.DEVICE_OBJECT)
         self.set_type_class('_CM_KEY_BODY', registry.CM_KEY_BODY)
@@ -36,7 +36,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 
         # This doesn't exist in very specific versions of windows
         try:
-            self.set_type_class('_POOL_HEADER', extensions.POOL_HEADER)
+            self.set_type_class('_POOL_HEADER', pool.POOL_HEADER)
         except ValueError:
             pass
 
