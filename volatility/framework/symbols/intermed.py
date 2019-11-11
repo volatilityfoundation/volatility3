@@ -369,7 +369,7 @@ class Version1Format(ISFormatTable):
             elif type_name == 'enum':
                 update = self._lookup_enum(dictionary['name'])
             elif type_name == 'bitfield':
-                update = {'start_bit': dictionary['bit_position'], 'end_bit': dictionary['bit_length']}
+                update = {'start_bit': dictionary['bit_position'], 'end_bit': dictionary['bit_position'] + dictionary['bit_length']}
                 update['base_type'] = self._interdict_to_template(dictionary['type'])
             # We do *not* call native_template.clone(), since it slows everything down a lot
             # We require that the native.get_type method always returns a newly constructed python object
