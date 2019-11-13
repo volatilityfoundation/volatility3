@@ -12,7 +12,7 @@ from volatility.framework.symbols import native
 
 
 class VmwareFormatException(exceptions.LayerException):
-    """Thrown when an error occurs with the underlying Crash file format."""
+    """Thrown when an error occurs with the underlying VMware vmem file format."""
 
 
 class VmwareLayer(segmented.SegmentedLayer):
