@@ -367,7 +367,7 @@ class BitField(interfaces.objects.ObjectInterface, int):
                 end_bit: int = 0,
                 **kwargs) -> 'BitField':
         value = base_type(context = context, object_info = object_info)
-        return int.__new__(cls, (value >> start_bit) & ((1 << end_bit) - 1))  # type: ignore
+        return int.__new__(cls, ((value & ((1 << end_bit) - 1)) >> start_bit))  # type: ignore
 
     def write(self, value):
         raise NotImplementedError("Writing to BitFields is not yet implemented")
