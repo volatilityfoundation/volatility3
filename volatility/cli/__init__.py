@@ -77,7 +77,6 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
     def run(self):
         """Executes the command line module, taking the system arguments,
         determining the plugin to run and then running it."""
-        sys.stdout.write("Volatility 3 Framework {}\n".format(constants.PACKAGE_VERSION))
 
         volatility.framework.require_interface_version(1, 0, 0)
 
@@ -144,6 +143,12 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != '--help' and arg != '-h']
         partial_args, _ = parser.parse_known_args(known_args)
+
+        banner_output = sys.stdout
+        if renderers[partial_args.renderer].structured_output:
+            banner_output = sys.stderr
+        banner_output.write("Volatility 3 Framework {}\n".format(constants.PACKAGE_VERSION))
+
         if partial_args.plugin_dirs:
             volatility.plugins.__path__ = [os.path.abspath(p)
                                            for p in partial_args.plugin_dirs.split(";")] + constants.PLUGINS_PATH
