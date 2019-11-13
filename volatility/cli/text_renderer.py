@@ -107,6 +107,7 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
 class CLIRenderer(interfaces.renderers.Renderer):
     """Class to add specific requirements for CLI renderers."""
     name = "unnamed"
+    structured_output = False
 
 
 class QuickTextRenderer(CLIRenderer):
@@ -176,6 +177,7 @@ class CSVRenderer(CLIRenderer):
     }
 
     name = "csv"
+    structured_output = True
 
     def get_render_options(self):
         pass
@@ -192,7 +194,7 @@ class CSVRenderer(CLIRenderer):
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
             line.append("{}".format('"' + column.name + '"'))
-        outfd.write("\n{}".format(",".join(line)))
+        outfd.write("{}".format(",".join(line)))
 
         def visitor(node, accumulator):
             accumulator.write("\n")
@@ -218,6 +220,7 @@ class PrettyTextRenderer(CLIRenderer):
     _type_renderers = QuickTextRenderer._type_renderers
 
     name = "pretty"
+    structured_output = True
 
     def get_render_options(self):
         pass
