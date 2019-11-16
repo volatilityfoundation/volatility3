@@ -287,6 +287,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
 
 
 class WintelStacker(interfaces.automagic.StackerLayerInterface):
+    stack_order = 40
 
     @classmethod
     def stack(cls,
