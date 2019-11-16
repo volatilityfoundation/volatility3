@@ -13,8 +13,6 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
     """A DataLayer class backed by a buffer in memory, designed for testing and
     swift data access."""
 
-    priority = 10
-
     def __init__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
@@ -74,8 +72,6 @@ class DummyLock:
 
 class FileLayer(interfaces.layers.DataLayerInterface):
     """a DataLayer backed by a file on the filesystem."""
-
-    priority = 20
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
