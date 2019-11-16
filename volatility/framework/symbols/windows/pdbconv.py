@@ -900,7 +900,6 @@ class PdbRetreiver:
                 except error.HTTPError as excp:
                     vollog.debug("Failed with {}".format(excp))
             if result:
-                vollog.debug("Successfully written to {}".format(result.name))
                 break
         if progress_callback is not None:
             progress_callback(100, "Downloading {}".format(url + suffix))
