@@ -31,7 +31,7 @@ class MacSymbolFinder(symbol_finder.SymbolFinder):
 
 
 class MacintelStacker(interfaces.automagic.StackerLayerInterface):
-    stack_order = 12
+    stack_order = 45
 
     @classmethod
     def stack(cls,
