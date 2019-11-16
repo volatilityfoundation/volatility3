@@ -40,6 +40,8 @@ class ResourceAccessor(object):
     """Object for openning URLs as files (downloading locally first if
     necessary)"""
 
+    list_handlers = True
+
     def __init__(self,
                  progress_callback: Optional[constants.ProgressCallback] = None,
                  context: Optional[ssl.SSLContext] = None) -> None:
@@ -50,8 +52,10 @@ class ResourceAccessor(object):
         self._progress_callback = progress_callback
         self._context = context
         self._handlers = list(framework.class_subclasses(urllib.request.BaseHandler))
-        vollog.log(constants.LOGLEVEL_VVV,
-                   "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
+        if self.list_handlers:
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
+            self.__class__.list_handlers = False
 
     def open(self, url, mode = "rb"):
         """Returns a file-like object for a particular URL opened in mode."""
