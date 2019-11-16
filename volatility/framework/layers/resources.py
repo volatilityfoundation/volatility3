@@ -95,7 +95,7 @@ class ResourceAccessor(object):
                         if not block:
                             break
                         if self._progress_callback:
-                            self._progress_callback(count / max(count, int(content_length)),
+                            self._progress_callback(count * 100 / max(count, int(content_length)),
                                                     "Reading file {}".format(url))
                         cache_file.write(block)
                     cache_file.close()
