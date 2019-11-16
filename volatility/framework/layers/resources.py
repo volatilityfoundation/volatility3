@@ -13,7 +13,7 @@ import ssl
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import Optional
+from typing import Optional, Any
 
 from volatility import framework
 from volatility.framework import constants
@@ -57,8 +57,12 @@ class ResourceAccessor(object):
                        "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
             self.__class__.list_handlers = False
 
-    def open(self, url, mode = "rb"):
-        """Returns a file-like object for a particular URL opened in mode."""
+    # Current urllib.request.urlopen returns Any, so we do the same
+    def open(self, url: str, mode: str = "rb") -> Any:
+        """Returns a file-like object for a particular URL opened in mode.
+
+        If the file is remote, it will be downloaded and locally cached
+        """
         urllib.request.install_opener(urllib.request.build_opener(*self._handlers))
 
         with contextlib.closing(urllib.request.urlopen(url, context = self._context)) as fp:
@@ -160,7 +164,7 @@ class JarHandler(urllib.request.BaseHandler):
     """
 
     @staticmethod
-    def default_open(req):
+    def default_open(req: urllib.request.Request) -> Optional[Any]:
         """Handles the request if it's the jar scheme."""
         if req.type == 'jar':
             subscheme, remainder = req.full_url.split(":")[1], ":".join(req.full_url.split(":")[2:])
