@@ -16,8 +16,6 @@ class VmwareFormatException(exceptions.LayerException):
 
 
 class VmwareLayer(segmented.SegmentedLayer):
-    priority = 22
-
     header_structure = "<4sII"
     group_structure = "64sQQ"
 

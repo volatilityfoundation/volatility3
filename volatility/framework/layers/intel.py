@@ -20,7 +20,6 @@ vollog = logging.getLogger(__name__)
 class Intel(linear.LinearlyMappedLayer):
     """Translation Layer for the Intel IA32 memory mapping."""
 
-    priority = 40
     _entry_format = "<I"
     _page_size_in_bits = 12
     _bits_per_register = 32
@@ -233,7 +232,6 @@ class IntelPAE(Intel):
     """Class for handling Physical Address Extensions for Intel
     architectures."""
 
-    priority = 35
     _entry_format = "<Q"
     _bits_per_register = 32
     _maxphyaddr = 40
@@ -245,7 +243,6 @@ class Intel32e(Intel):
     """Class for handling 64-bit (32-bit extensions) for Intel
     architectures."""
 
-    priority = 30
     _direct_metadata = collections.ChainMap({'architecture': 'Intel64'}, Intel._direct_metadata)
     _entry_format = "<Q"
     _bits_per_register = 64

@@ -22,7 +22,6 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     """
 
     provides = {"type": "physical"}
-    priority = 23
 
     SIGNATURE = 0x45474150
     VALIDDUMP = 0x504d5544

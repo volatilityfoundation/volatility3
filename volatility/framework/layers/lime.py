@@ -20,8 +20,6 @@ class LimeLayer(segmented.SegmentedLayer):
     are large holes in the physical layer
     """
 
-    priority = 21
-
     MAGIC = 0x4c694d45
     VERSION = 1
 
