@@ -893,7 +893,7 @@ class PdbRetreiver:
             url = sym_url + "/{}/{}/".format(file_name, guid)
 
             result = None
-            for suffix in [file_name[:-1] + '_', file_name]:
+            for suffix in [file_name, file_name[:-1] + '_']:
                 try:
                     vollog.debug("Attempting to retrieve {}".format(url + suffix))
                     result = resources.ResourceAccessor(progress_callback).open(url + suffix)
