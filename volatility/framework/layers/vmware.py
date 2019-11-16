@@ -112,6 +112,8 @@ class VmwareLayer(segmented.SegmentedLayer):
 
 class VmwareStacker(interfaces.automagic.StackerLayerInterface):
 
+    stack_order = 20
+
     @classmethod
     def stack(cls,
               context: interfaces.context.ContextInterface,
