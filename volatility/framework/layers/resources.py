@@ -14,6 +14,7 @@ import urllib.parse
 import urllib.request
 import zipfile
 from typing import Optional, Any
+from urllib import error
 
 from volatility import framework
 from volatility.framework import constants
@@ -65,7 +66,22 @@ class ResourceAccessor(object):
         """
         urllib.request.install_opener(urllib.request.build_opener(*self._handlers))
 
-        with contextlib.closing(urllib.request.urlopen(url, context = self._context)) as fp:
+        try:
+            fp = urllib.request.urlopen(url, context = self._context)
+        except error.URLError as excp:
+            if excp.args:
+                if isinstance(excp.args[0], ssl.SSLCertVerificationError):
+                    vollog.warning("SSL certificate verification failed: attempting UNVERIFIED retrieval")
+                    non_verifying_ctx = ssl.SSLContext()
+                    non_verifying_ctx.check_hostname = False
+                    non_verifying_ctx.verify_mode = ssl.CERT_NONE
+                    fp = urllib.request.urlopen(url, context = non_verifying_ctx)
+                else:
+                    raise excp
+            else:
+                raise excp
+
+        with contextlib.closing(fp) as fp:
             # Cache the file locally
             parsed_url = urllib.parse.urlparse(url)
 
