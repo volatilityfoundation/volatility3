@@ -80,7 +80,11 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 name = 'record-config',
                 description = "Whether to record the state of all the plugins once complete",
                 optional = True,
-                default = False)
+                default = False),
+            requirements.BooleanRequirement(name = 'write-bodyfile',
+                                            description = "Whether to create a body file whilst producing results",
+                                            optional = True,
+                                            default = False)
         ]
 
     def _generator(self, runable_plugins: List[TimeLinerInterface]) -> Optional[Iterable[Tuple[int, Tuple]]]:
