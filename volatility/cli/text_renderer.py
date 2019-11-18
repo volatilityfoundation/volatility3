@@ -220,7 +220,6 @@ class PrettyTextRenderer(CLIRenderer):
     _type_renderers = QuickTextRenderer._type_renderers
 
     name = "pretty"
-    structured_output = True
 
     def get_render_options(self):
         pass
