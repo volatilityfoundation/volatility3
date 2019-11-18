@@ -81,19 +81,19 @@ class SvcScan(interfaces.plugins.PluginInterface):
             symbol_filename = "services-xp-x86"
         elif SvcScan.is_xp_or_2003(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-xp-2003-x64"
+        elif SvcScan.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and is_64bit:
+            symbol_filename = "services-win10-16299-x64"
+        elif SvcScan.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
+            symbol_filename = "services-win10-16299-x86"
+        elif SvcScan.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and is_64bit:
+            symbol_filename = "services-win10-15063-x64"
+        elif SvcScan.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and not is_64bit:
+            symbol_filename = "services-win10-15063-x86"
         elif poolscanner.PoolScanner.is_windows_8_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win8-x64"
         elif poolscanner.PoolScanner.is_windows_8_or_later(context = context,
                                                            symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win8-x86"
-        elif SvcScan.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and is_64bit:
-            symbol_filename = "services-win10-15063-x64"
-        elif SvcScan.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and not is_64bit:
-            symbol_filename = "services-win10-15063-x86"
-        elif SvcScan.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and is_64bit:
-            symbol_filename = "services-win10-16299-x64"
-        elif SvcScan.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
-            symbol_filename = "services-win10-16299-x86"
         elif SvcScan.is_vista_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-vista-x64"
         elif SvcScan.is_vista_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
