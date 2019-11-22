@@ -74,7 +74,10 @@ class LintelStacker(interfaces.automagic.StackerLayerInterface):
                                                           progress_callback = progress_callback)
 
                 layer_class = intel.Intel  # type: Type
-                if 'init_level4_pgt' in table.symbols:
+                if 'init_top_pgt' in table.symbols:
+                    layer_class = intel.Intel32e
+                    dtb_symbol_name = 'init_top_pgt'
+                elif 'init_level4_pgt' in table.symbols:
                     layer_class = intel.Intel32e
                     dtb_symbol_name = 'init_level4_pgt'
                 else:
