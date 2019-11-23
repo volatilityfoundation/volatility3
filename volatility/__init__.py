@@ -4,13 +4,13 @@
 """Volatility 3 - An open-source memory forensics framework"""
 import sys
 from importlib import abc
-from typing import List, TypeVar, Callable
+from typing import List, TypeVar, Callable, Any, Optional
 
 _T = TypeVar("_T")
 _S = TypeVar("_S")
 
 
-class classproperty(object):
+class classproperty(property):
     """Class property decorator.
 
     Note this will change the return type
@@ -18,9 +18,12 @@ class classproperty(object):
 
     def __init__(self, func: Callable[[_S], _T]) -> None:
         self._func = func
+        super().__init__()
 
-    def __get__(self, _owner_self, owner_cls: _S) -> _T:
-        return self._func(owner_cls)
+    def __get__(self, obj: Any, type: Optional[_S] = None) -> _T:
+        if type is not None:
+            return self._func(type)
+        raise TypeError("Classproperty was not applied properly")
 
 
 class WarningFindSpec(abc.MetaPathFinder):
