@@ -47,7 +47,9 @@ class Volshell(generic.Volshell):
             self.change_process(self.config['pid'])
         return result
 
-    def display_type(self, object: Union[str, interfaces.objects.ObjectInterface], offset: int = None):
+    def display_type(self,
+                     object: Union[str, interfaces.objects.ObjectInterface, interfaces.objects.Template],
+                     offset: int = None):
         """Display Type describes the members of a particular object in alphabetical order"""
         if isinstance(object, str):
             if constants.BANG not in object:

@@ -210,38 +210,46 @@ class Volshell(interfaces.plugins.PluginInterface):
             print("Cannot display information about non-type object")
             return
 
-        if isinstance(object, str) and offset is None:
-            object = self.context.symbol_space.get_type(object)
-        elif isinstance(object, str) and offset is not None:
-            object = self.context.object(object, layer_name = self.current_layer, offset = offset)
-        elif offset is not None:
-            object = self.context.object(object.vol.type_name, layer_name = self.current_layer, offset = offset)
+        if not isinstance(object, str):
+            # Mypy requires us to order things this way
+            volobject = object
+        elif offset is None:
+            # Str and no offset
+            volobject = self.context.symbol_space.get_type(object)
+        else:
+            # Str and offset
+            volobject = self.context.object(object, layer_name = self.current_layer, offset = offset)
 
-        if hasattr(object.vol, 'size'):
-            print("{} ({} bytes)".format(object.vol.type_name, object.vol.size))
-        elif hasattr(object.vol, 'data_format'):
-            data_format = object.vol.data_format
-            print("{} ({} bytes, {} endian, {})".format(object.vol.type_name, data_format.length, data_format.byteorder,
+        if offset is not None:
+            volobject = self.context.object(volobject.vol.type_name, layer_name = self.current_layer, offset = offset)
+
+        if hasattr(volobject.vol, 'size'):
+            print("{} ({} bytes)".format(volobject.vol.type_name, volobject.vol.size))
+        elif hasattr(volobject.vol, 'data_format'):
+            data_format = volobject.vol.data_format
+            print("{} ({} bytes, {} endian, {})".format(volobject.vol.type_name, data_format.length,
+                                                        data_format.byteorder,
                                                         'signed' if data_format.signed else 'unsigned'))
 
-        if hasattr(object.vol, 'members'):
+        if hasattr(volobject.vol, 'members'):
             longest_member = longest_offset = longest_typename = 0
-            for member in object.vol.members:
-                relative_offset, member_type = object.vol.members[member]
+            for member in volobject.vol.members:
+                relative_offset, member_type = volobject.vol.members[member]
                 longest_member = max(len(member), longest_member)
                 longest_offset = max(len(hex(relative_offset)), longest_offset)
                 longest_typename = max(len(member_type.vol.type_name), longest_typename)
 
-            for member in sorted(object.vol.members, key = lambda x: (object.vol.members[x][0], x)):
-                relative_offset, member_type = object.vol.members[member]
+            for member in sorted(volobject.vol.members, key = lambda x: (volobject.vol.members[x][0], x)):
+                relative_offset, member_type = volobject.vol.members[member]
                 len_offset = len(hex(relative_offset))
                 len_member = len(member)
                 len_typename = len(member_type.vol.type_name)
-                if isinstance(object, interfaces.objects.ObjectInterface):
+                if isinstance(volobject, interfaces.objects.ObjectInterface):
                     # We're an instance, so also display the data
                     print(" " * (longest_offset - len_offset), hex(relative_offset), ":  ", member,
-                          " " * (longest_member - len_member), "  ", member_type.vol.type_name,
-                          " " * (longest_typename - len_typename), "  ", self._display_value(getattr(object, member)))
+                          " " * (longest_member - len_member), "  ",
+                          member_type.vol.type_name, " " * (longest_typename - len_typename), "  ",
+                          self._display_value(getattr(volobject, member)))
                 else:
                     print(" " * (longest_offset - len_offset), hex(relative_offset), ":  ", member,
                           " " * (longest_member - len_member), "  ", member_type.vol.type_name)
@@ -256,11 +264,11 @@ class Volshell(interfaces.plugins.PluginInterface):
             return hex(value.vol.offset)
 
     def consume_file(self, file: interfaces.plugins.FileInterface) -> None:
-        """Dummy file consumer to satisfy the """
+        """Dummy file consumer to satisfy the interface"""
         pass
 
     def generate_treegrid(self, plugin: Type[interfaces.plugins.PluginInterface],
-                          **kwargs) -> interfaces.renderers.TreeGrid:
+                          **kwargs) -> Optional[interfaces.renderers.TreeGrid]:
         """Generates a TreeGrid based on a specific plugin passing in kwarg configuration values"""
         path_join = interfaces.configuration.path_join
 
@@ -277,6 +285,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             return constructed.run()
         except exceptions.UnsatisfiedException as excp:
             print("Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
+        return None
 
     def render_treegrid(self,
                         treegrid: interfaces.renderers.TreeGrid,
@@ -288,7 +297,9 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     def display_plugin_output(self, plugin: Type[interfaces.plugins.PluginInterface], **kwargs) -> None:
         """Displays the output for a particular plugin (with keyword arguments)"""
-        self.render_treegrid(self.generate_treegrid(plugin, **kwargs))
+        treegrid = self.generate_treegrid(plugin, **kwargs)
+        if treegrid is not None:
+            self.render_treegrid(self.generate_treegrid(plugin, **kwargs))
 
     def display_symbols(self, symbol_table: str = None):
         """Prints an alphabetical list of symbols for a symbol table"""
