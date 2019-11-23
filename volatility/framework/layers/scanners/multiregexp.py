@@ -21,8 +21,7 @@ class MultiRegexp(object):
             raise ValueError("No strings to compile into a regular expression")
         self._regex = re.compile(b'|'.join(map(re.escape, self._pattern_strings)))
 
-    def search(self, haystack: bytes) \
-            -> Generator[Tuple[int, Union[str, bytes]], None, None]:
+    def search(self, haystack: bytes) -> Generator[Tuple[int, bytes], None, None]:
         if not isinstance(haystack, bytes):
             raise TypeError("Search haystack must be a byte string")
         if not self._regex.pattern:

@@ -53,7 +53,7 @@ class MultiStringScanner(layers.ScannerInterface):
             self._patterns.add_pattern(pattern)
         self._patterns.preprocess()
 
-    def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[int, Union[str, bytes]], None, None]:
+    def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[int, bytes], None, None]:
         """Runs through the data looking for the needles."""
         for offset, pattern in self._patterns.search(data):
             if offset < self.chunk_size:
