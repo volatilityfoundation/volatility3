@@ -61,7 +61,7 @@ class Elf64Layer(segmented.SegmentedLayer):
         if magic != cls.MAGIC:
             raise ElfFormatException(base_layer.name, "Bad magic 0x{:x} at file offset 0x{:x}".format(magic, offset))
         if elf_class != cls.ELF_CLASS:
-            raise ElfFormatException(base_layer.name, "ELF class is not 64-bit (2): {:d}".format(elf_class, offset))
+            raise ElfFormatException(base_layer.name, "ELF class is not 64-bit (2): {:d}".format(elf_class))
         # Virtualbox uses an ELF version of 0, which isn't to specification, but is ok to deal with
         return True
 
