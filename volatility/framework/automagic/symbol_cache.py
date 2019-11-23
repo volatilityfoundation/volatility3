@@ -46,8 +46,9 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
             for path in banners[banner]:
                 url = urllib.parse.urlparse(path)
                 if url.scheme == 'file' and not os.path.exists(urllib.request.url2pathname(url.path)):
-                    vollog.log(constants.LOGLEVEL_VV,
-                               "Removing cached path {} for banner {}: file does not exist".format(path, banner))
+                    vollog.log(
+                        constants.LOGLEVEL_VV, "Removing cached path {} for banner {}: file does not exist".format(
+                            path, str(banner, 'latin-1')))
                     banners[banner].remove(path)
                 # This is probably excessive, but it's here if we need it
                 # if url.scheme == 'jar':

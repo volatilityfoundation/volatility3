@@ -272,7 +272,7 @@ class TranslationLayerRequirement(interfaces.configuration.ConstructableRequirem
 
         if value is not None:
             vollog.log(constants.LOGLEVEL_V,
-                       "TypeError - Translation Layer Requirement only accepts string labels: {}".format(value))
+                       "TypeError - Translation Layer Requirement only accepts string labels: {}".format(repr(value)))
             return {config_path: self}
 
         # TODO: check that the space in the context lives up to the requirements for arch/os etc
@@ -328,7 +328,7 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         value = self.config_value(context, config_path, None)
         if not isinstance(value, str):
             vollog.log(constants.LOGLEVEL_V,
-                       "TypeError - SymbolTableRequirement only accepts string labels: {}".format(value))
+                       "TypeError - SymbolTableRequirement only accepts string labels: {}".format(repr(value)))
             return {config_path: self}
         if value not in context.symbol_space:
             # This is an expected situation, so return False rather than raise
