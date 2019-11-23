@@ -83,7 +83,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                  native_types: interfaces.symbols.NativeTableInterface = None,
                  table_mapping: Optional[Dict[str, str]] = None,
                  validate: bool = True,
-                 class_types: Optional[Dict[str, Type[interfaces.objects.ObjectInterface]]] = None) -> None:
+                 class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None) -> None:
         """Instantiates a SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
         done.

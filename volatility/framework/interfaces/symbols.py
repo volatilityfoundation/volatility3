@@ -5,7 +5,7 @@
 import bisect
 import collections.abc
 from abc import abstractmethod, ABC
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Mapping
 
 from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.interfaces import configuration, objects
@@ -80,7 +80,7 @@ class BaseSymbolTableInterface:
                  name: str,
                  native_types: 'NativeTableInterface',
                  table_mapping: Optional[Dict[str, str]] = None,
-                 class_types: Optional[Dict[str, Type[objects.ObjectInterface]]] = None) -> None:
+                 class_types: Optional[Mapping[str, Type[objects.ObjectInterface]]] = None) -> None:
         """
 
         Args:
@@ -266,7 +266,7 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
                  name: str,
                  native_types: 'NativeTableInterface',
                  table_mapping: Optional[Dict[str, str]] = None,
-                 class_types: Optional[Dict[str, Type[objects.ObjectInterface]]] = None) -> None:
+                 class_types: Optional[Mapping[str, Type[objects.ObjectInterface]]] = None) -> None:
         """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
         done.
