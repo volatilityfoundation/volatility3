@@ -99,7 +99,7 @@ class POOL_HEADER(objects.StructType):
 
                     # PADDING_INFO is a special case (4 bytes that contain the total padding length)
                     padding_length = 0
-                    if padding_present:
+                    if padding_present and padding_available is not None:
                         # Read the four bytes from just before the next optional_headers_length minus the padding_info size
                         #
                         #  ---------------

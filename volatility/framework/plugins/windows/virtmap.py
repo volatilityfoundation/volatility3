@@ -83,7 +83,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
     @classmethod
     def _enumerate_system_va_type(cls, large_page_size: int, system_range_start: int,
-                                  module: interfaces.context.ContextInterface,
+                                  module: interfaces.context.ModuleInterface,
                                   type_array: interfaces.objects.ObjectInterface) -> Dict[str, List[Tuple[int, int]]]:
         result = {}  # type: Dict[str, List[Tuple[int, int]]]
         system_va_type = module.get_enumeration('_MI_SYSTEM_VA_TYPE')

@@ -304,7 +304,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
             accumulator = function(node, initial_accumulator)
         if children is not None:
             if sort_key is not None:
-                children = sorted(children, key = lambda x: sort_key(x[0].values))
+                sort_key_not_none = sort_key  # Only necessary because of mypy
+                children = sorted(children, key = lambda x: sort_key_not_none(x[0].values))
                 if not sort_key.ascending:
                     children = reversed(children)
             accumulator = self._visit(children, function, accumulator, sort_key)
@@ -320,7 +321,8 @@ class TreeGrid(interfaces.renderers.TreeGrid):
             for n, children in list_of_children:
                 accumulator = function(n, accumulator)
                 if sort_key is not None:
-                    children = sorted(children, key = lambda x: sort_key(x[0].values))
+                    sort_key_not_none = sort_key  # Only necessary because of mypy
+                    children = sorted(children, key = lambda x: sort_key_not_none(x[0].values))
                     if not sort_key.ascending:
                         children = reversed(children)
                 accumulator = self._visit(children, function, accumulator, sort_key)

@@ -419,10 +419,8 @@ class Version1Format(ISFormatTable):
     def get_type(self, type_name: str) -> interfaces.objects.Template:
         """Resolves an individual symbol."""
         if constants.BANG in type_name:
-            table_name = None
             index = type_name.find(constants.BANG)
-            if index > 0:
-                table_name, type_name = type_name[:index], type_name[index + 1:]
+            table_name, type_name = type_name[:index], type_name[index + 1:]
             raise exceptions.SymbolError(
                 type_name, table_name,
                 "Symbol for a different table requested: {}".format(table_name + constants.BANG + type_name))
@@ -471,10 +469,8 @@ class Version2Format(Version1Format):
     def get_type(self, type_name: str) -> interfaces.objects.Template:
         """Resolves an individual symbol."""
         if constants.BANG in type_name:
-            table_name = None
             index = type_name.find(constants.BANG)
-            if index > 0:
-                table_name, type_name = type_name[:index], type_name[index + 1:]
+            table_name, type_name = type_name[:index], type_name[index + 1:]
             raise exceptions.SymbolError(
                 type_name, table_name,
                 "Symbol for a different table requested: {}".format(table_name + constants.BANG + type_name))

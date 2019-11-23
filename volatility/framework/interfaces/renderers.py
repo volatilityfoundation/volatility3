@@ -109,7 +109,7 @@ class Disassembly(object):
 # We don't class these off a shared base, because the BaseTypes must only
 # contain the types that the validator will accept (which would not include the base)
 
-_Type = TypeVar("_Type", bound = Type)
+_Type = TypeVar("_Type")
 BaseTypes = Union[Type[int], Type[str], Type[float], Type[bytes], Type[datetime.datetime], Type[BaseAbsentValue],
                   Type[Disassembly]]
 ColumnsType = List[Tuple[str, BaseTypes]]
