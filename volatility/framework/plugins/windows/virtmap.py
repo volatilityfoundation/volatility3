@@ -16,6 +16,8 @@ vollog = logging.getLogger(__name__)
 class VirtMap(interfaces.plugins.PluginInterface):
     """Lists virtual mapped sections."""
 
+    _version = (1, 0, 0)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
