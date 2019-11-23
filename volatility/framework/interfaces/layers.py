@@ -14,6 +14,7 @@ import multiprocessing
 import threading
 import traceback
 from abc import ABCMeta, abstractmethod
+from multiprocessing import managers
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 from volatility.framework import constants, exceptions, interfaces
@@ -29,7 +30,7 @@ try:
 except ImportError:
     pass
 
-ProgressValue = Union['DummyProgress', multiprocessing.Value]
+ProgressValue = Union['DummyProgress', managers.ValueProxy]
 IteratorValue = Tuple[List[Tuple[str, int, int]], int]
 
 
