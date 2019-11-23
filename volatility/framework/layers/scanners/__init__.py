@@ -3,7 +3,7 @@
 #
 
 import re
-from typing import Generator, List, Tuple, Union
+from typing import Generator, List, Tuple
 
 from volatility.framework.interfaces import layers
 from volatility.framework.layers.scanners import multiregexp
