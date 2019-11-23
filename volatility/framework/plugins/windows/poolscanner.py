@@ -398,7 +398,7 @@ class PoolScanner(plugins.PluginInterface):
         constraint_lookup = {}  # type: Dict[bytes, PoolConstraint]
         for constraint in pool_constraints:
             if constraint.tag in constraint_lookup:
-                raise ValueError("Constraint tag is used for more than one constraint: {}".format(constraint.tag))
+                raise ValueError("Constraint tag is used for more than one constraint: {}".format(repr(constraint.tag)))
             constraint_lookup[constraint.tag] = constraint
 
         module = cls._get_pool_header_module(context, layer_name, symbol_table)

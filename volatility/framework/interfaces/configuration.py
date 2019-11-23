@@ -439,7 +439,7 @@ class SimpleTypeRequirement(RequirementInterface):
             vollog.log(
                 constants.LOGLEVEL_V,
                 "TypeError - {} requirements only accept {} type: {}".format(self.name, self.instance_type.__name__,
-                                                                             value))
+                                                                             repr(value)))
             return {config_path: self}
         return {}
 
