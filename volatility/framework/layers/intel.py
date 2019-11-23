@@ -246,10 +246,21 @@ class Intel32e(Intel):
     _direct_metadata = collections.ChainMap({'architecture': 'Intel64'}, Intel._direct_metadata)
     _entry_format = "<Q"
     _bits_per_register = 64
-    _maxphyaddr = 52
+    _maxphyaddr = 48
     _maxvirtaddr = 48
     _structure = [('page map layer 4', 9, False), ('page directory pointer', 9, True), ('page directory', 9, True),
                   ('page table', 9, True)]
+
+
+class Intel32e5(Intel):
+
+    _direct_metadata = collections.ChainMap({'architecture': 'Intel64'}, Intel._direct_metadata)
+    _entry_format = "<Q"
+    _bits_per_register = 64
+    _maxphyaddr = 52
+    _maxvirtaddr = 57
+    _structure = [('page map layer 5', 9, False), ('page map layer 4', 9, False), ('page directory pointer', 9, True),
+                  ('page directory', 9, True), ('page table', 9, True)]
 
 
 class WindowsMixin(Intel):
