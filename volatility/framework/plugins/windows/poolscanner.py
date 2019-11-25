@@ -367,10 +367,11 @@ class PoolScanner(plugins.PluginInterface):
 
         sections = None
         if quick:
+            vollog.debug("Locating windows allocated sections to scan")
             scan_module = context.module(module_name = symbol_table,
                                          layer_name = scan_layer,
                                          offset = context.layers[scan_layer].config['kernel_virtual_offset'])
-            sections = virtmap.VirtMap.scannable_sections(scan_module)
+            sections = list(virtmap.VirtMap.scannable_sections(scan_module))
 
         is_windows_10 = cls.is_windows_10(context, symbol_table)
         if not is_windows_10:

@@ -5,7 +5,7 @@
 import logging
 from typing import List, Tuple, Dict, Generator
 
-from volatility.framework import interfaces, renderers, exceptions
+from volatility.framework import interfaces, renderers, exceptions, constants
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel
 from volatility.framework.renderers import format_hints
@@ -54,6 +54,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
                                           offset = symbol.address,
                                           subtype = module.get_type('_MI_VISIBLE_STATE')).dereference()
             if hasattr(visible_state, 'SystemVaRegions'):
+                vollog.log(constants.LOGLEVEL_VVVV, "Using MiVisibleState - SystemVaRegions")
                 for i in range(visible_state.SystemVaRegions.count):
                     lookup = system_va_type.lookup(i)
                     region_range = result.get(lookup, [])
@@ -61,6 +62,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
                         (visible_state.SystemVaRegions[i].BaseAddress, visible_state.SystemVaRegions[i].NumberOfBytes))
                     result[lookup] = region_range
             elif hasattr(visible_state, 'SystemVaType'):
+                vollog.log(constants.LOGLEVEL_VVVV, "Using MiVisibleState - SystemVaType")
                 system_range_start = module.object(object_type = "pointer",
                                                    offset = module.get_symbol("MmSystemRangeStart").address)
                 result = cls._enumerate_system_va_type(large_page_size, system_range_start, module,
@@ -68,6 +70,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
             else:
                 raise exceptions.SymbolError(None, module.name, "Required structures not found")
         elif module.has_symbol('MiSystemVaType'):
+            vollog.log(constants.LOGLEVEL_VVVV, "Using SystemVaType")
             system_range_start = module.object(object_type = "pointer",
                                                offset = module.get_symbol("MmSystemRangeStart").address)
             symbol = module.get_symbol('MiSystemVaType')
@@ -79,7 +82,7 @@ class VirtMap(interfaces.plugins.PluginInterface):
 
             result = cls._enumerate_system_va_type(large_page_size, system_range_start, module, type_array)
         else:
-            raise exceptions.SymbolError(None, module.name, "Required structures not found")
+            raise exceptions.SymbolError(None, module.name, "Required Mi structures not found")
 
         return result
 
@@ -110,9 +113,9 @@ class VirtMap(interfaces.plugins.PluginInterface):
     def scannable_sections(cls, module: interfaces.context.ModuleInterface) -> Generator[Tuple[int, int], None, None]:
         mapping = cls.determine_map(module)
         for entry in mapping:
-            if 'Unused' not in entry:
-                for value in mapping[entry]:
-                    yield value
+            # Excluding 'Unused' appears to include kernel memory in certain versions of windows?
+            for value in mapping[entry]:
+                yield value
 
     def run(self):
         layer = self.context.layers[self.config['primary']]
