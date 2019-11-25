@@ -4,7 +4,7 @@
 
 import enum
 import logging
-from typing import Dict, Generator, List, Optional, Tuple, Callable
+from typing import Dict, Generator, List, Optional, Tuple, Callable, Iterable
 
 from volatility.framework import constants, interfaces, renderers, exceptions, symbols
 from volatility.framework.configuration import requirements
@@ -411,7 +411,7 @@ class PoolScanner(plugins.PluginInterface):
                   pool_constraints: List[PoolConstraint],
                   alignment: int = 8,
                   progress_callback: Optional[constants.ProgressCallback] = None,
-                  sections: List = None) \
+                  sections: Iterable[Tuple[int, int]] = None) \
             -> Generator[Tuple[PoolConstraint, interfaces.objects.ObjectInterface], None, None]:
         """Returns the _POOL_HEADER object (based on the symbol_table template)
         after scanning through layer_name returning all headers that match any
@@ -425,6 +425,7 @@ class PoolScanner(plugins.PluginInterface):
             pool_constraints: List of pool constraints used to limit the scan results
             alignment: An optional value that all pool headers will be aligned to
             progress_callback: An optional function to provide progress feedback whilst scanning
+            sections: Specific memory sections to scan through
 
         Returns:
             An Iterable of pool constraints and the pool headers associated with them

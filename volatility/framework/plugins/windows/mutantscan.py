@@ -21,13 +21,18 @@ class MutantScan(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
+            requirements.BooleanRequirement(name = 'quick',
+                                            description = "Scan just allocated memory",
+                                            default = False,
+                                            optional = True),
         ]
 
     @classmethod
     def scan_mutants(cls,
                      context: interfaces.context.ContextInterface,
                      layer_name: str,
-                     symbol_table: str) -> \
+                     symbol_table: str,
+                     quick: bool = False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Scans for mutants using the poolscanner module and constraints.
 
@@ -35,6 +40,7 @@ class MutantScan(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
+            quick: Scan only memory that windows has allocated
 
         Returns:
               A list of Mutant objects found by scanning memory for the Mutant pool signatures
@@ -42,13 +48,20 @@ class MutantScan(interfaces.plugins.PluginInterface):
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Mut\xe1', b'Muta'])
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
+        for result in poolscanner.PoolScanner.generate_pool_scan(context,
+                                                                 layer_name,
+                                                                 symbol_table,
+                                                                 constraints,
+                                                                 quick = quick):
 
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        for mutant in self.scan_mutants(self.context, self.config['primary'], self.config['nt_symbols']):
+        for mutant in self.scan_mutants(self.context,
+                                        self.config['primary'],
+                                        self.config['nt_symbols'],
+                                        quick = self.config['quick']):
 
             try:
                 name = mutant.get_name()
