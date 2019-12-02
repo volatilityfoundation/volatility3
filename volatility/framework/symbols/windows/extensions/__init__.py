@@ -694,7 +694,7 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
 
             # check for all 0s besides the PCID entries
             if isinstance(self.Pcb.DirectoryTableBase, objects.Array):
-                dtb = self.Pcb.DirectoryTableBase.cast("unsigned long long")
+                dtb = self.Pcb.DirectoryTableBase.cast("pointer")
             else:
                 dtb = self.Pcb.DirectoryTableBase
 
