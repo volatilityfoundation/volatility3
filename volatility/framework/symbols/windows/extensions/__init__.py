@@ -740,14 +740,14 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
 
-        try:
-            proc_layer_name = self.add_process_layer()
-        except exceptions.InvalidAddressException:
-            return
+        # add_process_layer can raise InvalidAddressException.
+        # if that happens, we let the exception propagate upwards
+        proc_layer_name = self.add_process_layer()
 
         proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
-            return
+            raise exceptions.InvalidAddressException(proc_layer_name, self.Peb, 
+                                                     "Invalid address at {:0x}".format(self.Peb))
 
         sym_table = self.vol.type_name.split(constants.BANG)[0]
         peb = self._context.object("{}{}_PEB".format(sym_table, constants.BANG),
