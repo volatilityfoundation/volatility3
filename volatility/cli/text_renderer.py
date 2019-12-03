@@ -236,7 +236,7 @@ class PrettyTextRenderer(CLIRenderer):
         # TODO: Improve text output
         outfd = sys.stdout
 
-        outfd.write("Formatting...\r")
+        sys.stderr.write("Formatting...\n")
 
         display_alignment = ">"
         column_separator = " | "
