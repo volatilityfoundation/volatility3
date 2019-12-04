@@ -89,6 +89,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
         # Generate the results for each plugin
         for plugin in runable_plugins:
             plugin_name = plugin.__class__.__name__
+            self._progress_callback((runable_plugins.index(plugin) * 100) // len(runable_plugins),
+                                    "Running plugin {}...".format(plugin_name))
             try:
                 vollog.log(logging.INFO, "Running {}".format(plugin_name))
                 for (item, timestamp_type, timestamp) in plugin.generate_timeline():
