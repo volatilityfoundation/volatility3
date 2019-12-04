@@ -32,7 +32,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
                                                  fallback_checks = [("KdCopyDataBlock", None, False),
                                                                     ("_HANDLE_TABLE", "HandleCount", True)])
 
-    is_win10_up_to_15063 = poolscanner.os_distinguisher(version_check = lambda x: (10, 0) <= x < (10, 0, 16299),
+    is_win10_up_to_15063 = poolscanner.os_distinguisher(version_check = lambda x: (10, 0) <= x <= (10, 0, 15063),
                                                         fallback_checks = [("ObHeaderCookie", None, True),
                                                                            ("_HANDLE_TABLE", "HandleCount", False),
                                                                            ("_EPROCESS", "ControlFlowGuardEnabled",
