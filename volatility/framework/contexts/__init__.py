@@ -111,8 +111,10 @@ class Context(interfaces.context.ContextInterface):
         object_template = object_template.clone()
         object_template.update_vol(**arguments)
         return object_template(context = self,
-                               object_info = interfaces.objects.ObjectInformation(
-                                   layer_name = layer_name, offset = offset, native_layer_name = native_layer_name))
+                               object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
+                                                                                  offset = offset,
+                                                                                  native_layer_name = native_layer_name,
+                                                                                  size = object_template.size))
 
     def module(self,
                module_name: str,

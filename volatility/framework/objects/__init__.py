@@ -299,7 +299,8 @@ class Pointer(Integer):
         return self.vol.subtype(context = self._context,
                                 object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
                                                                                    offset = offset,
-                                                                                   parent = self))
+                                                                                   parent = self,
+                                                                                   size = self.vol.subtype.size))
 
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from
@@ -563,7 +564,8 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
                 layer_name = self.vol.layer_name,
                 offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
                 parent = self,
-                native_layer_name = self.vol.native_layer_name)
+                native_layer_name = self.vol.native_layer_name,
+                size = self.vol.subtype.size)
             result += [self.vol.subtype(context = self._context, object_info = object_info)]
         if not return_list:
             return result[0]
@@ -671,14 +673,17 @@ class AggregateType(interfaces.objects.ObjectInterface):
             return self._concrete_members[attr]
         elif attr in self.vol.members:
             mask = self._context.layers[self.vol.layer_name].address_mask
-            relative_offset, member = self.vol.members[attr]
-            member = member(context = self._context,
-                            object_info = interfaces.objects.ObjectInformation(
-                                layer_name = self.vol.layer_name,
-                                offset = mask & (self.vol.offset + relative_offset),
-                                member_name = attr,
-                                parent = self,
-                                native_layer_name = self.vol.native_layer_name))
+            relative_offset, template = self.vol.members[attr]
+            if isinstance(template, templates.ReferenceTemplate):
+                template = self._context.symbol_space.get_type(template.vol.type_name)
+            member = template(context = self._context,
+                              object_info = interfaces.objects.ObjectInformation(
+                                  layer_name = self.vol.layer_name,
+                                  offset = mask & (self.vol.offset + relative_offset),
+                                  member_name = attr,
+                                  parent = self,
+                                  native_layer_name = self.vol.native_layer_name,
+                                  size = template.size))
             self._concrete_members[attr] = member
             return member
         # We duplicate this code to avoid polluting the methodspace
