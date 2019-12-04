@@ -296,6 +296,7 @@ class JsonRenderer(CLIRenderer):
     }
 
     name = 'JSON'
+    structured_output = True
 
     def get_render_options(self) -> List[RenderOption]:
         pass
