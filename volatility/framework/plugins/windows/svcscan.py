@@ -35,13 +35,14 @@ class SvcScan(interfaces.plugins.PluginInterface):
     is_win10_up_to_15063 = poolscanner.os_distinguisher(version_check = lambda x: (10, 0) <= x < (10, 0, 16299),
                                                         fallback_checks = [("ObHeaderCookie", None, True),
                                                                            ("_HANDLE_TABLE", "HandleCount", False),
-                                                                           ("ObHeaderCookie", None, True),
-                                                                           ("_EPROCESS", "ControlFlowGuardEnabled", True)])
+                                                                           ("_EPROCESS", "ControlFlowGuardEnabled",
+                                                                            True)])
 
     is_win10_16299_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (10, 0, 16299),
                                                            fallback_checks = [("ObHeaderCookie", None, True),
                                                                               ("_HANDLE_TABLE", "HandleCount", False),
-                                                                              ("ObHeaderCookie", None, True)])
+                                                                              ("_EPROCESS", "ControlFlowGuardEnabled",
+                                                                               False)])
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
