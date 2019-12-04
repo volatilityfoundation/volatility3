@@ -4,16 +4,19 @@
 """A module containing a collection of plugins that produce data typically
 found in Linux's /proc file system."""
 
+import logging
+
 from typing import List, Generator, Iterable
 
 from volatility.framework import contexts
-from volatility.framework import renderers, constants, interfaces
+from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 
+vollog = logging.getLogger(__name__)
 
 class Lsmod(plugins.PluginInterface):
     """Lists loaded kernel modules."""
@@ -43,6 +46,12 @@ class Lsmod(plugins.PluginInterface):
         linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
         vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)
+
+        try:
+            vmlinux.get_type("module")
+        except exceptions.SymbolError:
+            vollog.debug("The required symbol 'module' is not present in symbol table. Please check that kernel modules are enabled for the system under analysis.") 
+            return
 
         modules = vmlinux.object_from_symbol(symbol_name = "modules").cast("list_head")
 
