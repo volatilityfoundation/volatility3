@@ -128,17 +128,19 @@ class ObjectInterface(metaclass = ABCMeta):
         """Writes the new value into the format at the offset the object
         currently resides at."""
 
-    def get_symbol_table(self) -> 'interfaces.symbols.SymbolTableInterface':
-        """Returns the symbol table for this particular object.
+    def get_symbol_table_name(self) -> str:
+        """Returns the symbol table name for this particular object.
 
-        Returns none if the symbol table cannot be identified.
+        Raises:
+            ValueError: If the object's symbol does not contain an explicit table
+            KeyError: If the table_name is not valid within the object's context
         """
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Unable to determine table for symbol: {}".format(self.vol.type_name))
         table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
         if table_name not in self._context.symbol_space:
             raise KeyError("Symbol table not found in context's symbol_space for symbol: {}".format(self.vol.type_name))
-        return self._context.symbol_space[table_name]
+        return table_name
 
     def cast(self, new_type_name: str, **additional) -> 'ObjectInterface':
         """Returns a new object at the offset and from the layer that the

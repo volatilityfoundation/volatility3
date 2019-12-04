@@ -498,7 +498,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InLoadOrderModuleList.to_list(
-                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG),
+                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table_name(), constants.BANG),
                     "InLoadOrderLinks"):
                 yield entry
         except exceptions.InvalidAddressException:
@@ -510,7 +510,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InInitializationOrderModuleList.to_list(
-                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG),
+                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table_name(), constants.BANG),
                     "InInitializationOrderLinks"):
                 yield entry
         except exceptions.InvalidAddressException:
@@ -522,7 +522,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
-                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG),
+                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table_name(), constants.BANG),
                     "InMemoryOrderLinks"):
                 yield entry
         except exceptions.InvalidAddressException:
@@ -546,7 +546,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
                 if self.Session == 0:
                     return renderers.NotApplicableValue()
 
-                symbol_table_name = self.get_symbol_table().name
+                symbol_table_name = self.get_symbol_table_name()
                 kvo = self._context.layers[self.vol.native_layer_name].config['kernel_virtual_offset']
                 ntkrnlmp = self._context.module(symbol_table_name,
                                                 layer_name = self.vol.native_layer_name,

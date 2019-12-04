@@ -23,7 +23,7 @@ class IMAGE_DOS_HEADER(objects.StructType):
             raise ValueError("e_magic {0:04X} is not a valid DOS signature.".format(self.e_magic))
 
         layer_name = self.vol.layer_name
-        symbol_table_name = self.get_symbol_table().name
+        symbol_table_name = self.get_symbol_table_name()
 
         nt_header = self._context.object(symbol_table_name + constants.BANG + "_IMAGE_NT_HEADERS",
                                          layer_name = layer_name,
@@ -89,7 +89,7 @@ class IMAGE_DOS_HEADER(objects.StructType):
         nt_header = self.get_nt_header()
 
         layer_name = self.vol.layer_name
-        symbol_table_name = self.get_symbol_table().name
+        symbol_table_name = self.get_symbol_table_name()
 
         section_alignment = nt_header.OptionalHeader.SectionAlignment
 
@@ -154,7 +154,7 @@ class IMAGE_NT_HEADERS(objects.StructType):
             <_IMAGE_SECTION_HEADER> objects
         """
         layer_name = self.vol.layer_name
-        symbol_table_name = self.get_symbol_table().name
+        symbol_table_name = self.get_symbol_table_name()
 
         sect_header_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG +
                                                                "_IMAGE_SECTION_HEADER").size
