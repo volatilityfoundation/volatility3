@@ -746,7 +746,7 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
 
         proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
-            raise exceptions.InvalidAddressException(proc_layer_name, self.Peb, 
+            raise exceptions.InvalidAddressException(proc_layer_name, self.Peb,
                                                      "Invalid address at {:0x}".format(self.Peb))
 
         sym_table = self.vol.type_name.split(constants.BANG)[0]
@@ -758,26 +758,38 @@ class EPROCESS(generic.GenericIntelProcess, ExecutiveObject):
     def load_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they were loaded."""
 
-        peb = self.get_peb()
-        for entry in peb.Ldr.InLoadOrderModuleList.to_list(
-                "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG), "InLoadOrderLinks"):
-            yield entry
+        try:
+            peb = self.get_peb()
+            for entry in peb.Ldr.InLoadOrderModuleList.to_list(
+                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG),
+                    "InLoadOrderLinks"):
+                yield entry
+        except exceptions.InvalidAddressException:
+            return
 
     def init_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they were initialized"""
 
-        peb = self.get_peb()
-        for entry in peb.Ldr.InInitializationOrderModuleList.to_list(
-                "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG), "InInitializationOrderLinks"):
-            yield entry
+        try:
+            peb = self.get_peb()
+            for entry in peb.Ldr.InInitializationOrderModuleList.to_list(
+                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG),
+                    "InInitializationOrderLinks"):
+                yield entry
+        except exceptions.InvalidAddressException:
+            return
 
     def mem_order_modules(self) -> Iterable[interfaces.objects.ObjectInterface]:
         """Generator for DLLs in the order that they appear in memory"""
 
-        peb = self.get_peb()
-        for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
-                "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG), "InMemoryOrderLinks"):
-            yield entry
+        try:
+            peb = self.get_peb()
+            for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
+                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table().name, constants.BANG),
+                    "InMemoryOrderLinks"):
+                yield entry
+        except exceptions.InvalidAddressException:
+            return
 
     def get_handle_count(self):
         try:
