@@ -34,7 +34,7 @@ class YaraScanner(interfaces.layers.ScannerInterface):
 
 
 class YaraScan(plugins.PluginInterface):
-    """Scans memory using yara rules (string or file)."""
+    """Scans kernel memory using yara rules (string or file)."""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -42,16 +42,8 @@ class YaraScan(plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = "Memory layer for the kernel",
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.BooleanRequirement(name = "all",
-                                            description = "Scan both process and kernel memory",
-                                            default = False,
-                                            optional = True),
             requirements.BooleanRequirement(name = "insensitive",
                                             description = "Makes the search case insensitive",
-                                            default = False,
-                                            optional = True),
-            requirements.BooleanRequirement(name = "kernel",
-                                            description = "Scan kernel modules",
                                             default = False,
                                             optional = True),
             requirements.BooleanRequirement(name = "wide",
