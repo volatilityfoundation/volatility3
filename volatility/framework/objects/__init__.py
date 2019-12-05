@@ -495,6 +495,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
         super().__init__(context = context, type_name = type_name, object_info = object_info)
         self._vol['count'] = count
         self._vol['subtype'] = subtype
+        self._vol['size'] = count * subtype.size
 
     # This overrides the little known Sequence.count(val) that returns the number of items in the list that match val
     # Changing the name would be confusing (since we use count of an array everywhere else), so this is more important
@@ -507,6 +508,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
     def count(self, value: int) -> None:
         """Sets the count to a specific value."""
         self._vol['count'] = value
+        self._vol['size'] = value * self._vol['subtype'].size
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
 
