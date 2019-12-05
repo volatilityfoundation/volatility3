@@ -301,6 +301,10 @@ class JsonRenderer(CLIRenderer):
     def get_render_options(self) -> List[RenderOption]:
         pass
 
+    def output_result(self, outfd, result):
+        """Outputs the JSON data to a file in a particular format"""
+        outfd.write(json.dumps(result, indent = 2, sort_keys = True))
+
     def render(self, grid: interfaces.renderers.TreeGrid):
         outfd = sys.stdout
 
@@ -334,4 +338,14 @@ class JsonRenderer(CLIRenderer):
         else:
             grid.visit(node = None, function = visitor, initial_accumulator = final_output)
 
-        outfd.write(json.dumps(final_output[1], indent = 2, sort_keys = True))
+        self.output_result(outfd, final_output[1])
+
+
+class JsonLinesRenderer(JsonRenderer):
+    name = 'JSONL'
+
+    def output_result(self, outfd, result):
+        """Outputs the JSON results as JSON lines"""
+        for line in result:
+            outfd.write(json.dumps(line, sort_keys = True))
+            outfd.write("\n")
