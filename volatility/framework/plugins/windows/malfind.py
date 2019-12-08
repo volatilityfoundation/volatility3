@@ -62,7 +62,7 @@ class Malfind(interfaces.plugins.PluginInterface):
         return True
 
     @classmethod
-    def list_injections(cls, context: interfaces.context.ContextInterface, symbol_table: str,
+    def list_injections(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
                         proc: interfaces.objects.ObjectInterface
                         ) -> Iterable[Tuple[interfaces.objects.ObjectInterface, bytes]]:
         """Generate memory regions for a process that may contain injected
@@ -89,7 +89,7 @@ class Malfind(interfaces.plugins.PluginInterface):
 
         for vad in proc.get_vad_root().traverse():
             protection_string = vad.get_protection(
-                vadinfo.VadInfo.protect_values(context, proc_layer_name, symbol_table), vadinfo.winnt_protections)
+                vadinfo.VadInfo.protect_values(context, layer_name, symbol_table), vadinfo.winnt_protections)
             write_exec = "EXECUTE" in protection_string and "WRITE" in protection_string
 
             # the write/exec check applies to everything
@@ -112,7 +112,8 @@ class Malfind(interfaces.plugins.PluginInterface):
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
 
-            for vad, data in self.list_injections(self.context, self.config["nt_symbols"], proc):
+            for vad, data in self.list_injections(self.context, self.config["primary"], self.config["nt_symbols"],
+                                                  proc):
 
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
                 if is_32bit_arch or proc.get_is_wow64():
@@ -125,7 +126,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.get_start()),
                            format_hints.Hex(vad.get_end()), vad.get_tag(),
                            vad.get_protection(
-                               vadinfo.VadInfo.protect_values(self.context, proc.vol.layer_name,
+                               vadinfo.VadInfo.protect_values(self.context, self.config["primary"],
                                                               self.config["nt_symbols"]), vadinfo.winnt_protections),
                            vad.get_commit_charge(), vad.get_private_memory(), format_hints.HexBytes(data), disasm))
 
