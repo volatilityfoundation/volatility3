@@ -284,15 +284,10 @@ class PrettyTextRenderer(CLIRenderer):
 
 class JsonRenderer(CLIRenderer):
     _type_renderers = {
-        format_hints.HexBytes:
-        quoted_optional(hex_bytes_as_text),
-        interfaces.renderers.Disassembly:
-        quoted_optional(display_disassembly),
-        datetime.datetime:
-        lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
-        if not isinstance(x, interfaces.renderers.BaseAbsentValue) else None,
-        'default':
-        lambda x: x
+        format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
+        interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
+        datetime.datetime: lambda x: x.isoformat() if not isinstance(x, interfaces.renderers.BaseAbsentValue) else None,
+        'default': lambda x: x
     }
 
     name = 'JSON'
