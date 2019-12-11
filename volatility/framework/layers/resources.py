@@ -105,14 +105,15 @@ class ResourceAccessor(object):
                     cache_file = open(temp_filename, "wb")
 
                     count = 0
-                    block = fp.read(block_size)
-                    while block:
+                    while True:
+                        block = fp.read(block_size)
                         count += len(block)
+                        if not block:
+                            break
                         if self._progress_callback:
                             self._progress_callback(count * 100 / max(count, int(content_length)),
                                                     "Reading file {}".format(url))
                         cache_file.write(block)
-                        block = fp.read(block_size)
                     cache_file.close()
                 # Re-open the cache with a different mode
                 curfile = open(temp_filename, mode = "rb")
@@ -120,8 +121,7 @@ class ResourceAccessor(object):
         # Determine whether the file is a particular type of file, and if so, open it as such
         IMPORTED_MAGIC = False
         if HAS_MAGIC:
-            stop = False
-            while not stop:
+            while True:
                 detected = None
                 try:
                     # Detect the content
@@ -141,31 +141,27 @@ class ResourceAccessor(object):
                         curfile = bz2.BZ2File(curfile, mode)
                     elif detected.mime_type == 'application/x-gzip':
                         curfile = gzip.GzipFile(fileobj = curfile, mode = mode)
-
-                    if detected.mime_type in ['application/x-xz', 'application/x-bzip2', 'application/x-gzip']:
-                        # Read and rewind to ensure we're inside any compressed file layers
-                        curfile.read(1)
-                        curfile.seek(0)
                     else:
-                        stop = True
+                        break
                 else:
-                    stop = True
+                    break
 
+                # Read and rewind to ensure we're inside any compressed file layers
+                curfile.read(1)
+                curfile.seek(0)
         if not IMPORTED_MAGIC:
             # Somewhat of a hack, but prevents a hard dependency on the magic module
             url_path = parsed_url.path
-            stop = False
-            while not stop:
-                url_path, extension = url_path.split(".")[:-1]
-                url_path = ".".join(url_path)
-                if extension == "xz":
+            while True:
+                if url_path.endswith(".xz"):
                     curfile = lzma.LZMAFile(curfile, mode)
-                elif extension == "bz2":
+                elif url_path.endswith(".bz2"):
                     curfile = bz2.BZ2File(curfile, mode)
-                elif extension == "gz":
+                elif url_path.endswith(".gz"):
                     curfile = gzip.GzipFile(fileobj = curfile, mode = mode)
                 else:
-                    stop = True
+                    break
+                url_path = ".".join(url_path.split(".")[:-1])
 
         # Fallback in case the file doesn't exist
         if curfile is None:
