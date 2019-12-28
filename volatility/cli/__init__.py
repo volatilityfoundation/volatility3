@@ -176,7 +176,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # Set the PARALLELISM
         if partial_args.parallelism == 'processes':
             constants.PARALLELISM = constants.Parallelism.Multiprocessing
-        elif partial_args.parallelism == 'threading':
+        elif partial_args.parallelism == 'threads':
             constants.PARALLELISM = constants.Parallelism.Threading
         else:
             constants.PARALLELISM = constants.Parallelism.Off
