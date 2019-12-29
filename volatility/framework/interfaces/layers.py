@@ -252,12 +252,12 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                     yield from scan_chunk(value)
             else:
                 progress = multiprocessing.Manager().Value("Q", 0)
-                parallel_module = multiprocessing
+                parallel_module = multiprocessing.pool.Pool
                 if constants.PARALLELISM == constants.Parallelism.Threading:
                     progress = DummyProgress()
-                    parallel_module = threading
+                    parallel_module = multiprocessing.pool.ThreadPool
                 scan_chunk = functools.partial(self._scan_chunk, scanner, progress)
-                with parallel_module.Pool() as pool:
+                with parallel_module() as pool:
                     result = pool.map_async(scan_chunk, scan_iterator())
                     while not result.ready():
                         if progress_callback:
