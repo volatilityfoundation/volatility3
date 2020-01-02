@@ -1,3 +1,8 @@
+
+# Author: Tamas Jos (@skelsec) <skelsecprojects@gmail.com>
+# License: MIT
+# Version: 0.0.1
+
 import logging
 from typing import List
 
