@@ -5,7 +5,7 @@
 import logging
 from typing import Callable, Dict, Iterable
 
-from volatility.framework import interfaces, contexts
+from volatility.framework import interfaces, contexts, exceptions
 from volatility.framework.automagic import mac
 from volatility.plugins.mac import pslist
 
@@ -37,6 +37,8 @@ class Tasks(pslist.PsList):
         mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        
+        kernel_as = context.layers[layer_name]
 
         queue_entry = kernel.object_from_symbol(symbol_name = "tasks")
 
@@ -48,10 +50,13 @@ class Tasks(pslist.PsList):
             else:
                 seen[task.vol.offset] = 1
 
-            proc = task.bsd_info.dereference().cast("proc")
-
-            if not context.layers[layer_name].is_valid(proc.vol.offset, proc.vol.size):
-                break
-
-            if not filter_func(proc):
+            try:
+                proc = task.bsd_info.dereference().cast("proc")
+            except exceptions.PagedInvalidAddressException:
+                continue
+            
+            if not filter_func(proc) and kernel_as.is_valid(proc.vol.offset, proc.vol.size):
                 yield proc
+
+
+
