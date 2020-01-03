@@ -678,14 +678,13 @@ class AggregateType(interfaces.objects.ObjectInterface):
             relative_offset, template = self.vol.members[attr]
             if isinstance(template, templates.ReferenceTemplate):
                 template = self._context.symbol_space.get_type(template.vol.type_name)
-            member = template(context = self._context,
-                              object_info = interfaces.objects.ObjectInformation(
-                                  layer_name = self.vol.layer_name,
-                                  offset = mask & (self.vol.offset + relative_offset),
-                                  member_name = attr,
-                                  parent = self,
-                                  native_layer_name = self.vol.native_layer_name,
-                                  size = template.size))
+            object_info = interfaces.objects.ObjectInformation(layer_name = self.vol.layer_name,
+                                                               offset = mask & (self.vol.offset + relative_offset),
+                                                               member_name = attr,
+                                                               parent = self,
+                                                               native_layer_name = self.vol.native_layer_name,
+                                                               size = template.size)
+            member = template(context = self._context, object_info = object_info)
             self._concrete_members[attr] = member
             return member
         # We duplicate this code to avoid polluting the methodspace

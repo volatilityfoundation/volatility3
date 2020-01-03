@@ -73,6 +73,7 @@ class ObjectInformation(ReadOnlyMapping):
             member_name: If the object was accessed as a member of a parent object, this was the name used to access it
             parent: If the object was accessed as a member of a parent object, this is the parent object
             native_layer_name: If this object references other objects (such as a pointer), what layer those objects live in
+            size: The size that the whole structure consumes in bytes
         """
         super().__init__({
             'layer_name': layer_name,
