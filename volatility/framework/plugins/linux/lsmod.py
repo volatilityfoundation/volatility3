@@ -42,13 +42,12 @@ class Lsmod(plugins.PluginInterface):
 
         Yields:
             The modules present in the `layer_name` layer's modules list
+
+        This function will throw a SymbolError exception if kernel module support is not enabled.
         """
         linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
         vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)
-
-        # this will cause an exception if module support is not compiled into the kernel
-        vmlinux.get_type("module")
 
         modules = vmlinux.object_from_symbol(symbol_name = "modules").cast("list_head")
 
