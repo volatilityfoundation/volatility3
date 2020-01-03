@@ -196,7 +196,18 @@
                         }
                     },
                     "offset": 44
-                }, 
+                },
+                "Tag": {
+                    "type": {
+                        "count": 4,
+                        "subtype": {
+                            "kind": "base",
+                            "name": "unsigned char"
+                        },
+                        "kind": "array"
+                    },
+                    "offset": 0
+                },
                 "DriverName": {
                     "type": {
                         "kind": "pointer",
