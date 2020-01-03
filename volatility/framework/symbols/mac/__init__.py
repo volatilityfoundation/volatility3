@@ -24,3 +24,4 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('ifnet', extensions.ifnet)
         self.set_type_class('sockaddr_dl', extensions.sockaddr_dl)
         self.set_type_class('sockaddr', extensions.sockaddr)
+        self.set_type_class('sysctl_oid', extensions.sysctl_oid)

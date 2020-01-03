@@ -4,7 +4,7 @@
 
 from typing import Generator, Iterable, Optional, Set, Tuple
 
-from volatility.framework import constants, objects
+from volatility.framework import constants, objects, renderers
 from volatility.framework import exceptions, interfaces
 from volatility.framework.objects import utility
 from volatility.framework.renderers import conversion
@@ -390,17 +390,27 @@ class queue_entry(objects.StructType):
                   max_size: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
         yielded = 0
 
-        for attr in ['next', 'prev']:
-            try:
-                n = getattr(self, attr).dereference().cast(type_name)
-                while n is not None and n.vol.offset != list_head:
-                    yield n
-                    yielded = yielded + 1
-                    if yielded == max_size:
-                        return
-                    n = getattr(n.member(attr = member_name), attr).dereference().cast(type_name)
-            except exceptions.InvalidAddressException:
-                pass
+        try:
+            n = self.next.dereference().cast(type_name)
+        except exceptions.PagedInvalidAddressException:
+            return
+        while n is not None and n.vol.offset != list_head:
+            yield n
+            yielded = yielded + 1
+            if yielded == max_size:
+                return
+            n = n.member(attr = member_name).next.dereference().cast(type_name)
+
+        try:
+            p = self.prev.dereference().cast(type_name)
+        except exceptions.PagedInvalidAddressException:
+            return
+        while p is not None and p.vol.offset != list_head:
+            yield p
+            yielded = yielded + 1
+            if yielded == max_size:
+                return
+            p = p.member(attr = member_name).prev.dereference().cast(type_name)
 
 
 class ifnet(objects.StructType):
@@ -464,3 +474,32 @@ class sockaddr(objects.StructType):
             ip = str(addr_dl)
 
         return ip
+
+
+class sysctl_oid(objects.StructType):
+
+    def get_perms(self):
+        ret = ""
+
+        checks = [0x80000000, 0x40000000, 0x00800000]
+        perms = ["R", "W", "L"]
+
+        for (i, c) in enumerate(checks):
+            if c & self.oid_kind:
+                ret = ret + perms[i]
+            else:
+                ret = ret + "-"
+
+        return ret
+
+    def get_ctltype(self):
+        types = {1: 'CTLTYPE_NODE', 2: 'CTLTYPE_INT', 3: 'CTLTYPE_STRING', 4: 'CTLTYPE_QUAD', 5: 'CTLTYPE_OPAQUE'}
+
+        ctltype = self.oid_kind & 0xf
+
+        if 0 < ctltype < 6:
+            ret = types[ctltype]
+        else:
+            ret = ""
+
+        return ret
