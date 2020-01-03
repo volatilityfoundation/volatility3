@@ -47,11 +47,8 @@ class Lsmod(plugins.PluginInterface):
 
         vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)
 
-        try:
-            vmlinux.get_type("module")
-        except exceptions.SymbolError:
-            vollog.debug("The required symbol 'module' is not present in symbol table. Please check that kernel modules are enabled for the system under analysis.") 
-            return
+        # this will cause an exception if module support is not compiled into the kernel
+        vmlinux.get_type("module")
 
         modules = vmlinux.object_from_symbol(symbol_name = "modules").cast("list_head")
 
@@ -61,13 +58,17 @@ class Lsmod(plugins.PluginInterface):
             yield module
 
     def _generator(self):
-        for module in self.list_modules(self.context, self.config['primary'], self.config['vmlinux']):
+        try:
+            for module in self.list_modules(self.context, self.config['primary'], self.config['vmlinux']):
 
-            mod_size = module.get_init_size() + module.get_core_size()
+                mod_size = module.get_init_size() + module.get_core_size()
 
-            mod_name = utility.array_to_string(module.name)
+                mod_name = utility.array_to_string(module.name)
 
-            yield 0, (format_hints.Hex(module.vol.offset), mod_name, mod_size)
+                yield 0, (format_hints.Hex(module.vol.offset), mod_name, mod_size)
+        
+        except exceptions.SymbolError:
+            vollog.debug("The required symbol 'module' is not present in symbol table. Please check that kernel modules are enabled for the system under analysis.") 
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Name", str), ("Size", int)], self._generator())
