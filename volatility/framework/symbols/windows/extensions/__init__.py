@@ -101,11 +101,17 @@ class MMVAD_SHORT(objects.StructType):
             vad_object = self.cast(target)
             yield vad_object
 
-        for vad_node in self.get_left_child().dereference().traverse(visited, depth + 1):
-            yield vad_node
+        try:
+            for vad_node in self.get_left_child().dereference().traverse(visited, depth + 1):
+                yield vad_node
+        except exceptions.InvalidAddressException as excp:
+            vollog.log(constants.LOGLEVEL_VVV, "Invalid address on LeftChild: {0:#x}".format(excp.invalid_address))
 
-        for vad_node in self.get_right_child().dereference().traverse(visited, depth + 1):
-            yield vad_node
+        try:
+            for vad_node in self.get_right_child().dereference().traverse(visited, depth + 1):
+                yield vad_node
+        except exceptions.InvalidAddressException as excp:
+            vollog.log(constants.LOGLEVEL_VVV, "Invalid address on RightChild: {0:#x}".format(excp.invalid_address))
 
     def get_right_child(self):
         """Get the right child member."""
