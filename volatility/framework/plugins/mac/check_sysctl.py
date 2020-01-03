@@ -40,7 +40,7 @@ class Check_sysctl(plugins.PluginInterface):
             var_name = known_sysctls[name]
 
             try:
-                var_array = kernel.object(object_type = var_name)
+                var_array = kernel.object_from_symbol(symbol_name = var_name)
             except exceptions.SymbolError:
                 var_array = None
 
