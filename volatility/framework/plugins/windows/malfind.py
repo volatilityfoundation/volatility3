@@ -62,7 +62,7 @@ class Malfind(interfaces.plugins.PluginInterface):
         return True
 
     @classmethod
-    def list_injections(cls, context: interfaces.context.ContextInterface, layer_name: str, symbol_table: str,
+    def list_injections(cls, context: interfaces.context.ContextInterface, kernel_layer_name: str, symbol_table: str,
                         proc: interfaces.objects.ObjectInterface
                         ) -> Iterable[Tuple[interfaces.objects.ObjectInterface, bytes]]:
         """Generate memory regions for a process that may contain injected
@@ -70,6 +70,7 @@ class Malfind(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
+            kernel_layer_name: The name of the kernel layer from which to read the VAD protections
             symbol_table: The name of the table containing the kernel symbols
             proc: an _EPROCESS instance
 
@@ -89,7 +90,7 @@ class Malfind(interfaces.plugins.PluginInterface):
 
         for vad in proc.get_vad_root().traverse():
             protection_string = vad.get_protection(
-                vadinfo.VadInfo.protect_values(context, layer_name, symbol_table), vadinfo.winnt_protections)
+                vadinfo.VadInfo.protect_values(context, kernel_layer_name, symbol_table), vadinfo.winnt_protections)
             write_exec = "EXECUTE" in protection_string and "WRITE" in protection_string
 
             # the write/exec check applies to everything
