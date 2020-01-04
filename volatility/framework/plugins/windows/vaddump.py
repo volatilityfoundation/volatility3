@@ -77,8 +77,6 @@ class VadDump(interfaces.plugins.PluginInterface):
                                                                                  excp.layer_name))
                 continue
 
-            proc_layer = self.context.layers[proc_layer_name]
-
             for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):
                 try:
                     filedata = interfaces.plugins.FileInterface("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
