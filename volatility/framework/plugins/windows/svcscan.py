@@ -32,17 +32,25 @@ class SvcScan(interfaces.plugins.PluginInterface):
                                                  fallback_checks = [("KdCopyDataBlock", None, False),
                                                                     ("_HANDLE_TABLE", "HandleCount", True)])
 
-    is_win10_up_to_15063 = poolscanner.os_distinguisher(version_check = lambda x: (10, 0) <= x <= (10, 0, 15063),
+    is_win10_up_to_15063 = poolscanner.os_distinguisher(version_check = lambda x: (10, 0) <= x < (10, 0, 15063),
+                                                        fallback_checks=[("ObHeaderCookie", None, True),
+                                                                         ("_HANDLE_TABLE", "HandleCount", False),
+                                                                         ("_EPROCESS", "KeepAliveCounter", True)])
+
+    is_win10_15063 = poolscanner.os_distinguisher(version_check = lambda x: (10, 0) <= x == (10, 0, 15063),
                                                         fallback_checks = [("ObHeaderCookie", None, True),
                                                                            ("_HANDLE_TABLE", "HandleCount", False),
                                                                            ("_EPROCESS", "ControlFlowGuardEnabled",
-                                                                            True)])
+                                                                            True),
+                                                                           ("_EPROCESS", "KeepAliveCounter", False)
+                                                                           ])
 
     is_win10_16299_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (10, 0, 16299),
                                                            fallback_checks = [("ObHeaderCookie", None, True),
                                                                               ("_HANDLE_TABLE", "HandleCount", False),
                                                                               ("_EPROCESS", "ControlFlowGuardEnabled",
-                                                                               False)])
+                                                                               False),
+                                                                              ("_EPROCESS", "KeepAliveCounter", False)])
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -88,8 +96,12 @@ class SvcScan(interfaces.plugins.PluginInterface):
         elif SvcScan.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win10-16299-x86"
         elif SvcScan.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and is_64bit:
-            symbol_filename = "services-win10-15063-x64"
+            symbol_filename = "services-win8-x64"
         elif SvcScan.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and not is_64bit:
+            symbol_filename = "services-win8-x86"
+        elif SvcScan.is_win10_15063(context = context, symbol_table = symbol_table) and is_64bit:
+            symbol_filename = "services-win10-15063-x64"
+        elif SvcScan.is_win10_15063(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win10-15063-x86"
         elif poolscanner.PoolScanner.is_windows_8_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win8-x64"
