@@ -28,18 +28,29 @@ class Netstat(plugins.PluginInterface):
             requirements.PluginRequirement(name = 'tasks', plugin = tasks.Tasks, version = (1, 0, 0))
         ]
 
-    def _generator(self, tasks):
-        for task in tasks:
+    @classmethod
+    def list_sockets(cls,
+                     context: interfaces.context.ContextInterface,
+                     layer_name: str,
+                     darwin_symbols: str,
+                     filter_func: Callable[[int], bool] = lambda _: False) -> \
+                Iterable[interfaces.objects.ObjectInterface]:
+
+        for task in tasks.Tasks.list_tasks(context,
+                                           layer_name,
+                                           darwin_symbols,
+                                           filter_func):
+
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
 
-            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(self.config, self.context, task):
+            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(darwin_symbols, context, task):
                 try:
                     ftype = filp.f_fglob.get_fg_type()
                 except exceptions.InvalidAddressException:
                     continue
 
-                if ftype != 'DTYPE_SOCKET':
+                if ftype != 'SOCKET':
                     continue
 
                 try:
@@ -47,39 +58,44 @@ class Netstat(plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     continue
 
-                family = socket.get_family()
+                yield task_name, pid, socket
 
-                if family == 1:
-                    try:
-                        upcb = socket.so_pcb.dereference().cast("unpcb")
-                        path = utility.array_to_string(upcb.unp_addr.sun_path)
-                    except exceptions.InvalidAddressException:
-                        continue
+    def _generator(self):
+        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
+        
+        for task_name, pid, socket in self.list_sockets(self.context,
+                                      self.config['primary'],
+                                      self.config['darwin'],
+                                      filter_func = filter_func):
 
-                    yield (0, (format_hints.Hex(socket.vol.offset), "UNIX", path, 0, "", 0, "",
+            family = socket.get_family()
+
+            if family == 1:
+                try:
+                    upcb = socket.so_pcb.dereference().cast("unpcb")
+                    path = utility.array_to_string(upcb.unp_addr.sun_path)
+                except exceptions.InvalidAddressException:
+                    continue
+
+                yield (0, (format_hints.Hex(socket.vol.offset), "UNIX", path, 0, "", 0, "",
+                           "{}/{:d}".format(task_name, pid)))
+
+            elif family in [2, 30]:
+                state = socket.get_state()
+                proto = socket.get_protocol_as_string()
+
+                vals = socket.get_converted_connection_info()
+
+                if vals:
+                    (lip, lport, rip, rport) = vals
+
+                    yield (0, (format_hints.Hex(socket.vol.offset), proto, lip, lport, rip, rport, state,
                                "{}/{:d}".format(task_name, pid)))
-
-                elif family in [2, 30]:
-                    state = socket.get_state()
-                    proto = socket.get_protocol_as_string()
-
-                    vals = socket.get_converted_connection_info()
-
-                    if vals:
-                        (lip, lport, rip, rport) = vals
-
-                        yield (0, (format_hints.Hex(socket.vol.offset), proto, lip, lport, rip, rport, state,
-                                   "{}/{:d}".format(task_name, pid)))
 
     def run(self):
         # mac.MacUtilities.aslr_mask_symbol_table(self.config, self.context)
 
-        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
-
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),
                                    ("Remote IP", str), ("Remote Port", int), ("State", str), ("Process", str)],
-                                  self._generator(
-                                      tasks.Tasks.list_tasks(self.context,
-                                                             self.config['primary'],
-                                                             self.config['darwin'],
-                                                             filter_func = filter_func)))
+                                  self._generator())
+ 

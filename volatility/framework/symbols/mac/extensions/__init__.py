@@ -86,7 +86,8 @@ class proc(generic.GenericIntelProcess):
 class fileglob(objects.StructType):
 
     def get_fg_type(self):
-        ret = "INVALID"
+        ret = None
+
         if self.has_member("fg_type"):
             ret = self.fg_type
         elif self.fg_ops != 0:
@@ -95,8 +96,10 @@ class fileglob(objects.StructType):
             except exceptions.InvalidAddressException:
                 pass
 
-        return ret.description
+        if ret:
+            ret = str(ret.description).replace("DTYPE_", "")
 
+        return ret
 
 class vm_map_object(objects.StructType):
 

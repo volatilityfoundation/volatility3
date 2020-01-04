@@ -214,7 +214,8 @@ class MacUtilities(object):
         return addr - 0xffffff8000000000
 
     @classmethod
-    def files_descriptors_for_process(cls, config: interfaces.configuration.HierarchicalDict,
+    def files_descriptors_for_process(cls, 
+                                      symbol_table_name : str,
                                       context: interfaces.context.ContextInterface,
                                       task: interfaces.objects.ObjectInterface):
 
@@ -234,7 +235,7 @@ class MacUtilities(object):
         if num_fds > 4096:
             num_fds = 1024
 
-        file_type = config["darwin"] + constants.BANG + 'fileproc'
+        file_type = symbol_table_name + constants.BANG + 'fileproc'
 
         try:
             table_addr = task.p_fd.fd_ofiles.dereference()
@@ -250,11 +251,11 @@ class MacUtilities(object):
                 except exceptions.InvalidAddressException:
                     continue
 
-                if ftype == 'DTYPE_VNODE':
+                if ftype == 'VNODE':
                     vnode = f.f_fglob.fg_data.dereference().cast("vnode")
                     path = vnode.full_path()
-                else:
-                    path = "<{}>".format(ftype.replace("DTYPE_", "").lower())
+                elif ftype:
+                    path = "<{}>".format(ftype.lower())
 
                 yield f, path, fd_num
 
