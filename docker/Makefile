@@ -1,16 +1,36 @@
-DOCKER_BIN:=/usr/bin/env docker
+DOCKER_BIN=docker
 DOCKER_FLAGS+=
-DOCKER_REPOSITORY:=volatilityfoundation
-DOCKER_TAG:=latest
+DOCKER_REPOSITORY?=volatility
+DOCKER_TAG?=latest
 
-.PHONY: all build scratch
+.PHONY: all dwarf2json pdbconv volatility volshell
 
-all: build
+all: dwarf2json pdbconv volatility volshell
 
-build:
-	@$(DOCKER_BIN) build $(DOCKER_FLAGS) -t $(DOCKER_REPOSITORY)/pdbconv:$(DOCKER_TAG) ./pdbconv
-	@$(DOCKER_BIN) build $(DOCKER_FLAGS) -t $(DOCKER_REPOSITORY)/volatility:$(DOCKER_TAG) ./volatility
-	@$(DOCKER_BIN) build $(DOCKER_FLAGS) -t $(DOCKER_REPOSITORY)/volshell:$(DOCKER_TAG) ./volshell
+dwarf2json:
+	@$(DOCKER_BIN) build \
+		$(DOCKER_FLAGS)  \
+		--rm             \
+		--tag $(DOCKER_REPOSITORY)/$@:$(DOCKER_TAG) \
+		$@
 
-scratch:
-	@DOCKER_FLAGS+=--no-cache $(MAKE) all
+pdbconv:
+	@$(DOCKER_BIN) build \
+		$(DOCKER_FLAGS)  \
+		--rm             \
+		--tag $(DOCKER_REPOSITORY)/$@:$(DOCKER_TAG) \
+		$@
+
+volatility:
+	@$(DOCKER_BIN) build \
+		$(DOCKER_FLAGS)  \
+		--rm             \
+		--tag $(DOCKER_REPOSITORY)/$@:$(DOCKER_TAG) \
+		$@
+
+volshell:
+	@$(DOCKER_BIN) build \
+		$(DOCKER_FLAGS)  \
+		--rm             \
+		--tag $(DOCKER_REPOSITORY)/$@:$(DOCKER_TAG) \
+		$@

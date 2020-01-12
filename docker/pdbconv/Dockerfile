@@ -3,20 +3,20 @@
 # Maintained by sk4la <sk4la.box@gmail.com>.
 #
 # To build:
-#   $ docker build -t volatilityfoundation/pdbconv:latest .
+#   $ docker build -t volatility/pdbconv:latest .
 #
 # Additionaly, one can set the following build arguments (using the --build-arg option) to customize the build:
-#   - DEF_ALPINE_VERSION [3.10]
+#   - DEF_ALPINE_VERSION [3.11]
 #   - DEF_INSTALL_PREFIX [/usr]
 #   - DEF_USERNAME [root]
 #
 # To run as a standalone container:
-#   $ docker run -v "${PWD}:/case" --rm --cap-drop=ALL volatilityfoundation/pdbconv
-#   $ docker run -v "${PWD}:/case" --rm --cap-drop=ALL volatilityfoundation/pdbconv -f /case/ntkrnlmp.pdb -o /case/ntkrnlmp.json
+#   $ docker run -v $PWD:/case --rm --cap-drop ALL volatility/pdbconv
+#   $ docker run -v $PWD:/case --rm --cap-drop ALL volatility/pdbconv -f /case/ntkrnlmp.pdb -o /case/ntkrnlmp.json
 #
 # See https://github.com/volatilityfoundation/volatility3 for details.
 
-ARG DEF_ALPINE_VERSION=3.10
+ARG DEF_ALPINE_VERSION=3.11
 
 FROM alpine:${DEF_ALPINE_VERSION}
 
@@ -43,9 +43,9 @@ RUN apk add --no-cache                  \
     python3-dev
 
 # Install the Volatility 3 framework
-RUN git clone https://github.com/volatilityfoundation/volatility3.git      && \
-    cd volatility3                                                         && \
-    python3 setup.py install                                               && \
+RUN git clone https://github.com/volatilityfoundation/volatility3.git && \
+    cd volatility3                                                    && \
+    python3 setup.py install                                          && \
     ln -sf ${DEF_INSTALL_PREFIX}/bin/vol ${DEF_INSTALL_PREFIX}/bin/volatility
 
 RUN python3 -m pip install --no-cache --upgrade \
@@ -59,4 +59,4 @@ WORKDIR /
 
 ENTRYPOINT [ "/usr/bin/env", "python3", "/usr/lib/volatility3/volatility/framework/symbols/windows/pdbconv.py" ]
 
-CMD [ "-h" ]
+CMD [ "--help" ]

@@ -3,22 +3,22 @@
 # Maintained by sk4la <sk4la.box@gmail.com>.
 #
 # To build:
-#   $ docker build -t volatilityfoundation/volshell:latest .
+#   $ docker build -t volatility/volshell:latest .
 #
 # Additionaly, one can set the following build arguments (using the --build-arg option) to customize the build:
-#   - DEF_ALPINE_VERSION [3.10]
+#   - DEF_ALPINE_VERSION [3.11]
 #   - DEF_INSTALL_PREFIX [/usr]
 #   - DEF_USERNAME [root]
 #
 # To run as a standalone container:
-#   $ docker run -v "${PWD}:/case:ro" --rm --cap-drop=ALL -it volatilityfoundation/volshell
-#   $ docker run -v "${PWD}:/case:ro" --rm --cap-drop=ALL -it volatilityfoundation/volshell -f /case/volatile.dmp
+#   $ docker run -v $PWD:/case:ro --rm --cap-drop ALL -it volatility/volshell
+#   $ docker run -v $PWD:/case:ro --rm --cap-drop ALL -it volatility/volshell -f /case/volatile.dmp
 #
 # One can also remove the ":ro" suffix (in the -v option) to allow writing to disk.
 #
 # See https://github.com/volatilityfoundation/volatility3 for details.
 
-ARG DEF_ALPINE_VERSION=3.10
+ARG DEF_ALPINE_VERSION=3.11
 
 FROM alpine:${DEF_ALPINE_VERSION} AS builder
 
@@ -72,15 +72,15 @@ RUN apk add --no-cache                  \
     apk add --no-cache --virtual .build \
     git
 
-COPY --from=builder --chown=${DEF_USERNAME}:${DEF_USERNAME} /tmp/build/yara-python yara-python
+COPY --from=builder --chown="${DEF_USERNAME}:${DEF_USERNAME}" /tmp/build/yara-python yara-python
 
 RUN find . -type d -exec chmod 755 {} \; && \
     find . -type f -exec chmod 644 {} \;
 
 # Install the Volatility 3 framework
-RUN git clone https://github.com/volatilityfoundation/volatility3.git      && \
-    cd volatility3                                                         && \
-    python3 setup.py install                                               && \
+RUN git clone https://github.com/volatilityfoundation/volatility3.git && \
+    cd volatility3                                                    && \
+    python3 setup.py install                                          && \
     ln -sf ${DEF_INSTALL_PREFIX}/bin/vol ${DEF_INSTALL_PREFIX}/bin/volatility
 
 WORKDIR ${DEF_INSTALL_PREFIX}/lib/yara-python
@@ -90,9 +90,9 @@ RUN python3 setup.py install
 
 WORKDIR ${DEF_INSTALL_PREFIX}/lib/volatility3/volatility/symbols/
 
-COPY --from=builder --chown=${DEF_USERNAME}:${DEF_USERNAME} /tmp/build/linux linux
-COPY --from=builder --chown=${DEF_USERNAME}:${DEF_USERNAME} /tmp/build/mac mac
-COPY --from=builder --chown=${DEF_USERNAME}:${DEF_USERNAME} /tmp/build/windows windows
+COPY --from=builder --chown="${DEF_USERNAME}:${DEF_USERNAME}" /tmp/build/linux linux
+COPY --from=builder --chown="${DEF_USERNAME}:${DEF_USERNAME}" /tmp/build/mac mac
+COPY --from=builder --chown="${DEF_USERNAME}:${DEF_USERNAME}" /tmp/build/windows windows
 
 RUN find . -type d -exec chmod 755 {} \; && \
     find . -type f -exec chmod 644 {} \;
@@ -104,4 +104,4 @@ WORKDIR /
 
 ENTRYPOINT [ "/usr/bin/env", "volshell" ]
 
-CMD [ "-h" ]
+CMD [ "--help" ]
