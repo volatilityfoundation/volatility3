@@ -54,9 +54,6 @@ class Tasks(pslist.PsList):
                 proc = task.bsd_info.dereference().cast("proc")
             except exceptions.PagedInvalidAddressException:
                 continue
-            
-            if not filter_func(proc) and kernel_as.is_valid(proc.vol.offset, proc.vol.size):
+
+            if kernel_as.is_valid(proc.vol.offset, proc.vol.size) and not filter_func(proc):
                 yield proc
-
-
-
