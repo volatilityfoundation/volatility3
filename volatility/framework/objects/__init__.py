@@ -72,7 +72,7 @@ class Void(interfaces.objects.ObjectInterface):
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
             """Dummy size for Void objects."""
-            raise TypeError("Void types are incomplete, cannot contain data and do not have a size")
+            return 0
 
     def write(self, value: Any) -> None:
         """Dummy method that does nothing for Void objects."""
@@ -384,7 +384,7 @@ class BitField(interfaces.objects.ObjectInterface, int):
 
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
-            return Integer.VolTemplateProxy.size(template)
+            return template.vol.base_type.size
 
         @classmethod
         def children(cls, template: interfaces.objects.Template) -> List[interfaces.objects.Template]:
