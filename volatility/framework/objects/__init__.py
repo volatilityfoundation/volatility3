@@ -254,6 +254,13 @@ class String(PrimitiveObject, str):
             value = value[:value.find('\x00')]
         return value
 
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
+        @classmethod
+        def size(cls, template: interfaces.objects.Template) -> int:
+            """Returns the size of the templated object."""
+            return template.vol.max_length
+
 
 class Pointer(Integer):
     """Pointer which points to another object."""
