@@ -593,3 +593,49 @@ class Version6Format(Version5Format):
 class Version7Format(Version6Format):
     """Class for storing intermediate debugging data as objects and classes."""
     version = (6, 1, 0)
+
+
+class Version8Format(Version7Format):
+    """Class for storing intermediate debugging data as objects and classes."""
+    version = (6, 2, 0)
+
+    def _reduce_indirect_members(self, members: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+        result = {}
+        for member in members:
+            if members[member].get('anonymous', False):
+                # Do checks to make sure the new dictionary is appropriate
+                parent_item = members[member]
+                submembers = self._reduce_indirect_members(self._json_object['user_types'].get(parent_item['type'], {}))
+                for item in submembers:
+                    result[item] = submembers[item].copy()
+                    result[item]['offset'] = submembers[item]['offset'] + parent_item.get('offset', 0)
+            else:
+                result[member] = members[member]
+        return result
+
+    def get_type(self, type_name: str) -> interfaces.objects.Template:
+        """Resolves an individual symbol."""
+        if constants.BANG in type_name:
+            index = type_name.find(constants.BANG)
+            table_name, type_name = type_name[:index], type_name[index + 1:]
+            raise exceptions.SymbolError(
+                type_name, table_name,
+                "Symbol for a different table requested: {}".format(table_name + constants.BANG + type_name))
+        if type_name not in self._json_object['user_types']:
+            # Fall back to the natives table
+            return self.natives.get_type(self.name + constants.BANG + type_name)
+        curdict = self._json_object['user_types'][type_name]
+        members = {}
+        for member_name in curdict['fields']:
+            interdict = self._reduce_indirect_members(curdict['fields'][member_name])
+            member = (interdict['offset'], self._interdict_to_template(interdict['type']))
+            members[member_name] = member
+        object_class = self.get_type_class(type_name)
+        if object_class == objects.AggregateType:
+            for clazz in objects.AggregateTypes:
+                if objects.AggregateTypes[clazz] == curdict['kind']:
+                    object_class = clazz
+        return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
+                                                object_class = object_class,
+                                                size = curdict['length'],
+                                                members = members)
