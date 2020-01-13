@@ -4,7 +4,7 @@
 
 from typing import Generator, Iterable, Optional, Set, Tuple
 
-from volatility.framework import constants, objects, renderers
+from volatility.framework import constants, objects
 from volatility.framework import exceptions, interfaces
 from volatility.framework.objects import utility
 from volatility.framework.renderers import conversion
@@ -392,25 +392,25 @@ class queue_entry(objects.StructType):
 
         try:
             n = self.next.dereference().cast(type_name)
-        except exceptions.PagedInvalidAddressException:
-            return
-        while n is not None and n.vol.offset != list_head:
-            yield n
-            yielded = yielded + 1
-            if yielded == max_size:
-                return
-            n = n.member(attr = member_name).next.dereference().cast(type_name)
+            while n is not None and n.vol.offset != list_head:
+                yield n
+                yielded = yielded + 1
+                if yielded == max_size:
+                    return
+                n = n.member(attr = member_name).next.dereference().cast(type_name)
+        except exceptions.InvalidAddressException:
+            pass
 
         try:
             p = self.prev.dereference().cast(type_name)
-        except exceptions.PagedInvalidAddressException:
+            while p is not None and p.vol.offset != list_head:
+                yield p
+                yielded = yielded + 1
+                if yielded == max_size:
+                    return
+                p = p.member(attr = member_name).prev.dereference().cast(type_name)
+        except exceptions.InvalidAddressException:
             return
-        while p is not None and p.vol.offset != list_head:
-            yield p
-            yielded = yielded + 1
-            if yielded == max_size:
-                return
-            p = p.member(attr = member_name).prev.dereference().cast(type_name)
 
 
 class ifnet(objects.StructType):
