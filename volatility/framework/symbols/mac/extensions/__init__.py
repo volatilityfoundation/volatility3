@@ -390,27 +390,17 @@ class queue_entry(objects.StructType):
                   max_size: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
         yielded = 0
 
-        try:
-            n = self.next.dereference().cast(type_name)
-            while n is not None and n.vol.offset != list_head:
-                yield n
-                yielded = yielded + 1
-                if yielded == max_size:
-                    return
-                n = n.member(attr = member_name).next.dereference().cast(type_name)
-        except exceptions.InvalidAddressException:
-            pass
-
-        try:
-            p = self.prev.dereference().cast(type_name)
-            while p is not None and p.vol.offset != list_head:
-                yield p
-                yielded = yielded + 1
-                if yielded == max_size:
-                    return
-                p = p.member(attr = member_name).prev.dereference().cast(type_name)
-        except exceptions.InvalidAddressException:
-            return
+        for attr in ['next', 'prev']:
+            try:
+                n = getattr(self, attr).dereference().cast(type_name)
+                while n is not None and n.vol.offset != list_head:
+                    yield n
+                    yielded = yielded + 1
+                    if yielded == max_size:
+                        return
+                    n = getattr(n.member(attr = member_name), attr).dereference().cast(type_name)
+            except exceptions.InvalidAddressException:
+                pass
 
 
 class ifnet(objects.StructType):
