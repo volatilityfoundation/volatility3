@@ -13,6 +13,7 @@ import hashlib
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from volatility.framework import constants, interfaces, symbols, exceptions
+from volatility.framework.objects import templates
 
 
 class Context(interfaces.context.ContextInterface):
@@ -104,6 +105,8 @@ class Context(interfaces.context.ContextInterface):
             except exceptions.SymbolError:
                 object_template = self._symbol_space.get_enumeration(object_type)
         else:
+            if isinstance(object_type, templates.ReferenceTemplate):
+                object_type = self._symbol_space.get_type(object_type.vol.type_name)
             object_template = object_type
             # Ensure that if a pre-constructed type is provided we just instantiate it
             arguments.update(object_template.vol)
