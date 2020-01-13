@@ -35,60 +35,53 @@ class ProcDump(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def process_dump(cls, proc)
-        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
-                                                                self.config_path,
+    def process_dump(cls, proc, context: interfaces.context.ContextInterface, config_path: str, config: dict):
+        pe_table_name = intermed.IntermediateSymbolTable.create(context,
+                                                                config_path,
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
 
         proc_id = "Unknown"
-        try:
-            proc_id = proc.UniqueProcessId
-            proc_layer_name = proc.add_process_layer()
-
-            peb = self._context.object(self.config["nt_symbols"] + constants.BANG + "_PEB",
-                                           layer_name = proc_layer_name,
-                                           offset = proc.Peb)
-
-            dos_header = self.context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
-                                                 offset = peb.ImageBaseAddress,
-                                                 layer_name = proc_layer_name)
-
-            filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(
-                proc.UniqueProcessId, peb.ImageBaseAddress))
-
-            for offset, data in dos_header.reconstruct():
-                filedata.data.seek(offset)
-                filedata.data.write(data)
+        proc_id = proc.UniqueProcessId
+        proc_layer_name = proc.add_process_layer()
+        peb = context.object(config["nt_symbols"] + constants.BANG + "_PEB",
+                                        layer_name = proc_layer_name,
+                                        offset = proc.Peb)
+        dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
+                                                offset = peb.ImageBaseAddress,
+                                                layer_name = proc_layer_name)
+        filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(
+            proc.UniqueProcessId, peb.ImageBaseAddress))
+        for offset, data in dos_header.reconstruct():
+            filedata.data.seek(offset)
+            filedata.data.write(data)
                 
-            return filedata, None
-
-        except ValueError:
-            result_text = "PE parsing error"
-
-        except exceptions.SwappedInvalidAddressException as exp:
-            result_text = "Process {}: Required memory at {:#x} is inaccessible (swapped)".format(
-                proc_id, exp.invalid_address)
-
-        except exceptions.PagedInvalidAddressException as exp:
-            result_text = "Process {}: Required memory at {:#x} is not valid (process exited?)".format(
-                proc_id, exp.invalid_address)
-
-        except exceptions.InvalidAddressException as exp:
-            result_text = "Process {}: Required memory at {:#x} is not valid (incomplete layer {}?)".format(
-                proc_id, exp.invalid_address, exp.layer_name)
-
-
-        return None, result_text
+        return filedata
 
     def _generator(self, procs):
     
         for proc in procs:
-            process_name = utility.array_to_string(proc.ImageFileName)
-            filedata, result_text = self.process_dump(proc)
-            self.produce_file(filedata)
-            result_text = "Stored {}".format(filedata.preferred_filename)
+            try:
+                process_name = utility.array_to_string(proc.ImageFileName)
+                filedata = self.process_dump(proc, self.context, self.config_path, self.config)
+                self.produce_file(filedata)
+                result_text = "Stored {}".format(filedata.preferred_filename)
+            except ValueError:
+                result_text = "PE parsing error"
+
+            except exceptions.SwappedInvalidAddressException as exp:
+                result_text = "Process {}: Required memory at {:#x} is inaccessible (swapped)".format(
+                    proc_id, exp.invalid_address)
+
+            except exceptions.PagedInvalidAddressException as exp:
+                result_text = "Process {}: Required memory at {:#x} is not valid (process exited?)".format(
+                    proc_id, exp.invalid_address)
+
+            except exceptions.InvalidAddressException as exp:
+                result_text = "Process {}: Required memory at {:#x} is not valid (incomplete layer {}?)".format(
+                    proc_id, exp.invalid_address, exp.layer_name)
+
 
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 
