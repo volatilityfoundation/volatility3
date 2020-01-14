@@ -110,8 +110,10 @@ class IMAGE_DOS_HEADER(objects.StructType):
         fixed_data = self.fix_image_base(raw_data, nt_header)
         yield 0, fixed_data
 
-        prevsect = None
-        sect_sizes = []
+        start_addr = nt_header.FileHeader.SizeOfOptionalHeader + \
+                     (nt_header.OptionalHeader.vol.offset - self.vol.offset)
+
+        counter = 0
         for sect in nt_header.get_sections():
 
             if sect.VirtualAddress > size_of_image:
@@ -123,26 +125,17 @@ class IMAGE_DOS_HEADER(objects.StructType):
             if sect.SizeOfRawData > size_of_image:
                 raise ValueError("Section SizeOfRawData is too large: {}".format(sect.SizeOfRawData))
 
-            if prevsect is not None:
-                sect_sizes.append(sect.VirtualAddress - prevsect.VirtualAddress)
-            prevsect = sect
-        if prevsect is not None:
-            sect_sizes.append(conversion.round(prevsect.Misc.VirtualSize, section_alignment, up = True))
+            if sect is not None:
+                # It doesn't matter if this is too big, because it'll get overwritten by the later layers
+                sect_size = conversion.round(sect.Misc.VirtualSize, section_alignment, up = True)
+                sectheader = read_layer.read(sect.vol.offset, sect_header_size)
+                sectheader = self.replace_header_field(sect, sectheader, sect.PointerToRawData, sect.VirtualAddress)
+                sectheader = self.replace_header_field(sect, sectheader, sect.SizeOfRawData, sect_size)
+                sectheader = self.replace_header_field(sect, sectheader, sect.Misc.VirtualSize, sect_size)
 
-        counter = 0
-        start_addr = nt_header.FileHeader.SizeOfOptionalHeader + \
-                     (nt_header.OptionalHeader.vol.offset - self.vol.offset)
-
-        for sect in nt_header.get_sections():
-
-            sectheader = read_layer.read(sect.vol.offset, sect_header_size)
-            sectheader = self.replace_header_field(sect, sectheader, sect.PointerToRawData, sect.VirtualAddress)
-            sectheader = self.replace_header_field(sect, sectheader, sect.SizeOfRawData, sect_sizes[counter])
-            sectheader = self.replace_header_field(sect, sectheader, sect.Misc.VirtualSize, sect_sizes[counter])
-
-            offset = start_addr + (counter * sect_header_size)
-            yield offset, sectheader
-            counter += 1
+                offset = start_addr + (counter * sect_header_size)
+                yield offset, sectheader
+                counter += 1
 
 
 class IMAGE_NT_HEADERS(objects.StructType):
