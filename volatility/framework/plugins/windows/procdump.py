@@ -75,13 +75,13 @@ class ProcDump(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             try:
+                proc_id = proc.UniqueProcessId
                 process_name = utility.array_to_string(proc.ImageFileName)
                 filedata = self.process_dump(self.context, self.config["nt_symbols"], pe_table_name, proc)
                 self.produce_file(filedata)
                 result_text = "Stored {}".format(filedata.preferred_filename)
             except ValueError:
                 result_text = "PE parsing error"
-
             except exceptions.SwappedInvalidAddressException as exp:
                 result_text = "Process {}: Required memory at {:#x} is inaccessible (swapped)".format(
                     proc_id, exp.invalid_address)
