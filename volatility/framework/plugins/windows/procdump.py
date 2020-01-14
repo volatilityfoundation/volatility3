@@ -35,17 +35,23 @@ class ProcDump(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def process_dump(cls, proc, context: interfaces.context.ContextInterface, config_path: str, config: dict):
-        pe_table_name = intermed.IntermediateSymbolTable.create(context,
-                                                                config_path,
-                                                                "windows",
-                                                                "pe",
-                                                                class_types = pe.class_types)
+    def process_dump(cls, context: interfaces.context.ContextInterface, kernel_table_name: str, pe_table_name: str, proc: interfaces.objects.ObjectInterface) -> interfaces.plugins.FileInterface:
+        """Extracts the complete data for a process as a FileInterface
+
+        Args:
+            context: the context to operate upon
+            kernel_table_name: the name for the symbol table containing the kernel's symbols
+            pe_table_name: the name for the symbol table containing the PE format symbols
+            proc: the process object whose memory should be output
+
+        Returns:
+            A FileInterface object containing the complete data for the process
+        """
 
         proc_id = "Unknown"
         proc_id = proc.UniqueProcessId
         proc_layer_name = proc.add_process_layer()
-        peb = context.object(config["nt_symbols"] + constants.BANG + "_PEB",
+        peb = context.object(kernel_table_name + constants.BANG + "_PEB",
                                         layer_name = proc_layer_name,
                                         offset = proc.Peb)
         dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
@@ -60,11 +66,17 @@ class ProcDump(interfaces.plugins.PluginInterface):
         return filedata
 
     def _generator(self, procs):
-    
+        
+        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                self.config_path,
+                                                                "windows",
+                                                                "pe",
+                                                                class_types = pe.class_types)
+
         for proc in procs:
             try:
                 process_name = utility.array_to_string(proc.ImageFileName)
-                filedata = self.process_dump(proc, self.context, self.config_path, self.config)
+                filedata = self.process_dump(self.context, self.config["nt_symbols"], pe_table_name, proc)
                 self.produce_file(filedata)
                 result_text = "Stored {}".format(filedata.preferred_filename)
             except ValueError:
