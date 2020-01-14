@@ -383,7 +383,11 @@ class inpcb(objects.StructType):
 
 class queue_entry(objects.StructType):
 
-    def walk_list(self, list_head: interfaces.objects.ObjectInterface, member_name: str, type_name: str, max_size: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
+    def walk_list(self,
+                  list_head: interfaces.objects.ObjectInterface,
+                  member_name: str,
+                  type_name: str,
+                  max_size: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
         yielded = 0
 
         try:
@@ -396,7 +400,7 @@ class queue_entry(objects.StructType):
             if yielded == max_size:
                 return
             n = n.member(attr = member_name).next.dereference().cast(type_name)
-        
+
         try:
             p = self.prev.dereference().cast(type_name)
         except exceptions.PagedInvalidAddressException:
@@ -408,7 +412,9 @@ class queue_entry(objects.StructType):
                 return
             p = p.member(attr = member_name).prev.dereference().cast(type_name)
 
+
 class ifnet(objects.StructType):
+
     def sockaddr_dl(self):
         if self.has_member("if_lladdr"):
             try:
@@ -423,8 +429,10 @@ class ifnet(objects.StructType):
 
         return val
 
+
 # this is used for MAC addresses
 class sockaddr_dl(objects.StructType):
+
     def __str__(self):
         ret = ""
 
@@ -446,22 +454,23 @@ class sockaddr_dl(objects.StructType):
 
         return ret
 
+
 class sockaddr(objects.StructType):
+
     def get_address(self):
         ip = ""
 
         family = self.sa_family
-        if family == 2: # AF_INET
+        if family == 2:  # AF_INET
             addr_in = self.cast("sockaddr_in")
             ip = conversion.convert_ipv4(addr_in.sin_addr.s_addr)
 
-        elif family == 30: # AF_INET6
+        elif family == 30:  # AF_INET6
             addr_in6 = self.cast("sockaddr_in6")
             ip = conversion.convert_ipv6(addr_in6.sin6_addr.member(attr = "__u6_addr").member(attr = "__u6_addr32"))
 
-        elif family == 18: # AF_LINK
+        elif family == 18:  # AF_LINK
             addr_dl = self.cast("sockaddr_dl")
             ip = str(addr_dl)
 
         return ip
-

@@ -18,6 +18,7 @@ from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
 
+
 class Lsmod(plugins.PluginInterface):
     """Lists loaded kernel modules."""
 
@@ -65,9 +66,11 @@ class Lsmod(plugins.PluginInterface):
                 mod_name = utility.array_to_string(module.name)
 
                 yield 0, (format_hints.Hex(module.vol.offset), mod_name, mod_size)
-        
+
         except exceptions.SymbolError:
-            vollog.debug("The required symbol 'module' is not present in symbol table. Please check that kernel modules are enabled for the system under analysis.") 
+            vollog.debug(
+                "The required symbol 'module' is not present in symbol table. Please check that kernel modules are enabled for the system under analysis."
+            )
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Name", str), ("Size", int)], self._generator())

@@ -18,7 +18,7 @@ vollog = logging.getLogger(__name__)
 class ProcDump(interfaces.plugins.PluginInterface):
     """Dumps process executable images."""
 
-    _version = (1,1,0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -35,7 +35,8 @@ class ProcDump(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def process_dump(cls, context: interfaces.context.ContextInterface, kernel_table_name: str, pe_table_name: str, proc: interfaces.objects.ObjectInterface) -> interfaces.plugins.FileInterface:
+    def process_dump(cls, context: interfaces.context.ContextInterface, kernel_table_name: str, pe_table_name: str,
+                     proc: interfaces.objects.ObjectInterface) -> interfaces.plugins.FileInterface:
         """Extracts the complete data for a process as a FileInterface
 
         Args:
@@ -52,21 +53,21 @@ class ProcDump(interfaces.plugins.PluginInterface):
         proc_id = proc.UniqueProcessId
         proc_layer_name = proc.add_process_layer()
         peb = context.object(kernel_table_name + constants.BANG + "_PEB",
-                                        layer_name = proc_layer_name,
-                                        offset = proc.Peb)
+                             layer_name = proc_layer_name,
+                             offset = proc.Peb)
         dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
-                                                offset = peb.ImageBaseAddress,
-                                                layer_name = proc_layer_name)
-        filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(
-            proc.UniqueProcessId, peb.ImageBaseAddress))
+                                    offset = peb.ImageBaseAddress,
+                                    layer_name = proc_layer_name)
+        filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId,
+                                                                                peb.ImageBaseAddress))
         for offset, data in dos_header.reconstruct():
             filedata.data.seek(offset)
             filedata.data.write(data)
-                
+
         return filedata
 
     def _generator(self, procs):
-        
+
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
                                                                 self.config_path,
                                                                 "windows",
@@ -93,7 +94,6 @@ class ProcDump(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException as exp:
                 result_text = "Process {}: Required memory at {:#x} is not valid (incomplete layer {}?)".format(
                     proc_id, exp.invalid_address, exp.layer_name)
-
 
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 

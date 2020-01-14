@@ -80,6 +80,6 @@ class Netstat(plugins.PluginInterface):
                                    ("Remote IP", str), ("Remote Port", int), ("State", str), ("Process", str)],
                                   self._generator(
                                       tasks.Tasks.list_tasks(self.context,
-                                                               self.config['primary'],
-                                                               self.config['darwin'],
-                                                               filter_func = filter_func)))
+                                                             self.config['primary'],
+                                                             self.config['darwin'],
+                                                             filter_func = filter_func)))

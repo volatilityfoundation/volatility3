@@ -25,7 +25,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('fs_struct', extensions.fs_struct)
         self.set_type_class('files_struct', extensions.files_struct)
         self.set_type_class('vfsmount', extensions.vfsmount)
-        
+
         if 'module' in self.types:
             self.set_type_class('module', extensions.module)
 

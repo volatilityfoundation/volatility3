@@ -36,7 +36,8 @@ class SvcScan(interfaces.plugins.PluginInterface):
                                                         fallback_checks = [("ObHeaderCookie", None, True),
                                                                            ("_HANDLE_TABLE", "HandleCount", False),
                                                                            ("ObHeaderCookie", None, True),
-                                                                           ("_EPROCESS", "ControlFlowGuardEnabled", True)])
+                                                                           ("_EPROCESS", "ControlFlowGuardEnabled",
+                                                                            True)])
 
     is_win10_16299_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (10, 0, 16299),
                                                            fallback_checks = [("ObHeaderCookie", None, True),

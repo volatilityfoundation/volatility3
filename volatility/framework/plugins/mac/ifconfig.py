@@ -9,14 +9,16 @@ from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 
+
 class Ifconfig(plugins.PluginInterface):
     """Lists loaded kernel modules"""
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(
-                name = 'primary', description = 'Memory layer for the kernel', architectures = ["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Linux kernel symbols")
         ]
 
@@ -33,11 +35,11 @@ class Ifconfig(plugins.PluginInterface):
         for ifnet in mac.MacUtilities.walk_tailq(list_head, "if_link"):
             name = utility.pointer_to_string(ifnet.if_name, 32)
             unit = ifnet.if_unit
-            prom = ifnet.if_flags & 0x100 == 0x100 # IFF_PROMISC
+            prom = ifnet.if_flags & 0x100 == 0x100  # IFF_PROMISC
 
             sock_addr_dl = ifnet.sockaddr_dl()
             if sock_addr_dl is None:
-                mac_addr = renderers.UnreadableValue() 
+                mac_addr = renderers.UnreadableValue()
             else:
                 mac_addr = str(sock_addr_dl)
 
@@ -47,8 +49,5 @@ class Ifconfig(plugins.PluginInterface):
                 yield (0, ("{0}{1}".format(name, unit), ip, mac_addr, prom))
 
     def run(self):
-        return renderers.TreeGrid([("Interface", str), ("IP Address", str), ("Mac Address", str), ("Promiscuous", bool)], self._generator())
-
-
-
-
+        return renderers.TreeGrid([("Interface", str), ("IP Address", str), ("Mac Address", str),
+                                   ("Promiscuous", bool)], self._generator())

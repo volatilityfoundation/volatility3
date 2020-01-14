@@ -15,7 +15,7 @@ vollog = logging.getLogger(__name__)
 
 class VadDump(interfaces.plugins.PluginInterface):
     """Dumps process memory ranges."""
-    _version = (1,1,0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -38,7 +38,8 @@ class VadDump(interfaces.plugins.PluginInterface):
                 ]
 
     @classmethod
-    def vad_dump(cls, context: interfaces.context.ContextInterface, layer_name: str, vad: interfaces.objects.ObjectInterface) -> bytes:
+    def vad_dump(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                 vad: interfaces.objects.ObjectInterface) -> bytes:
         """
             Returns VAD content
         """

@@ -37,7 +37,7 @@ class Tasks(pslist.PsList):
         mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
-        
+
         kernel_as = context.layers[layer_name]
 
         queue_entry = kernel.object_from_symbol(symbol_name = "tasks")
