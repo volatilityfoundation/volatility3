@@ -8,7 +8,7 @@ import struct
 from collections import abc
 from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
 
-from volatility.framework import interfaces
+from volatility.framework import interfaces, constants
 from volatility.framework.objects import templates, utility
 
 vollog = logging.getLogger(__name__)
@@ -71,7 +71,14 @@ class Void(interfaces.objects.ObjectInterface):
 
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
-            """Dummy size for Void objects."""
+            """Dummy size for Void objects.
+
+            According to http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf, void is an incomplete type,
+            and therefore sizeof(void) should fail.  However, we need to be able to construct voids to be able to
+            cast them, so we return a useless size.  It shouldn't cause errors, but it also shouldn't be common,
+            it is logged at the lowest level.
+            """
+            vollog.log(constants.LOGLEVEL_VVVV, "Void size requested")
             return 0
 
     def write(self, value: Any) -> None:
