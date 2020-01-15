@@ -61,9 +61,9 @@ class PrintKey(interfaces.plugins.PluginInterface):
             vollog.warning("Hive walker was not passed a valid node_path (or None)")
             return
         node = node_path[-1]
+        key_path = '\\'.join([k.get_name() for k in node_path])
         if node.vol.type_name.endswith(constants.BANG + '_CELL_DATA'):
             raise RegistryFormatException(hive.name, "Encountered _CELL_DATA instead of _CM_KEY_NODE")
-        key_path = node.get_key_path()
         last_write_time = conversion.wintime_to_datetime(node.LastWriteTime.QuadPart)
 
         for key_node in node.get_subkeys():
