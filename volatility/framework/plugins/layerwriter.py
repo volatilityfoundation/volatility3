@@ -71,14 +71,14 @@ class LayerWriter(plugins.PluginInterface):
         return filedata
 
     def _generator(self):
-        if 'primary' not in self.context.layers:
+        if self.config['primary'] not in self.context.layers:
             yield 0, ('Layer Name does not exist', )
         elif os.path.exists(self.config.get('output', self.default_output_name)):
             yield 0, ('Refusing to overwrite existing output file', )
         else:
             output_name = self.config.get('output', self.default_output_name)
             try:
-                filedata = self.write_layer(self.context, 'primary', output_name,
+                filedata = self.write_layer(self.context, self.config['primary'], output_name,
                                             self.config.get('block_size', self.default_block_size),
                                             self._progress_callback)
                 self.produce_file(filedata)
