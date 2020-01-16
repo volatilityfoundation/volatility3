@@ -207,6 +207,12 @@ class Bytes(PrimitiveObject, bytes):
             cls, cls._unmarshall(context, data_format = DataFormatInfo(length, "big", False),
                                  object_info = object_info))
 
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
+        @classmethod
+        def size(cls, template: interfaces.objects.Template) -> int:
+            return template.vol.length
+
 
 class String(PrimitiveObject, str):
     """Primitive Object that handles string values.
