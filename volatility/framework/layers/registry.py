@@ -216,8 +216,13 @@ class RegistryHive(linear.LinearlyMappedLayer):
         # Return the translated offset without checking bounds within the HBIN.  The check runs into
         # issues when pages are swapped on large HBINs, and did not seem to find any errors on single page
         # HBINs while dramatically slowing performance.
-        translated_offset = self._translate(offset)
-        response = [(offset, translated_offset, length, self._base_layer)]
+        try:
+            translated_offset = self._translate(offset)
+            response = [(offset, translated_offset, length, self._base_layer)]
+        except exceptions.LayerException:
+            if not ignore_errors:
+                raise
+            response = []
         return response
 
     @property
