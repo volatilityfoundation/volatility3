@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 """Volatility 3 - An open-source memory forensics framework"""
+import inspect
 import sys
 from importlib import abc
 from typing import List, TypeVar, Callable, Any, Optional
@@ -36,9 +37,9 @@ class WarningFindSpec(abc.MetaPathFinder):
         first."""
         if fullname.startswith("volatility.framework.plugins."):
             warning = "Please do not use the volatility.framework.plugins namespace directly, only use volatility.plugins"
-            # Pyinstaller uses pkgutil to import, but needs to read the modules to figure out dependencies
-            # As such, we only print the warning when directly imported rather than being run from a script
-            if 'pkgutil' not in sys.modules:
+            # Pyinstaller uses walk_packages to import, but needs to read the modules to figure out dependencies
+            # As such, we only print the warning when directly imported rather than from within walk_packages
+            if inspect.stack()[-2].function != 'walk_packages':
                 raise Warning(warning)
 
 
