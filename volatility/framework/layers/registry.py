@@ -36,6 +36,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         self._base_layer = self.config["base_layer"]
         self._hive_offset = self.config["hive_offset"]
         self._table_name = self.config["nt_symbols"]
+        self._page_size = 1 << 12
 
         self._reg_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
                                                                        'registry')
@@ -216,13 +217,21 @@ class RegistryHive(linear.LinearlyMappedLayer):
         # Return the translated offset without checking bounds within the HBIN.  The check runs into
         # issues when pages are swapped on large HBINs, and did not seem to find any errors on single page
         # HBINs while dramatically slowing performance.
-        try:
-            translated_offset = self._translate(offset)
-            response = [(offset, translated_offset, length, self._base_layer)]
-        except exceptions.LayerException:
-            if not ignore_errors:
-                raise
-            response = []
+        response = []
+        current_offset = offset
+        remaining_length = length
+        chunk_size = (self._page_size - 1) - (offset & (self._page_size - 1))
+        while remaining_length > 0:
+            chunk_size = min(chunk_size, remaining_length, self._page_size)
+            try:
+                translated_offset = self._translate(current_offset)
+                response.append((current_offset, translated_offset, chunk_size, self._base_layer))
+            except exceptions.LayerException:
+                if not ignore_errors:
+                    raise
+            current_offset += self._page_size
+            remaining_length -= self._page_size
+            chunk_size = self._page_size
         return response
 
     @property
