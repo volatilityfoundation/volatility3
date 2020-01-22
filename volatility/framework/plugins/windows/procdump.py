@@ -49,7 +49,6 @@ class ProcDump(interfaces.plugins.PluginInterface):
             A FileInterface object containing the complete data for the process
         """
 
-        proc_id = "Unknown"
         proc_id = proc.UniqueProcessId
         proc_layer_name = proc.add_process_layer()
         peb = context.object(kernel_table_name + constants.BANG + "_PEB",
