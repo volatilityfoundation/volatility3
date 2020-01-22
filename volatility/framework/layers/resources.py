@@ -70,6 +70,7 @@ class ResourceAccessor(object):
             fp = urllib.request.urlopen(url, context = self._context)
         except error.URLError as excp:
             if excp.args:
+                # TODO: As of python3.7 this can be removed
                 unverified_retrieval = (hasattr(ssl, "SSLCertVerificationError") and isinstance(excp.args[0],
                                                                                                 ssl.SSLCertVerificationError)) or (
                                                isinstance(excp.args[0], ssl.SSLError) and excp.args[
