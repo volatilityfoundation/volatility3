@@ -77,6 +77,9 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
                 # Prev offset keeps track of the end of the previous subchunk
                 prev_offset = chunk_start
                 output = []  # type: List[Tuple[str, int, int]]
+
+                # Returning the segments of the layer below only works with linearly mapped layers that don't process
+                # the data in some way
                 # We populate the response based on subchunks that may be mapped all over the place
                 for mapped in self.mapping(chunk_start, chunk_length, ignore_errors = True):
                     offset, _, mapped_offset, mapped_length, layer_name = mapped

@@ -395,7 +395,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Returns a list of layer names that this layer translates onto."""
         return []
 
-    def _decode_data(self, layer_name: str, mapped_offset: int, offset: int, output_length: int) -> bytes:
+    def _decode_data(self, layer_name: str, mapped_offset: int, offset: int, output_length: int, pad: bool) -> bytes:
         """Decodes any necessary data.
 
         Args:
@@ -407,7 +407,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
         Returns:
              The data to be read from the underlying layer."""
-        return self._context.layers.read(layer_name, mapped_offset, output_length)
+        return self._context.layers.read(layer_name, mapped_offset, output_length, pad = pad)
 
     def _encode_data(self, layer_name: str, mapped_offset: int, offset: int, value: bytes) -> bytes:
         """Encodes any necessary data.
@@ -442,7 +442,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
             # The layer_offset can be less than the current_offset in non-linearly mapped layers
             # it does not suggest an overlap, but that the data is in an encoded block
             if mapped_length > 0:
-                processed_data = self._decode_data(layer, mapped_offset, layer_offset, sublength)
+                processed_data = self._decode_data(layer, mapped_offset, layer_offset, sublength, pad)
                 if len(processed_data) != sublength:
                     raise ValueError("ProcessedData length does not match expected length of chunk")
                 output += processed_data
