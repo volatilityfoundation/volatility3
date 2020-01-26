@@ -209,7 +209,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
         entry = table.Table[table_index]
         return entry.get_block_offset() + suboffset
 
-    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
+    def mapping(self, offset: int, length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
 
         if length < 0:
             raise ValueError("Mapping length of RegistryHive must be positive or zero")
@@ -225,7 +226,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
             chunk_size = min(chunk_size, remaining_length, self._page_size)
             try:
                 translated_offset = self._translate(current_offset)
-                response.append((current_offset, translated_offset, chunk_size, self._base_layer))
+                response.append((current_offset, chunk_size, translated_offset, chunk_size, self._base_layer))
             except exceptions.LayerException:
                 if not ignore_errors:
                     raise
@@ -245,7 +246,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
             # Pass this to the lower layers for now
             return all([
                 self.context.layers[layer].is_valid(offset, length)
-                for (_, offset, length, layer) in self.mapping(offset, length)
+                for (_, _, offset, length, layer) in self.mapping(offset, length)
             ])
         except exceptions.InvalidAddressException:
             return False
