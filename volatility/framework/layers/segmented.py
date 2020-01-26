@@ -45,7 +45,7 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
         try:
             base_layer = self._context.layers[self._base_layer]
             return all(
-                [base_layer.is_valid(mapped_offset) for _i, mapped_offset, _i, _s in self.mapping(offset, length)])
+                [base_layer.is_valid(mapped_offset) for _i, _i, mapped_offset, _i, _s in self.mapping(offset, length)])
         except exceptions.InvalidAddressException:
             return False
 
@@ -69,8 +69,9 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
                 return self._segments[i]
         raise exceptions.InvalidAddressException(self.name, offset, "Invalid address at {:0x}".format(offset))
 
-    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
-        """Returns a sorted iterable of (offset, mapped_offset, length, layer)
+    def mapping(self, offset: int, length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+        """Returns a sorted iterable of (offset, length, mapped_offset, mapped_length, layer)
         mappings."""
         done = False
         current_offset = offset
@@ -100,7 +101,7 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
                     return
             # Crop it to the amount we need left
             chunk_size = min(size, length + offset - logical_offset)
-            yield (logical_offset, mapped_offset, chunk_size, self._base_layer)
+            yield logical_offset, chunk_size, mapped_offset, chunk_size, self._base_layer
             current_offset += chunk_size
             # Terminate if we've gone (or reached) our required limit
             if current_offset >= offset + length:

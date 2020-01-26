@@ -323,7 +323,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             try:
                 kvp = vlayer.mapping(kvo, 0)
                 if (any([(p == kernel['mz_offset'] and layer_name == physical_layer_name)
-                         for (_, p, _, layer_name) in kvp])):
+                         for (_, _, p, _, layer_name) in kvp])):
                     valid_kernels[virtual_layer_name] = (kvo, kernel)
                     # Sit the virtual offset under the TranslationLayer it applies to
                     context.config[kvo_path] = kvo

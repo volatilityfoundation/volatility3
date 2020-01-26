@@ -84,7 +84,7 @@ class Strings(interfaces.plugins.PluginInterface):
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors = True):
-                vpage, kpage, page_size, maplayer = mapval
+                vpage, _, kpage, page_size, maplayer = mapval
                 for val in range(kpage, kpage + page_size, 0x1000):
                     cur_set = reverse_map.get(kpage >> 12, set())
                     cur_set.add(("kernel", vpage))
@@ -107,7 +107,7 @@ class Strings(interfaces.plugins.PluginInterface):
                 proc_layer = self.context.layers[proc_layer_name]
                 if isinstance(proc_layer, linear.LinearlyMappedLayer):
                     for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
-                        kpage, vpage, page_size, maplayer = mapval
+                        kpage, _, vpage, page_size, maplayer = mapval
                         for val in range(kpage, kpage + page_size, 0x1000):
                             cur_set = reverse_map.get(kpage >> 12, set())
                             cur_set.add(("Process {}".format(process.UniqueProcessId), vpage))

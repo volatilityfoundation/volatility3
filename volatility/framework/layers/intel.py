@@ -166,13 +166,14 @@ class Intel(linear.LinearlyMappedLayer):
             # TODO: Consider reimplementing this, since calls to mapping can call is_valid
             return all([
                 self._context.layers[layer].is_valid(mapped_offset)
-                for _, mapped_offset, _, layer in self.mapping(offset, length)
+                for _, _, mapped_offset, _, layer in self.mapping(offset, length)
             ])
         except exceptions.InvalidAddressException:
             return False
 
-    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
-        """Returns a sorted iterable of (offset, mapped_offset, length, layer)
+    def mapping(self, offset: int, length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+        """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
         mappings.
 
         This allows translation layers to provide maps of contiguous
@@ -187,7 +188,7 @@ class Intel(linear.LinearlyMappedLayer):
                 if not ignore_errors:
                     raise
                 return
-            yield (offset, mapped_offset, length, layer_name)
+            yield offset, length, mapped_offset, length, layer_name
             return
         while length > 0:
             try:
@@ -207,7 +208,7 @@ class Intel(linear.LinearlyMappedLayer):
                 length -= length_diff
                 offset += length_diff
             else:
-                yield (offset, chunk_offset, chunk_size, layer_name)
+                yield offset, length, chunk_offset, chunk_size, layer_name
                 length -= chunk_size
                 offset += chunk_size
 
