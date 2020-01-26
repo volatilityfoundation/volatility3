@@ -1,0 +1,107 @@
+{
+  "symbols": {
+  },
+  "user_types": {
+    "qevm_header": {
+      "fields": {
+        "magic": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "version": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    },
+    "qevm_htab": {
+      "fields": {
+        "index": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "n_valid": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "n_invalid": {
+          "offset": 6,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    }
+  },
+  "enums": {
+  },
+  "base_types": {
+    "unsigned char": {
+      "endian": "big",
+      "kind": "char",
+      "signed": false,
+      "size": 1
+    },
+    "unsigned short": {
+      "endian": "big",
+      "kind": "int",
+      "signed": false,
+      "size": 2
+    },
+    "long": {
+      "endian": "big",
+      "kind": "int",
+      "signed": true,
+      "size": 4
+    },
+    "char": {
+      "endian": "big",
+      "kind": "char",
+      "signed": true,
+      "size": 1
+    },
+    "unsigned long": {
+      "endian": "big",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "long long": {
+      "endian": "big",
+      "kind": "int",
+      "signed": true,
+      "size": 8
+    },
+    "unsigned long long": {
+      "endian": "big",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    }
+  },
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "ikelos-by-hand",
+      "datetime": "2020-01-07T22:59:47"
+    },
+    "format": "6.1.0"
+  }
+}
