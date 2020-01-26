@@ -395,7 +395,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Returns a list of layer names that this layer translates onto."""
         return []
 
-    def _decode(self, layer_name: str, mapped_offset: int, offset: int, output_length: int) -> bytes:
+    def _decode_data(self, layer_name: str, mapped_offset: int, offset: int, output_length: int) -> bytes:
         """Decodes any necessary data.
 
         Args:
@@ -409,7 +409,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
              The data to be read from the underlying layer."""
         return self._context.layers.read(layer_name, mapped_offset, output_length)
 
-    def _encode(self, layer_name: str, mapped_offset: int, offset: int, value: bytes) -> bytes:
+    def _encode_data(self, layer_name: str, mapped_offset: int, offset: int, value: bytes) -> bytes:
         """Encodes any necessary data.
 
         Args:
@@ -442,7 +442,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
             # The layer_offset can be less than the current_offset in non-linearly mapped layers
             # it does not suggest an overlap, but that the data is in an encoded block
             if mapped_length > 0:
-                processed_data = self._decode(layer, mapped_offset, layer_offset, sublength)
+                processed_data = self._decode_data(layer, mapped_offset, layer_offset, sublength)
                 if len(processed_data) != sublength:
                     raise ValueError("ProcessedData length does not match expected length of chunk")
                 output += processed_data
@@ -460,7 +460,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                     self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
 
             value_chunk = value[layer_offset - offset:layer_offset - offset + sublength]
-            new_data = self._encode(layer, mapped_offset, layer_offset, value_chunk)
+            new_data = self._encode_data(layer, mapped_offset, layer_offset, value_chunk)
             self._context.layers.write(layer, mapped_offset, new_data)
 
             current_offset += len(value_chunk)
