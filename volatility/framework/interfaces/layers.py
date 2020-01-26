@@ -464,7 +464,52 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
             new_data = self._encode_data(layer, mapped_offset, layer_offset, value_chunk)
             self._context.layers.write(layer, mapped_offset, new_data)
 
-            current_offset += len(value_chunk)
+            current_offset += len(new_data)
+
+    def _scan_iterator(self, scanner: 'ScannerInterface', sections: Iterable[Tuple[int, int]],
+                       linear: bool = False) -> Iterable[IteratorValue]:
+        """Iterator that indicates which blocks in the layer are to be read by
+        for the scanning.
+
+        Returns a list of blocks (potentially in lower layers) that make
+        up this chunk contiguously. Chunks can be no bigger than
+        scanner.chunk_size + scanner.overlap DataLayers by default are
+        assumed to have no holes
+        """
+        for (section_start, section_length) in sections:
+            # For each section, split it into scan size chunks
+            for chunk_start in range(section_start, section_start + section_length, scanner.chunk_size):
+                # Shorten it, if we're at the end of the section
+                chunk_length = min(section_start + section_length - chunk_start, scanner.chunk_size + scanner.overlap)
+
+                # Prev offset keeps track of the end of the previous subchunk
+                prev_offset = chunk_start
+                output = []  # type: List[Tuple[str, int, int]]
+
+                # We populate the response based on subchunks that may be mapped all over the place
+                for mapped in self.mapping(chunk_start, chunk_length, ignore_errors = True):
+                    # We don't bother with the other data in case the data's been processed by a lower layer
+                    offset, sublength, mapped_offset, mapped_length, layer_name = mapped
+
+                    # We need to check if the offset is next to the end of the last one (contiguous)
+                    if offset != prev_offset:
+                        # Only yield if we've accumulated output
+                        if len(output):
+                            # Yield all the (joined) items so far
+                            # and the ending point of that subchunk (where we'd gotten to previously)
+                            yield output, prev_offset
+                        output = []
+
+                    # Shift the marker up to the end of what we just received and add it to the output
+                    prev_offset = offset + sublength
+
+                    if not linear:
+                        output += [(self.name, offset, sublength)]
+                    else:
+                        output += [(layer_name, mapped_offset, mapped_length)]
+                # If there's still output left, output it
+                if len(output):
+                    yield output, prev_offset
 
 
 class LayerContainer(collections.abc.Mapping):
