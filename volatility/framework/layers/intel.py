@@ -208,7 +208,7 @@ class Intel(linear.LinearlyMappedLayer):
                 length -= length_diff
                 offset += length_diff
             else:
-                yield offset, length, chunk_offset, chunk_size, layer_name
+                yield offset, chunk_size, chunk_offset, chunk_size, layer_name
                 length -= chunk_size
                 offset += chunk_size
 
