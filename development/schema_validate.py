@@ -53,6 +53,6 @@ if __name__ == '__main__':
                 print("[x] File not found: {}".format(filename))
         except Exception as e:
             failures.append(filename)
-            print("[x] Exception occured: {} ({})".format(filename, repr(e)))
+            print("[x] Exception occurred: {} ({})".format(filename, repr(e)))
 
     print("Failures", failures)
