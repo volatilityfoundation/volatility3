@@ -66,6 +66,7 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
         segments = []
 
         base_layer = self.context.layers[self._base_layer]
+        read_pcram = False
 
         while not done:
             addr = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
@@ -94,12 +95,16 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
                     namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                    offset = index,
                                                    layer_name = self._base_layer)
+                    read_pcram = (base_layer.read(index + 1, namelen) == b'pc.ram')
                     index += 1 + namelen
                 if flags & self.SEGMENT_FLAG_COMPRESS:
-                    segments.append((addr, index, 1))
+                    if read_pcram:
+                        segments.append((addr, index, 1))
+                        self._compressed.add(addr)
                     index += 1
                 else:
-                    segments.append((addr, index, page_size))
+                    if read_pcram:
+                        segments.append((addr, index, page_size))
                     index += page_size
             if flags & self.SEGMENT_FLAG_XBZRLE:
                 raise exceptions.LayerException(self.name, "XBZRLE compression not supported")
