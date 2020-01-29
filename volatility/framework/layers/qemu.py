@@ -184,7 +184,6 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
                 raise exceptions.LayerException("QEMU unknown RAM version_id {}".format(version_id))
             new_segments, index = self._get_ram_segments(index, self._configuration.get('page_size', None) or 4096)
             self._segments += new_segments
-            print("NEW INDEX", index)
         elif name == 'spapr/htab':
             if version_id != 1:
                 raise exceptions.LayerException("QEMU unknown HTAB version_id {}".format(version_id))
