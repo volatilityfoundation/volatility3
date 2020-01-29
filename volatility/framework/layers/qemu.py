@@ -36,7 +36,8 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         self._qemu_table_name = intermed.IntermediateSymbolTable.create(context, config_path, 'generic', 'qemu')
         self._configuration = None
-        self._compressed = {}
+        self._compressed = set()
+        self._current_segment_name = ''
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
     @classmethod
@@ -66,7 +67,6 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
         segments = []
 
         base_layer = self.context.layers[self._base_layer]
-        read_pcram = False
 
         while not done:
             addr = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
@@ -82,10 +82,10 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
                                                offset = index,
                                                layer_name = self._base_layer)
                 while namelen != 0:
-                    if base_layer.read(index + 1, namelen) == b'pc.ram':
-                        total_size = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
-                                                          offset = index + 1 + namelen,
-                                                          layer_name = self._base_layer)
+                    # if base_layer.read(index + 1, namelen) == b'pc.ram':
+                    #     total_size = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
+                    #                                       offset = index + 1 + namelen,
+                    #                                       layer_name = self._base_layer)
                     index += 1 + namelen + 8
                     namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                    offset = index,
@@ -95,15 +95,15 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
                     namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                    offset = index,
                                                    layer_name = self._base_layer)
-                    read_pcram = (base_layer.read(index + 1, namelen) == b'pc.ram')
+                    self._current_segment_name = base_layer.read(index + 1, namelen)
                     index += 1 + namelen
                 if flags & self.SEGMENT_FLAG_COMPRESS:
-                    if read_pcram:
+                    if self._current_segment_name == b'pc.ram':
                         segments.append((addr, index, 1))
                         self._compressed.add(addr)
                     index += 1
                 else:
-                    if read_pcram:
+                    if self._current_segment_name == b'pc.ram':
                         segments.append((addr, index, page_size))
                     index += page_size
             if flags & self.SEGMENT_FLAG_XBZRLE:
@@ -224,9 +224,5 @@ class QemuStacker(interfaces.automagic.StackerLayerInterface):
             return None
         new_name = context.layers.free_layer_name("QemuSuspendLayer")
         context.config[interfaces.configuration.path_join(new_name, "base_layer")] = layer_name
-        layer = None
-        try:
-            layer = QemuSuspendLayer(context, new_name, new_name)
-        except Exception as e:
-            print(e)
+        layer = QemuSuspendLayer(context, new_name, new_name)
         return layer
