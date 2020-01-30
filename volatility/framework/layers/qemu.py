@@ -7,7 +7,7 @@ from volatility.framework.layers import segmented
 from volatility.framework.symbols import intermed
 
 
-class QemuSuspendLayer(segmented.SegmentedLayer):
+class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
     """A Qemu suspend-to-disk translation layer."""
 
     QEVM_EOF = 0x00
@@ -61,7 +61,7 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
                     return json.loads(data)
         raise exceptions.LayerException(name, "Could not load JSON configuration from the end of the file")
 
-    def _get_ram_segments(self, index: int, page_size: int) -> Tuple[List[Tuple[int, int, int]], int]:
+    def _get_ram_segments(self, index: int, page_size: int) -> Tuple[List[Tuple[int, int, int, int]], int]:
         """Recovers the new index and any sections of memory from a ram section"""
         done = None
         segments = []
@@ -99,12 +99,12 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
                     index += 1 + namelen
                 if flags & self.SEGMENT_FLAG_COMPRESS:
                     if self._current_segment_name == b'pc.ram':
-                        segments.append((addr, index, 1))
+                        segments.append((addr, index, page_size, 1))
                         self._compressed.add(addr)
                     index += 1
                 else:
                     if self._current_segment_name == b'pc.ram':
-                        segments.append((addr, index, page_size))
+                        segments.append((addr, index, page_size, page_size))
                     index += page_size
             if flags & self.SEGMENT_FLAG_XBZRLE:
                 raise exceptions.LayerException(self.name, "XBZRLE compression not supported")
@@ -205,8 +205,11 @@ class QemuSuspendLayer(segmented.SegmentedLayer):
 
     def _decode_data(self, data: bytes, mapped_offset: int, offset: int, output_length: int) -> bytes:
         if mapped_offset in self._compressed:
-            return data * 0x1000
+            return (data * 0x1000)[:output_length]
         return data
+
+    def read(self, offset: int, length: int, pad: bool = False) -> bytes:
+        return super().read(offset, length, pad)
 
 
 class QemuStacker(interfaces.automagic.StackerLayerInterface):
