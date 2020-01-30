@@ -48,7 +48,7 @@ class LimeLayer(segmented.SegmentedLayer):
                     self.name, "Bad start/end 0x{:x}/0x{:x} at file offset 0x{:x}".format(start, end, offset))
 
             segment_length = end - start + 1
-            segments.append((start, offset + header_size, segment_length))
+            segments.append((start, offset + header_size, segment_length, segment_length))
             maxaddr = end
             offset = offset + header_size + segment_length
 

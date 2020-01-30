@@ -43,7 +43,7 @@ class Elf64Layer(segmented.SegmentedLayer):
             # We only want PT_TYPES with valid sizes
             if phdr.p_type.lookup() == "PT_LOAD" and phdr.p_filesz == phdr.p_memsz and phdr.p_filesz > 0:
                 # Cast these to ints to ensure the offsets don't need reconstructing
-                segments.append((int(phdr.p_paddr), int(phdr.p_offset), int(phdr.p_memsz)))
+                segments.append((int(phdr.p_paddr), int(phdr.p_offset), int(phdr.p_memsz), int(phdr.p_memsz)))
 
         if len(segments) == 0:
             raise ElfFormatException(self.name, "No ELF segments defined in {}".format(self._base_layer))
