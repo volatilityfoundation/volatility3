@@ -65,7 +65,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         offset = self.headerpages
         for x in self.header.PhysicalMemoryBlockBuffer.Run:
-            segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000))
+            segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
             # print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
             #                  offset * 0x1000,
             #                  x.PageCount * 0x1000))

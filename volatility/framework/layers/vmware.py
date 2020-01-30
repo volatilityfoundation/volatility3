@@ -94,7 +94,7 @@ class VmwareLayer(segmented.SegmentedLayer):
             offset = tags[("regionPPN", (region, ))][1] * self._page_size
             mapped_offset = tags[("regionPageNum", (region, ))][1] * self._page_size
             length = tags[("regionSize", (region, ))][1] * self._page_size
-            self._segments.append((offset, mapped_offset, length))
+            self._segments.append((offset, mapped_offset, length, length))
 
     @property
     def dependencies(self) -> List[str]:
