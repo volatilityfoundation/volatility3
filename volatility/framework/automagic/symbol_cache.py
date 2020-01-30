@@ -120,5 +120,10 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                     del isf
                     gc.collect()
 
+            for banner in banners:
+                for filename in banners[banner]:
+                    if filename:
+                        vollog.log(constants.LOGLEVEL_VVVV, 'Using banner file {}'.format(filename))
+
             # Rewrite the cached banners each run, since writing is faster than the banner_cache validation portion
             self.save_banners(banners)
