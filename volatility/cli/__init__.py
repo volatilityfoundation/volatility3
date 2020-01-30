@@ -12,6 +12,7 @@ User interfaces make use of the framework to:
 """
 
 import argparse
+import glob
 import inspect
 import json
 import logging
@@ -138,6 +139,10 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                             help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--clear-cache",
+                            help = "Clears out all short-term cached items",
+                            default = False,
+                            action = 'store_true')
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -180,6 +185,10 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             constants.PARALLELISM = constants.Parallelism.Threading
         else:
             constants.PARALLELISM = constants.Parallelism.Off
+
+        if partial_args.clear_cache:
+            for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, '*.cache')):
+                os.unlink(cache_filename)
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
