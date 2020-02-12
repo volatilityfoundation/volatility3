@@ -36,6 +36,15 @@ class Netstat(plugins.PluginInterface):
                      filter_func: Callable[[int], bool] = lambda _: False) -> \
                 Iterable[interfaces.objects.ObjectInterface]:
 
+        """
+        Returns the open socket descriptors of a process
+
+        Return values:
+            A tuple of 3 elements:
+                1) The name of the process that opened the socket
+                2) The process ID of the processed that opened the socket
+                3) The address of the associated socket structure
+        """
         for task in tasks.Tasks.list_tasks(context,
                                            layer_name,
                                            darwin_symbols,
