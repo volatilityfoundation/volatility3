@@ -388,30 +388,50 @@ class queue_entry(objects.StructType):
                   member_name: str,
                   type_name: str,
                   max_size: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
+        """
+        Walks a queue in a smear-aware and smear-resistant manner
+
+        smear is detected by:
+            - the max_size parameter sets an upper bound
+            - each seen entry is only allowed once
+
+        attempts to work around smear:
+            - the list is walked in both directions to help find as many elements as possible
+
+        Args:
+            list_head   - the head of the list
+            member_name - the name of the embedded list member
+            type_name   - the type of each element in the list
+            max_size    - the maximum amount of elements that will be returned
+
+        Returns:
+            Each instance of the queue cast as "type_name" type
+        """
+
         yielded = 0
 
-        try:
-            n = self.next.dereference().cast(type_name)
-        except exceptions.PagedInvalidAddressException:
-            return
-        while n is not None and n.vol.offset != list_head:
-            yield n
-            yielded = yielded + 1
-            if yielded == max_size:
-                return
-            n = n.member(attr = member_name).next.dereference().cast(type_name)
+        seen = set()
 
-        try:
-            p = self.prev.dereference().cast(type_name)
-        except exceptions.PagedInvalidAddressException:
-            return
-        while p is not None and p.vol.offset != list_head:
-            yield p
-            yielded = yielded + 1
-            if yielded == max_size:
-                return
-            p = p.member(attr = member_name).prev.dereference().cast(type_name)
+        for attr in ['next', 'prev']:
+            try:
+                n = getattr(self, attr).dereference().cast(type_name)
 
+                while n is not None and n.vol.offset != list_head:
+                    if n.vol.offset in seen:
+                        break
+
+                    yield n
+
+                    seen.add(n.vol.offset)
+
+                    yielded = yielded + 1
+                    if yielded == max_size:
+                        return
+ 
+                    n = getattr(n.member(attr = member_name), attr).dereference().cast(type_name)
+
+            except exceptions.InvalidAddressException:
+                pass
 
 class ifnet(objects.StructType):
 
