@@ -478,7 +478,18 @@ class sockaddr(objects.StructType):
 
 class sysctl_oid(objects.StructType):
 
-    def get_perms(self):
+    def get_perms(self) -> str:
+        """
+        Returns the actions allowed on the node
+
+        Args: None
+
+        Returns:
+            A combination of:
+                R - readable 
+                W - writeable
+                L - self handles locking
+        """
         ret = ""
 
         checks = [0x80000000, 0x40000000, 0x00800000]
@@ -492,7 +503,23 @@ class sysctl_oid(objects.StructType):
 
         return ret
 
-    def get_ctltype(self):
+    def get_ctltype(self) -> str:
+        """
+        Returns the type of the sysctl node
+
+        Args: None
+
+        Returns:
+            One of:
+                CTLTYPE_NODE
+                CTLTYPE_INT
+                CTLTYPE_STRING
+                CTLTYPE_QUAD
+                CTLTYPE_OPAQUE
+                an empty string for nodes not in the above types
+
+        Based on sysctl_sysctl_debug_dump_node
+        """
         types = {1: 'CTLTYPE_NODE', 2: 'CTLTYPE_INT', 3: 'CTLTYPE_STRING', 4: 'CTLTYPE_QUAD', 5: 'CTLTYPE_OPAQUE'}
 
         ctltype = self.oid_kind & 0xf
