@@ -219,6 +219,21 @@ class MacUtilities(object):
                                       context: interfaces.context.ContextInterface,
                                       task: interfaces.objects.ObjectInterface):
 
+        """Creates a generator for the file descriptors of a process
+
+        Args:
+            symbol_table_name: The name of the symbol table associated with the process
+            context:
+            task: The process structure to enumerate file descriptors from
+
+        Return:
+            A 3 element tuple is yielded for each file descriptor:
+            1) The file's object
+            2) The path referenced by the descriptor. 
+                The path is either empty, the full path of the file in the file system, or the formatted name for sockets, pipes, etc.
+            3) The file descriptor number
+        """
+
         try:
             num_fds = task.p_fd.fd_lastfile
         except exceptions.InvalidAddressException:
