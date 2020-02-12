@@ -73,6 +73,13 @@ class HMAP_ENTRY(objects.StructType):
 
 class CMHIVE(objects.StructType):
 
+    def is_valid(self) -> bool:
+        """Determine if the object is valid."""
+        try:
+            return self.Hive.Signature == 0xbee0bee0
+        except exceptions.InvalidAddressException:
+            return False
+
     def get_name(self) -> Optional[interfaces.objects.ObjectInterface]:
         """Determine a name for the hive.
 
