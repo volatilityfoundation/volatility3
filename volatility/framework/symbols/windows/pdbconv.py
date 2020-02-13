@@ -520,11 +520,7 @@ class PdbReader:
         """Strips unnecessary components from the start of a symbol name."""
         new_name = name
 
-        if new_name[:7] in ["__imp__", "__imp_@"]:
-            new_name = new_name[7:]
-        elif new_name[:6] in ["__imp_"]:
-            new_name = new_name[6:]
-        elif new_name[:1] in ["_", "@", "\u007F"]:
+        if new_name[:1] in ["_", "@", "\u007F"]:
             new_name = new_name[1:]
 
         name_array = new_name.split("@")
