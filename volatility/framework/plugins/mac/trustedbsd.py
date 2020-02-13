@@ -34,6 +34,8 @@ class trustedbsd(plugins.PluginInterface):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
+        
+        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 
         policy_list = kernel.object_from_symbol(symbol_name = "mac_policy_list").cast("mac_policy_list")
 
@@ -41,10 +43,7 @@ class trustedbsd(plugins.PluginInterface):
                                 offset = policy_list.entries.dereference().vol.offset,
                                 subtype = kernel.get_type('mac_policy_list_element'),
                                 count = policy_list.staticmax + 1)
-
-        mask = self.context.layers[self.config['primary']].address_mask
-        mods_list = [(mod.name, mod.address & mask, (mod.address & mask) + mod.size) for mod in mods]
-
+    
         for i, ent in enumerate(entries):
             # I don't know how this can happen, but the kernel makes this check all over the place
             # the policy isn't useful without any ops so a rootkit can't abuse this
@@ -65,23 +64,13 @@ class trustedbsd(plugins.PluginInterface):
                 if call_addr is None or call_addr == 0:
                     continue
 
-                found_module = None
+                module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, call_addr)
 
-                for mod_name_info, mod_base, mod_end in mods_list:
-                    if call_addr >= mod_base and call_addr <= mod_end:
-                        found_module = mod_name_info
-                        break
-
-                if found_module:
-                    symbol_module = utility.array_to_string(found_module)
-                else:
-                    symbol_module = "UNKNOWN"
-
-                yield (0, (check, ent_name, symbol_module, format_hints.Hex(call_addr)))
+                yield (0, (check, ent_name, format_hints.Hex(call_addr), module_name, symbol_name))
 
     def run(self):
-        return renderers.TreeGrid([("Member", str), ("Policy Name", str), ("Handler Module", str),
-                                   ("Handler Address", format_hints.Hex)],
+        return renderers.TreeGrid([("Member", str), ("Policy Name", str), ("Handler Address", format_hints.Hex), ("Handler Module", str),
+                                   ("Handler Symbol", str)],
                                   self._generator(
                                       lsmod.Lsmod.list_modules(self.context, self.config['primary'],
                                                                self.config['darwin'])))
