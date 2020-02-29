@@ -213,7 +213,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
     architecture."""
     overlap = 0x4000
     thread_safe = True
-    tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
+    tests = [DtbTest64bit(), DtbTest32bit(), DtbTestPae()]
     """The default tests to run when searching for DTBs"""
 
     def __init__(self, tests: List[DtbTest]) -> None:
@@ -239,7 +239,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
     It will scan for existing TranslationLayers that do not have a DTB  using the :class:`PageMapScanner`
     """
     priority = 20
-    tests = [DtbTest32bit(), DtbTest64bit(), DtbTestPae()]
+    tests = [DtbTest64bit(), DtbTest32bit(), DtbTestPae()]
 
     def __call__(self,
                  context: interfaces.context.ContextInterface,
