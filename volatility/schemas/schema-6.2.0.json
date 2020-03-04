@@ -82,6 +82,10 @@
       "type": "object",
       "$comment": "Reserved for future use"
     },
+    "metadata_mac": {
+      "type": "object",
+      "$comment": "Reserved for future use"
+    },
     "metadata_format": {
       "type": "string",
       "pattern": "^6.[0-9]+.[0-9]+$"
@@ -144,6 +148,24 @@
           "required": [
             "format",
             "linux"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "format": {
+              "$ref": "#/definitions/metadata_format"
+            },
+            "producer": {
+              "$ref": "#/definitions/metadata_producer"
+            },
+            "mac": {
+              "$ref": "#/definitions/metadata_mac"
+            }
+          },
+          "required": [
+            "format",
+            "mac"
           ],
           "additionalProperties": false
         }
