@@ -80,23 +80,73 @@
     },
     "metadata_linux": {
       "type": "object",
-      "$comment": "Reserved for future use"
+      "properties": {
+        "elf": {
+          "$ref": "#/definitions/metadata_linux_elf"
+        },
+        "dwarf": {
+          "$ref": "#/definitions/metadata_dwarf"
+        }
+      },
+      "additionalProperties": false
     },
     "metadata_mac": {
       "type": "object",
-      "$comment": "Reserved for future use"
+      "properties": {
+        "elf": {
+          "$ref": "#/definitions/metadata_mac_macho"
+        },
+        "dwarf": {
+          "$ref": "#/definitions/metadata_dwarf"
+        }
+      },
+      "additionalProperties": false
     },
     "metadata_format": {
       "type": "string",
       "pattern": "^6.[0-9]+.[0-9]+$"
     },
-    "metadata_source": {
+    "metadata_linux_elf": {
       "type": "object",
       "properties": {
-        "type": {
-          "type": "string"
+        "symbols": {
+          "type": "boolean"
+        },
+        "buildid": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]+$"
         }
-      }
+      },
+      "additionalProperties": false
+    },
+    "metadata_mac_macho": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": "boolean"
+        },
+        "uuid": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata_dwarf": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": "boolean"
+        },
+        "types": {
+          "type": "boolean"
+        },
+        "uuid": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+$"
+        }
+      },
+      "additionalProperties": false
     },
     "element_metadata": {
       "type": "object",
