@@ -215,8 +215,8 @@ class MacUtilities(object):
 
     @classmethod
     def files_descriptors_for_process(cls, 
-                                      symbol_table_name : str,
                                       context: interfaces.context.ContextInterface,
+                                      symbol_table_name : str,
                                       task: interfaces.objects.ObjectInterface):
 
         """Creates a generator for the file descriptors of a process
