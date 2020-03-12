@@ -53,7 +53,7 @@ class Netstat(plugins.PluginInterface):
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
 
-            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(darwin_symbols, context, task):
+            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(context, darwin_symbols, task):
                 try:
                     ftype = filp.f_fglob.get_fg_type()
                 except exceptions.InvalidAddressException:

@@ -30,7 +30,7 @@ class lsof(plugins.PluginInterface):
         for task in tasks:
             pid = task.p_pid
 
-            for _, filepath, fd in mac.MacUtilities.files_descriptors_for_process(self.config['darwin'], self.context, task):
+            for _, filepath, fd in mac.MacUtilities.files_descriptors_for_process(self.context, self.config['darwin'], task):
                 if filepath and len(filepath) > 0:
                     yield (0, (pid, fd, filepath))
 
