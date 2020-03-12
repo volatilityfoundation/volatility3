@@ -3,8 +3,9 @@
 #
 
 import logging
+from typing import Iterable, Callable
 
-from volatility.framework import exceptions, renderers
+from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
@@ -35,7 +36,6 @@ class Netstat(plugins.PluginInterface):
                      darwin_symbols: str,
                      filter_func: Callable[[int], bool] = lambda _: False) -> \
                 Iterable[interfaces.objects.ObjectInterface]:
-
         """
         Returns the open socket descriptors of a process
 
@@ -45,10 +45,7 @@ class Netstat(plugins.PluginInterface):
                 2) The process ID of the processed that opened the socket
                 3) The address of the associated socket structure
         """
-        for task in tasks.Tasks.list_tasks(context,
-                                           layer_name,
-                                           darwin_symbols,
-                                           filter_func):
+        for task in tasks.Tasks.list_tasks(context, layer_name, darwin_symbols, filter_func):
 
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
@@ -71,11 +68,11 @@ class Netstat(plugins.PluginInterface):
 
     def _generator(self):
         filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
-        
+
         for task_name, pid, socket in self.list_sockets(self.context,
-                                      self.config['primary'],
-                                      self.config['darwin'],
-                                      filter_func = filter_func):
+                                                        self.config['primary'],
+                                                        self.config['darwin'],
+                                                        filter_func = filter_func):
 
             family = socket.get_family()
 
@@ -107,4 +104,3 @@ class Netstat(plugins.PluginInterface):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),
                                    ("Remote IP", str), ("Remote Port", int), ("State", str), ("Process", str)],
                                   self._generator())
- 
