@@ -125,7 +125,13 @@ class vnode(objects.StructType):
             if int(vnodeobj.v_mount.mnt_vnodecovered) != 0:
                 self._do_calc_path(ret, vnodeobj.v_mount.mnt_vnodecovered, vnodeobj.v_mount.mnt_vnodecovered.v_name)
         else:
-            self._do_calc_path(ret, vnodeobj.v_parent, vnodeobj.v_parent.v_name)
+            try:
+                parent = vnodeobj.v_parent
+                parent_name = parent.v_name
+            except exceptions.InvalidAddressException:
+                return
+
+            self._do_calc_path(ret, parent, parent_name)
 
     def full_path(self):
         if self.v_flag & 0x000001 != 0 and self.v_mount != 0 and self.v_mount.mnt_flag & 0x00004000 != 0:
