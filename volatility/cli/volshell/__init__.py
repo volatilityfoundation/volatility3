@@ -233,7 +233,7 @@ class VolShell(cli.CommandLine):
 
             # Construct and run the plugin
             constructed.run()
-        except exceptions.UnsatisfiedException as excp:
+        except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
 

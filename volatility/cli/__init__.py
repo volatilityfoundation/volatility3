@@ -290,7 +290,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             # Construct and run the plugin
             if constructed:
                 renderers[args.renderer]().render(constructed.run())
-        except (exceptions.InvalidAddressException) as excp:
+        except (exceptions.VolatilityException) as excp:
             self.process_exceptions(excp)
 
     def process_exceptions(self, excp):
@@ -346,6 +346,10 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             general = "Volatility experienced a layer-related issue: {}".format(excp.layer_name)
             detail = "{}".format(excp)
             caused_by = ["A faulty layer implementation (re-run with -vvv and file a bug)"]
+        elif isinstance(excp, exceptions.MissingModuleException):
+            general = "Volatility could not import a necessary module: {}".format(excp.module)
+            detail = "{}".format(excp)
+            caused_by = ["A required python module is not installed (install the module and re-run)"]
         else:
             general = "Volatilty encountered an unexpected situation."
             detail = ""
