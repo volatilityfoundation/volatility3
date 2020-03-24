@@ -78,26 +78,20 @@
       },
       "additionalProperties": false
     },
-    "metadata_linux": {
+    "metadata_nix": {
       "type": "object",
       "properties": {
-        "elf": {
-          "$ref": "#/definitions/metadata_linux_elf"
+        "symbols": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/metadata_linux_item"
+          }
         },
-        "dwarf": {
-          "$ref": "#/definitions/metadata_dwarf"
-        }
-      },
-      "additionalProperties": false
-    },
-    "metadata_mac": {
-      "type": "object",
-      "properties": {
-        "elf": {
-          "$ref": "#/definitions/metadata_mac_macho"
-        },
-        "dwarf": {
-          "$ref": "#/definitions/metadata_dwarf"
+        "types": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/metadata_linux_item"
+          }
         }
       },
       "additionalProperties": false
@@ -106,44 +100,23 @@
       "type": "string",
       "pattern": "^6.[0-9]+.[0-9]+$"
     },
-    "metadata_linux_elf": {
+    "metadata_nix_item": {
       "type": "object",
       "properties": {
-        "symbols": {
-          "type": "boolean"
+        "kind": {
+          "type": "string",
+          "pattern": "^(dwarf|symtab|system-map)$"
         },
-        "buildid": {
+        "name": {
+          "type": "string"
+        },
+        "hash_type": {
+          "type": "string",
+          "pattern": "^(sha256)$"
+        },
+        "hash_value": {
           "type": "string",
           "pattern": "^[a-fA-F0-9]+$"
-        }
-      },
-      "additionalProperties": false
-    },
-    "metadata_mac_macho": {
-      "type": "object",
-      "properties": {
-        "symbols": {
-          "type": "boolean"
-        },
-        "uuid": {
-          "type": "string",
-          "pattern": "^[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+$"
-        }
-      },
-      "additionalProperties": false
-    },
-    "metadata_dwarf": {
-      "type": "object",
-      "properties": {
-        "symbols": {
-          "type": "boolean"
-        },
-        "types": {
-          "type": "boolean"
-        },
-        "uuid": {
-          "type": "string",
-          "pattern": "^[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+-[a-fA-F0-9]+$"
         }
       },
       "additionalProperties": false
@@ -192,7 +165,7 @@
               "$ref": "#/definitions/metadata_producer"
             },
             "linux": {
-              "$ref": "#/definitions/metadata_linux"
+              "$ref": "#/definitions/metadata_nix"
             }
           },
           "required": [
@@ -210,7 +183,7 @@
               "$ref": "#/definitions/metadata_producer"
             },
             "mac": {
-              "$ref": "#/definitions/metadata_mac"
+              "$ref": "#/definitions/metadata_nix"
             }
           },
           "required": [
