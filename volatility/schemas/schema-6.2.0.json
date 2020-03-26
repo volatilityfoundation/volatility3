@@ -84,13 +84,13 @@
         "symbols": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/metadata_linux_item"
+            "$ref": "#/definitions/metadata_nix_item"
           }
         },
         "types": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/metadata_linux_item"
+            "$ref": "#/definitions/metadata_nix_item"
           }
         }
       },
