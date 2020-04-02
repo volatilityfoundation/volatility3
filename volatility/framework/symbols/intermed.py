@@ -602,7 +602,7 @@ class Version8Format(Version7Format):
     def _reduce_indirect_members(self, members: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         result = {}
         for member in members:
-            if members[member].get('anonymous', False):
+            if isinstance(members[member], dict) and members[member].get('anonymous', False):
                 # Do checks to make sure the new dictionary is appropriate
                 parent_item = members[member]
                 submembers = self._reduce_indirect_members(self._json_object['user_types'].get(parent_item['type'], {}))
@@ -637,5 +637,5 @@ class Version8Format(Version7Format):
                     object_class = clazz
         return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
                                                 object_class = object_class,
-                                                size = curdict['length'],
+                                                size = curdict['size'],
                                                 members = members)
