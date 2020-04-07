@@ -52,7 +52,7 @@ class MutantScan(interfaces.plugins.PluginInterface):
 
             try:
                 name = mutant.get_name()
-            except exceptions.InvalidAddressException:
+            except (AttributeError, exceptions.InvalidAddressException):
                 name = renderers.NotApplicableValue()
 
             yield (0, (format_hints.Hex(mutant.vol.offset), name))
