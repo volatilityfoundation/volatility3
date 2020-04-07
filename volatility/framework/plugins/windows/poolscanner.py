@@ -370,7 +370,7 @@ class PoolScanner(plugins.PluginInterface):
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
                 continue
 
-            if not constraint.skip_type_test:
+            if constraint.object_type is not None and not constraint.skip_type_test:
                 try:
                     if mem_object.get_object_header().get_object_type(type_map, cookie) != constraint.object_type:
                         continue
