@@ -29,11 +29,13 @@ class Check_trap_table(plugins.PluginInterface):
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
         ]
 
-    def _generator(self, mods: Iterator[Any]):
+    def _generator(self):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
         
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['darwin'])
+
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 
         table = kernel.object_from_symbol(symbol_name = "mach_trap_table")
@@ -54,11 +56,7 @@ class Check_trap_table(plugins.PluginInterface):
     def run(self):
         return renderers.TreeGrid([("Table Address", format_hints.Hex), ("Table Name", str), ("Index", int),
                                    ("Handler Address", format_hints.Hex), ("Handler Module", str), ("Handler Symbol", str)],
-                                   self._generator(
-                                      lsmod.Lsmod.list_modules(self.context, self.config['primary'],
-                                          self.config['darwin'])))
-
-
+                                   self._generator())
 
 
 

@@ -30,11 +30,13 @@ class Timers(plugins.PluginInterface):
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
         ]
 
-    def _generator(self,  mods: Iterator[Any]):
+    def _generator(self):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
         kernel = contexts.Module(self.context, self.config['darwin'], self.config['primary'], 0)
         
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['darwin'])
+
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 
         real_ncpus = kernel.object_from_symbol(symbol_name = "real_ncpus")
@@ -75,7 +77,4 @@ class Timers(plugins.PluginInterface):
     def run(self):
         return renderers.TreeGrid([("Function", format_hints.Hex), ("Param 0", format_hints.Hex), ("Param 1", format_hints.Hex),
                                    ("Deadline", int), ("Entry Time", int), ("Module", str), ("Symbol", str)],
-                                  self._generator(
-                                      lsmod.Lsmod.list_modules(self.context, self.config['primary'],
-                                          self.config['darwin'])))
-
+                                  self._generator()) 
