@@ -111,10 +111,12 @@ class Check_sysctl(plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 break
 
-    def _generator(self, mods: Iterator[Any]):
+    def _generator(self):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
+
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['darwin'])
 
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods) 
 
@@ -133,6 +135,4 @@ class Check_sysctl(plugins.PluginInterface):
     def run(self):
         return renderers.TreeGrid([("Name", str), ("Number", int), ("Perms", str), ("Handler Address", format_hints.Hex),
                                    ("Value", str), ("Handler Module", str), ("Handler Symbol", str)],
-                                   self._generator(
-                                      lsmod.Lsmod.list_modules(self.context, self.config['primary'],
-                                          self.config['darwin'])))
+                                   self._generator()) 
