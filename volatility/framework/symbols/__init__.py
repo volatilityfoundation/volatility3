@@ -5,6 +5,7 @@
 import collections
 import collections.abc
 import enum
+import functools
 import logging
 from typing import Any, Dict, Iterable, Iterator, TypeVar
 
@@ -253,6 +254,10 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
     original_get_symbol = symbol_table.get_symbol
     cached_symbols = {}  # type: Dict[interfaces.symbols.SymbolInterface, interfaces.symbols.SymbolInterface]
 
+    if hasattr(symbol_table, '_original_get_symbol'):
+        original_get_symbol = symbol_table._original_get_symbol
+
+    @functools.wraps(original_get_symbol)
     def address_masked_get_symbol(*args, **kwargs):
         symbol = original_get_symbol(*args, **kwargs)
         # This is speedy, but may not be very efficient from a memory perspective
@@ -265,8 +270,9 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
         cached_symbols[symbol] = new_symbol
         return new_symbol
 
-    original_get_symbol = symbol_table.get_symbol
+    symbol_table._original_get_symbol = symbol_table.get_symbol
     setattr(symbol_table, "get_symbol", address_masked_get_symbol)
+
     return symbol_table
 
 
