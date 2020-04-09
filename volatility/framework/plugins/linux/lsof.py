@@ -45,7 +45,8 @@ class Lsof(plugins.PluginInterface):
                 yield (0, (pid, name, fd_num, full_path))
 
     def run(self):
-        linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'])
+        masked_vmlinux_symbols = linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'],
+                                                                             self.config['primary'])
 
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
@@ -53,5 +54,5 @@ class Lsof(plugins.PluginInterface):
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
                                                                self.config['primary'],
-                                                               self.config['vmlinux'],
+                                                               masked_vmlinux_symbols,
                                                                filter_func = filter_func)))

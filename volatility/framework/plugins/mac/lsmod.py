@@ -37,9 +37,9 @@ class Lsmod(plugins.PluginInterface):
         Returns:
             A list of modules from the `layer_name` layer
         """
-        mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
+        masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        kernel = contexts.Module(context, masked_darwin_symbols, layer_name, 0)
 
         kmod_ptr = kernel.object_from_symbol(symbol_name = "kmod")
 
