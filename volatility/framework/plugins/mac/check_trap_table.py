@@ -3,10 +3,10 @@
 #
 
 import logging
-from typing import List, Iterator, Any
+from typing import List
 
 from volatility.framework import exceptions, interfaces
-from volatility.framework import renderers, constants, contexts
+from volatility.framework import renderers, contexts
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
@@ -30,11 +30,12 @@ class Check_trap_table(plugins.PluginInterface):
         ]
 
     def _generator(self):
-        mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
+        masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'],
+                                                                        self.config['primary'])
 
-        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
+        kernel = contexts.Module(self._context, masked_darwin_symbols, self.config['primary'], 0)
 
-        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['darwin'])
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], masked_darwin_symbols)
 
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 

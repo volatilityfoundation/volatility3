@@ -256,9 +256,8 @@ class LinuxUtilities(object):
                                context: interfaces.context.ContextInterface,
                                symbol_table: str,
                                layer_name: str,
-                               aslr_shift = 0):
+                               aslr_shift = 0) -> str:
 
-        sym_table = context.symbol_space[symbol_table]
         sym_layer = context.layers[layer_name]
 
         if aslr_shift == 0:
@@ -267,7 +266,7 @@ class LinuxUtilities(object):
             aslr_layer = sym_layer.config['memory_layer']
             _, aslr_shift = cls.find_aslr(context, symbol_table, aslr_layer)
 
-        symbols.mask_symbol_table(sym_table, sym_layer.address_mask, aslr_shift)
+        return symbols.mask_symbol_table(context, symbol_table, sym_layer.address_mask, aslr_shift)
 
     @classmethod
     def find_aslr(cls,

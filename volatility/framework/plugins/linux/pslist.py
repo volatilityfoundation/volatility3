@@ -75,9 +75,9 @@ class PsList(interfaces.plugins.PluginInterface):
         Yields:
             Process objects
         """
-        linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
+        masked_vmlinux_symbols = linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
 
-        vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)
+        vmlinux = contexts.Module(context, masked_vmlinux_symbols, layer_name, 0)
 
         init_task = vmlinux.object_from_symbol(symbol_name = "init_task")
 

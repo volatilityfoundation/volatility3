@@ -99,7 +99,7 @@ class Netstat(plugins.PluginInterface):
                                "{}/{:d}".format(task_name, pid)))
 
     def run(self):
-        # mac.MacUtilities.aslr_mask_symbol_table(self.config, self.context)
+        # masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(self.config, self.context)
 
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),
                                    ("Remote IP", str), ("Remote Port", int), ("State", str), ("Process", str)],

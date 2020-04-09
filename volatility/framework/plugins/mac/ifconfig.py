@@ -2,12 +2,11 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from volatility.framework import exceptions, renderers, interfaces, contexts
+from volatility.framework import exceptions, renderers, contexts
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
-from volatility.framework.renderers import format_hints
 
 
 class Ifconfig(plugins.PluginInterface):
@@ -23,9 +22,10 @@ class Ifconfig(plugins.PluginInterface):
         ]
 
     def _generator(self):
-        mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
+        masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'],
+                                                                        self.config['primary'])
 
-        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
+        kernel = contexts.Module(self._context, masked_darwin_symbols, self.config['primary'], 0)
 
         try:
             list_head = kernel.object_from_symbol(symbol_name = "ifnet_head")

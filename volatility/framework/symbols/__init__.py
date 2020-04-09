@@ -4,6 +4,7 @@
 
 import collections
 import collections.abc
+import copy
 import enum
 import functools
 import logging
@@ -246,20 +247,22 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         return self._membership(SymbolType.ENUM, name)
 
 
-def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
+def mask_symbol_table(context: interfaces.context.ContextInterface,
+                      symbol_table_name: str,
                       address_mask: int = 0,
-                      table_aslr_shift: int = 0):
+                      table_aslr_shift: int = 0) -> str:
     """Alters a symbol table, such that all symbols returned have their address
     masked by the address mask."""
-    original_get_symbol = symbol_table.get_symbol
+    original_table = context.symbol_space[symbol_table_name]
+    new_table = copy.deepcopy(original_table)
+    new_table.name = context.symbol_space.free_table_name(original_table.name + '_masked'.format())
+    context.symbol_space.append(new_table)
+
     cached_symbols = {}  # type: Dict[interfaces.symbols.SymbolInterface, interfaces.symbols.SymbolInterface]
 
-    if hasattr(symbol_table, '_original_get_symbol'):
-        original_get_symbol = symbol_table._original_get_symbol
-
-    @functools.wraps(original_get_symbol)
+    @functools.wraps(original_table.get_symbol)
     def address_masked_get_symbol(*args, **kwargs):
-        symbol = original_get_symbol(*args, **kwargs)
+        symbol = original_table.get_symbol(*args, **kwargs)
         # This is speedy, but may not be very efficient from a memory perspective
         if symbol in cached_symbols:
             return cached_symbols[symbol]
@@ -270,10 +273,9 @@ def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
         cached_symbols[symbol] = new_symbol
         return new_symbol
 
-    symbol_table._original_get_symbol = symbol_table.get_symbol
-    setattr(symbol_table, "get_symbol", address_masked_get_symbol)
+    setattr(new_table, "get_symbol", address_masked_get_symbol)
 
-    return symbol_table
+    return new_table.name
 
 
 def symbol_table_is_64bit(context: interfaces.context.ContextInterface, symbol_table_name: str) -> bool:

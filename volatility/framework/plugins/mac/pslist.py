@@ -71,9 +71,9 @@ class PsList(interfaces.plugins.PluginInterface):
             The list of process objects from the processes linked list after filtering
         """
 
-        mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
+        masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
 
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        kernel = contexts.Module(context, masked_darwin_symbols, layer_name, 0)
 
         kernel_as = context.layers[layer_name]
 
