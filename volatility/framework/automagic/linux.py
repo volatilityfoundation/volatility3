@@ -171,7 +171,12 @@ class LinuxUtilities(object):
 
         sym_addr = dentry.d_op.d_dname
 
-        symbs = list(context.symbol_space.get_symbols_by_location(sym_addr))
+        symbol_table_arr = sym_addr.vol.type_name.split("!")
+        symbol_table = None
+        if len(symbol_table_arr) == 2:
+            symbol_table = symbol_table_arr[0]
+
+        symbs = list(context.symbol_space.get_symbols_by_location(sym_addr, table_name = symbol_table))
 
         if len(symbs) == 1:
             sym = symbs[0].split(constants.BANG)[1]
