@@ -100,8 +100,9 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         """
         # Check there are no obvious errors
         # Open the file and test the version
+        self._isf_url = isf_url
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        fp = volatility.framework.layers.resources.ResourceAccessor().open(isf_url)
+        fp = volatility.framework.layers.resources.ResourceAccessor().open(self._isf_url)
         reader = codecs.getreader("utf-8")
         json_object = json.load(reader(fp))  # type: ignore
         fp.close()
@@ -242,6 +243,18 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             requirements.StringRequirement(
                 "isf_url", description = "JSON file containing the symbols encoded in the Intermediate Symbol Format")
         ]
+
+    def clone(self, new_name: str):
+        print(self._delegate._overrides)
+        import pdb
+        pdb.set_trace()
+        return IntermediateSymbolTable(self._context,
+                                       self.config_path,
+                                       new_name,
+                                       isf_url = self._isf_url,
+                                       native_types = self._native_types,
+                                       table_mapping = self.table_mapping,
+                                       class_types = self._delegate._overrides)
 
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta):
