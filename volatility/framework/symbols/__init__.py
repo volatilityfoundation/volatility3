@@ -4,7 +4,6 @@
 
 import collections
 import collections.abc
-import copy
 import enum
 import functools
 import logging
@@ -254,15 +253,16 @@ def mask_symbol_table(context: interfaces.context.ContextInterface,
     """Alters a symbol table, such that all symbols returned have their address
     masked by the address mask."""
     original_table = context.symbol_space[symbol_table_name]
-    new_table = copy.deepcopy(original_table)
-    new_table.name = context.symbol_space.free_table_name(original_table.name + '_masked'.format())
+    new_table_name = context.symbol_space.free_table_name(original_table.name + '_masked'.format())
+    new_table = original_table.clone(new_table_name)
     context.symbol_space.append(new_table)
+    new_table_get_symbol = new_table.get_symbol
 
     cached_symbols = {}  # type: Dict[interfaces.symbols.SymbolInterface, interfaces.symbols.SymbolInterface]
 
-    @functools.wraps(original_table.get_symbol)
+    @functools.wraps(new_table_get_symbol)
     def address_masked_get_symbol(*args, **kwargs):
-        symbol = original_table.get_symbol(*args, **kwargs)
+        symbol = new_table_get_symbol(*args, **kwargs)
         # This is speedy, but may not be very efficient from a memory perspective
         if symbol in cached_symbols:
             return cached_symbols[symbol]
