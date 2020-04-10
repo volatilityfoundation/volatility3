@@ -245,9 +245,6 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         ]
 
     def clone(self, new_name: str):
-        print(self._delegate._overrides)
-        import pdb
-        pdb.set_trace()
         return IntermediateSymbolTable(self._context,
                                        self.config_path,
                                        new_name,
