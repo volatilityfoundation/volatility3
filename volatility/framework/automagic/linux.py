@@ -228,8 +228,7 @@ class LinuxUtilities(object):
         return ret
 
     @classmethod
-    def files_descriptors_for_process(cls, config: interfaces.configuration.HierarchicalDict,
-                                      context: interfaces.context.ContextInterface,
+    def files_descriptors_for_process(cls, context: interfaces.context.ContextInterface, symbol_table: str,
                                       task: interfaces.objects.ObjectInterface):
 
         fd_table = task.files.get_fds()
@@ -242,7 +241,7 @@ class LinuxUtilities(object):
         if max_fds > 500000:
             return
 
-        file_type = config["vmlinux"] + constants.BANG + 'file'
+        file_type = symbol_table + constants.BANG + 'file'
 
         fds = objects.utility.array_of_pointers(fd_table, count = max_fds, subtype = file_type, context = context)
 
