@@ -6,7 +6,7 @@ found in Linux's /proc file system."""
 import logging
 from typing import List
 
-from volatility.framework import renderers, interfaces
+from volatility.framework import renderers, interfaces, constants
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
