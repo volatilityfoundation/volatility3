@@ -62,7 +62,7 @@ class Check_afinfo(plugins.PluginInterface):
             yield var_name, "show", var.seq_show
 
     def _generator(self):
-        linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'])
+        masked_vmlinux_symbols = linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'])
 
         vmlinux = contexts.Module(self.context, masked_vmlinux_symbols, self.config['primary'], 0)
 
