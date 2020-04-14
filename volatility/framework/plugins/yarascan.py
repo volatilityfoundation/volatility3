@@ -27,10 +27,10 @@ class YaraScanner(interfaces.layers.ScannerInterface):
         super().__init__()
         self._rules = rules
 
-    def __call__(self, data: bytes, data_offset: int) -> Iterable[Tuple[int, str]]:
+    def __call__(self, data: bytes, data_offset: int) -> Iterable[Tuple[int, str, bytes]]:
         for match in self._rules.match(data = data):
             for offset, name, value in match.strings:
-                yield (offset + data_offset, name)
+                yield (offset + data_offset, name, value)
 
 
 class YaraScan(plugins.PluginInterface):
@@ -78,8 +78,8 @@ class YaraScan(plugins.PluginInterface):
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
 
-        for offset, name in layer.scan(context = self.context, scanner = YaraScanner(rules = rules)):
-            yield (0, (format_hints.Hex(offset), name))
+        for offset, name, value in layer.scan(context = self.context, scanner = YaraScanner(rules = rules)):
+            yield (0, (format_hints.Hex(offset), name, value))
 
     def run(self):
-        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Rule', str)], self._generator())
+        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Rule', str), ('Value', bytes)], self._generator())

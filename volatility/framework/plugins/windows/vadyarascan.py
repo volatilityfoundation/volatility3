@@ -75,10 +75,10 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                                                  filter_func = filter_func):
             layer_name = task.add_process_layer()
             layer = self.context.layers[layer_name]
-            for offset, name in layer.scan(context = self.context,
-                                           scanner = yarascan.YaraScanner(rules = rules),
-                                           sections = self.get_vad_maps(task)):
-                yield (0, (format_hints.Hex(offset), task.UniqueProcessId, name))
+            for offset, name, value in layer.scan(context = self.context,
+                                                  scanner = yarascan.YaraScanner(rules = rules),
+                                                  sections = self.get_vad_maps(task)):
+                yield (0, (format_hints.Hex(offset), task.UniqueProcessId, name, value))
 
     @staticmethod
     def get_vad_maps(task: interfaces.objects.ObjectInterface) -> Iterable[Tuple[int, int]]:
@@ -98,4 +98,5 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             yield (start, end - start)
 
     def run(self):
-        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Pid', int), ('Rule', str)], self._generator())
+        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Pid', int), ('Rule', str), ('Value', bytes)],
+                                  self._generator())
