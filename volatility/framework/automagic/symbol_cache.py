@@ -48,7 +48,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                 if url.scheme == 'file' and not os.path.exists(urllib.request.url2pathname(url.path)):
                     vollog.log(
                         constants.LOGLEVEL_VV, "Removing cached path {} for banner {}: file does not exist".format(
-                            path, str(banner, 'latin-1')))
+                            path, str(banner or b'', 'latin-1')))
                     banners[banner].remove(path)
                 # This is probably excessive, but it's here if we need it
                 # if url.scheme == 'jar':
@@ -120,5 +120,5 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                     del isf
                     gc.collect()
 
-            # Rewrite the cached banners each run, since writing is faster than the banner_cache validation portion
-            self.save_banners(banners)
+        # Rewrite the cached banners each run, since writing is faster than the banner_cache validation portion
+        self.save_banners(banners)
