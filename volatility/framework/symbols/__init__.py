@@ -253,6 +253,9 @@ def mask_symbol_table(context: interfaces.context.ContextInterface,
     """Alters a symbol table, such that all symbols returned have their address
     masked by the address mask.
 
+    Note: This is not cumulative, and will always take the original symbol_table and apply
+    this shift to it, ignoring any previous shifts the table may have undergone.
+
     Args:
         context: Context that containing the symbol table and layers to be acted upon
         symbol_table_name: Symbol table to mask
@@ -282,8 +285,11 @@ def mask_symbol_table(context: interfaces.context.ContextInterface,
         # This is speedy, but may not be very efficient from a memory perspective
         if symbol in cached_symbols:
             return cached_symbols[symbol]
+        address = symbol.address + table_aslr_shift
+        if address_mask:
+            address = address & address_mask
         new_symbol = interfaces.symbols.SymbolInterface(name = symbol.name,
-                                                        address = address_mask & (symbol.address + table_aslr_shift),
+                                                        address = address,
                                                         type = symbol.type,
                                                         constant_data = symbol.constant_data)
         cached_symbols[symbol] = new_symbol
