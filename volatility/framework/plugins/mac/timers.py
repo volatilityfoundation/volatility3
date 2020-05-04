@@ -29,12 +29,9 @@ class Timers(plugins.PluginInterface):
         ]
 
     def _generator(self):
-        masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'],
-                                                                        self.config['primary'])
+        kernel = contexts.Module(self.context, self.config['darwin'], self.config['primary'], 0)
 
-        kernel = contexts.Module(self.context, masked_darwin_symbols, self.config['primary'], 0)
-
-        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], masked_darwin_symbols)
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['darwin'])
 
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 

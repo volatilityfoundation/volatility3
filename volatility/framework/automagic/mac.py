@@ -9,6 +9,7 @@ from typing import Optional, Iterable, Set, Iterator, Any
 from volatility.framework import interfaces, constants, layers, exceptions, objects
 from volatility.framework import symbols
 from volatility.framework.automagic import symbol_cache, symbol_finder
+from volatility.framework.interfaces.configuration import path_join
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import mac
 
@@ -28,6 +29,28 @@ class MacSymbolFinder(symbol_finder.SymbolFinder):
     banner_config_key = 'kernel_banner'
     banner_cache = MacBannerCache
     symbol_class = "volatility.framework.symbols.mac.MacKernelIntermedSymbols"
+
+    def _banner_scan(self,
+                     context: interfaces.context.ContextInterface,
+                     config_path: str,
+                     requirement: interfaces.configuration.ConstructableRequirementInterface,
+                     layer_name: str,
+                     progress_callback: constants.ProgressCallback = None) -> None:
+        result = super()._banner_scan(context, config_path, requirement, layer_name, progress_callback)
+
+        new_symbol_table_name = context.config[path_join(config_path, requirement.name)]
+
+        sym_layer = context.layers[layer_name]
+        if not isinstance(sym_layer, layers.intel.Intel):
+            raise TypeError("Layer name {} is not an intel space")
+        aslr_layer = sym_layer.config['memory_layer']
+        aslr_shift = MacUtilities.find_aslr(context, new_symbol_table_name, aslr_layer)
+
+        masked_symbol_table_name = MacUtilities.aslr_mask_symbol_table(context, new_symbol_table_name, layer_name,
+                                                                       aslr_shift)
+        context.config[path_join(config_path, requirement.name)] = masked_symbol_table_name
+
+        return result
 
 
 class MacintelStacker(interfaces.automagic.StackerLayerInterface):
@@ -153,7 +176,7 @@ class MacUtilities(object):
         end_addr = end_addr & mask
 
         return [("__kernel__", start_addr, end_addr)] + \
-                    MacUtilities.mask_mods_list(context, layer_name, mods_list)
+               MacUtilities.mask_mods_list(context, layer_name, mods_list)
 
     @classmethod
     def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: Iterator[Any],
@@ -169,26 +192,17 @@ class MacUtilities(object):
 
                     if len(symbols) > 0:
                         symbol_name = str(symbols[0].split(constants.BANG)[1]) if constants.BANG in symbols[0] else \
-                                       str(symbols[0])
+                            str(symbols[0])
 
                 break
 
         return mod_name, symbol_name
 
     @classmethod
-    def aslr_mask_symbol_table(cls,
-                               context: interfaces.context.ContextInterface,
-                               symbol_table: str,
-                               layer_name: str,
-                               aslr_shift = 0) -> str:
+    def aslr_mask_symbol_table(cls, context: interfaces.context.ContextInterface, symbol_table: str, layer_name: str,
+                               aslr_shift) -> str:
 
         sym_layer = context.layers[layer_name]
-
-        if aslr_shift == 0:
-            if not isinstance(sym_layer, layers.intel.Intel):
-                raise TypeError("Layer name {} is not an intel space")
-            aslr_layer = sym_layer.config['memory_layer']
-            aslr_shift = cls.find_aslr(context, symbol_table, aslr_layer)
 
         return symbols.mask_symbol_table(context, symbol_table, sym_layer.address_mask, aslr_shift)
 
@@ -282,7 +296,7 @@ class MacUtilities(object):
         Return:
             A 3 element tuple is yielded for each file descriptor:
             1) The file's object
-            2) The path referenced by the descriptor. 
+            2) The path referenced by the descriptor.
                 The path is either empty, the full path of the file in the file system, or the formatted name for sockets, pipes, etc.
             3) The file descriptor number
         """
