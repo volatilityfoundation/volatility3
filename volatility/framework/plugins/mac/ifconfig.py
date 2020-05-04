@@ -22,10 +22,7 @@ class Ifconfig(plugins.PluginInterface):
         ]
 
     def _generator(self):
-        masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'],
-                                                                        self.config['primary'])
-
-        kernel = contexts.Module(self._context, masked_darwin_symbols, self.config['primary'], 0)
+        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
         try:
             list_head = kernel.object_from_symbol(symbol_name = "ifnet_head")

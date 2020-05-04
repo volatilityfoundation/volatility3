@@ -6,7 +6,6 @@ import logging
 from typing import Callable, Dict, Iterable
 
 from volatility.framework import interfaces, contexts, exceptions
-from volatility.framework.automagic import mac
 from volatility.plugins.mac import pslist
 
 vollog = logging.getLogger(__name__)
@@ -34,9 +33,7 @@ class Tasks(pslist.PsList):
             The list of task objects from the `layer_name` layer's `tasks` list after filtering
         """
 
-        masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
-
-        kernel = contexts.Module(context, masked_darwin_symbols, layer_name, 0)
+        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
         kernel_as = context.layers[layer_name]
 

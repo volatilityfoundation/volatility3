@@ -31,10 +31,7 @@ class trustedbsd(plugins.PluginInterface):
         ]
 
     def _generator(self, mods: Iterator[Any]):
-        masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'],
-                                                                        self.config['primary'])
-
-        kernel = contexts.Module(self._context, masked_darwin_symbols, self.config['primary'], 0)
+        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
 
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 

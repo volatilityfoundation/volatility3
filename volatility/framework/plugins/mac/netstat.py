@@ -35,7 +35,7 @@ class Netstat(plugins.PluginInterface):
                      layer_name: str,
                      darwin_symbols: str,
                      filter_func: Callable[[int], bool] = lambda _: False) -> \
-                Iterable[interfaces.objects.ObjectInterface]:
+            Iterable[interfaces.objects.ObjectInterface]:
         """
         Returns the open socket descriptors of a process
 
@@ -99,8 +99,6 @@ class Netstat(plugins.PluginInterface):
                                "{}/{:d}".format(task_name, pid)))
 
     def run(self):
-        # masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(self.config, self.context)
-
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),
                                    ("Remote IP", str), ("Remote Port", int), ("State", str), ("Process", str)],
                                   self._generator())

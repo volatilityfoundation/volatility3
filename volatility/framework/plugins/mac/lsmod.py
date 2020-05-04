@@ -4,7 +4,6 @@
 """A module containing a collection of plugins that produce data typically
 found in Mac's lsmod command."""
 from volatility.framework import renderers, interfaces, contexts
-from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
@@ -37,9 +36,7 @@ class Lsmod(plugins.PluginInterface):
         Returns:
             A list of modules from the `layer_name` layer
         """
-        masked_darwin_symbols = mac.MacUtilities.aslr_mask_symbol_table(context, darwin_symbols, layer_name)
-
-        kernel = contexts.Module(context, masked_darwin_symbols, layer_name, 0)
+        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
         kmod_ptr = kernel.object_from_symbol(symbol_name = "kmod")
 
