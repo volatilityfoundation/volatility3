@@ -5,29 +5,13 @@
 import logging
 from typing import List, Optional, Tuple, Type
 
-from volatility.framework import interfaces, constants, exceptions, layers
-from volatility.framework import symbols, objects
+from volatility.framework import interfaces, constants, exceptions
+from volatility.framework import objects
 from volatility.framework.automagic import symbol_cache, symbol_finder
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
 
 vollog = logging.getLogger(__name__)
-
-
-class LinuxBannerCache(symbol_cache.SymbolBannerCache):
-    """Caches the banners found in the Linux symbol files."""
-
-    os = "linux"
-    symbol_name = "linux_banner"
-    banner_path = constants.LINUX_BANNERS_PATH
-
-
-class LinuxSymbolFinder(symbol_finder.SymbolFinder):
-    """Linux symbol loader based on uname signature strings."""
-
-    banner_config_key = "kernel_banner"
-    banner_cache = LinuxBannerCache
-    symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
 
 
 class LintelStacker(interfaces.automagic.StackerLayerInterface):
@@ -257,23 +241,6 @@ class LinuxUtilities(object):
                 yield fd_num, filp, full_path
 
     @classmethod
-    def aslr_mask_symbol_table(cls,
-                               context: interfaces.context.ContextInterface,
-                               symbol_table: str,
-                               layer_name: str,
-                               aslr_shift = 0) -> str:
-
-        sym_layer = context.layers[layer_name]
-
-        if aslr_shift == 0:
-            if not isinstance(sym_layer, layers.intel.Intel):
-                raise TypeError("Layer name {} is not an intel space")
-            aslr_layer = sym_layer.config['memory_layer']
-            _, aslr_shift = cls.find_aslr(context, symbol_table, aslr_layer)
-
-        return symbols.mask_symbol_table(context, symbol_table, sym_layer.address_mask, aslr_shift)
-
-    @classmethod
     def find_aslr(cls,
                   context: interfaces.context.ContextInterface,
                   symbol_table: str,
@@ -319,3 +286,20 @@ class LinuxUtilities(object):
         if addr > 0xffffffff80000000:
             return addr - 0xffffffff80000000
         return addr - 0xc0000000
+
+
+class LinuxBannerCache(symbol_cache.SymbolBannerCache):
+    """Caches the banners found in the Linux symbol files."""
+
+    os = "linux"
+    symbol_name = "linux_banner"
+    banner_path = constants.LINUX_BANNERS_PATH
+
+
+class LinuxSymbolFinder(symbol_finder.SymbolFinder):
+    """Linux symbol loader based on uname signature strings."""
+
+    banner_config_key = "kernel_banner"
+    banner_cache = LinuxBannerCache
+    symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
+    find_aslr = lambda *args: LinuxUtilities.find_aslr(*args)[1]

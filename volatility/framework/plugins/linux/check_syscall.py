@@ -122,10 +122,7 @@ class Check_syscall(plugins.PluginInterface):
 
     # TODO - add finding and parsing unistd.h once cached file enumeration is added
     def _generator(self):
-        masked_symbol_table = linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'],
-                                                                          self.config['primary'])
-
-        vmlinux = contexts.Module(self.context, masked_symbol_table, self.config['primary'], 0)
+        vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
 
         ptr_sz = vmlinux.get_type("pointer").size
         if ptr_sz == 4:

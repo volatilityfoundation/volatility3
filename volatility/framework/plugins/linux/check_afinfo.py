@@ -62,9 +62,7 @@ class Check_afinfo(plugins.PluginInterface):
             yield var_name, "show", var.seq_show
 
     def _generator(self):
-        masked_vmlinux_symbols = linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'], self.config['primary'])
-
-        vmlinux = contexts.Module(self.context, masked_vmlinux_symbols, self.config['primary'], 0)
+        vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
 
         op_members = vmlinux.get_type('file_operations').members
         seq_members = vmlinux.get_type('seq_operations').members
