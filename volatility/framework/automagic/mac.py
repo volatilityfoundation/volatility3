@@ -16,43 +16,6 @@ from volatility.framework.symbols import mac
 vollog = logging.getLogger(__name__)
 
 
-class MacBannerCache(symbol_cache.SymbolBannerCache):
-    """Caches the banners found in the Mac symbol files."""
-    os = "mac"
-    symbol_name = "version"
-    banner_path = constants.MAC_BANNERS_PATH
-
-
-class MacSymbolFinder(symbol_finder.SymbolFinder):
-    """Mac symbol loader based on uname signature strings."""
-
-    banner_config_key = 'kernel_banner'
-    banner_cache = MacBannerCache
-    symbol_class = "volatility.framework.symbols.mac.MacKernelIntermedSymbols"
-
-    def _banner_scan(self,
-                     context: interfaces.context.ContextInterface,
-                     config_path: str,
-                     requirement: interfaces.configuration.ConstructableRequirementInterface,
-                     layer_name: str,
-                     progress_callback: constants.ProgressCallback = None) -> None:
-        result = super()._banner_scan(context, config_path, requirement, layer_name, progress_callback)
-
-        new_symbol_table_name = context.config[path_join(config_path, requirement.name)]
-
-        sym_layer = context.layers[layer_name]
-        if not isinstance(sym_layer, layers.intel.Intel):
-            raise TypeError("Layer name {} is not an intel space")
-        aslr_layer = sym_layer.config['memory_layer']
-        aslr_shift = MacUtilities.find_aslr(context, new_symbol_table_name, aslr_layer)
-
-        masked_symbol_table_name = MacUtilities.aslr_mask_symbol_table(context, new_symbol_table_name, layer_name,
-                                                                       aslr_shift)
-        context.config[path_join(config_path, requirement.name)] = masked_symbol_table_name
-
-        return result
-
-
 class MacintelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 45
 
@@ -197,14 +160,6 @@ class MacUtilities(object):
                 break
 
         return mod_name, symbol_name
-
-    @classmethod
-    def aslr_mask_symbol_table(cls, context: interfaces.context.ContextInterface, symbol_table: str, layer_name: str,
-                               aslr_shift) -> str:
-
-        sym_layer = context.layers[layer_name]
-
-        return symbols.mask_symbol_table(context, symbol_table, sym_layer.address_mask, aslr_shift)
 
     @classmethod
     def _scan_generator(cls, context, layer_name, progress_callback):
@@ -368,3 +323,19 @@ class MacUtilities(object):
                 current = current.member(attr = next_member).tqe_next
             except exceptions.InvalidAddressException:
                 break
+
+
+class MacBannerCache(symbol_cache.SymbolBannerCache):
+    """Caches the banners found in the Mac symbol files."""
+    os = "mac"
+    symbol_name = "version"
+    banner_path = constants.MAC_BANNERS_PATH
+
+
+class MacSymbolFinder(symbol_finder.SymbolFinder):
+    """Mac symbol loader based on uname signature strings."""
+
+    banner_config_key = 'kernel_banner'
+    banner_cache = MacBannerCache
+    find_aslr = MacUtilities.find_aslr
+    symbol_class = "volatility.framework.symbols.mac.MacKernelIntermedSymbols"

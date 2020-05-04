@@ -3,9 +3,9 @@
 #
 
 import logging
-from typing import Any, Iterable, List, Tuple, Type, Optional
+from typing import Any, Iterable, List, Tuple, Type, Optional, Callable
 
-from volatility.framework import interfaces, constants
+from volatility.framework import interfaces, constants, layers, symbols
 from volatility.framework.automagic import symbol_cache
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import scanners
@@ -20,6 +20,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
     banner_config_key = "banner"  # type: str
     banner_cache = None  # type: Optional[Type[symbol_cache.SymbolBannerCache]]
     symbol_class = None  # type: Optional[str]
+    find_aslr = None  # type: Optional[Callable]
 
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         super().__init__(context, config_path)
@@ -108,6 +109,17 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 context.config[path_join(config_path, requirement.name, "isf_url")] = isf_path
                 # Construct the appropriate symbol table
                 requirement.construct(context, config_path)
+
+                # Apply the ASLR masking
+                if self.find_aslr:
+                    unmasked_symbol_table_name = context.config[path_join(config_path, requirement.name)]
+                    if not isinstance(layer, layers.intel.Intel):
+                        raise TypeError("Layer name {} is not an intel space")
+                    aslr_shift = self.find_aslr(context, unmasked_symbol_table_name, layer.config['memory_layer'])
+                    masked_symbol_table_name = symbols.mask_symbol_table(context, unmasked_symbol_table_name,
+                                                                         layer_name, aslr_shift)
+                    context.config[path_join(config_path, requirement.name)] = masked_symbol_table_name
+
                 break
             else:
                 if symbol_files:

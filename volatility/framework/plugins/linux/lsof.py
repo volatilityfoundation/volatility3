@@ -45,14 +45,11 @@ class Lsof(plugins.PluginInterface):
                 yield (0, (pid, name, fd_num, full_path))
 
     def run(self):
-        masked_vmlinux_symbols = linux.LinuxUtilities.aslr_mask_symbol_table(self.context, self.config['vmlinux'],
-                                                                             self.config['primary'])
-
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("FD", int), ("Path", str)],
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
                                                                self.config['primary'],
-                                                               masked_vmlinux_symbols,
+                                                               self.config['vmlinux'],
                                                                filter_func = filter_func)))
