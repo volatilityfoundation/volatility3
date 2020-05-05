@@ -302,8 +302,8 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                 result[1] = (last_start, self.maximum_address - last_start)
         return result
 
-    def _scan_iterator(self, scanner: 'ScannerInterface',
-                       sections: Iterable[Tuple[int, int]]) -> Iterable[IteratorValue]:
+    def _scan_iterator(self, scanner: 'ScannerInterface', sections: Iterable[Tuple[int,
+                                                                                   int]]) -> Iterable[IteratorValue]:
         """Iterator that indicates which blocks in the layer are to be read by
         for the scanning.
 
@@ -377,7 +377,9 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     """
 
     @abstractmethod
-    def mapping(self, offset: int, length: int,
+    def mapping(self,
+                offset: int,
+                length: int,
                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
         """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
         mappings.
@@ -466,7 +468,9 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
             current_offset += len(new_data)
 
-    def _scan_iterator(self, scanner: 'ScannerInterface', sections: Iterable[Tuple[int, int]],
+    def _scan_iterator(self,
+                       scanner: 'ScannerInterface',
+                       sections: Iterable[Tuple[int, int]],
                        linear: bool = False) -> Iterable[IteratorValue]:
         """Iterator that indicates which blocks in the layer are to be read by
         for the scanning.

@@ -136,7 +136,9 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
     def is_valid(self, offset: int, length: int = 1) -> bool:
         return self.context.layers[self._base_layer].is_valid(offset, length)
 
-    def mapping(self, offset: int, length: int,
+    def mapping(self,
+                offset: int,
+                length: int,
                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
         yield offset, length, offset, length, self._base_layer
 
@@ -183,7 +185,9 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
             requirements.IntRequirement(name = 'maximum_size')
         ]
 
-    def mapping(self, offset: int, length: int,
+    def mapping(self,
+                offset: int,
+                length: int,
                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
         returned = 0
         page_size = self._pdb_layer.page_size

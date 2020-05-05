@@ -145,8 +145,9 @@ class CM_KEY_NODE(objects.StructType):
             subkey_node = hive.get_cell(self.SubKeyLists[index]).u.KeyIndex
             yield from self._get_subkeys_recursive(hive, subkey_node)
 
-    def _get_subkeys_recursive(self, hive: RegistryHive, node: interfaces.objects.ObjectInterface
-                               ) -> Iterable[interfaces.objects.ObjectInterface]:
+    def _get_subkeys_recursive(
+            self, hive: RegistryHive,
+            node: interfaces.objects.ObjectInterface) -> Iterable[interfaces.objects.ObjectInterface]:
         """Recursively descend a node returning subkeys."""
         # The keylist appears to include 4 bytes of key name after each value
         # We can either double the list and only use the even items, or

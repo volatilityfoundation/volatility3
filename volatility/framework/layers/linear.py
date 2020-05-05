@@ -65,6 +65,8 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
             value = value[length:]
             current_offset += length
 
-    def _scan_iterator(self, scanner: 'ScannerInterface', sections: Iterable[Tuple[int, int]],
+    def _scan_iterator(self,
+                       scanner: 'ScannerInterface',
+                       sections: Iterable[Tuple[int, int]],
                        linear: bool = True) -> Iterable[IteratorValue]:
         return super()._scan_iterator(scanner, sections, linear)

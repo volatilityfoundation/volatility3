@@ -118,7 +118,7 @@ class Check_sysctl(plugins.PluginInterface):
 
         mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['darwin'])
 
-        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods) 
+        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 
         sysctl_list = kernel.object_from_symbol(symbol_name = "sysctl__children")
 
@@ -128,11 +128,12 @@ class Check_sysctl(plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 continue
 
-            module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, check_addr) 
+            module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, check_addr)
 
-            yield (0, (name, sysctl.oid_number, sysctl.get_perms(), format_hints.Hex(check_addr), val, module_name, symbol_name))
+            yield (0, (name, sysctl.oid_number, sysctl.get_perms(), format_hints.Hex(check_addr), val, module_name,
+                       symbol_name))
 
     def run(self):
-        return renderers.TreeGrid([("Name", str), ("Number", int), ("Perms", str), ("Handler Address", format_hints.Hex),
-                                   ("Value", str), ("Handler Module", str), ("Handler Symbol", str)],
-                                   self._generator()) 
+        return renderers.TreeGrid([("Name", str), ("Number", int), ("Perms", str),
+                                   ("Handler Address", format_hints.Hex), ("Value", str), ("Handler Module", str),
+                                   ("Handler Symbol", str)], self._generator())

@@ -62,9 +62,9 @@ class Malfind(interfaces.plugins.PluginInterface):
         return True
 
     @classmethod
-    def list_injections(cls, context: interfaces.context.ContextInterface, kernel_layer_name: str, symbol_table: str,
-                        proc: interfaces.objects.ObjectInterface
-                        ) -> Iterable[Tuple[interfaces.objects.ObjectInterface, bytes]]:
+    def list_injections(
+            cls, context: interfaces.context.ContextInterface, kernel_layer_name: str, symbol_table: str,
+            proc: interfaces.objects.ObjectInterface) -> Iterable[Tuple[interfaces.objects.ObjectInterface, bytes]]:
         """Generate memory regions for a process that may contain injected
         code.
 

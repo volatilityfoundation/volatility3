@@ -60,8 +60,8 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
                           context: interfaces.context.ContextInterface,
                           config_path: str,
                           requirement_root: interfaces.configuration.RequirementInterface,
-                          requirement_type: Union[Tuple[Type[interfaces.configuration.RequirementInterface], ...], Type[
-                              interfaces.configuration.RequirementInterface]],
+                          requirement_type: Union[Tuple[Type[interfaces.configuration.RequirementInterface], ...],
+                                                  Type[interfaces.configuration.RequirementInterface]],
                           shortcut: bool = True) -> List[Tuple[str, interfaces.configuration.RequirementInterface]]:
         """Determines if there is actually an unfulfilled `Requirement`
         waiting.

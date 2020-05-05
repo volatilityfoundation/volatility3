@@ -84,8 +84,8 @@ class VerInfo(interfaces.plugins.PluginInterface):
         return major, minor, product, build
 
     def _generator(self, procs: Generator[interfaces.objects.ObjectInterface, None, None],
-                   mods: Generator[interfaces.objects.ObjectInterface, None, None],
-                   session_layers: Generator[str, None, None]):
+                   mods: Generator[interfaces.objects.ObjectInterface, None, None], session_layers: Generator[str, None,
+                                                                                                              None]):
         """Generates a list of PE file version info for processes, dlls, and
         modules.
 

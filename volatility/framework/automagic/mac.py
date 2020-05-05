@@ -119,24 +119,23 @@ class MacUtilities(object):
     """Class with multiple useful mac functions."""
 
     @classmethod
-    def mask_mods_list(cls,
-                      context: interfaces.context.ContextInterface,
-                      layer_name: str,
-                      mods: Iterator[Any]) -> Iterator[Any]:
-
+    def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                       mods: Iterator[Any]) -> Iterator[Any]:
         """
         A helper function to mask the starting and end address of kernel modules
         """
         mask = context.layers[layer_name].address_mask
 
-        return [(objects.utility.array_to_string(mod.name), mod.address & mask, (mod.address & mask) + mod.size) for mod in mods]
+        return [(objects.utility.array_to_string(mod.name), mod.address & mask, (mod.address & mask) + mod.size)
+                for mod in mods]
 
     @classmethod
-    def generate_kernel_handler_info(cls,
-                                     context: interfaces.context.ContextInterface,
-                                     layer_name: str,
-                                     kernel, # ikelos - how to type this??
-                                     mods_list: Iterator[Any]):
+    def generate_kernel_handler_info(
+            cls,
+            context: interfaces.context.ContextInterface,
+            layer_name: str,
+            kernel,  # ikelos - how to type this??
+            mods_list: Iterator[Any]):
 
         try:
             start_addr = kernel.object_from_symbol("vm_kernel_stext")
@@ -149,17 +148,15 @@ class MacUtilities(object):
             end_addr = kernel.object_from_symbol("etext")
 
         mask = context.layers[layer_name].address_mask
-        
+
         start_addr = start_addr & mask
-        end_addr   = end_addr & mask
+        end_addr = end_addr & mask
 
         return [("__kernel__", start_addr, end_addr)] + \
                     MacUtilities.mask_mods_list(context, layer_name, mods_list)
 
     @classmethod
-    def lookup_module_address(cls,
-                              context: interfaces.context.ContextInterface, 
-                              handlers: Iterator[Any],
+    def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: Iterator[Any],
                               target_address):
         mod_name = "UNKNOWN"
         symbol_name = "N/A"
@@ -169,14 +166,14 @@ class MacUtilities(object):
                 mod_name = name
                 if name == "__kernel__":
                     symbols = list(context.symbol_space.get_symbols_by_location(target_address))
-        
+
                     if len(symbols) > 0:
                         symbol_name = str(symbols[0].split(constants.BANG)[1]) if constants.BANG in symbols[0] else \
                                        str(symbols[0])
 
                 break
-    
-        return mod_name, symbol_name 
+
+        return mod_name, symbol_name
 
     @classmethod
     def aslr_mask_symbol_table(cls,
@@ -274,11 +271,8 @@ class MacUtilities(object):
         return addr - 0xffffff8000000000
 
     @classmethod
-    def files_descriptors_for_process(cls, 
-                                      context: interfaces.context.ContextInterface,
-                                      symbol_table_name : str,
+    def files_descriptors_for_process(cls, context: interfaces.context.ContextInterface, symbol_table_name: str,
                                       task: interfaces.objects.ObjectInterface):
-
         """Creates a generator for the file descriptors of a process
 
         Args:
@@ -335,7 +329,9 @@ class MacUtilities(object):
                 yield f, path, fd_num
 
     @classmethod
-    def walk_tailq(cls, queue: interfaces.objects.ObjectInterface, next_member: str,
+    def walk_tailq(cls,
+                   queue: interfaces.objects.ObjectInterface,
+                   next_member: str,
                    max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
         seen = set()  # type: Set[int]
 

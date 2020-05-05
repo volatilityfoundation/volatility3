@@ -111,9 +111,10 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
             yield (constraint, header)
 
 
-def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
-                     fallback_checks: List[Tuple[str, Optional[str], bool]]
-                     ) -> Callable[[interfaces.context.ContextInterface, str], bool]:
+def os_distinguisher(
+    version_check: Callable[[Tuple[int, ...]], bool],
+    fallback_checks: List[Tuple[str, Optional[str],
+                                bool]]) -> Callable[[interfaces.context.ContextInterface, str], bool]:
     """Distinguishes a symbol table as being above a particular version or
     point.
 

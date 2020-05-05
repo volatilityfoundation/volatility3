@@ -171,7 +171,9 @@ class Intel(linear.LinearlyMappedLayer):
         except exceptions.InvalidAddressException:
             return False
 
-    def mapping(self, offset: int, length: int,
+    def mapping(self,
+                offset: int,
+                length: int,
                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
         """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
         mappings.

@@ -36,8 +36,8 @@ def convert_data_to_value(data: bytes, struct_type: Type[TUnion[int, float, byte
     return struct.unpack(struct_format, data)[0]
 
 
-def convert_value_to_data(value: TUnion[int, float, bytes, str, bool],
-                          struct_type: Type[TUnion[int, float, bytes, str, bool]],
+def convert_value_to_data(value: TUnion[int, float, bytes, str, bool], struct_type: Type[TUnion[int, float, bytes, str,
+                                                                                                bool]],
                           data_format: DataFormatInfo) -> bytes:
     """Converts a particular value to a series of bytes."""
     if not isinstance(value, struct_type):
@@ -425,8 +425,8 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         return int.__new__(cls, value)  # type: ignore
 
     def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
-                 object_info: interfaces.objects.ObjectInformation, base_type: Integer,
-                 choices: Dict[str, int]) -> None:
+                 object_info: interfaces.objects.ObjectInformation, base_type: Integer, choices: Dict[str,
+                                                                                                      int]) -> None:
         super().__init__(context, type_name, object_info)
         self._inverse_choices = self._generate_inverse_choices(choices)
         self._vol['choices'] = choices

@@ -228,7 +228,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
 
-    def download_pdb_isf(self, guid: str, age: int, pdb_name: str,
+    def download_pdb_isf(self,
+                         guid: str,
+                         age: int,
+                         pdb_name: str,
                          progress_callback: constants.ProgressCallback = None) -> None:
         """Attempts to download the PDB file, convert it to an ISF file and
         save it to one of the symbol locations."""

@@ -697,9 +697,9 @@ class PdbReader:
         self.user_types = self.replace_forward_references(self.user_types, type_references)
 
     def consume_type(
-            self, module: interfaces.context.ModuleInterface, offset: int, length: int
-    ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Union[None, List, interfaces.objects.
-                                                                                        ObjectInterface]], int]:
+        self, module: interfaces.context.ModuleInterface, offset: int, length: int
+    ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Union[
+            None, List, interfaces.objects.ObjectInterface]], int]:
         """Returns a (leaf_type, name, object) Tuple for a type, and the number
         of bytes consumed."""
         result = None, None, None  # type: Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[Union[List, interfaces.objects.ObjectInterface]]]
@@ -838,7 +838,8 @@ class PdbReader:
     # COMMON CODE
 
     @staticmethod
-    def parse_string(structure: interfaces.objects.ObjectInterface, parse_as_pascal: bool = False,
+    def parse_string(structure: interfaces.objects.ObjectInterface,
+                     parse_as_pascal: bool = False,
                      size: int = 0) -> str:
         """Consumes either a c-string or a pascal string depending on the
         leaf_type."""
@@ -882,7 +883,9 @@ class PdbReader:
 
 class PdbRetreiver:
 
-    def retreive_pdb(self, guid: str, file_name: str,
+    def retreive_pdb(self,
+                     guid: str,
+                     file_name: str,
                      progress_callback: constants.ProgressCallback = None) -> Optional[str]:
         vollog.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])

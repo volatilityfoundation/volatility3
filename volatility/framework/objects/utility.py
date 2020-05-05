@@ -7,7 +7,8 @@ from typing import Optional, Union
 from volatility.framework import interfaces, objects, constants
 
 
-def array_to_string(array: 'objects.Array', count: Optional[int] = None,
+def array_to_string(array: 'objects.Array',
+                    count: Optional[int] = None,
                     errors: str = 'replace') -> interfaces.objects.ObjectInterface:
     """Takes a volatility Array of characters and returns a string."""
     # TODO: Consider checking the Array's target is a native char

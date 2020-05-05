@@ -101,6 +101,7 @@ class fileglob(objects.StructType):
 
         return ret
 
+
 class vm_map_object(objects.StructType):
 
     def get_map_object(self):
@@ -430,11 +431,12 @@ class queue_entry(objects.StructType):
                     yielded = yielded + 1
                     if yielded == max_size:
                         return
- 
+
                     n = getattr(n.member(attr = member_name), attr).dereference().cast(type_name)
 
             except exceptions.InvalidAddressException:
                 pass
+
 
 class ifnet(objects.StructType):
 

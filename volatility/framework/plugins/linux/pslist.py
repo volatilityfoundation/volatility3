@@ -59,12 +59,12 @@ class PsList(interfaces.plugins.PluginInterface):
             yield (0, (pid, ppid, name))
 
     @classmethod
-    def list_tasks(cls,
-                   context: interfaces.context.ContextInterface,
-                   layer_name: str,
-                   vmlinux_symbols: str,
-                   filter_func: Callable[[int], bool] = lambda _: False
-                   ) -> Iterable[interfaces.objects.ObjectInterface]:
+    def list_tasks(
+            cls,
+            context: interfaces.context.ContextInterface,
+            layer_name: str,
+            vmlinux_symbols: str,
+            filter_func: Callable[[int], bool] = lambda _: False) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer.
 
         Args:

@@ -159,7 +159,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
             return node_key
         return node_key[-1]
 
-    def visit_nodes(self, visitor: Callable[[objects.StructType], None],
+    def visit_nodes(self,
+                    visitor: Callable[[objects.StructType], None],
                     node: Optional[objects.StructType] = None) -> None:
         """Applies a callable (visitor) to all nodes within the registry tree
         from a given node."""
@@ -209,7 +210,9 @@ class RegistryHive(linear.LinearlyMappedLayer):
         entry = table.Table[table_index]
         return entry.get_block_offset() + suboffset
 
-    def mapping(self, offset: int, length: int,
+    def mapping(self,
+                offset: int,
+                length: int,
                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
 
         if length < 0:

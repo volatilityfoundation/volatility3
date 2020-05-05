@@ -246,8 +246,9 @@ class PrettyTextRenderer(CLIRenderer):
         tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
         max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
 
-        def visitor(node, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
-                    ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
+        def visitor(
+            node, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
+        ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
             line = {}
@@ -307,8 +308,8 @@ class JsonRenderer(CLIRenderer):
         final_output = ({}, [])
 
         def visitor(
-                node: Optional[interfaces.renderers.TreeNode],
-                accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]],
+            node: Optional[interfaces.renderers.TreeNode],
+            accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]],
         ) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             acc_map, final_tree = accumulator

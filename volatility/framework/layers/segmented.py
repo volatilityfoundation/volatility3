@@ -69,7 +69,9 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
                 return self._segments[i]
         raise exceptions.InvalidAddressException(self.name, offset, "Invalid address at {:0x}".format(offset))
 
-    def mapping(self, offset: int, length: int,
+    def mapping(self,
+                offset: int,
+                length: int,
                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
         """Returns a sorted iterable of (offset, length, mapped_offset, mapped_length, layer)
         mappings."""

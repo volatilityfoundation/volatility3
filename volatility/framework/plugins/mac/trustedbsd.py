@@ -34,7 +34,7 @@ class trustedbsd(plugins.PluginInterface):
         mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
 
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
-        
+
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 
         policy_list = kernel.object_from_symbol(symbol_name = "mac_policy_list").cast("mac_policy_list")
@@ -43,7 +43,7 @@ class trustedbsd(plugins.PluginInterface):
                                 offset = policy_list.entries.dereference().vol.offset,
                                 subtype = kernel.get_type('mac_policy_list_element'),
                                 count = policy_list.staticmax + 1)
-    
+
         for i, ent in enumerate(entries):
             # I don't know how this can happen, but the kernel makes this check all over the place
             # the policy isn't useful without any ops so a rootkit can't abuse this
@@ -69,8 +69,8 @@ class trustedbsd(plugins.PluginInterface):
                 yield (0, (check, ent_name, format_hints.Hex(call_addr), module_name, symbol_name))
 
     def run(self):
-        return renderers.TreeGrid([("Member", str), ("Policy Name", str), ("Handler Address", format_hints.Hex), ("Handler Module", str),
-                                   ("Handler Symbol", str)],
+        return renderers.TreeGrid([("Member", str), ("Policy Name", str), ("Handler Address", format_hints.Hex),
+                                   ("Handler Module", str), ("Handler Symbol", str)],
                                   self._generator(
                                       lsmod.Lsmod.list_modules(self.context, self.config['primary'],
                                                                self.config['darwin'])))
