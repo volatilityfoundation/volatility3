@@ -44,7 +44,8 @@ class HiveList(interfaces.plugins.PluginInterface):
             requirements.StringRequirement(name = 'filter',
                                            description = "String to filter hive names returned",
                                            optional = True,
-                                           default = None)
+                                           default = None),
+            requirements.PluginRequirement(name='hivescan', plugin=hivescan.HiveScan, version=(1, 0, 0)),
         ]
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
@@ -68,6 +69,7 @@ class HiveList(interfaces.plugins.PluginInterface):
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
+            base_config_path: The configuration path for any settings required by the new table
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
             filter_string: An optional string which must be present in the hive name if specified 
@@ -134,8 +136,8 @@ class HiveList(interfaces.plugins.PluginInterface):
         hg = HiveGenerator(cmhive, forward=True)
         for hive in hg:
             if hive.vol.offset in seen:
-                vollog.warning("Hivelist found an already seen offset {} while "\
-                               "traversing forwards, this should not occur".format(hive.vol.offset))
+                vollog.debug("Hivelist found an already seen offset {} while "\
+                               "traversing forwards, this should not occur".format(hex(hive.vol.offset)))
                 break
             seen.add(hive.vol.offset)
             if filter_string is None or filter_string.lower() in str(hive.get_name() or "").lower():
@@ -144,12 +146,12 @@ class HiveList(interfaces.plugins.PluginInterface):
 
         forward_invalid = hg.invalid
         if forward_invalid:
-            vollog.warning("Hivelist failed traversing the list forwards at {}, traversing backwards".format(hex(forward_invalid)))
+            vollog.debug("Hivelist failed traversing the list forwards at {}, traversing backwards".format(hex(forward_invalid)))
             hg = HiveGenerator(cmhive, forward=False)
             for hive in hg:
                 if hive.vol.offset in seen:
                     vollog.debug("Hivelist found an already seen offset {} while "\
-                                 "traversing backwards, list walking met in the middle".format(hive.vol.offset))
+                                 "traversing backwards, list walking met in the middle".format(hex(hive.vol.offset)))
                     break
                 seen.add(hive.vol.offset)
                 if filter_string is None or filter_string.lower() in str(hive.get_name() or "").lower():
@@ -165,24 +167,26 @@ class HiveList(interfaces.plugins.PluginInterface):
                 # therefore, there must be more 2 or more invalid hives, so the middle of the list is not reachable
                 # by walking the list, so revert to scanning, and walk the list forwards and backwards from each
                 # found hive
-                vollog.warning("Hivelist failed traversing backwards at {}, a different "\
+                vollog.debug("Hivelist failed traversing backwards at {}, a different "\
                                "location from forwards, revert to scanning".format(hex(backward_invalid)))
                 for hive in hivescan.HiveScan.scan_hives(context, layer_name, symbol_table):
-                    if hive.HiveList.Flink:
-                        start_hive_offset = hive.HiveList.Flink - reloff
+                    try:
+                        if hive.HiveList.Flink:
+                            start_hive_offset = hive.HiveList.Flink - reloff
 
-                        ## Now instantiate the first hive in virtual address space as normal
-                        start_hive = ntkrnlmp.object(object_type="_CMHIVE", offset=start_hive_offset,
-                                                     absolute=True)
-
-                        for forward in (True, False):
-                            for linked_hive in start_hive.HiveList.to_list(hive.vol.type_name, "HiveList", forward):
-                                if not linked_hive.is_valid() or linked_hive.vol.offset in seen:
-                                    continue
-                                seen.add(linked_hive.vol.offset)
-                                if filter_string is None or filter_string.lower() in str(linked_hive.get_name() or "").lower():
-                                    if context.layers[layer_name].is_valid(linked_hive.vol.offset):
-                                        yield linked_hive
+                            ## Now instantiate the first hive in virtual address space as normal
+                            start_hive = ntkrnlmp.object(object_type="_CMHIVE", offset=start_hive_offset,
+                                                         absolute=True)
+                            for forward in (True, False):
+                                for linked_hive in start_hive.HiveList.to_list(hive.vol.type_name, "HiveList", forward):
+                                    if not linked_hive.is_valid() or linked_hive.vol.offset in seen:
+                                        continue
+                                    seen.add(linked_hive.vol.offset)
+                                    if filter_string is None or filter_string.lower() in str(linked_hive.get_name() or "").lower():
+                                        if context.layers[layer_name].is_valid(linked_hive.vol.offset):
+                                            yield linked_hive
+                    except exceptions.InvalidAddressException:
+                        vollog.debug("InvalidAddressException when traversing hive {} found from scan, skipping".format(hex(hive.vol.offset)))
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("FileFullPath", str)], self._generator())
