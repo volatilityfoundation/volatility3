@@ -186,9 +186,7 @@ class POOL_TRACKER_BIG_PAGES(objects.StructType):
 
     def get_key(self) -> str:
         """Returns the Key value as a 4 character string"""
-        tag_bytes = objects.convert_value_to_data(self.Key,
-                                                  int,
-                                                  objects.DataFormatInfo(4, "little", False))
+        tag_bytes = objects.convert_value_to_data(self.Key, int, objects.DataFormatInfo(4, "little", False))
         return "".join([chr(x) if 32 < x < 127 else '' for x in tag_bytes])
 
     def get_pool_type(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
