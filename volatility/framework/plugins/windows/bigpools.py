@@ -24,9 +24,9 @@ class BigPools(interfaces.plugins.PluginInterface):
     is_vista_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (6, 0),
                                                      fallback_checks = [("KdCopyDataBlock", None, True)])
 
-    is_win10 = poolscanner.os_distinguisher(version_check=lambda x: (10, 0) <= x,
-                                            fallback_checks=[("ObHeaderCookie", None, True),
-                                                             ("_HANDLE_TABLE", "HandleCount", False)])
+    is_win10 = poolscanner.os_distinguisher(version_check = lambda x: (10, 0) <= x,
+                                            fallback_checks = [("ObHeaderCookie", None, True),
+                                                               ("_HANDLE_TABLE", "HandleCount", False)])
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -36,18 +36,18 @@ class BigPools(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.StringRequirement(name='tags',
-                                           description="Comma separated list of pool tags to filter pools returned",
-                                           optional=True,
-                                           default=None)
+            requirements.StringRequirement(name = 'tags',
+                                           description = "Comma separated list of pool tags to filter pools returned",
+                                           optional = True,
+                                           default = None)
         ]
 
     @classmethod
     def list_big_pools(cls,
-                   context: interfaces.context.ContextInterface,
-                   layer_name: str,
-                   symbol_table: str,
-                   tags: Optional[list] = None):
+                       context: interfaces.context.ContextInterface,
+                       layer_name: str,
+                       symbol_table: str,
+                       tags: Optional[list] = None):
         """Returns the big page pool objects from the kernel PoolBigPageTable array.
 
         Args:
@@ -60,15 +60,13 @@ class BigPools(interfaces.plugins.PluginInterface):
             A big page pool object
         """
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
         big_page_table_offset = ntkrnlmp.get_symbol("PoolBigPageTable").address
-        big_page_table = ntkrnlmp.object(object_type="unsigned long long",
-                                         offset=big_page_table_offset)
+        big_page_table = ntkrnlmp.object(object_type = "unsigned long long", offset = big_page_table_offset)
 
         big_page_table_size_offset = ntkrnlmp.get_symbol("PoolBigPageTableSize").address
-        big_page_table_size = ntkrnlmp.object(object_type="unsigned long",
-                                              offset=big_page_table_size_offset)
+        big_page_table_size = ntkrnlmp.object(object_type = "unsigned long", offset = big_page_table_size_offset)
 
         try:
             big_page_table_type = ntkrnlmp.get_type("_POOL_TRACKER_BIG_PAGED")
@@ -89,27 +87,27 @@ class BigPools(interfaces.plugins.PluginInterface):
                 big_pools_json_filename += "-x86"
 
             new_table_name = intermed.IntermediateSymbolTable.create(
-                context=context,
-                config_path=configuration.path_join(context.symbol_space[symbol_table].config_path, "bigpools"),
-                sub_path="windows",
-                filename=big_pools_json_filename,
-                table_mapping={'nt_symbols': symbol_table},
-                class_types={'_POOL_TRACKER_BIG_PAGES': extensions.pool.POOL_TRACKER_BIG_PAGES})
-            module = context.module(new_table_name, layer_name, offset=0)
+                context = context,
+                config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "bigpools"),
+                sub_path = "windows",
+                filename = big_pools_json_filename,
+                table_mapping = {'nt_symbols': symbol_table},
+                class_types = {'_POOL_TRACKER_BIG_PAGES': extensions.pool.POOL_TRACKER_BIG_PAGES})
+            module = context.module(new_table_name, layer_name, offset = 0)
             big_page_table_type = module.get_type("_POOL_TRACKER_BIG_PAGES")
 
-        big_pools = ntkrnlmp.object(object_type="array",
-                                    offset=big_page_table,
-                                    subtype=big_page_table_type,
-                                    count=big_page_table_size,
-                                    absolute=True)
+        big_pools = ntkrnlmp.object(object_type = "array",
+                                    offset = big_page_table,
+                                    subtype = big_page_table_type,
+                                    count = big_page_table_size,
+                                    absolute = True)
 
         for big_pool in big_pools:
             if big_pool.is_valid():
                 if tags is None or big_pool.get_key() in tags:
                     yield big_pool
 
-    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]: #, str, int]]]:
+    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:  #, str, int]]]:
         if self.config.get("tags"):
             tags = [tag for tag in self.config["tags"].split(',')]
         else:
@@ -124,10 +122,7 @@ class BigPools(interfaces.plugins.PluginInterface):
             if not isinstance(num_bytes, interfaces.renderers.BaseAbsentValue):
                 num_bytes = format_hints.Hex(num_bytes)
 
-            yield (0, (format_hints.Hex(big_pool.Va),
-                       big_pool.get_key(),
-                       big_pool.get_pool_type(),
-                       num_bytes))
+            yield (0, (format_hints.Hex(big_pool.Va), big_pool.get_key(), big_pool.get_pool_type(), num_bytes))
 
     def run(self):
         return renderers.TreeGrid([

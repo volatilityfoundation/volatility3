@@ -16,6 +16,7 @@ vollog = logging.getLogger(__name__)
 class HiveGenerator():
     """Walks the registry HiveList linked list in a given direction and stores an invalid offset
     if it's unable to fully walk the list"""
+
     def __init__(self, cmhive, forward = True):
         self.cmhive = cmhive
         self.forward = forward
@@ -45,7 +46,7 @@ class HiveList(interfaces.plugins.PluginInterface):
                                            description = "String to filter hive names returned",
                                            optional = True,
                                            default = None),
-            requirements.PluginRequirement(name='hivescan', plugin=hivescan.HiveScan, version=(1, 0, 0)),
+            requirements.PluginRequirement(name = 'hivescan', plugin = hivescan.HiveScan, version = (1, 0, 0)),
         ]
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
@@ -133,7 +134,7 @@ class HiveList(interfaces.plugins.PluginInterface):
         # Run through the list forwards
         seen = set()
 
-        hg = HiveGenerator(cmhive, forward=True)
+        hg = HiveGenerator(cmhive, forward = True)
         for hive in hg:
             if hive.vol.offset in seen:
                 vollog.debug("Hivelist found an already seen offset {} while "\
@@ -146,8 +147,9 @@ class HiveList(interfaces.plugins.PluginInterface):
 
         forward_invalid = hg.invalid
         if forward_invalid:
-            vollog.debug("Hivelist failed traversing the list forwards at {}, traversing backwards".format(hex(forward_invalid)))
-            hg = HiveGenerator(cmhive, forward=False)
+            vollog.debug("Hivelist failed traversing the list forwards at {}, traversing backwards".format(
+                hex(forward_invalid)))
+            hg = HiveGenerator(cmhive, forward = False)
             for hive in hg:
                 if hive.vol.offset in seen:
                     vollog.debug("Hivelist found an already seen offset {} while "\
@@ -175,18 +177,21 @@ class HiveList(interfaces.plugins.PluginInterface):
                             start_hive_offset = hive.HiveList.Flink - reloff
 
                             ## Now instantiate the first hive in virtual address space as normal
-                            start_hive = ntkrnlmp.object(object_type="_CMHIVE", offset=start_hive_offset,
-                                                         absolute=True)
+                            start_hive = ntkrnlmp.object(object_type = "_CMHIVE",
+                                                         offset = start_hive_offset,
+                                                         absolute = True)
                             for forward in (True, False):
                                 for linked_hive in start_hive.HiveList.to_list(hive.vol.type_name, "HiveList", forward):
                                     if not linked_hive.is_valid() or linked_hive.vol.offset in seen:
                                         continue
                                     seen.add(linked_hive.vol.offset)
-                                    if filter_string is None or filter_string.lower() in str(linked_hive.get_name() or "").lower():
+                                    if filter_string is None or filter_string.lower() in str(linked_hive.get_name()
+                                                                                             or "").lower():
                                         if context.layers[layer_name].is_valid(linked_hive.vol.offset):
                                             yield linked_hive
                     except exceptions.InvalidAddressException:
-                        vollog.debug("InvalidAddressException when traversing hive {} found from scan, skipping".format(hex(hive.vol.offset)))
+                        vollog.debug("InvalidAddressException when traversing hive {} found from scan, skipping".format(
+                            hex(hive.vol.offset)))
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("FileFullPath", str)], self._generator())

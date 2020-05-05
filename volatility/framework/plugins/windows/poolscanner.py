@@ -318,7 +318,7 @@ class PoolScanner(plugins.PluginInterface):
                            type_name = symbol_table + constants.BANG + "_CMHIVE",
                            size = (800, None),
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE,
-                           skip_type_test=True),
+                           skip_type_test = True),
         ]
 
         if not tags_filter:

@@ -52,13 +52,13 @@ class HiveScan(interfaces.plugins.PluginInterface):
 
         if is_windows_8_1_or_later and is_64bit:
             kvo = context.layers[layer_name].config['kernel_virtual_offset']
-            ntkrnlmp = context.module(symbol_table, layer_name=layer_name, offset=kvo)
+            ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
             for pool in bigpools.BigPools.list_big_pools(context,
-                                                         layer_name=layer_name,
-                                                         symbol_table=symbol_table,
-                                                         tags=["CM10"]):
-                cmhive = ntkrnlmp.object(object_type="_CMHIVE", offset=pool.Va, absolute=True)
+                                                         layer_name = layer_name,
+                                                         symbol_table = symbol_table,
+                                                         tags = ["CM10"]):
+                cmhive = ntkrnlmp.object(object_type = "_CMHIVE", offset = pool.Va, absolute = True)
                 yield cmhive
 
         else:
