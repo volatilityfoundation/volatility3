@@ -398,11 +398,12 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         return []
 
     def _decode_data(self, data: bytes, mapped_offset: int, offset: int, output_length: int) -> bytes:
-        """Decodes any necessary data.
+        """Decodes any necessary data.  Note, additional data may need to be read from the lower layer, such as lookup
+        tables or similar.  The data provided to this layer is purely that data which encompasses the requested data
+        range.
 
         Args:
-            layer_name: The layer from which the data should be taken
-            value: The new value to encode
+            data: The bytes of data necessary for decoding
             mapped_offset: The offset in the underlying layer where the data would begin
             offset: The offset in the higher-layer where the data would begin
             output_length: The expected length of the returned data
@@ -411,11 +412,11 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
              The data to be read from the underlying layer."""
         return data
 
-    def _encode_data(self, data: bytes, mapped_offset: int, offset: int, value: bytes) -> bytes:
+    def _encode_data(self, layer_name: str, mapped_offset: int, offset: int, value: bytes) -> bytes:
         """Encodes any necessary data.
 
         Args:
-            layer_name: The layer from which the data should be taken
+            layer_name: The layer to write data back to
             mapped_offset: The offset in the underlying layer where the data would begin
             offset: The offset in the higher-layer where the data would begin
             value: The new value to encode
