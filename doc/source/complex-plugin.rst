@@ -121,7 +121,7 @@ The table name can then by used to access the constructed table from the context
 
     context.symbol_space[table_name]
 
-Writing new translation layers
+Writing new Translation Layers
 ------------------------------
 
 Translation layers offer a way for data to be translated from a higher (domain) layer to a lower (range) layer.
@@ -190,16 +190,16 @@ would return the following data:
     [(5, 4, 2, 4, 'rle layer')]
 
 It would then define `_decode` and `_encode` methods that could convert from one to the other.  In the case of `read(5, 4)`,
-_decode_data would be provided with the following parameters
+the `_decode` method would be provided with the following parameters:
 
 .. code-block:: python
 
-    data = `5b1c`
+    data = "5b1c"
     mapped_offset = 2
     offset = 5
     output_length = 4
 
-This requires that the `_decode` method can unpack encoding back to `bbbbbc` and also know that the decoded
+This requires that the `_decode` method can unpack the encoding back to `bbbbbc` and also know that the decoded
 block starts at 3, so that it can return just `bbbc`, as required.  Such layers therefore typically need to keep much
 more internal state, to keep track of which offset of encoded data relates to which decoded offset for both the mapping
 and `_encode` and `_decode` methods.
