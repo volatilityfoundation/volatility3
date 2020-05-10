@@ -6,8 +6,10 @@ construct classes that fulfill the descendants of a :class:`~volatility.framewo
 rk.interfaces.configuration.ConfigurableInterface`."""
 
 import logging
+import sys
 from typing import List
 
+from volatility import framework
 from volatility.framework import constants
 from volatility.framework import interfaces
 
@@ -31,6 +33,10 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
                  requirement: interfaces.configuration.RequirementInterface,
                  progress_callback = None,
                  optional = False) -> List[str]:
+
+        # Make sure we import the layers, so they can reconstructed
+        framework.import_files(sys.modules['volatility.framework.layers'])
+
         result = []  # type: List[str]
         if requirement.unsatisfied(context, config_path):
             # Having called validate at the top level tells us both that we need to dig deeper
