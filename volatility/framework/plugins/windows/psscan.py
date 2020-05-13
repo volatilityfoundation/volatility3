@@ -22,13 +22,18 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.BooleanRequirement(name = 'quick',
+                                            description = "Scan just allocated memory",
+                                            default = False,
+                                            optional = True),
         ]
 
     @classmethod
     def scan_processes(cls,
                        context: interfaces.context.ContextInterface,
                        layer_name: str,
-                       symbol_table: str) -> \
+                       symbol_table: str,
+                       quick: bool = False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Scans for processes using the poolscanner module and constraints.
 
@@ -36,6 +41,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
+            quick: Scan only memory that windows has allocated
 
         Returns:
             A list of processes found by scanning the `layer_name` layer for process pool signatures
@@ -43,13 +49,20 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Pro\xe3', b'Proc'])
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
+        for result in poolscanner.PoolScanner.generate_pool_scan(context,
+                                                                 layer_name,
+                                                                 symbol_table,
+                                                                 constraints,
+                                                                 quick = quick):
 
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        for proc in self.scan_processes(self.context, self.config['primary'], self.config['nt_symbols']):
+        for proc in self.scan_processes(self.context,
+                                        self.config['primary'],
+                                        self.config['nt_symbols'],
+                                        quick = self.config['quick']):
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),

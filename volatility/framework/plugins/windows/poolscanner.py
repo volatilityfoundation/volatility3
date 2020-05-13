@@ -4,7 +4,7 @@
 
 import enum
 import logging
-from typing import Dict, Generator, List, Optional, Tuple, Callable
+from typing import Dict, Generator, List, Optional, Tuple, Callable, Iterable
 
 from volatility.framework import constants, interfaces, renderers, exceptions, symbols
 from volatility.framework.configuration import requirements
@@ -13,7 +13,7 @@ from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
-from volatility.plugins.windows import handles
+from volatility.plugins.windows import handles, virtmap
 
 vollog = logging.getLogger(__name__)
 
@@ -190,7 +190,12 @@ class PoolScanner(plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.BooleanRequirement(name = 'quick',
+                                            description = "Scan just allocated memory",
+                                            default = False,
+                                            optional = True),
             requirements.PluginRequirement(name = 'handles', plugin = handles.Handles, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'virtmap', plugin = virtmap.VirtMap, version = (1, 0, 0)),
         ]
 
     is_windows_10 = os_distinguisher(version_check = lambda x: x >= (10, 0),
@@ -207,8 +212,11 @@ class PoolScanner(plugins.PluginInterface):
         symbol_table = self.config["nt_symbols"]
         constraints = self.builtin_constraints(symbol_table)
 
-        for constraint, mem_object, header in self.generate_pool_scan(self.context, self.config["primary"],
-                                                                      symbol_table, constraints):
+        for constraint, mem_object, header in self.generate_pool_scan(self.context,
+                                                                      self.config["primary"],
+                                                                      symbol_table,
+                                                                      constraints,
+                                                                      quick = self.config["quick"]):
             # generate some type-specific info for sanity checking
             if constraint.object_type == "Process":
                 name = mem_object.ImageFileName.cast("string",
@@ -330,7 +338,8 @@ class PoolScanner(plugins.PluginInterface):
                            context: interfaces.context.ContextInterface,
                            layer_name: str,
                            symbol_table: str,
-                           constraints: List[PoolConstraint]) \
+                           constraints: List[PoolConstraint],
+                           quick: bool = False) \
             -> Generator[Tuple[
                              PoolConstraint, interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface], None, None]:
         """
@@ -340,6 +349,7 @@ class PoolScanner(plugins.PluginInterface):
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
             constraints: List of pool constraints used to limit the scan results
+            quick: Only scans the memory windows has allocated mapped as in-use 
 
         Returns:
             Iterable of tuples, containing the constraint that matched, the object from memory, the object header used to determine the object
@@ -356,11 +366,24 @@ class PoolScanner(plugins.PluginInterface):
         # start off with the primary virtual layer
         scan_layer = layer_name
 
-        # switch to a non-virtual layer if necessary
+        sections = None
+        if quick:
+            vollog.debug("Locating windows allocated sections to scan")
+            scan_module = context.module(module_name = symbol_table,
+                                         layer_name = scan_layer,
+                                         offset = context.layers[scan_layer].config['kernel_virtual_offset'])
+            sections = list(virtmap.VirtMap.scannable_sections(scan_module))
+
+        is_windows_10 = cls.is_windows_10(context, symbol_table)
         if not is_windows_10:
             scan_layer = context.layers[scan_layer].config['memory_layer']
 
-        for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = 8):
+        for constraint, header in cls.pool_scan(context,
+                                                scan_layer,
+                                                symbol_table,
+                                                constraints,
+                                                alignment = 8,
+                                                sections = sections):
 
             mem_object = header.get_object(type_name = constraint.type_name,
                                            use_top_down = is_windows_8_or_later,
@@ -389,7 +412,8 @@ class PoolScanner(plugins.PluginInterface):
                   symbol_table: str,
                   pool_constraints: List[PoolConstraint],
                   alignment: int = 8,
-                  progress_callback: Optional[constants.ProgressCallback] = None) \
+                  progress_callback: Optional[constants.ProgressCallback] = None,
+                  sections: Iterable[Tuple[int, int]] = None) \
             -> Generator[Tuple[PoolConstraint, interfaces.objects.ObjectInterface], None, None]:
         """Returns the _POOL_HEADER object (based on the symbol_table template)
         after scanning through layer_name returning all headers that match any
@@ -403,6 +427,7 @@ class PoolScanner(plugins.PluginInterface):
             pool_constraints: List of pool constraints used to limit the scan results
             alignment: An optional value that all pool headers will be aligned to
             progress_callback: An optional function to provide progress feedback whilst scanning
+            sections: Specific memory sections to scan through
 
         Returns:
             An Iterable of pool constraints and the pool headers associated with them
@@ -419,7 +444,7 @@ class PoolScanner(plugins.PluginInterface):
         # Run the scan locating the offsets of a particular tag
         layer = context.layers[layer_name]
         scanner = PoolHeaderScanner(module, constraint_lookup, alignment)
-        yield from layer.scan(context, scanner, progress_callback)
+        yield from layer.scan(context, scanner, progress_callback, sections = sections)
 
     @classmethod
     def _get_pool_header_module(cls, context, layer_name, symbol_table):

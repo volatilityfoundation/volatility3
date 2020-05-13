@@ -22,13 +22,18 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.BooleanRequirement(name = 'quick',
+                                            description = "Scan just allocated memory",
+                                            default = False,
+                                            optional = True),
         ]
 
     @classmethod
     def scan_symlinks(cls,
                       context: interfaces.context.ContextInterface,
                       layer_name: str,
-                      symbol_table: str) -> \
+                      symbol_table: str,
+                      quick: bool = False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Scans for links using the poolscanner module and constraints.
 
@@ -36,6 +41,7 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
+            quick: Scan only memory that windows has allocated
 
         Returns:
             A list of symlink objects found by scanning memory for the Symlink pool signatures
@@ -43,13 +49,20 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Sym\xe2', b'Symb'])
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
+        for result in poolscanner.PoolScanner.generate_pool_scan(context,
+                                                                 layer_name,
+                                                                 symbol_table,
+                                                                 constraints,
+                                                                 quick = quick):
 
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        for link in self.scan_symlinks(self.context, self.config['primary'], self.config['nt_symbols']):
+        for link in self.scan_symlinks(self.context,
+                                       self.config['primary'],
+                                       self.config['nt_symbols'],
+                                       quick = self.config['quick']):
 
             try:
                 from_name = link.get_link_name()

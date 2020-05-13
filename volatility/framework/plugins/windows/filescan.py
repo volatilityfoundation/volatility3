@@ -21,13 +21,18 @@ class FileScan(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
+            requirements.BooleanRequirement(name = 'quick',
+                                            description = "Scan just allocated memory",
+                                            default = False,
+                                            optional = True),
         ]
 
     @classmethod
     def scan_files(cls,
                    context: interfaces.context.ContextInterface,
                    layer_name: str,
-                   symbol_table: str) -> \
+                   symbol_table: str,
+                   quick: bool = False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Scans for file objects using the poolscanner module and constraints.
 
@@ -35,6 +40,7 @@ class FileScan(interfaces.plugins.PluginInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
+            quick: Scan only memory that windows has allocated
 
         Returns:
             A list of File objects as found from the `layer_name` layer based on File pool signatures
@@ -42,13 +48,20 @@ class FileScan(interfaces.plugins.PluginInterface):
 
         constraints = poolscanner.PoolScanner.builtin_constraints(symbol_table, [b'Fil\xe5', b'File'])
 
-        for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
+        for result in poolscanner.PoolScanner.generate_pool_scan(context,
+                                                                 layer_name,
+                                                                 symbol_table,
+                                                                 constraints,
+                                                                 quick = quick):
 
             _constraint, mem_object, _header = result
             yield mem_object
 
     def _generator(self):
-        for fileobj in self.scan_files(self.context, self.config['primary'], self.config['nt_symbols']):
+        for fileobj in self.scan_files(self.context,
+                                       self.config['primary'],
+                                       self.config['nt_symbols'],
+                                       quick = self.config['quick']):
 
             try:
                 file_name = fileobj.FileName.String
