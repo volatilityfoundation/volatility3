@@ -8,10 +8,13 @@ or file or graphical output
 """
 import collections
 import datetime
+import logging
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from volatility.framework import interfaces
 from volatility.framework.interfaces import renderers
+
+vollog = logging.getLogger(__name__)
 
 
 class UnreadableValue(interfaces.renderers.BaseAbsentValue):
@@ -148,6 +151,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         Args:
             columns: A list of column tuples made up of (name, type).
             generator: An iterable containing row for a tree grid, each row contains a indent level followed by the values for each column in order.
+            fail_on_errors: Allows UIs to prevent exceptions bubbling up during population
         """
         self._populated = False
         self._row_count = 0
@@ -178,12 +182,20 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 output += (letter if letter in 'abcdefghiljklmnopqrstuvwxyz_0123456789' else '_')
         return output
 
-    def populate(self, function: interfaces.renderers.VisitorSignature = None, initial_accumulator: Any = None) -> None:
+    def populate(self,
+                 function: interfaces.renderers.VisitorSignature = None,
+                 initial_accumulator: Any = None,
+                 fail_on_errors: bool = True) -> Optional[Exception]:
         """Populates the tree by consuming the TreeGrid's construction
         generator Func is called on every node, so can be used to create output
         on demand.
 
         This is equivalent to a one-time visit.
+
+        Args:
+            function: The visitor to be called on each row of the treegrid
+            initial_accumulator: The initial value for an accumulator passed to the visitor to allow it to maintain state
+            fail_on_errors: A boolean defining whether exceptions should be caught or bubble up
         """
         accumulator = initial_accumulator
         if function is None:
@@ -192,15 +204,22 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 return None
 
         if not self.populated:
-            prev_nodes = []  # type: List[TreeNode]
-            for (level, item) in self._generator:
-                parent_index = min(len(prev_nodes), level)
-                parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
-                treenode = self._append(parent, item)
-                prev_nodes = prev_nodes[0:parent_index] + [treenode]
-                if function is not None:
-                    accumulator = function(treenode, accumulator)
-                self._row_count += 1
+            try:
+                prev_nodes = []  # type: List[TreeNode]
+                for (level, item) in self._generator:
+                    parent_index = min(len(prev_nodes), level)
+                    parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
+                    treenode = self._append(parent, item)
+                    prev_nodes = prev_nodes[0:parent_index] + [treenode]
+                    if function is not None:
+                        accumulator = function(treenode, accumulator)
+                    self._row_count += 1
+            except Exception as excp:
+                if self._fail_on_errors:
+                    raise
+                vollog.debug("Exception during population: {}".format(excp))
+                self._populated = True
+                return excp
         self._populated = True
 
     @property
