@@ -151,7 +151,6 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         Args:
             columns: A list of column tuples made up of (name, type).
             generator: An iterable containing row for a tree grid, each row contains a indent level followed by the values for each column in order.
-            fail_on_errors: Allows UIs to prevent exceptions bubbling up during population
         """
         self._populated = False
         self._row_count = 0
@@ -215,7 +214,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                         accumulator = function(treenode, accumulator)
                     self._row_count += 1
             except Exception as excp:
-                if self._fail_on_errors:
+                if fail_on_errors:
                     raise
                 vollog.debug("Exception during population: {}".format(excp))
                 self._populated = True
