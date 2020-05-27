@@ -109,3 +109,15 @@ def convert_network_four_tuple(family, four_tuple):
         ret = None
 
     return ret
+
+
+class StringlikeData(str):
+    """Container for data that's supposed to be a string but could in fact be binary data"""
+
+    def __init__(self, original: bytes, encoding: str = 'utf-16-le'):
+        self.original = original
+        self._encoding = encoding
+        str.__init__(self)
+
+    def __str__(self):
+        return str(self.original, encoding = self._encoding, errors = 'replace').split("\x00")[0]
