@@ -18,17 +18,20 @@ class HiveGenerator():
     if it's unable to fully walk the list"""
 
     def __init__(self, cmhive, forward = True):
-        self.cmhive = cmhive
-        self.forward = forward
-        self.invalid = None
+        self._cmhive = cmhive
+        self._forward = forward
+        self._invalid = None
 
     def __iter__(self):
-        for hive in self.cmhive.HiveList.to_list(self.cmhive.vol.type_name, "HiveList", forward = self.forward):
+        for hive in self._cmhive.HiveList.to_list(self._cmhive.vol.type_name, "HiveList", forward = self._forward):
             if not hive.is_valid():
-                self.invalid = hive.vol.offset
+                self._invalid = hive.vol.offset
                 return
             yield hive
 
+    @property
+    def invalid(self) -> Optional[int]:
+        return self._invalid
 
 class HiveList(interfaces.plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image."""
