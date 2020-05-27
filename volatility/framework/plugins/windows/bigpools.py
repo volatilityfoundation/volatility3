@@ -69,7 +69,7 @@ class BigPools(interfaces.plugins.PluginInterface):
         big_page_table_size = ntkrnlmp.object(object_type = "unsigned long", offset = big_page_table_size_offset)
 
         try:
-            big_page_table_type = ntkrnlmp.get_type("_POOL_TRACKER_BIG_PAGED")
+            big_page_table_type = ntkrnlmp.get_type("_POOL_TRACKER_BIG_PAGES")
         except exceptions.SymbolError:
             # We have to manually load a symbol table
             is_vista_or_later = cls.is_vista_or_later(context, symbol_table)
