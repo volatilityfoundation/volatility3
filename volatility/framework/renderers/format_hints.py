@@ -32,5 +32,9 @@ class StrLike(bytes):
         return super().__new__(cls, original)
 
     def __init__(self, original: bytes, encoding: str = 'utf-16-le'):
-        self.encoding = encoding
+        self.original = original
+        self._encoding = encoding
         bytes.__init__(original)
+
+    def __str__(self):
+        return str(self.original, encoding = self._encoding, errors = 'replace').split("\x00")[0]
