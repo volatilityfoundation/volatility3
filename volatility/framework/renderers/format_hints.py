@@ -23,3 +23,18 @@ class Hex(int):
 class HexBytes(bytes):
     """A class to indicate that the bytes should be display in an extended
     format showing hexadecimal and ascii printable display."""
+
+
+class StrLike(bytes):
+    """The contents are supposed to be a string, but may contain binary data."""
+
+    def __new__(cls, original, encoding: str = 'utf-16-le'):
+        return super().__new__(cls, original)
+
+    def __init__(self, original: bytes, encoding: str = 'utf-16-le'):
+        self.original = original
+        self._encoding = encoding
+        bytes.__init__(original)
+
+    def __str__(self):
+        return str(self.original, encoding = self._encoding, errors = 'replace').split("\x00")[0]
