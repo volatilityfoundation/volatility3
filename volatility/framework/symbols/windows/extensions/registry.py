@@ -5,10 +5,11 @@
 import enum
 import logging
 import struct
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Union
 
 from volatility.framework import constants, exceptions, objects, interfaces
 from volatility.framework.layers.registry import RegistryHive, RegistryInvalidIndex, RegistryFormatException
+from volatility.framework.renderers import conversion
 
 vollog = logging.getLogger(__name__)
 
@@ -239,7 +240,7 @@ class CM_KEY_VALUE(objects.StructType):
         self.Name.count = namelength
         return self.Name.cast("string", max_length = namelength, encoding = "latin-1")
 
-    def decode_data(self) -> bytes:
+    def decode_data(self) -> Union[str, bytes]:
         """Properly decodes the data associated with the value node"""
         # Determine if the data is stored inline
         datalen = self.DataLength
@@ -288,13 +289,16 @@ class CM_KEY_VALUE(objects.StructType):
                 raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
             return struct.unpack("<Q", data)[0]
         if self_type in [
-                RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ,
+                RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ
+        ]:
+            return conversion.StringlikeData(data, encoding = 'utf-16-le')
+        if self_type in [
                 RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
                 RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
         ]:
             return data
         if self_type == RegValueTypes.REG_NONE:
-            return b''
+            return ''
 
         # Fall back if it's something weird
         vollog.debug("Unknown registry value type encountered: {}".format(self.Type))
