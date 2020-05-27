@@ -9,6 +9,7 @@ from typing import Optional, Iterable, Union
 
 from volatility.framework import constants, exceptions, objects, interfaces
 from volatility.framework.layers.registry import RegistryHive, RegistryInvalidIndex, RegistryFormatException
+from volatility.framework.renderers import conversion
 
 vollog = logging.getLogger(__name__)
 
@@ -287,14 +288,10 @@ class CM_KEY_VALUE(objects.StructType):
             if len(data) != struct.calcsize("<Q"):
                 raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
             return struct.unpack("<Q", data)[0]
-        if self_type in [RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK]:
-            # truncate after \x00\x00 to ensure it can
-            output = str(data, encoding = "utf-16-le", errors = 'replace')
-            if output.find("\x00") > 0:
-                output = output[:output.find("\x00")]
-            return output
-        if self_type == RegValueTypes.REG_MULTI_SZ:
-            return str(data, encoding = "utf-16-le").split("\x00")[0]
+        if self_type in [
+                RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ
+        ]:
+            return conversion.StringlikeData(data, encoding = 'utf-16-le')
         if self_type in [
                 RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
                 RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
