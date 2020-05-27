@@ -53,6 +53,17 @@ def hex_bytes_as_text(value: bytes) -> str:
     return output
 
 
+def strlike_as_text(value: format_hints.StrLike) -> str:
+    """Renders the bytes as a string where possible, otherwise it displays hex data
+
+    This attempts to convert the string based on its encoding and if no data's been lost due to the split on the null character, then it displays it as is
+    """
+    string_representation = str(value, encoding = value.encoding, errors = 'replace')
+    if len(string_representation) - 1 <= len(string_representation.split("\x00")[0]) <= len(string_representation):
+        return string_representation.split("\x00")[0]
+    return hex_bytes_as_text(value)
+
+
 def optional(func):
 
     @wraps(func)
@@ -117,6 +128,7 @@ class QuickTextRenderer(CLIRenderer):
         format_hints.Bin: optional(lambda x: "0b{:b}".format(x)),
         format_hints.Hex: optional(lambda x: "0x{:x}".format(x)),
         format_hints.HexBytes: optional(hex_bytes_as_text),
+        format_hints.StrLike: quoted_optional(strlike_as_text),
         interfaces.renderers.Disassembly: optional(display_disassembly),
         bytes: optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
         datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
@@ -172,6 +184,7 @@ class CSVRenderer(CLIRenderer):
         format_hints.Bin: quoted_optional(lambda x: "0b{:b}".format(x)),
         format_hints.Hex: quoted_optional(lambda x: "0x{:x}".format(x)),
         format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
+        format_hints.StrLike: quoted_optional(strlike_as_text),
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
         bytes: quoted_optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
         datetime.datetime: quoted_optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
