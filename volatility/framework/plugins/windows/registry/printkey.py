@@ -121,7 +121,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     value_node_name = renderers.UnreadableValue()
 
                 try:
-                    value_data = str(node.decode_data())  # type: Union[interfaces.renderers.BaseAbsentValue, str]
+                    value_data = node.decode_data()  # type: Union[interfaces.renderers.BaseAbsentValue, bytes]
                 except (ValueError, exceptions.InvalidAddressException, RegistryFormatException) as excp:
                     vollog.debug(excp)
                     value_data = renderers.UnreadableValue()
@@ -133,7 +133,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     value_type = renderers.UnreadableValue()
 
                 result = (depth, (last_write_time, renderers.format_hints.Hex(hive.hive_offset), value_type, key_path,
-                                  value_node_name, value_data, volatile))
+                                  value_node_name, format_hints.StrLike(value_data), volatile))
                 yield result
 
     def _registry_walker(self,
@@ -173,7 +173,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
         offset = self.config.get('offset', None)
 
         return TreeGrid(columns = [('Last Write Time', datetime.datetime), ('Hive Offset', format_hints.Hex),
-                                   ('Type', str), ('Key', str), ('Name', str), ('Data', str), ('Volatile', bool)],
+                                   ('Type', str), ('Key', str), ('Name', str), ('Data', format_hints.StrLike),
+                                   ('Volatile', bool)],
                         generator = self._registry_walker(self.config['primary'],
                                                           self.config['nt_symbols'],
                                                           hive_offsets = None if offset is None else [offset],
