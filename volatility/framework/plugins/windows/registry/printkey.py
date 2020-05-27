@@ -133,7 +133,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     value_type = renderers.UnreadableValue()
 
                 result = (depth, (last_write_time, renderers.format_hints.Hex(hive.hive_offset), value_type, key_path,
-                                  value_node_name, format_hints.StrLike(value_data), volatile))
+                                  value_node_name, format_hints.StrLike(value_data, encoding = 'utf-16-le'), volatile))
                 yield result
 
     def _registry_walker(self,
