@@ -224,7 +224,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         response = []
         current_offset = offset
         remaining_length = length
-        chunk_size = (self._page_size - 1) - (offset & (self._page_size - 1))
+        chunk_size = self._page_size - (offset & (self._page_size - 1))
         while remaining_length > 0:
             chunk_size = min(chunk_size, remaining_length, self._page_size)
             try:
@@ -233,8 +233,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
             except exceptions.LayerException:
                 if not ignore_errors:
                     raise
-            current_offset += self._page_size
-            remaining_length -= self._page_size
+            current_offset += chunk_size
+            remaining_length -= chunk_size
             chunk_size = self._page_size
         return response
 
