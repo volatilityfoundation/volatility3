@@ -326,16 +326,22 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         provided context."""
         config_path = interfaces.configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
-        if not isinstance(value, str):
+        if not isinstance(value, str) and value is not None:
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - SymbolTableRequirement only accepts string labels: {}".format(repr(value)))
             return {config_path: self}
-        if value not in context.symbol_space:
-            # This is an expected situation, so return False rather than raise
+        if value and value in context.symbol_space:
+            # This is an expected situation, so return rather than raise
+            return {}
+        elif value:
             vollog.log(constants.LOGLEVEL_V, "IndexError - Value not present in the symbol space: {}".format(value
                                                                                                              or ""))
-            return {config_path: self}
-        return {}
+
+        ### NOTE: This validate method has side effects (the dependencies can change)!!!
+
+        self._validate_class(context, interfaces.configuration.parent_path(config_path))
+        vollog.log(constants.LOGLEVEL_V, "Symbol table requirement not yet fulfilled: {}".format(config_path))
+        return {config_path: self}
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the symbol space within the context based on the
