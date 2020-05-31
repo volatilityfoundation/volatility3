@@ -246,60 +246,6 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         return self._membership(SymbolType.ENUM, name)
 
 
-def mask_symbol_table(context: interfaces.context.ContextInterface,
-                      symbol_table_name: str,
-                      layer_name: str = "",
-                      table_aslr_shift: int = 0) -> str:
-    """Alters a symbol table, such that all symbols returned have their address
-    masked by the address mask.
-
-    Note: This is not cumulative, and will always take the original symbol_table and apply
-    this shift to it, ignoring any previous shifts the table may have undergone.
-
-    Args:
-        context: Context that containing the symbol table and layers to be acted upon
-        symbol_table_name: Symbol table to mask
-        layer_name: Layer whose address mask will mask all symbol offsets
-        table_aslr_shift: Offset to add to all symbol addresses for ASLR
-
-    Returns:
-        Identifier for the new table that has been created
-    """
-    layer = context.layers.get(layer_name, None)
-    if layer is None:
-        address_mask = 0
-    else:
-        address_mask = layer.address_mask
-
-    original_table = context.symbol_space[symbol_table_name]
-    new_table_name = context.symbol_space.free_table_name(original_table.name + '_masked'.format())
-    new_table = original_table.clone(new_table_name)
-    context.symbol_space.append(new_table)
-    new_table_get_symbol = new_table.get_symbol
-
-    cached_symbols = {}  # type: Dict[interfaces.symbols.SymbolInterface, interfaces.symbols.SymbolInterface]
-
-    @functools.wraps(new_table_get_symbol)
-    def address_masked_get_symbol(*args, **kwargs):
-        symbol = new_table_get_symbol(*args, **kwargs)
-        # This is speedy, but may not be very efficient from a memory perspective
-        if symbol in cached_symbols:
-            return cached_symbols[symbol]
-        address = symbol.address + table_aslr_shift
-        if address_mask:
-            address = address & address_mask
-        new_symbol = interfaces.symbols.SymbolInterface(name = symbol.name,
-                                                        address = address,
-                                                        type = symbol.type,
-                                                        constant_data = symbol.constant_data)
-        cached_symbols[symbol] = new_symbol
-        return new_symbol
-
-    setattr(new_table, "get_symbol", address_masked_get_symbol)
-
-    return new_table.name
-
-
 def symbol_table_is_64bit(context: interfaces.context.ContextInterface, symbol_table_name: str) -> bool:
     """Returns a boolean as to whether a particular symbol table within a
     context is 64-bit or not."""
