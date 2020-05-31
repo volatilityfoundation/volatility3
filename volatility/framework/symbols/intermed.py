@@ -245,8 +245,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         return super().get_requirements() + [
             requirements.StringRequirement(
                 "isf_url", description = "JSON file containing the symbols encoded in the Intermediate Symbol Format"),
-            requirements.IntRequirement(
-                name = 'symbol_shift', description = 'Symbol Shift', optional = True, default = 0)
+            requirements.IntRequirement(name = 'symbol_shift', description = 'Symbol Shift', optional = False)
         ]
 
 
