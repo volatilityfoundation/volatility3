@@ -102,7 +102,7 @@ def import_files(base_module, ignore_errors = False) -> List[str]:
                 if (f.endswith(".py") or f.endswith(".pyc") or f.endswith(".pyo")) and not f.startswith("__"):
                     modpath = os.path.join(root[len(path) + len(os.path.sep):], f[:f.rfind(".")])
                     module = modpath.replace(os.path.sep, ".")
-                    if module not in sys.modules:
+                    if base_module.__name__ + "." + module not in sys.modules:
                         try:
                             vollog.debug("Importing module: {}.{}".format(base_module.__name__, module))
                             importlib.import_module(base_module.__name__ + "." + module)
@@ -113,7 +113,8 @@ def import_files(base_module, ignore_errors = False) -> List[str]:
                             if not ignore_errors:
                                 raise
                     else:
-                        vollog.info("Skipping existing module: {}".format(module))
+                        vollog.log(constants.LOGLEVEL_VVVV,
+                                   "Skipping existing module: {}".format(base_module.__name__ + "." + module))
     return failures
 
 
