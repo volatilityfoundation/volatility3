@@ -195,7 +195,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         """Returns a list of Requirement objects for this type of layer."""
-        return []
+        return super(cls).get_requirements()
 
     @property
     def dependencies(self) -> List[str]:

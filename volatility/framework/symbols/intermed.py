@@ -239,9 +239,11 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [
+        return super().get_requirements() + [
             requirements.StringRequirement(
-                "isf_url", description = "JSON file containing the symbols encoded in the Intermediate Symbol Format")
+                "isf_url", description = "JSON file containing the symbols encoded in the Intermediate Symbol Format"),
+            requirements.IntRequirement(
+                name = 'symbol_shift', description = 'Symbol Shift', optional = True, default = 0)
         ]
 
     def clone(self, new_name: str):
@@ -323,7 +325,8 @@ class Version1Format(ISFormatTable):
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
             raise exceptions.SymbolError(name, self.name, "Unknown symbol: {}".format(name))
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = symbol['address'])
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
+            name = name, address = symbol['address'] + self.config.get('symbol_shift', 0))
         return self._symbol_cache[name]
 
     @property
@@ -524,9 +527,8 @@ class Version3Format(Version2Format):
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
-                                                                      address = symbol['address'],
-                                                                      type = symbol_type)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
+            name = name, address = symbol['address'] + self.config.get('symbol_shift', 0), type = symbol_type)
         return self._symbol_cache[name]
 
 
@@ -579,10 +581,11 @@ class Version5Format(Version4Format):
         symbol_constant_data = None
         if 'constant_data' in symbol:
             symbol_constant_data = base64.b64decode(symbol.get('constant_data'))
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
-                                                                      address = symbol['address'],
-                                                                      type = symbol_type,
-                                                                      constant_data = symbol_constant_data)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
+            name = name,
+            address = symbol['address'] + self.config.get('symbol_shift', 0),
+            type = symbol_type,
+            constant_data = symbol_constant_data)
         return self._symbol_cache[name]
 
 

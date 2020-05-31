@@ -8,7 +8,9 @@ from abc import abstractmethod, ABC
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Mapping
 
 from volatility.framework import constants, exceptions, interfaces
+from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import configuration, objects
+from volatility.framework.interfaces.configuration import RequirementInterface
 
 
 class SymbolInterface:
@@ -271,8 +273,7 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
                  table_mapping: Optional[Dict[str, str]] = None,
                  class_types: Optional[Mapping[str, Type[objects.ObjectInterface]]] = None) -> None:
         """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
-        appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
-        done.
+        appropriate schema.
 
         Args:
             context: The volatility context for the symbol table
@@ -289,9 +290,15 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
     def build_configuration(self) -> 'configuration.HierarchicalDict':
         config = super().build_configuration()
 
-        # Translation Layers are constructable, and therefore require a class configuration variable
+        # Symbol Tables are constructable, and therefore require a class configuration variable
         config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
         return config
+
+    @classmethod
+    def get_requirements(cls) -> List[RequirementInterface]:
+        return super().get_requirements() + [
+            requirements.IntRequirement(name = 'symbol_shift', description = 'Symbol Shift', optional = False)
+        ]
 
 
 class NativeTableInterface(BaseSymbolTableInterface):
