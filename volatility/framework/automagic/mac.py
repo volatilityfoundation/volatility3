@@ -7,9 +7,7 @@ import struct
 from typing import Optional, Iterable, Set, Iterator, Any
 
 from volatility.framework import interfaces, constants, layers, exceptions, objects
-from volatility.framework import symbols
 from volatility.framework.automagic import symbol_cache, symbol_finder
-from volatility.framework.interfaces.configuration import path_join
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import mac
 
