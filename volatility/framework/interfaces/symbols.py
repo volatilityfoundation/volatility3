@@ -210,9 +210,6 @@ class BaseSymbolTableInterface:
             yield sort_symbols[result][1]
             result += 1
 
-    def clone(self, new_name: str):
-        """Constructs a new copy of the symbol_table under a different name"""
-
 
 class SymbolSpaceInterface(collections.abc.Mapping):
     """An interface for the container that holds all the symbol-containing

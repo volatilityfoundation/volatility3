@@ -2,7 +2,6 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import volatility.framework.symbols.windows.extensions.pool
-from volatility.framework import interfaces
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
 from volatility.framework.symbols.windows.extensions import registry, pool
@@ -10,8 +9,8 @@ from volatility.framework.symbols.windows.extensions import registry, pool
 
 class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 
-    def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str, isf_url: str) -> None:
-        super().__init__(context = context, config_path = config_path, name = name, isf_url = isf_url)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
         # Set-up windows specific types
         self.set_type_class('_ETHREAD', extensions.ETHREAD)
