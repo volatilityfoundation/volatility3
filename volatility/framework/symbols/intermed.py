@@ -83,7 +83,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                  native_types: interfaces.symbols.NativeTableInterface = None,
                  table_mapping: Optional[Dict[str, str]] = None,
                  validate: bool = True,
-                 class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None) -> None:
+                 class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None,
+                 symbol_shift: int = 0) -> None:
         """Instantiates a SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
         done.
@@ -208,7 +209,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                filename: str,
                native_types: Optional[interfaces.symbols.NativeTableInterface] = None,
                table_mapping: Optional[Dict[str, str]] = None,
-               class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None) -> str:
+               class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None,
+               symbol_shift: int = 0) -> str:
         """Takes a context and loads an intermediate symbol table based on a
         filename.
 
@@ -233,7 +235,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                     isf_url = urls[0],
                     native_types = native_types,
                     table_mapping = table_mapping,
-                    class_types = class_types)
+                    class_types = class_types,
+                    symbol_shift = symbol_shift)
         context.symbol_space.append(table)
         return table_name
 
@@ -245,15 +248,6 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             requirements.IntRequirement(
                 name = 'symbol_shift', description = 'Symbol Shift', optional = True, default = 0)
         ]
-
-    def clone(self, new_name: str):
-        return IntermediateSymbolTable(self._context,
-                                       self.config_path,
-                                       new_name,
-                                       isf_url = self._isf_url,
-                                       native_types = self._native_types,
-                                       table_mapping = self.table_mapping,
-                                       class_types = self._delegate._overrides)
 
 
 class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta):
