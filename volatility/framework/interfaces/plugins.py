@@ -13,7 +13,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from typing import List, Optional, Tuple
 
-from volatility import classproperty
+from volatility import classproperty, framework
 from volatility.framework import exceptions, constants, interfaces
 
 vollog = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface, metaclass 
 
     # Be careful with inheritance around this
     _version = (0, 0, 0)  # type: Tuple[int, int, int]
+    _required_framework_verison = (1, 0, 0)  # type: Tuple[int, int, int]
     """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
 
     def __init__(self,
@@ -99,6 +100,8 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface, metaclass 
             vollog.warning("Plugin failed validation")
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
         self._file_consumer = None  # type: Optional[FileConsumerInterface]
+
+        framework.require_interface_version(*self._required_framework_verison)
 
     def set_file_consumer(self, consumer: FileConsumerInterface) -> None:
         """Sets the file consumer to be used by this plugin."""
