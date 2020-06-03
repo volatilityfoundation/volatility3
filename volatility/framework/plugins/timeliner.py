@@ -81,7 +81,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 description = "Whether to record the state of all the plugins once complete",
                 optional = True,
                 default = False),
-            requirements.BooleanRequirement(name = 'write-bodyfile',
+            requirements.BooleanRequirement(name = 'create-bodyfile',
                                             description = "Whether to create a body file whilst producing results",
                                             optional = True,
                                             default = False)
