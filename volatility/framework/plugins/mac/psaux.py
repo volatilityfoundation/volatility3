@@ -80,8 +80,11 @@ class Psaux(plugins.PluginInterface):
                     args.append(arg)
 
                 argc = argc - 1
-
-            args_str = " ".join([s.decode("utf-8") for s in args])
+                
+            try:
+                args_str = " ".join([s.decode("utf-8") for s in args])
+            except:
+                pass
 
             yield (0, (task.p_pid, task_name, task.p_argc, args_str))
 
