@@ -17,14 +17,15 @@ class Downloader:
     def __init__(self, url_lists: List[List[str]]) -> None:
         self.url_lists = url_lists
 
-    def download_lists(self):
+    def download_lists(self, keep = False):
         for url_list in self.url_lists:
             print("Downloading files...")
             files_for_processing = self.download_list(url_list)
             self.process_files(files_for_processing)
-            for fname in files_for_processing.values():
-                if fname:
-                    os.unlink(fname)
+            if not keep:
+                for fname in files_for_processing.values():
+                    if fname:
+                        os.unlink(fname)
 
     def download_list(self, urls: List[str]) -> Dict[str, str]:
         processed_files = {}
@@ -113,6 +114,12 @@ if __name__ == '__main__':
                         default = DWARF2JSON,
                         help = "Path to the dwarf2json binary",
                         required = True)
+    parser.add_argument("-k",
+                        "--keep",
+                        dest = 'keep',
+                        action = 'store_true',
+                        help = 'Keep extracted temporary files after completion',
+                        default = False)
     args = parser.parse_args()
 
     DWARF2JSON = args.dwarfpath
@@ -125,4 +132,4 @@ if __name__ == '__main__':
         urls += [[lines[2 * i].strip(), lines[(2 * i) + 1].strip()]]
 
     d = Downloader(urls)
-    d.download_lists()
+    d.download_lists(keep = args.keep)
