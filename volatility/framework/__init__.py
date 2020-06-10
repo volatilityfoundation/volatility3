@@ -104,17 +104,14 @@ def import_files(base_module, ignore_errors = False) -> List[str]:
                     module = modpath.replace(os.path.sep, ".")
                     if base_module.__name__ + "." + module not in sys.modules:
                         try:
-                            vollog.debug("Importing module: {}.{}".format(base_module.__name__, module))
                             importlib.import_module(base_module.__name__ + "." + module)
                         except ImportError as e:
                             vollog.debug(str(e))
-                            vollog.debug("Failed to import module {} based on file: {}".format(module, modpath))
+                            vollog.debug("Failed to import module {} based on file: {}".format(
+                                base_module.__name__ + "." + module, modpath))
                             failures.append(base_module.__name__ + "." + module)
                             if not ignore_errors:
                                 raise
-                    else:
-                        vollog.log(constants.LOGLEVEL_VVVV,
-                                   "Skipping existing module: {}".format(base_module.__name__ + "." + module))
     return failures
 
 
