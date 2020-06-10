@@ -1,4 +1,4 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
@@ -107,7 +107,7 @@ class BigPools(interfaces.plugins.PluginInterface):
                 if tags is None or big_pool.get_key() in tags:
                     yield big_pool
 
-    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:  #, str, int]]]:
+    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:  # , str, int]]]:
         if self.config.get("tags"):
             tags = [tag for tag in self.config["tags"].split(',')]
         else:
