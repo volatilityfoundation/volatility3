@@ -13,7 +13,7 @@ from volatility.plugins.mac import tasks
 vollog = logging.getLogger(__name__)
 
 
-class lsof(plugins.PluginInterface):
+class Lsof(plugins.PluginInterface):
     """Lists all open file descriptors for all processes."""
 
     @classmethod

@@ -17,7 +17,7 @@ from volatility.plugins.mac import lsmod
 vollog = logging.getLogger(__name__)
 
 
-class trustedbsd(plugins.PluginInterface):
+class Trustedbsd(plugins.PluginInterface):
     """Checks for malicious trustedbsd modules"""
 
     @classmethod
