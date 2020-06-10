@@ -107,6 +107,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 path_join = interfaces.configuration.path_join
                 context.config[path_join(config_path, requirement.name, "class")] = clazz
                 context.config[path_join(config_path, requirement.name, "isf_url")] = isf_path
+                context.config[path_join(config_path, requirement.name, "symbol_mask")] = layer.address_mask
 
                 # Set a default symbol_shift when attempt to determine it,
                 # so we can create the symbols which are used in finding the aslr_shift anyway

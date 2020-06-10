@@ -294,7 +294,9 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
     @classmethod
     def get_requirements(cls) -> List[RequirementInterface]:
         return super().get_requirements() + [
-            requirements.IntRequirement(name = 'symbol_shift', description = 'Symbol Shift', optional = False)
+            requirements.IntRequirement(name = 'symbol_shift', description = 'Symbol Shift', optional = False),
+            requirements.IntRequirement(
+                name = 'symbol_mask', description = 'Address mask for symbols', optional = True, default = 0),
         ]
 
 
