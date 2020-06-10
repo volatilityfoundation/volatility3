@@ -532,8 +532,14 @@ class Version3Format(Version2Format):
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
-            name = name, address = symbol['address'] + self.config.get('symbol_shift', 0), type = symbol_type)
+
+        # Mask the addresses if necessary
+        address = symbol['address'] + self.config.get('symbol_shift', 0)
+        if self.config.get('symbol_mask', 0):
+            address = address & self.config['symbol_mask']
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
+                                                                      address = address,
+                                                                      type = symbol_type)
         return self._symbol_cache[name]
 
 
@@ -586,11 +592,15 @@ class Version5Format(Version4Format):
         symbol_constant_data = None
         if 'constant_data' in symbol:
             symbol_constant_data = base64.b64decode(symbol.get('constant_data'))
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(
-            name = name,
-            address = symbol['address'] + self.config.get('symbol_shift', 0),
-            type = symbol_type,
-            constant_data = symbol_constant_data)
+
+        # Mask the addresses if necessary
+        address = symbol['address'] + self.config.get('symbol_shift', 0)
+        if self.config.get('symbol_mask', 0):
+            address = address & self.config['symbol_mask']
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
+                                                                      address = address,
+                                                                      type = symbol_type,
+                                                                      constant_data = symbol_constant_data)
         return self._symbol_cache[name]
 
 
