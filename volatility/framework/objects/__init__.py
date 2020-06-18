@@ -156,9 +156,12 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         return self._context.layers.write(self.vol.layer_name, self.vol.offset, data)
 
 
+# This must be int (and the _struct_type must be int) because bool cannot be inherited from:
+# https://mail.python.org/pipermail/python-dev/2002-March/020822.html
+# https://mail.python.org/pipermail/python-dev/2004-February/042537.html
 class Boolean(PrimitiveObject, int):
     """Primitive Object that handles boolean types."""
-    _struct_type = bool  # type: ClassVar[Type]
+    _struct_type = int  # type: ClassVar[Type]
 
 
 class Integer(PrimitiveObject, int):
