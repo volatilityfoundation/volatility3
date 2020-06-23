@@ -253,12 +253,15 @@ class LinuxUtilities(object):
         init_task_json_address = context.symbol_space.get_symbol(init_task_symbol).address
         swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
         module = context.module(symbol_table, layer_name, 0)
+        address_mask = context.symbol_space[symbol_table].config.get('symbol_mask', None)
+
+        task_symbol = module.get_type('task_struct')
+        comm_child_offset = task_symbol.relative_child_offset('comm')
 
         for offset in context.layers[layer_name].scan(scanner = scanners.RegExScanner(swapper_signature),
                                                       context = context,
                                                       progress_callback = progress_callback):
-            task_symbol = module.get_type('task_struct')
-            init_task_address = offset - task_symbol.relative_child_offset('comm')
+            init_task_address = offset - comm_child_offset
             init_task = module.object(object_type = 'task_struct', offset = init_task_address, absolute = True)
             if init_task.pid != 0:
                 continue
@@ -268,6 +271,8 @@ class LinuxUtilities(object):
             # This we get for free
             aslr_shift = init_task.files.cast('long unsigned int') - module.get_symbol('init_files').address
             kaslr_shift = init_task_address - cls.virtual_to_physical_address(init_task_json_address)
+            if address_mask:
+                aslr_shift = aslr_shift & address_mask
 
             if aslr_shift & 0xfff != 0 or kaslr_shift & 0xfff != 0:
                 continue
