@@ -302,4 +302,4 @@ class LinuxSymbolFinder(symbol_finder.SymbolFinder):
     banner_config_key = "kernel_banner"
     banner_cache = LinuxBannerCache
     symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
-    find_aslr = lambda *args: LinuxUtilities.find_aslr(*args)[1]
+    find_aslr = lambda cls, *args: LinuxUtilities.find_aslr(*args)[1]
