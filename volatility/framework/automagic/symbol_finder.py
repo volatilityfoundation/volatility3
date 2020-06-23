@@ -127,6 +127,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                         raise TypeError("Layer name {} is not an intel space")
                     aslr_shift = self.find_aslr(context, unmasked_symbol_table_name, layer.config['memory_layer'])
                     context.config[path_join(config_path, requirement.name, "symbol_shift")] = aslr_shift
+                    context.symbol_space.clear_symbol_cache(unmasked_symbol_table_name)
 
                 break
             else:

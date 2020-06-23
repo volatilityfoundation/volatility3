@@ -220,6 +220,11 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         inserting a symbol table."""
 
     @abstractmethod
+    def clear_symbol_cache(self, table_name: str) -> None:
+        """Clears the symbol cache for the specified table name. If no table
+        name is specified, the caches of all symbol tables are cleared."""
+
+    @abstractmethod
     def get_symbols_by_type(self, type_name: str) -> Iterable[str]:
         """Returns all symbols based on the type of the symbol."""
 

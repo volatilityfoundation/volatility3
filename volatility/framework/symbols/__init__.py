@@ -37,6 +37,17 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         self._resolved = {}  # type: Dict[str, interfaces.objects.Template]
         self._resolved_symbols = {}  # type: Dict[str, interfaces.objects.Template]
 
+    def clear_symbol_cache(self, table_name: str = None) -> None:
+        """Clears the symbol cache for the specified table name. If no table
+        name is specified, the caches of all symbol tables are cleared."""
+        table_list = list()
+        if table_name is None:
+            table_list = self._dict.values()
+        else:
+            table_list.append(self._dict[table_name])
+        for table in table_list:
+            table.clear_symbol_cache()
+
     def free_table_name(self, prefix: str = "layer") -> str:
         """Returns an unused table name to ensure no collision occurs when
         inserting a symbol table."""
