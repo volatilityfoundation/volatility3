@@ -128,7 +128,6 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         while remaining_data:
             current_line, remaining_data = remaining_data[:16], remaining_data[16:]
-            offset += 16
 
             data_blocks = [current_line[chunk_size * i:chunk_size * (i + 1)] for i in range(16 // chunk_size)]
             data_blocks = [x for x in data_blocks if x != b'']
@@ -145,6 +144,7 @@ class Volshell(interfaces.plugins.PluginInterface):
                 ascii_data = connector.join([self._ascii_bytes(x) for x in valid_data])
 
             print(hex(offset), "  ", hex_data, "  ", ascii_data)
+            offset += 16
 
     @staticmethod
     def _ascii_bytes(bytes):
