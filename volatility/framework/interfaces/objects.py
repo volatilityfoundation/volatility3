@@ -6,7 +6,6 @@ interpreted values of data from a layer."""
 import abc
 import collections
 import collections.abc
-import contextlib
 import logging
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, List, Mapping, Optional
@@ -184,9 +183,12 @@ class ObjectInterface(metaclass = ABCMeta):
             member_name: Name of the member to test access to determine if the member is valid or not
         """
         if self.has_member(member_name):
-            with contextlib.suppress(Exception):
+            # noinspection PyBroadException
+            try:
                 _ = getattr(self, member_name)
                 return True
+            except Exception:
+                pass
         return False
 
     def has_valid_members(self, member_names: List[str]) -> bool:
