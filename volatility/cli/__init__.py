@@ -120,7 +120,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         parser.add_argument("-o",
                             "--output-dir",
                             help = "Directory in which to output any generated files",
-                            default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')),
+                            default = os.getcwd(),
                             type = str)
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument("-r",
