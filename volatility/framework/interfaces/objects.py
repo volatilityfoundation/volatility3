@@ -178,7 +178,11 @@ class ObjectInterface(metaclass = ABCMeta):
         return False
 
     def has_valid_member(self, member_name: str) -> bool:
-        """Returns whether the dereferenced type has a valid member."""
+        """Returns whether the dereferenced type has a valid member.
+
+        Args:
+            member_name: Name of the member to test access to determine if the member is valid or not
+        """
         if self.has_member(member_name):
             with contextlib.suppress(Exception):
                 _ = getattr(self, member_name)
@@ -191,14 +195,7 @@ class ObjectInterface(metaclass = ABCMeta):
         Args:
             member_names: List of names to test as to members with those names validity
         """
-        # Use catch a single error to short circuit failures quickly
-        with contextlib.suppress(Exception):
-            for member_name in member_names:
-                if not self.has_member(member_name):
-                    return False
-                _ = getattr(self, member_name)
-            return True
-        return False
+        return all([self.has_valid_member(member_name) for member_name in member_names])
 
     class VolTemplateProxy(metaclass = abc.ABCMeta):
         """A container for proxied methods that the ObjectTemplate of this
