@@ -6,6 +6,7 @@ interpreted values of data from a layer."""
 import abc
 import collections
 import collections.abc
+import contextlib
 import logging
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, List, Mapping, Optional
@@ -179,11 +180,9 @@ class ObjectInterface(metaclass = ABCMeta):
     def has_valid_member(self, member_name: str) -> bool:
         """Returns whether the dereferenced type has a valid member."""
         if self.has_member(member_name):
-            try:
+            with contextlib.suppress(Exception):
                 _ = getattr(self, member_name)
                 return True
-            finally:
-                return False
         return False
 
     def has_valid_members(self, member_names: List[str]) -> bool:
@@ -192,15 +191,14 @@ class ObjectInterface(metaclass = ABCMeta):
         Args:
             member_names: List of names to test as to members with those names validity
         """
-        # Use only a single try/except for efficiency
-        try:
+        # Use catch a single error to short circuit failures quickly
+        with contextlib.suppress(Exception):
             for member_name in member_names:
                 if not self.has_member(member_name):
                     return False
                 _ = getattr(self, member_name)
             return True
-        finally:
-            return False
+        return False
 
     class VolTemplateProxy(metaclass = abc.ABCMeta):
         """A container for proxied methods that the ObjectTemplate of this
