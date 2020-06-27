@@ -120,6 +120,11 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         self._delegate = self._closest_version(metadata.get('format', "0.0.0"),
                                                self._versions)(context, config_path, name, json_object, native_types,
                                                                table_mapping)
+        if self._delegate.version < constants.ISF_MINIMUM_SUPPORTED:
+            raise RuntimeError("ISF version {} is no longer supported: {}".format(metadata.get('format', "0.0.0"),
+                                                                                  isf_url))
+        elif self._delegate.version < constants.ISF_MINIMUM_DEPRECATED:
+            vollog.warning("ISF version {} has been deprecated: {}".format(metadata.get('format', "0.0.0"), isf_url))
 
         # Inherit
         super().__init__(context,

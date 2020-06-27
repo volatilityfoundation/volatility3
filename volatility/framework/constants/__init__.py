@@ -84,3 +84,8 @@ class Parallelism(enum.IntEnum):
 
 PARALLELISM = Parallelism.Off
 """Default value to the parallelism setting used throughout volatility"""
+
+ISF_MINIMUM_SUPPORTED = (2, 0, 0)
+"""The minimum supported version of the Intermediate Symbol Format"""
+ISF_MINIMUM_DEPRECATED = (3, 9, 9)
+"""The highest version of the ISF that's deprecated (usually higher than supported)"""
