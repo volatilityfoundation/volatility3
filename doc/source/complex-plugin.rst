@@ -214,6 +214,33 @@ other changes or updates to tables, etc are carried out.
 all of the data in the image.  Such a situation is not currently supported with this API and it is strongly recommended
 to raise NotImplementedError in this method.
 
+Communicating between layers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Layers can ask for information from lower layers using the `layer.metadata` lookup.  In the following example,
+a LayerStacker automagic that generates the intel TranslationLayer requests whether the base layer knows what the
+`page_map_offset` value should be, a CrashDumpLayer would have that information.  As such the TranslationLayer would
+just lookup the `page_map_offset` value in the `base_layer.metadata` dictionary:
+
+.. code-block:: python
+
+    if base_layer.metadata.get('page_layer_offset', None) is not None:
+
+Most layers will return `None`, since this is the default, but the CrashDumpLayer may know what the value should be,
+so it therefore populates the `metadata` property.  This is defined as a read-only mapping to ensure that every layer
+includes data from every underlying layer.  As such, CrashDumpLayer would actually specify this value by setting it
+in the protected dictionary by `self._direct_metadata['page_map_offset']`.
+
+There is, unfortunately, no easy way to form consensus between a particular layer may want and what a particular layer
+may be able to provide.  At the moment, the main information that layers may populate are:
+
+* `os` with values of `Windows`, `Linux`, `Mac` or `unknown`
+* `architecture` with values of `Intel32`, `Intel64` or `unknown`
+* `pae` a boolean specifying whether the PAE mode is enabled for windows
+* `page_map_offset` the value pointing to the intel page_map_offset
+
+Any value can be specified and used by layers but consideration towards ambiguity should be used to ensure that overly
+generic names aren't used for something and then best describe something else that may be needed later on.
 
 Writing new Templates and Objects
 ---------------------------------
