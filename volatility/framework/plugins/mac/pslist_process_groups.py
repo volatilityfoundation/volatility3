@@ -1,4 +1,4 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
@@ -11,7 +11,7 @@ from volatility.plugins.mac import pslist
 vollog = logging.getLogger(__name__)
 
 class Pslist_Process_Groups(pslist.PsList):
-    """Lists the processes present in a particular mac memory image."""
+    """Lists the processes present in a particular mac memory image by enumerating the process group hash table."""
 
     @classmethod
     def list_tasks(cls,
