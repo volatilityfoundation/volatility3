@@ -81,7 +81,7 @@ class Psaux(plugins.PluginInterface):
 
                 argc = argc - 1
 
-            args_str = " ".join([s.decode("utf-8") for s in args])
+            args_str = " ".join([s.decode("utf-8", errors = 'replace') for s in args])
 
             yield (0, (task.p_pid, task_name, task.p_argc, args_str))
 
