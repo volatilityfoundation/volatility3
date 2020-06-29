@@ -6,7 +6,7 @@ from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
-from volatility.plugins.mac import tasks
+from volatility.plugins.mac import pslist
 
 
 class PsTree(plugins.PluginInterface):
@@ -26,7 +26,7 @@ class PsTree(plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
-            requirements.PluginRequirement(name = 'tasks', plugin = tasks.Tasks, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0))
         ]
 
     def _find_level(self, pid):
@@ -45,8 +45,10 @@ class PsTree(plugins.PluginInterface):
         self._levels[pid] = level
 
     def _generator(self):
-        """Generates the."""
-        for proc in tasks.Tasks.list_tasks(self.context, self.config['primary'], self.config['darwin']):
+        """Generates the tree list of processes"""
+        list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
+
+        for proc in list_tasks(self.context, self.config['primary'], self.config['darwin']):
             self._processes[proc.p_pid] = proc
 
         # Build the child/level maps

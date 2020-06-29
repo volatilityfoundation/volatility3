@@ -8,7 +8,7 @@ from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
-from volatility.plugins.mac import tasks
+from volatility.plugins.mac import pslist
 
 
 class Psaux(plugins.PluginInterface):
@@ -21,7 +21,7 @@ class Psaux(plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
-            requirements.PluginRequirement(name = 'tasks', plugin = tasks.Tasks, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0))
         ]
 
     def _generator(self, tasks: Iterator[Any]) -> Generator[Tuple[int, Tuple[int, str, int, str]], None, None]:
@@ -86,11 +86,12 @@ class Psaux(plugins.PluginInterface):
             yield (0, (task.p_pid, task_name, task.p_argc, args_str))
 
     def run(self) -> renderers.TreeGrid:
-        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
                                   self._generator(
-                                      tasks.Tasks.list_tasks(self.context,
-                                                             self.config['primary'],
-                                                             self.config['darwin'],
-                                                             filter_func = filter_func)))
+                                      list_tasks(self.context,
+                                                 self.config['primary'],
+                                                 self.config['darwin'],
+                                                 filter_func = filter_func)))

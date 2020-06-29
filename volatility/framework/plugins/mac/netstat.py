@@ -11,7 +11,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
-from volatility.plugins.mac import tasks
+from volatility.plugins.mac import pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class Netstat(plugins.PluginInterface):
                                                      description = 'Kernel Address Space',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
-            requirements.PluginRequirement(name = 'tasks', plugin = tasks.Tasks, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0))
         ]
 
     @classmethod
@@ -45,7 +45,9 @@ class Netstat(plugins.PluginInterface):
                 2) The process ID of the processed that opened the socket
                 3) The address of the associated socket structure
         """
-        for task in tasks.Tasks.list_tasks(context, layer_name, darwin_symbols, filter_func):
+        # This is hardcoded, since a change in method
+        list_tasks = pslist.PsList.get_list_tasks(pslist.PsList.pslist_methods[0])
+        for task in list_tasks(context, layer_name, darwin_symbols, filter_func):
 
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
@@ -67,7 +69,7 @@ class Netstat(plugins.PluginInterface):
                 yield task_name, pid, socket
 
     def _generator(self):
-        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         for task_name, pid, socket in self.list_sockets(self.context,
                                                         self.config['primary'],
