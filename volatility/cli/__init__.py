@@ -256,7 +256,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 # This must be specific to get us started, setup the config and run
                 ctx.config[interfaces.configuration.path_join(current_config_path, "location")] = single_location
                 physical_layer = physical.FileLayer(ctx, current_config_path, current_layer_name)
-                ctx.config['automagic.TranslationLayerStacker.initial_layer'] = physical_layer.name
+                ctx.config['automagic.LayerStacker.single_location'] = physical_layer.name
                 ctx.add_layer(physical_layer)
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
