@@ -31,13 +31,11 @@ from volatility.framework.configuration import requirements
 # Make sure we log everything
 
 vollog = logging.getLogger()
-vollog.setLevel(1)
-# Trim the console down by default
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
 formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
+# Trim the console down by default
 console.setFormatter(formatter)
-vollog.addHandler(console)
 
 
 class PrintedProgress(object):
@@ -72,7 +70,14 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
     """Constructs a command-line interface object for users to run plugins."""
 
     def __init__(self):
+        self.setup_logging()
         self.output_dir = None
+
+    @classmethod
+    def setup_logging(cls):
+        # Delay the setting of vollog for those that want to import volatility.cli (issue #241)
+        vollog.setLevel(1)
+        vollog.addHandler(console)
 
     def run(self):
         """Executes the command line module, taking the system arguments,
