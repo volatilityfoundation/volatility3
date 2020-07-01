@@ -54,7 +54,7 @@ class DriverScan(interfaces.plugins.PluginInterface):
 
             try:
                 driver_name = driver.get_driver_name()
-            except exceptions.InvalidAddressException:
+            except (ValueError, exceptions.InvalidAddressException):
                 driver_name = renderers.NotApplicableValue()
 
             try:

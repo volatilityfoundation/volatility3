@@ -319,7 +319,7 @@ class Handles(interfaces.plugins.PluginInterface):
                     else:
                         try:
                             obj_name = entry.NameInfo.Name.String
-                        except exceptions.InvalidAddressException:
+                        except (ValueError, exceptions.InvalidAddressException):
                             obj_name = ""
 
                 except (exceptions.InvalidAddressException):
