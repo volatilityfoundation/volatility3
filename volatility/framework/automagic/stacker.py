@@ -13,7 +13,7 @@ once a layer successfully stacks on top of the existing layers, it is removed fr
 import logging
 import sys
 import traceback
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Type
 
 from volatility import framework
 from volatility.framework import interfaces, constants
@@ -45,7 +45,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     def __call__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
-                 requirement: interfaces.configuration.RequirementInterface,
+                 requirement: interfaces.configuration.RequirementInterface = None,
                  progress_callback: constants.ProgressCallback = None) -> Optional[List[str]]:
         """Runs the automagic over the configurable."""
 
@@ -103,7 +103,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         physical_layer = physical.FileLayer(new_context, current_config_path, current_layer_name)
         new_context.add_layer(physical_layer)
 
-        stacked_layers = self.stack_layer(new_context, current_layer_name, progress_callback)
+        stacked_layers = self.stack_layer(new_context, current_layer_name, self.create_stackers_list(),
+                                          progress_callback)
 
         if stacked_layers is not None:
             # Applies the stacked_layers to each requirement in the requirements list
@@ -123,8 +124,11 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         vollog.debug("Stacked layers: {}".format(stacked_layers))
 
     @classmethod
-    def stack_layer(cls, context: interfaces.context.ContextInterface, initial_layer: str,
-                    progress_callback: constants.ProgressCallback):
+    def stack_layer(cls,
+                    context: interfaces.context.ContextInterface,
+                    initial_layer: str,
+                    stack_set: List[Type[interfaces.automagic.StackerLayerInterface]] = None,
+                    progress_callback: constants.ProgressCallback = None):
         """Stacks as many possible layers on top of the initial layer as can be done.
 
         WARNING: This modifies the context provided and may pollute it with unnecessary layers
@@ -138,6 +142,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         Args:
             context: The context on which to operate
             initial_layer: The name of the initial layer within the context
+            stack_set: A list of StackerLayerInterface objects in the order they should be stacked
             progress_callback: A function to report progress during the process
 
         Returns:
@@ -146,8 +151,14 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
         stacked_layers = [initial_layer]
-        stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
-                           key = lambda x: x.stack_order)
+        if not stack_set or not len(stack_set):
+            stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
+                               key = lambda x: x.stack_order)
+
+        for stacker in stack_set:
+            if not issubclass(stacker, interfaces.automagic.StackerLayerInterface):
+                raise TypeError("Stacker {} is not a descendent of StackerLayerInterface".format(stacker.__name__))
+
         while stacked:
             stacked = False
             new_layer = None
@@ -175,6 +186,19 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 stacked = True
                 stack_set.remove(stacker_cls)
         return stacked_layers
+
+    def create_stackers_list(self):
+        """Creates the list of stackers to use based on the config option"""
+        stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
+                           key = lambda x: x.stack_order)
+        stacker_list = self.config.get('stackers', [])
+        if len(stacker_list):
+            result = []
+            for stacker in stack_set:
+                if stacker.__name__ in stacker_list:
+                    result.append(stacker)
+            stack_set = result
+        return stack_set
 
     @classmethod
     def find_suitable_requirements(cls, context: interfaces.context.ContextInterface, config_path: str,
@@ -214,7 +238,39 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # This is not optional for the stacker to run, so optional must be marked as False
         return [
-            requirements.URIRequirement("single_location",
+            requirements.URIRequirement(name = "single_location",
                                         description = "Specifies a base location on which to stack",
-                                        optional = True)
+                                        optional = True),
+            requirements.ListRequirement(name = "stackers", description = "List of stackers", optional = True)
         ]
+
+
+def choose_stackers(plugin):
+    """Chooses the available stackers based on the plugin"""
+    plugin_module_components = plugin.__module__.split('.')
+    oses = ['windows', 'linux', 'mac']
+
+    operating_system = 'unknown'
+    lowest_index = len(plugin_module_components)
+
+    for os in oses:
+        try:
+            if plugin_module_components.index(os) < lowest_index:
+                lowest_index = plugin_module_components.index(os)
+                operating_system = os
+        except ValueError:
+            # The value wasn't found, try the next one
+            pass
+
+    result = []
+    for stacker in sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
+                          key = lambda x: x.stack_order):
+        stacker_name = stacker.__name__.lower()
+        append = True
+        if 'intel' in stacker_name:
+            if operating_system in oses:
+                if not stacker_name.startswith(operating_system):
+                    append = False
+        if append:
+            result.append(stacker.__name__)
+    return result
