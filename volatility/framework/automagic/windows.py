@@ -288,6 +288,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
 
 class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 40
+    exclusion_list = ['mac', 'linux']
 
     @classmethod
     def stack(cls,

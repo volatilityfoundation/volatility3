@@ -16,6 +16,7 @@ vollog = logging.getLogger(__name__)
 
 class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 45
+    exclusion_list = ['mac', 'windows']
 
     @classmethod
     def stack(cls,
