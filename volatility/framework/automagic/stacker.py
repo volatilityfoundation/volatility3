@@ -16,7 +16,7 @@ import traceback
 from typing import List, Optional, Tuple
 
 from volatility import framework
-from volatility.framework import interfaces, constants, import_files
+from volatility.framework import interfaces, constants
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical
@@ -103,37 +103,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         physical_layer = physical.FileLayer(new_context, current_config_path, current_layer_name)
         new_context.add_layer(physical_layer)
 
-        # Repeatedly apply "determine what this is" code and build as much up as possible
-        stacked = True
-        stacked_layers = [current_layer_name]
-        stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
-                           key = lambda x: x.stack_order)
-        while stacked:
-            stacked = False
-            new_layer = None
-            stacker_cls = None
-            for stacker_cls in stack_set:
-                stacker = stacker_cls()
-                try:
-                    vollog.log(constants.LOGLEVEL_VV, "Attempting to stack using {}".format(stacker_cls.__name__))
-                    new_layer = stacker.stack(new_context, current_layer_name, progress_callback)
-                    if new_layer:
-                        new_context.layers.add_layer(new_layer)
-                        vollog.log(constants.LOGLEVEL_VV,
-                                   "Stacked {} using {}".format(new_layer.name, stacker_cls.__name__))
-                        break
-                except Exception as excp:
-                    # Stacking exceptions are likely only of interest to developers, so the lowest level of logging
-                    fulltrace = traceback.TracebackException.from_exception(excp).format(chain = True)
-                    vollog.log(constants.LOGLEVEL_VVV, "Exception during stacking: {}".format(str(excp)))
-                    vollog.log(constants.LOGLEVEL_VVVV, "\n".join(fulltrace))
-            else:
-                stacked = False
-            if new_layer and stacker_cls:
-                stacked_layers = [new_layer.name] + stacked_layers
-                current_layer_name = new_layer.name
-                stacked = True
-                stack_set.remove(stacker_cls)
+        stacked_layers = self.stack_layer(new_context, current_layer_name, progress_callback)
 
         if stacked_layers is not None:
             # Applies the stacked_layers to each requirement in the requirements list
@@ -150,10 +120,64 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
                 # Stash the changed config items
                 self._cached = context.config.get(path, None), context.config.branch(path)
-
         vollog.debug("Stacked layers: {}".format(stacked_layers))
 
-    def find_suitable_requirements(self, context: interfaces.context.ContextInterface, config_path: str,
+    @classmethod
+    def stack_layer(cls, context: interfaces.context.ContextInterface, initial_layer: str,
+                    progress_callback: constants.ProgressCallback):
+        """Stacks as many possible layers on top of the initial layer as can be done.
+
+        WARNING: This modifies the context provided and may pollute it with unnecessary layers
+        Recommended use is to:
+        1. Pass in context.clone() instead of context
+        2. When provided the layer list, choose the desired layer
+        3. Build the configuration using layer.build_configuration()
+        4. Merge the configuration into the original context with context.config.merge()
+        5. Call Construction magic to reconstruct the layers from just the configuration
+
+        Args:
+            context: The context on which to operate
+            initial_layer: The name of the initial layer within the context
+            progress_callback: A function to report progress during the process
+
+        Returns:
+            A list of layer names that exist in the provided context, stacked in order (highest to lowest)
+        """
+        # Repeatedly apply "determine what this is" code and build as much up as possible
+        stacked = True
+        stacked_layers = [initial_layer]
+        stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
+                           key = lambda x: x.stack_order)
+        while stacked:
+            stacked = False
+            new_layer = None
+            stacker_cls = None
+            for stacker_cls in stack_set:
+                stacker = stacker_cls()
+                try:
+                    vollog.log(constants.LOGLEVEL_VV, "Attempting to stack using {}".format(stacker_cls.__name__))
+                    new_layer = stacker.stack(context, initial_layer, progress_callback)
+                    if new_layer:
+                        context.layers.add_layer(new_layer)
+                        vollog.log(constants.LOGLEVEL_VV,
+                                   "Stacked {} using {}".format(new_layer.name, stacker_cls.__name__))
+                        break
+                except Exception as excp:
+                    # Stacking exceptions are likely only of interest to developers, so the lowest level of logging
+                    fulltrace = traceback.TracebackException.from_exception(excp).format(chain = True)
+                    vollog.log(constants.LOGLEVEL_VVV, "Exception during stacking: {}".format(str(excp)))
+                    vollog.log(constants.LOGLEVEL_VVVV, "\n".join(fulltrace))
+            else:
+                stacked = False
+            if new_layer and stacker_cls:
+                stacked_layers = [new_layer.name] + stacked_layers
+                initial_layer = new_layer.name
+                stacked = True
+                stack_set.remove(stacker_cls)
+        return stacked_layers
+
+    @classmethod
+    def find_suitable_requirements(cls, context: interfaces.context.ContextInterface, config_path: str,
                                    requirement: interfaces.configuration.RequirementInterface,
                                    stacked_layers: List[str]) -> Optional[Tuple[str, str]]:
         """Looks for translation layer requirements and attempts to apply the
@@ -181,7 +205,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             else:
                 return child_config_path, context.config.get(child_config_path, None)
         for req_name, req in requirement.requirements.items():
-            result = self.find_suitable_requirements(context, child_config_path, req, stacked_layers)
+            result = cls.find_suitable_requirements(context, child_config_path, req, stacked_layers)
             if result:
                 return result
         return None
