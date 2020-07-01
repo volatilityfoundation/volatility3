@@ -29,7 +29,6 @@ from volatility.framework import automagic, constants, contexts, exceptions, int
 from volatility.framework.configuration import requirements
 
 # Make sure we log everything
-from volatility.framework.layers import physical
 
 vollog = logging.getLogger()
 console = logging.StreamHandler()
@@ -252,17 +251,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 vollog.log(logging.INFO, "File does not exist: {}".format(file_name))
             else:
                 single_location = "file:" + request.pathname2url(file_name)
-
-                # Setup the local copy of the resource
-                config_path = "cli"
-                current_layer_name = ctx.layers.free_layer_name("FileLayer")
-                current_config_path = interfaces.configuration.path_join(config_path, "base_layer", current_layer_name)
-
-                # This must be specific to get us started, setup the config and run
-                ctx.config[interfaces.configuration.path_join(current_config_path, "location")] = single_location
-                physical_layer = physical.FileLayer(ctx, current_config_path, current_layer_name)
-                ctx.config['automagic.LayerStacker.single_location'] = physical_layer.name
-                ctx.add_layer(physical_layer)
+                ctx.config['automagic.LayerStacker.single_location'] = single_location
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:

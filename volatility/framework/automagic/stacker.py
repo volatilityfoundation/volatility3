@@ -16,9 +16,10 @@ import traceback
 from typing import List, Optional, Tuple
 
 from volatility import framework
-from volatility.framework import interfaces, constants
+from volatility.framework import interfaces, constants, import_files
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
+from volatility.framework.layers import physical
 
 vollog = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             vollog.info("Unable to run LayerStacker, unsatisfied requirement: {}".format(unsatisfied))
             return list(unsatisfied)
         if not self.config or not self.config.get('single_location', None):
-            return list(unsatisfied)
+            raise ValueError("Unable to run LayerStacker, single_location parameter not provided")
 
         # Search for suitable requirements
         self.stack(context, config_path, requirement, progress_callback)
@@ -91,7 +92,16 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             self._cached = None
 
         new_context = context.clone()
-        current_layer_name = self.config.get('single_location', None)
+        location = self.config.get('single_location', None)
+
+        # Setup the local copy of the resource
+        current_layer_name = context.layers.free_layer_name("FileLayer")
+        current_config_path = interfaces.configuration.path_join(config_path, "stack", current_layer_name)
+
+        # This must be specific to get us started, setup the config and run
+        new_context.config[interfaces.configuration.path_join(current_config_path, "location")] = location
+        physical_layer = physical.FileLayer(new_context, current_config_path, current_layer_name)
+        new_context.add_layer(physical_layer)
 
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
