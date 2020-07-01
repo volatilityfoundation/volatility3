@@ -245,32 +245,14 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         ]
 
 
-def choose_stackers(plugin):
-    """Chooses the available stackers based on the plugin"""
-    plugin_module_components = plugin.__module__.split('.')
-    oses = ['windows', 'linux', 'mac']
-
-    operating_system = 'unknown'
-    lowest_index = len(plugin_module_components)
-
-    for os in oses:
-        try:
-            if plugin_module_components.index(os) < lowest_index:
-                lowest_index = plugin_module_components.index(os)
-                operating_system = os
-        except ValueError:
-            # The value wasn't found, try the next one
-            pass
+def choose_os_stackers(plugin):
+    """Identifies the stackers that should be run, based on the plugin (and thus os) provided"""
+    plugin_first_level = plugin.__module__.split('.')[0]
 
     result = []
     for stacker in sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
                           key = lambda x: x.stack_order):
-        stacker_name = stacker.__name__.lower()
-        append = True
-        if 'intel' in stacker_name:
-            if operating_system in oses:
-                if not stacker_name.startswith(operating_system):
-                    append = False
-        if append:
-            result.append(stacker.__name__)
+        if plugin_first_level in stacker.exclusion_list:
+            continue
+        result.append(stacker.__name__)
     return result

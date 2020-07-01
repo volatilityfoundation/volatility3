@@ -104,6 +104,9 @@ class StackerLayerInterface(metaclass = ABCMeta):
     """
 
     stack_order = 0
+    """The order in which to attempt stacking, the lower the earlier"""
+    exclusion_list = []
+    """The list operating systems/first-level plugin hierarchy that should exclude this stacker"""
 
     @classmethod
     def stack(self,

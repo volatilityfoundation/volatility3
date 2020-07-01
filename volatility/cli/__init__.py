@@ -271,7 +271,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
         automagics = automagic.choose_automagic(automagics, plugin)
-        ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_stackers(plugin)
+        ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
         self.output_dir = args.output_dir
 
         ###
