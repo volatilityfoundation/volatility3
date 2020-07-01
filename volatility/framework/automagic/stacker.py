@@ -19,69 +19,11 @@ from volatility import framework
 from volatility.framework import interfaces, constants
 from volatility.framework.automagic import construct_layers
 from volatility.framework.configuration import requirements
-from volatility.framework.layers import physical
 
 vollog = logging.getLogger(__name__)
 
 
 class LayerStacker(interfaces.automagic.AutomagicInterface):
-    """Builds up layers in a single stack.
-
-    This class mimics the volatility 2 style of stacking address spaces.  It builds up various layers based on
-    separate :class:`~volatility.framework.interfaces.automagic.StackerLayerInterface` classes.  These classes are
-    built up based on a `stack_order` class variable each has.
-
-    This has a high priority to provide other automagic modules as complete a context/configuration tree as possible.
-    Upon completion it will re-call the :class:`~volatility.framework.automagic.construct_layers.ConstructionMagic`,
-    so that any stacked layers are actually constructed and added to the context.
-    """
-    priority = 9
-
-    def __call__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: constants.ProgressCallback = None) -> Optional[List[str]]:
-        """Runs the automagic over the configurable."""
-        if not self.config or not self.config.get('single_location'):
-            # "Successful" but no results
-            return []
-
-        vollog.warning("Outdated Interface: The LayerStacker interface has been deprecated for TranslationLayerStacker")
-        # raise DeprecationWarning("The LayerStacker has been updated as TranslationLayerStacker")
-
-        unsatisfied = self.unsatisfied(self.context, self.config_path)
-        if unsatisfied:
-            vollog.info("Unable to run LayerStacker, unsatisfied requirement: {}".format(unsatisfied))
-            return list(unsatisfied)
-
-        # Setup the local copy of the resource
-        base_config_path = config_path.split(interfaces.configuration.CONFIG_SEPARATOR)
-        tls_config_path = interfaces.configuration.path_join(*base_config_path, 'TranslationLayerStacker')
-        single_location = self.config['single_location']
-        current_layer_name = context.layers.free_layer_name("FileLayer")
-        current_config_path = interfaces.configuration.path_join(config_path, "base_layer", current_layer_name)
-
-        # This must be specific to get us started, setup the config and run
-        context.config[interfaces.configuration.path_join(current_config_path, "location")] = single_location
-        physical_layer = physical.FileLayer(context, current_config_path, current_layer_name)
-        context.add_layer(physical_layer)
-
-        # Setup and call the TranslationLayerStacker
-        context.config[interfaces.configuration.path_join(tls_config_path, 'initial_layer')] = physical_layer.name
-        stacker = TranslationLayerStacker(context, tls_config_path)
-        stacker(context, config_path, requirement, progress_callback)
-
-    @classmethod
-    def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [
-            requirements.URIRequirement("single_location",
-                                        description = "Specifies the URI of an initial physical file on which to stack",
-                                        optional = True)
-        ]
-
-
-class TranslationLayerStacker(interfaces.automagic.AutomagicInterface):
     """Builds up layers in a single stack.
 
     This class mimics the volatility 2 style of stacking address spaces.  It builds up various layers based on
@@ -115,7 +57,9 @@ class TranslationLayerStacker(interfaces.automagic.AutomagicInterface):
         # Bow out quickly if the UI hasn't provided a single_location
         unsatisfied = self.unsatisfied(self.context, self.config_path)
         if unsatisfied:
-            vollog.info("Unable to run TranslationLayerStacker, unsatisfied requirement: {}".format(unsatisfied))
+            vollog.info("Unable to run LayerStacker, unsatisfied requirement: {}".format(unsatisfied))
+            return list(unsatisfied)
+        if not self.config or not self.config.get('single_location', None):
             return list(unsatisfied)
 
         # Search for suitable requirements
@@ -147,7 +91,7 @@ class TranslationLayerStacker(interfaces.automagic.AutomagicInterface):
             self._cached = None
 
         new_context = context.clone()
-        current_layer_name = self.config.get('initial_layer', None)
+        current_layer_name = self.config.get('single_location', None)
 
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
@@ -234,8 +178,9 @@ class TranslationLayerStacker(interfaces.automagic.AutomagicInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
+        # This is not optional for the stacker to run, so optional must be marked as False
         return [
-            requirements.StringRequirement("initial_layer",
-                                           description = "Specifies the name of a layer on which to stack",
-                                           optional = True)
+            requirements.URIRequirement("single_location",
+                                        description = "Specifies a base location on which to stack",
+                                        optional = True)
         ]
