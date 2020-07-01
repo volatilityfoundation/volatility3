@@ -53,7 +53,7 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
 
             try:
                 from_name = link.get_link_name()
-            except exceptions.InvalidAddressException:
+            except (ValueError, exceptions.InvalidAddressException):
                 continue
 
             try:

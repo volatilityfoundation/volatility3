@@ -42,7 +42,7 @@ class DriverIrp(interfaces.plugins.PluginInterface):
 
             try:
                 driver_name = driver.get_driver_name()
-            except exceptions.InvalidAddressException:
+            except (ValueError, exceptions.InvalidAddressException):
                 driver_name = renderers.NotApplicableValue()
 
             for i, address in enumerate(driver.MajorFunction):

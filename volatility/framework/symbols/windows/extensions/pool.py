@@ -294,6 +294,11 @@ class OBJECT_HEADER(objects.StructType):
                                                  layer_name = self.vol.native_layer_name,
                                                  offset = kvo + address + calculated_index)
 
+        if header_offset == 0:
+            raise ValueError(
+                "Could not find _OBJECT_HEADER_NAME_INFO for object at {} of layer {}".format(self.vol.offset,
+                                                                                              self.vol.layer_name))
+
         header = self._context.object(symbol_table_name + constants.BANG + "_OBJECT_HEADER_NAME_INFO",
                                       layer_name = self.vol.layer_name,
                                       offset = self.vol.offset - header_offset,

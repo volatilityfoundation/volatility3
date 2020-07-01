@@ -362,7 +362,10 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
         name = renderers.UnreadableValue()  # type: Union[str, interfaces.renderers.BaseAbsentValue]
 
         if self._context.layers[self.vol.layer_name].is_valid(self.DeviceObject):
-            name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
+            try:
+                name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
+            except ValueError:
+                pass
 
         try:
             name += self.FileName.String
