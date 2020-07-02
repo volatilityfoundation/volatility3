@@ -247,7 +247,10 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
 def choose_os_stackers(plugin):
     """Identifies the stackers that should be run, based on the plugin (and thus os) provided"""
-    plugin_first_level = plugin.__module__.split('.')[0]
+    plugin_first_level = plugin.__module__.split('.')[2]
+
+    # Ensure all stackers are loaded
+    framework.import_files(sys.modules['volatility.framework.layers'])
 
     result = []
     for stacker in sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
