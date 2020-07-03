@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Iterable, Tuple, List
+from typing import Iterable, Tuple, List, Dict, Any
 
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
@@ -62,30 +62,42 @@ class YaraScan(plugins.PluginInterface):
                                         optional = True)
         ]
 
-    def _generator(self):
-
+    @classmethod
+    def process_yara_options(cls, config: Dict[str, Any]):
         rules = None
-        if self.config.get('yara_rules', None) is not None:
-            rule = self.config['yara_rules']
+        if config.get('yara_rules', None) is not None:
+            rule = config['yara_rules']
             if rule[0] not in ["{", "/"]:
                 rule = '"{}"'.format(rule)
-            if self.config.get('case', False):
+            if config.get('case', False):
                 rule += " nocase"
-            if self.config.get('wide', False):
+            if config.get('wide', False):
                 rule += " wide ascii"
             rules = yara.compile(sources = {'n': 'rule r1 {{strings: $a = {} condition: $a}}'.format(rule)})
-        elif self.config.get('yara_file', None) is not None:
-            rules = yara.compile(file = resources.ResourceAccessor().open(self.config['yara_file'], "rb"))
+        elif config.get('yara_file', None) is not None:
+            rules = yara.compile(file = resources.ResourceAccessor().open(config['yara_file'], "rb"))
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
-
-        for offset, rule_name, name, value in self.scan(self.context, self.config['primary'], rules):
-            yield 0, (format_hints.Hex(offset), rule_name, name, value)
+        return rules
 
     @classmethod
-    def scan(cls, context: interfaces.context.ContextInterface, layer_name: str, rules, sections = None):
+    def scan(cls,
+             context: interfaces.context.ContextInterface,
+             layer_name: str,
+             rules,
+             sections: Iterable[Tuple[int, int]] = None):
+        if rules is None:
+            return
         layer = context.layers[layer_name]
         yield from layer.scan(context = context, scanner = YaraScanner(rules = rules), sections = sections)
+
+    def _generator(self):
+
+        rules = self.process_yara_options(dict(self.config))
+
+        for offset, rule_name, name, value in self.scan(context = self.context, layer_name = self.config['primary'],
+                                             rules = rules):
+            yield (0, (format_hints.Hex(offset), rule_name, name, value))
 
     def run(self):
         return renderers.TreeGrid([('Offset', format_hints.Hex), ('Rule', str), ('Component', str), ('Value', bytes)],

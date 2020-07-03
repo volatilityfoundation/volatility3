@@ -53,21 +53,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
     def _generator(self):
 
-        layer = self.context.layers[self.config['primary']]
-        rules = None
-        if self.config.get('yara_rules', None) is not None:
-            rule = self.config['yara_rules']
-            if rule[0] not in ["{", "/"]:
-                rule = '"{}"'.format(rule)
-            if self.config.get('case', False):
-                rule += " nocase"
-            if self.config.get('wide', False):
-                rule += " wide ascii"
-            rules = yara.compile(sources = {'n': 'rule r1 {{strings: $a = {} condition: $a}}'.format(rule)})
-        elif self.config.get('yara_file', None) is not None:
-            rules = yara.compile(file = resources.ResourceAccessor().open(self.config['yara_file'], "rb"))
-        else:
-            vollog.error("No yara rules, nor yara rules file were specified")
+        rules = yarascan.YaraScan.process_yara_options(dict(self.config))
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
