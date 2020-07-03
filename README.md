@@ -73,9 +73,9 @@ Symbol table packs for the various operating systems are available for download 
 
 The hashes to verify whether any of the symbol pack files have downloaded successfully or have changed can be found at:
 
-<https://downloads.volatilityfoundation.org/volatility3/symbols/SHA256SUMS>
-<https://downloads.volatilityfoundation.org/volatility3/symbols/SHA1SUMS>
-<https://downloads.volatilityfoundation.org/volatility3/symbols/MD5SUMS>
+<https://downloads.volatilityfoundation.org/volatility3/symbols/SHA256SUMS>  
+<https://downloads.volatilityfoundation.org/volatility3/symbols/SHA1SUMS>  
+<https://downloads.volatilityfoundation.org/volatility3/symbols/MD5SUMS>  
 
 Symbol tables zip files must be placed, as named, into the `volatility/symbols` directory (or just the symbols directory next to the executable file).
 
