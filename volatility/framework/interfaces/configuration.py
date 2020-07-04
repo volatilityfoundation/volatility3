@@ -50,6 +50,11 @@ def parent_path(value: str) -> str:
     return CONFIG_SEPARATOR.join(value.split(CONFIG_SEPARATOR)[:-1])
 
 
+def path_head(value: str) -> str:
+    """Return the top of the configuration path"""
+    return value.split(CONFIG_SEPARATOR)[-1]
+
+
 def path_depth(path: str, depth: int = 1) -> str:
     """Returns the `path` up to a certain depth.
 

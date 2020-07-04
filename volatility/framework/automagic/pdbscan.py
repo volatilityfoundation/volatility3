@@ -7,7 +7,7 @@ from loaded PE files.
 This module contains a standalone scanner, and also a :class:`~volatility.framework.interfaces.layers.ScannerInterface`
 based scanner for use within the framework by calling :func:`~volatility.framework.interfaces.layers.DataLayerInterface.scan`.
 """
-
+import binascii
 import json
 import logging
 import lzma
@@ -20,6 +20,7 @@ from urllib import request
 from volatility import symbols
 from volatility.framework import constants, exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
+from volatility.framework.configuration.requirements import SymbolTableRequirement
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import intermed, native
 from volatility.framework.symbols.windows import pdbconv
@@ -75,54 +76,232 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
             sig = data.find(b"RSDS", sig + 1)
 
 
-def scan(ctx: interfaces.context.ContextInterface,
-         layer_name: str,
-         page_size: int,
-         progress_callback: constants.ProgressCallback = None,
-         start: Optional[int] = None,
-         end: Optional[int] = None) -> Generator[Dict[str, Optional[Union[bytes, str, int]]], None, None]:
-    """Scans through `layer_name` at `ctx` looking for RSDS headers that
-    indicate one of four common pdb kernel names (as listed in
-    `self.pdb_names`) and returns the tuple (GUID, age, pdb_name,
-    signature_offset, mz_offset)
+class PDBUtility:
+    """Class to handle and manage all getting symbols based on MZ header"""
 
-    .. note:: This is automagical and therefore not guaranteed to provide correct results.
+    @classmethod
+    def symbol_table_from_offset(cls,
+                                 context: interfaces.context.ContextInterface,
+                                 layer_name: str,
+                                 offset: int,
+                                 symbol_table_class: str,
+                                 config_path: str = None,
+                                 progress_callback: constants.ProgressCallback = None) -> str:
+        """Produces the name of a symbol table loaded from the offset for an MZ header
 
-    The UI should always provide the user an opportunity to specify the
-    appropriate types and PDB values themselves
-    """
-    min_pfn = 0
-    pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
+        Args:
+            context: The context on which to operate
+            layer_name: The name of the (contiguous) layer within the context that contains the MZ file
+            offset: The offset in the layer at which the MZ file begins
+            symbol_table_class: The type of symbol class to construct the SymbolTable
+            config_path: New path for the produced symbol table configuration with the config tree
+            progress_callback: Callable called to update ongoing progress
 
-    if start is None:
-        start = ctx.layers[layer_name].minimum_address
-    if end is None:
-        end = ctx.layers[layer_name].maximum_address
+        Returns:
+            None if no pdb information can be determined, else returned the name of the loaded symbols for the MZ
+        """
+        guid, age, pdb_name = cls.get_guid_from_mz(context, layer_name, offset)
+        if config_path is None:
+            config_path = interfaces.configuration.path_join('pdbutility', pdb_name.strip('\x00').replace('.', '_'))
 
-    for (GUID, age, pdb_name, signature_offset) in ctx.layers[layer_name].scan(ctx,
-                                                                               PdbSignatureScanner(pdb_names),
-                                                                               progress_callback = progress_callback,
-                                                                               sections = [(start, end - start)]):
-        mz_offset = None
-        sig_pfn = signature_offset // page_size
+        return cls.load_windows_symbol_table(context, guid, age, pdb_name, symbol_table_class, config_path,
+                                             progress_callback)
 
-        for i in range(sig_pfn, min_pfn, -1):
-            if not ctx.layers[layer_name].is_valid(i * page_size, 2):
+    @classmethod
+    def load_windows_symbol_table(cls,
+                                  context: interfaces.context.ContextInterface,
+                                  guid: str,
+                                  age: int,
+                                  pdb_name: str,
+                                  symbol_table_class: str,
+                                  config_path: str = 'pdbutility',
+                                  progress_callback: constants.ProgressCallback = None):
+        """Loads (downlading if necessary) a windows symbol table"""
+
+        filter_string = os.path.join(pdb_name.strip('\x00'), guid.upper() + "-" + str(age))
+
+        isf_path = False
+        # Take the first result of search for the intermediate file
+        for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
+            isf_path = value
+            break
+        else:
+            # If none are found, attempt to download the pdb, convert it and try again
+            PDBUtility.download_pdb_isf(context, guid.upper(), age, pdb_name, progress_callback)
+            # Try again
+            for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
+                isf_path = value
                 break
 
-            data = ctx.layers[layer_name].read(i * page_size, 2)
-            if data == b'MZ':
-                mz_offset = i * page_size
-                break
-        min_pfn = sig_pfn
+        if not isf_path:
+            vollog.debug("Required symbol library path not found: {}".format(filter_string))
+            return None
 
-        yield {
-            'GUID': GUID,
-            'age': age,
-            'pdb_name': str(pdb_name, "utf-8"),
-            'signature_offset': signature_offset,
-            'mz_offset': mz_offset
-        }
+        vollog.debug("Using symbol library: {}".format(filter_string))
+
+        # Set the discovered options
+        join = interfaces.configuration.path_join
+        context.config[join(config_path, "class")] = symbol_table_class
+        context.config[join(config_path, "isf_url")] = isf_path
+        parent_config_path = interfaces.configuration.parent_path(config_path)
+        requirement_name = interfaces.configuration.path_head(config_path)
+
+        # Construct the appropriate symbol table
+        requirement = SymbolTableRequirement(name = requirement_name, description = "PDBUtility generated symbol table")
+        requirement.construct(context, parent_config_path)
+        return context.config[config_path]
+
+    @classmethod
+    def get_guid_from_mz(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                         offset: int) -> Tuple[str, int, str]:
+        """Takes the offset to an MZ header, locates any available pdb headers, and extracts the guid, age and pdb_name from them
+
+        Args:
+            context: The context on which to operate
+            layer_name: The name of the (contiguous) layer within the context that contains the MZ file
+            offset: The offset in the layer at which the MZ file begins
+
+        Returns:
+            A tuple of the guid, age and pdb_name, or None if no PDB record can be found
+        """
+        try:
+            import pefile
+        except ImportError:
+            vollog.error("Get_guid_from_mz requires the following python module: pefile")
+            return None
+
+        layer = context.layers[layer_name]
+        mz_sig = layer.read(offset, 2)
+
+        # Check it is actually the MZ header
+        if mz_sig != b"MZ":
+            return None
+
+        nt_header_start = ord(layer.read(offset + 0x3C, 1))
+        optional_header_size = struct.unpack('<H', layer.read(offset + nt_header_start + 0x14, 2))[0]
+        # Just enough to tell us the max size
+        pe_header = layer.read(offset, nt_header_start + 0x16 + optional_header_size)
+        pe_data = pefile.PE(data = pe_header)
+        max_size = pe_data.OPTIONAL_HEADER.SizeOfImage
+
+        # Proper data
+        pe_header = layer.read(offset, max_size)
+        pe_data = pefile.PE(data = pe_header)
+        if not hasattr(pe_data, 'DIRECTORY_ENTRY_DEBUG') or not len(pe_data.DIRECTORY_ENTRY_DEBUG):
+            return None
+
+        # Extract the data
+        debug_entry = pe_data.DIRECTORY_ENTRY_DEBUG[0].entry
+        pdb_name = debug_entry.PdbFileName.decode("utf-8")
+        age = debug_entry.Age
+        guid = "{:x}{:x}{:x}{}".format(debug_entry.Signature_Data1, debug_entry.Signature_Data2,
+                                       debug_entry.Signature_Data3,
+                                       binascii.hexlify(debug_entry.Signature_Data4).decode('utf-8'))
+        return guid, age, pdb_name
+
+    @classmethod
+    def download_pdb_isf(cls,
+                         context: interfaces.context.ContextInterface,
+                         guid: str,
+                         age: int,
+                         pdb_name: str,
+                         progress_callback: constants.ProgressCallback = None) -> None:
+        """Attempts to download the PDB file, convert it to an ISF file and
+        save it to one of the symbol locations."""
+        # Check for writability
+        filter_string = os.path.join(pdb_name, guid + "-" + str(age))
+        for path in symbols.__path__:
+
+            # Store any temporary files created by downloading PDB files
+            tmp_files = []
+            potential_output_filename = os.path.join(path, "windows", filter_string + ".json.xz")
+            data_written = False
+            try:
+                os.makedirs(os.path.dirname(potential_output_filename), exist_ok = True)
+                with lzma.open(potential_output_filename, "w") as of:
+                    # Once we haven't thrown an error, do the computation
+                    filename = pdbconv.PdbRetreiver().retreive_pdb(guid + str(age),
+                                                                   file_name = pdb_name,
+                                                                   progress_callback = progress_callback)
+                    if filename:
+                        tmp_files.append(filename)
+                        location = "file:" + request.pathname2url(tmp_files[-1])
+                        json_output = pdbconv.PdbReader(context, location, progress_callback).get_json()
+                        of.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
+                        # After we've successfully written it out, record the fact so we don't clear it out
+                        data_written = True
+                    else:
+                        vollog.warning("Symbol file could not be found on remote server" + (" " * 100))
+                break
+            except PermissionError:
+                vollog.warning("Cannot write necessary symbol file, please check permissions on {}".format(
+                    potential_output_filename))
+                continue
+            finally:
+                # If something else failed, removed the symbol file so we don't pick it up in the future
+                if not data_written and os.path.exists(potential_output_filename):
+                    os.remove(potential_output_filename)
+                # Clear out all the temporary file if we constructed one
+                for filename in tmp_files:
+                    try:
+                        os.remove(filename)
+                    except PermissionError:
+                        vollog.warning("Temporary file could not be removed: {}".format(filename))
+        else:
+            vollog.warning("Cannot write downloaded symbols, please add the appropriate symbols"
+                           " or add/modify a symbols directory that is writable")
+
+    @classmethod
+    def pdbname_scan(cls,
+                     ctx: interfaces.context.ContextInterface,
+                     layer_name: str,
+                     page_size: int,
+                     pdb_names: List[bytes],
+                     progress_callback: constants.ProgressCallback = None,
+                     start: Optional[int] = None,
+                     end: Optional[int] = None) -> Generator[Dict[str, Optional[Union[bytes, str, int]]], None, None]:
+        """Scans through `layer_name` at `ctx` looking for RSDS headers that
+        indicate one of four common pdb kernel names (as listed in
+        `self.pdb_names`) and returns the tuple (GUID, age, pdb_name,
+        signature_offset, mz_offset)
+
+        .. note:: This is automagical and therefore not guaranteed to provide correct results.
+
+        The UI should always provide the user an opportunity to specify the
+        appropriate types and PDB values themselves
+        """
+        min_pfn = 0
+
+        if start is None:
+            start = ctx.layers[layer_name].minimum_address
+        if end is None:
+            end = ctx.layers[layer_name].maximum_address
+
+        for (GUID, age, pdb_name,
+             signature_offset) in ctx.layers[layer_name].scan(ctx,
+                                                              PdbSignatureScanner(pdb_names),
+                                                              progress_callback = progress_callback,
+                                                              sections = [(start, end - start)]):
+            mz_offset = None
+            sig_pfn = signature_offset // page_size
+
+            for i in range(sig_pfn, min_pfn, -1):
+                if not ctx.layers[layer_name].is_valid(i * page_size, 2):
+                    break
+
+                data = ctx.layers[layer_name].read(i * page_size, 2)
+                if data == b'MZ':
+                    mz_offset = i * page_size
+                    break
+            min_pfn = sig_pfn
+
+            yield {
+                'GUID': GUID,
+                'age': age,
+                'pdb_name': str(pdb_name, "utf-8"),
+                'signature_offset': signature_offset,
+                'mz_offset': mz_offset
+            }
 
 
 class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
@@ -198,85 +377,16 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     _kvo, kernel = valid_kernels[virtual_layer]
                     if not isinstance(kernel['pdb_name'], str) or not isinstance(kernel['GUID'], str):
                         raise TypeError("PDB name or GUID not a string value")
-                    filter_string = os.path.join(kernel['pdb_name'], kernel['GUID'] + "-" + str(kernel['age']))
 
-                    # Take the first result of search for the intermediate file
-                    for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
-                        isf_path = value
-                        break
-                    else:
-                        # If none are found, attempt to download the pdb, convert it and try again
-                        self.download_pdb_isf(kernel['GUID'], kernel['age'], kernel['pdb_name'], progress_callback)
-                        # Try again
-                        for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
-                            isf_path = value
-                            break
-
-                    if isf_path:
-                        vollog.debug("Using symbol library: {}".format(filter_string))
-                        clazz = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols"
-                        # Set the discovered options
-                        context.config[join(sub_config_path, "class")] = clazz
-                        context.config[join(sub_config_path, "isf_url")] = isf_path
-                        # Construct the appropriate symbol table
-                        config_path = interfaces.configuration.parent_path(sub_config_path)
-                        if isinstance(requirement, interfaces.configuration.ConstructableRequirementInterface):
-                            requirement.construct(context, config_path)
-                        break
-                    else:
-                        vollog.debug("Required symbol library path not found: {}".format(filter_string))
+                    PDBUtility.load_windows_symbol_table(
+                        context = context,
+                        guid = kernel['GUID'],
+                        age = kernel['age'],
+                        pdb_name = kernel['pdb_name'],
+                        symbol_table_class = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols",
+                        config_path = sub_config_path)
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
-
-    def download_pdb_isf(self,
-                         guid: str,
-                         age: int,
-                         pdb_name: str,
-                         progress_callback: constants.ProgressCallback = None) -> None:
-        """Attempts to download the PDB file, convert it to an ISF file and
-        save it to one of the symbol locations."""
-        # Check for writability
-        filter_string = os.path.join(pdb_name, guid + "-" + str(age))
-        for path in symbols.__path__:
-
-            # Store any temporary files created by downloading PDB files
-            tmp_files = []
-            potential_output_filename = os.path.join(path, "windows", filter_string + ".json.xz")
-            data_written = False
-            try:
-                os.makedirs(os.path.dirname(potential_output_filename), exist_ok = True)
-                with lzma.open(potential_output_filename, "w") as of:
-                    # Once we haven't thrown an error, do the computation
-                    filename = pdbconv.PdbRetreiver().retreive_pdb(guid + str(age),
-                                                                   file_name = pdb_name,
-                                                                   progress_callback = progress_callback)
-                    if filename:
-                        tmp_files.append(filename)
-                        location = "file:" + request.pathname2url(tmp_files[-1])
-                        json_output = pdbconv.PdbReader(self.context, location, progress_callback).get_json()
-                        of.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
-                        # After we've successfully written it out, record the fact so we don't clear it out
-                        data_written = True
-                    else:
-                        vollog.warning("Symbol file could not be found on remote server" + (" " * 100))
-                break
-            except PermissionError:
-                vollog.warning("Cannot write necessary symbol file, please check permissions on {}".format(
-                    potential_output_filename))
-                continue
-            finally:
-                # If something else failed, removed the symbol file so we don't pick it up in the future
-                if not data_written and os.path.exists(potential_output_filename):
-                    os.remove(potential_output_filename)
-                # Clear out all the temporary file if we constructed one
-                for filename in tmp_files:
-                    try:
-                        os.remove(filename)
-                    except PermissionError:
-                        vollog.warning("Temporary file could not be removed: {}".format(filename))
-        else:
-            vollog.warning("Cannot write downloaded symbols, please add the appropriate symbols"
-                           " or add/modify a symbols directory that is writable")
 
     def set_kernel_virtual_offset(self, context: interfaces.context.ContextInterface,
                                   valid_kernels: ValidKernelsType) -> None:
@@ -310,10 +420,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         kvo_path = interfaces.configuration.path_join(vlayer.config_path, 'kernel_virtual_offset')
 
-        kernels = scan(ctx = context,
-                       layer_name = physical_layer_name,
-                       page_size = vlayer.page_size,
-                       progress_callback = progress_callback)
+        kernel_pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
+        kernels = PDBUtility.pdbname_scan(ctx = context,
+                                          layer_name = physical_layer_name,
+                                          page_size = vlayer.page_size,
+                                          pdb_names = kernel_pdb_names,
+                                          progress_callback = progress_callback)
         for kernel in kernels:
             # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
             if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
@@ -410,17 +522,19 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         # Scan a few megs of the virtual space at the location to see if they're potential kernels
 
         valid_kernels = {}  # type: ValidKernelsType
+        kernel_pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
 
         virtual_layer_name = vlayer.name
         try:
             if vlayer.read(address, 0x2) == b'MZ':
                 res = list(
-                    scan(ctx = context,
-                         layer_name = vlayer.name,
-                         page_size = vlayer.page_size,
-                         progress_callback = progress_callback,
-                         start = address,
-                         end = address + self.max_pdb_size))
+                    PDBUtility.pdbname_scan(ctx = context,
+                                            layer_name = vlayer.name,
+                                            page_size = vlayer.page_size,
+                                            pdb_names = kernel_pdb_names,
+                                            progress_callback = progress_callback,
+                                            start = address,
+                                            end = address + self.max_pdb_size))
                 if res:
                     valid_kernels[virtual_layer_name] = (address, res[0])
         except exceptions.InvalidAddressException:
