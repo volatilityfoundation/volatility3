@@ -125,7 +125,9 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                         raise exceptions.SymbolSpaceError("Symbol table could not be constructed")
                     if not isinstance(layer, layers.intel.Intel):
                         raise TypeError("Layer name {} is not an intel space")
+                    vollog.debug("running find_aslr from symbol_finder") 
                     aslr_shift = self.find_aslr(context, unmasked_symbol_table_name, layer.config['memory_layer'])
+                    vollog.debug("setting find_aslr from symbol_finder: {:x}".format(aslr_shift)) 
                     context.config[path_join(config_path, requirement.name, "symbol_shift")] = aslr_shift
                     context.symbol_space.clear_symbol_cache(unmasked_symbol_table_name)
 

@@ -83,7 +83,14 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 idlepml4_str = layer.read(idlepml4_ptr, 4)
                 idlepml4_addr = struct.unpack("<I", idlepml4_str)[0]
 
-                dtb = idlepml4_addr
+                tmp_dtb = idlepml4_addr
+
+                vollog.debug("POSSIBLE DTB: 0x{:0x}".format(tmp_dtb))
+                if tmp_dtb % 4096:
+                    vollog.debug("skipping non-page aligned DTB: 0x{:0x}".format(tmp_dtb))
+                    continue
+
+                dtb = tmp_dtb
 
                 # Build the new layer
                 new_layer_name = context.layers.free_layer_name("IntelLayer")
@@ -209,6 +216,14 @@ class MacUtilities(object):
 
             tmp_aslr_shift = offset - cls.virtual_to_physical_address(version_json_address)
 
+            a = cls.virtual_to_physical_address(version_json_address)
+            b = offset
+            c = version_json_address
+            vollog.debug("json {:x} | v2p {:x} | offset {:x} | tmp_aslr {:x}".format(c, a, b, tmp_aslr_shift))
+
+            x = context.layers[layer_name].read(a + tmp_aslr_shift, 64)
+            vollog.debug("x version is {}".format(x))
+
             major_string = context.layers[layer_name].read(version_major_phys_offset + tmp_aslr_shift, 4)
             major = struct.unpack("<I", major_string)[0]
 
@@ -221,8 +236,8 @@ class MacUtilities(object):
             if minor != banner_minor:
                 continue
 
-            if aslr_shift & 0xfff != 0:
-                continue
+            if tmp_aslr_shift & 0xfff != 0:
+                continue 
 
             aslr_shift = tmp_aslr_shift & 0xffffffff
             break
@@ -235,8 +250,13 @@ class MacUtilities(object):
     def virtual_to_physical_address(cls, addr: int) -> int:
         """Converts a virtual mac address to a physical one (does not account
         of ASLR)"""
-        return addr - 0xffffff8000000000
+        if addr > 0xffffff8000000000:
+            addr = addr - 0xffffff8000000000
+        else:
+            addr = addr - 0xff8000000000
 
+        return addr
+        
     @classmethod
     def files_descriptors_for_process(cls, context: interfaces.context.ContextInterface, symbol_table_name: str,
                                       task: interfaces.objects.ObjectInterface):
