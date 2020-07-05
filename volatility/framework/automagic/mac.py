@@ -44,7 +44,6 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         for banner_offset, banner in layer.scan(context = context, scanner = mss,
                                                 progress_callback = progress_callback):
             dtb = None
-            vollog.debug("Identified banner: {}".format(repr(banner)))
 
             symbol_files = mac_banners.get(banner, None)
             if symbol_files:
@@ -63,7 +62,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                                             progress_callback = progress_callback)
 
                 if kaslr_shift == 0:
-                    vollog.debug("Invalid kalsr_shift found at offset: {}".format(banner_offset))
+                    vollog.log(constants.LOGLEVEL_VVV, "Invalid kalsr_shift found at offset: {}".format(banner_offset))
                     continue
 
                 bootpml4_addr = cls.virtual_to_physical_address(table.get_symbol("BootPML4").address + kaslr_shift)
@@ -84,9 +83,8 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
 
                 tmp_dtb = idlepml4_addr
 
-                vollog.debug("POSSIBLE DTB: 0x{:0x}".format(tmp_dtb))
                 if tmp_dtb % 4096:
-                    vollog.debug("skipping non-page aligned DTB: 0x{:0x}".format(tmp_dtb))
+                    vollog.log(constants.LOGLEVEL_VVV, "Skipping non-page aligned DTB: 0x{:0x}".format(tmp_dtb))
                     continue
 
                 dtb = tmp_dtb
@@ -98,9 +96,13 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 context.config[join(config_path, "page_map_offset")] = dtb
                 context.config[join(config_path, MacSymbolFinder.banner_config_key)] = str(banner, 'latin-1')
 
-                new_layer = intel.Intel32e(context, config_path = config_path, name = new_layer_name)
+                new_layer = intel.Intel32e(context,
+                                           config_path = config_path,
+                                           name = new_layer_name,
+                                           metadata = {'kaslr_value': kaslr_shift})
 
             if new_layer and dtb:
+                vollog.debug("Identified banner: {}".format(repr(banner)))
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
                 return new_layer
         return None
@@ -138,14 +140,6 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
 
             tmp_aslr_shift = offset - cls.virtual_to_physical_address(version_json_address)
 
-            a = cls.virtual_to_physical_address(version_json_address)
-            b = offset
-            c = version_json_address
-            vollog.debug("json {:x} | v2p {:x} | offset {:x} | tmp_aslr {:x}".format(c, a, b, tmp_aslr_shift))
-
-            x = context.layers[layer_name].read(a + tmp_aslr_shift, 64)
-            vollog.debug("x version is {}".format(x))
-
             major_string = context.layers[layer_name].read(version_major_phys_offset + tmp_aslr_shift, 4)
             major = struct.unpack("<I", major_string)[0]
 
@@ -159,12 +153,12 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 continue
 
             if tmp_aslr_shift & 0xfff != 0:
-                continue 
+                continue
 
             aslr_shift = tmp_aslr_shift & 0xffffffff
             break
 
-        vollog.debug("Mac ASLR shift value determined: {:0x}".format(aslr_shift))
+        vollog.log(constants.LOGLEVEL_VVVV, "Mac find_aslr returned: {:0x}".format(aslr_shift))
 
         return aslr_shift
 
@@ -178,7 +172,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             addr = addr - 0xff8000000000
 
         return addr
-        
+
     @classmethod
     def _scan_generator(cls, context, layer_name, progress_callback):
         darwin_signature = rb"Darwin Kernel Version \d{1,3}\.\d{1,3}\.\d{1,3}: [^\x00]+\x00"
