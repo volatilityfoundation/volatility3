@@ -113,7 +113,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 # so we can create the symbols which are used in finding the aslr_shift anyway
                 if not context.config.get(path_join(config_path, requirement.name, "symbol_shift"), None):
                     # Don't overwrite it if it's already been set, it will be manually refound if not present
-                    context.config[path_join(config_path, requirement.name, "symbol_shift")] = 0
+                    prefound_kaslr_value = context.layers[layer_name].metadata.get('kaslr_value', 0)
+                    context.config[path_join(config_path, requirement.name, "symbol_shift")] = prefound_kaslr_value
                 # Construct the appropriate symbol table
                 requirement.construct(context, config_path)
 
@@ -125,9 +126,9 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                         raise exceptions.SymbolSpaceError("Symbol table could not be constructed")
                     if not isinstance(layer, layers.intel.Intel):
                         raise TypeError("Layer name {} is not an intel space")
-                    vollog.debug("running find_aslr from symbol_finder") 
+                    vollog.debug("running find_aslr from symbol_finder")
                     aslr_shift = self.find_aslr(context, unmasked_symbol_table_name, layer.config['memory_layer'])
-                    vollog.debug("setting find_aslr from symbol_finder: {:x}".format(aslr_shift)) 
+                    vollog.debug("setting find_aslr from symbol_finder: {:x}".format(aslr_shift))
                     context.config[path_join(config_path, requirement.name, "symbol_shift")] = aslr_shift
                     context.symbol_space.clear_symbol_cache(unmasked_symbol_table_name)
 
