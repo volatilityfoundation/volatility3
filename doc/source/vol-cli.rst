@@ -26,7 +26,7 @@ area of research.
 The command line tool allows developers to distribute and easily use the
 plugins of the framework against memory images of their choice.
 
-Plugins made define their own options, these are dynamic and therefore not
+Plugins may define their own options, these are dynamic and therefore not
 listed in this man page.  Plugin options must be listed after the plugin
 name.  A list of the options for a specific plugin is available by running
 "**volatility** <plugin> --help".
@@ -42,7 +42,7 @@ Options
 -c CONFIG, --config CONFIG
     Loads a JSON configuration from the CONFIG file
 
---parallelism {processes,threads,off}
+--parallelism [{processes,threads,off}]
     Enables parallelism (defaults to processes if no argument given).  The
     parallelism can be either off, or multithreaded (but due to python's GIL
     still only takes up a single CPU) or multiprocessed (which spawns other
