@@ -88,9 +88,16 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
 
-        parser = volargparse.HelpfulArgParser(add_help=False,
+        parser = volargparse.HelpfulArgParser(add_help = False,
                                               prog = 'volatility',
                                               description = "An open-source memory forensics framework")
+        parser.add_argument(
+            "-h",
+            "--help",
+            action = "help",
+            default = argparse.SUPPRESS,
+            help = "Show this help message and exit, for specific plugin options use '{} <pluginname> --help'".format(
+                parser.prog))
         parser.add_argument("-c",
                             "--config",
                             help = "Load the configuration from a json file",
@@ -150,9 +157,6 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                             help = "Clears out all short-term cached items",
                             default = False,
                             action = 'store_true')
-        parser.add_argument("-h", "--help", action="help", default=argparse.SUPPRESS,
-                            help="Show this help message and exit. Use: volatility <pluginname> --help for help on a "
-                                 "specific plugin.")
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
