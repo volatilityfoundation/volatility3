@@ -27,10 +27,11 @@ class YaraScanner(interfaces.layers.ScannerInterface):
         super().__init__()
         self._rules = rules
 
-    def __call__(self, data: bytes, data_offset: int) -> Iterable[Tuple[int, str, bytes]]:
+    def __call__(self, data: bytes, data_offset: int) -> Iterable[Tuple[int, str, str, bytes]]:
         for match in self._rules.match(data = data):
+            rule_name = match.rule
             for offset, name, value in match.strings:
-                yield (offset + data_offset, name, value)
+                yield (offset + data_offset, rule_name, name, value)
 
 
 class YaraScan(plugins.PluginInterface):
