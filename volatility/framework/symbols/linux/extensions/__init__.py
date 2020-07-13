@@ -26,7 +26,8 @@ class module(generic.GenericIntelProcess):
         elif self.has_member("init_size"):
             return self.init_size
 
-        raise AttributeError("module -> get_init_size: Unable to determine .init section size of module")
+        raise AttributeError(
+            "module -> get_init_size: Unable to determine .init section size of module")
 
     def get_core_size(self):
         if self.has_member("core_layout"):
@@ -35,7 +36,8 @@ class module(generic.GenericIntelProcess):
         elif self.has_member("core_size"):
             return self.core_size
 
-        raise AttributeError("module -> get_core_size: Unable to determine initial size of module")
+        raise AttributeError(
+            "module -> get_core_size: Unable to determine initial size of module")
 
 
 class task_struct(generic.GenericIntelProcess):
@@ -53,14 +55,16 @@ class task_struct(generic.GenericIntelProcess):
             return None
 
         if not isinstance(parent_layer, linear.LinearlyMappedLayer):
-            raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
+            raise TypeError(
+                "Parent layer is not a translation layer, unable to construct process layer")
 
         dtb, layer_name = parent_layer.translate(pgd)
         if not dtb:
             return None
 
         if preferred_name is None:
-            preferred_name = self.vol.layer_name + "_Process{}".format(self.pid)
+            preferred_name = self.vol.layer_name + \
+                "_Process{}".format(self.pid)
 
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
@@ -76,7 +80,8 @@ class task_struct(generic.GenericIntelProcess):
                 continue
             else:
                 # FIXME: Check if this actually needs to be printed out or not
-                vollog.info("adding vma: {:x} {:x} | {:x} {:x}".format(start, self.mm.brk, end, self.mm.start_brk))
+                vollog.info("adding vma: {:x} {:x} | {:x} {:x}".format(
+                    start, self.mm.brk, end, self.mm.start_brk))
 
             yield (start, end - start)
 
@@ -206,7 +211,8 @@ class vm_area_struct(objects.StructType):
 
     def get_name(self, context, task):
         if self.vm_file != 0:
-            fname = linux.LinuxUtilities.path_for_file(context, task, self.vm_file)
+            fname = linux.LinuxUtilities.path_for_file(
+                context, task, self.vm_file)
         elif self.vm_start <= task.mm.start_brk and self.vm_end >= task.mm.brk:
             fname = "[heap]"
         elif self.vm_start <= task.mm.start_stack and self.vm_end >= task.mm.start_stack:
@@ -285,7 +291,8 @@ class list_head(objects.StructType, collections.abc.Iterable):
         """Returns an iterator of the entries in the list."""
         layer = layer or self.vol.layer_name
 
-        relative_offset = self._context.symbol_space.get_type(symbol_type).relative_child_offset(member)
+        relative_offset = self._context.symbol_space.get_type(
+            symbol_type).relative_child_offset(member)
 
         direction = 'prev'
         if forward:
@@ -293,12 +300,13 @@ class list_head(objects.StructType, collections.abc.Iterable):
         link = getattr(self, direction).dereference()
 
         if not sentinel:
-            yield self._context.object(symbol_type, layer, offset = self.vol.offset - relative_offset)
+            yield self._context.object(symbol_type, layer, offset=self.vol.offset - relative_offset)
 
         seen = {self.vol.offset}
         while link.vol.offset not in seen:
 
-            obj = self._context.object(symbol_type, layer, offset = link.vol.offset - relative_offset)
+            obj = self._context.object(
+                symbol_type, layer, offset=link.vol.offset - relative_offset)
             yield obj
 
             seen.add(link.vol.offset)
@@ -324,7 +332,8 @@ class files_struct(objects.StructType):
         elif self.has_member("max_fds"):
             return self.max_fds
         else:
-            raise AttributeError("Unable to find files -> maximum file descriptors")
+            raise AttributeError(
+                "Unable to find files -> maximum file descriptors")
 
 
 class mount(objects.StructType):
@@ -364,15 +373,16 @@ class vfsmount(objects.StructType):
 
     def is_valid(self):
         return self.get_mnt_sb() != 0 and \
-               self.get_mnt_root() != 0 and \
-               self.get_mnt_parent() != 0
+            self.get_mnt_root() != 0 and \
+            self.get_mnt_parent() != 0
 
     def _get_real_mnt(self):
         table_name = self.vol.type_name.split(constants.BANG)[0]
         mount_struct = "{0}{1}mount".format(table_name, constants.BANG)
-        offset = self._context.symbol_space.get_type(mount_struct).relative_child_offset("mnt")
+        offset = self._context.symbol_space.get_type(
+            mount_struct).relative_child_offset("mnt")
 
-        return self._context.object(mount_struct, self.vol.layer_name, offset = self.vol.offset - offset)
+        return self._context.object(mount_struct, self.vol.layer_name, offset=self.vol.offset - offset)
 
     def get_mnt_parent(self):
         if self.has_member("mnt_parent"):
@@ -388,3 +398,15 @@ class vfsmount(objects.StructType):
 
     def get_mnt_root(self):
         return self.mnt_root
+
+
+class kobject(objects.StructType):
+
+    def reference_count(self):
+        refcnt = self.kref.refcount
+        if self.has_member("counter"):
+            ret = refcnt.counter
+        else:
+            ret = refcnt.refs.counter
+
+        return ret
