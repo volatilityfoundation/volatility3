@@ -5,7 +5,6 @@
 from typing import Callable, Iterable, List, Any
 
 from volatility.framework import renderers, interfaces, contexts
-from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 
@@ -21,7 +20,11 @@ class PsList(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols")
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
+            requirements.IntRequirement(name = 'pid',
+                                        description = 'Filter on a specific process ID',
+                                        default = None,
+                                        optional = True)
         ]
 
     @classmethod

@@ -11,7 +11,7 @@ Synopsis
            [-o OUTPUT_DIR] [-q] [-r RENDERER] [-f FILE]
            [--write-config] [--single-location SINGLE_LOCATION]
            [--single-swap-locations SINGLE_SWAP_LOCATIONS]
-           plugin ...
+           <plugin> ...
 
 Description
 -----------
@@ -25,6 +25,11 @@ area of research.
 
 The command line tool allows developers to distribute and easily use the
 plugins of the framework against memory images of their choice.
+
+Plugins may define their own options, these are dynamic and therefore not
+listed in this man page.  Plugin options must be listed after the plugin
+name.  A list of the options for a specific plugin is available by running
+"**volatility** <plugin> --help".
 
 Options
 -------
@@ -48,7 +53,7 @@ Options
     Extends an existing configuration with a single directive as specified by
     EXTEND.  Extensions must be of the form **configuration.item.name=value**
 
--p PLUGIN_DIRS --plugin-dirs PLUGIN_DIRS
+-p PLUGIN_DIRS, --plugin-dirs PLUGIN_DIRS
     Specified a semi-colon separated list of paths that contain directories
     where plugins may be found.  These paths are searched before the default
     paths when loading python files for plugins.  This can therefore be used
@@ -100,16 +105,16 @@ Options
     other plugins, but there's no guarantee that plugins use the same
     configuration options.
 
---single-location LOCATION
+--single-location SINGLE_LOCATION
     This specifies a URL which will be downloaded if necessary, and built
     upon by the automagic and, since most plugins require a single memory
     image, can be considered the input for the program.
 
---single-swap-locations
+--single-swap-locations SINGLE_SWAP_LOCATIONS
     A comma-separated list of swap files to be considered as part of the
     memory image specified by the single-location or file parameters.
 
-**plugin**
+**<plugin>**
     The name of the plugin to execute (these are usually categorized by
     the operating system, such as `windows.pslist.PsList`).  Any subtring
     that uniquely matches the desired plugin name can be used.  As such

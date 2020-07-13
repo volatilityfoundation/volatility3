@@ -242,6 +242,12 @@ may be able to provide.  At the moment, the main information that layers may pop
 Any value can be specified and used by layers but consideration towards ambiguity should be used to ensure that overly
 generic names aren't used for something and then best describe something else that may be needed later on.
 
+.. note::
+
+    The data stored in metadata is *not* restored when constructed from a configuration, so metadata should only be
+    used as a temporary means of storing information to be used in constructing later objects and all information
+    required to recreate an object must be written through the requirements mechanism.
+
 Writing new Templates and Objects
 ---------------------------------
 

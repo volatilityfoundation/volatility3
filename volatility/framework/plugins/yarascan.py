@@ -30,11 +30,13 @@ class YaraScanner(interfaces.layers.ScannerInterface):
     def __call__(self, data: bytes, data_offset: int) -> Iterable[Tuple[int, str, bytes]]:
         for match in self._rules.match(data = data):
             for offset, name, value in match.strings:
-                yield (offset + data_offset, name, value)
+                yield (offset + data_offset, match.rule, name, value)
 
 
 class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
+
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -62,7 +64,6 @@ class YaraScan(plugins.PluginInterface):
 
     def _generator(self):
 
-        layer = self.context.layers[self.config['primary']]
         rules = None
         if self.config.get('yara_rules', None) is not None:
             rule = self.config['yara_rules']
@@ -78,8 +79,14 @@ class YaraScan(plugins.PluginInterface):
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
 
-        for offset, name, value in layer.scan(context = self.context, scanner = YaraScanner(rules = rules)):
-            yield (0, (format_hints.Hex(offset), name, value))
+        for offset, rule_name, name, value in self.scan(self.context, self.config['primary'], rules):
+            yield 0, (format_hints.Hex(offset), rule_name, name, value)
+
+    @classmethod
+    def scan(cls, context: interfaces.context.ContextInterface, layer_name: str, rules, sections = None):
+        layer = context.layers[layer_name]
+        yield from layer.scan(context = context, scanner = YaraScanner(rules = rules), sections = sections)
 
     def run(self):
-        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Rule', str), ('Value', bytes)], self._generator())
+        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Rule', str), ('Component', str), ('Value', bytes)],
+                                  self._generator())

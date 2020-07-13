@@ -14,8 +14,9 @@ from volatility.framework.symbols import mac
 vollog = logging.getLogger(__name__)
 
 
-class MacintelStacker(interfaces.automagic.StackerLayerInterface):
+class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 45
+    exclusion_list = ['windows', 'linux']
 
     @classmethod
     def stack(cls,

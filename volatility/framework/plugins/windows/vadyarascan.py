@@ -44,6 +44,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                                         description = "Set the maximum size (default is 1GB)",
                                         optional = True),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'yarascan', plugin = yarascan.YaraScan, version = (2, 0, 0)),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
                                         optional = True)
@@ -74,11 +75,11 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                                                  symbol_table = self.config['nt_symbols'],
                                                  filter_func = filter_func):
             layer_name = task.add_process_layer()
-            layer = self.context.layers[layer_name]
-            for offset, name, value in layer.scan(context = self.context,
-                                                  scanner = yarascan.YaraScanner(rules = rules),
-                                                  sections = self.get_vad_maps(task)):
-                yield (0, (format_hints.Hex(offset), task.UniqueProcessId, name, value))
+            for offset, rule_name, name, value in yarascan.YaraScan.scan(context = self.context,
+                                                                         layer_name = layer_name,
+                                                                         rules = rules,
+                                                                         sections = self.get_vad_maps(task)):
+                yield 0, (format_hints.Hex(offset), task.UniqueProcessId, rule_name, name, value)
 
     @staticmethod
     def get_vad_maps(task: interfaces.objects.ObjectInterface) -> Iterable[Tuple[int, int]]:
@@ -98,5 +99,5 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             yield (start, end - start)
 
     def run(self):
-        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Pid', int), ('Rule', str), ('Value', bytes)],
-                                  self._generator())
+        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Pid', int), ('Rule', str), ('Component', str),
+                                   ('Value', bytes)], self._generator())

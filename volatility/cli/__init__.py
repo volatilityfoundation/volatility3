@@ -26,6 +26,7 @@ import volatility.symbols
 from volatility import framework
 from volatility.cli import text_renderer, volargparse
 from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins, configuration
+from volatility.framework.automagic import stacker
 from volatility.framework.configuration import requirements
 
 # Make sure we log everything
@@ -87,8 +88,16 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
 
-        parser = volargparse.HelpfulArgParser(prog = 'volatility',
+        parser = volargparse.HelpfulArgParser(add_help = False,
+                                              prog = 'volatility',
                                               description = "An open-source memory forensics framework")
+        parser.add_argument(
+            "-h",
+            "--help",
+            action = "help",
+            default = argparse.SUPPRESS,
+            help = "Show this help message and exit, for specific plugin options use '{} <pluginname> --help'".format(
+                parser.prog))
         parser.add_argument("-c",
                             "--config",
                             help = "Load the configuration from a json file",
@@ -270,6 +279,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
         automagics = automagic.choose_automagic(automagics, plugin)
+        ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
         self.output_dir = args.output_dir
 
         ###
