@@ -66,3 +66,7 @@ class check_creds(interfaces.plugins.PluginInterface):
                 for pid in pids:
                     pid_str = pid_str + "{0:d}, ".format(pid)
                 pid_str = pid_str[:-2]
+                yield(0, [str(pid_str)])
+
+    def run(self):
+        return renderers.TreeGrid([("PIDs", str)], self._generator())
