@@ -58,7 +58,11 @@ def strlike_as_text(value: format_hints.StrLike) -> str:
 
     This attempts to convert the string based on its encoding and if no data's been lost due to the split on the null character, then it displays it as is
     """
+    if value.show_hex:
+        return hex_bytes_as_text(value)
     string_representation = str(value, encoding = value.encoding, errors = 'replace')
+    if value.split_nulls and ((len(value) / 2 - 1) <= len(string_representation) <= (len(value) / 2)):
+        return "\n".join(string_representation.split("\x00"))
     if len(string_representation) - 1 <= len(string_representation.split("\x00")[0]) <= len(string_representation):
         return string_representation.split("\x00")[0]
     return hex_bytes_as_text(value)
@@ -85,6 +89,8 @@ def quoted_optional(func):
         result = optional(func)(x)
         if result == "-" or result == "N/A":
             return ""
+        if isinstance(x, format_hints.StrLike) and x.converted_int:
+            return "{}".format(result)
         if isinstance(x, int) and not isinstance(x, (format_hints.Hex, format_hints.Bin)):
             return "{}".format(result)
         return "\"{}\"".format(result)

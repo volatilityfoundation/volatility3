@@ -5,7 +5,7 @@
 import enum
 import logging
 import struct
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Union
 
 from volatility.framework import constants, exceptions, objects, interfaces
 from volatility.framework.layers.registry import RegistryHive, RegistryInvalidIndex, RegistryFormatException
@@ -239,7 +239,7 @@ class CM_KEY_VALUE(objects.StructType):
         self.Name.count = namelength
         return self.Name.cast("string", max_length = namelength, encoding = "latin-1")
 
-    def decode_data(self) -> bytes:
+    def decode_data(self) -> Union[int, bytes]:
         """Properly decodes the data associated with the value node"""
         # Determine if the data is stored inline
         datalen = self.DataLength
@@ -298,4 +298,4 @@ class CM_KEY_VALUE(objects.StructType):
 
         # Fall back if it's something weird
         vollog.debug("Unknown registry value type encountered: {}".format(self.Type))
-        return data.hex()
+        return data
