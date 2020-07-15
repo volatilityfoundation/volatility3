@@ -903,6 +903,8 @@ class PdbRetreiver:
                 break
         if progress_callback is not None:
             progress_callback(100, "Downloading {}".format(url + suffix))
+        if result is None:
+            return None
         return result.name
 
 
