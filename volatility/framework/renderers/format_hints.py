@@ -28,9 +28,17 @@ class HexBytes(bytes):
 class StrLike(bytes):
     """The contents are supposed to be a string, but may contain binary data."""
 
-    def __new__(cls, original, encoding: str = 'utf-16-le'):
+    def __new__(cls, original, encoding: str = 'utf-16-le', split_nulls: bool = False, show_hex: bool = False):
+        if isinstance(original, int):
+            original = str(original).encode(encoding)
         return super().__new__(cls, original)
 
-    def __init__(self, original: bytes, encoding: str = 'utf-16-le'):
+    def __init__(self, original: bytes, encoding: str = 'utf-16-le', split_nulls: bool = False, show_hex: bool = False):
+        if isinstance(original, int):
+            self.converted_int = True
+        else:
+            self.converted_int = False
         self.encoding = encoding
+        self.split_nulls = split_nulls
+        self.show_hex = show_hex
         bytes.__init__(original)

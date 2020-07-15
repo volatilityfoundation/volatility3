@@ -66,7 +66,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
             vollog.warning("Hive walker was not passed a valid node_path (or None)")
             return
         node = node_path[-1]
-        key_path = '\\'.join([k.get_name() for k in node_path])
+        key_path_items = [hive] + node_path[1:]
+        key_path = '\\'.join([k.get_name() for k in key_path_items])
         if node.vol.type_name.endswith(constants.BANG + '_CELL_DATA'):
             raise RegistryFormatException(hive.name, "Encountered _CELL_DATA instead of _CM_KEY_NODE")
         last_write_time = conversion.wintime_to_datetime(node.LastWriteTime.QuadPart)
@@ -113,7 +114,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     key_node_name = renderers.UnreadableValue()
 
                 yield (depth, (last_write_time, renderers.format_hints.Hex(hive.hive_offset), "Key", key_path,
-                               key_node_name, "", volatile))
+                               key_node_name, renderers.NotApplicableValue(), volatile))
             else:
                 try:
                     value_node_name = node.get_name() or "(Default)"
@@ -122,19 +123,32 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     value_node_name = renderers.UnreadableValue()
 
                 try:
-                    value_data = node.decode_data()  # type: Union[interfaces.renderers.BaseAbsentValue, bytes]
-                except (ValueError, exceptions.InvalidAddressException, RegistryFormatException) as excp:
-                    vollog.debug(excp)
-                    value_data = renderers.UnreadableValue()
-
-                try:
                     value_type = RegValueTypes.get(node.Type).name
                 except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
                     vollog.debug(excp)
                     value_type = renderers.UnreadableValue()
 
+                if isinstance(value_type, renderers.UnreadableValue):
+                    vollog.debug("Couldn't read registry value type, so data is unreadable")
+                    value_data = renderers.UnreadableValue()
+                else:
+                    try:
+                        value_data = node.decode_data()  # type: Union[interfaces.renderers.BaseAbsentValue, bytes]
+
+                        if isinstance(value_data, int):
+                            value_data = format_hints.StrLike(value_data, encoding='utf-8')
+                        elif RegValueTypes.get(node.Type) == RegValueTypes.REG_BINARY:
+                            value_data = format_hints.StrLike(value_data, show_hex=True)
+                        elif RegValueTypes.get(node.Type) == RegValueTypes.REG_MULTI_SZ:
+                            value_data = format_hints.StrLike(value_data, encoding='utf-16-le', split_nulls=True)
+                        else:
+                            value_data = format_hints.StrLike(value_data, encoding='utf-16-le')
+                    except (ValueError, exceptions.InvalidAddressException, RegistryFormatException) as excp:
+                        vollog.debug(excp)
+                        value_data = renderers.UnreadableValue()
+
                 result = (depth, (last_write_time, renderers.format_hints.Hex(hive.hive_offset), value_type, key_path,
-                                  value_node_name, format_hints.StrLike(value_data, encoding = 'utf-16-le'), volatile))
+                                  value_node_name, value_data, volatile))
                 yield result
 
     def _registry_walker(self,
