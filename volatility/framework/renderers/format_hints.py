@@ -25,7 +25,7 @@ class HexBytes(bytes):
     format showing hexadecimal and ascii printable display."""
 
 
-class StrLike(bytes):
+class MultiTypeData(bytes):
     """The contents are supposed to be a string, but may contain binary data."""
 
     def __new__(cls, original, encoding: str = 'utf-16-le', split_nulls: bool = False, show_hex: bool = False):

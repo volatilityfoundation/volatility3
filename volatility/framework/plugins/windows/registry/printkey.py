@@ -136,13 +136,15 @@ class PrintKey(interfaces.plugins.PluginInterface):
                         value_data = node.decode_data()  # type: Union[interfaces.renderers.BaseAbsentValue, bytes]
 
                         if isinstance(value_data, int):
-                            value_data = format_hints.StrLike(value_data, encoding='utf-8')
+                            value_data = format_hints.MultiTypeData(value_data, encoding = 'utf-8')
                         elif RegValueTypes.get(node.Type) == RegValueTypes.REG_BINARY:
-                            value_data = format_hints.StrLike(value_data, show_hex=True)
+                            value_data = format_hints.MultiTypeData(value_data, show_hex = True)
                         elif RegValueTypes.get(node.Type) == RegValueTypes.REG_MULTI_SZ:
-                            value_data = format_hints.StrLike(value_data, encoding='utf-16-le', split_nulls=True)
+                            value_data = format_hints.MultiTypeData(value_data,
+                                                                    encoding = 'utf-16-le',
+                                                                    split_nulls = True)
                         else:
-                            value_data = format_hints.StrLike(value_data, encoding='utf-16-le')
+                            value_data = format_hints.MultiTypeData(value_data, encoding = 'utf-16-le')
                     except (ValueError, exceptions.InvalidAddressException, RegistryFormatException) as excp:
                         vollog.debug(excp)
                         value_data = renderers.UnreadableValue()
@@ -188,7 +190,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
         offset = self.config.get('offset', None)
 
         return TreeGrid(columns = [('Last Write Time', datetime.datetime), ('Hive Offset', format_hints.Hex),
-                                   ('Type', str), ('Key', str), ('Name', str), ('Data', format_hints.StrLike),
+                                   ('Type', str), ('Key', str), ('Name', str), ('Data', format_hints.MultiTypeData),
                                    ('Volatile', bool)],
                         generator = self._registry_walker(self.config['primary'],
                                                           self.config['nt_symbols'],

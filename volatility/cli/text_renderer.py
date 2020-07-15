@@ -53,7 +53,7 @@ def hex_bytes_as_text(value: bytes) -> str:
     return output
 
 
-def strlike_as_text(value: format_hints.StrLike) -> str:
+def multitypedata_as_text(value: format_hints.MultiTypeData) -> str:
     """Renders the bytes as a string where possible, otherwise it displays hex data
 
     This attempts to convert the string based on its encoding and if no data's been lost due to the split on the null character, then it displays it as is
@@ -89,7 +89,7 @@ def quoted_optional(func):
         result = optional(func)(x)
         if result == "-" or result == "N/A":
             return ""
-        if isinstance(x, format_hints.StrLike) and x.converted_int:
+        if isinstance(x, format_hints.MultiTypeData) and x.converted_int:
             return "{}".format(result)
         if isinstance(x, int) and not isinstance(x, (format_hints.Hex, format_hints.Bin)):
             return "{}".format(result)
@@ -134,7 +134,7 @@ class QuickTextRenderer(CLIRenderer):
         format_hints.Bin: optional(lambda x: "0b{:b}".format(x)),
         format_hints.Hex: optional(lambda x: "0x{:x}".format(x)),
         format_hints.HexBytes: optional(hex_bytes_as_text),
-        format_hints.StrLike: quoted_optional(strlike_as_text),
+        format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         interfaces.renderers.Disassembly: optional(display_disassembly),
         bytes: optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
         datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
@@ -190,7 +190,7 @@ class CSVRenderer(CLIRenderer):
         format_hints.Bin: quoted_optional(lambda x: "0b{:b}".format(x)),
         format_hints.Hex: quoted_optional(lambda x: "0x{:x}".format(x)),
         format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
-        format_hints.StrLike: quoted_optional(strlike_as_text),
+        format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
         bytes: quoted_optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
         datetime.datetime: quoted_optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
