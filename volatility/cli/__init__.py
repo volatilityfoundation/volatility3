@@ -279,7 +279,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
         automagics = automagic.choose_automagic(automagics, plugin)
-        ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
+        if ctx.config.get('automagic.LayerStacker.stackers', None) is None:
+            ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
         self.output_dir = args.output_dir
 
         ###
@@ -487,8 +488,9 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                     if "type" in additional:
                         del additional["type"]
             elif isinstance(requirement, volatility.framework.configuration.requirements.ListRequirement):
-                # This is a trick to generate a list of values
-                additional["type"] = lambda x: x.split(',')
+                additional["type"] = requirement.element_type
+                nargs = '*' if requirement.optional else '+'
+                additional["nargs"] = nargs
             elif isinstance(requirement, volatility.framework.configuration.requirements.ChoiceRequirement):
                 additional["type"] = str
                 additional["choices"] = requirement.choices
