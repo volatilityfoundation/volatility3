@@ -690,12 +690,17 @@ class ConfigurableInterface(metaclass = ABCMeta):
 
 
 class VersionableInterface:
+    """A class that allows version checking so that plugins can request specific versions of components they made need
+
+    This currently includes other Plugins and scanners, but may be extended in the future
+
+    All version number should use semantic versioning
+    """
     _version: Tuple[int, int, int] = (0, 0, 0)
 
     @classproperty
     def version(cls) -> Tuple[int, int, int]:
-        """The version of the current interface (classmethods available on the
-        plugin).
+        """The version of the current interface (classmethods available on the component).
 
         It is strongly recommended that Semantic Versioning be used (and the default version verification is defined that way):
 
