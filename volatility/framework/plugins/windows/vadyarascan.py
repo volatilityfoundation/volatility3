@@ -45,9 +45,10 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                                         optional = True),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'yarascan', plugin = yarascan.YaraScan, version = (2, 0, 0)),
-            requirements.IntRequirement(name = 'pid',
-                                        description = "Process ID to include (all other processes are excluded)",
-                                        optional = True)
+            requirements.ListRequirement(name = 'pid',
+                                         element_type = int,
+                                         description = "Process IDs to include (all other processes are excluded)",
+                                         optional = True)
         ]
 
     def _generator(self):
@@ -68,7 +69,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
 
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for task in pslist.PsList.list_processes(context = self.context,
                                                  layer_name = self.config['primary'],

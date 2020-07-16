@@ -21,10 +21,10 @@ class PsList(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.IntRequirement(name = 'pid',
-                                        description = 'Filter on a specific process ID',
-                                        default = None,
-                                        optional = True)
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True)
         ]
 
     @classmethod
@@ -53,7 +53,7 @@ class PsList(interfaces.plugins.PluginInterface):
         for task in self.list_tasks(self.context,
                                     self.config['primary'],
                                     self.config['vmlinux'],
-                                    filter_func = self.create_pid_filter([self.config.get('pid', None)])):
+                                    filter_func = self.create_pid_filter(self.config.get('pid', None))):
             pid = task.pid
             ppid = 0
             if task.parent:

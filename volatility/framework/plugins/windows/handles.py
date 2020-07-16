@@ -41,9 +41,10 @@ class Handles(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.IntRequirement(name = 'pid',
-                                        description = "Process ID to include (all other processes are excluded)",
-                                        optional = True),
+            requirements.ListRequirement(name = 'pid',
+                                         element_type = int,
+                                         description = "Process IDs to include (all other processes are excluded)",
+                                         optional = True),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
 
@@ -333,7 +334,7 @@ class Handles(interfaces.plugins.PluginInterface):
 
     def run(self):
 
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Offset", format_hints.Hex),
                                    ("HandleValue", format_hints.Hex), ("Type", str),

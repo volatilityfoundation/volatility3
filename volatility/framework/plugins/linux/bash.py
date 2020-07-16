@@ -29,6 +29,10 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.ListRequirement(name = 'pid',
+                                         element_type = int,
+                                         description = "Process IDs to include (all other processes are excluded)",
+                                         optional = True)
         ]
 
     def _generator(self, tasks):
@@ -80,7 +84,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield (0, (task.pid, task_name, hist.get_time_object(), hist.get_command()))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("CommandTime", datetime.datetime),
                                    ("Command", str)],
@@ -91,7 +95,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                                filter_func = filter_func)))
 
     def generate_timeline(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for row in self._generator(
                 pslist.PsList.list_tasks(self.context,

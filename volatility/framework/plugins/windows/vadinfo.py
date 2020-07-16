@@ -52,9 +52,10 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                                           "(all other address ranges are excluded). This must be " \
                                                           "a base address, not an address within the desired range.",
                                             optional = True),
-                requirements.IntRequirement(
-                    name = 'pid', description = "Process ID to include (all other processes are excluded)",
-                    optional = True),
+                requirements.ListRequirement(name = 'pid',
+                                             description = 'Filter on specific process IDs',
+                                             element_type = int,
+                                             optional = True),
                 requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
                 ]
 
@@ -121,7 +122,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
     def run(self):
 
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Offset", format_hints.Hex),
                                    ("Start VPN", format_hints.Hex), ("End VPN", format_hints.Hex), ("Tag", str),

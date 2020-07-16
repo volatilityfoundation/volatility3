@@ -6,6 +6,7 @@ import logging
 from typing import Callable, Iterable, List, Dict
 
 from volatility.framework import renderers, interfaces, contexts, exceptions
+from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 
@@ -29,7 +30,11 @@ class PsList(interfaces.plugins.PluginInterface):
                                            description = 'Method to determine for processes',
                                            choices = cls.pslist_methods,
                                            default = cls.pslist_methods[0],
-                                           optional = True)
+                                           optional = True),
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True)
         ]
 
     @classmethod
@@ -82,7 +87,7 @@ class PsList(interfaces.plugins.PluginInterface):
         for task in list_tasks(self.context,
                                self.config['primary'],
                                self.config['darwin'],
-                               filter_func = self.create_pid_filter([self.config.get('pid', None)])):
+                               filter_func = self.create_pid_filter(self.config.get('pid', None))):
             pid = task.p_pid
             ppid = task.p_ppid
             name = utility.array_to_string(task.p_comm)

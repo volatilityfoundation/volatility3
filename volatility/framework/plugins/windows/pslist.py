@@ -30,9 +30,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                             description = 'Display physical offsets instead of virtual',
                                             default = cls.PHYSICAL_DEFAULT,
                                             optional = True),
-            requirements.IntRequirement(name = 'pid',
-                                        description = "Process ID to include (all other processes are excluded)",
-                                        optional = True)
+            requirements.ListRequirement(name = 'pid',
+                                         element_type = int,
+                                         description = "Process ID to include (all other processes are excluded)",
+                                         optional = True)
         ]
 
     @classmethod
@@ -127,7 +128,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         for proc in self.list_processes(self.context,
                                         self.config['primary'],
                                         self.config['nt_symbols'],
-                                        filter_func = self.create_pid_filter([self.config.get('pid', None)])):
+                                        filter_func = self.create_pid_filter(self.config.get('pid', None))):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset

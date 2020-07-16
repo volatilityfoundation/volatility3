@@ -26,7 +26,12 @@ class Netstat(plugins.PluginInterface):
                                                      description = 'Kernel Address Space',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0))
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True)
+
         ]
 
     @classmethod
@@ -45,7 +50,7 @@ class Netstat(plugins.PluginInterface):
                 2) The process ID of the processed that opened the socket
                 3) The address of the associated socket structure
         """
-        # This is hardcoded, since a change in method
+        # This is hardcoded, since a change in the default method would change the expected results
         list_tasks = pslist.PsList.get_list_tasks(pslist.PsList.pslist_methods[0])
         for task in list_tasks(context, layer_name, darwin_symbols, filter_func):
 
@@ -69,7 +74,7 @@ class Netstat(plugins.PluginInterface):
                 yield task_name, pid, socket
 
     def _generator(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for task_name, pid, socket in self.list_sockets(self.context,
                                                         self.config['primary'],
