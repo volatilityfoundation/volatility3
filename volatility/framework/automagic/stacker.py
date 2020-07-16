@@ -151,9 +151,6 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
         stacked_layers = [initial_layer]
-        if not stack_set or not len(stack_set):
-            stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
-                               key = lambda x: x.stack_order)
 
         for stacker in stack_set:
             if not issubclass(stacker, interfaces.automagic.StackerLayerInterface):
