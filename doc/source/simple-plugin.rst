@@ -40,9 +40,10 @@ to be able to run properly.  Any that are defined as optional need not necessari
                     requirements.PluginRequirement(name = 'pslist',
                                                    plugin = pslist.PsList,
                                                    version = (1, 0, 0)),
-                    requirements.IntRequirement(name = 'pid',
-                                                description = "Process ID to include (all other processes are excluded)",
-                                                optional = True)]
+                    requirements.ListRequirement(name = 'pid',
+                                                 element_type = int,
+                                                 description = "Process IDs to include (all other processes are excluded)",
+                                                 optional = True)]
 
 
 This is a classmethod, because it is called before the specific plugin object has been instantiated (in order to know how
@@ -103,11 +104,12 @@ running the plugin.
 
 ::
 
-    requirements.IntRequirement(name = 'pid',
-                                description = "Process ID to include (all other processes are excluded)",
-                                optional = True)]
+    requirements.ListRequirement(name = 'pid',
+                                 description = 'Filter on specific process IDs',
+                                 element_type = int,
+                                 optional = True)
 
-The final requirement is a Simple Requirement, populated by an integer.  The description will be presented to the user to
+The final requirement is a List Requirement, populated by integers.  The description will be presented to the user to
 describe what the value represents.  The optional flag indicates that the plugin can function without the ``pid`` value
 being defined within the configuration tree at all.
 
@@ -125,7 +127,7 @@ that will be output as part of the :py:class:`~volatility.framework.interfaces.r
 
         def run(self):
 
-            filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+            filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
             return renderers.TreeGrid([("PID", int),
                                        ("Process", str),

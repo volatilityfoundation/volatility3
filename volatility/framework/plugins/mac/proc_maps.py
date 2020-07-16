@@ -19,7 +19,11 @@ class Maps(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0))
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True)
         ]
 
     def _generator(self, tasks):
@@ -36,7 +40,7 @@ class Maps(interfaces.plugins.PluginInterface):
                            format_hints.Hex(vma.links.end), vma.get_perms(), path))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
         list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),

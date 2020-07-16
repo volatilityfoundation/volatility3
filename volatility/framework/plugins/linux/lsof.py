@@ -26,7 +26,11 @@ class Lsof(plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True)
         ]
 
     def _generator(self, tasks):
@@ -45,7 +49,7 @@ class Lsof(plugins.PluginInterface):
                 yield (0, (pid, name, fd_num, full_path))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("FD", int), ("Path", str)],
                                   self._generator(
