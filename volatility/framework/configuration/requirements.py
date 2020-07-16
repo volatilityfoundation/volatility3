@@ -97,7 +97,7 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
         if not value and self.min_elements > 0:
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - ListRequirement has non-zero min_elements")
             return {config_path: self}
-        if value == default:
+        if value is None and not self.optional:
             # We need to differentiate between no value and an empty list
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - Value was not specified")
             return {config_path: self}
