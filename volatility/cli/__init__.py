@@ -157,6 +157,10 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                             help = "Clears out all short-term cached items",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--safe",
+                            help = "Does not display data that is unreadable or unparsable",
+                            default = False,
+                            action = 'store_true')
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -305,7 +309,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         try:
             # Construct and run the plugin
             if constructed:
-                renderers[args.renderer]().render(constructed.run())
+                renderers[args.renderer](safe = args.safe).render(constructed.run())
         except (exceptions.VolatilityException) as excp:
             self.process_exceptions(excp)
 
