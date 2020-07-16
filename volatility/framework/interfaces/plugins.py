@@ -13,7 +13,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from typing import List, Optional, Tuple
 
-from volatility import classproperty, framework
+from volatility import framework
 from volatility.framework import exceptions, constants, interfaces
 
 vollog = logging.getLogger(__name__)
@@ -67,7 +67,9 @@ class FileConsumerInterface(object):
 #  The plugin runs and produces a TreeGrid output
 
 
-class PluginInterface(interfaces.configuration.ConfigurableInterface, metaclass = ABCMeta):
+class PluginInterface(interfaces.configuration.ConfigurableInterface,
+                      interfaces.configuration.VersionableInterface,
+                      metaclass = ABCMeta):
     """Class that defines the basic interface that all Plugins must maintain.
 
     The constructor must only take a `context` and `config_path`, so
@@ -77,7 +79,6 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface, metaclass 
     """
 
     # Be careful with inheritance around this
-    _version = (0, 0, 0)  # type: Tuple[int, int, int]
     _required_framework_verison = (1, 0, 0)  # type: Tuple[int, int, int]
     """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
 
@@ -114,19 +115,6 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface, metaclass 
             self._file_consumer.consume_file(filedata)
         else:
             vollog.debug("No file consumer specified to consume: {}".format(filedata.preferred_filename))
-
-    @classproperty
-    def version(cls) -> Tuple[int, int, int]:
-        """The version of the current interface (classmethods available on the
-        plugin).
-
-        It is strongly recommended that Semantic Versioning be used (and the default version verification is defined that way):
-
-            MAJOR version when you make incompatible API changes.
-            MINOR version when you add functionality in a backwards compatible manner.
-            PATCH version when you make backwards compatible bug fixes.
-        """
-        return cls._version
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

@@ -21,6 +21,7 @@ except ImportError:
 
 
 class YaraScanner(interfaces.layers.ScannerInterface):
+    _version = (2, 0, 0)
 
     # yara.Rules isn't exposed, so we can't type this properly
     def __init__(self, rules) -> None:
@@ -36,7 +37,7 @@ class YaraScanner(interfaces.layers.ScannerInterface):
 class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
 
-    _version = (2, 0, 0)
+    _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -80,24 +81,12 @@ class YaraScan(plugins.PluginInterface):
             vollog.error("No yara rules, nor yara rules file were specified")
         return rules
 
-    @classmethod
-    def scan(cls,
-             context: interfaces.context.ContextInterface,
-             layer_name: str,
-             rules,
-             sections: Iterable[Tuple[int, int]] = None):
-        if rules is None:
-            return
-        layer = context.layers[layer_name]
-        yield from layer.scan(context = context, scanner = YaraScanner(rules = rules), sections = sections)
-
     def _generator(self):
-
         rules = self.process_yara_options(dict(self.config))
 
-        for offset, rule_name, name, value in self.scan(context = self.context, layer_name = self.config['primary'],
-                                             rules = rules):
-            yield (0, (format_hints.Hex(offset), rule_name, name, value))
+        layer = self.context.layers[self.config['primary']]
+        for offset, rule_name, name, value in layer.scan(context = self.context, scanner = YaraScanner(rules = rules)):
+            yield 0, (format_hints.Hex(offset), rule_name, name, value)
 
     def run(self):
         return renderers.TreeGrid([('Offset', format_hints.Hex), ('Rule', str), ('Component', str), ('Value', bytes)],
