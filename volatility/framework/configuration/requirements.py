@@ -398,6 +398,7 @@ class PluginRequirement(interfaces.configuration.RequirementInterface):
     def unsatisfied(self, context: interfaces.context.ContextInterface,
                     config_path: str) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
+        config_path = interfaces.configuration.path_join(config_path, self.name)
         if len(self._version) > 0 and self._plugin.version[0] != self._version[0]:
             return {config_path: self}
         if len(self._version) > 1 and self._plugin.version[1] > self._version[1]:
