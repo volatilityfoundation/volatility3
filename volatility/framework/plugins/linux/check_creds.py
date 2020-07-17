@@ -1,13 +1,6 @@
-# Volatility
-
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
-"""
-@author:       Matt Tressler
-@contact:      matthewtressler10@gmail.com
-"""
 
 import logging
 from typing import List
@@ -44,7 +37,7 @@ class check_creds(interfaces.plugins.PluginInterface):
         type_task = self.context.symbol_space.get_type(self.config['vmlinux'] + constants.BANG +"task_struct")
 
         if not type_task.has_member("cred"):
-            vollog.error("this command is not supported by this profile")
+            raise TypeError("This plugin requires the task_struct structure to have a cred member. This member is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.")
 
         creds = {}
 
