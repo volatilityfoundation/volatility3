@@ -32,6 +32,9 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_KMUTANT', extensions.KMUTANT)
         self.set_type_class('_DRIVER_OBJECT', extensions.DRIVER_OBJECT)
         self.set_type_class('_OBJECT_SYMBOLIC_LINK', extensions.OBJECT_SYMBOLIC_LINK)
+        self.set_type_class('_CONTROL_AREA', extensions.CONTROL_AREA)
+        self.set_type_class('_SHARED_CACHE_MAP', extensions.SHARED_CACHE_MAP)
+        self.set_type_class('_VACB', extensions.VACB)
         self.set_type_class('_POOL_TRACKER_BIG_PAGES', pool.POOL_TRACKER_BIG_PAGES)
 
         # This doesn't exist in very specific versions of windows

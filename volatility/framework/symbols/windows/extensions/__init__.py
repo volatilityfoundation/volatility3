@@ -7,6 +7,7 @@ import datetime
 import functools
 import logging
 import struct
+import math
 from typing import Iterable, Iterator, Optional, Union, Dict, Tuple, List
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
@@ -667,3 +668,320 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
+
+class CONTROL_AREA(objects.StructType):
+    """A class for _CONTROL_AREA structures"""
+
+    PAGE_SIZE = 0x1000
+    PAGE_MASK = PAGE_SIZE - 1
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid."""
+        try:
+            # The Segment.ControlArea should point back to this object
+            if self.Segment.ControlArea != self.vol.offset:
+                return False
+
+            # The SizeOfSegment should match the total PTEs multiplied by a default page size
+            if self.Segment.SizeOfSegment != (self.Segment.TotalNumberOfPtes * self.PAGE_SIZE):
+                return False
+
+            # The first SubsectionBase should not be page aligned
+            #subsection = self.get_subsection()
+            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            #    return False
+        except exceptions.InvalidAddressException:
+            return False
+
+        # True if everything else passes
+        return True
+
+    def get_subsection(self) -> interfaces.objects.ObjectInterface:
+        """Get the Subsection object, which is found immediately after the _CONTROL_AREA."""
+
+        return self._context.object(self.get_symbol_table_name() + constants.BANG + "_SUBSECTION",
+                             layer_name=self.vol.layer_name,
+                             offset=self.vol.offset + self.vol.size,
+                             native_layer_name=self.vol.native_layer_name)
+
+    def get_pte(self, offset: int) -> interfaces.objects.ObjectInterface:
+        """Get a PTE object at the requested offset"""
+
+        return self._context.object(self.get_symbol_table_name() + constants.BANG + "_MMPTE",
+                             layer_name=self.vol.layer_name,
+                             offset=offset,
+                             native_layer_name=self.vol.native_layer_name)
+
+    def get_available_pages(self) -> Iterable[Tuple[int, int, int]]:
+        """Get the available pages that correspond to a cached file.
+
+        The tuples generated are (physical_offset, file_offset, page_size).
+        """
+        symbol_table_name = self.get_symbol_table_name()
+        mmpte_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_MMPTE")
+        mmpte_size = mmpte_type.size
+        subsection = self.get_subsection()
+        is_64bit = symbols.symbol_table_is_64bit(self._context, symbol_table_name)
+        is_pae = self._context.layers[self.vol.layer_name].metadata.get("pae", False)
+
+        # This is a null-terminated single-linked list.
+        while subsection != 0:
+            try:
+                if subsection.ControlArea != self.vol.offset:
+                    break
+            except exceptions.InvalidAddressException:
+                break
+
+            # The offset into the file is stored implicitly based on the PTE location within the Subsection.
+            starting_sector = subsection.StartingSector
+            subsection_offset = starting_sector * 0x200
+
+            # Similar to the check in is_valid(), make sure the SubsectionBase is not page aligned.
+            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            #    break
+
+            ptecount = 0
+            while ptecount < subsection.PtesInSubsection:
+                pte_offset = subsection.SubsectionBase + (mmpte_size * ptecount)
+                file_offset = subsection_offset + ptecount * 0x1000
+
+                try:
+                    mmpte = self.get_pte(pte_offset)
+                except exceptions.InvalidAddressException:
+                    ptecount += 1
+                    continue
+
+                # First we check if the entry is valid. If so, then we get the physical offset.
+                # The valid entries are actually handled by the hardware.
+                if mmpte.u.Hard.Valid == 1:
+                    physoffset = mmpte.u.Hard.PageFrameNumber << 12
+                    yield physoffset, file_offset, self.PAGE_SIZE
+
+                elif mmpte.u.Soft.Prototype == 1:
+                    if not is_64bit and not is_pae:
+                        subsection_offset = ((mmpte.u.Subsect.SubsectionAddressHigh << 7) | (
+                                mmpte.u.Subsect.SubsectionAddressLow << 3))
+
+                # If the entry is not a valid physical address then see if it is in transition.
+                elif mmpte.u.Trans.Transition == 1:
+                    physoffset = mmpte.u.Trans.PageFrameNumber << 12
+                    yield physoffset, file_offset, self.PAGE_SIZE
+
+                # Go to the next PTE entry
+                ptecount += 1
+
+            # Go to the next Subsection in the single-linked list
+            subsection = subsection.NextSubsection
+
+class VACB(objects.StructType):
+    """A class for _VACB structures"""
+
+    FILEOFFSET_MASK = 0xFFFFFFFFFFFF0000
+
+    def is_valid(self, shared_cache_map: interfaces.objects.ObjectInterface) -> bool:
+        """Determine if the object is valid."""
+        try:
+            layer = self._context.layers[self.vol.layer_name]
+
+            # Check if the Overlay member of _VACB is resident. The Overlay member stores information
+            # about the FileOffset and the ActiveCount. This is just another proactive sanity check.
+            #if not self.Overlay:
+            #    return False
+
+            if not layer.is_valid(self.SharedCacheMap):
+                return False
+
+            # Make sure that the SharedCacheMap member of the VACB points back to the parent object.
+            return self.SharedCacheMap == shared_cache_map.vol.offset
+        except exceptions.InvalidAddressException:
+            return False
+
+    def get_file_offset(self) -> int:
+        # The FileOffset member of VACB is used to denote the offset within the file where the
+        # view begins. Since all views are 256 KB in size, the bottom 16 bits are used to
+        # store the number of references to the view.
+        return self.Overlay.FileOffset.QuadPart & self.FILEOFFSET_MASK
+
+class SHARED_CACHE_MAP(objects.StructType):
+    """A class for _SHARED_CACHE_MAP structures"""
+
+    VACB_BLOCK = 0x40000
+    VACB_OFFSET_SHIFT = 18
+    VACB_LEVEL_SHIFT = 7
+    VACB_SIZE_OF_FIRST_LEVEL = 1 << (VACB_OFFSET_SHIFT + VACB_LEVEL_SHIFT)
+    VACB_ARRAY = 0x80
+
+    def is_valid(self) -> bool:
+        """Determine if the object is valid."""
+
+        if self.FileSize.QuadPart <= 0 or self.ValidDataLength.QuadPart <= 0:
+            return False
+
+        if self.SectionSize.QuadPart < 0 or ((self.FileSize.QuadPart < self.ValidDataLength.QuadPart) and (
+                   self.ValidDataLength.QuadPart != 0x7fffffffffffffff)):
+            return False
+
+        return True
+
+    def process_index_array(self, array_pointer: interfaces.objects.ObjectInterface, level: int, limit: int,
+                            vacb_list: Optional[List] = None) -> List:
+        """Recursively process the sparse multilevel VACB index array.
+
+        :param array_pointer: The address of a possible index array
+        :param level: The current level
+        :param limit: The level where we abandon all hope. Ideally this is 7
+        :param vacb_list: An array of collected VACBs
+        :return: Collected VACBs
+        """
+        if vacb_list is None:
+            vacb_list = []
+
+        if level > limit:
+            return []
+
+        symbol_table_name = self.get_symbol_table_name()
+        pointer_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer")
+
+        # Create an array of 128 entries for the VACB index array
+        vacb_array = self._context.object(object_type=symbol_table_name + constants.BANG + "array",
+                                          layer_name=self.vol.layer_name,
+                                          offset=array_pointer,
+                                          count=self.VACB_ARRAY,
+                                          subtype=pointer_type)
+
+        # Iterate through the entries
+        for counter in range(0, self.VACB_ARRAY):
+            # Check if the VACB entry is in use
+            if not vacb_array[counter]:
+                continue
+
+            vacb_obj = vacb_array[counter].dereference().cast(symbol_table_name + constants.BANG + "_VACB")
+            if vacb_obj.is_valid(shared_cache_map=self):
+                self.save_vacb(vacb_obj, vacb_list)
+            else:
+                # Process the next level of the multi-level array
+                vacb_list = self.process_index_array(vacb_array[counter], level + 1, limit, vacb_list)
+        return vacb_list
+
+    def save_vacb(self, vacb_obj: interfaces.objects.ObjectInterface, vacb_list: List):
+        data = (int(vacb_obj.BaseAddress), int(vacb_obj.get_file_offset()), self.VACB_BLOCK)
+        vacb_list.append(data)
+
+    def get_available_pages(self) -> List:
+        """Get the available pages that correspond to a cached file.
+
+        The lists generated are (virtual_offset, file_offset, page_size).
+        """
+        vacb_list = []
+        section_size = self.SectionSize.QuadPart
+
+        # Determine the number of VACBs within the cache (nonpaged). each VACB
+        # represents a 256-KB view in the system cache.
+        full_blocks = section_size // self.VACB_BLOCK
+        left_over = section_size % self.VACB_BLOCK
+
+        # As an optimization, the shared cache map object contains a VACB index array of four entries.
+        # The VACB index arrays are arrays of pointers to VACBs, that track which views of a given file
+        # are mapped in the cache. For example, the first entry in the VACB index array refers to the first
+        # 256 KB of the file. The InitialVacbs can describe a file up to 1 MB (4xVACB).
+        iterval = 0
+        while (iterval < full_blocks) and (full_blocks <= 4):
+            vacb_obj = self.InitialVacbs[iterval]
+            if vacb_obj.is_valid(shared_cache_map=self):
+                self.save_vacb(vacb_obj, vacb_list)
+            iterval += 1
+
+        # We also have to account for the spill over data that is not found in the full blocks.
+        # The first case to consider is when the spill over is still in InitialVacbs.
+        if (left_over > 0) and (full_blocks < 4):
+            vacb_obj = self.InitialVacbs[iterval]
+            if vacb_obj.is_valid(shared_cache_map=self):
+                self.save_vacb(vacb_obj, vacb_list)
+
+        # If the file is larger than 1 MB, a seperate VACB index array needs to be allocated.
+        # This is based on how many 256 KB blocks would be required for the size of the file.
+        # This newly allocated VACB index array is found through the Vacbs member of SHARED_CACHE_MAP.
+        vacb_obj = self.Vacbs
+
+        # Note: avoid calling is_valid() here, since self.Vacbs is a pointer to a pointer
+        if not vacb_obj:
+            return vacb_list
+
+        # There are a number of instances where the initial value in InitialVacb will also be the fist
+        # entry in Vacbs. Thus we ignore, since it was already processed. It is possible to just
+        # process again as the file offset is specified for each VACB.
+        if self.InitialVacbs[0].vol.offset == vacb_obj:
+            return vacb_list
+
+        # If the file is less than 32 MB than it can be found in a single level VACB index array.
+        symbol_table_name = self.get_symbol_table_name()
+        pointer_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer")
+        size_of_pointer = pointer_type.size
+
+        if not section_size > self.VACB_SIZE_OF_FIRST_LEVEL:
+            array_head = vacb_obj
+            for counter in range(0, full_blocks):
+                vacb_entry = self._context.object(symbol_table_name + constants.BANG + "pointer",
+                                                  layer_name=self.vol.layer_name,
+                                                  offset=array_head + (counter * size_of_pointer))
+
+                # If we find a zero entry, then we proceed to the next one. If the entry is zero,
+                # then the view is not mapped and we skip. We do not pad because we use the
+                # FileOffset to seek to the correct offset in the file.
+                if not vacb_entry:
+                    continue
+
+                vacb = vacb_entry.dereference().cast(symbol_table_name + constants.BANG + "_VACB")
+                if vacb.is_valid(shared_cache_map=self):
+                    self.save_vacb(vacb, vacb_list)
+
+            if left_over > 0:
+                vacb_entry = self._context.object(symbol_table_name + constants.BANG + "pointer",
+                                                  layer_name=self.vol.layer_name,
+                                                  offset=array_head + ((counter + 1) * size_of_pointer))
+
+                if not vacb_entry:
+                    return vacb_list
+
+                vacb = vacb_entry.dereference().cast(symbol_table_name + constants.BANG + "_VACB")
+                if vacb.is_valid(shared_cache_map=self):
+                    self.save_vacb(vacb, vacb_list)
+
+            # The file is less than 32 MB, so we can stop processing.
+            return vacb_list
+
+        # If we get to this point, then we know that the SectionSize is greater than
+        # VACB_SIZE_OF_FIRST_LEVEL (32 MB). Then we have a "sparse" multilevel index
+        # array where each VACB index array is made up of 128 entries. We no
+        # longer assume the data is sequential. (Log2 (32 MB) - 18)/7
+        level_depth = math.ceil(math.log(section_size, 2))
+        level_depth = (level_depth - self.VACB_OFFSET_SHIFT) / self.VACB_LEVEL_SHIFT
+        level_depth = math.ceil(level_depth)
+        limit_depth = level_depth
+
+        if section_size > self.VACB_SIZE_OF_FIRST_LEVEL:
+
+            # Create an array of 128 entries for the VACB index array.
+            vacb_array = self._context.object(object_type=symbol_table_name + constants.BANG + "array",
+                                              layer_name=self.vol.layer_name,
+                                              offset=vacb_obj,
+                                              count=self.VACB_ARRAY,
+                                              subtype=pointer_type)
+
+            # Walk the array and if any entry points to the shared cache map object then we extract it.
+            # Otherwise, if it is non-zero, then traverse to the next level.
+            for counter in range(0, self.VACB_ARRAY):
+                if not vacb_array[counter]:
+                    continue
+
+                vacb = vacb_array[counter].dereference().cast(symbol_table_name + constants.BANG + "_VACB")
+                if vacb.SharedCacheMap == self.vol.offset:
+                    if vacb.is_valid(shared_cache_map=self):
+                        self.save_vacb(vacb, vacb_list)
+                else:
+                    # Process the next level of the multi-level array. We set the limit_depth to be
+                    # the depth of the tree as determined from the size and we initialize the
+                    # current level to 2.
+                    vacb_list = self.process_index_array(vacb_array[counter], 2, limit_depth, vacb_list)
+
+        return vacb_list
