@@ -6,8 +6,9 @@ import collections.abc
 import datetime
 import functools
 import logging
+import struct
 import math
-from typing import Iterable, Iterator, Optional, Union, Tuple, List
+from typing import Iterable, Iterator, Optional, Union, Dict, Tuple, List
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
@@ -30,6 +31,7 @@ class KSYSTEM_TIME(objects.StructType):
 
 class MMVAD_SHORT(objects.StructType):
     """A class that represents process virtual memory ranges.
+
     Each instance is a node in a binary tree structure and is pointed to
     by VadRoot.
     """
@@ -135,7 +137,6 @@ class MMVAD_SHORT(objects.StructType):
                     return self.Core.VadNode.RightChild
                 if self.Core.VadNode.has_member("Right"):
                     return self.Core.VadNode.Right
-
         raise AttributeError("Unable to find the right child member")
 
     def get_left_child(self):
@@ -146,7 +147,6 @@ class MMVAD_SHORT(objects.StructType):
 
         elif self.has_member("Left"):
             return self.Left
-
         # this is for windows 8 and 10
         elif self.has_member("VadNode"):
             if self.VadNode.has_member("LeftChild"):
@@ -323,6 +323,7 @@ class MMVAD(MMVAD_SHORT):
 class EX_FAST_REF(objects.StructType):
     """This is a standard Windows structure that stores a pointer to an object
     but also leverages the least significant bits to encode additional details.
+
     When dereferencing the pointer, we need to strip off the extra bits.
     """
 
@@ -404,7 +405,6 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
             pass
 
         return name
-
     def access_string(self):
         ## Make a nicely formatted ACL string
         return (('R' if self.ReadAccess else '-') + ('W' if self.WriteAccess else '-') +
@@ -431,7 +431,6 @@ class ETHREAD(objects.StructType):
     def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
         return self.ThreadsProcess.dereference(kernel_layer)
-
     def get_cross_thread_flags(self) -> str:
         dictCrossThreadFlags = {
             'PS_CROSS_THREAD_FLAGS_TERMINATED': 0,
@@ -666,7 +665,6 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         else:
             # windows xp and 2003
             return self.VadRoot.dereference().cast("_MMVAD")
-
     def environment_variables(self):
         """Generator for environment variables.
 
@@ -755,7 +753,6 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
-
 
 class TOKEN(objects.StructType):
     """A class for process etoken object."""
@@ -875,6 +872,7 @@ class KTHREAD(objects.StructType):
             37: 'MaximumWaitReason'
         }
         return dictWaitReason.get(self.WaitReason, renderers.NotApplicableValue())
+
 class CONTROL_AREA(objects.StructType):
     """A class for _CONTROL_AREA structures"""
 
@@ -984,6 +982,24 @@ class VACB(objects.StructType):
 
     FILEOFFSET_MASK = 0xFFFFFFFFFFFF0000
 
+    def is_valid(self, shared_cache_map: interfaces.objects.ObjectInterface) -> bool:
+        """Determine if the object is valid."""
+        try:
+            layer = self._context.layers[self.vol.layer_name]
+
+            # Check if the Overlay member of _VACB is resident. The Overlay member stores information
+            # about the FileOffset and the ActiveCount. This is just another proactive sanity check.
+            #if not self.Overlay:
+            #    return False
+
+            if not layer.is_valid(self.SharedCacheMap):
+                return False
+
+            # Make sure that the SharedCacheMap member of the VACB points back to the parent object.
+            return self.SharedCacheMap == shared_cache_map.vol.offset
+        except exceptions.InvalidAddressException:
+            return False
+
     def get_file_offset(self) -> int:
         # The FileOffset member of VACB is used to denote the offset within the file where the
         # view begins. Since all views are 256 KB in size, the bottom 16 bits are used to
@@ -1075,19 +1091,15 @@ class SHARED_CACHE_MAP(objects.StructType):
         iterval = 0
         while (iterval < full_blocks) and (full_blocks <= 4):
             vacb_obj = self.InitialVacbs[iterval]
-            try:
-                # Make sure that the SharedCacheMap member of the VACB points back to the parent object.
-                if vacb_obj.SharedCacheMap == self.vol.offset:
-                    self.save_vacb(vacb_obj, vacb_list)
-            except exceptions.InvalidAddressException:
-                pass
+            if vacb_obj.is_valid(shared_cache_map=self):
+                self.save_vacb(vacb_obj, vacb_list)
             iterval += 1
 
         # We also have to account for the spill over data that is not found in the full blocks.
         # The first case to consider is when the spill over is still in InitialVacbs.
         if (left_over > 0) and (full_blocks < 4):
             vacb_obj = self.InitialVacbs[iterval]
-            if vacb_obj.SharedCacheMap == self.vol.offset:
+            if vacb_obj.is_valid(shared_cache_map=self):
                 self.save_vacb(vacb_obj, vacb_list)
 
         # If the file is larger than 1 MB, a seperate VACB index array needs to be allocated.
@@ -1124,7 +1136,7 @@ class SHARED_CACHE_MAP(objects.StructType):
                     continue
 
                 vacb = vacb_entry.dereference().cast(symbol_table_name + constants.BANG + "_VACB")
-                if vacb.SharedCacheMap == self.vol.offset:
+                if vacb.is_valid(shared_cache_map=self):
                     self.save_vacb(vacb, vacb_list)
 
             if left_over > 0:
@@ -1136,7 +1148,7 @@ class SHARED_CACHE_MAP(objects.StructType):
                     return vacb_list
 
                 vacb = vacb_entry.dereference().cast(symbol_table_name + constants.BANG + "_VACB")
-                if vacb.SharedCacheMap == self.vol.offset:
+                if vacb.is_valid(shared_cache_map=self):
                     self.save_vacb(vacb, vacb_list)
 
             # The file is less than 32 MB, so we can stop processing.
@@ -1168,7 +1180,8 @@ class SHARED_CACHE_MAP(objects.StructType):
 
                 vacb = vacb_array[counter].dereference().cast(symbol_table_name + constants.BANG + "_VACB")
                 if vacb.SharedCacheMap == self.vol.offset:
-                    self.save_vacb(vacb, vacb_list)
+                    if vacb.is_valid(shared_cache_map=self):
+                        self.save_vacb(vacb, vacb_list)
                 else:
                     # Process the next level of the multi-level array. We set the limit_depth to be
                     # the depth of the tree as determined from the size and we initialize the
