@@ -780,6 +780,16 @@ class VACB(objects.StructType):
 
     def is_valid(self, shared_cache_map: interfaces.objects.ObjectInterface) -> bool:
         """Determine if the object is valid."""
+
+        #print("repr(self): {}".format(repr(self)))
+        #print("self.vol.offset: {0:#x}".format(self.vol.offset))
+        #print("shared_cache_map (parameter): {0:#x}".format(shared_cache_map.vol.offset))
+        #next_parent = self.vol.parent
+        #while next_parent is not None:
+        #    print("repr(next_parent): {}".format(repr(next_parent)))
+        #    print("next_parent.vol.offset: {0:#x}".format(next_parent.vol.offset))
+        #    next_parent = next_parent.vol.parent
+
         try:
             layer = self._context.layers[self.vol.layer_name]
 
