@@ -444,12 +444,12 @@ class ifnet(objects.StructType):
         if self.has_member("if_lladdr"):
             try:
                 val = self.if_lladdr.ifa_addr.dereference().cast("sockaddr_dl")
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 val = None
         else:
             try:
                 val = self.if_addrhead.tqh_first.ifa_addr.dereference().cast("sockaddr_dl")
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 val = None
 
         return val

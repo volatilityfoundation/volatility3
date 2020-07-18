@@ -164,7 +164,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
             try:
                 proc = task.bsd_info.dereference().cast("proc")
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 continue
 
             if kernel_layer.is_valid(proc.vol.offset, proc.vol.size) and not filter_func(proc):
@@ -205,7 +205,7 @@ class PsList(interfaces.plugins.PluginInterface):
             # it is expected that many won't be initialized
             try:
                 pgrp = proc_list.lh_first
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 continue
 
             seen_pgrps = set()
@@ -217,7 +217,7 @@ class PsList(interfaces.plugins.PluginInterface):
                 # nothing can be done if this list pointer is invalid, so move on
                 try:
                     p = pgrp.pg_members.lh_first
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     break
 
                 seen_pg = set()
@@ -229,11 +229,11 @@ class PsList(interfaces.plugins.PluginInterface):
 
                     try:
                         p = p.p_pglist.le_next
-                    except exceptions.PagedInvalidAddressException:
+                    except exceptions.InvalidAddressException:
                         break
                 try:
                     pgrp = pgrp.pg_hash.le_next
-                except exceptions.PagedInvalidAddressException:
+                except exceptions.InvalidAddressException:
                     break
 
     def run(self):
