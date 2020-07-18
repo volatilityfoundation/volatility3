@@ -17,7 +17,7 @@ class PsList(interfaces.plugins.PluginInterface):
     """Lists the processes present in a particular mac memory image."""
 
     _version = (2, 0, 0)
-    pslist_methods = ['tasks', 'allproc', 'process_group']
+    pslist_methods = ['tasks', 'allproc', 'process_group', 'sessions']
 
     @classmethod
     def get_requirements(cls):
@@ -60,6 +60,8 @@ class PsList(interfaces.plugins.PluginInterface):
             list_tasks = cls.list_tasks_tasks
         elif method == 'process_group':
             list_tasks = cls.list_tasks_process_group
+        elif method == 'sessions':
+            list_tasks = cls.list_tasks_sessions
         else:
             raise ValueError("Impossible method choice chosen")
         vollog.debug("Using method {}".format(method))
@@ -174,6 +176,55 @@ class PsList(interfaces.plugins.PluginInterface):
 
             if kernel_layer.is_valid(proc.vol.offset, proc.vol.size) and not filter_func(proc):
                 yield proc
+
+    @classmethod
+    def list_tasks_sessions(cls,
+                            context: interfaces.context.ContextInterface,
+                            layer_name: str,
+                            darwin_symbols: str,
+                            filter_func: Callable[[int], bool] = lambda _: False) -> \
+            Iterable[interfaces.objects.ObjectInterface]:
+        """Lists all the tasks in the primary layer using process groups
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            darwin_symbols: The name of the table containing the kernel symbols
+            filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
+
+        Returns:
+            The list of task objects from the `layer_name` layer's `tasks` list after filtering
+        """
+        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+
+        table_size = kernel.object_from_symbol(symbol_name = "sesshash")
+
+        sesshashtbl = kernel.object_from_symbol(symbol_name = "sesshashtbl")
+
+        proc_array = kernel.object(object_type = "array",
+                                   offset = sesshashtbl,
+                                   count = table_size + 1,
+                                   subtype = kernel.get_type("sesshashhead"))
+
+        for proc_list in proc_array:
+            # test the validity of the current element
+            # it is expected that many won't be initialized
+            try:
+                p = proc_list.lh_first
+            except exceptions.PagedInvalidAddressException:
+                continue
+
+            seen = set()
+            while p and p.vol.offset not in seen:
+                seen.add(p.vol.offset)
+
+                if p.is_readable() and p.s_leader.is_readable() and not filter_func(p.s_leader):
+                    yield p.s_leader
+
+                try:
+                    p = p.s_hash.le_next
+                except exceptions.PagedInvalidAddressException:
+                    break
 
     @classmethod
     def list_tasks_process_group(cls,
