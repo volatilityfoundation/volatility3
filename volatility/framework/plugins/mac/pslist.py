@@ -184,7 +184,7 @@ class PsList(interfaces.plugins.PluginInterface):
                             darwin_symbols: str,
                             filter_func: Callable[[int], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
-        """Lists all the tasks in the primary layer using process groups
+        """Lists all the tasks in the primary layer using sessions
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
