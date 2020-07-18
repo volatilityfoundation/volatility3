@@ -109,8 +109,6 @@ class PsList(interfaces.plugins.PluginInterface):
 
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
-        kernel_layer = context.layers[layer_name]
-
         proc = kernel.object_from_symbol(symbol_name = "allproc").lh_first
 
         seen = {}  # type: Dict[int, int]
@@ -121,7 +119,7 @@ class PsList(interfaces.plugins.PluginInterface):
             else:
                 seen[proc.vol.offset] = 1
 
-            if not filter_func(proc) and kernel_layer.is_valid(proc.vol.offset, proc.vol.size):
+            if not filter_func(proc):
                 yield proc
 
             try:
@@ -150,8 +148,6 @@ class PsList(interfaces.plugins.PluginInterface):
 
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
-        kernel_layer = context.layers[layer_name]
-
         queue_entry = kernel.object_from_symbol(symbol_name = "tasks")
 
         seen = {}  # type: Dict[int, int]
@@ -167,7 +163,7 @@ class PsList(interfaces.plugins.PluginInterface):
             except exceptions.PagedInvalidAddressException:
                 continue
 
-            if kernel_layer.is_valid(proc.vol.offset, proc.vol.size) and not filter_func(proc):
+            if not filter_func(proc):
                 yield proc
 
     @classmethod
