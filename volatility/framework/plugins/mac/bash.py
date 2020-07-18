@@ -84,7 +84,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
-        list_tasks = pslist.PsList.get_list_tasks(self.config.get('method', 'tasks'))
+        list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("CommandTime", datetime.datetime),
                                    ("Command", str)],

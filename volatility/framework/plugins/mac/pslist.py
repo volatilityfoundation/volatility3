@@ -77,7 +77,7 @@ class PsList(interfaces.plugins.PluginInterface):
         return filter_func
 
     def _generator(self):
-        list_tasks = self.get_list_tasks(self.config.get('method', self.pslist_methods[0]))
+        list_tasks = self.get_list_tasks(self.config.get('pslist_method', self.pslist_methods[0]))
 
         for task in list_tasks(self.context,
                                self.config['primary'],
