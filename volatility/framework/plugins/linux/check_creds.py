@@ -3,16 +3,13 @@
 #
 
 import logging
-from typing import List
 
-from volatility.framework import interfaces, renderers, exceptions, constants, contexts, objects
-from volatility.framework.automagic import linux
+from volatility.framework import interfaces, renderers, constants, contexts
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import plugins
-from volatility.framework.layers import intel
 from volatility.plugins.linux import pslist
 
 vollog = logging.getLogger(__name__)
+
 
 class check_creds(interfaces.plugins.PluginInterface):
     """Checks if any processes are sharing credential structures"""
@@ -20,29 +17,28 @@ class check_creds(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name='primary',
-                                                     description='Memory layer for the kernel',
-                                                     architectures=["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(
-                name="vmlinux", description="Linux kernel symbols"),
-
-            requirements.PluginRequirement(
-                name='pslist', plugin=pslist.PsList, version=(1, 0, 0))
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
 
     def _generator(self):
-        vmlinux = contexts.Module(
-            self.context, self.config['vmlinux'], self.config['primary'], 0)
+        vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
 
-        type_task = self.context.symbol_space.get_type(self.config['vmlinux'] + constants.BANG +"task_struct")
+        type_task = self.context.symbol_space.get_type(self.config['vmlinux'] + constants.BANG + "task_struct")
 
         if not type_task.has_member("cred"):
-            raise TypeError("This plugin requires the task_struct structure to have a cred member. This member is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.")
+            raise TypeError(
+                "This plugin requires the task_struct structure to have a cred member. "
+                "This member is not present in the supplied symbol table. "
+                "This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
+            )
 
         creds = {}
 
-        tasks = pslist.PsList.list_tasks(self.context,
-                                         self.config['primary'], self.config['vmlinux'])
+        tasks = pslist.PsList.list_tasks(self.context, self.config['primary'], self.config['vmlinux'])
 
         for task in tasks:
 
@@ -59,7 +55,7 @@ class check_creds(interfaces.plugins.PluginInterface):
                 for pid in pids:
                     pid_str = pid_str + "{0:d}, ".format(pid)
                 pid_str = pid_str[:-2]
-                yield(0, [str(pid_str)])
+                yield (0, [str(pid_str)])
 
     def run(self):
         return renderers.TreeGrid([("PIDs", str)], self._generator())
