@@ -38,13 +38,23 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         if not linux_banners:
             vollog.info("No Linux banners found - if this is a linux plugin, please check your symbol files location")
             return None
-
-        mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
+        
+        # search for specific banners and the Linux version of the banners
+        search_banners = [x for x in linux_banners if x is not None]
+        search_banners = search_banners + list(set([x.split(b'-')[0] for x in search_banners if x.find(b'Linux version') == 0]))
+        
+        mss = scanners.MultiStringScanner([x for x in search_banners if x is not None])
+        # capture all banners for second pass if no matches found
+        found_banners = set()
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             dtb = None
             vollog.debug("Identified banner: {}".format(repr(banner)))
-
+            found_banners.add(banner)
             symbol_files = linux_banners.get(banner, None)
+            if symbol_files is None:
+                # banners may be versions, but we want to check all specific banners first
+                continue
+
             if symbol_files:
                 isf_path = symbol_files[0]
                 table_name = context.symbol_space.free_table_name('LintelStacker')
@@ -83,7 +93,88 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             if layer and dtb:
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
                 return layer
+        
+        # failed to match a particular banner, so lets check linux kernel versions
+        # note, only banners with a specific version should be processed
+        # if we fall back to kernel versions, there is no guarantee we select the
+        # most suitable symbol pack, if there are multiple symbol packs for a 
+        # set of kernels.  This can be improved in the match_kernel_version with
+        # additional logic to tease out the right distro+kernel+etc.
+        l_banners = list(linux_banners.keys())
+        for banner in found_banners:
+           match = cls.match_kernel_version(banner, l_banners)
+           if match is None:
+               continue
+           banner = match
+           symbol_files = linux_banners.get(match, None)
+
+           if symbol_files:
+               isf_path = symbol_files[0]
+               table_name = context.symbol_space.free_table_name('LintelStacker')
+               table = linux.LinuxKernelIntermedSymbols(context,
+                                                        'temporary.' + table_name,
+                                                        name = table_name,
+                                                        isf_url = isf_path)
+               context.symbol_space.append(table)
+               kaslr_shift, _ = LinuxUtilities.find_aslr(context,
+                                                         table_name,
+                                                         layer_name,
+                                                         progress_callback = progress_callback)
+
+               layer_class = intel.Intel  # type: Type
+               print('building layer for ', match)
+               if 'init_top_pgt' in table.symbols:
+                   layer_class = intel.Intel32e
+                   dtb_symbol_name = 'init_top_pgt'
+               elif 'init_level4_pgt' in table.symbols:
+                   layer_class = intel.Intel32e
+                   dtb_symbol_name = 'init_level4_pgt'
+               else:
+                   dtb_symbol_name = 'swapper_pg_dir'
+
+               dtb = LinuxUtilities.virtual_to_physical_address(
+                   table.get_symbol(dtb_symbol_name).address + kaslr_shift)
+
+               # Build the new layer
+               new_layer_name = context.layers.free_layer_name("IntelLayer")
+               config_path = join("IntelHelper", new_layer_name)
+               context.config[join(config_path, "memory_layer")] = layer_name
+               context.config[join(config_path, "page_map_offset")] = dtb
+               context.config[join(config_path, LinuxSymbolFinder.banner_config_key)] = str(banner, 'latin-1')
+
+               layer = layer_class(context, config_path = config_path, name = new_layer_name)
+
+           if layer and dtb:
+               vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
+               return layer
         return None
+
+    @classmethod
+    def extract_version(cls, vstr):
+        if vstr.find(b'Linux version') == -1:
+            return None
+        elif vstr.find(b'Linux version') == 0 and vstr.find(b'-') > 0:
+            return vstr.split(b'Linux version')[1].split(b'-')[0].strip()
+        else:
+            return vstr.split(b'Linux version')[1].strip()
+    
+    @classmethod
+    def match_kernel_version(cls, banner, known_l_banners):
+       # TODO check for architecture in the string?
+       version = cls.extract_version(banner)
+       if version is not None:
+           # try to match on a specific version
+           keys = [i for i in known_l_banners if i is not None and i.find(version) > -1 ]
+           # no version matches, return None
+           if len(keys) == 0:
+               return None
+           # check for exact matches
+           exact_version = [i for i in keys if i is not None and cls.extract_version(i) == version]
+           if len(exact_version) > 0:
+               return exact_version[0]
+           # return first version match
+           return keys[0]
+       return None
 
 
 class LinuxUtilities(object):
