@@ -1,13 +1,6 @@
-# Volatility
-
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
-"""
-@author:       Matt Tressler
-@contact:      matthewtressler10@gmail.com
-"""
 
 import logging
 from typing import List
@@ -45,11 +38,10 @@ class check_modules(plugins.PluginInterface):
         try:
             module_kset = vmlinux.object_from_symbol("module_kset")
         except exceptions.SymbolError:
-            vollog.error("this command is not supported by this profile")
-            return
+            module_kset = None
 
         if not module_kset:
-            vollog.error("this command is not supported by this profile")
+            raise TypeError("This plugin requires the module_kset structure. This structure is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.")
 
         ret = {}
 
