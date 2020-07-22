@@ -17,8 +17,8 @@ vollog = logging.getLogger(__name__)
 
 
 class tty_check(plugins.PluginInterface):
-    """Compares module list to sysfs info, if available"""
-
+     """Checks tty devices for hooks"""
+     
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
