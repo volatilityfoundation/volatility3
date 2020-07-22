@@ -9,7 +9,6 @@ from volatility.framework import interfaces, renderers, exceptions, constants, c
 from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
-from volatility.framework.layers import intel
 from volatility.framework.objects import utility
 from volatility.plugins.linux import lsmod
 from volatility.framework.renderers import format_hints
@@ -47,7 +46,11 @@ class tty_check(plugins.PluginInterface):
             tty_drivers = None
 
         if not tty_drivers:
-            raise TypeError("This plugin requires the tty_drivers structure. This structure is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.")
+            raise TypeError(
+                "This plugin requires the tty_drivers structure." 
+                "This structure is not present in the supplied symbol table."
+                "This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
+            )
 
         sym_cache = {}
 
