@@ -38,7 +38,7 @@ class tty_check(plugins.PluginInterface):
 
         modules = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['vmlinux'])
 
-        handles = linux.LinuxUtilities.generate_kernel_handler_info(self.context, self.config['primary'], vmlinux, modules)
+        handlers = linux.LinuxUtilities.generate_kernel_handler_info(self.context, self.config['primary'], vmlinux, modules)
 
         try:
             tty_drivers = vmlinux.object_from_symbol("tty_drivers")
@@ -70,7 +70,7 @@ class tty_check(plugins.PluginInterface):
 
                 recv_buf = tty_dev.ldisc.ops.receive_buf
 
-                module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(self.context, handles, recv_buf)
+                module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(self.context, handlers, recv_buf)
 
                 sym_cache[recv_buf] = symbol_name
 
