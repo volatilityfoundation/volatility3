@@ -9,6 +9,7 @@ from volatility.framework import interfaces, constants
 from volatility.framework.automagic import symbol_cache, symbol_finder
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
+from volatility.framework.objects import utility
 
 vollog = logging.getLogger(__name__)
 
@@ -135,6 +136,63 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             return addr - 0xffffffff80000000
         return addr - 0xc0000000
 
+    @classmethod
+    def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                       mods: Iterator[Any]) -> Iterator[Any]:
+        """
+        A helper function to mask the starting and end address of kernel modules
+        """
+        mask = context.layers[layer_name].address_mask
+
+        return [(utility.array_to_string(mod.name), mod.vol.offset & mask, (mod.vol.offset & mask) + mod.vol.size)
+                for mod in mods]
+
+    @classmethod
+    def generate_kernel_handler_info(
+            cls,
+            context: interfaces.context.ContextInterface,
+            layer_name: str,
+            kernel,  # ikelos - how to type this??
+            mods_list: Iterator[Any]):
+
+        try:
+            start_addr = kernel.object_from_symbol("vm_kernel_stext")
+        except exceptions.SymbolError:
+            start_addr = kernel.object_from_symbol("_text")
+
+        try:
+            end_addr = kernel.object_from_symbol("vm_kernel_etext")
+        except exceptions.SymbolError:
+            end_addr = kernel.object_from_symbol("_etext")
+
+        mask = context.layers[layer_name].address_mask
+
+        start_addr = start_addr.vol.offset & mask
+        end_addr = end_addr.vol.offset & mask
+
+        return [("__kernel__", start_addr, end_addr)] + \
+            LinuxUtilities.mask_mods_list(context, layer_name, mods_list)
+
+    @classmethod
+    def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: Iterator[Any],
+                              target_address):
+        mod_name = "UNKNOWN"
+        symbol_name = "N/A"
+
+        for name, start, end in handlers:
+            if start <= target_address <= end:
+                mod_name = name
+                if name == "__kernel__":
+                    symbols = list(
+                        context.symbol_space.get_symbols_by_location(target_address))
+
+                    if len(symbols) > 0:
+                        symbol_name = str(symbols[0].split(constants.BANG)[1]) if constants.BANG in symbols[0] else \
+                            str(symbols[0])
+
+                break
+
+        return mod_name, symbol_name
 
 class LinuxBannerCache(symbol_cache.SymbolBannerCache):
     """Caches the banners found in the Linux symbol files."""
