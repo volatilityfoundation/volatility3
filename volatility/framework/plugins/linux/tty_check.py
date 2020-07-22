@@ -52,8 +52,6 @@ class tty_check(plugins.PluginInterface):
                 "This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
             )
 
-        sym_cache = {}
-
         for tty in tty_drivers.to_list(vmlinux.name + constants.BANG + "tty_driver", "tty_drivers"):
 
             try:
@@ -72,12 +70,8 @@ class tty_check(plugins.PluginInterface):
 
                 module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(self.context, handlers, recv_buf)
 
-                sym_cache[recv_buf] = symbol_name
-
                 yield (0, (name, format_hints.Hex(recv_buf), module_name, symbol_name))
                 
-
-
     def run(self):
         return renderers.TreeGrid([("Name", str), ("Address", format_hints.Hex), ("Module", str),
                                    ("Symbol", str)], self._generator())
