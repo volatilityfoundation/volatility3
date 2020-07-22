@@ -22,6 +22,14 @@ vollog = logging.getLogger(__name__)
 
 class module(generic.GenericIntelProcess):
 
+    def get_module_base(self):
+        if self.has_member("core_layout"):
+            return self.core_layout.base
+        else:
+            return self.module_core
+
+        raise AttributeError("module -> get_module_core: Unable to determine base address of module")
+
     def get_init_size(self):
         if self.has_member("init_layout"):
             return self.init_layout.size
@@ -38,7 +46,7 @@ class module(generic.GenericIntelProcess):
         elif self.has_member("core_size"):
             return self.core_size
 
-        raise AttributeError("module -> get_core_size: Unable to determine initial size of module")
+        raise AttributeError("module -> get_core_size: Unable to determine core size of module")
 
     def get_module_core(self):
         if self.has_member("core_layout"):

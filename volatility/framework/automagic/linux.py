@@ -144,7 +144,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         """
         mask = context.layers[layer_name].address_mask
 
-        return [(utility.array_to_string(mod.name), mod.vol.offset & mask, (mod.vol.offset & mask) + mod.vol.size)
+        return [(utility.array_to_string(mod.name), mod.get_module_base() & mask, (mod.get_module_base() & mask) + mod.get_core_size())
                 for mod in mods]
 
     @classmethod
@@ -153,21 +153,14 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             context: interfaces.context.ContextInterface,
             layer_name: str,
             kernel,  # ikelos - how to type this??
-            mods_list: Iterator[Any]):
-
-        try:
-            start_addr = kernel.object_from_symbol("vm_kernel_stext")
-        except exceptions.SymbolError:
-            start_addr = kernel.object_from_symbol("_text")
-
-        try:
-            end_addr = kernel.object_from_symbol("vm_kernel_etext")
-        except exceptions.SymbolError:
-            end_addr = kernel.object_from_symbol("_etext")
+            mods_list: Iterator[Any]):          
 
         mask = context.layers[layer_name].address_mask
 
+        start_addr = kernel.object_from_symbol("_text")
         start_addr = start_addr.vol.offset & mask
+
+        end_addr = kernel.object_from_symbol("_etext")
         end_addr = end_addr.vol.offset & mask
 
         return [("__kernel__", start_addr, end_addr)] + \
