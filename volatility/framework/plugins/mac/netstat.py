@@ -6,11 +6,11 @@ import logging
 from typing import Iterable, Callable
 
 from volatility.framework import exceptions, renderers, interfaces
-from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
+from volatility.framework.symbols import mac
 from volatility.plugins.mac import pslist
 
 vollog = logging.getLogger(__name__)

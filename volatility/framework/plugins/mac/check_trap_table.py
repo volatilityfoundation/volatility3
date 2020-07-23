@@ -7,10 +7,10 @@ from typing import List
 
 from volatility.framework import exceptions, interfaces
 from volatility.framework import renderers, contexts
-from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import format_hints
+from volatility.framework.symbols import mac
 from volatility.plugins.mac import lsmod
 
 vollog = logging.getLogger(__name__)
