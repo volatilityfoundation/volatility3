@@ -9,7 +9,6 @@ from volatility.framework import interfaces, constants
 from volatility.framework.automagic import symbol_cache, symbol_finder
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
-from volatility.framework.symbols.linux import LinuxUtilities
 
 vollog = logging.getLogger(__name__)
 
@@ -53,10 +52,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                                                          name = table_name,
                                                          isf_url = isf_path)
                 context.symbol_space.append(table)
-                kaslr_shift, _ = LinuxUtilities.find_aslr(context,
-                                                          table_name,
-                                                          layer_name,
-                                                          progress_callback = progress_callback)
+                kaslr_shift, _ = cls.find_aslr(context, table_name, layer_name, progress_callback = progress_callback)
 
                 layer_class = intel.Intel  # type: Type
                 if 'init_top_pgt' in table.symbols:
@@ -68,8 +64,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 else:
                     dtb_symbol_name = 'swapper_pg_dir'
 
-                dtb = LinuxUtilities.virtual_to_physical_address(
-                    table.get_symbol(dtb_symbol_name).address + kaslr_shift)
+                dtb = cls.virtual_to_physical_address(table.get_symbol(dtb_symbol_name).address + kaslr_shift)
 
                 # Build the new layer
                 new_layer_name = context.layers.free_layer_name("IntelLayer")
