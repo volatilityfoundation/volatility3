@@ -11,7 +11,6 @@ User interfaces make use of the framework to:
  * display the results
 """
 import argparse
-import glob
 import inspect
 import json
 import logging
@@ -70,6 +69,8 @@ class MuteProgress(PrintedProgress):
 class CommandLine(interfaces.plugins.FileConsumerInterface):
     """Constructs a command-line interface object for users to run plugins."""
 
+    CLI_NAME = 'volatility'
+
     def __init__(self):
         self.setup_logging()
         self.output_dir = None
@@ -89,7 +90,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
 
         parser = volargparse.HelpfulArgParser(add_help = False,
-                                              prog = 'volatility',
+                                              prog = self.CLI_NAME,
                                               description = "An open-source memory forensics framework")
         parser.add_argument(
             "-h",
@@ -201,8 +202,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             constants.PARALLELISM = constants.Parallelism.Off
 
         if partial_args.clear_cache:
-            for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, '*.cache')):
-                os.unlink(cache_filename)
+            framework.clear_cache()
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
@@ -228,6 +228,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         subparser = parser.add_subparsers(title = "Plugins",
                                           dest = "plugin",
+                                          description = "For plugin specific options, run '{} <plugin> --help'".format(
+                                              self.CLI_NAME),
                                           action = volargparse.HelpfulSubparserAction)
         for plugin in sorted(plugin_list):
             plugin_parser = subparser.add_parser(plugin, help = plugin_list[plugin].__doc__)

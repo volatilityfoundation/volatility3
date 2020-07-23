@@ -154,7 +154,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
             else:
                 node_key = []
         if not node_key:
-            raise KeyError("Key {} not found under {}", key_array[0], '\\'.join(found_key))
+            raise KeyError("Key {} not found under {}".format(key_array[0], '\\'.join(found_key)))
         if return_list:
             return node_key
         return node_key[-1]

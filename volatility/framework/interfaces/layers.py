@@ -34,7 +34,7 @@ ProgressValue = Union['DummyProgress', managers.ValueProxy]
 IteratorValue = Tuple[List[Tuple[str, int, int]], int]
 
 
-class ScannerInterface(metaclass = ABCMeta):
+class ScannerInterface(interfaces.configuration.VersionableInterface, metaclass = ABCMeta):
     """Class for layer scanners that return locations of particular values from
     within the data.
 
@@ -63,6 +63,7 @@ class ScannerInterface(metaclass = ABCMeta):
     thread_safe = False
 
     def __init__(self) -> None:
+        super().__init__()
         self.chunk_size = 0x1000000  # Default to 16Mb chunks
         self.overlap = 0x1000  # A page of overlap by default
         self._context = None  # type: Optional[interfaces.context.ContextInterface]

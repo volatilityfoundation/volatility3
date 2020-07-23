@@ -23,8 +23,9 @@ import random
 import string
 import sys
 from abc import ABCMeta, abstractmethod
-from typing import Any, ClassVar, Dict, Generator, List, Optional, Type, Union
+from typing import Any, ClassVar, Dict, Generator, List, Optional, Type, Union, Tuple
 
+from volatility import classproperty
 from volatility.framework import constants, interfaces
 
 CONFIG_SEPARATOR = "."
@@ -686,3 +687,25 @@ class ConfigurableInterface(metaclass = ABCMeta):
             context.config[path_join(new_config_path, k)] = v
 
         return new_config_path
+
+
+class VersionableInterface:
+    """A class that allows version checking so that plugins can request specific versions of components they made need
+
+    This currently includes other Plugins and scanners, but may be extended in the future
+
+    All version number should use semantic versioning
+    """
+    _version = (0, 0, 0)  # type: Tuple[int, int, int]
+
+    @classproperty
+    def version(cls) -> Tuple[int, int, int]:
+        """The version of the current interface (classmethods available on the component).
+
+        It is strongly recommended that Semantic Versioning be used (and the default version verification is defined that way):
+
+            MAJOR version when you make incompatible API changes.
+            MINOR version when you add functionality in a backwards compatible manner.
+            PATCH version when you make backwards compatible bug fixes.
+        """
+        return cls._version
