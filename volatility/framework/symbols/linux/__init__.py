@@ -7,6 +7,7 @@ from volatility.framework import exceptions, constants, interfaces, objects, con
 from volatility.framework.objects import utility
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.linux import extensions
+from volatility.framework.objects import utility
 
 
 class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):

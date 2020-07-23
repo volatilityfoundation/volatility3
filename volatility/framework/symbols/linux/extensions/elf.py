@@ -2,15 +2,27 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+<<<<<<< HEAD
 from typing import Dict, Tuple
 
 from volatility.framework import constants
 from volatility.framework import objects, interfaces
+=======
+from volatility.framework import exceptions, constants
+from volatility.framework import objects, interfaces
+from volatility.framework.objects import utility
+from volatility.framework.renderers import conversion
+from typing import Any, Dict, List, Optional, Tuple, Union, Type
+>>>>>>> added hashdump
 
 
 class elf(objects.StructType):
     '''
+<<<<<<< HEAD
     Class used to create elf objects. It overrides the typename to `Elf32_` or `Elf64_`,
+=======
+    Class used to create elf objects. It overrides the typename to Elf32_ or Elf64_, 
+>>>>>>> added hashdump
     depending on the corresponding value on e_ident
     '''
 
@@ -45,7 +57,11 @@ class elf(objects.StructType):
         elif ei_class == 2:
             self._type_prefix = "Elf64_"
         else:
+<<<<<<< HEAD
             raise ValueError("Unsupported ei_class value {}".format(ei_class))
+=======
+            self._type_prefix = None
+>>>>>>> added hashdump
 
         # Construct the full header
         self._hdr = self._context.object(symbol_table_name + constants.BANG + self._type_prefix + "Ehdr",
