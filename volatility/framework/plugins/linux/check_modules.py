@@ -23,14 +23,11 @@ class check_modules(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name='primary',
-                                                     description='Memory layer for the kernel',
-                                                     architectures=["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(
-                name="vmlinux", description="Linux kernel symbols"),
-
-            requirements.PluginRequirement(
-                name='lsmod', plugin=lsmod.Lsmod, version=(1, 0, 0))
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
+            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
         ]
 
     def get_kset_modules(self, vmlinux):
@@ -41,17 +38,18 @@ class check_modules(plugins.PluginInterface):
             module_kset = None
 
         if not module_kset:
-            raise TypeError("This plugin requires the module_kset structure. This structure is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt.")
+            raise TypeError(
+                "This plugin requires the module_kset structure. This structure is not present in the supplied symbol table. This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
+            )
 
         ret = {}
 
-        kobj_off = self.context.symbol_space.get_type(
-            self.config['vmlinux'] + constants.BANG + 'module_kobject').relative_child_offset('kobj')
+        kobj_off = self.context.symbol_space.get_type(self.config['vmlinux'] + constants.BANG +
+                                                      'module_kobject').relative_child_offset('kobj')
 
         for kobj in module_kset.list.to_list(vmlinux.name + constants.BANG + "kobject", "entry"):
 
-            mod_kobj = vmlinux.object(
-                object_type="module_kobject", offset=kobj.vol.offset - kobj_off)
+            mod_kobj = vmlinux.object(object_type = "module_kobject", offset = kobj.vol.offset - kobj_off)
 
             mod = mod_kobj.mod
 
@@ -62,18 +60,16 @@ class check_modules(plugins.PluginInterface):
         return ret
 
     def _generator(self):
-        vmlinux = contexts.Module(
-            self.context, self.config['vmlinux'], self.config['primary'], 0)
+        vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
 
         kset_modules = self.get_kset_modules(vmlinux)
 
-        lsmod_modules = set(str(utility.array_to_string(modules.name)) for modules in
-                            lsmod.Lsmod.list_modules(self.context,
-                                                     self.config['primary'], self.config['vmlinux']))
+        lsmod_modules = set(
+            str(utility.array_to_string(modules.name))
+            for modules in lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['vmlinux']))
 
         for mod_name in set(kset_modules.keys()).difference(lsmod_modules):
-            yield(0, (format_hints.Hex(kset_modules[mod_name]), str(mod_name)))
+            yield (0, (format_hints.Hex(kset_modules[mod_name]), str(mod_name)))
 
     def run(self):
-        return renderers.TreeGrid([("Module Address", format_hints.Hex),
-                                   ("Module Name", str)], self._generator())
+        return renderers.TreeGrid([("Module Address", format_hints.Hex), ("Module Name", str)], self._generator())

@@ -33,6 +33,7 @@ class HiveGenerator():
     def invalid(self) -> Optional[int]:
         return self._invalid
 
+
 class HiveList(interfaces.plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image."""
 
