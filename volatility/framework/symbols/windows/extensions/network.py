@@ -78,22 +78,6 @@ AF_INET6 = 0x17
 inaddr_any = inet_ntop(socket.AF_INET, [0] * 4)
 inaddr6_any = inet_ntop(socket.AF_INET6, [0] * 16)
 
-# copied to here as symbol space does not appear to support custom Enums
-TCP_STATE_ENUM = {
-    0: 'CLOSED',
-    1: 'LISTENING',
-    2: 'SYN_SENT',
-    3: 'SYN_RCVD',
-    4: 'ESTABLISHED',
-    5: 'FIN_WAIT1',
-    6: 'FIN_WAIT2',
-    7: 'CLOSE_WAIT',
-    8: 'CLOSING',
-    9: 'LAST_ACK',
-    12: 'TIME_WAIT',
-    13: 'DELETE_TCB'
-}
-
 class _TCP_LISTENER(objects.StructType):
     """Class for objects found in TcpL pools.
 
@@ -247,7 +231,7 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
 
     def is_valid(self):
 
-        if self.State not in TCP_STATE_ENUM:
+        if self.State not in self.State.choices.values():
             vollog.debug("invalid due to invalid tcp state {}".format(self.State))
             return False
 

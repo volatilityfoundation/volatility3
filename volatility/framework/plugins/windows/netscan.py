@@ -245,6 +245,8 @@ class NetScan(interfaces.plugins.PluginInterface):
                                                                 self.config["nt_symbols"],
                                                                 self.config_path)
 
+        tcp_states = self.context.symbol_space.get_enumeration(netscan_symbol_table + constants.BANG + "TCPStateEnum")
+
         for netw_obj in self.scan(self.context, self.config['primary'], self.config['nt_symbols'],
                                   netscan_symbol_table):
 
@@ -277,9 +279,9 @@ class NetScan(interfaces.plugins.PluginInterface):
                 else:
                     proto = "TCPv?"
 
-                if netw_obj.State in network.TCP_STATE_ENUM:
-                    state = network.TCP_STATE_ENUM[netw_obj.State]
-                else:
+                try:
+                    state = tcp_states.lookup(netw_obj.State)
+                except ValueError:
                     state = renderers.UnreadableValue()
 
                 yield (0, (format_hints.Hex(netw_obj.vol.offset), proto,
