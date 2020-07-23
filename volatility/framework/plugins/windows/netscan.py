@@ -4,10 +4,9 @@
 
 import logging
 import datetime
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
 from volatility.framework import constants, exceptions, interfaces, renderers, symbols, layers
-from volatility.framework.automagic.pdbscan import scan
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
@@ -39,7 +38,7 @@ class NetScan(interfaces.plugins.PluginInterface):
         ]
 
     @staticmethod
-    def create_netscan_constraints(context, symbol_table: str) -> List[poolscanner.PoolConstraint]:
+    def create_netscan_constraints(context: interfaces.context.ContextInterface, symbol_table: str) -> List[poolscanner.PoolConstraint]:
         """Creates a list of Pool Tag Constraints for network objects.
 
         Args:
@@ -218,7 +217,7 @@ class NetScan(interfaces.plugins.PluginInterface):
             _constraint, mem_object, _header = result
             yield mem_object
 
-    def _generator(self, show_corrupt_results = None):
+    def _generator(self, show_corrupt_results: Optional[bool] = None):
         """ Generates the network objects for use in rendering. """
 
         netscan_symbol_table = self.create_netscan_symbol_table()
