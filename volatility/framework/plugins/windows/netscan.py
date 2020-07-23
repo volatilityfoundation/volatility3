@@ -20,7 +20,6 @@ class NetScan(interfaces.plugins.PluginInterface):
     """Scans for network objects present in a particular windows memory image."""
 
     _version = (1, 0, 0)
-    CORRUPT_DEFAULT = False
 
     @classmethod
     def get_requirements(cls):
@@ -32,7 +31,7 @@ class NetScan(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
             requirements.BooleanRequirement(name = 'include-corrupt',
                 description = "Radically eases result validation. This will show partially overwritten data. WARNING: the results are likely to include garbage and/or corrupt data. Be cautious!",
-                default = cls.CORRUPT_DEFAULT,
+                default = False,
                 optional = True
             ),
         ]
@@ -73,10 +72,17 @@ class NetScan(interfaces.plugins.PluginInterface):
                                        page_type = poolscanner.PoolType.NONPAGED | poolscanner.PoolType.FREE)
         ]
 
-    def determine_tcpip_version(self) -> str:
+    @classmethod
+    def determine_tcpip_version(cls,
+             context: interfaces.context.ContextInterface,
+             layer_name: str,
+             nt_symbol_table: str) -> str:
         """Tries to determine which symbol filename to use for the image's tcpip driver. The logic is partially taken from the info plugin.
 
         Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            nt_symbol_table: The name of the table containing the kernel symbols
 
         Returns:
             The filename of the symbol table to use.
@@ -88,7 +94,7 @@ class NetScan(interfaces.plugins.PluginInterface):
         # therefore we determine the version based on the kernel version as testing
         # with several windows versions has showed this to work out correctly.
 
-        is_64bit = symbols.symbol_table_is_64bit(self.context, self.config['nt_symbols'])
+        is_64bit = symbols.symbol_table_is_64bit(context, nt_symbol_table)
 
         if is_64bit:
             arch = "x64"
@@ -97,19 +103,18 @@ class NetScan(interfaces.plugins.PluginInterface):
 
         # the following code is taken from the windows.info plugin.
 
-        virtual_layer_name = self.config["primary"]
-        virtual_layer = self.context.layers[virtual_layer_name]
+        virtual_layer = context.layers[layer_name]
         if not isinstance(virtual_layer, layers.intel.Intel):
             raise TypeError("Virtual Layer is not an intel layer")
 
         kvo = virtual_layer.config["kernel_virtual_offset"]
 
-        ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual_layer_name, offset = kvo)
+        ntkrnlmp = context.module(nt_symbol_table, layer_name = layer_name, offset = kvo)
 
         vers_offset = ntkrnlmp.get_symbol("KdVersionBlock").address
 
         vers = ntkrnlmp.object(object_type = "_DBGKD_GET_VERSION64",
-                               layer_name = virtual_layer_name,
+                               layer_name = layer_name,
                                offset = vers_offset)
 
         vollog.debug("Determined OS Major/Minor Version: {}.{}".format(vers.MajorVersion, vers.MinorVersion))
@@ -123,7 +128,7 @@ class NetScan(interfaces.plugins.PluginInterface):
             kuser_addr = 0xFFFFF78000000000
 
         kuser = ntkrnlmp.object(object_type = "_KUSER_SHARED_DATA",
-                                layer_name = virtual_layer_name,
+                                layer_name = layer_name,
                                 offset = kuser_addr,
                                 absolute = True)
 
@@ -174,18 +179,33 @@ class NetScan(interfaces.plugins.PluginInterface):
 
         return filename, class_types
 
-    def create_netscan_symbol_table(self) -> str:
+    @classmethod
+    def create_netscan_symbol_table(cls,
+             context: interfaces.context.ContextInterface,
+             layer_name: str,
+             nt_symbol_table: str,
+             config_path: str) -> str:
         """Creates a symbol table for TCP Listeners and TCP/UDP Endpoints.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            nt_symbol_table: The name of the table containing the kernel symbols
+            config_path: The config path where to find symbol files
 
         Returns:
             The name of the constructed symbol table
         """
-        table_mapping = {"nt_symbols": self.config["nt_symbols"]}
+        table_mapping = {"nt_symbols": nt_symbol_table}
 
-        symbol_filename, class_types = self.determine_tcpip_version()
+        symbol_filename, class_types = cls.determine_tcpip_version(
+            context,
+            layer_name,
+            nt_symbol_table,
+        )
 
-        return intermed.IntermediateSymbolTable.create(self.context,
-                                                       self.config_path,
+        return intermed.IntermediateSymbolTable.create(context,
+                                                       config_path,
                                                        "windows",
                                                        symbol_filename,
                                                        class_types = class_types,
@@ -220,7 +240,10 @@ class NetScan(interfaces.plugins.PluginInterface):
     def _generator(self, show_corrupt_results: Optional[bool] = None):
         """ Generates the network objects for use in rendering. """
 
-        netscan_symbol_table = self.create_netscan_symbol_table()
+        netscan_symbol_table = self.create_netscan_symbol_table(self.context,
+                                                                self.config["primary"],
+                                                                self.config["nt_symbols"],
+                                                                self.config_path)
 
         for netw_obj in self.scan(self.context, self.config['primary'], self.config['nt_symbols'],
                                   netscan_symbol_table):
