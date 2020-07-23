@@ -466,6 +466,11 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
     def choices(self) -> Dict[str, int]:
         return self._vol['choices']
 
+    @property
+    def legal(self) -> bool:
+        """Returns whether the value for the object is a valid choice"""
+        return self in self.choices.values()
+
     def __getattr__(self, attr: str) -> str:
         """Returns the value for a specific name."""
         if attr in self._vol['choices']:
