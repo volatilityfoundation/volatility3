@@ -101,6 +101,8 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
             # We need to differentiate between no value and an empty list
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - Value was not specified")
             return {config_path: self}
+        elif value is None:
+            context.config[config_path] = []
         if not isinstance(value, list):
             # TODO: Check this is the correct response for an error
             raise TypeError("Unexpected config value found: {}".format(repr(value)))
