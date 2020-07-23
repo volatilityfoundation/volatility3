@@ -15,9 +15,8 @@ from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
 
-
 class tty_check(plugins.PluginInterface):
-     """Checks tty devices for hooks"""
+    """Checks tty devices for hooks"""
      
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
