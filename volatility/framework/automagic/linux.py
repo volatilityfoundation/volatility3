@@ -138,7 +138,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
 
     @classmethod
     def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                       mods: Iterator[Any]) -> Iterator[Any]:
+                       mods: Iterator[interfaces.objects.ObjectInterface]) -> List[Tuple[str, int, int]]:
         """
         A helper function to mask the starting and end address of kernel modules
         """
@@ -153,7 +153,11 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             context: interfaces.context.ContextInterface,
             layer_name: str,
             kernel,  # ikelos - how to type this??
-            mods_list: Iterator[Any]):          
+            mods_list: Iterator[interfaces.objects.ObjectInterface]) -> List[Tuple[str, int, int]]:
+
+        """
+        A helper function that gets the beginning and end address of the kernel module
+        """    
 
         mask = context.layers[layer_name].address_mask
 
@@ -167,8 +171,13 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             LinuxUtilities.mask_mods_list(context, layer_name, mods_list)
 
     @classmethod
-    def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: Iterator[Any],
+    def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: List[Tuple[str, int, int]],
                               target_address):
+        """
+        Searches between the start and end address of the kernel module using target_address.  
+        Returns the module and symbol name of the address provided.
+        """
+        
         mod_name = "UNKNOWN"
         symbol_name = "N/A"
 
@@ -179,9 +188,9 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                     symbols = list(
                         context.symbol_space.get_symbols_by_location(target_address))
 
-                    if len(symbols) > 0:
-                        symbol_name = str(symbols[0].split(constants.BANG)[1]) if constants.BANG in symbols[0] else \
-                            str(symbols[0])
+                    if len(symbols):
+                        symbol_name = symbols[0].split(constants.BANG)[1] if constants.BANG in symbols[0] else \
+                            symbols[0]
 
                 break
 
