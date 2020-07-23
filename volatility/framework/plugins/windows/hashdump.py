@@ -17,7 +17,6 @@ from volatility.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
 
-vollog = logging.getLogger(__name__)
 
 
 class Hashdump(interfaces.plugins.PluginInterface):
