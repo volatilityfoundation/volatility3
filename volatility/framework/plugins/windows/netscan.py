@@ -245,16 +245,13 @@ class NetScan(interfaces.plugins.PluginInterface):
                                                                 self.config["nt_symbols"],
                                                                 self.config_path)
 
-        tcp_states = self.context.symbol_space.get_enumeration(netscan_symbol_table + constants.BANG + "TCPStateEnum")
-
         for netw_obj in self.scan(self.context, self.config['primary'], self.config['nt_symbols'],
                                   netscan_symbol_table):
 
             vollog.debug("Found netw obj @ 0x{:2x} of assumed type {}".format(netw_obj.vol.offset, type(netw_obj)))
             # objects passed pool header constraints. check for additional constraints if strict flag is set.
-            if not show_corrupt_results:
-                if not netw_obj.is_valid():
-                    continue
+            if not show_corrupt_results and not netw_obj.is_valid():
+                continue
 
             if isinstance(netw_obj, network._UDP_ENDPOINT):
                 vollog.debug("Found UDP_ENDPOINT @ 0x{:2x}".format(netw_obj.vol.offset))
@@ -280,7 +277,7 @@ class NetScan(interfaces.plugins.PluginInterface):
                     proto = "TCPv?"
 
                 try:
-                    state = tcp_states.lookup(netw_obj.State)
+                    state = netw_obj.State.description
                 except ValueError:
                     state = renderers.UnreadableValue()
 

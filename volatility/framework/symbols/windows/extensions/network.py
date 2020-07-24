@@ -95,6 +95,9 @@ class _TCP_LISTENER(objects.StructType):
 
     """
 
+    MIN_CREATETIME_YEAR = 1950
+    MAX_CREATETIME_YEAR = 2200
+
     def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
                  object_info: interfaces.objects.ObjectInformation, size: int,
                  members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
@@ -120,25 +123,19 @@ class _TCP_LISTENER(objects.StructType):
             return None
 
     def get_owner_pid(self):
-        try:
-            if self.get_owner().is_valid():
+        if self.get_owner().is_valid():
+            if self.get_owner().has_valid_member("UniqueProcessId"):
                 return self.get_owner().UniqueProcessId
-            else:
-                return None
 
-        except exceptions.InvalidAddressException:
-            return None
+        return None
 
     def get_owner_procname(self):
-        try:
-            if self.get_owner().is_valid():
+        if self.get_owner().is_valid():
+            if self.get_owner().has_valid_member("ImageFileName"):
                 return self.get_owner().ImageFileName.cast(
                         "string", max_length = self.get_owner().ImageFileName.vol.count, errors = "replace")
-            else:
-                return None
 
-        except exceptions.InvalidAddressException:
-            return None
+        return None
 
     def get_create_time(self):
         dt_obj = conversion.wintime_to_datetime(self.CreateTime.QuadPart)
@@ -147,7 +144,7 @@ class _TCP_LISTENER(objects.StructType):
             return dt_obj
 
         # return None if the timestamp seems invalid
-        if dt_obj.year < 1950 or dt_obj.year > 2200:
+        if not (self.MIN_CREATETIME_YEAR < dt_obj.year < self.MAX_CREATETIME_YEAR):
             return None
         else:
             return dt_obj
