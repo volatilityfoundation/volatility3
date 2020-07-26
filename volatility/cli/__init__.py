@@ -11,7 +11,6 @@ User interfaces make use of the framework to:
  * display the results
 """
 import argparse
-import glob
 import inspect
 import json
 import logging
@@ -201,8 +200,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             constants.PARALLELISM = constants.Parallelism.Off
 
         if partial_args.clear_cache:
-            for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, '*.cache')):
-                os.unlink(cache_filename)
+            framework.clear_cache()
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
