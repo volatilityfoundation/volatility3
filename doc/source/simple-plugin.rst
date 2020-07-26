@@ -57,7 +57,8 @@ to instantiate the plugin).  At the moment these requirements are fairly straigh
 
 This requirement indicates that the plugin will operate on a single
 :py:class:`TranslationLayer <volatility.framework.interfaces.layers.TranslationLayerInterface>`.  The name of the
-loaded layer will appear in the plugin's configuration under the name ``primary``
+loaded layer will appear in the plugin's configuration under the name ``primary``.    Requirement values can be
+accessed within the plugin through the plugin's `config` attribute (for example ``self.config['pid']``).
 
 .. note:: The name itself is dynamic depending on the other layers already present in the Context.  Always use the value
     from the configuration rather than attempting to guess what the layer will be called.
@@ -65,13 +66,13 @@ loaded layer will appear in the plugin's configuration under the name ``primary`
 Finally, this defines that the translation layer must be on the Intel Architecture.  At the moment, this acts as a filter,
 failing to be satisfied by memory images that do not match the architecture required.
 
+Most plugins will only operate on a single layer, but it is entirely possible for a plugin to request two different
+layers, for example a plugin that carries out some form of difference or statistics against multiple memory images.
+
 This requirement (and the next two) are known as Complex Requirements, and user interfaces will likely not directly
 request a value for this from a user.  The value stored in the configuration tree for a
 :py:class:`~volatility.framework.configuration.requirements.TranslationLayerRequirement` is
 the string name of a layer present in the context's memory that satisfies the requirement.
-
-Most plugins will only operate on a single layer, but it is entirely possible for a plugin to request two different
-layers, for example a plugin that carries out some form of difference or statistics against multiple memory images.
 
 ::
 
