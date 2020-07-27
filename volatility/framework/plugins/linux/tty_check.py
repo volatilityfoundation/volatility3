@@ -37,7 +37,7 @@ class tty_check(plugins.PluginInterface):
 
         modules = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['vmlinux'])
 
-        handlers = linux.LinuxUtilities.generate_kernel_handler_info(self.context, self.config['primary'], vmlinux, modules)
+        handlers = linux.LinuxUtilities.generate_kernel_handler_info(self.context, self.config['primary'], self.config['vmlinux'], modules)
 
         try:
             tty_drivers = vmlinux.object_from_symbol("tty_drivers")
