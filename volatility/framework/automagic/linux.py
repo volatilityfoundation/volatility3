@@ -152,12 +152,14 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             cls,
             context: interfaces.context.ContextInterface,
             layer_name: str,
-            kernel,  # ikelos - how to type this??
+            kernel_name,  # ikelos - how to type this??
             mods_list: Iterator[interfaces.objects.ObjectInterface]) -> List[Tuple[str, int, int]]:
 
         """
         A helper function that gets the beginning and end address of the kernel module
         """    
+
+        kernel = contexts.Module(context, kernel_name, layer_name, 0)
 
         mask = context.layers[layer_name].address_mask
 
@@ -167,7 +169,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         end_addr = kernel.object_from_symbol("_etext")
         end_addr = end_addr.vol.offset & mask
 
-        return [("__kernel__", start_addr, end_addr)] + \
+        return [(constants.linux.KERNEL_NAME, start_addr, end_addr)] + \
             LinuxUtilities.mask_mods_list(context, layer_name, mods_list)
 
     @classmethod
@@ -184,7 +186,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         for name, start, end in handlers:
             if start <= target_address <= end:
                 mod_name = name
-                if name == "__kernel__":
+                if name == constants.linux.KERNEL_NAME:
                     symbols = list(
                         context.symbol_space.get_symbols_by_location(target_address))
 
