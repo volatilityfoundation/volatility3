@@ -152,7 +152,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             cls,
             context: interfaces.context.ContextInterface,
             layer_name: str,
-            kernel_name,  # ikelos - how to type this??
+            kernel_name: str,
             mods_list: Iterator[interfaces.objects.ObjectInterface]) -> List[Tuple[str, int, int]]:
 
         """
