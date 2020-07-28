@@ -6,12 +6,13 @@ from typing import List
 
 import volatility
 from volatility.framework import exceptions, interfaces
-from volatility.framework import renderers, constants, contexts
+from volatility.framework import renderers, contexts
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
-from volatility.framework.renderers import format_hints
 from volatility.framework.objects import utility
+from volatility.framework.renderers import format_hints
+from volatility.plugins.mac import lsmod
 
 vollog = logging.getLogger(__name__)
 
@@ -25,7 +26,8 @@ class Check_sysctl(plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols")
+            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
+            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
         ]
 
     def _parse_global_variable_sysctls(self, kernel, name):
@@ -40,7 +42,7 @@ class Check_sysctl(plugins.PluginInterface):
             var_name = known_sysctls[name]
 
             try:
-                var_array = kernel.object(object_type = var_name)
+                var_array = kernel.object_from_symbol(symbol_name = var_name)
             except exceptions.SymbolError:
                 var_array = None
 
@@ -110,29 +112,26 @@ class Check_sysctl(plugins.PluginInterface):
                 break
 
     def _generator(self):
-        mac.MacUtilities.aslr_mask_symbol_table(self.context, self.config['darwin'], self.config['primary'])
-
         kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
+
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['darwin'])
+
+        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 
         sysctl_list = kernel.object_from_symbol(symbol_name = "sysctl__children")
 
         for sysctl, name, val in self._process_sysctl_list(kernel, sysctl_list):
-            check_addr = sysctl.oid_handler
+            try:
+                check_addr = sysctl.oid_handler
+            except exceptions.InvalidAddressException:
+                continue
 
-            if check_addr == 0:
-                sym_name = "<No Handler>"
-            else:
-                symbols = list(self.context.symbol_space.get_symbols_by_location(check_addr))
+            module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, check_addr)
 
-                if len(symbols) > 0:
-                    sym_name = str(symbols[0].split(constants.BANG)[1]) if constants.BANG in symbols[0] else \
-                        str(symbols[0])
-                else:
-                    sym_name = "UNKNOWN"
-
-            yield (0, (name, sysctl.oid_number, sysctl.get_perms(), format_hints.Hex(check_addr), val, sym_name))
+            yield (0, (name, sysctl.oid_number, sysctl.get_perms(), format_hints.Hex(check_addr), val, module_name,
+                       symbol_name))
 
     def run(self):
         return renderers.TreeGrid([("Name", str), ("Number", int), ("Perms", str),
-                                   ("Handler Address", format_hints.Hex), ("Value", str), ("Handler Symbol", str)],
-                                  self._generator())
+                                   ("Handler Address", format_hints.Hex), ("Value", str), ("Handler Module", str),
+                                   ("Handler Symbol", str)], self._generator())

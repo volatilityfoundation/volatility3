@@ -10,7 +10,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.layers import linear
 
 
-class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
+class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, metaclass = ABCMeta):
     """A class to handle a single run-based layer-to-layer mapping.
 
     In the documentation "mapped address" or "mapped offset" refers to
@@ -25,7 +25,7 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
         self._base_layer = self.config["base_layer"]
-        self._segments = []  # type: List[Tuple[int, int, int]]
+        self._segments = []  # type: List[Tuple[int, int, int, int]]
         self._minaddr = None  # type: Optional[int]
         self._maxaddr = None  # type: Optional[int]
 
@@ -45,14 +45,14 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
         try:
             base_layer = self._context.layers[self._base_layer]
             return all(
-                [base_layer.is_valid(mapped_offset) for _i, mapped_offset, _i, _s in self.mapping(offset, length)])
+                [base_layer.is_valid(mapped_offset) for _i, _i, mapped_offset, _i, _s in self.mapping(offset, length)])
         except exceptions.InvalidAddressException:
             return False
 
-    def _find_segment(self, offset: int, next: bool = False) -> Tuple[int, int, int]:
+    def _find_segment(self, offset: int, next: bool = False) -> Tuple[int, int, int, int]:
         """Finds the segment containing a given offset.
 
-        Returns the segment tuple (offset, mapped_offset, length)
+        Returns the segment tuple (offset, mapped_offset, length, mapped_length)
         """
 
         if not self._segments:
@@ -69,15 +69,18 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
                 return self._segments[i]
         raise exceptions.InvalidAddressException(self.name, offset, "Invalid address at {:0x}".format(offset))
 
-    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
-        """Returns a sorted iterable of (offset, mapped_offset, length, layer)
+    def mapping(self,
+                offset: int,
+                length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+        """Returns a sorted iterable of (offset, length, mapped_offset, mapped_length, layer)
         mappings."""
         done = False
         current_offset = offset
         while not done:
             try:
                 # Search for the appropriate segment that contains the current_offset
-                logical_offset, mapped_offset, size = self._find_segment(current_offset)
+                logical_offset, mapped_offset, size, mapped_size = self._find_segment(current_offset)
                 # If it starts before the current_offset, bring the lower edge up to the right place
                 if current_offset > logical_offset:
                     difference = current_offset - logical_offset
@@ -90,7 +93,7 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
                     raise
                 try:
                     # Find the next valid segment after our current_offset
-                    logical_offset, mapped_offset, size = self._find_segment(current_offset, next = True)
+                    logical_offset, mapped_offset, size, mapped_size = self._find_segment(current_offset, next = True)
                     # We know that the logical_offset must be greater than current_offset so skip to that value
                     current_offset = logical_offset
                     # If it starts too late then we're done
@@ -100,7 +103,7 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
                     return
             # Crop it to the amount we need left
             chunk_size = min(size, length + offset - logical_offset)
-            yield (logical_offset, mapped_offset, chunk_size, self._base_layer)
+            yield logical_offset, chunk_size, mapped_offset, chunk_size, self._base_layer
             current_offset += chunk_size
             # Terminate if we've gone (or reached) our required limit
             if current_offset >= offset + length:
@@ -111,7 +114,7 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
         if not self._segments:
             raise ValueError("SegmentedLayer must contain some segments")
         if self._minaddr is None:
-            mapped, _, _ = self._segments[0]
+            mapped, _, _, _ = self._segments[0]
             self._minaddr = mapped
         return self._minaddr
 
@@ -120,7 +123,7 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
         if not self._segments:
             raise ValueError("SegmentedLayer must contain some segments")
         if self._maxaddr is None:
-            mapped, _, length = self._segments[-1]
+            mapped, _, length, _ = self._segments[-1]
             self._maxaddr = mapped + length
         return self._maxaddr
 
@@ -133,3 +136,7 @@ class SegmentedLayer(linear.LinearlyMappedLayer, metaclass = ABCMeta):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'base_layer', optional = False)]
+
+
+class SegmentedLayer(NonLinearlySegmentedLayer, linear.LinearlyMappedLayer, metaclass = ABCMeta):
+    pass

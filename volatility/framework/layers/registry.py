@@ -36,6 +36,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         self._base_layer = self.config["base_layer"]
         self._hive_offset = self.config["hive_offset"]
         self._table_name = self.config["nt_symbols"]
+        self._page_size = 1 << 12
 
         self._reg_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
                                                                        'registry')
@@ -158,7 +159,8 @@ class RegistryHive(linear.LinearlyMappedLayer):
             return node_key
         return node_key[-1]
 
-    def visit_nodes(self, visitor: Callable[[objects.StructType], None],
+    def visit_nodes(self,
+                    visitor: Callable[[objects.StructType], None],
                     node: Optional[objects.StructType] = None) -> None:
         """Applies a callable (visitor) to all nodes within the registry tree
         from a given node."""
@@ -208,7 +210,10 @@ class RegistryHive(linear.LinearlyMappedLayer):
         entry = table.Table[table_index]
         return entry.get_block_offset() + suboffset
 
-    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
+    def mapping(self,
+                offset: int,
+                length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
 
         if length < 0:
             raise ValueError("Mapping length of RegistryHive must be positive or zero")
@@ -216,8 +221,21 @@ class RegistryHive(linear.LinearlyMappedLayer):
         # Return the translated offset without checking bounds within the HBIN.  The check runs into
         # issues when pages are swapped on large HBINs, and did not seem to find any errors on single page
         # HBINs while dramatically slowing performance.
-        translated_offset = self._translate(offset)
-        response = [(offset, translated_offset, length, self._base_layer)]
+        response = []
+        current_offset = offset
+        remaining_length = length
+        chunk_size = self._page_size - (offset & (self._page_size - 1))
+        while remaining_length > 0:
+            chunk_size = min(chunk_size, remaining_length, self._page_size)
+            try:
+                translated_offset = self._translate(current_offset)
+                response.append((current_offset, chunk_size, translated_offset, chunk_size, self._base_layer))
+            except exceptions.LayerException:
+                if not ignore_errors:
+                    raise
+            current_offset += chunk_size
+            remaining_length -= chunk_size
+            chunk_size = self._page_size
         return response
 
     @property
@@ -231,7 +249,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
             # Pass this to the lower layers for now
             return all([
                 self.context.layers[layer].is_valid(offset, length)
-                for (_, offset, length, layer) in self.mapping(offset, length)
+                for (_, _, offset, length, layer) in self.mapping(offset, length)
             ])
         except exceptions.InvalidAddressException:
             return False

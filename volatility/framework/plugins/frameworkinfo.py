@@ -17,6 +17,7 @@ class FrameworkInfo(plugins.PluginInterface):
             'Automagic': interfaces.automagic.AutomagicInterface,
             'Requirement': interfaces.configuration.RequirementInterface,
             'Layer': interfaces.layers.DataLayerInterface,
+            'LayerStacker': interfaces.automagic.StackerLayerInterface,
             'Object': interfaces.objects.ObjectInterface,
             'Plugin': interfaces.plugins.PluginInterface,
             'Renderer': interfaces.renderers.Renderer

@@ -34,7 +34,7 @@ class Statistics(plugins.PluginInterface):
 
             while page_addr < layer.maximum_address:
                 try:
-                    _, _, page_size, layer_name = list(layer.mapping(page_addr, 2 * expected_page_size))[0]
+                    _, _, _, page_size, layer_name = list(layer.mapping(page_addr, 2 * expected_page_size))[0]
                     if layer_name != layer.config['memory_layer']:
                         swap_count += 1
                     else:

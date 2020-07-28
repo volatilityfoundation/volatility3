@@ -8,7 +8,9 @@ from abc import abstractmethod, ABC
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Mapping
 
 from volatility.framework import constants, exceptions, interfaces
+from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import configuration, objects
+from volatility.framework.interfaces.configuration import RequirementInterface
 
 
 class SymbolInterface:
@@ -218,6 +220,11 @@ class SymbolSpaceInterface(collections.abc.Mapping):
         inserting a symbol table."""
 
     @abstractmethod
+    def clear_symbol_cache(self, table_name: str) -> None:
+        """Clears the symbol cache for the specified table name. If no table
+        name is specified, the caches of all symbol tables are cleared."""
+
+    @abstractmethod
     def get_symbols_by_type(self, type_name: str) -> Iterable[str]:
         """Returns all symbols based on the type of the symbol."""
 
@@ -268,8 +275,7 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
                  table_mapping: Optional[Dict[str, str]] = None,
                  class_types: Optional[Mapping[str, Type[objects.ObjectInterface]]] = None) -> None:
         """Instantiates an SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
-        appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
-        done.
+        appropriate schema.
 
         Args:
             context: The volatility context for the symbol table
@@ -286,9 +292,17 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
     def build_configuration(self) -> 'configuration.HierarchicalDict':
         config = super().build_configuration()
 
-        # Translation Layers are constructable, and therefore require a class configuration variable
+        # Symbol Tables are constructable, and therefore require a class configuration variable
         config["class"] = self.__class__.__module__ + "." + self.__class__.__name__
         return config
+
+    @classmethod
+    def get_requirements(cls) -> List[RequirementInterface]:
+        return super().get_requirements() + [
+            requirements.IntRequirement(name = 'symbol_shift', description = 'Symbol Shift', optional = False),
+            requirements.IntRequirement(
+                name = 'symbol_mask', description = 'Address mask for symbols', optional = True, default = 0),
+        ]
 
 
 class NativeTableInterface(BaseSymbolTableInterface):

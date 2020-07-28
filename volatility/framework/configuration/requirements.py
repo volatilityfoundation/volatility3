@@ -97,10 +97,12 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
         if not value and self.min_elements > 0:
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - ListRequirement has non-zero min_elements")
             return {config_path: self}
-        if value == default:
+        if value is None and not self.optional:
             # We need to differentiate between no value and an empty list
             vollog.log(constants.LOGLEVEL_V, "ListRequirement Unsatisfied - Value was not specified")
             return {config_path: self}
+        elif value is None:
+            context.config[config_path] = []
         if not isinstance(value, list):
             # TODO: Check this is the correct response for an error
             raise TypeError("Unexpected config value found: {}".format(repr(value)))
@@ -326,16 +328,22 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         provided context."""
         config_path = interfaces.configuration.path_join(config_path, self.name)
         value = self.config_value(context, config_path, None)
-        if not isinstance(value, str):
+        if not isinstance(value, str) and value is not None:
             vollog.log(constants.LOGLEVEL_V,
                        "TypeError - SymbolTableRequirement only accepts string labels: {}".format(repr(value)))
             return {config_path: self}
-        if value not in context.symbol_space:
-            # This is an expected situation, so return False rather than raise
+        if value and value in context.symbol_space:
+            # This is an expected situation, so return rather than raise
+            return {}
+        elif value:
             vollog.log(constants.LOGLEVEL_V, "IndexError - Value not present in the symbol space: {}".format(value
                                                                                                              or ""))
-            return {config_path: self}
-        return {}
+
+        ### NOTE: This validate method has side effects (the dependencies can change)!!!
+
+        self._validate_class(context, interfaces.configuration.parent_path(config_path))
+        vollog.log(constants.LOGLEVEL_V, "Symbol table requirement not yet fulfilled: {}".format(config_path))
+        return {config_path: self}
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         """Constructs the symbol space within the context based on the
@@ -392,6 +400,7 @@ class PluginRequirement(interfaces.configuration.RequirementInterface):
     def unsatisfied(self, context: interfaces.context.ContextInterface,
                     config_path: str) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
+        config_path = interfaces.configuration.path_join(config_path, self.name)
         if len(self._version) > 0 and self._plugin.version[0] != self._version[0]:
             return {config_path: self}
         if len(self._version) > 1 and self._plugin.version[1] > self._version[1]:

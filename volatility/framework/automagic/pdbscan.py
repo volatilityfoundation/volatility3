@@ -228,7 +228,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
 
-    def download_pdb_isf(self, guid: str, age: int, pdb_name: str,
+    def download_pdb_isf(self,
+                         guid: str,
+                         age: int,
+                         pdb_name: str,
                          progress_callback: constants.ProgressCallback = None) -> None:
         """Attempts to download the PDB file, convert it to an ISF file and
         save it to one of the symbol locations."""
@@ -323,7 +326,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             try:
                 kvp = vlayer.mapping(kvo, 0)
                 if (any([(p == kernel['mz_offset'] and layer_name == physical_layer_name)
-                         for (_, p, _, layer_name) in kvp])):
+                         for (_, _, p, _, layer_name) in kvp])):
                     valid_kernels[virtual_layer_name] = (kvo, kernel)
                     # Sit the virtual offset under the TranslationLayer it applies to
                     context.config[kvo_path] = kvo

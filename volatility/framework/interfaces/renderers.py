@@ -9,9 +9,9 @@ renderer interface which can interact with a TreeGrid to produce
 suitable output.
 """
 
-import collections
 import datetime
 from abc import abstractmethod, ABCMeta
+from collections import abc
 from typing import Any, Callable, ClassVar, Generator, Iterable, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union
 
 Column = NamedTuple('Column', [('name', str), ('type', Any)])
@@ -46,7 +46,7 @@ class ColumnSortKey(metaclass = ABCMeta):
         function."""
 
 
-class TreeNode(collections.Sequence, metaclass = ABCMeta):
+class TreeNode(abc.Sequence, metaclass = ABCMeta):
 
     def __init__(self, path, treegrid, parent, values):
         """Initializes the TreeNode."""

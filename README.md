@@ -71,6 +71,12 @@ Symbol table packs for the various operating systems are available for download 
 <https://downloads.volatilityfoundation.org/volatility3/symbols/mac.zip>  
 <https://downloads.volatilityfoundation.org/volatility3/symbols/linux.zip>  
 
+The hashes to verify whether any of the symbol pack files have downloaded successfully or have changed can be found at:
+
+<https://downloads.volatilityfoundation.org/volatility3/symbols/SHA256SUMS>  
+<https://downloads.volatilityfoundation.org/volatility3/symbols/SHA1SUMS>  
+<https://downloads.volatilityfoundation.org/volatility3/symbols/MD5SUMS>  
+
 Symbol tables zip files must be placed, as named, into the `volatility/symbols` directory (or just the symbols directory next to the executable file).
 
 Windows symbols that cannot be found will be queried, downloaded, generated and cached.  Mac and Linux symbol tables must be manually produced by a tool such as [dwarf2json](https://github.com/volatilityfoundation/dwarf2json).
@@ -85,7 +91,7 @@ The latest generated copy of the documentation can be found at: <https://volatil
 
 ## Licensing and Copyright
 
-Copyright (C) 2007-2019 Volatility Foundation
+Copyright (C) 2007-2020 Volatility Foundation
 
 All Rights Reserved
 

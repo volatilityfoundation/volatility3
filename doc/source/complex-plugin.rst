@@ -112,8 +112,8 @@ Another useful parameter is `table_mapping` which allows for type referenced ins
         table_mapping = {'one_table': 'another_table'})
 
 The last parameter that can be used is called `class_types` which allows a particular structure to be instantiated on
-a class other than :py:class:`~volatility.framework.objects.StructType`, allowing for additional methods to be defined and
-associated with the type.
+a class other than :py:class:`~volatility.framework.objects.StructType`, allowing for additional methods to be defined
+and associated with the type.
 
 The table name can then by used to access the constructed table from the context, such as:
 
@@ -121,9 +121,132 @@ The table name can then by used to access the constructed table from the context
 
     context.symbol_space[table_name]
 
-Writing new translation layers
+Writing new Translation Layers
 ------------------------------
 
+Translation layers offer a way for data to be translated from a higher (domain) layer to a lower (range) layer.
+The main method that must be overloaded for a translation layer is the `mapping` method.  Usually this is a linear
+mapping whereby a value at an offset in the domain maps directly to an offset in the range.
+
+Most new layers should inherit from :py:class:`~volatility.framework.layers.linear.LinearlyMappedLayer` where they
+can define a mapping method as follows:
+
+.. code-block:: python
+
+    def mapping(self,
+                offset: int,
+                length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+
+This takes a (domain) offset and a length of block, and returns a sorted list of chunks that cover the requested amount
+of data.  Each chunk contains the following information (in order):
+
+* (domain) offset - requested offset in the domain
+* chunk length - the length of the data in the domain
+* (range) offset - where the data lives in the lower layer
+* mapped length - the length of the data in the range
+* layer_name - the layer that this data comes from
+
+An example (and the most common layer encountered in memory forensics) would be an Intel layer, which models the intel
+page mapping system.  Based on a series of tables stored within the layer itself, an intel layer can convert a virtual
+address to a physical address.  It should be noted that intel layers are surjective in that a single virtual address can
+map to multiple physical addresses, but a single virtual address can only ever map to a single physical address.
+
+As a simple example, in a virtual layer which looks like `abracadabra` but maps to a physical layer that looks
+like `abcdr`, requesting `mapping(5, 4)` would return:
+
+.. code-block:: python
+
+    [(5,1,0,1, 'physical_layer'),
+     (6,1,3,1, 'physical_layer'),
+     (7,2,0,2, 'physical_layer')
+    ]
+
+This mapping mechanism allows for great flexibility in that chunks making up a virtual layer can come from multiple
+different range layers, allowing for swap space to be used to construct the virtual layer, for example.  Also, by
+defining the mapping method, the read and write methods (which read and write into the domain layer) are defined for you
+to write to the lower layers (which in turn can write to layers even lower than that) until eventually they arrive at a
+DataLayer, such as a file or a buffer.
+
+This mechanism also allowed for some minor optimization in scanning such a layer, but should further control over the
+scanning of layers be needed, please refer to the Layer Scanning page.
+
+Whilst it may seem as though some of the data seems redundant (the length values are always the same) this is not the
+case for :py:class:`~volatility.framework.layers.segmented.NonLinearlySegmentedLayer`.  These layers do not guarantee
+that each domain address maps directly to a range address, and in fact can carry out processing on the data.  These
+layers are most commonly encountered as compression or encryption layers (whereby a domain address may map into a
+chunk of the range, but not directly).  In this instance, the mapping will likely define additional methods that can
+take a chunk and process it from its original value into its final value (such as decompressing for read and compressing
+for write).
+
+These methods are private to the class, and are used within the standard `read` and `write` methods of a layer.
+A non-linear layer's mapping method should return the data required to be able to return the original data.  As an
+example, a run length encoded layer, whose domain data looks like `aaabbbbbcdddd` could be stored as `3a5b1c4d`.
+The mapping method call for `mapping(5,4)` should return all the regions that encompass the data required.  The layer
+would return the following data:
+
+.. code-block:: python
+
+    [(5, 4, 2, 4, 'rle layer')]
+
+It would then define `_decode` and `_encode` methods that could convert from one to the other.  In the case of `read(5, 4)`,
+the `_decode` method would be provided with the following parameters:
+
+.. code-block:: python
+
+    data = "5b1c"
+    mapped_offset = 2
+    offset = 5
+    output_length = 4
+
+This requires that the `_decode` method can unpack the encoding back to `bbbbbc` and also know that the decoded
+block starts at 3, so that it can return just `bbbc`, as required.  Such layers therefore typically need to keep much
+more internal state, to keep track of which offset of encoded data relates to which decoded offset for both the mapping
+and `_encode` and `_decode` methods.
+
+If the data processing produces known fixed length values, then it is possible to write an `_encode` method in much the
+same way as the decode method.  `_encode` is provided with the data to encode, the mapped_offset to write it to the lower
+(range) layer, the original offset of the data in the higher (domain) layer and the value of the not yet encoded data
+to write.  The encoded result, regardless of length will be written over the current image at the mapped_offset.  No
+other changes or updates to tables, etc are carried out.
+
+`_encode` is much more difficult if the encoded data can be variable length, as it may involve rewriting most, if not
+all of the data in the image.  Such a situation is not currently supported with this API and it is strongly recommended
+to raise NotImplementedError in this method.
+
+Communicating between layers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Layers can ask for information from lower layers using the `layer.metadata` lookup.  In the following example,
+a LayerStacker automagic that generates the intel TranslationLayer requests whether the base layer knows what the
+`page_map_offset` value should be, a CrashDumpLayer would have that information.  As such the TranslationLayer would
+just lookup the `page_map_offset` value in the `base_layer.metadata` dictionary:
+
+.. code-block:: python
+
+    if base_layer.metadata.get('page_layer_offset', None) is not None:
+
+Most layers will return `None`, since this is the default, but the CrashDumpLayer may know what the value should be,
+so it therefore populates the `metadata` property.  This is defined as a read-only mapping to ensure that every layer
+includes data from every underlying layer.  As such, CrashDumpLayer would actually specify this value by setting it
+in the protected dictionary by `self._direct_metadata['page_map_offset']`.
+
+There is, unfortunately, no easy way to form consensus between a particular layer may want and what a particular layer
+may be able to provide.  At the moment, the main information that layers may populate are:
+
+* `os` with values of `Windows`, `Linux`, `Mac` or `unknown`
+* `architecture` with values of `Intel32`, `Intel64` or `unknown`
+* `pae` a boolean specifying whether the PAE mode is enabled for windows
+* `page_map_offset` the value pointing to the intel page_map_offset
+
+Any value can be specified and used by layers but consideration towards ambiguity should be used to ensure that overly
+generic names aren't used for something and then best describe something else that may be needed later on.
+
+.. note::
+
+    The data stored in metadata is *not* restored when constructed from a configuration, so metadata should only be
+    used as a temporary means of storing information to be used in constructing later objects and all information
+    required to recreate an object must be written through the requirements mechanism.
 
 Writing new Templates and Objects
 ---------------------------------

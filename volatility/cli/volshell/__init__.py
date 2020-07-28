@@ -84,6 +84,10 @@ class VolShell(cli.CommandLine):
                             help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--clear-cache",
+                            help = "Clears out all short-term cached items",
+                            default = False,
+                            action = 'store_true')
 
         # Volshell specific flags
         os_specific = parser.add_mutually_exclusive_group(required = False)
@@ -118,10 +122,15 @@ class VolShell(cli.CommandLine):
             file_logger.setFormatter(file_formatter)
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
+
         if partial_args.verbosity < 3:
             console.setLevel(30 - (partial_args.verbosity * 10))
         else:
             console.setLevel(10 - (partial_args.verbosity - 2))
+
+        if partial_args.clear_cache:
+            for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, '*.cache')):
+                os.unlink(cache_filename)
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
@@ -224,7 +233,7 @@ class VolShell(cli.CommandLine):
 
             # Construct and run the plugin
             constructed.run()
-        except exceptions.UnsatisfiedException as excp:
+        except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
             parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
 

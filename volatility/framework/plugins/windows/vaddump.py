@@ -15,7 +15,7 @@ vollog = logging.getLogger(__name__)
 
 class VadDump(interfaces.plugins.PluginInterface):
     """Dumps process memory ranges."""
-    _version = (1,1,0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -30,15 +30,17 @@ class VadDump(interfaces.plugins.PluginInterface):
                                                           "(all other address ranges are excluded). This must be " \
                                                           "a base address, not an address within the desired range.",
                                             optional = True),
-                requirements.IntRequirement(
-                    name = 'pid', description = "Process ID to include (all other processes are excluded)",
-                    optional = True),
+                requirements.ListRequirement(name = 'pid',
+                                             element_type = int,
+                                             description = "Process IDs to include (all other processes are excluded)",
+                                             optional = True),
                 requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
                 requirements.PluginRequirement(name = 'vadinfo', plugin = vadinfo.VadInfo, version = (1, 0, 0)),
                 ]
 
     @classmethod
-    def vad_dump(cls, context: interfaces.context.ContextInterface, layer_name: str, vad: interfaces.objects.ObjectInterface) -> bytes:
+    def vad_dump(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                 vad: interfaces.objects.ObjectInterface) -> bytes:
         """
             Returns VAD content
         """
@@ -47,7 +49,7 @@ class VadDump(interfaces.plugins.PluginInterface):
         proc_layer = context.layers[layer_name]
         chunk_size = 1024 * 1024 * 10
         offset = vad.get_start()
-        out_of_range = vad.get_start() + vad.get_end()
+        out_of_range = vad.get_end()
         # print("walking from {:x} to {:x} | {:x}".format(offset, out_of_range, out_of_range-offset))
         while offset < out_of_range:
             to_read = min(chunk_size, out_of_range - offset)
@@ -77,8 +79,6 @@ class VadDump(interfaces.plugins.PluginInterface):
                                                                                  excp.layer_name))
                 continue
 
-            proc_layer = self.context.layers[proc_layer_name]
-
             for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):
                 try:
                     filedata = interfaces.plugins.FileInterface("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
@@ -95,7 +95,7 @@ class VadDump(interfaces.plugins.PluginInterface):
                 yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Result", str)],
                                   self._generator(

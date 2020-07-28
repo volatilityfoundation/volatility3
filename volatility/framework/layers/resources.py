@@ -37,6 +37,22 @@ vollog = logging.getLogger(__name__)
 #   fix this
 
 
+def cascadeCloseFile(new_fp, original_fp):
+    """Really horrible solution for ensuring files aren't left open
+
+    Args:
+        new_fp: The file pointer constructed based on the original file pointer
+        original_fp: The original file pointer that should be closed when the new file pointer is closed, but isn't
+    """
+
+    def close():
+        original_fp.close()
+        return new_fp.__class__.close(new_fp)
+
+    new_fp.close = close
+    return new_fp
+
+
 class ResourceAccessor(object):
     """Object for openning URLs as files (downloading locally first if
     necessary)"""
@@ -70,7 +86,11 @@ class ResourceAccessor(object):
             fp = urllib.request.urlopen(url, context = self._context)
         except error.URLError as excp:
             if excp.args:
-                if isinstance(excp.args[0], ssl.SSLCertVerificationError):
+                # TODO: As of python3.7 this can be removed
+                unverified_retrieval = (hasattr(ssl, "SSLCertVerificationError") and isinstance(
+                    excp.args[0], ssl.SSLCertVerificationError)) or (isinstance(excp.args[0], ssl.SSLError) and
+                                                                     excp.args[0].reason == "CERTIFICATE_VERIFY_FAILED")
+                if unverified_retrieval:
                     vollog.warning("SSL certificate verification failed: attempting UNVERIFIED retrieval")
                     non_verifying_ctx = ssl.SSLContext()
                     non_verifying_ctx.check_hostname = False
@@ -92,7 +112,7 @@ class ResourceAccessor(object):
                 # TODO: find a way to check if we already have this file (look at http headers?)
                 block_size = 1028 * 8
                 temp_filename = os.path.join(constants.CACHE_PATH,
-                                             "data_" + hashlib.sha512(bytes(url, 'latin-1')).hexdigest())
+                                             "data_" + hashlib.sha512(bytes(url, 'latin-1')).hexdigest() + ".cache")
 
                 if not os.path.exists(temp_filename):
                     vollog.debug("Caching file at: {}".format(temp_filename))
@@ -105,15 +125,14 @@ class ResourceAccessor(object):
                     cache_file = open(temp_filename, "wb")
 
                     count = 0
-                    while True:
-                        block = fp.read(block_size)
+                    block = fp.read(block_size)
+                    while block:
                         count += len(block)
-                        if not block:
-                            break
                         if self._progress_callback:
                             self._progress_callback(count * 100 / max(count, int(content_length)),
                                                     "Reading file {}".format(url))
                         cache_file.write(block)
+                        block = fp.read(block_size)
                     cache_file.close()
                 # Re-open the cache with a different mode
                 curfile = open(temp_filename, mode = "rb")
@@ -121,7 +140,8 @@ class ResourceAccessor(object):
         # Determine whether the file is a particular type of file, and if so, open it as such
         IMPORTED_MAGIC = False
         if HAS_MAGIC:
-            while True:
+            stop = False
+            while not stop:
                 detected = None
                 try:
                     # Detect the content
@@ -136,32 +156,36 @@ class ResourceAccessor(object):
 
                 if detected:
                     if detected.mime_type == 'application/x-xz':
-                        curfile = lzma.LZMAFile(curfile, mode)
+                        curfile = cascadeCloseFile(lzma.LZMAFile(curfile, mode), curfile)
                     elif detected.mime_type == 'application/x-bzip2':
-                        curfile = bz2.BZ2File(curfile, mode)
+                        curfile = cascadeCloseFile(bz2.BZ2File(curfile, mode), curfile)
                     elif detected.mime_type == 'application/x-gzip':
-                        curfile = gzip.GzipFile(fileobj = curfile, mode = mode)
+                        curfile = cascadeCloseFile(gzip.GzipFile(fileobj = curfile, mode = mode), curfile)
+                    if detected.mime_type in ['application/x-xz', 'application/x-bzip2', 'application/x-gzip']:
+                        # Read and rewind to ensure we're inside any compressed file layers
+                        curfile.read(1)
+                        curfile.seek(0)
                     else:
-                        break
+                        stop = True
                 else:
-                    break
+                    stop = True
 
-                # Read and rewind to ensure we're inside any compressed file layers
-                curfile.read(1)
-                curfile.seek(0)
         if not IMPORTED_MAGIC:
             # Somewhat of a hack, but prevents a hard dependency on the magic module
             url_path = parsed_url.path
-            while True:
-                if url_path.endswith(".xz"):
-                    curfile = lzma.LZMAFile(curfile, mode)
-                elif url_path.endswith(".bz2"):
-                    curfile = bz2.BZ2File(curfile, mode)
-                elif url_path.endswith(".gz"):
-                    curfile = gzip.GzipFile(fileobj = curfile, mode = mode)
+            stop = False
+            while not stop:
+                url_path_split = url_path.split(".")
+                url_path, extension = url_path_split[:-1], url_path_split[-1]
+                url_path = ".".join(url_path)
+                if extension == "xz":
+                    curfile = cascadeCloseFile(lzma.LZMAFile(curfile, mode), curfile)
+                elif extension == "bz2":
+                    curfile = cascadeCloseFile(bz2.BZ2File(curfile, mode), curfile)
+                elif extension == "gz":
+                    curfile = cascadeCloseFile(gzip.GzipFile(fileobj = curfile, mode = mode), curfile)
                 else:
-                    break
-                url_path = ".".join(url_path.split(".")[:-1])
+                    stop = True
 
         # Fallback in case the file doesn't exist
         if curfile is None:

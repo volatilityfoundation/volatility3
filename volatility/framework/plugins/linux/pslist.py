@@ -5,7 +5,6 @@
 from typing import Callable, Iterable, List, Any
 
 from volatility.framework import renderers, interfaces, contexts
-from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 
@@ -21,7 +20,11 @@ class PsList(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols")
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True)
         ]
 
     @classmethod
@@ -50,7 +53,7 @@ class PsList(interfaces.plugins.PluginInterface):
         for task in self.list_tasks(self.context,
                                     self.config['primary'],
                                     self.config['vmlinux'],
-                                    filter_func = self.create_pid_filter([self.config.get('pid', None)])):
+                                    filter_func = self.create_pid_filter(self.config.get('pid', None))):
             pid = task.pid
             ppid = 0
             if task.parent:
@@ -59,12 +62,12 @@ class PsList(interfaces.plugins.PluginInterface):
             yield (0, (pid, ppid, name))
 
     @classmethod
-    def list_tasks(cls,
-                   context: interfaces.context.ContextInterface,
-                   layer_name: str,
-                   vmlinux_symbols: str,
-                   filter_func: Callable[[int], bool] = lambda _: False
-                   ) -> Iterable[interfaces.objects.ObjectInterface]:
+    def list_tasks(
+            cls,
+            context: interfaces.context.ContextInterface,
+            layer_name: str,
+            vmlinux_symbols: str,
+            filter_func: Callable[[int], bool] = lambda _: False) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer.
 
         Args:
@@ -75,8 +78,6 @@ class PsList(interfaces.plugins.PluginInterface):
         Yields:
             Process objects
         """
-        linux.LinuxUtilities.aslr_mask_symbol_table(context, vmlinux_symbols, layer_name)
-
         vmlinux = contexts.Module(context, vmlinux_symbols, layer_name, 0)
 
         init_task = vmlinux.object_from_symbol(symbol_name = "init_task")

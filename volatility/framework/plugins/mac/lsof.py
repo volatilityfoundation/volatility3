@@ -8,12 +8,12 @@ from volatility.framework import renderers
 from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
-from volatility.plugins.mac import tasks
+from volatility.plugins.mac import pslist
 
 vollog = logging.getLogger(__name__)
 
 
-class lsof(plugins.PluginInterface):
+class Lsof(plugins.PluginInterface):
     """Lists all open file descriptors for all processes."""
 
     @classmethod
@@ -23,23 +23,29 @@ class lsof(plugins.PluginInterface):
                                                      description = 'Kernel Address Space',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
-            requirements.PluginRequirement(name = 'tasks', plugin = tasks.Tasks, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True)
         ]
 
     def _generator(self, tasks):
         for task in tasks:
             pid = task.p_pid
 
-            for _, filepath, fd in mac.MacUtilities.files_descriptors_for_process(self.config, self.context, task):
+            for _, filepath, fd in mac.MacUtilities.files_descriptors_for_process(self.context, self.config['darwin'],
+                                                                                  task):
                 if filepath and len(filepath) > 0:
                     yield (0, (pid, fd, filepath))
 
     def run(self):
-        filter_func = tasks.Tasks.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
 
         return renderers.TreeGrid([("PID", int), ("File Descriptor", int), ("File Path", str)],
                                   self._generator(
-                                      tasks.Tasks.list_tasks(self.context,
-                                                               self.config['primary'],
-                                                               self.config['darwin'],
-                                                               filter_func = filter_func)))
+                                      list_tasks(self.context,
+                                                 self.config['primary'],
+                                                 self.config['darwin'],
+                                                 filter_func = filter_func)))

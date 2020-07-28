@@ -5,6 +5,7 @@
 import collections
 import collections.abc
 import enum
+import functools
 import logging
 from typing import Any, Dict, Iterable, Iterator, TypeVar
 
@@ -35,6 +36,17 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         # Permanently cache all resolved symbols
         self._resolved = {}  # type: Dict[str, interfaces.objects.Template]
         self._resolved_symbols = {}  # type: Dict[str, interfaces.objects.Template]
+
+    def clear_symbol_cache(self, table_name: str = None) -> None:
+        """Clears the symbol cache for the specified table name. If no table
+        name is specified, the caches of all symbol tables are cleared."""
+        table_list = list()
+        if table_name is None:
+            table_list = self._dict.values()
+        else:
+            table_list.append(self._dict[table_name])
+        for table in table_list:
+            table.clear_symbol_cache()
 
     def free_table_name(self, prefix: str = "layer") -> str:
         """Returns an unused table name to ensure no collision occurs when
@@ -243,31 +255,6 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 
     def has_enumeration(self, name: str) -> bool:
         return self._membership(SymbolType.ENUM, name)
-
-
-def mask_symbol_table(symbol_table: interfaces.symbols.SymbolTableInterface,
-                      address_mask: int = 0,
-                      table_aslr_shift: int = 0):
-    """Alters a symbol table, such that all symbols returned have their address
-    masked by the address mask."""
-    original_get_symbol = symbol_table.get_symbol
-    cached_symbols = {}  # type: Dict[interfaces.symbols.SymbolInterface, interfaces.symbols.SymbolInterface]
-
-    def address_masked_get_symbol(*args, **kwargs):
-        symbol = original_get_symbol(*args, **kwargs)
-        # This is speedy, but may not be very efficient from a memory perspective
-        if symbol in cached_symbols:
-            return cached_symbols[symbol]
-        new_symbol = interfaces.symbols.SymbolInterface(name = symbol.name,
-                                                        address = address_mask & (symbol.address + table_aslr_shift),
-                                                        type = symbol.type,
-                                                        constant_data = symbol.constant_data)
-        cached_symbols[symbol] = new_symbol
-        return new_symbol
-
-    original_get_symbol = symbol_table.get_symbol
-    setattr(symbol_table, "get_symbol", address_masked_get_symbol)
-    return symbol_table
 
 
 def symbol_table_is_64bit(context: interfaces.context.ContextInterface, symbol_table_name: str) -> bool:

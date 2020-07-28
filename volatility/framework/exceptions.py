@@ -92,3 +92,10 @@ class UnsatisfiedException(VolatilityException):
     def __init__(self, unsatisfied: Dict[str, interfaces.configuration.RequirementInterface]) -> None:
         super().__init__()
         self.unsatisfied = unsatisfied
+
+
+class MissingModuleException(VolatilityException):
+
+    def __init__(self, module: str, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.module = module

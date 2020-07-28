@@ -1,7 +1,8 @@
 import functools
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Iterable
 
 from volatility.framework import exceptions, interfaces
+from volatility.framework.interfaces.layers import IteratorValue
 
 
 class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
@@ -13,7 +14,7 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
     def translate(self, offset: int, ignore_errors: bool = False) -> Tuple[Optional[int], Optional[str]]:
         mapping = list(self.mapping(offset, 0, ignore_errors))
         if len(mapping) == 1:
-            original_offset, mapped_offset, _, layer = mapping[0]
+            original_offset, _, mapped_offset, _, layer = mapping[0]
             if original_offset != offset:
                 raise exceptions.LayerException(self.name,
                                                 "Layer {} claims to map linearly but does not".format(self.name))
@@ -34,7 +35,7 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
         length size."""
         current_offset = offset
         output = []  # type: List[bytes]
-        for (offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
+        for (offset, _, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
             if not pad and offset > current_offset:
                 raise exceptions.InvalidAddressException(
                     self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
@@ -54,7 +55,7 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
         underlying mapping."""
         current_offset = offset
         length = len(value)
-        for (offset, mapped_offset, length, layer) in self.mapping(offset, length):
+        for (offset, _, mapped_offset, length, layer) in self.mapping(offset, length):
             if offset > current_offset:
                 raise exceptions.InvalidAddressException(
                     self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
@@ -63,3 +64,9 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
             self._context.layers.write(layer, mapped_offset, value[:length])
             value = value[length:]
             current_offset += length
+
+    def _scan_iterator(self,
+                       scanner: 'ScannerInterface',
+                       sections: Iterable[Tuple[int, int]],
+                       linear: bool = True) -> Iterable[IteratorValue]:
+        return super()._scan_iterator(scanner, sections, linear)

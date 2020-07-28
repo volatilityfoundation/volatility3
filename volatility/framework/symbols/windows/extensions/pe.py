@@ -23,7 +23,7 @@ class IMAGE_DOS_HEADER(objects.StructType):
             raise ValueError("e_magic {0:04X} is not a valid DOS signature.".format(self.e_magic))
 
         layer_name = self.vol.layer_name
-        symbol_table_name = self.get_symbol_table().name
+        symbol_table_name = self.get_symbol_table_name()
 
         nt_header = self._context.object(symbol_table_name + constants.BANG + "_IMAGE_NT_HEADERS",
                                          layer_name = layer_name,
@@ -89,7 +89,7 @@ class IMAGE_DOS_HEADER(objects.StructType):
         nt_header = self.get_nt_header()
 
         layer_name = self.vol.layer_name
-        symbol_table_name = self.get_symbol_table().name
+        symbol_table_name = self.get_symbol_table_name()
 
         section_alignment = nt_header.OptionalHeader.SectionAlignment
 
@@ -110,8 +110,10 @@ class IMAGE_DOS_HEADER(objects.StructType):
         fixed_data = self.fix_image_base(raw_data, nt_header)
         yield 0, fixed_data
 
-        prevsect = None
-        sect_sizes = []
+        start_addr = nt_header.FileHeader.SizeOfOptionalHeader + \
+                     (nt_header.OptionalHeader.vol.offset - self.vol.offset)
+
+        counter = 0
         for sect in nt_header.get_sections():
 
             if sect.VirtualAddress > size_of_image:
@@ -123,26 +125,17 @@ class IMAGE_DOS_HEADER(objects.StructType):
             if sect.SizeOfRawData > size_of_image:
                 raise ValueError("Section SizeOfRawData is too large: {}".format(sect.SizeOfRawData))
 
-            if prevsect is not None:
-                sect_sizes.append(sect.VirtualAddress - prevsect.VirtualAddress)
-            prevsect = sect
-        if prevsect is not None:
-            sect_sizes.append(conversion.round(prevsect.Misc.VirtualSize, section_alignment, up = True))
+            if sect is not None:
+                # It doesn't matter if this is too big, because it'll get overwritten by the later layers
+                sect_size = conversion.round(sect.Misc.VirtualSize, section_alignment, up = True)
+                sectheader = read_layer.read(sect.vol.offset, sect_header_size)
+                sectheader = self.replace_header_field(sect, sectheader, sect.PointerToRawData, sect.VirtualAddress)
+                sectheader = self.replace_header_field(sect, sectheader, sect.SizeOfRawData, sect_size)
+                sectheader = self.replace_header_field(sect, sectheader, sect.Misc.VirtualSize, sect_size)
 
-        counter = 0
-        start_addr = nt_header.FileHeader.SizeOfOptionalHeader + \
-                     (nt_header.OptionalHeader.vol.offset - self.vol.offset)
-
-        for sect in nt_header.get_sections():
-
-            sectheader = read_layer.read(sect.vol.offset, sect_header_size)
-            sectheader = self.replace_header_field(sect, sectheader, sect.PointerToRawData, sect.VirtualAddress)
-            sectheader = self.replace_header_field(sect, sectheader, sect.SizeOfRawData, sect_sizes[counter])
-            sectheader = self.replace_header_field(sect, sectheader, sect.Misc.VirtualSize, sect_sizes[counter])
-
-            offset = start_addr + (counter * sect_header_size)
-            yield offset, sectheader
-            counter += 1
+                offset = start_addr + (counter * sect_header_size)
+                yield offset, sectheader
+                counter += 1
 
 
 class IMAGE_NT_HEADERS(objects.StructType):
@@ -154,7 +147,7 @@ class IMAGE_NT_HEADERS(objects.StructType):
             <_IMAGE_SECTION_HEADER> objects
         """
         layer_name = self.vol.layer_name
-        symbol_table_name = self.get_symbol_table().name
+        symbol_table_name = self.get_symbol_table_name()
 
         sect_header_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG +
                                                                "_IMAGE_SECTION_HEADER").size

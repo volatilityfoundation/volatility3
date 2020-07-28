@@ -63,7 +63,8 @@ class ObjectInformation(ReadOnlyMapping):
                  offset: int,
                  member_name: Optional[str] = None,
                  parent: Optional['ObjectInterface'] = None,
-                 native_layer_name: Optional[str] = None):
+                 native_layer_name: Optional[str] = None,
+                 size: Optional[int] = None):
         """Constructs a container for basic information about an object.
 
         Args:
@@ -72,13 +73,15 @@ class ObjectInformation(ReadOnlyMapping):
             member_name: If the object was accessed as a member of a parent object, this was the name used to access it
             parent: If the object was accessed as a member of a parent object, this is the parent object
             native_layer_name: If this object references other objects (such as a pointer), what layer those objects live in
+            size: The size that the whole structure consumes in bytes
         """
         super().__init__({
             'layer_name': layer_name,
             'offset': offset,
             'member_name': member_name,
             'parent': parent,
-            'native_layer_name': native_layer_name or layer_name
+            'native_layer_name': native_layer_name or layer_name,
+            'size': size
         })
 
 
@@ -128,17 +131,19 @@ class ObjectInterface(metaclass = ABCMeta):
         """Writes the new value into the format at the offset the object
         currently resides at."""
 
-    def get_symbol_table(self) -> 'interfaces.symbols.SymbolTableInterface':
-        """Returns the symbol table for this particular object.
+    def get_symbol_table_name(self) -> str:
+        """Returns the symbol table name for this particular object.
 
-        Returns none if the symbol table cannot be identified.
+        Raises:
+            ValueError: If the object's symbol does not contain an explicit table
+            KeyError: If the table_name is not valid within the object's context
         """
         if constants.BANG not in self.vol.type_name:
             raise ValueError("Unable to determine table for symbol: {}".format(self.vol.type_name))
         table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
         if table_name not in self._context.symbol_space:
             raise KeyError("Symbol table not found in context's symbol_space for symbol: {}".format(self.vol.type_name))
-        return self._context.symbol_space[table_name]
+        return table_name
 
     def cast(self, new_type_name: str, **additional) -> 'ObjectInterface':
         """Returns a new object at the offset and from the layer that the
@@ -158,7 +163,8 @@ class ObjectInterface(metaclass = ABCMeta):
                                         offset = self.vol.offset,
                                         member_name = self.vol.member_name,
                                         parent = self.vol.parent,
-                                        native_layer_name = self.vol.native_layer_name)
+                                        native_layer_name = self.vol.native_layer_name,
+                                        size = object_template.size)
         return object_template(context = self._context, object_info = object_info)
 
     def has_member(self, member_name: str) -> bool:
@@ -169,6 +175,29 @@ class ObjectInterface(metaclass = ABCMeta):
             member_name: Name to test whether a member exists within the type structure
         """
         return False
+
+    def has_valid_member(self, member_name: str) -> bool:
+        """Returns whether the dereferenced type has a valid member.
+
+        Args:
+            member_name: Name of the member to test access to determine if the member is valid or not
+        """
+        if self.has_member(member_name):
+            # noinspection PyBroadException
+            try:
+                _ = getattr(self, member_name)
+                return True
+            except Exception:
+                pass
+        return False
+
+    def has_valid_members(self, member_names: List[str]) -> bool:
+        """Returns whether the object has all of the members listed in member_names
+
+        Args:
+            member_names: List of names to test as to members with those names validity
+        """
+        return all([self.has_valid_member(member_name) for member_name in member_names])
 
     class VolTemplateProxy(metaclass = abc.ABCMeta):
         """A container for proxied methods that the ObjectTemplate of this

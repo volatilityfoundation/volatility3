@@ -41,9 +41,10 @@ class Handles(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.IntRequirement(name = 'pid',
-                                        description = "Process ID to include (all other processes are excluded)",
-                                        optional = True),
+            requirements.ListRequirement(name = 'pid',
+                                         element_type = int,
+                                         description = "Process IDs to include (all other processes are excluded)",
+                                         optional = True),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
         ]
 
@@ -85,8 +86,11 @@ class Handles(interfaces.plugins.PluginInterface):
 
             # is this the right thing to raise here?
             if magic is None:
-                raise AttributeError(
-                    "Unable to find the SAR value for decoding handle table pointers (Is capstone installed?)")
+                if not has_capstone:
+                    raise AttributeError("Unable to find the SAR value for decoding handle table pointers")
+                else:
+                    raise exceptions.MissingModuleException(
+                        "Unable to find the SAR value for decoding handle table pointers", module = "capstone")
 
             offset = self._decode_pointer(handle_table_entry.LowValue, magic)
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
@@ -316,7 +320,7 @@ class Handles(interfaces.plugins.PluginInterface):
                     else:
                         try:
                             obj_name = entry.NameInfo.Name.String
-                        except exceptions.InvalidAddressException:
+                        except (ValueError, exceptions.InvalidAddressException):
                             obj_name = ""
 
                 except (exceptions.InvalidAddressException):
@@ -330,7 +334,7 @@ class Handles(interfaces.plugins.PluginInterface):
 
     def run(self):
 
-        filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Offset", format_hints.Hex),
                                    ("HandleValue", format_hints.Hex), ("Type", str),

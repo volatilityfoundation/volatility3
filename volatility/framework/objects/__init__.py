@@ -8,7 +8,7 @@ import struct
 from collections import abc
 from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
 
-from volatility.framework import interfaces
+from volatility.framework import interfaces, constants
 from volatility.framework.objects import templates, utility
 
 vollog = logging.getLogger(__name__)
@@ -36,8 +36,8 @@ def convert_data_to_value(data: bytes, struct_type: Type[TUnion[int, float, byte
     return struct.unpack(struct_format, data)[0]
 
 
-def convert_value_to_data(value: TUnion[int, float, bytes, str, bool],
-                          struct_type: Type[TUnion[int, float, bytes, str, bool]],
+def convert_value_to_data(value: TUnion[int, float, bytes, str, bool], struct_type: Type[TUnion[int, float, bytes, str,
+                                                                                                bool]],
                           data_format: DataFormatInfo) -> bytes:
     """Converts a particular value to a series of bytes."""
     if not isinstance(value, struct_type):
@@ -71,8 +71,15 @@ class Void(interfaces.objects.ObjectInterface):
 
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
-            """Dummy size for Void objects."""
-            raise TypeError("Void types are incomplete, cannot contain data and do not have a size")
+            """Dummy size for Void objects.
+
+            According to http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf, void is an incomplete type,
+            and therefore sizeof(void) should fail.  However, we need to be able to construct voids to be able to
+            cast them, so we return a useless size.  It shouldn't cause errors, but it also shouldn't be common,
+            it is logged at the lowest level.
+            """
+            vollog.log(constants.LOGLEVEL_VVVV, "Void size requested")
+            return 0
 
     def write(self, value: Any) -> None:
         """Dummy method that does nothing for Void objects."""
@@ -149,9 +156,12 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         return self._context.layers.write(self.vol.layer_name, self.vol.offset, data)
 
 
+# This must be int (and the _struct_type must be int) because bool cannot be inherited from:
+# https://mail.python.org/pipermail/python-dev/2002-March/020822.html
+# https://mail.python.org/pipermail/python-dev/2004-February/042537.html
 class Boolean(PrimitiveObject, int):
     """Primitive Object that handles boolean types."""
-    _struct_type = bool  # type: ClassVar[Type]
+    _struct_type = int  # type: ClassVar[Type]
 
 
 class Integer(PrimitiveObject, int):
@@ -199,6 +209,12 @@ class Bytes(PrimitiveObject, bytes):
         return cls._struct_type.__new__(
             cls, cls._unmarshall(context, data_format = DataFormatInfo(length, "big", False),
                                  object_info = object_info))
+
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
+        @classmethod
+        def size(cls, template: interfaces.objects.Template) -> int:
+            return template.vol.length
 
 
 class String(PrimitiveObject, str):
@@ -254,6 +270,13 @@ class String(PrimitiveObject, str):
             value = value[:value.find('\x00')]
         return value
 
+    class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
+
+        @classmethod
+        def size(cls, template: interfaces.objects.Template) -> int:
+            """Returns the size of the templated object."""
+            return template.vol.max_length
+
 
 class Pointer(Integer):
     """Pointer which points to another object."""
@@ -299,13 +322,14 @@ class Pointer(Integer):
         return self.vol.subtype(context = self._context,
                                 object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
                                                                                    offset = offset,
-                                                                                   parent = self))
+                                                                                   parent = self,
+                                                                                   size = self.vol.subtype.size))
 
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from
         memory."""
         layer_name = layer_name or self.vol.layer_name
-        return self._context.layers[layer_name].is_valid(self, self.vol.size)
+        return self._context.layers[layer_name].is_valid(self, self.vol.subtype.size)
 
     def __getattr__(self, attr: str) -> Any:
         """Convenience function to access unknown attributes by getting them
@@ -376,7 +400,7 @@ class BitField(interfaces.objects.ObjectInterface, int):
 
         @classmethod
         def size(cls, template: interfaces.objects.Template) -> int:
-            return Integer.VolTemplateProxy.size(template)
+            return template.vol.base_type.size
 
         @classmethod
         def children(cls, template: interfaces.objects.Template) -> List[interfaces.objects.Template]:
@@ -404,8 +428,8 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         return int.__new__(cls, value)  # type: ignore
 
     def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
-                 object_info: interfaces.objects.ObjectInformation, base_type: Integer,
-                 choices: Dict[str, int]) -> None:
+                 object_info: interfaces.objects.ObjectInformation, base_type: Integer, choices: Dict[str,
+                                                                                                      int]) -> None:
         super().__init__(context, type_name, object_info)
         self._inverse_choices = self._generate_inverse_choices(choices)
         self._vol['choices'] = choices
@@ -494,6 +518,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
         super().__init__(context = context, type_name = type_name, object_info = object_info)
         self._vol['count'] = count
         self._vol['subtype'] = subtype
+        self._vol['size'] = count * subtype.size
 
     # This overrides the little known Sequence.count(val) that returns the number of items in the list that match val
     # Changing the name would be confusing (since we use count of an array everywhere else), so this is more important
@@ -506,6 +531,7 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
     def count(self, value: int) -> None:
         """Sets the count to a specific value."""
         self._vol['count'] = value
+        self._vol['size'] = value * self._vol['subtype'].size
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
 
@@ -563,7 +589,8 @@ class Array(interfaces.objects.ObjectInterface, abc.Sequence):
                 layer_name = self.vol.layer_name,
                 offset = mask & (self.vol.offset + (self.vol.subtype.size * index)),
                 parent = self,
-                native_layer_name = self.vol.native_layer_name)
+                native_layer_name = self.vol.native_layer_name,
+                size = self.vol.subtype.size)
             result += [self.vol.subtype(context = self._context, object_info = object_info)]
         if not return_list:
             return result[0]
@@ -671,14 +698,16 @@ class AggregateType(interfaces.objects.ObjectInterface):
             return self._concrete_members[attr]
         elif attr in self.vol.members:
             mask = self._context.layers[self.vol.layer_name].address_mask
-            relative_offset, member = self.vol.members[attr]
-            member = member(context = self._context,
-                            object_info = interfaces.objects.ObjectInformation(
-                                layer_name = self.vol.layer_name,
-                                offset = mask & (self.vol.offset + relative_offset),
-                                member_name = attr,
-                                parent = self,
-                                native_layer_name = self.vol.native_layer_name))
+            relative_offset, template = self.vol.members[attr]
+            if isinstance(template, templates.ReferenceTemplate):
+                template = self._context.symbol_space.get_type(template.vol.type_name)
+            object_info = interfaces.objects.ObjectInformation(layer_name = self.vol.layer_name,
+                                                               offset = mask & (self.vol.offset + relative_offset),
+                                                               member_name = attr,
+                                                               parent = self,
+                                                               native_layer_name = self.vol.native_layer_name,
+                                                               size = template.size)
+            member = template(context = self._context, object_info = object_info)
             self._concrete_members[attr] = member
             return member
         # We duplicate this code to avoid polluting the methodspace

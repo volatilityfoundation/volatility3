@@ -80,8 +80,8 @@ def choose_automagic(automagics, plugin):
 
 def run(automagics: List[interfaces.automagic.AutomagicInterface],
         context: interfaces.context.ContextInterface,
-        configurable: Union[interfaces.configuration.ConfigurableInterface, Type[interfaces.configuration.
-                                                                                 ConfigurableInterface]],
+        configurable: Union[interfaces.configuration.ConfigurableInterface,
+                            Type[interfaces.configuration.ConfigurableInterface]],
         config_path: str,
         progress_callback: constants.ProgressCallback = None) -> List[traceback.TracebackException]:
     """Runs through the list of `automagics` in order, allowing them to make

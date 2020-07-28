@@ -3,13 +3,15 @@
 #
 
 import datetime
+import json
 import logging
 import random
 import string
 import sys
 from functools import wraps
-from typing import Any, List, Tuple, Dict
+from typing import Any, List, Tuple, Dict, Optional
 
+from volatility.framework.interfaces.renderers import RenderOption
 from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -51,6 +53,21 @@ def hex_bytes_as_text(value: bytes) -> str:
     return output
 
 
+def multitypedata_as_text(value: format_hints.MultiTypeData) -> str:
+    """Renders the bytes as a string where possible, otherwise it displays hex data
+
+    This attempts to convert the string based on its encoding and if no data's been lost due to the split on the null character, then it displays it as is
+    """
+    if value.show_hex:
+        return hex_bytes_as_text(value)
+    string_representation = str(value, encoding = value.encoding, errors = 'replace')
+    if value.split_nulls and ((len(value) / 2 - 1) <= len(string_representation) <= (len(value) / 2)):
+        return "\n".join(string_representation.split("\x00"))
+    if len(string_representation) - 1 <= len(string_representation.split("\x00")[0]) <= len(string_representation):
+        return string_representation.split("\x00")[0]
+    return hex_bytes_as_text(value)
+
+
 def optional(func):
 
     @wraps(func)
@@ -72,6 +89,8 @@ def quoted_optional(func):
         result = optional(func)(x)
         if result == "-" or result == "N/A":
             return ""
+        if isinstance(x, format_hints.MultiTypeData) and x.converted_int:
+            return "{}".format(result)
         if isinstance(x, int) and not isinstance(x, (format_hints.Hex, format_hints.Bin)):
             return "{}".format(result)
         return "\"{}\"".format(result)
@@ -107,6 +126,7 @@ def display_disassembly(disasm: interfaces.renderers.Disassembly) -> str:
 class CLIRenderer(interfaces.renderers.Renderer):
     """Class to add specific requirements for CLI renderers."""
     name = "unnamed"
+    structured_output = False
 
 
 class QuickTextRenderer(CLIRenderer):
@@ -114,6 +134,7 @@ class QuickTextRenderer(CLIRenderer):
         format_hints.Bin: optional(lambda x: "0b{:b}".format(x)),
         format_hints.Hex: optional(lambda x: "0x{:x}".format(x)),
         format_hints.HexBytes: optional(hex_bytes_as_text),
+        format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         interfaces.renderers.Disassembly: optional(display_disassembly),
         bytes: optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
         datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
@@ -169,6 +190,7 @@ class CSVRenderer(CLIRenderer):
         format_hints.Bin: quoted_optional(lambda x: "0b{:b}".format(x)),
         format_hints.Hex: quoted_optional(lambda x: "0x{:x}".format(x)),
         format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
+        format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
         bytes: quoted_optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
         datetime.datetime: quoted_optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
@@ -176,6 +198,7 @@ class CSVRenderer(CLIRenderer):
     }
 
     name = "csv"
+    structured_output = True
 
     def get_render_options(self):
         pass
@@ -192,7 +215,7 @@ class CSVRenderer(CLIRenderer):
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
             line.append("{}".format('"' + column.name + '"'))
-        outfd.write("\n{}".format(",".join(line)))
+        outfd.write("{}".format(",".join(line)))
 
         def visitor(node, accumulator):
             accumulator.write("\n")
@@ -234,7 +257,7 @@ class PrettyTextRenderer(CLIRenderer):
         # TODO: Improve text output
         outfd = sys.stdout
 
-        outfd.write("Formatting...\r")
+        sys.stderr.write("Formatting...\n")
 
         display_alignment = ">"
         column_separator = " | "
@@ -242,8 +265,9 @@ class PrettyTextRenderer(CLIRenderer):
         tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
         max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
 
-        def visitor(node, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
-                    ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
+        def visitor(
+            node, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
+        ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
             line = {}
@@ -276,3 +300,67 @@ class PrettyTextRenderer(CLIRenderer):
         outfd.write(format_string.format(*column_titles))
         for (depth, line) in final_output:
             outfd.write(format_string.format("*" * depth, *[line[column] for column in grid.columns]))
+
+
+class JsonRenderer(CLIRenderer):
+    _type_renderers = {
+        format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
+        interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
+        datetime.datetime: lambda x: x.isoformat() if not isinstance(x, interfaces.renderers.BaseAbsentValue) else None,
+        'default': lambda x: x
+    }
+
+    name = 'JSON'
+    structured_output = True
+
+    def get_render_options(self) -> List[RenderOption]:
+        pass
+
+    def output_result(self, outfd, result):
+        """Outputs the JSON data to a file in a particular format"""
+        outfd.write(json.dumps(result, indent = 2, sort_keys = True))
+
+    def render(self, grid: interfaces.renderers.TreeGrid):
+        outfd = sys.stdout
+
+        outfd.write("\n")
+        final_output = ({}, [])
+
+        def visitor(
+            node: Optional[interfaces.renderers.TreeNode],
+            accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]],
+        ) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
+            # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
+            acc_map, final_tree = accumulator
+            node_dict = {'__children': []}
+            for column_index in range(len(grid.columns)):
+                column = grid.columns[column_index]
+                renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
+                data = renderer(list(node.values)[column_index])
+                if isinstance(data, interfaces.renderers.BaseAbsentValue):
+                    data = None
+                node_dict[column.name] = data
+            if node.parent:
+                acc_map[node.parent.path]['__children'].append(node_dict)
+            else:
+                final_tree.append(node_dict)
+            acc_map[node.path] = node_dict
+
+            return (acc_map, final_tree)
+
+        if not grid.populated:
+            grid.populate(visitor, final_output)
+        else:
+            grid.visit(node = None, function = visitor, initial_accumulator = final_output)
+
+        self.output_result(outfd, final_output[1])
+
+
+class JsonLinesRenderer(JsonRenderer):
+    name = 'JSONL'
+
+    def output_result(self, outfd, result):
+        """Outputs the JSON results as JSON lines"""
+        for line in result:
+            outfd.write(json.dumps(line, sort_keys = True))
+            outfd.write("\n")

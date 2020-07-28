@@ -73,6 +73,13 @@ class HMAP_ENTRY(objects.StructType):
 
 class CMHIVE(objects.StructType):
 
+    def is_valid(self) -> bool:
+        """Determine if the object is valid."""
+        try:
+            return self.Hive.Signature == 0xbee0bee0
+        except exceptions.InvalidAddressException:
+            return False
+
     def get_name(self) -> Optional[interfaces.objects.ObjectInterface]:
         """Determine a name for the hive.
 
@@ -145,8 +152,9 @@ class CM_KEY_NODE(objects.StructType):
             subkey_node = hive.get_cell(self.SubKeyLists[index]).u.KeyIndex
             yield from self._get_subkeys_recursive(hive, subkey_node)
 
-    def _get_subkeys_recursive(self, hive: RegistryHive, node: interfaces.objects.ObjectInterface
-                               ) -> Iterable[interfaces.objects.ObjectInterface]:
+    def _get_subkeys_recursive(
+            self, hive: RegistryHive,
+            node: interfaces.objects.ObjectInterface) -> Iterable[interfaces.objects.ObjectInterface]:
         """Recursively descend a node returning subkeys."""
         # The keylist appears to include 4 bytes of key name after each value
         # We can either double the list and only use the even items, or
@@ -201,12 +209,14 @@ class CM_KEY_NODE(objects.StructType):
                     if node.vol.type_name.endswith(constants.BANG + '_CM_KEY_VALUE'):
                         yield node
         except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
-            vollog.debug("Invalid address {}".format(excp))
+            vollog.debug("Invalid address in get_values iteration: {}".format(excp))
             return
 
     def get_name(self) -> interfaces.objects.ObjectInterface:
-        """Since this is just a casting convenience, it can be a property."""
-        return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
+        """Gets the name for the current key node"""
+        namelength = self.NameLength
+        self.Name.count = namelength
+        return self.Name.cast("string", max_length = namelength, encoding = "latin-1")
 
     def get_key_path(self) -> str:
         reg = self._context.layers[self.vol.layer_name]
@@ -224,24 +234,29 @@ class CM_KEY_VALUE(objects.StructType):
     """Extensions to extract data from CM_KEY_VALUE nodes."""
 
     def get_name(self) -> interfaces.objects.ObjectInterface:
-        """Since this is just a casting convenience, it can be a property."""
-        self.Name.count = self.NameLength
-        return self.Name.cast("string", max_length = self.NameLength, encoding = "latin-1")
+        """Gets the name for the current key value"""
+        namelength = self.NameLength
+        self.Name.count = namelength
+        return self.Name.cast("string", max_length = namelength, encoding = "latin-1")
 
-    def decode_data(self) -> Union[str, bytes]:
-        """Since this is just a casting convenience, it can be a property."""
+    def decode_data(self) -> Union[int, bytes]:
+        """Properly decodes the data associated with the value node"""
         # Determine if the data is stored inline
-        datalen = self.DataLength & 0x7fffffff
+        datalen = self.DataLength
         data = b""
         # Check if the data is stored inline
         layer = self._context.layers[self.vol.layer_name]
         if not isinstance(layer, RegistryHive):
             raise TypeError("Key value was not instantiated on a RegistryHive layer")
 
-        if self.DataLength & 0x80000000 and (0 > datalen or datalen > 4):
-            raise ValueError("Unable to read inline registry value with excessive length: {}".format(datalen))
-        elif self.DataLength & 0x80000000:
-            data = layer.read(self.Data.vol.offset, datalen)
+        # If the high-bit is set
+        if datalen & 0x80000000:
+            # Remove the high bit
+            datalen = datalen & 0x7fffffff
+            if (0 > datalen or datalen > 4):
+                raise ValueError("Unable to read inline registry value with excessive length: {}".format(datalen))
+            else:
+                data = layer.read(self.Data.vol.offset, datalen)
         elif layer.hive.Version == 5 and datalen > 0x4000:
             # We're bigdata
             big_data = layer.get_node(self.Data)
@@ -272,22 +287,15 @@ class CM_KEY_VALUE(objects.StructType):
             if len(data) != struct.calcsize("<Q"):
                 raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
             return struct.unpack("<Q", data)[0]
-        if self_type in [RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK]:
-            # truncate after \x00\x00 to ensure it can
-            output = str(data, encoding = "utf-16-le", errors = 'replace')
-            if output.find("\x00") > 0:
-                output = output[:output.find("\x00")]
-            return output
-        if self_type == RegValueTypes.REG_MULTI_SZ:
-            return str(data, encoding = "utf-16-le").split("\x00")[0]
         if self_type in [
+                RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ,
                 RegValueTypes.REG_BINARY, RegValueTypes.REG_FULL_RESOURCE_DESCRIPTOR, RegValueTypes.REG_RESOURCE_LIST,
                 RegValueTypes.REG_RESOURCE_REQUIREMENTS_LIST
         ]:
             return data
         if self_type == RegValueTypes.REG_NONE:
-            return ''
+            return b''
 
         # Fall back if it's something weird
         vollog.debug("Unknown registry value type encountered: {}".format(self.Type))
-        return data.hex()
+        return data

@@ -366,8 +366,9 @@ class PdbReader:
             offset += length_len
             output, consumed = self.consume_type(module, offset, length)
             leaf_type, name, value = output
-            if name == '<unnamed-tag>' or name == '__unnamed':
-                name = '__unnamed_' + hex(len(self.types) + 0x1000)[2:]
+            for tag_type in ['unnamed', 'anonymous']:
+                if name == '<{}-tag>'.format(tag_type) or name == '__{}'.format(tag_type):
+                    name = '__{}_'.format(tag_type) + hex(len(self.types) + 0x1000)[2:]
             type_references[name] = len(self.types)
             self.types.append((leaf_type, name, value))
             offset += length
@@ -519,11 +520,7 @@ class PdbReader:
         """Strips unnecessary components from the start of a symbol name."""
         new_name = name
 
-        if new_name[:7] in ["__imp__", "__imp_@"]:
-            new_name = new_name[7:]
-        elif new_name[:6] in ["__imp_"]:
-            new_name = new_name[6:]
-        elif new_name[:1] in ["_", "@", "\u007F"]:
+        if new_name[:1] in ["_", "@", "\u007F"]:
             new_name = new_name[1:]
 
         name_array = new_name.split("@")
@@ -700,9 +697,9 @@ class PdbReader:
         self.user_types = self.replace_forward_references(self.user_types, type_references)
 
     def consume_type(
-            self, module: interfaces.context.ModuleInterface, offset: int, length: int
-    ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Union[None, List, interfaces.objects.
-                                                                                        ObjectInterface]], int]:
+        self, module: interfaces.context.ModuleInterface, offset: int, length: int
+    ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Union[
+            None, List, interfaces.objects.ObjectInterface]], int]:
         """Returns a (leaf_type, name, object) Tuple for a type, and the number
         of bytes consumed."""
         result = None, None, None  # type: Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[Union[List, interfaces.objects.ObjectInterface]]]
@@ -820,11 +817,11 @@ class PdbReader:
         elif isinstance(types, ForwardArrayCount):
             element_type = types.element_type
             # If we're a forward array count, we need to do the calculation now after all the types have been processed
-            if element_type > 0x1000:
-                loop = True
-                while loop:
+            loop = True
+            while loop:
+                loop = False
+                if element_type > 0x1000:
                     _, name, toplevel_type = self.types[element_type - 0x1000]
-                    loop = False
                     # If there's no name, the original size is probably fine as long as we're not indirect (LF_MODIFIER)
                     if not name and isinstance(
                             toplevel_type,
@@ -841,7 +838,8 @@ class PdbReader:
     # COMMON CODE
 
     @staticmethod
-    def parse_string(structure: interfaces.objects.ObjectInterface, parse_as_pascal: bool = False,
+    def parse_string(structure: interfaces.objects.ObjectInterface,
+                     parse_as_pascal: bool = False,
                      size: int = 0) -> str:
         """Consumes either a c-string or a pascal string depending on the
         leaf_type."""
@@ -885,7 +883,9 @@ class PdbReader:
 
 class PdbRetreiver:
 
-    def retreive_pdb(self, guid: str, file_name: str,
+    def retreive_pdb(self,
+                     guid: str,
+                     file_name: str,
                      progress_callback: constants.ProgressCallback = None) -> Optional[str]:
         vollog.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])
@@ -903,6 +903,8 @@ class PdbRetreiver:
                 break
         if progress_callback is not None:
             progress_callback(100, "Downloading {}".format(url + suffix))
+        if result is None:
+            return None
         return result.name
 
 

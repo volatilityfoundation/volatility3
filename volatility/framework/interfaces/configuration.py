@@ -62,7 +62,8 @@ class HierarchicalDict(collections.abc.Mapping):
     """The core of configuration data, it is a mapping class that stores keys
     within itself, and also stores lower hierarchies."""
 
-    def __init__(self, initial_dict: Dict[str, 'SimpleTypeRequirement'] = None,
+    def __init__(self,
+                 initial_dict: Dict[str, 'SimpleTypeRequirement'] = None,
                  separator: str = CONFIG_SEPARATOR) -> None:
         """
         Args:

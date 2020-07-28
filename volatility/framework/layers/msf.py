@@ -136,8 +136,11 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
     def is_valid(self, offset: int, length: int = 1) -> bool:
         return self.context.layers[self._base_layer].is_valid(offset, length)
 
-    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
-        yield (offset, offset, length, self._base_layer)
+    def mapping(self,
+                offset: int,
+                length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+        yield offset, length, offset, length, self._base_layer
 
     def get_stream(self, index) -> Optional['PdbMSFStream']:
         self.read_streams()
@@ -182,7 +185,10 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
             requirements.IntRequirement(name = 'maximum_size')
         ]
 
-    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
+    def mapping(self,
+                offset: int,
+                length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
         returned = 0
         page_size = self._pdb_layer.page_size
         while length > 0:
@@ -194,7 +200,8 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
                     raise exceptions.InvalidAddressException(layer_name = self.name,
                                                              invalid_address = offset + returned)
             else:
-                yield (offset + returned, (self._pages[page] * page_size) + page_position, chunk_size, self._base_layer)
+                yield offset + returned, chunk_size, (self._pages[page] *
+                                                      page_size) + page_position, chunk_size, self._base_layer
             returned += chunk_size
             length -= chunk_size
 

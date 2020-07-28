@@ -5,8 +5,8 @@
 import logging
 from typing import List, Optional, Tuple, Type
 
-from volatility.framework import interfaces, constants, exceptions, layers
-from volatility.framework import symbols, objects
+from volatility.framework import interfaces, constants, exceptions
+from volatility.framework import objects
 from volatility.framework.automagic import symbol_cache, symbol_finder
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
@@ -14,24 +14,9 @@ from volatility.framework.symbols import linux
 vollog = logging.getLogger(__name__)
 
 
-class LinuxBannerCache(symbol_cache.SymbolBannerCache):
-    """Caches the banners found in the Linux symbol files."""
-
-    os = "linux"
-    symbol_name = "linux_banner"
-    banner_path = constants.LINUX_BANNERS_PATH
-
-
-class LinuxSymbolFinder(symbol_finder.SymbolFinder):
-    """Linux symbol loader based on uname signature strings."""
-
-    banner_config_key = "kernel_banner"
-    banner_cache = LinuxBannerCache
-    symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
-
-
-class LintelStacker(interfaces.automagic.StackerLayerInterface):
+class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 45
+    exclusion_list = ['mac', 'windows']
 
     @classmethod
     def stack(cls,
@@ -171,7 +156,12 @@ class LinuxUtilities(object):
 
         sym_addr = dentry.d_op.d_dname
 
-        symbs = list(context.symbol_space.get_symbols_by_location(sym_addr))
+        symbol_table_arr = sym_addr.vol.type_name.split("!")
+        symbol_table = None
+        if len(symbol_table_arr) == 2:
+            symbol_table = symbol_table_arr[0]
+
+        symbs = list(context.symbol_space.get_symbols_by_location(sym_addr, table_name = symbol_table))
 
         if len(symbs) == 1:
             sym = symbs[0].split(constants.BANG)[1]
@@ -228,8 +218,7 @@ class LinuxUtilities(object):
         return ret
 
     @classmethod
-    def files_descriptors_for_process(cls, config: interfaces.configuration.HierarchicalDict,
-                                      context: interfaces.context.ContextInterface,
+    def files_descriptors_for_process(cls, context: interfaces.context.ContextInterface, symbol_table: str,
                                       task: interfaces.objects.ObjectInterface):
 
         fd_table = task.files.get_fds()
@@ -242,7 +231,7 @@ class LinuxUtilities(object):
         if max_fds > 500000:
             return
 
-        file_type = config["vmlinux"] + constants.BANG + 'file'
+        file_type = symbol_table + constants.BANG + 'file'
 
         fds = objects.utility.array_of_pointers(fd_table, count = max_fds, subtype = file_type, context = context)
 
@@ -251,24 +240,6 @@ class LinuxUtilities(object):
                 full_path = LinuxUtilities.path_for_file(context, task, filp)
 
                 yield fd_num, filp, full_path
-
-    @classmethod
-    def aslr_mask_symbol_table(cls,
-                               context: interfaces.context.ContextInterface,
-                               symbol_table: str,
-                               layer_name: str,
-                               aslr_shift = 0):
-
-        sym_table = context.symbol_space[symbol_table]
-        sym_layer = context.layers[layer_name]
-
-        if aslr_shift == 0:
-            if not isinstance(sym_layer, layers.intel.Intel):
-                raise TypeError("Layer name {} is not an intel space")
-            aslr_layer = sym_layer.config['memory_layer']
-            _, aslr_shift = cls.find_aslr(context, symbol_table, aslr_layer)
-
-        symbols.mask_symbol_table(sym_table, sym_layer.address_mask, aslr_shift)
 
     @classmethod
     def find_aslr(cls,
@@ -283,12 +254,15 @@ class LinuxUtilities(object):
         init_task_json_address = context.symbol_space.get_symbol(init_task_symbol).address
         swapper_signature = rb"swapper(\/0|\x00\x00)\x00\x00\x00\x00\x00\x00"
         module = context.module(symbol_table, layer_name, 0)
+        address_mask = context.symbol_space[symbol_table].config.get('symbol_mask', None)
+
+        task_symbol = module.get_type('task_struct')
+        comm_child_offset = task_symbol.relative_child_offset('comm')
 
         for offset in context.layers[layer_name].scan(scanner = scanners.RegExScanner(swapper_signature),
                                                       context = context,
                                                       progress_callback = progress_callback):
-            task_symbol = module.get_type('task_struct')
-            init_task_address = offset - task_symbol.relative_child_offset('comm')
+            init_task_address = offset - comm_child_offset
             init_task = module.object(object_type = 'task_struct', offset = init_task_address, absolute = True)
             if init_task.pid != 0:
                 continue
@@ -298,6 +272,8 @@ class LinuxUtilities(object):
             # This we get for free
             aslr_shift = init_task.files.cast('long unsigned int') - module.get_symbol('init_files').address
             kaslr_shift = init_task_address - cls.virtual_to_physical_address(init_task_json_address)
+            if address_mask:
+                aslr_shift = aslr_shift & address_mask
 
             if aslr_shift & 0xfff != 0 or kaslr_shift & 0xfff != 0:
                 continue
@@ -316,3 +292,20 @@ class LinuxUtilities(object):
         if addr > 0xffffffff80000000:
             return addr - 0xffffffff80000000
         return addr - 0xc0000000
+
+
+class LinuxBannerCache(symbol_cache.SymbolBannerCache):
+    """Caches the banners found in the Linux symbol files."""
+
+    os = "linux"
+    symbol_name = "linux_banner"
+    banner_path = constants.LINUX_BANNERS_PATH
+
+
+class LinuxSymbolFinder(symbol_finder.SymbolFinder):
+    """Linux symbol loader based on uname signature strings."""
+
+    banner_config_key = "kernel_banner"
+    banner_cache = LinuxBannerCache
+    symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
+    find_aslr = lambda cls, *args: LinuxUtilities.find_aslr(*args)[1]

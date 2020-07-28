@@ -36,7 +36,7 @@ BANG = "!"
 
 # We use the SemVer 2.0.0 versioning scheme
 VERSION_MAJOR = 1  # Number of releases of the library with a breaking change
-VERSION_MINOR = 0  # Number of changes that only add to the interface
+VERSION_MINOR = 1  # Number of changes that only add to the interface
 VERSION_PATCH = 0  # Number of changes that do not change the interface
 VERSION_SUFFIX = "-beta.1"
 
@@ -84,3 +84,8 @@ class Parallelism(enum.IntEnum):
 
 PARALLELISM = Parallelism.Off
 """Default value to the parallelism setting used throughout volatility"""
+
+ISF_MINIMUM_SUPPORTED = (2, 0, 0)
+"""The minimum supported version of the Intermediate Symbol Format"""
+ISF_MINIMUM_DEPRECATED = (3, 9, 9)
+"""The highest version of the ISF that's deprecated (usually higher than supported)"""

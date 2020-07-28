@@ -86,7 +86,8 @@ class proc(generic.GenericIntelProcess):
 class fileglob(objects.StructType):
 
     def get_fg_type(self):
-        ret = "INVALID"
+        ret = None
+
         if self.has_member("fg_type"):
             ret = self.fg_type
         elif self.fg_ops != 0:
@@ -95,7 +96,10 @@ class fileglob(objects.StructType):
             except exceptions.InvalidAddressException:
                 pass
 
-        return ret.description
+        if ret:
+            ret = str(ret.description).replace("DTYPE_", "")
+
+        return ret
 
 
 class vm_map_object(objects.StructType):
@@ -122,7 +126,13 @@ class vnode(objects.StructType):
             if int(vnodeobj.v_mount.mnt_vnodecovered) != 0:
                 self._do_calc_path(ret, vnodeobj.v_mount.mnt_vnodecovered, vnodeobj.v_mount.mnt_vnodecovered.v_name)
         else:
-            self._do_calc_path(ret, vnodeobj.v_parent, vnodeobj.v_parent.v_name)
+            try:
+                parent = vnodeobj.v_parent
+                parent_name = parent.v_name
+            except exceptions.InvalidAddressException:
+                return
+
+            self._do_calc_path(ret, parent, parent_name)
 
     def full_path(self):
         if self.v_flag & 0x000001 != 0 and self.v_mount != 0 and self.v_mount.mnt_flag & 0x00004000 != 0:
@@ -383,48 +393,77 @@ class inpcb(objects.StructType):
 
 class queue_entry(objects.StructType):
 
-    def walk_list(self, list_head: interfaces.objects.ObjectInterface, member_name: str, type_name: str, max_size: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
+    def walk_list(self,
+                  list_head: interfaces.objects.ObjectInterface,
+                  member_name: str,
+                  type_name: str,
+                  max_size: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
+        """
+        Walks a queue in a smear-aware and smear-resistant manner
+
+        smear is detected by:
+            - the max_size parameter sets an upper bound
+            - each seen entry is only allowed once
+
+        attempts to work around smear:
+            - the list is walked in both directions to help find as many elements as possible
+
+        Args:
+            list_head   - the head of the list
+            member_name - the name of the embedded list member
+            type_name   - the type of each element in the list
+            max_size    - the maximum amount of elements that will be returned
+
+        Returns:
+            Each instance of the queue cast as "type_name" type
+        """
+
         yielded = 0
 
-        try:
-            n = self.next.dereference().cast(type_name)
-        except exceptions.PagedInvalidAddressException:
-            return
-        while n is not None and n.vol.offset != list_head:
-            yield n
-            yielded = yielded + 1
-            if yielded == max_size:
-                return
-            n = n.member(attr = member_name).next.dereference().cast(type_name)
-        
-        try:
-            p = self.prev.dereference().cast(type_name)
-        except exceptions.PagedInvalidAddressException:
-            return
-        while p is not None and p.vol.offset != list_head:
-            yield p
-            yielded = yielded + 1
-            if yielded == max_size:
-                return
-            p = p.member(attr = member_name).prev.dereference().cast(type_name)
+        seen = set()
+
+        for attr in ['next', 'prev']:
+            try:
+                n = getattr(self, attr).dereference().cast(type_name)
+
+                while n is not None and n.vol.offset != list_head:
+                    if n.vol.offset in seen:
+                        break
+
+                    yield n
+
+                    seen.add(n.vol.offset)
+
+                    yielded = yielded + 1
+                    if yielded == max_size:
+                        return
+
+                    n = getattr(n.member(attr = member_name), attr).dereference().cast(type_name)
+
+            except exceptions.InvalidAddressException:
+                pass
+
 
 class ifnet(objects.StructType):
+
     def sockaddr_dl(self):
         if self.has_member("if_lladdr"):
             try:
                 val = self.if_lladdr.ifa_addr.dereference().cast("sockaddr_dl")
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 val = None
         else:
             try:
                 val = self.if_addrhead.tqh_first.ifa_addr.dereference().cast("sockaddr_dl")
-            except exceptions.PagedInvalidAddressException:
+            except exceptions.InvalidAddressException:
                 val = None
 
         return val
 
+
 # this is used for MAC addresses
 class sockaddr_dl(objects.StructType):
+
     def __str__(self):
         ret = ""
 
@@ -446,22 +485,79 @@ class sockaddr_dl(objects.StructType):
 
         return ret
 
+
 class sockaddr(objects.StructType):
+
     def get_address(self):
         ip = ""
 
         family = self.sa_family
-        if family == 2: # AF_INET
+        if family == 2:  # AF_INET
             addr_in = self.cast("sockaddr_in")
             ip = conversion.convert_ipv4(addr_in.sin_addr.s_addr)
 
-        elif family == 30: # AF_INET6
+        elif family == 30:  # AF_INET6
             addr_in6 = self.cast("sockaddr_in6")
             ip = conversion.convert_ipv6(addr_in6.sin6_addr.member(attr = "__u6_addr").member(attr = "__u6_addr32"))
 
-        elif family == 18: # AF_LINK
+        elif family == 18:  # AF_LINK
             addr_dl = self.cast("sockaddr_dl")
             ip = str(addr_dl)
 
         return ip
 
+
+class sysctl_oid(objects.StructType):
+
+    def get_perms(self) -> str:
+        """
+        Returns the actions allowed on the node
+
+        Args: None
+
+        Returns:
+            A combination of:
+                R - readable 
+                W - writeable
+                L - self handles locking
+        """
+        ret = ""
+
+        checks = [0x80000000, 0x40000000, 0x00800000]
+        perms = ["R", "W", "L"]
+
+        for (i, c) in enumerate(checks):
+            if c & self.oid_kind:
+                ret = ret + perms[i]
+            else:
+                ret = ret + "-"
+
+        return ret
+
+    def get_ctltype(self) -> str:
+        """
+        Returns the type of the sysctl node
+
+        Args: None
+
+        Returns:
+            One of:
+                CTLTYPE_NODE
+                CTLTYPE_INT
+                CTLTYPE_STRING
+                CTLTYPE_QUAD
+                CTLTYPE_OPAQUE
+                an empty string for nodes not in the above types
+
+        Based on sysctl_sysctl_debug_dump_node
+        """
+        types = {1: 'CTLTYPE_NODE', 2: 'CTLTYPE_INT', 3: 'CTLTYPE_STRING', 4: 'CTLTYPE_QUAD', 5: 'CTLTYPE_OPAQUE'}
+
+        ctltype = self.oid_kind & 0xf
+
+        if 0 < ctltype < 6:
+            ret = types[ctltype]
+        else:
+            ret = ""
+
+        return ret

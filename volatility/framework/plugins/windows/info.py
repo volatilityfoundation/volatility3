@@ -27,7 +27,9 @@ class Info(plugins.PluginInterface):
         ]
 
     @classmethod
-    def get_depends(cls, context: interfaces.context.ContextInterface, layer_name: str,
+    def get_depends(cls,
+                    context: interfaces.context.ContextInterface,
+                    layer_name: str,
                     index: int = 0) -> Iterable[Tuple[int, interfaces.layers.DataLayerInterface]]:
         """List the dependencies of a given layer.
 

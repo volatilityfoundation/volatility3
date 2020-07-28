@@ -1,0 +1,111 @@
+{
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "dlassalle-by-hand",
+      "datetime": "2020-04-30T14:30:00.000000"
+    },
+    "format": "6.2.0"
+  },
+  "user_types": {
+    "_POOL_TRACKER_BIG_PAGES": {
+      "fields": {
+        "Va": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Key": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Pattern": {
+          "offset": 8,
+          "type": {
+            "bit_length": 8,
+            "bit_position": 0,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "PoolType": {
+          "offset": 8,
+          "type": {
+            "bit_length": 8,
+            "bit_position": 8,
+            "kind": "bitfield",
+            "type": {
+              "kind": "enum",
+              "name": "_POOL_TYPE"
+            }
+          }
+        },
+        "SlushSize": {
+          "offset": 8,
+          "type": {
+            "bit_length": 12,
+            "bit_position": 20,
+            "kind": "bitfield",
+            "type": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "NumberOfBytes": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 16
+    }
+  },
+  "symbols": {
+  },
+  "enums": {
+    "_POOL_TYPE": {
+      "base": "unsigned long",
+      "constants": {
+        "NonPagedPoolBase": 0,
+        "PagedPool": 1,
+        "NonPagedPoolBaseMustSucceed": 2,
+        "DontUseThisType": 3,
+        "NonPagedPoolBaseCacheAligned": 4,
+        "PagedPoolCacheAligned": 5,
+        "NonPagedPoolBaseCacheAlignedMustS": 6,
+        "MaxPoolType": 7,
+        "NonPagedPoolMustSucceedSession": 34,
+        "DontUseThisTypeSession": 35,
+        "NonPagedPoolSession": 32,
+        "NonPagedPoolNx": 512,
+        "NonPagedPoolSessionNx": 544,
+        "NonPagedPoolNxCacheAligned": 516,
+        "PagedPoolSession": 33,
+        "NonPagedPoolCacheAlignedMustSSession": 38,
+        "PagedPoolCacheAlignedSession": 37,
+        "NonPagedPoolCacheAlignedSession": 36
+      },
+      "size": 4
+    }
+  },
+  "base_types": {
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    }
+  }
+}

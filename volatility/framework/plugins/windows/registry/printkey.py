@@ -20,6 +20,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
     """Lists the registry keys under a hive or specific key value."""
 
     _version = (1, 0, 0)
+    _required_framework_version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -41,8 +42,12 @@ class PrintKey(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def key_iterator(cls, hive: RegistryHive, node_path: Sequence[objects.StructType] = None, recurse: bool = False
-                     ) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
+    def key_iterator(
+        cls,
+        hive: RegistryHive,
+        node_path: Sequence[objects.StructType] = None,
+        recurse: bool = False
+    ) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
         """Walks through a set of nodes from a given node (last one in
         node_path). Avoids loops by not traversing into nodes already present
         in the node_path.
@@ -61,9 +66,10 @@ class PrintKey(interfaces.plugins.PluginInterface):
             vollog.warning("Hive walker was not passed a valid node_path (or None)")
             return
         node = node_path[-1]
+        key_path_items = [hive] + node_path[1:]
+        key_path = '\\'.join([k.get_name() for k in key_path_items])
         if node.vol.type_name.endswith(constants.BANG + '_CELL_DATA'):
             raise RegistryFormatException(hive.name, "Encountered _CELL_DATA instead of _CM_KEY_NODE")
-        key_path = node.get_key_path()
         last_write_time = conversion.wintime_to_datetime(node.LastWriteTime.QuadPart)
 
         for key_node in node.get_subkeys():
@@ -108,7 +114,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     key_node_name = renderers.UnreadableValue()
 
                 yield (depth, (last_write_time, renderers.format_hints.Hex(hive.hive_offset), "Key", key_path,
-                               key_node_name, "", volatile))
+                               key_node_name, renderers.NotApplicableValue(), volatile))
             else:
                 try:
                     value_node_name = node.get_name() or "(Default)"
@@ -117,16 +123,31 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     value_node_name = renderers.UnreadableValue()
 
                 try:
-                    value_data = str(node.decode_data())  # type: Union[interfaces.renderers.BaseAbsentValue, str]
-                except (ValueError, exceptions.InvalidAddressException, RegistryFormatException) as excp:
-                    vollog.debug(excp)
-                    value_data = renderers.UnreadableValue()
-
-                try:
                     value_type = RegValueTypes.get(node.Type).name
                 except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
                     vollog.debug(excp)
                     value_type = renderers.UnreadableValue()
+
+                if isinstance(value_type, renderers.UnreadableValue):
+                    vollog.debug("Couldn't read registry value type, so data is unreadable")
+                    value_data = renderers.UnreadableValue()
+                else:
+                    try:
+                        value_data = node.decode_data()  # type: Union[interfaces.renderers.BaseAbsentValue, bytes]
+
+                        if isinstance(value_data, int):
+                            value_data = format_hints.MultiTypeData(value_data, encoding = 'utf-8')
+                        elif RegValueTypes.get(node.Type) == RegValueTypes.REG_BINARY:
+                            value_data = format_hints.MultiTypeData(value_data, show_hex = True)
+                        elif RegValueTypes.get(node.Type) == RegValueTypes.REG_MULTI_SZ:
+                            value_data = format_hints.MultiTypeData(value_data,
+                                                                    encoding = 'utf-16-le',
+                                                                    split_nulls = True)
+                        else:
+                            value_data = format_hints.MultiTypeData(value_data, encoding = 'utf-16-le')
+                    except (ValueError, exceptions.InvalidAddressException, RegistryFormatException) as excp:
+                        vollog.debug(excp)
+                        value_data = renderers.UnreadableValue()
 
                 result = (depth, (last_write_time, renderers.format_hints.Hex(hive.hive_offset), value_type, key_path,
                                   value_node_name, value_data, volatile))
@@ -169,7 +190,8 @@ class PrintKey(interfaces.plugins.PluginInterface):
         offset = self.config.get('offset', None)
 
         return TreeGrid(columns = [('Last Write Time', datetime.datetime), ('Hive Offset', format_hints.Hex),
-                                   ('Type', str), ('Key', str), ('Name', str), ('Data', str), ('Volatile', bool)],
+                                   ('Type', str), ('Key', str), ('Name', str), ('Data', format_hints.MultiTypeData),
+                                   ('Volatile', bool)],
                         generator = self._registry_walker(self.config['primary'],
                                                           self.config['nt_symbols'],
                                                           hive_offsets = None if offset is None else [offset],

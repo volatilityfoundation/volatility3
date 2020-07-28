@@ -10,7 +10,6 @@ User interfaces make use of the framework to:
  * run the plugin
  * display the results
 """
-
 import argparse
 import inspect
 import json
@@ -18,26 +17,25 @@ import logging
 import os
 import sys
 import traceback
-from typing import Any, Dict, Type, Union
+from typing import Dict, Type, Union
 from urllib import parse, request
 
 import volatility.plugins
 import volatility.symbols
 from volatility import framework
-from volatility.cli import text_renderer
+from volatility.cli import text_renderer, volargparse
 from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins, configuration
+from volatility.framework.automagic import stacker
 from volatility.framework.configuration import requirements
 
 # Make sure we log everything
 
 vollog = logging.getLogger()
-vollog.setLevel(1)
-# Trim the console down by default
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
 formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
+# Trim the console down by default
 console.setFormatter(formatter)
-vollog.addHandler(console)
 
 
 class PrintedProgress(object):
@@ -72,18 +70,33 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
     """Constructs a command-line interface object for users to run plugins."""
 
     def __init__(self):
+        self.setup_logging()
         self.output_dir = None
+
+    @classmethod
+    def setup_logging(cls):
+        # Delay the setting of vollog for those that want to import volatility.cli (issue #241)
+        vollog.setLevel(1)
+        vollog.addHandler(console)
 
     def run(self):
         """Executes the command line module, taking the system arguments,
         determining the plugin to run and then running it."""
-        sys.stdout.write("Volatility 3 Framework {}\n".format(constants.PACKAGE_VERSION))
 
         volatility.framework.require_interface_version(1, 0, 0)
 
         renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
 
-        parser = argparse.ArgumentParser(prog = 'volatility', description = "An open-source memory forensics framework")
+        parser = volargparse.HelpfulArgParser(add_help = False,
+                                              prog = 'volatility',
+                                              description = "An open-source memory forensics framework")
+        parser.add_argument(
+            "-h",
+            "--help",
+            action = "help",
+            default = argparse.SUPPRESS,
+            help = "Show this help message and exit, for specific plugin options use '{} <pluginname> --help'".format(
+                parser.prog))
         parser.add_argument("-c",
                             "--config",
                             help = "Load the configuration from a json file",
@@ -120,7 +133,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         parser.add_argument("-o",
                             "--output-dir",
                             help = "Directory in which to output any generated files",
-                            default = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')),
+                            default = os.getcwd(),
                             type = str)
         parser.add_argument("-q", "--quiet", help = "Remove progress feedback", default = False, action = 'store_true')
         parser.add_argument("-r",
@@ -139,11 +152,21 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                             help = "Write configuration JSON file out to config.json",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--clear-cache",
+                            help = "Clears out all short-term cached items",
+                            default = False,
+                            action = 'store_true')
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != '--help' and arg != '-h']
         partial_args, _ = parser.parse_known_args(known_args)
+
+        banner_output = sys.stdout
+        if renderers[partial_args.renderer].structured_output:
+            banner_output = sys.stderr
+        banner_output.write("Volatility 3 Framework {}\n".format(constants.PACKAGE_VERSION))
+
         if partial_args.plugin_dirs:
             volatility.plugins.__path__ = [os.path.abspath(p)
                                            for p in partial_args.plugin_dirs.split(";")] + constants.PLUGINS_PATH
@@ -171,10 +194,13 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # Set the PARALLELISM
         if partial_args.parallelism == 'processes':
             constants.PARALLELISM = constants.Parallelism.Multiprocessing
-        elif partial_args.parallelism == 'threading':
+        elif partial_args.parallelism == 'threads':
             constants.PARALLELISM = constants.Parallelism.Threading
         else:
             constants.PARALLELISM = constants.Parallelism.Off
+
+        if partial_args.clear_cache:
+            framework.clear_cache()
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
@@ -198,7 +224,9 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 self.populate_requirements_argparse(parser, amagic.__class__)
                 configurables_list[amagic.__class__.__name__] = amagic
 
-        subparser = parser.add_subparsers(title = "Plugins", dest = "plugin", action = HelpfulSubparserAction)
+        subparser = parser.add_subparsers(title = "Plugins",
+                                          dest = "plugin",
+                                          action = volargparse.HelpfulSubparserAction)
         for plugin in sorted(plugin_list):
             plugin_parser = subparser.add_parser(plugin, help = plugin_list[plugin].__doc__)
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
@@ -249,6 +277,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
         automagics = automagic.choose_automagic(automagics, plugin)
+        if ctx.config.get('automagic.LayerStacker.stackers', None) is None:
+            ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
         self.output_dir = args.output_dir
 
         ###
@@ -274,7 +304,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             # Construct and run the plugin
             if constructed:
                 renderers[args.renderer]().render(constructed.run())
-        except (exceptions.InvalidAddressException) as excp:
+        except (exceptions.VolatilityException) as excp:
             self.process_exceptions(excp)
 
     def process_exceptions(self, excp):
@@ -330,6 +360,10 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             general = "Volatility experienced a layer-related issue: {}".format(excp.layer_name)
             detail = "{}".format(excp)
             caused_by = ["A faulty layer implementation (re-run with -vvv and file a bug)"]
+        elif isinstance(excp, exceptions.MissingModuleException):
+            general = "Volatility could not import a necessary module: {}".format(excp.module)
+            detail = "{}".format(excp)
+            caused_by = ["A required python module is not installed (install the module and re-run)"]
         else:
             general = "Volatilty encountered an unexpected situation."
             detail = ""
@@ -452,8 +486,9 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                     if "type" in additional:
                         del additional["type"]
             elif isinstance(requirement, volatility.framework.configuration.requirements.ListRequirement):
-                # This is a trick to generate a list of values
-                additional["type"] = lambda x: x.split(',')
+                additional["type"] = requirement.element_type
+                nargs = '*' if requirement.optional else '+'
+                additional["nargs"] = nargs
             elif isinstance(requirement, volatility.framework.configuration.requirements.ChoiceRequirement):
                 additional["type"] = str
                 additional["choices"] = requirement.choices
@@ -465,51 +500,6 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                                 dest = requirement.name,
                                 required = not requirement.optional,
                                 **additional)
-
-
-# We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
-class HelpfulSubparserAction(argparse._SubParsersAction):
-    """Class to either select a unique plugin based on a substring, or identify
-    the alternatives."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # We don't want the action self-check to kick in, so we remove the choices list, the check happens in __call__
-        self.choices = None
-
-    def __call__(self, parser, namespace, values, option_string = None):
-        parser_name = values[0]
-        arg_strings = values[1:]
-
-        # set the parser name if requested
-        if self.dest is not argparse.SUPPRESS:
-            setattr(namespace, self.dest, parser_name)
-
-        matched_parsers = [name for name in self._name_parser_map if parser_name in name]
-
-        if len(matched_parsers) < 1:
-            msg = 'invalid choice {} (choose from {})'.format(parser_name, ', '.join(self._name_parser_map))
-            raise argparse.ArgumentError(self, msg)
-        if len(matched_parsers) > 1:
-            msg = 'plugin {} matches multiple plugins ({})'.format(parser_name, ', '.join(matched_parsers))
-            raise argparse.ArgumentError(self, msg)
-        parser = self._name_parser_map[matched_parsers[0]]
-        setattr(namespace, 'plugin', matched_parsers[0])
-
-        # parse all the remaining options into the namespace
-        # store any unrecognized options on the object, so that the top
-        # level parser can decide what to do with them
-
-        # In case this subparser defines new defaults, we parse them
-        # in a new namespace object and then update the original
-        # namespace for the relevant parts.
-        subnamespace, arg_strings = parser.parse_known_args(arg_strings, None)
-        for key, value in vars(subnamespace).items():
-            setattr(namespace, key, value)
-
-        if arg_strings:
-            vars(namespace).setdefault(argparse._UNRECOGNIZED_ARGS_ATTR, [])
-            getattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
 
 
 def main():

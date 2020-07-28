@@ -195,7 +195,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         """Returns a list of Requirement objects for this type of layer."""
-        return []
+        return super(cls).get_requirements()
 
     @property
     def dependencies(self) -> List[str]:
@@ -302,8 +302,8 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                 result[1] = (last_start, self.maximum_address - last_start)
         return result
 
-    def _scan_iterator(self, scanner: 'ScannerInterface',
-                       sections: Iterable[Tuple[int, int]]) -> Iterable[IteratorValue]:
+    def _scan_iterator(self, scanner: 'ScannerInterface', sections: Iterable[Tuple[int,
+                                                                                   int]]) -> Iterable[IteratorValue]:
         """Iterator that indicates which blocks in the layer are to be read by
         for the scanning.
 
@@ -377,8 +377,11 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
     """
 
     @abstractmethod
-    def mapping(self, offset: int, length: int, ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, str]]:
-        """Returns a sorted iterable of (offset, mapped_offset, length, layer)
+    def mapping(self,
+                offset: int,
+                length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+        """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
         mappings.
 
         ignore_errors will provide all available maps with gaps, but
@@ -394,13 +397,33 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Returns a list of layer names that this layer translates onto."""
         return []
 
-    def _decode(self, data: bytes, mapped_offset: int, offset: int) -> bytes:
-        """Decodes any necessary data."""
+    def _decode_data(self, data: bytes, mapped_offset: int, offset: int, output_length: int) -> bytes:
+        """Decodes any necessary data.  Note, additional data may need to be read from the lower layer, such as lookup
+        tables or similar.  The data provided to this layer is purely that data which encompasses the requested data
+        range.
+
+        Args:
+            data: The bytes of data necessary for decoding
+            mapped_offset: The offset in the underlying layer where the data would begin
+            offset: The offset in the higher-layer where the data would begin
+            output_length: The expected length of the returned data
+
+        Returns:
+             The data to be read from the underlying layer."""
         return data
 
-    def _encode(self, data: bytes, mapped_offset: int, offset: int) -> bytes:
-        """Encodes any necessary data."""
-        return data
+    def _encode_data(self, layer_name: str, mapped_offset: int, offset: int, value: bytes) -> bytes:
+        """Encodes any necessary data.
+
+        Args:
+            layer_name: The layer to write data back to
+            mapped_offset: The offset in the underlying layer where the data would begin
+            offset: The offset in the higher-layer where the data would begin
+            value: The new value to encode
+
+        Returns:
+             The data to be rewritten at mapped_offset."""
+        return value
 
     # ## Read/Write functions for mapped pages
 
@@ -409,55 +432,55 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of
         length size."""
         current_offset = offset
-        output = []  # type: List[bytes]
-        for (layer_offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length, ignore_errors = pad):
+        output = b''  # type: bytes
+        for (layer_offset, sublength, mapped_offset, mapped_length, layer) in self.mapping(offset,
+                                                                                           length,
+                                                                                           ignore_errors = pad):
             if not pad and layer_offset > current_offset:
                 raise exceptions.InvalidAddressException(
                     self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
             elif layer_offset > current_offset:
-                output += [b"\x00" * (layer_offset - current_offset)]
+                output += b"\x00" * (layer_offset - current_offset)
                 current_offset = layer_offset
             # The layer_offset can be less than the current_offset in non-linearly mapped layers
             # it does not suggest an overlap, but that the data is in an encoded block
             if mapped_length > 0:
-                processed_data = self._decode(self._context.layers.read(layer, mapped_offset, mapped_length, pad),
-                                              mapped_offset, layer_offset)
-                # Chop off anything unnecessary at the start
-                processed_data = processed_data[current_offset - layer_offset:]
-                # Chop off anything unnecessary at the end
-                processed_data = processed_data[:length - (current_offset - offset)]
-                output += [processed_data]
-                current_offset += len(processed_data)
-        recovered_data = b"".join(output)
-        return recovered_data + b"\x00" * (length - len(recovered_data))
+                unprocessed_data = self._context.layers.read(layer, mapped_offset, mapped_length, pad)
+                processed_data = self._decode_data(unprocessed_data, mapped_offset, layer_offset, sublength)
+                if len(processed_data) != sublength:
+                    raise ValueError("ProcessedData length does not match expected length of chunk")
+                output += processed_data
+                current_offset += sublength
+        return output + (b"\x00" * (length - len(output)))
 
     def write(self, offset: int, value: bytes) -> None:
         """Writes a value at offset, distributing the writing across any
         underlying mapping."""
         current_offset = offset
         length = len(value)
-        for (layer_offset, mapped_offset, mapped_length, layer) in self.mapping(offset, length):
+        for (layer_offset, sublength, mapped_offset, mapped_length, layer) in self.mapping(offset, length):
             if layer_offset > current_offset:
                 raise exceptions.InvalidAddressException(
                     self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
-            original_data = self._context.layers.read(layer, mapped_offset, mapped_length)
-            # Always chunk the value based on the mapping
-            value_to_write = original_data[:current_offset - layer_offset] + value[:mapped_length -
-                                                                                   (current_offset - layer_offset)]
-            value = value[mapped_length - (current_offset - layer_offset):]
-            encoded_value = self._encode(value_to_write, mapped_offset, layer_offset)
-            if len(encoded_value) != mapped_length:
-                raise exceptions.LayerException(self.name,
-                                                "Unable to write new value, does not map to the same dimensions")
-            self._context.layers.write(layer, mapped_offset, encoded_value)
-            current_offset += len(value_to_write)
 
-    # ## Scan implementation with knowledge of pages
+            value_chunk = value[layer_offset - offset:layer_offset - offset + sublength]
+            new_data = self._encode_data(layer, mapped_offset, layer_offset, value_chunk)
+            self._context.layers.write(layer, mapped_offset, new_data)
 
-    def _scan_iterator(self, scanner: 'ScannerInterface',
-                       sections: Iterable[Tuple[int, int]]) -> Iterable[IteratorValue]:
-        """Essentially, for paged systems we take a bunch of pages and chunk them up into scanner.page_size or
-        as large a chunk as possible (if there are gaps)."""
+            current_offset += len(new_data)
+
+    def _scan_iterator(self,
+                       scanner: 'ScannerInterface',
+                       sections: Iterable[Tuple[int, int]],
+                       linear: bool = False) -> Iterable[IteratorValue]:
+        """Iterator that indicates which blocks in the layer are to be read by
+        for the scanning.
+
+        Returns a list of blocks (potentially in lower layers) that make
+        up this chunk contiguously. Chunks can be no bigger than
+        scanner.chunk_size + scanner.overlap DataLayers by default are
+        assumed to have no holes
+        """
         for (section_start, section_length) in sections:
             # For each section, split it into scan size chunks
             for chunk_start in range(section_start, section_start + section_length, scanner.chunk_size):
@@ -467,9 +490,11 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 # Prev offset keeps track of the end of the previous subchunk
                 prev_offset = chunk_start
                 output = []  # type: List[Tuple[str, int, int]]
+
                 # We populate the response based on subchunks that may be mapped all over the place
                 for mapped in self.mapping(chunk_start, chunk_length, ignore_errors = True):
-                    offset, mapped_offset, length, layer_name = mapped
+                    # We don't bother with the other data in case the data's been processed by a lower layer
+                    offset, sublength, mapped_offset, mapped_length, layer_name = mapped
 
                     # We need to check if the offset is next to the end of the last one (contiguous)
                     if offset != prev_offset:
@@ -481,8 +506,12 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                         output = []
 
                     # Shift the marker up to the end of what we just received and add it to the output
-                    prev_offset = offset + length
-                    output += [(layer_name, mapped_offset, length)]
+                    prev_offset = offset + sublength
+
+                    if not linear:
+                        output += [(self.name, offset, sublength)]
+                    else:
+                        output += [(layer_name, mapped_offset, mapped_length)]
                 # If there's still output left, output it
                 if len(output):
                     yield output, prev_offset

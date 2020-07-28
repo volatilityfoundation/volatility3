@@ -40,9 +40,10 @@ to be able to run properly.  Any that are defined as optional need not necessari
                     requirements.PluginRequirement(name = 'pslist',
                                                    plugin = pslist.PsList,
                                                    version = (1, 0, 0)),
-                    requirements.IntRequirement(name = 'pid',
-                                                description = "Process ID to include (all other processes are excluded)",
-                                                optional = True)]
+                    requirements.ListRequirement(name = 'pid',
+                                                 element_type = int,
+                                                 description = "Process IDs to include (all other processes are excluded)",
+                                                 optional = True)]
 
 
 This is a classmethod, because it is called before the specific plugin object has been instantiated (in order to know how
@@ -56,7 +57,8 @@ to instantiate the plugin).  At the moment these requirements are fairly straigh
 
 This requirement indicates that the plugin will operate on a single
 :py:class:`TranslationLayer <volatility.framework.interfaces.layers.TranslationLayerInterface>`.  The name of the
-loaded layer will appear in the plugin's configuration under the name ``primary``
+loaded layer will appear in the plugin's configuration under the name ``primary``.    Requirement values can be
+accessed within the plugin through the plugin's `config` attribute (for example ``self.config['pid']``).
 
 .. note:: The name itself is dynamic depending on the other layers already present in the Context.  Always use the value
     from the configuration rather than attempting to guess what the layer will be called.
@@ -64,13 +66,13 @@ loaded layer will appear in the plugin's configuration under the name ``primary`
 Finally, this defines that the translation layer must be on the Intel Architecture.  At the moment, this acts as a filter,
 failing to be satisfied by memory images that do not match the architecture required.
 
+Most plugins will only operate on a single layer, but it is entirely possible for a plugin to request two different
+layers, for example a plugin that carries out some form of difference or statistics against multiple memory images.
+
 This requirement (and the next two) are known as Complex Requirements, and user interfaces will likely not directly
 request a value for this from a user.  The value stored in the configuration tree for a
 :py:class:`~volatility.framework.configuration.requirements.TranslationLayerRequirement` is
 the string name of a layer present in the context's memory that satisfies the requirement.
-
-Most plugins will only operate on a single layer, but it is entirely possible for a plugin to request two different
-layers, for example a plugin that carries out some form of difference or statistics against multiple memory images.
 
 ::
 
@@ -103,11 +105,12 @@ running the plugin.
 
 ::
 
-    requirements.IntRequirement(name = 'pid',
-                                description = "Process ID to include (all other processes are excluded)",
-                                optional = True)]
+    requirements.ListRequirement(name = 'pid',
+                                 description = 'Filter on specific process IDs',
+                                 element_type = int,
+                                 optional = True)
 
-The final requirement is a Simple Requirement, populated by an integer.  The description will be presented to the user to
+The final requirement is a List Requirement, populated by integers.  The description will be presented to the user to
 describe what the value represents.  The optional flag indicates that the plugin can function without the ``pid`` value
 being defined within the configuration tree at all.
 
@@ -125,7 +128,7 @@ that will be output as part of the :py:class:`~volatility.framework.interfaces.r
 
         def run(self):
 
-            filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+            filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
             return renderers.TreeGrid([("PID", int),
                                        ("Process", str),

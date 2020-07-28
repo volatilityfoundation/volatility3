@@ -40,7 +40,8 @@ class PoolConstraint:
                  page_type: Optional[int] = None,
                  size: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  index: Optional[Tuple[Optional[int], Optional[int]]] = None,
-                 alignment: Optional[int] = 1) -> None:
+                 alignment: Optional[int] = 1,
+                 skip_type_test: bool = False) -> None:
         self.tag = tag
         self.type_name = type_name
         self.object_type = object_type
@@ -48,6 +49,7 @@ class PoolConstraint:
         self.size = size
         self.index = index
         self.alignment = alignment
+        self.skip_type_test = skip_type_test
 
 
 class PoolHeaderScanner(interfaces.layers.ScannerInterface):
@@ -100,6 +102,7 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
                     if constraint.index[1]:
                         if header.PoolIndex > constraint.index[1]:
                             continue
+
             except exceptions.InvalidAddressException:
                 # The tested object's header doesn't point to valid addresses, ignore it
                 continue
@@ -108,9 +111,10 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
             yield (constraint, header)
 
 
-def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
-                     fallback_checks: List[Tuple[str, Optional[str], bool]]
-                     ) -> Callable[[interfaces.context.ContextInterface, str], bool]:
+def os_distinguisher(
+    version_check: Callable[[Tuple[int, ...]], bool],
+    fallback_checks: List[Tuple[str, Optional[str],
+                                bool]]) -> Callable[[interfaces.context.ContextInterface, str], bool]:
     """Distinguishes a symbol table as being above a particular version or
     point.
 
@@ -138,10 +142,10 @@ def os_distinguisher(version_check: Callable[[Tuple[int, ...]], bool],
     # try the primary method based on the pe version in the ISF
     def method(context: interfaces.context.ContextInterface, symbol_table: str) -> bool:
         """
-        
+
         Args:
-            context: The context that contains the symbol table named `symbol_table`  
-            symbol_table: Name of the symbol table within the context to distinguish the version of 
+            context: The context that contains the symbol table named `symbol_table`
+            symbol_table: Name of the symbol table within the context to distinguish the version of
 
         Returns:
             True if the symbol table is of the required version
@@ -248,6 +252,7 @@ class PoolScanner(plugins.PluginInterface):
                            type_name = symbol_table + constants.BANG + "_EPROCESS",
                            object_type = "Process",
                            size = (600, None),
+                           skip_type_test = True,
                            page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
             # processes on windows starting with windows 8
             PoolConstraint(b'Proc',
@@ -312,7 +317,8 @@ class PoolScanner(plugins.PluginInterface):
             PoolConstraint(b'CM10',
                            type_name = symbol_table + constants.BANG + "_CMHIVE",
                            size = (800, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE,
+                           skip_type_test = True),
         ]
 
         if not tags_filter:
@@ -329,12 +335,12 @@ class PoolScanner(plugins.PluginInterface):
             -> Generator[Tuple[
                              PoolConstraint, interfaces.objects.ObjectInterface, interfaces.objects.ObjectInterface], None, None]:
         """
-        
+
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            constraints: List of pool constraints used to limit the scan results 
+            constraints: List of pool constraints used to limit the scan results
 
         Returns:
             Iterable of tuples, containing the constraint that matched, the object from memory, the object header used to determine the object
@@ -355,18 +361,30 @@ class PoolScanner(plugins.PluginInterface):
         if not is_windows_10:
             scan_layer = context.layers[scan_layer].config['memory_layer']
 
-        for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = 8):
+        if symbols.symbol_table_is_64bit(context, symbol_table):
+            alignment = 0x10
+        else:
+            alignment = 8
+
+        for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = alignment):
 
             mem_object = header.get_object(type_name = constraint.type_name,
-                                           type_map = type_map,
                                            use_top_down = is_windows_8_or_later,
-                                           object_type = constraint.object_type,
-                                           native_layer_name = 'primary',
-                                           cookie = cookie)
+                                           executive = constraint.object_type is not None,
+                                           native_layer_name = 'primary')
 
             if mem_object is None:
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
                 continue
+
+            if constraint.object_type is not None and not constraint.skip_type_test:
+                try:
+                    if mem_object.get_object_header().get_object_type(type_map, cookie) != constraint.object_type:
+                        continue
+                except exceptions.InvalidAddressException:
+                    vollog.log(constants.LOGLEVEL_VVV,
+                               "Cannot test instance type check for {}".format(constraint.type_name))
+                    continue
 
             yield constraint, mem_object, header
 
@@ -433,7 +451,7 @@ class PoolScanner(plugins.PluginInterface):
                 sub_path = "windows",
                 filename = pool_header_json_filename,
                 table_mapping = {'nt_symbols': symbol_table},
-                class_types = {'_POOL_HEADER': extensions.POOL_HEADER})
+                class_types = {'_POOL_HEADER': extensions.pool.POOL_HEADER})
             module = context.module(new_table_name, layer_name, offset = 0)
         return module
 
