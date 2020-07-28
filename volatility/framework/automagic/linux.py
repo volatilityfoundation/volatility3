@@ -52,7 +52,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                                                          name = table_name,
                                                          isf_url = isf_path)
                 context.symbol_space.append(table)
-                kaslr_shift, _ = cls.find_aslr(context, table_name, layer_name, progress_callback = progress_callback)
+                kaslr_shift, aslr_shift = cls.find_aslr(context, table_name, layer_name, progress_callback = progress_callback)
 
                 layer_class = intel.Intel  # type: Type
                 if 'init_top_pgt' in table.symbols:
@@ -76,7 +76,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 layer = layer_class(context,
                                     config_path = config_path,
                                     name = new_layer_name,
-                                    metadata = {'kaslr_value': kaslr_shift})
+                                    metadata = {'kaslr_value': aslr_shift})
 
             if layer and dtb:
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
