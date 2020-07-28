@@ -503,3 +503,15 @@ class vfsmount(objects.StructType):
 
     def get_mnt_root(self):
         return self.mnt_root
+
+
+class kobject(objects.StructType):
+
+    def reference_count(self):
+        refcnt = self.kref.refcount
+        if self.has_member("counter"):
+            ret = refcnt.counter
+        else:
+            ret = refcnt.refs.counter
+
+        return ret
