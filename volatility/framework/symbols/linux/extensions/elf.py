@@ -8,7 +8,6 @@ from volatility.framework.objects import utility
 from volatility.framework.renderers import conversion
 from typing import Any, Dict, List, Optional, Tuple, Union, Type
 
-
 class elf(objects.StructType):
     '''
     Class used to create elf objects. It overrides the typename to Elf32_ or Elf64_, 
@@ -24,9 +23,8 @@ class elf(objects.StructType):
                          size = size,
                          members = members)
 
-
         layer_name = self.vol.layer_name
-        symbol_table_name = self.get_symbol_table().name
+        symbol_table_name = self.get_symbol_table_name()
         # We read the MAGIC: (0x0 to 0x4) 0x7f 0x45 0x4c 0x46
         magic = self._context.object(symbol_table_name + constants.BANG + "unsigned long",
                                                layer_name = layer_name,
@@ -42,56 +40,56 @@ class elf(objects.StructType):
                                                offset = object_info.offset + 0x4)
                  
         if ei_class == 1:
-            self.__type_prefix = "Elf32_"
+            self._type_prefix = "Elf32_"
         elif ei_class == 2:
-            self.__type_prefix = "Elf64_"
+            self._type_prefix = "Elf64_"
         else:
-            self.__type_prefix = None
+            self._type_prefix = None
 
         # Construct the full header
-        self.__hdr = self._context.object(symbol_table_name + constants.BANG + self.__type_prefix + "Ehdr",
+        self._hdr = self._context.object(symbol_table_name + constants.BANG + self._type_prefix + "Ehdr",
                                                layer_name = layer_name,
                                                offset = object_info.offset)
-        self.__offset = object_info.offset
+        self._offset = object_info.offset
 
-        self.cached_symtab  = None
-        self.cached_strtab  = None
+        self._cached_symtab  = None
+        self._cached_strtab  = None
 
     def is_valid(self):
         '''
         Determine whether it is a valid object
         '''
-        return self.__type_prefix is not None and self.__hdr is not None
+        return self._type_prefix is not None and self._hdr is not None
 
     def __getattr__(self, name):
         # Just redirect to the corresponding header
-        if name[0:2] == "e_" and name in dir(self.__hdr):
-            return self.__hdr.__getattr__(name)
+        if name[0:2] == "e_" and name in dir(self._hdr):
+            return self._hdr.__getattr__(name)
         else:
             return self.__getattribute__(name)
 
     def __dir__(self):
-        return self.__hdr.__dir__() + ["get_program_headers", "is_valid", "get_section_headers", "get_symbols", "__dir__"]
+        return self._hdr.__dir__() + ["get_program_headers", "is_valid", "get_section_headers", "get_symbols", "__dir__"]
 
     def get_program_headers(self):
-        program_headers = self._context.object(self.get_symbol_table().name + constants.BANG + "array",
+        program_headers = self._context.object(self.get_symbol_table_name() + constants.BANG + "array",
                                                layer_name = self.vol.layer_name,
-                                               offset = self.__offset + self.e_phoff,
-                                               subtype = self._context.symbol_space.get_type(self.get_symbol_table().name + constants.BANG + self.__type_prefix + "Phdr"),
+                                               offset = self._offset + self.e_phoff,
+                                               subtype = self._context.symbol_space.get_type(self.get_symbol_table_name() + constants.BANG + self._type_prefix + "Phdr"),
                                                count = self.e_phnum)
 
         for prog_header in program_headers:
-            prog_header.set_parent_e_type(self.e_type)
-            prog_header.set_parent_offset(self.__offset)
-            prog_header.set_type_prefix(self.__type_prefix)
+            prog_header.parent_e_type = self.e_type
+            prog_header.parent_offset = self._offset
+            prog_header.type_prefix = self._type_prefix
             yield prog_header
 
     def get_section_headers(self):
-        section_headers = self._context.object(self.get_symbol_table().name + constants.BANG + "array",
+        section_headers = self._context.object(self.get_symbol_table_name() + constants.BANG + "array",
                                                layer_name = self.vol.layer_name,
-                                               offset = self.__offset + self.e_shoff,
+                                               offset = self._offset + self.e_shoff,
                                                subtype =
-                                               self._context.symbol_space.get_type(self.get_symbol_table().name + constants.BANG + self.__type_prefix + "Shdr"),
+                                               self._context.symbol_space.get_type(self.get_symbol_table_name() + constants.BANG + self._type_prefix + "Shdr"),
                                                count = self.e_shnum)
         return section_headers
 
@@ -127,41 +125,50 @@ class elf(objects.StructType):
         if dt_strtab == None or dt_symtab == None or dt_strent == None:
             return None
 
-        self.cached_symtab  = dt_symtab
-        self.cached_strtab  = dt_strtab
+        self._cached_symtab  = dt_symtab
+        self._cached_strtab  = dt_strtab
 
         # Calculate number of symbol entries assuming that strtab follows symtab
         if dt_symtab < dt_strtab:
-            self.cached_numsyms = int((int(dt_strtab) - int(dt_symtab)) / dt_strent)
+            self._cached_numsyms = (dt_strtab - dt_symtab) // dt_strent
         else:
-            self.cached_numsyms = 1024
+            self._cached_numsyms = 1024
 
     def get_symbols(self):
-        if self.cached_symtab == None:
+        if self._cached_symtab == None:
             self._find_symbols()
                 
-        if self.cached_symtab == None:
+        if self._cached_symtab == None:
             return
 
-        symtab_arr = self._context.object(self.get_symbol_table().name + constants.BANG + "array",
+        symtab_arr = self._context.object(self.get_symbol_table_name() + constants.BANG + "array",
                                                layer_name = self.vol.layer_name,
-                                               offset = self.cached_symtab,
-                                               subtype = self._context.symbol_space.get_type(self.get_symbol_table().name + constants.BANG + self.__type_prefix + "Sym"),
-                                               count = self.cached_numsyms)
+                                               offset = self._cached_symtab,
+                                               subtype = self._context.symbol_space.get_type(self.get_symbol_table_name() + constants.BANG + self._type_prefix + "Sym"),
+                                               count = self._cached_numsyms)
 
         for sym in symtab_arr:
-            sym.set_cached_strtab(self.cached_strtab)
+            sym.cached_strtab = self._cached_strtab
             yield sym
 
 
 class elf_sym(objects.StructType):
     """ An elf symbol entry"""
 
-    def set_cached_strtab(self, cached_strtab):
-        self.cached_strtab = cached_strtab
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cached_strtab = None
+
+    @property
+    def cached_strtab(self):
+        return self._cached_strtab
+
+    @cached_strtab.setter
+    def cached_strtab(self, cached_strtab):
+        self._cached_strtab = cached_strtab
 
     def get_name(self):
-        addr = self.cached_strtab + self.st_name
+        addr = self._cached_strtab + self.st_name
 
         # Just get the first 255 characters, it should be enough for a symbol name
         name_bytes = self._context.layers[self.vol.layer_name].read(addr, 255, pad = True)
@@ -170,43 +177,51 @@ class elf_sym(objects.StructType):
             idx = name_bytes.find(b"\x00")
             if idx != -1:
                 name_bytes = name_bytes[:idx]
+            return name_bytes.decode('utf-8', errors='ignore')
         else:
+            # If we cannot read the name from the address space,
+            # we return None.
             return None
-
-        return name_bytes.decode('utf-8', errors='ignore')
 
 
 class elf_phdr(objects.StructType):
     """ An elf program header """
 
-    def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
-                 object_info: interfaces.objects.ObjectInformation, size: int,
-                 members: Dict[str, Tuple[int, interfaces.objects.Template]]) -> None:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._parent_e_type = None 
+        self._parent_offset = None
+        self._type_prefix = None
 
-        super().__init__(context = context,
-                         type_name = type_name,
-                         object_info = object_info,
-                         size = size,
-                         members = members)
+    @property
+    def parent_e_type(self):
+        return self._parent_e_type
 
-        self.__parent_e_type = None 
-        self.__parent_offset = None
-        self.__type_prefix = None
+    @parent_e_type.setter
+    def parent_e_type(self, e_type):
+        self._parent_e_type = e_type
 
-    def set_parent_e_type(self, e_type):
-        self.__parent_e_type = e_type
+    @property
+    def parent_offset(self):
+        return self._parent_offset
 
-    def set_parent_offset(self, offset):
-        self.__parent_offset = offset
+    @parent_offset.setter
+    def parent_offset(self, offset):
+        self._parent_offset = offset
 
-    def set_type_prefix(self, prefix):
-        self.__type_prefix = prefix
+    @property
+    def type_prefix(self):
+        return self._type_prefix
+
+    @type_prefix.setter
+    def type_prefix(self, prefix):
+        self._type_prefix = prefix
 
     def get_vaddr(self):
         offset = self.__getattr__("p_vaddr")
 
-        if self.__parent_e_type == 3: # ET_DYN
-            offset = self.__parent_offset + offset
+        if self._parent_e_type == 3: # ET_DYN
+            offset = self._parent_offset + offset
 
         return offset 
 
@@ -223,17 +238,17 @@ class elf_phdr(objects.StructType):
         # the buffer of array starts at elf_base + our virtual address ( offset )
         arr_start = self.get_vaddr()
 
-        symbol_table_name = self.get_symbol_table().name
+        symbol_table_name = self.get_symbol_table_name()
 
         rtsize = self._context.symbol_space.get_type(symbol_table_name + \
                                                      constants.BANG + \
-                                                     self.__type_prefix + "Dyn").size
+                                                     self._type_prefix + "Dyn").size
 
         for i in range(256):
             # use the real size
             idx = i * rtsize
 
-            dyn = self._context.object(symbol_table_name + constants.BANG + self.__type_prefix + "Dyn",
+            dyn = self._context.object(symbol_table_name + constants.BANG + self._type_prefix + "Dyn",
                                                layer_name = self.vol.layer_name,
                                                offset = arr_start + idx)
 
@@ -241,3 +256,10 @@ class elf_phdr(objects.StructType):
             
             if dyn.d_tag == 0:
                 break
+
+class_types = {'Elf': elf,
+               'Elf64_Phdr': elf_phdr,
+               'Elf32_Phdr': elf_phdr,
+               'Elf32_Sym': elf_sym,
+               'Elf64_Sym': elf_sym }
+
