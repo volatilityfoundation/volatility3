@@ -62,11 +62,12 @@ class module(generic.GenericIntelProcess):
 
     def _get_sect_count(self, grp):
         """ Try to determine the number of valid sections """
-        arr = self._context.object(self.get_symbol_table().name + constants.BANG + "array",
-                                   layer_name = self.vol.layer_name,
-                                   offset = grp.attrs,
-                                   subtype = self._context.symbol_space.get_type(self.get_symbol_table().name + constants.BANG + "pointer"),
-                                   count = 25)
+        arr = self._context.object(
+            self.get_symbol_table().name + constants.BANG + "array",
+            layer_name = self.vol.layer_name,
+            offset = grp.attrs,
+            subtype = self._context.symbol_space.get_type(self.get_symbol_table().name + constants.BANG + "pointer"),
+            count = 25)
 
         idx = 0
         while arr[idx]:
@@ -84,7 +85,8 @@ class module(generic.GenericIntelProcess):
         arr = self._context.object(self.get_symbol_table().name + constants.BANG + "array",
                                    layer_name = self.vol.layer_name,
                                    offset = self.sect_attrs.attrs.vol.offset,
-                                   subtype = self._context.symbol_space.get_type(self.get_symbol_table().name + constants.BANG + 'module_sect_attr'),
+                                   subtype = self._context.symbol_space.get_type(self.get_symbol_table().name +
+                                                                                 constants.BANG + 'module_sect_attr'),
                                    count = num_sects)
 
         for attr in arr:
@@ -99,17 +101,18 @@ class module(generic.GenericIntelProcess):
             prefix = "Elf32_"
 
         elf_table_name = intermed.IntermediateSymbolTable.create(self.context,
-                                                                  self.config_path,
-                                                                  "linux",
-                                                                  "elf",
-                                                                  native_types = None,
-                                                                  class_types = extensions.elf.class_types)
+                                                                 self.config_path,
+                                                                 "linux",
+                                                                 "elf",
+                                                                 native_types = None,
+                                                                 class_types = extensions.elf.class_types)
 
-        syms = self._context.object(self.get_symbol_table().name + constants.BANG + "array",
-                                               layer_name = self.vol.layer_name,
-                                               offset = self.section_symtab,
-                                               subtype = self._context.symbol_space.get_type(elf_table_name + constants.BANG + prefix + "Sym"),
-                                               count = self.num_symtab + 1)
+        syms = self._context.object(
+            self.get_symbol_table().name + constants.BANG + "array",
+            layer_name = self.vol.layer_name,
+            offset = self.section_symtab,
+            subtype = self._context.symbol_space.get_type(elf_table_name + constants.BANG + prefix + "Sym"),
+            count = self.num_symtab + 1)
         if self.section_strtab:
             for sym in syms:
                 sym.set_cached_strtab(self.section_strtab)
@@ -121,7 +124,7 @@ class module(generic.GenericIntelProcess):
             sym_name = sym.get_name()
             sym_addr = sym.st_value
             if wanted_sym_name == sym_name:
-                return sym_addr 
+                return sym_addr
 
     @property
     def section_symtab(self):
@@ -131,7 +134,7 @@ class module(generic.GenericIntelProcess):
             return self.symtab
 
         raise AttributeError("module -> symtab: Unable to get symtab")
- 
+
     @property
     def num_symtab(self):
         if self.has_member("kallsyms"):

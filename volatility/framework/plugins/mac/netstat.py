@@ -31,7 +31,6 @@ class Netstat(plugins.PluginInterface):
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
                                          optional = True)
-
         ]
 
     @classmethod
