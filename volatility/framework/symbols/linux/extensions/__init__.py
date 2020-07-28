@@ -12,7 +12,9 @@ from volatility.framework.automagic import linux
 from volatility.framework.layers import linear
 from volatility.framework.symbols import generic
 from volatility.framework.objects import utility
-from volatility.framework.symbols.linux.elf import ElfIntermedSymbols
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.linux import extensions
+from volatility.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
 
@@ -97,7 +99,12 @@ class module(generic.GenericIntelProcess):
         else:
             prefix = "Elf32_"
 
-        elf_table_name = ElfIntermedSymbols.create(self._context, "", "linux", "elf")
+        elf_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                  self.config_path,
+                                                                  "linux",
+                                                                  "elf",
+                                                                  native_types = None,
+                                                                  class_types = extensions.elf.class_types)
 
         syms = self._context.object(self.get_symbol_table().name + constants.BANG + "array",
                                                layer_name = self.vol.layer_name,
