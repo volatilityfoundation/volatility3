@@ -467,7 +467,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         return self._vol['choices']
 
     @property
-    def legal(self) -> bool:
+    def is_valid_choice(self) -> bool:
         """Returns whether the value for the object is a valid choice"""
         return self in self.choices.values()
 
