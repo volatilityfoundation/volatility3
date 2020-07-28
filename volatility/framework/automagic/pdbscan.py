@@ -127,7 +127,7 @@ class PDBUtility:
             break
         else:
             # If none are found, attempt to download the pdb, convert it and try again
-            PDBUtility.download_pdb_isf(context, guid.upper(), age, pdb_name, progress_callback)
+            cls.download_pdb_isf(context, guid.upper(), age, pdb_name, progress_callback)
             # Try again
             for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
                 isf_path = value
@@ -153,7 +153,7 @@ class PDBUtility:
 
     @classmethod
     def get_guid_from_mz(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                         offset: int) -> Tuple[str, int, str]:
+                         offset: int) -> Optional[Tuple[str, int, str]]:
         """Takes the offset to an MZ header, locates any available pdb headers, and extracts the guid, age and pdb_name from them
 
         Args:
