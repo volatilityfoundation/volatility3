@@ -8,9 +8,8 @@ from typing import Generator, Iterable, Iterator, Optional, Tuple
 
 from volatility.framework import constants
 from volatility.framework import exceptions, objects, interfaces, symbols
-from volatility.framework.automagic import linux
 from volatility.framework.layers import linear
-from volatility.framework.symbols import generic
+from volatility.framework.symbols import generic, linux
 from volatility.framework.objects import utility
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.linux import extensions

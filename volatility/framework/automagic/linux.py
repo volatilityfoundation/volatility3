@@ -3,10 +3,9 @@
 #
 
 import logging
-from typing import List, Optional, Tuple, Type
+from typing import Optional, Tuple, Type
 
-from volatility.framework import interfaces, constants, exceptions
-from volatility.framework import objects
+from volatility.framework import interfaces, constants
 from volatility.framework.automagic import symbol_cache, symbol_finder
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import linux
@@ -53,10 +52,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                                                          name = table_name,
                                                          isf_url = isf_path)
                 context.symbol_space.append(table)
-                kaslr_shift, _ = LinuxUtilities.find_aslr(context,
-                                                          table_name,
-                                                          layer_name,
-                                                          progress_callback = progress_callback)
+                kaslr_shift, _ = cls.find_aslr(context, table_name, layer_name, progress_callback = progress_callback)
 
                 layer_class = intel.Intel  # type: Type
                 if 'init_top_pgt' in table.symbols:
@@ -68,8 +64,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 else:
                     dtb_symbol_name = 'swapper_pg_dir'
 
-                dtb = LinuxUtilities.virtual_to_physical_address(
-                    table.get_symbol(dtb_symbol_name).address + kaslr_shift)
+                dtb = cls.virtual_to_physical_address(table.get_symbol(dtb_symbol_name).address + kaslr_shift)
 
                 # Build the new layer
                 new_layer_name = context.layers.free_layer_name("IntelLayer")
@@ -84,162 +79,6 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
                 return layer
         return None
-
-
-class LinuxUtilities(object):
-    """Class with multiple useful linux functions."""
-
-    # based on __d_path from the Linux kernel
-    @classmethod
-    def _do_get_path(cls, rdentry, rmnt, dentry, vfsmnt) -> str:
-
-        ret_path = []  # type: List[str]
-
-        while dentry != rdentry or vfsmnt != rmnt:
-            dname = dentry.path()
-            if dname == "":
-                break
-
-            ret_path.insert(0, dname.strip('/'))
-            if dentry == vfsmnt.get_mnt_root() or dentry == dentry.d_parent:
-                if vfsmnt.get_mnt_parent() == vfsmnt:
-                    break
-
-                dentry = vfsmnt.get_mnt_mountpoint()
-                vfsmnt = vfsmnt.get_mnt_parent()
-
-                continue
-
-            parent = dentry.d_parent
-            dentry = parent
-
-        # if we did not gather any valid dentrys in the path, then the entire file is
-        # either 1) smeared out of memory or 2) de-allocated and corresponding structures overwritten
-        # we return an empty string in this case to avoid confusion with something like a handle to the root
-        # directory (e.g., "/")
-        if not ret_path:
-            return ""
-
-        ret_val = '/'.join([str(p) for p in ret_path if p != ""])
-
-        if ret_val.startswith(("socket:", "pipe:")):
-            if ret_val.find("]") == -1:
-                try:
-                    inode = dentry.d_inode
-                    ino = inode.i_ino
-                except exceptions.InvalidAddressException:
-                    ino = 0
-
-                ret_val = ret_val[:-1] + ":[{0}]".format(ino)
-            else:
-                ret_val = ret_val.replace("/", "")
-
-        elif ret_val != "inotify":
-            ret_val = '/' + ret_val
-
-        return ret_val
-
-    # method used by 'older' kernels
-    # TODO: lookup when dentry_operations->d_name was merged into the mainline kernel for exact version
-    @classmethod
-    def _get_path_file(cls, task, filp) -> str:
-        rdentry = task.fs.get_root_dentry()
-        rmnt = task.fs.get_root_mnt()
-        dentry = filp.get_dentry()
-        vfsmnt = filp.get_vfsmnt()
-
-        return LinuxUtilities._do_get_path(rdentry, rmnt, dentry, vfsmnt)
-
-    @classmethod
-    def _get_new_sock_pipe_path(cls, context, task, filp) -> str:
-        dentry = filp.get_dentry()
-
-        sym_addr = dentry.d_op.d_dname
-
-        symbol_table_arr = sym_addr.vol.type_name.split("!")
-        symbol_table = None
-        if len(symbol_table_arr) == 2:
-            symbol_table = symbol_table_arr[0]
-
-        symbs = list(context.symbol_space.get_symbols_by_location(sym_addr, table_name = symbol_table))
-
-        if len(symbs) == 1:
-            sym = symbs[0].split(constants.BANG)[1]
-
-            if sym == "sockfs_dname":
-                pre_name = "socket"
-
-            elif sym == "anon_inodefs_dname":
-                pre_name = "anon_inode"
-
-            elif sym == "pipefs_dname":
-                pre_name = "pipe"
-
-            elif sym == "simple_dname":
-                pre_name = cls._get_path_file(task, filp)
-
-            else:
-                pre_name = "<unsupported d_op symbol: {0}>".format(sym)
-
-            ret = "{0}:[{1:d}]".format(pre_name, dentry.d_inode.i_ino)
-
-        else:
-            ret = "<invalid d_dname pointer> {0:x}".format(sym_addr)
-
-        return ret
-
-    # a 'file' structure doesn't have enough information to properly restore its full path
-    # we need the root mount information from task_struct to determine this
-    @classmethod
-    def path_for_file(cls, context, task, filp) -> str:
-        try:
-            dentry = filp.get_dentry()
-        except exceptions.InvalidAddressException:
-            return ""
-
-        if dentry == 0:
-            return ""
-
-        dname_is_valid = False
-
-        # TODO COMPARE THIS IN LSOF OUTPUT TO VOL2
-        try:
-            if dentry.d_op and dentry.d_op.has_member("d_dname") and dentry.d_op.d_dname:
-                dname_is_valid = True
-
-        except exceptions.InvalidAddressException:
-            dname_is_valid = False
-
-        if dname_is_valid:
-            ret = LinuxUtilities._get_new_sock_pipe_path(context, task, filp)
-        else:
-            ret = LinuxUtilities._get_path_file(task, filp)
-
-        return ret
-
-    @classmethod
-    def files_descriptors_for_process(cls, context: interfaces.context.ContextInterface, symbol_table: str,
-                                      task: interfaces.objects.ObjectInterface):
-
-        fd_table = task.files.get_fds()
-        if fd_table == 0:
-            return
-
-        max_fds = task.files.get_max_fds()
-
-        # corruption check
-        if max_fds > 500000:
-            return
-
-        file_type = symbol_table + constants.BANG + 'file'
-
-        fds = objects.utility.array_of_pointers(fd_table, count = max_fds, subtype = file_type, context = context)
-
-        for (fd_num, filp) in enumerate(fds):
-            if filp != 0:
-                full_path = LinuxUtilities.path_for_file(context, task, filp)
-
-                yield fd_num, filp, full_path
 
     @classmethod
     def find_aslr(cls,
@@ -308,4 +147,4 @@ class LinuxSymbolFinder(symbol_finder.SymbolFinder):
     banner_config_key = "kernel_banner"
     banner_cache = LinuxBannerCache
     symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
-    find_aslr = lambda cls, *args: LinuxUtilities.find_aslr(*args)[1]
+    find_aslr = lambda cls, *args: LinuxIntelStacker.find_aslr(*args)[1]
