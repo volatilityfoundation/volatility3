@@ -1,7 +1,9 @@
-
+# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+#
+import logging
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.renderers import format_hints
 from volatility.plugins.windows.registry import hivelist
 from struct import unpack, pack
 from Crypto.Hash import MD5, MD4
@@ -9,6 +11,7 @@ from Crypto.Cipher import ARC4, DES, AES
 import hashlib
 import binascii
 
+vollog = logging.getLogger(__name__)
 
 class Hashdump(interfaces.plugins.PluginInterface):
     """Dumps user hashes from memory"""
@@ -55,41 +58,28 @@ class Hashdump(interfaces.plugins.PluginInterface):
     empty_lm = "aad3b435b51404eeaad3b435b51404ee"
     empty_nt = "31d6cfe0d16ae931b73c59d7e0c089c0"
 
-    #empty treegrid object to return in case of error
-    none_obj = (0,('','','',''))
-
-    #helper method to find a particular key in a hive
-    def open_key(self, root, key):
-        if key == []:
-            return root
-
-        keyname = key.pop(0)
-        for s in root.get_subkeys():        
-            if s.get_name().upper() == keyname.upper():
-                    return self.open_key(s, key)
-        return None
-
-    def get_user_keys(self, samhive):
-        user_key_path = ["SAM", "Domains", "Account", "Users"]
-
+    @classmethod
+    def get_user_keys(cls, samhive):
+        user_key_path= "SAM\\Domains\\Account\\Users"
         root = samhive.root_cell_offset
         if not root:
             return []
 
-        user_key = self.open_key(samhive.get_node(root), user_key_path)
+        user_key = samhive.get_key(user_key_path)
         if not user_key:
             return []
         return [k for k in user_key.get_subkeys() if k.Name != "Names"]
-
-    def get_bootkey(self, syshive):
+    
+    @classmethod
+    def get_bootkey(cls, syshive):
         cs =1
-        lsa_base = ["ControlSet{0:03}".format(cs), "Control", "Lsa"]
+        lsa_base = "ControlSet{0:03}".format(cs)+ "\\Control\\Lsa"
         lsa_keys = ["JD", "Skew1", "GBG", "Data"]
         root = syshive.root_cell_offset 
         if not root:
             return None
 
-        lsa = self.open_key(syshive.get_node(root), lsa_base)
+        lsa = syshive.get_key(lsa_base)
 
 
         if not lsa:
@@ -98,7 +88,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
         bootkey = ""
 
         for lk in lsa_keys:
-            key = self.open_key(lsa, [lk])
+            key = syshive.get_key(lsa_base+'\\'+lk)
 
             class_data = syshive.read(key.Class+4, key.ClassLength)
 
@@ -112,11 +102,12 @@ class Hashdump(interfaces.plugins.PluginInterface):
         bootkey_scrambled = ""
 
         for i in range(len(bootkey_str)):
-            bootkey_scrambled += bootkey_str[self.p[i]]
+            bootkey_scrambled += bootkey_str[cls.p[i]]
         return bootkey_scrambled
 
-    def get_hbootkey(self, samhive, bootkey):
-        sam_account_path = ["SAM", "Domains", "Account"]
+    @classmethod
+    def get_hbootkey(cls, samhive, bootkey):
+        sam_account_path = "SAM\\Domains\\Account"
 
         if not bootkey:
             return None
@@ -125,32 +116,32 @@ class Hashdump(interfaces.plugins.PluginInterface):
         if not root:
             return None
 
-        sam_account_key = self.open_key(samhive.get_node(root), sam_account_path)
+        sam_account_key=samhive.get_key(sam_account_path)
         if not sam_account_key:
             return None
         
 
-        F = None
+        sam_data = None
         for v in sam_account_key.get_values():
             if v.get_name() == 'F':
-                F = samhive.read(v.Data+4, v.DataLength)
-        if not F:
+                sam_data = samhive.read(v.Data+4, v.DataLength)
+        if not sam_data:
             return None
 
-        revision = F[0x00]
+        revision = sam_data[0x00]
         if revision == 2:
             md5 = hashlib.md5()
         
-            md5.update(F[0x70:0x80] + self.aqwerty + bootkey.encode('latin1') + self.anum)
+            md5.update(sam_data[0x70:0x80] + cls.aqwerty + bootkey.encode('latin1') + cls.anum)
             rc4_key = md5.digest()
 
             rc4 = ARC4.new(rc4_key)
-            hbootkey = rc4.encrypt(F[0x80:0xA0])
+            hbootkey = rc4.encrypt(sam_data[0x80:0xA0])
             return hbootkey
         elif revision == 3:
             # AES encrypted 
-            iv = F[0x78:0x88]
-            encryptedHBootKey = F[0x88:0xA8]
+            iv = sam_data[0x78:0x88]
+            encryptedHBootKey = sam_data[0x88:0xA8]
             cipher = AES.new(bootkey.encode('latin1'), AES.MODE_CBC, iv)
             hbootkey = cipher.decrypt(encryptedHBootKey)
             return hbootkey[:16]
@@ -160,77 +151,82 @@ class Hashdump(interfaces.plugins.PluginInterface):
         return hbootkey
     
 
-
-    def decrypt_single_salted_hash(self, rid, hbootkey, enc_hash, lmntstr, salt):
+    @classmethod
+    def decrypt_single_salted_hash(cls, rid, hbootkey, enc_hash, lmntstr, salt):
         if enc_hash == "":
             return ""
-        (des_k1,des_k2) = self.sid_to_key(rid)
-        d1 = DES.new(des_k1.encode('latin1'), DES.MODE_ECB)
-        d2 = DES.new(des_k2.encode('latin1'), DES.MODE_ECB)
+        (des_k1,des_k2) = cls.sid_to_key(rid)
+        des1 = DES.new(des_k1.encode('latin1'), DES.MODE_ECB)
+        des2 = DES.new(des_k2.encode('latin1'), DES.MODE_ECB)
         cipher = AES.new(hbootkey[:16], AES.MODE_CBC, salt)
         obfkey = cipher.decrypt(enc_hash)
-        return d1.decrypt(obfkey[:8]) + d2.decrypt(obfkey[8:16])
-        
-    def get_user_hashes(self, user, samhive, hbootkey):
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:16])
+
+    @classmethod  
+    def get_user_hashes(cls, user, samhive, hbootkey):
         ## Will sometimes find extra user with rid = NAMES, returns empty strings right now
         try:
             rid = int(str(user.get_name()), 16)
         except ValueError:
             return None
-        V = None
+        sam_data = None
         for v in user.get_values():
             if v.get_name() == 'V':
-                V = samhive.read(v.Data+4, v.DataLength)
-        if not V:
+                sam_data = samhive.read(v.Data+4, v.DataLength)
+        if not sam_data:
             return None
         
-        lm_offset = unpack("<L", V[0x9c:0xa0])[0] + 0xCC
-        lm_len = unpack("<L", V[0xa0:0xa4])[0]
-        nt_offset = unpack("<L", V[0xa8:0xac])[0] + 0xCC
-        nt_len = unpack("<L", V[0xac:0xb0])[0]
+        lm_offset = unpack("<L", sam_data[0x9c:0xa0])[0] + 0xCC
+        lm_len = unpack("<L", sam_data[0xa0:0xa4])[0]
+        nt_offset = unpack("<L", sam_data[0xa8:0xac])[0] + 0xCC
+        nt_len = unpack("<L", sam_data[0xac:0xb0])[0]
 
 
-        lm_revision = V[lm_offset + 2:lm_offset + 3]
+        lm_revision = sam_data[lm_offset + 2:lm_offset + 3]
         if lm_revision == b'\x01':
             lm_exists = True if lm_len == 20 else False
-            enc_lm_hash = V[lm_offset + 0x04:lm_offset + 0x14] if lm_exists else ""
-            lmhash = self.decrypt_single_hash(rid, hbootkey, enc_lm_hash, self.almpassword)
+            enc_lm_hash = sam_data[lm_offset + 0x04:lm_offset + 0x14] if lm_exists else ""
+            lmhash = cls.decrypt_single_hash(rid, hbootkey, enc_lm_hash, cls.almpassword)
         elif lm_revision == b'\x02':
             lm_exists = True if lm_len == 56 else False
-            lm_salt = V[hash_offset+4:hash_offset+20] if lm_exists else ""
-            enc_lm_hash = V[hash_offset+20:hash_offset+52] if lm_exists else ""
-            lmhash = self.decrypt_single_salted_hash(rid, hbootkey, enc_lm_hash, self.almpassword, lm_salt)
+            lm_salt = sam_data[hash_offset+4:hash_offset+20] if lm_exists else ""
+            enc_lm_hash = sam_data[hash_offset+20:hash_offset+52] if lm_exists else ""
+            lmhash = cls.decrypt_single_salted_hash(rid, hbootkey, enc_lm_hash, cls.almpassword, lm_salt)
 
         # NT hash decryption
-        nt_len = unpack("<L", V[0xac:0xb0])[0]
+        nt_len = unpack("<L", sam_data[0xac:0xb0])[0]
 
-        nt_revision = V[nt_offset + 2:nt_offset + 3]
+        nt_revision = sam_data[nt_offset + 2:nt_offset + 3]
         if nt_revision == b'\x01':
             nt_exists = True if nt_len == 20 else False
-            enc_nt_hash = V[nt_offset+4:nt_offset+20] if nt_exists else ""
-            nthash = self.decrypt_single_hash(rid, hbootkey, enc_nt_hash, self.antpassword)
+            enc_nt_hash = sam_data[nt_offset+4:nt_offset+20] if nt_exists else ""
+            nthash = cls.decrypt_single_hash(rid, hbootkey, enc_nt_hash, cls.antpassword)
         elif nt_revision == b'\x02':
             nt_exists = True if nt_len == 56 else False
-            nt_salt = V[nt_offset+8:nt_offset+24] if nt_exists else ""
-            enc_nt_hash = V[nt_offset+24:nt_offset+56] if nt_exists else ""
-            nthash = self.decrypt_single_salted_hash(rid, hbootkey, enc_nt_hash, self.antpassword, nt_salt)
+            nt_salt = sam_data[nt_offset+8:nt_offset+24] if nt_exists else ""
+            enc_nt_hash = sam_data[nt_offset+24:nt_offset+56] if nt_exists else ""
+            nthash = cls.decrypt_single_salted_hash(rid, hbootkey, enc_nt_hash, cls.antpassword, nt_salt)
         return lmhash, nthash
+    
+    #Takes rid of a user and converts it to a key to be used by the DES cipher
+    @classmethod
+    def sid_to_key(cls, sid):
 
-    def sid_to_key(self, sid):
+        str1 = ""
+        str1 += chr(sid & 0xFF)
+        str1 += chr((sid >> 8) & 0xFF)
+        str1 += chr((sid >> 16) & 0xFF)
+        str1 += chr((sid >> 24) & 0xFF)
+        str1 += str1[0]
+        str1 += str1[1]
+        str1 += str1[2]
+        str2 = str1[3] + str1[0] + str1[1] + str1[2]
+        str2 += str2[0] + str2[1] + str2[2]
+        return cls.str_to_key(str1), cls.str_to_key(str2)
 
-        s1 = ""
-        s1 += chr(sid & 0xFF)
-        s1 += chr((sid >> 8) & 0xFF)
-        s1 += chr((sid >> 16) & 0xFF)
-        s1 += chr((sid >> 24) & 0xFF)
-        s1 += s1[0]
-        s1 += s1[1]
-        s1 += s1[2]
-        s2 = s1[3] + s1[0] + s1[1] + s1[2]
-        s2 += s2[0] + s2[1] + s2[2]
-        return self.str_to_key(s1), self.str_to_key(s2)
-
-    def str_to_key(self, s):
+    #build final DES key from the strings generated in sid_to_key
+    @classmethod
+    def str_to_key(cls, s):
         key = []
         key.append(ord(s[0]) >> 1)
         key.append(((ord(s[0]) & 0x01) << 6) | (ord(s[1]) >> 2))
@@ -242,14 +238,14 @@ class Hashdump(interfaces.plugins.PluginInterface):
         key.append(ord(s[6]) & 0x7F)
         for i in range(8):
             key[i] = (key[i] << 1)
-            key[i] = self.odd_parity[key[i]]
-
+            key[i] = cls.odd_parity[key[i]]
         return "".join(chr(k) for k in key)
 
-    def decrypt_single_hash(self, rid, hbootkey, enc_hash, lmntstr):
-        (des_k1, des_k2) = self.sid_to_key(rid)
-        d1 = DES.new(des_k1.encode('latin1'), DES.MODE_ECB)
-        d2 = DES.new(des_k2.encode('latin1'), DES.MODE_ECB)
+    @classmethod
+    def decrypt_single_hash(cls, rid, hbootkey, enc_hash, lmntstr):
+        (des_k1, des_k2) = cls.sid_to_key(rid)
+        des1 = DES.new(des_k1.encode('latin1'), DES.MODE_ECB)
+        des2 = DES.new(des_k2.encode('latin1'), DES.MODE_ECB)
         md5 = MD5.new()
 
         md5.update(hbootkey[:0x10] + pack("<L", rid) + lmntstr)
@@ -257,12 +253,11 @@ class Hashdump(interfaces.plugins.PluginInterface):
         rc4 = ARC4.new(rc4_key)
         obfkey = rc4.encrypt(enc_hash)
 
-        hash = d1.decrypt(obfkey[:8]) + d2.decrypt(obfkey[8:])
+        hash = des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:])
         return hash
 
-
-
-    def get_user_name(self, user, samhive):
+    @classmethod
+    def get_user_name(cls, user, samhive):
         V = None
         for v in user.get_values():
             if v.get_name() == 'V':
@@ -281,18 +276,21 @@ class Hashdump(interfaces.plugins.PluginInterface):
     #replaces the dump_hashes method in vol2
     def _generator(self, syshive, samhive):
         if syshive == None:
-            print("SYSTEM address is None: Did you use the correct profile?")
-            yield self.none_obj
+            vollog.debug("SYSTEM address is None: Did you use the correct profile?")
+            yield (0, (renderers.NotAvailableValue(), renderers.NotAvailableValue(), renderers.NotAvailableValue(),
+                               renderers.NotAvailableValue()))
         if samhive == None:
-            print("SAM address is None: Did you use the correct profile?")
-            yield self.none_obj
+            vollog.debug("SAM address is None: Did you use the correct profile?")
+            yield (0, (renderers.NotAvailableValue(), renderers.NotAvailableValue(), renderers.NotAvailableValue(),
+                               renderers.NotAvailableValue()))
         bootkey = self.get_bootkey(syshive)
         hbootkey = self.get_hbootkey(samhive, bootkey)
         if hbootkey:
             for user in self.get_user_keys(samhive):
                 ret = self.get_user_hashes(user, samhive, hbootkey)
                 if not ret:
-                    yield self.none_obj
+                    yield (0, (renderers.UnreadableValue(), renderers.UnreadableValue(), renderers.NotAvailableValue(),
+                               renderers.NotAvailableValue()))
                 else:
                     lmhash, nthash = ret
                     if not lmhash:
@@ -305,7 +303,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
                     if name is not None:
                         name = name.encode('ascii', 'ignore')
                     else:
-                        name = "(unavailable)"
+                        name = renderers.NotAvailableValue()
                         
 
                     if lmhash == self.empty_lm:
@@ -322,8 +320,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
                                 lmout,
                                 ntout))
         else:
-            print("Hbootkey is not valid")
-            yield self.none_obj
+            raise Exception("Hbootkey is not valid")
 
     def run(self):
         offset = self.config.get('offset', None)
