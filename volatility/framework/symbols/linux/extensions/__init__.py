@@ -416,7 +416,11 @@ class list_head(objects.StructType, collections.abc.Iterable):
         direction = 'prev'
         if forward:
             direction = 'next'
-        link = getattr(self, direction).dereference()
+        try:
+            link = getattr(self, direction).dereference()
+        except exceptions.InvalidAddressException:
+            print("return here")
+            return
 
         if not sentinel:
             yield self._context.object(symbol_type, layer, offset = self.vol.offset - relative_offset)
@@ -428,7 +432,11 @@ class list_head(objects.StructType, collections.abc.Iterable):
             yield obj
 
             seen.add(link.vol.offset)
-            link = getattr(link, direction).dereference()
+            try:
+                link = getattr(self, direction).dereference()
+            except exceptions.InvalidAddressException:
+                print("break here")
+                break
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)

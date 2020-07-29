@@ -6,7 +6,7 @@ import logging
 from typing import List
 
 from volatility.framework import interfaces, renderers, exceptions, constants, contexts
-from volatility.framework.automagic import linux
+from volatility.framework.symbols import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
