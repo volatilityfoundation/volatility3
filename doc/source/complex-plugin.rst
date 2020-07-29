@@ -29,7 +29,7 @@ available plugins that feature a Timeliner interface).  This can be achieved wit
 
     automagics = automagic.choose_automagic(automagic.available(self._context), plugin_class)
     plugin = plugins.construct_plugin(self.context, automagics, plugin_class, self.config_path,
-                                self._progress_callback, self._file_consumer)
+                                self._progress_callback, self._file_consumer, self.FileHandler)
 
 This code will first generate suitable automagics for running against the context.  Unfortunately this must be re-run for
 each plugin in order to populate the context's configuration correctly based on the plugin's requirements (which may vary
@@ -41,10 +41,29 @@ between plugins).  Once the automagics have been constructed, the plugin can be 
  * the configuration path within the context for the plugin
  * any callback to determine progress in lengthy operations
  * any file consumers for files created during running of the plugin
+ * a file handler class for files created during the running of the plugin
 
 With the constructed plugin, it can either be run by calling its
 :py:meth:`~volatility.framework.interfaces.plugins.PluginInterface.run` method, or any other known method can
 be invoked on it.
+
+Writing out files
+-----------------
+The :py:class:`~volatility.framework.interfaces.plugins.PluginInterface` contains a FileHandler attribute, that should be
+used as a means of writing out files by passing them to the `consume_file` method.  When producing a file, construct an object
+handler using the :py:obj:`~volatility.framework.interfaces.plugins.PluginInterface.FileHandler` class.
+
+..code-block:: python
+
+    output = self.FileHandler(filename = 'newfile.out')
+    output.data.write(data_for_file)
+
+    self.consume_file(output)
+
+The filename is the preferred filename to be output, but there is no guarantee the UI will want to or be able to produce
+that exact filename.  This layer of abstraction allows different UIs (such as a Web-based UI or a Command Line Interface)
+to be able to handle and work with the file data produced by a plugin.  The data attribute is an io-based object
+that adheres to the BytesIO class.  The backing store is unspecified and may be decided by the UI.
 
 Writing Scanners
 ----------------
