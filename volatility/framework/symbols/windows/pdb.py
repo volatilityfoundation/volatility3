@@ -30,7 +30,7 @@ class PDBUtility:
                                  offset: int,
                                  symbol_table_class: str,
                                  config_path: str = None,
-                                 progress_callback: constants.ProgressCallback = None) -> str:
+                                 progress_callback: constants.ProgressCallback = None) -> Optional[str]:
         """Produces the name of a symbol table loaded from the offset for an MZ header
 
         Args:
@@ -44,9 +44,12 @@ class PDBUtility:
         Returns:
             None if no pdb information can be determined, else returned the name of the loaded symbols for the MZ
         """
-        guid, age, pdb_name = cls.get_guid_from_mz(context, layer_name, offset)
+        result = cls.get_guid_from_mz(context, layer_name, offset)
+        if result is None:
+            return None
+        guid, age, pdb_name = result
         if config_path is None:
-            config_path = interfaces.configuration.path_join('pdbutility', pdb_name.strip('\x00').replace('.', '_'))
+            config_path = interfaces.configuration.path_join('pdbutility', pdb_name.replace('.', '_'))
 
         return cls.load_windows_symbol_table(context, guid, age, pdb_name, symbol_table_class, config_path,
                                              progress_callback)
@@ -136,7 +139,7 @@ class PDBUtility:
 
         # Extract the data
         debug_entry = pe_data.DIRECTORY_ENTRY_DEBUG[0].entry
-        pdb_name = debug_entry.PdbFileName.decode("utf-8")
+        pdb_name = debug_entry.PdbFileName.decode("utf-8").strip('\x00')
         age = debug_entry.Age
         guid = "{:x}{:x}{:x}{}".format(debug_entry.Signature_Data1, debug_entry.Signature_Data2,
                                        debug_entry.Signature_Data3,
