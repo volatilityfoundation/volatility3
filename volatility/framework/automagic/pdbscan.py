@@ -109,7 +109,8 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                         age = kernel['age'],
                         pdb_name = kernel['pdb_name'],
                         symbol_table_class = "volatility.framework.symbols.windows.WindowsKernelIntermedSymbols",
-                        config_path = sub_config_path)
+                        config_path = sub_config_path,
+                        progress_callback = progress_callback)
                 else:
                     vollog.debug("No suitable kernel pdb signature found")
 
