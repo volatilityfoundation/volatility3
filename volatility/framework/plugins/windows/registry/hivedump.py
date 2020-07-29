@@ -7,7 +7,6 @@ from typing import List
 
 from volatility.framework import interfaces
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import TreeGrid, format_hints
 from volatility.plugins.windows.registry import hivelist
 
@@ -42,7 +41,7 @@ class HiveDump(interfaces.plugins.PluginInterface):
             maxaddr = hive.hive.Storage[0].Length
             hive_name = self._sanitize_hive_name(hive.get_name())
 
-            filedata = plugins.FileInterface('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset)))
+            filedata = self.FileHandler('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset)))
             if hive._base_block:
                 hive_data = self.context.layers[hive.dependencies[0]].read(hive.hive.BaseBlock, 1 << 12)
             else:

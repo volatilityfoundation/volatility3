@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import List
+from typing import List, Type
 
 from volatility.framework import interfaces, exceptions, constants, renderers
 from volatility.framework.configuration import requirements
@@ -18,7 +18,7 @@ vollog = logging.getLogger(__name__)
 class ProcDump(interfaces.plugins.PluginInterface):
     """Dumps process executable images."""
 
-    _version = (1, 1, 0)
+    _version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -36,8 +36,13 @@ class ProcDump(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def process_dump(cls, context: interfaces.context.ContextInterface, kernel_table_name: str, pe_table_name: str,
-                     proc: interfaces.objects.ObjectInterface) -> interfaces.plugins.FileInterface:
+    def process_dump(
+            cls,
+            context: interfaces.context.ContextInterface,
+            kernel_table_name: str,
+            pe_table_name: str,
+            proc: interfaces.objects.ObjectInterface,
+            file_handler_class: Type[interfaces.plugins.FileInterface] = None) -> interfaces.plugins.FileInterface:
         """Extracts the complete data for a process as a FileInterface
 
         Args:
@@ -58,8 +63,11 @@ class ProcDump(interfaces.plugins.PluginInterface):
         dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                     offset = peb.ImageBaseAddress,
                                     layer_name = proc_layer_name)
-        filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId,
-                                                                                peb.ImageBaseAddress))
+
+        if file_handler_class is None:
+            file_handler_class = interfaces.plugins.FileInterface
+
+        filedata = file_handler_class("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
         for offset, data in dos_header.reconstruct():
             filedata.data.seek(offset)
             filedata.data.write(data)
@@ -78,7 +86,8 @@ class ProcDump(interfaces.plugins.PluginInterface):
             try:
                 proc_id = proc.UniqueProcessId
                 process_name = utility.array_to_string(proc.ImageFileName)
-                filedata = self.process_dump(self.context, self.config["nt_symbols"], pe_table_name, proc)
+                filedata = self.process_dump(self.context, self.config["nt_symbols"], pe_table_name, proc,
+                                             self.FileHandler)
                 self.produce_file(filedata)
                 result_text = "Stored {}".format(filedata.preferred_filename)
             except ValueError:

@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import List, Optional
+from typing import List, Optional, Type
 
 from volatility.framework import renderers, interfaces, constants, exceptions
 from volatility.framework.configuration import requirements
@@ -19,7 +19,7 @@ class LayerWriter(plugins.PluginInterface):
     default_output_name = "output.raw"
     default_block_size = 0x500000
 
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -42,6 +42,7 @@ class LayerWriter(plugins.PluginInterface):
                     context: interfaces.context.ContextInterface,
                     layer_name: str,
                     preferred_name: str,
+                    file_handler_class: Type[interfaces.plugins.FileInterface] = None,
                     chunk_size: Optional[int] = None,
                     progress_callback: Optional[constants.ProgressCallback] = None) -> Optional[plugins.FileInterface]:
         """Produces a filedata from the named layer in the provided context
@@ -50,6 +51,7 @@ class LayerWriter(plugins.PluginInterface):
             context: the context from which to read the memory layer
             layer_name: the name of the layer to write out
             preferred_name: a string with the preferred filename for hte file
+            file_handler_class: File handler for generated files
             chunk_size: an optional size for the chunks that should be written (defaults to 0x500000)
             progress_callback: an optional function that takes a percentage and a string that displays output
         """
@@ -61,7 +63,10 @@ class LayerWriter(plugins.PluginInterface):
         if chunk_size is None:
             chunk_size = cls.default_block_size
 
-        filedata = plugins.FileInterface(preferred_name)
+        if file_handler_class is None:
+            file_handler_class = interfaces.plugins.FileInterface
+
+        filedata = file_handler_class(preferred_name)
         for i in range(0, layer.maximum_address, chunk_size):
             current_chunk_size = min(chunk_size, layer.maximum_address - i)
             data = layer.read(i, current_chunk_size, pad = True)

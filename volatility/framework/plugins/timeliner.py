@@ -107,7 +107,6 @@ class Timeliner(interfaces.plugins.PluginInterface):
         """Takes a timeline, sorts it and output the data from each relevant
         row from each plugin."""
         # Generate the results for each plugin
-        data = []
         for plugin in runable_plugins:
             plugin_name = plugin.__class__.__name__
             self._progress_callback((runable_plugins.index(plugin) * 100) // len(runable_plugins),
@@ -136,7 +135,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
         # Write out a body file if necessary
         if self.config.get('create-bodyfile', True):
-            filedata = interfaces.plugins.FileInterface("volatility.body")
+            filedata = self.FileHandler("volatility.body")
             with io.TextIOWrapper(filedata.data, write_through = True) as fp:
                 for (plugin_name, item) in self.timeline:
                     times = self.timeline[(plugin_name, item)]
@@ -202,7 +201,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 for entry in old_dict:
                     total_config[interfaces.configuration.path_join(plugin.__class__.__name__, entry)] = old_dict[entry]
 
-            filedata = interfaces.plugins.FileInterface("config.json")
+            filedata = self.FileHandler("config.json")
             with io.TextIOWrapper(filedata.data, write_through = True) as fp:
                 json.dump(total_config, fp, sort_keys = True, indent = 2)
                 self.produce_file(filedata)

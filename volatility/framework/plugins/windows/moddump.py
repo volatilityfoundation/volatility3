@@ -131,7 +131,7 @@ class ModDump(interfaces.plugins.PluginInterface):
                                                      offset = mod.DllBase,
                                                      layer_name = session_layer_name)
 
-                    filedata = interfaces.plugins.FileInterface("module.{0:#x}.dmp".format(mod.DllBase))
+                    filedata = self.FileHandler("module.{0:#x}.dmp".format(mod.DllBase))
 
                     for offset, data in dos_header.reconstruct():
                         filedata.data.seek(offset)

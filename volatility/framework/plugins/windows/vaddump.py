@@ -81,7 +81,7 @@ class VadDump(interfaces.plugins.PluginInterface):
 
             for vad in vadinfo.VadInfo.list_vads(proc, filter_func = filter_func):
                 try:
-                    filedata = interfaces.plugins.FileInterface("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
+                    filedata = self.FileHandler("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
                         proc.UniqueProcessId, vad.get_start(), vad.get_end()))
 
                     data = self.vad_dump(self.context, proc_layer_name, vad)

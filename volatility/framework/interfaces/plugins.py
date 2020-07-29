@@ -101,6 +101,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
             vollog.warning("Plugin failed validation")
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
         self._file_consumer = None  # type: Optional[FileConsumerInterface]
+        self._file_handler = interfaces.plugins.FileInterface
 
         framework.require_interface_version(*self._required_framework_verison)
 
@@ -130,3 +131,13 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
         Returns:
             A TreeGrid object that can then be passed to a Renderer.
         """
+
+    @property
+    def FileHandler(self):
+        """Returns a FileHandler which implements interfaces.plugins.FileInterface"""
+        return self._file_handler
+
+    def set_file_handler_class(self, value):
+        """Sets the file handler class to be used by plugins"""
+        if isinstance(value, interfaces.plugins.FileInterface):
+            self._file_handler = value

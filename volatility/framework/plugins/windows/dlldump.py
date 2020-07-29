@@ -86,8 +86,9 @@ class DllDump(interfaces.plugins.PluginInterface):
                         continue
 
                 try:
-                    filedata = interfaces.plugins.FileInterface("pid.{0}.{1}.{2:#x}.dmp".format(
-                        proc.UniqueProcessId, ntpath.basename(vad.get_file_name()), vad.get_start()))
+                    filedata = self.FileHandler("pid.{0}.{1}.{2:#x}.dmp".format(proc.UniqueProcessId,
+                                                                                ntpath.basename(vad.get_file_name()),
+                                                                                vad.get_start()))
 
                     dos_header = self.context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                                      offset = vad.get_start(),
