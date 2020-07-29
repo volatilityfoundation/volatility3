@@ -15,11 +15,14 @@ from volatility.framework import interfaces, automagic, exceptions, constants
 vollog = logging.getLogger(__name__)
 
 
-def construct_plugin(context: interfaces.context.ContextInterface,
-                     automagics: List[interfaces.automagic.AutomagicInterface],
-                     plugin: Type[interfaces.plugins.PluginInterface], base_config_path: str,
-                     progress_callback: constants.ProgressCallback,
-                     file_consumer: interfaces.plugins.FileConsumerInterface) -> interfaces.plugins.PluginInterface:
+def construct_plugin(
+        context: interfaces.context.ContextInterface,
+        automagics: List[interfaces.automagic.AutomagicInterface],
+        plugin: Type[interfaces.plugins.PluginInterface],
+        base_config_path: str,
+        progress_callback: constants.ProgressCallback,
+        file_consumer: interfaces.plugins.FileConsumerInterface,
+        file_handler_class: Type[interfaces.plugins.FileInterface] = None) -> interfaces.plugins.PluginInterface:
     """Constructs a plugin object based on the parameters.
 
     Clever magic figures out how to fulfill each requirement that might not be fulfilled
@@ -31,6 +34,7 @@ def construct_plugin(context: interfaces.context.ContextInterface,
         base_config_path: The path within the context's config containing the plugin's configuration
         progress_callback: Callback function to provide feedback for ongoing processes
         file_consumer: Object to pass any generated files to
+        file_handler_class: Class for new constructed files to be passed to the consumer
 
     Returns:
         The constructed plugin object
@@ -51,4 +55,6 @@ def construct_plugin(context: interfaces.context.ContextInterface,
     constructed = plugin(context, plugin_config_path, progress_callback = progress_callback)
     if file_consumer:
         constructed.set_file_consumer(file_consumer)
+    if file_handler_class:
+        constructed.set_file_handler_class(file_handler_class)
     return constructed

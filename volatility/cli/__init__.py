@@ -15,7 +15,9 @@ import inspect
 import json
 import logging
 import os
+import shutil
 import sys
+import tempfile
 import traceback
 from typing import Dict, Type, Union
 from urllib import parse, request
@@ -66,6 +68,23 @@ class MuteProgress(PrintedProgress):
         pass
 
 
+class FileBackedHandler(interfaces.plugins.FileInterface):
+
+    def __init__(self, filename: str, data: bytes = None):
+        super().__init__(filename, b'')
+        prefix, suffix = filename.split('.')[:-1], filename.split('.')[-1]
+        self._file_pointer = tempfile.NamedTemporaryFile(prefix = prefix, suffix = suffix, delete = False)
+
+    @property
+    def data(self):
+        return self._file_pointer
+
+    def finalize_file(self, output_filename: str):
+        """Moves the temporary file into its final destination"""
+        self._file_pointer.close()
+        shutil.move(self._file_pointer.name, output_filename)
+
+
 class CommandLine(interfaces.plugins.FileConsumerInterface):
     """Constructs a command-line interface object for users to run plugins."""
 
@@ -83,7 +102,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         """Executes the command line module, taking the system arguments,
         determining the plugin to run and then running it."""
 
-        volatility.framework.require_interface_version(1, 0, 0)
+        volatility.framework.require_interface_version(1, 2, 0)
 
         renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
 
@@ -452,12 +471,16 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         filename, extension = os.path.join(self.output_dir, '.'.join(pref_name_array[:-1])), pref_name_array[-1]
         output_filename = "{}.{}".format(filename, extension)
 
-        if not os.path.exists(output_filename):
-            with open(output_filename, "wb") as current_file:
-                current_file.write(filedata.data.getvalue())
-                vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
+        if isinstance(filedata, FileBackedHandler):
+            filedata.finalize_file(output_filename)
+            vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
         else:
-            vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
+            if not os.path.exists(output_filename):
+                with open(output_filename, "wb") as current_file:
+                    current_file.write(filedata.data.getvalue())
+                    vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
+            else:
+                vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
 
     def populate_requirements_argparse(self, parser: Union[argparse.ArgumentParser, argparse._ArgumentGroup],
                                        configurable: Type[interfaces.configuration.ConfigurableInterface]):
