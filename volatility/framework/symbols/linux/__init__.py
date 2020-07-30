@@ -227,7 +227,7 @@ class LinuxUtilities(object):
             LinuxUtilities.mask_mods_list(context, layer_name, mods_list)
 
     @classmethod
-    def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: List[Tuple[str, int, int]],
+    def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: Tuple[str, str],
                               target_address):
         """
         Searches between the start and end address of the kernel module using target_address.  
