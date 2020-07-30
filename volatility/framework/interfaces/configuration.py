@@ -696,7 +696,7 @@ class VersionableInterface:
 
     All version number should use semantic versioning
     """
-    _version: Tuple[int, int, int] = (0, 0, 0)
+    _version = (0, 0, 0)  # type: Tuple[int, int, int]
 
     @classproperty
     def version(cls) -> Tuple[int, int, int]:
