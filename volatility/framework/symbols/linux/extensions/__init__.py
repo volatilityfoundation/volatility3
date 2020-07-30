@@ -432,7 +432,7 @@ class list_head(objects.StructType, collections.abc.Iterable):
 
             seen.add(link.vol.offset)
             try:
-                link = getattr(self, direction).dereference()
+                link = getattr(link, direction).dereference()
             except exceptions.InvalidAddressException:
                 break
 
