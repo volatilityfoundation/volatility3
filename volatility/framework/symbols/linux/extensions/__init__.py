@@ -419,7 +419,6 @@ class list_head(objects.StructType, collections.abc.Iterable):
         try:
             link = getattr(self, direction).dereference()
         except exceptions.InvalidAddressException:
-            print("return here")
             return
 
         if not sentinel:
@@ -435,7 +434,6 @@ class list_head(objects.StructType, collections.abc.Iterable):
             try:
                 link = getattr(self, direction).dereference()
             except exceptions.InvalidAddressException:
-                print("break here")
                 break
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
