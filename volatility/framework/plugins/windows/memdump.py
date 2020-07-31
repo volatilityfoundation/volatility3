@@ -3,7 +3,7 @@
 #
 
 from typing import List
-
+import sys
 from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
@@ -28,37 +28,13 @@ class Memdump(interfaces.plugins.PluginInterface):
                                         description = "Process ID to include (all other processes are excluded)",
                                         optional = True)
         ]
-        
-    @classmethod
-    def mem_dump(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                 vad: interfaces.objects.ObjectInterface) -> bytes:
-        """ Get data for each VA"""
-        temp = b""
-
-        proc_layer = context.layers[layer_name]
-        chunk_size = 1024 * 1024 * 10
-        offset = vad.get_start()
-        out_of_range = vad.get_end()
-
-        while offset < out_of_range:
-            to_read = min(chunk_size, out_of_range - offset)
-            data = proc_layer.read(offset, to_read, pad = True)
-            if not data:
-                break
-            temp += data
-            offset += to_read
-
-        return temp
-
 
     def _generator(self, procs):
-        #print("reading")
-        test = 0
         for proc in procs:
+            data = b""
             process_name = proc.ImageFileName.cast("string",
                                                    max_length = proc.ImageFileName.vol.count,
                                                    errors = 'replace')
-            offset = 0
             pid = "Unknown"
             try:
                 pid = proc.UniqueProcessId
@@ -67,30 +43,33 @@ class Memdump(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException as excp:
                 vollog.debug("Process {}: invalid address {} in layer {}".format(pid, excp.invalid_address, excp.layer_name))
                 continue
-            
+
+            #Create file for writing
+            filedata = interfaces.plugins.FileInterface("{}.dmp".format(proc.UniqueProcessId))
+
             for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                 vadd, _, vpage, page_size, maplayer = mapval
+                data = proc_layer.read(vadd, page_size, pad = True)
                 try:
-                    filedata = interfaces.plugins.FileInterface("{}.img".format(proc.UniqueProcessId))
-                    temp_data = data = proc_layer.read(vadd, page_size, pad = True)
-                    filedata.data.write(temp_data)
-                    #self.produce_file(filedata)
-
-                    result_text = "Writing {} [ {} ] to {}.img".format(process_name, proc.UniqueProcessId, proc.UniqueProcessId)
+                    filedata.data.write(data)
                 except exceptions.InvalidAddressException:
-                    result_text = "Unable to write {} [ {} ]to {}.img".format(process_name, proc.UniqueProcessId, proc.UniqueProcessId)
+                    vollog.debug("Unable to write {}'s address {} [ {} ]to {}.dmp".format(process_name, vadd, proc.UniqueProcessId, proc.UniqueProcessId))
+                    continue
 
-                yield(0, (result_text,))
-                offset += page_size
-            self.produce_file(filedata)
+
+            try:
+                result_text = "Writing {} [ {} ] to {}.dmp".format(process_name, proc.UniqueProcessId, proc.UniqueProcessId)
+                self.produce_file(filedata)
+            except exceptions.InvalidAddressException:
+                result_text = "Unable to write {} [ {} ]to {}.dmp".format(process_name, proc.UniqueProcessId, proc.UniqueProcessId)
             
-
-
+            yield(0, (result_text,))
+            
+            
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
-        #print("here run")
-        return renderers.TreeGrid([ ("Result", str)],
+        return renderers.TreeGrid([ ("Creating the following files:",  str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
                                                                    layer_name = self.config['primary'],
