@@ -29,7 +29,6 @@ class Memmap(interfaces.plugins.PluginInterface):
         ]
 
     def _generator(self, procs):
-
         for proc in procs:
             reverse_map = dict()
             offset = 0

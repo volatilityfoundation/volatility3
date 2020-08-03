@@ -12,7 +12,7 @@ from volatility.plugins.windows import pslist, dlllist, ssdt, vadinfo
 
 
 class Memdump(interfaces.plugins.PluginInterface):
-    """Prints the memory map"""
+    """Dump the addressable memory for a process"""
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -55,7 +55,6 @@ class Memdump(interfaces.plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     vollog.debug("Unable to write {}'s address {} [ {} ]to {}.dmp".format(process_name, vadd, proc.UniqueProcessId, proc.UniqueProcessId))
                     continue
-
 
             try:
                 result_text = "Writing {} [ {} ] to {}.dmp".format(process_name, proc.UniqueProcessId, proc.UniqueProcessId)
