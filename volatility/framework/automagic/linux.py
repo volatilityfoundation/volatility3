@@ -133,7 +133,6 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
 
     @classmethod
     def virtual_to_physical_address(cls, addr: int) -> int:
-
         """Converts a virtual linux address to a physical one (does not account
         of ASLR)"""
         if addr > 0xffffffff80000000:
