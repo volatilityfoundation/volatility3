@@ -20,13 +20,13 @@ class Check_idt(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name='primary',
-                                                     description='Memory layer for the kernel',
-                                                     architectures=["Intel32", "Intel64"]),
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
 
-            requirements.SymbolTableRequirement(name="vmlinux", description="Linux kernel symbols"),
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
             
-            requirements.PluginRequirement(name='lsmod', plugin=lsmod.Lsmod, version=(1, 0, 0))
+            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
         ]
 
     def _generator(self):
@@ -39,7 +39,7 @@ class Check_idt(interfaces.plugins.PluginInterface):
 
         is_32bit = not symbols.symbol_table_is_64bit(self.context, self.config["vmlinux"])
 
-        tblsz = 256
+        idt_table_size = 256
 
         # hw handlers + system call
         check_idxs = list(range(0, 20)) + [128]
@@ -57,37 +57,32 @@ class Check_idt(interfaces.plugins.PluginInterface):
             else:
                 idt_type = "idt_desc"
 
-        # this is written as a list b/c there are supposdly kernels with per-CPU IDTs
-        # but I haven't found one yet... 
-        # ^ This is from vol2. Not sure if this should stay a list or if object_from_symbol
-        # would even give u a multi-element list
-        addrs = [vmlinux.object_from_symbol("idt_table")]
+        addrs = vmlinux.object_from_symbol("idt_table")
 
-        for tableaddr in addrs:
-            table = vmlinux.object(object_type='array', offset=tableaddr.vol.offset, subtype=vmlinux.get_type(idt_type), count=tblsz)
+        table = vmlinux.object(object_type = 'array', offset = addrs.vol.offset, subtype = vmlinux.get_type(idt_type), count = idt_table_size)
 
-            for i in check_idxs:
-                ent = table[i]
+        for i in check_idxs:
+            ent = table[i]
 
-                if not ent:
-                    continue
+            if not ent:
+                continue
 
-                if hasattr(ent, "Address"):
-                    idt_addr = ent.Address
+            if hasattr(ent, "Address"):
+                idt_addr = ent.Address
+            else:
+                low = ent.offset_low
+                middle = ent.offset_middle
+
+                if hasattr(ent, "offset_high"):
+                    high = ent.offset_high
                 else:
-                    low = ent.offset_low
-                    middle = ent.offset_middle
+                    high = 0
 
-                    if hasattr(ent, "offset_high"):
-                        high = ent.offset_high
-                    else:
-                        high = 0
+                idt_addr = (high << 32) | (middle << 16) | low
 
-                    idt_addr = (high << 32) | (middle << 16) | low
+            module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(self.context, handlers, idt_addr)
 
-                module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(self.context, handlers, idt_addr)
-
-                yield(0, [format_hints.Hex(i), format_hints.Hex(idt_addr), module_name, symbol_name])
+            yield(0, [format_hints.Hex(i), format_hints.Hex(idt_addr), module_name, symbol_name])
         
 
     def run(self):
