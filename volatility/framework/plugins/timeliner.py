@@ -143,14 +143,13 @@ class Timeliner(interfaces.plugins.PluginInterface):
                     # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
 
                     if self._any_time_present(times):
-                        filedata.data.write(
-                            bytes(
-                                "|{} - {}||||||{}|{}|{}|{}\n".format(
-                                    plugin_name, self._sanitize_body_format(item),
-                                    self._text_format(times.get(TimeLinerType.ACCESSED, "")),
-                                    self._text_format(times.get(TimeLinerType.MODIFIED, "")),
-                                    self._text_format(times.get(TimeLinerType.CHANGED, "")),
-                                    self._text_format(times.get(TimeLinerType.CREATED, ""))), "raw_unicode_escape"))
+                        fp.write(
+                            "|{} - {}||||||{}|{}|{}|{}\n".format(
+                                plugin_name, self._sanitize_body_format(item),
+                                self._text_format(times.get(TimeLinerType.ACCESSED, "")),
+                                self._text_format(times.get(TimeLinerType.MODIFIED, "")),
+                                self._text_format(times.get(TimeLinerType.CHANGED, "")),
+                                self._text_format(times.get(TimeLinerType.CREATED, ""))))
                 self.produce_file(filedata)
 
     def _sanitize_body_format(self, value):
