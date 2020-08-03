@@ -38,7 +38,7 @@ class ConfigWriter(plugins.PluginInterface):
             filename = "config.extra"
         try:
             filedata = plugins.FileInterface(filename)
-            filedata.data.write(bytes(json.dumps(config, sort_keys = True, indent = 2), 'latin-1'))
+            filedata.data.write(bytes(json.dumps(config, sort_keys = True, indent = 2), 'raw_unicode_escape'))
             self.produce_file(filedata)
         except Exception:
             vollog.warning("Unable to JSON encode configuration")

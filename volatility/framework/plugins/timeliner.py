@@ -132,7 +132,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                                     self._text_format(times.get(TimeLinerType.ACCESSED, "")),
                                     self._text_format(times.get(TimeLinerType.MODIFIED, "")),
                                     self._text_format(times.get(TimeLinerType.CHANGED, "")),
-                                    self._text_format(times.get(TimeLinerType.CREATED, ""))), "latin-1"))
+                                    self._text_format(times.get(TimeLinerType.CREATED, ""))), "raw_unicode_escape"))
                 self.produce_file(filedata)
 
     def _sanitize_body_format(self, value):

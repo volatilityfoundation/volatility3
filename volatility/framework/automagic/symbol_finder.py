@@ -89,7 +89,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
 
         # Check if the Stacker has already found what we're looking for
         if layer.config.get(self.banner_config_key, None):
-            banner_list = [(0, bytes(layer.config[self.banner_config_key], 'latin-1'))]  # type: Iterable[Any]
+            banner_list = [(0, bytes(layer.config[self.banner_config_key], 'raw_unicode_escape'))]  # type: Iterable[Any]
         else:
             # Swap to the physical layer for scanning
             # TODO: Fix this so it works for layers other than just Intel
