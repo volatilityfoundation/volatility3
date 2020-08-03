@@ -251,3 +251,11 @@ class LinuxUtilities(object):
                 break
 
         return mod_name, symbol_name
+
+    @classmethod    
+    def walk_internal_list(cls, vmlinux, struct_name, list_member, list_start):
+        while list_start:
+            list_struct = vmlinux.object(
+                object_type=struct_name, offset=list_start.vol.offset)
+            yield list_struct
+            list_start = getattr(list_struct, list_member)
