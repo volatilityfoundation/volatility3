@@ -139,6 +139,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             return addr - 0xffffffff80000000
         return addr - 0xc0000000
 
+
 class LinuxBannerCache(symbol_cache.SymbolBannerCache):
     """Caches the banners found in the Linux symbol files."""
 

@@ -15,26 +15,24 @@ vollog = logging.getLogger(__name__)
 
 class Keyboard_notifiers(interfaces.plugins.PluginInterface):
     """Parses the keyboard notifier call chain"""
-    
+
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name='primary',
-                                                     description='Memory layer for the kernel',
-                                                     architectures=["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(
-                name="vmlinux", description="Linux kernel symbols"),
-            requirements.PluginRequirement(
-                name='lsmod', plugin=lsmod.Lsmod, version=(1, 0, 0))
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
+            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
         ]
 
     def _generator(self):
-        vmlinux = contexts.Module(
-            self.context, self.config['vmlinux'], self.config['primary'], 0)
+        vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
 
         modules = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['vmlinux'])
 
-        handlers = linux.LinuxUtilities.generate_kernel_handler_info(self.context, self.config['primary'], self.config['vmlinux'], modules)
+        handlers = linux.LinuxUtilities.generate_kernel_handler_info(self.context, self.config['primary'],
+                                                                     self.config['vmlinux'], modules)
 
         try:
             knl_addr = vmlinux.object_from_symbol("keyboard_notifier_list")
@@ -48,7 +46,7 @@ class Keyboard_notifiers(interfaces.plugins.PluginInterface):
                 "This means you are either analyzing an unsupported kernel version or that your symbol table is corrupt."
             )
 
-        knl = vmlinux.object(object_type="atomic_notifier_head", offset=knl_addr.vol.offset)
+        knl = vmlinux.object(object_type = "atomic_notifier_head", offset = knl_addr.vol.offset)
 
         for call_back in linux.LinuxUtilities.walk_internal_list(vmlinux, "notifier_block", "next", knl.head):
             call_addr = call_back.notifier_call
@@ -56,7 +54,6 @@ class Keyboard_notifiers(interfaces.plugins.PluginInterface):
             module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(self.context, handlers, call_addr)
 
             yield (0, [format_hints.Hex(call_addr), module_name, symbol_name])
-
 
     def run(self):
         return renderers.TreeGrid([("Address", format_hints.Hex), ("Module", str), ("Symbol", str)], self._generator())

@@ -199,15 +199,12 @@ class LinuxUtilities(object):
         """
         mask = context.layers[layer_name].address_mask
 
-        return [(utility.array_to_string(mod.name), mod.get_module_base() & mask, (mod.get_module_base() & mask) + mod.get_core_size())
-                for mod in mods]
+        return [(utility.array_to_string(mod.name), mod.get_module_base() & mask,
+                 (mod.get_module_base() & mask) + mod.get_core_size()) for mod in mods]
 
     @classmethod
     def generate_kernel_handler_info(
-            cls,
-            context: interfaces.context.ContextInterface,
-            layer_name: str,
-            kernel_name: str,
+            cls, context: interfaces.context.ContextInterface, layer_name: str, kernel_name: str,
             mods_list: Iterator[interfaces.objects.ObjectInterface]) -> List[Tuple[str, int, int]]:
         """
         A helper function that gets the beginning and end address of the kernel module
@@ -241,8 +238,7 @@ class LinuxUtilities(object):
             if start <= target_address <= end:
                 mod_name = name
                 if name == constants.linux.KERNEL_NAME:
-                    symbols = list(
-                        context.symbol_space.get_symbols_by_location(target_address))
+                    symbols = list(context.symbol_space.get_symbols_by_location(target_address))
 
                     if len(symbols):
                         symbol_name = symbols[0].split(constants.BANG)[1] if constants.BANG in symbols[0] else \
@@ -252,10 +248,9 @@ class LinuxUtilities(object):
 
         return mod_name, symbol_name
 
-    @classmethod    
+    @classmethod
     def walk_internal_list(cls, vmlinux, struct_name, list_member, list_start):
         while list_start:
-            list_struct = vmlinux.object(
-                object_type=struct_name, offset=list_start.vol.offset)
+            list_struct = vmlinux.object(object_type = struct_name, offset = list_start.vol.offset)
             yield list_struct
             list_start = getattr(list_struct, list_member)
