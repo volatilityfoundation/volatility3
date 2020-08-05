@@ -17,6 +17,8 @@ from volatility.framework.symbols.windows.extensions import kdbg
 class Info(plugins.PluginInterface):
     """Show OS & kernel details of the memory sample being analyzed."""
 
+    _version = (1, 0, 0)
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
