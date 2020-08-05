@@ -12,7 +12,7 @@ from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows.extensions import network
 from volatility.plugins import timeliner
-from volatility.plugins.windows import poolscanner
+from volatility.plugins.windows import info, poolscanner
 
 vollog = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ class NetScan(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'info', plugin = info.Info, version= (1, 0, 0)),
             requirements.BooleanRequirement(name = 'include-corrupt',
                 description = "Radically eases result validation. This will show partially overwritten data. WARNING: the results are likely to include garbage and/or corrupt data. Be cautious!",
                 default = False,
@@ -101,36 +102,13 @@ class NetScan(interfaces.plugins.PluginInterface):
         else:
             arch = "x86"
 
-        # the following code is taken from the windows.info plugin.
+        vers = info.Info.get_version_structure(context, layer_name, nt_symbol_table)
 
-        virtual_layer = context.layers[layer_name]
-        if not isinstance(virtual_layer, layers.intel.Intel):
-            raise TypeError("Virtual Layer is not an intel layer")
-
-        kvo = virtual_layer.config["kernel_virtual_offset"]
-
-        ntkrnlmp = context.module(nt_symbol_table, layer_name = layer_name, offset = kvo)
-
-        vers_offset = ntkrnlmp.get_symbol("KdVersionBlock").address
-
-        vers = ntkrnlmp.object(object_type = "_DBGKD_GET_VERSION64",
-                               layer_name = layer_name,
-                               offset = vers_offset)
+        kuser = info.Info.get_kuser_structure(context, layer_name, nt_symbol_table)
 
         vollog.debug("Determined OS Major/Minor Version: {}.{}".format(vers.MajorVersion, vers.MinorVersion))
 
         vers_minor_version = int(vers.MinorVersion)
-
-        # this is a hard-coded address in the Windows OS
-        if virtual_layer.bits_per_register == 32:
-            kuser_addr = 0xFFDF0000
-        else:
-            kuser_addr = 0xFFFFF78000000000
-
-        kuser = ntkrnlmp.object(object_type = "_KUSER_SHARED_DATA",
-                                layer_name = layer_name,
-                                offset = kuser_addr,
-                                absolute = True)
 
         nt_major_version = str(kuser.NtMajorVersion)
         nt_minor_version = str(kuser.NtMinorVersion)
