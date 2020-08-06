@@ -69,6 +69,8 @@ class MuteProgress(PrintedProgress):
 class CommandLine(interfaces.plugins.FileConsumerInterface):
     """Constructs a command-line interface object for users to run plugins."""
 
+    CLI_NAME = 'volatility'
+
     def __init__(self):
         self.setup_logging()
         self.output_dir = None
@@ -88,7 +90,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
 
         parser = volargparse.HelpfulArgParser(add_help = False,
-                                              prog = 'volatility',
+                                              prog = self.CLI_NAME,
                                               description = "An open-source memory forensics framework")
         parser.add_argument(
             "-h",
@@ -207,7 +209,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         failures = framework.import_files(volatility.plugins,
                                           True)  # Will not log as console's default level is WARNING
         if failures:
-            parser.epilog = "The following plugins could not be loaded (use -vv to see why): " + \
+            parser.epilog += "The following plugins could not be loaded (use -vv to see why): " + \
                             ", ".join(sorted(failures))
             vollog.info(parser.epilog)
         automagics = automagic.available(ctx)
@@ -226,6 +228,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
 
         subparser = parser.add_subparsers(title = "Plugins",
                                           dest = "plugin",
+                                          description = "For plugin specific options, run '{} <plugin> --help'".format(
+                                              self.CLI_NAME),
                                           action = volargparse.HelpfulSubparserAction)
         for plugin in sorted(plugin_list):
             plugin_parser = subparser.add_parser(plugin, help = plugin_list[plugin].__doc__)
