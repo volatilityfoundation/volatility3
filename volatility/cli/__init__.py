@@ -209,7 +209,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         failures = framework.import_files(volatility.plugins,
                                           True)  # Will not log as console's default level is WARNING
         if failures:
-            parser.epilog += "The following plugins could not be loaded (use -vv to see why): " + \
+            parser.epilog = "The following plugins could not be loaded (use -vv to see why): " + \
                             ", ".join(sorted(failures))
             vollog.info(parser.epilog)
         automagics = automagic.available(ctx)
