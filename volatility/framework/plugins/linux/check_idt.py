@@ -41,6 +41,8 @@ class Check_idt(interfaces.plugins.PluginInterface):
 
         idt_table_size = 256
 
+        address_mask = self.context.layers[self.config['primary']].address_mask
+
         # hw handlers + system call
         check_idxs = list(range(0, 20)) + [128]
 
@@ -79,6 +81,8 @@ class Check_idt(interfaces.plugins.PluginInterface):
                     high = 0
 
                 idt_addr = (high << 32) | (middle << 16) | low
+
+                idt_addr = idt_addr & address_mask
 
             module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(self.context, handlers, idt_addr)
 
