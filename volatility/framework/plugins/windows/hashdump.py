@@ -75,9 +75,12 @@ class Hashdump(interfaces.plugins.PluginInterface):
         lsa_base = "ControlSet{0:03}".format(cs) + "\\Control\\Lsa"
         lsa_keys = ["JD", "Skew1", "GBG", "Data"]
 
-        lsa = syshive.get_key(lsa_base)
-
-        if not lsa:
+        
+        try: 
+            lsa = syshive.get_key(lsa_base)
+        
+        except KeyError:
+            vollog.debug("Unable to read hashes from registry")
             return None
 
         bootkey = ''
