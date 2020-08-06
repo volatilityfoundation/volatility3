@@ -80,9 +80,12 @@ class Hashdump(interfaces.plugins.PluginInterface):
         if not root:
             return None
 
-        lsa = syshive.get_key(lsa_base)
-
-        if not lsa:
+        
+        try: 
+            lsa = syshive.get_key(lsa_base)
+        
+        except KeyError:
+            vollog.debug("Unable to read hashes from registry")
             return None
 
         bootkey = ''
