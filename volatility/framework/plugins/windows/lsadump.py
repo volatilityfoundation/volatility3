@@ -24,7 +24,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols",
                                                 description = "Windows kernel symbols"),
-            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))#,
+            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
             ]
     
     @classmethod
@@ -52,13 +52,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
     def get_lsa_key(cls, sechive, bootkey, vista_or_later):
         if not bootkey:
             return None
-
-        root = sechive.root_cell_offset
-        if not root:
-            return None
-
-        
-        
+          
         if vista_or_later:
             policy_key = 'PolEKList'
         else:
@@ -79,7 +73,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             return None
         if not vista_or_later:
             md5 = MD5.new()
-            md5.update(bootkey.encode('latin1'))
+            md5.update(bootkey)
             for _i in range(1000):
                 md5.update(obf_lsa_key[60:76])
             rc4key = md5.digest()
@@ -88,7 +82,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             lsa_key = rc4.decrypt(obf_lsa_key[12:60])
             lsa_key = lsa_key[0x10:0x20]
         else:
-            lsa_key = cls.decrypt_aes(obf_lsa_key, bootkey.encode('latin1'))
+            lsa_key = cls.decrypt_aes(obf_lsa_key, bootkey)
             lsa_key = lsa_key[68:100]
         return lsa_key
     
@@ -97,8 +91,8 @@ class Lsadump(interfaces.plugins.PluginInterface):
         try:
             enc_secret_key = sechive.get_key("Policy\\Secrets\\" + name + "\\CurrVal")
         except KeyError:
-            vollog.debug("Unable to read cache from memory")
-            exit()
+            raise Exception("Unable to read cache from memory")
+            
 
         enc_secret_value = next(enc_secret_key.get_values())
         if not enc_secret_value:
@@ -127,8 +121,8 @@ class Lsadump(interfaces.plugins.PluginInterface):
         for i in range(0, len(secret), 8):
             enc_block = secret[i:i + 8].decode('latin1')
             block_key = key[j:j + 7]
-            des_key = hashdump.Hashdump.str_to_key(block_key.decode('latin1'))
-            des = DES.new(des_key.encode('latin1'), DES.MODE_ECB)
+            des_key = hashdump.Hashdump.sidbytes_to_key(block_key)
+            des = DES.new(des_key, DES.MODE_ECB)
             enc_block = enc_block + "\x00" * int(abs(8 - len(enc_block)) % 8)
             decrypted_data += des.decrypt(enc_block.encode('latin1')).decode('latin1')
             j += 7
@@ -147,12 +141,15 @@ class Lsadump(interfaces.plugins.PluginInterface):
 
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         lsakey = self.get_lsa_key(sechive, bootkey, vista_or_later)
-        if not bootkey or not lsakey:
-            return None
+        if not bootkey:
+            raise Exception('Unable to find bootkey')
+        
+        if not lsakey:
+            raise Exception('Unable to find lsa key')
 
         secrets_key = sechive.get_key('Policy\\Secrets')
         if not secrets_key:
-            return None
+            raise Exception('Unable to find secrets key')
 
         for key in secrets_key.get_subkeys():
 

@@ -1,3 +1,6 @@
+# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+#
 
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
@@ -21,12 +24,12 @@ class Cachedump(interfaces.plugins.PluginInterface):
                                                 description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
             ]
-    @classmethod
-    def get_nlkm(cls, sechive, lsakey, is_vista_or_later):
+
+    def get_nlkm(self, sechive, lsakey, is_vista_or_later):
         return lsadump.Lsadump.get_secret_by_name(sechive, 'NL$KM', lsakey, is_vista_or_later)
     
-    @classmethod
-    def decrypt_hash(cls, edata, nlkm, ch, xp):
+
+    def decrypt_hash(self, edata, nlkm, ch, xp):
         if xp:
             hmac_md5 = HMAC.new(nlkm.encode('latin1'), ch)
             rc4key = hmac_md5.digest()
@@ -43,8 +46,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
                 data += aes.decrypt(buf)
         return data
     
-    @classmethod
-    def parse_cache_entry(cls, cache_data):
+    def parse_cache_entry(self, cache_data):
         (uname_len, domain_len) = unpack("<HH", cache_data[:4])
         if len(cache_data[60:62]) == 0:
             return (uname_len, domain_len, 0, '', '')
@@ -53,20 +55,20 @@ class Cachedump(interfaces.plugins.PluginInterface):
         enc_data = cache_data[96:]
         return (uname_len, domain_len, domain_name_len, enc_data, ch)
 
-    @classmethod
-    def parse_decrypted_cache(cls, dec_data, uname_len,
+    #Get the data from the cache and separate it into the username, domain name, and hash data
+    def parse_decrypted_cache(self, dec_data, uname_len,
             domain_len, domain_name_len):
-        uname_off = 72
+        uname_offset= 72
         pad = 2 * ((uname_len / 2) % 2)
-        domain_off = int(uname_off + uname_len + pad)
+        domain_offset= int(uname_offset+ uname_len + pad)
         pad = 2 * ((domain_len / 2) % 2)
-        domain_name_off = int(domain_off + domain_len + pad)
+        domain_name_offset= int(domain_offset+ domain_len + pad)
         hashh = dec_data[:0x10]
-        username = dec_data[uname_off:uname_off + uname_len]
+        username = dec_data[uname_offset:uname_offset+ uname_len]
         username = username.decode('utf-16-le', 'replace')
-        domain = dec_data[domain_off:domain_off + domain_len]
+        domain = dec_data[domain_offset:domain_offset+ domain_len]
         domain = domain.decode('utf-16-le', 'replace')
-        domain_name = dec_data[domain_name_off:domain_name_off + domain_name_len]
+        domain_name = dec_data[domain_name_offset:domain_name_offset+ domain_name_len]
         domain_name = domain_name.decode('utf-16-le', 'replace')
 
         return (username, domain, domain_name, hashh)
@@ -74,7 +76,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
     def _generator(self, syshive, sechive):
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         if not bootkey:
-            return []
+            raise Exception('Unable to find bootkey')
         
         is_vista_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (6, 0),
                                                      fallback_checks = [("KdCopyDataBlock", None, True)])
@@ -82,22 +84,22 @@ class Cachedump(interfaces.plugins.PluginInterface):
 
         lsakey = lsadump.Lsadump.get_lsa_key(sechive, bootkey, vista_or_later)
         if not lsakey:
-            return []
+            raise Exception('Unable to find lsa key') 
 
         nlkm = self.get_nlkm(sechive, lsakey, vista_or_later)
         if not nlkm:
-            return []
+            raise Exception('Unable to find nlkma key') 
 
         cache = sechive.get_key("Cache")
         if not cache:
-            return []
+            raise Exception('Unable to find cache key') 
         
 
-        for v in cache.get_values():
-            if v.Name == "NL$Control":
+        for cache_item in cache.get_values():
+            if cache_item.Name == "NL$Control":
                 continue
 
-            data = sechive.read(v.Data+4, v.DataLength)
+            data = sechive.read(cache_item.Data+4, cache_item.DataLength)
             if data == None:
                 continue
             (uname_len, domain_len, domain_name_len,
