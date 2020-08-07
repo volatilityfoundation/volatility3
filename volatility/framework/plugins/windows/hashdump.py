@@ -18,8 +18,6 @@ from volatility.plugins.windows.registry import hivelist
 vollog = logging.getLogger(__name__)
 
 
-vollog = logging.getLogger(__name__)
-
 class Hashdump(interfaces.plugins.PluginInterface):
     """Dumps user hashes from memory"""
 
@@ -75,12 +73,9 @@ class Hashdump(interfaces.plugins.PluginInterface):
         lsa_base = "ControlSet{0:03}".format(cs) + "\\Control\\Lsa"
         lsa_keys = ["JD", "Skew1", "GBG", "Data"]
 
-        
-        try: 
-            lsa = syshive.get_key(lsa_base)
-        
-        except KeyError:
-            vollog.debug("Unable to read hashes from registry")
+        lsa = syshive.get_key(lsa_base)
+
+        if not lsa:
             return None
 
         bootkey = ''
