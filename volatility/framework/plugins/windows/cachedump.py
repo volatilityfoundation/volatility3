@@ -15,6 +15,9 @@ from struct import unpack
 
 class Cachedump(interfaces.plugins.PluginInterface):
     """Dumps lsa secrets from memory"""
+
+    _version = (1, 0, 0)
+    
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',
@@ -22,7 +25,8 @@ class Cachedump(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols",
                                                 description = "Windows kernel symbols"),
-            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'lsadump', plugin = lsadump.Lsadump, version = (1, 0, 0))
             ]
 
     def get_nlkm(self, sechive, lsakey, is_vista_or_later):
@@ -55,9 +59,10 @@ class Cachedump(interfaces.plugins.PluginInterface):
         enc_data = cache_data[96:]
         return (uname_len, domain_len, domain_name_len, enc_data, ch)
 
-    #Get the data from the cache and separate it into the username, domain name, and hash data
+    
     def parse_decrypted_cache(self, dec_data, uname_len,
             domain_len, domain_name_len):
+        """Get the data from the cache and separate it into the username, domain name, and hash data"""
         uname_offset= 72
         pad = 2 * ((uname_len / 2) % 2)
         domain_offset= int(uname_offset+ uname_len + pad)

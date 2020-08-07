@@ -17,6 +17,9 @@ vollog = logging.getLogger(__name__)
 
 class Lsadump(interfaces.plugins.PluginInterface):
     """Dumps lsa secrets from memory"""
+
+    _version = (1, 0, 0)
+ 
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',
