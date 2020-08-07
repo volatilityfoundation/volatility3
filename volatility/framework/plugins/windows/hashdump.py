@@ -19,6 +19,7 @@ vollog = logging.getLogger(__name__)
 
 vollog = logging.getLogger(__name__)
 
+
 class Hashdump(interfaces.plugins.PluginInterface):
     """Dumps user hashes from memory"""
 
@@ -62,9 +63,6 @@ class Hashdump(interfaces.plugins.PluginInterface):
     @classmethod
     def get_user_keys(cls, samhive: registry.RegistryHive) -> List[interfaces.objects.ObjectInterface]:
         user_key_path = "SAM\\Domains\\Account\\Users"
-        root = samhive.root_cell_offset
-        if not root:
-            return []
 
         user_key = samhive.get_key(user_key_path)
         if not user_key:
@@ -76,16 +74,10 @@ class Hashdump(interfaces.plugins.PluginInterface):
         cs = 1
         lsa_base = "ControlSet{0:03}".format(cs) + "\\Control\\Lsa"
         lsa_keys = ["JD", "Skew1", "GBG", "Data"]
-        root = syshive.root_cell_offset
-        if not root:
-            return None
 
-        
-        try: 
-            lsa = syshive.get_key(lsa_base)
-        
-        except KeyError:
-            vollog.debug("Unable to read hashes from registry")
+        lsa = syshive.get_key(lsa_base)
+
+        if not lsa:
             return None
 
         bootkey = ''
@@ -108,10 +100,6 @@ class Hashdump(interfaces.plugins.PluginInterface):
         sam_account_path = "SAM\\Domains\\Account"
 
         if not bootkey:
-            return None
-
-        root = samhive.root_cell_offset
-        if not root:
             return None
 
         sam_account_key = samhive.get_key(sam_account_path)
