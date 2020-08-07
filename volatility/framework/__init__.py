@@ -4,6 +4,7 @@
 """Volatility 3 framework."""
 # Check the python version to ensure it's suitable
 # We currently require 3.5.3 since 3.5.1 has no typing.Type and 3.5.2 is broken for ''/delayed encapsulated types
+import glob
 import sys
 
 required_python_version = (3, 5, 3)
@@ -123,3 +124,11 @@ def list_plugins() -> Dict[str, Type[interfaces.plugins.PluginInterface]]:
             plugin_name = plugin_name[len("volatility.plugins."):]
         plugin_list[plugin_name] = plugin
     return plugin_list
+
+
+def clear_cache(complete = False):
+    glob_pattern = '*.cache'
+    if not complete:
+        glob_pattern = 'data_' + glob_pattern
+    for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, glob_pattern)):
+        os.unlink(cache_filename)

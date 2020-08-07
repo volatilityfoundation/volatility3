@@ -32,7 +32,6 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
                                          optional = True)
-
         ]
 
     def _generator(self, tasks):

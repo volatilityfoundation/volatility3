@@ -89,7 +89,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
 
         # Check if the Stacker has already found what we're looking for
         if layer.config.get(self.banner_config_key, None):
-            banner_list = [(0, bytes(layer.config[self.banner_config_key], 'latin-1'))]  # type: Iterable[Any]
+            banner_list = [(0, bytes(layer.config[self.banner_config_key], 'raw_unicode_escape'))]  # type: Iterable[Any]
         else:
             # Swap to the physical layer for scanning
             # TODO: Fix this so it works for layers other than just Intel
@@ -113,7 +113,8 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 # so we can create the symbols which are used in finding the aslr_shift anyway
                 if not context.config.get(path_join(config_path, requirement.name, "symbol_shift"), None):
                     # Don't overwrite it if it's already been set, it will be manually refound if not present
-                    context.config[path_join(config_path, requirement.name, "symbol_shift")] = 0
+                    prefound_kaslr_value = context.layers[layer_name].metadata.get('kaslr_value', 0)
+                    context.config[path_join(config_path, requirement.name, "symbol_shift")] = prefound_kaslr_value
                 # Construct the appropriate symbol table
                 requirement.construct(context, config_path)
 

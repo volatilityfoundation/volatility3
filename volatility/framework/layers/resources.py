@@ -74,6 +74,12 @@ class ResourceAccessor(object):
                        "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
             self.__class__.list_handlers = False
 
+    def uses_cache(self, url: str) -> bool:
+        """Determines whether a URLs contents should be cached"""
+        parsed_url = urllib.parse.urlparse(url)
+
+        return not parsed_url.scheme in ['file', 'jar']
+
     # Current urllib.request.urlopen returns Any, so we do the same
     def open(self, url: str, mode: str = "rb") -> Any:
         """Returns a file-like object for a particular URL opened in mode.
@@ -103,16 +109,15 @@ class ResourceAccessor(object):
 
         with contextlib.closing(fp) as fp:
             # Cache the file locally
-            parsed_url = urllib.parse.urlparse(url)
 
-            if parsed_url.scheme == 'file':
+            if not self.uses_cache(url):
                 # ZipExtFiles (files in zips) cannot seek, so must be cached in order to use and/or decompress
                 curfile = urllib.request.urlopen(url, context = self._context)
             else:
                 # TODO: find a way to check if we already have this file (look at http headers?)
                 block_size = 1028 * 8
                 temp_filename = os.path.join(constants.CACHE_PATH,
-                                             "data_" + hashlib.sha512(bytes(url, 'latin-1')).hexdigest() + ".cache")
+                                             "data_" + hashlib.sha512(bytes(url, 'raw_unicode_escape')).hexdigest() + ".cache")
 
                 if not os.path.exists(temp_filename):
                     vollog.debug("Caching file at: {}".format(temp_filename))
@@ -172,6 +177,7 @@ class ResourceAccessor(object):
 
         if not IMPORTED_MAGIC:
             # Somewhat of a hack, but prevents a hard dependency on the magic module
+            parsed_url = urllib.parse.urlparse(url)
             url_path = parsed_url.path
             stop = False
             while not stop:

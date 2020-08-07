@@ -69,7 +69,6 @@ def multitypedata_as_text(value: format_hints.MultiTypeData) -> str:
 
 
 def optional(func):
-
     @wraps(func)
     def wrapped(x: Any) -> str:
         if isinstance(x, interfaces.renderers.BaseAbsentValue):
@@ -83,7 +82,6 @@ def optional(func):
 
 
 def quoted_optional(func):
-
     @wraps(func)
     def wrapped(x: Any) -> str:
         result = optional(func)(x)
@@ -266,7 +264,7 @@ class PrettyTextRenderer(CLIRenderer):
         max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
 
         def visitor(
-            node, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
+                node, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
         ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
@@ -288,7 +286,7 @@ class PrettyTextRenderer(CLIRenderer):
             grid.visit(node = None, function = visitor, initial_accumulator = final_output)
 
         # Always align the tree to the left
-        format_string_list = ["{0:<" + str(max_column_widths[tree_indent_column]) + "s}"]
+        format_string_list = ["{0:<" + str(max_column_widths.get(tree_indent_column, 0)) + "s}"]
         for column_index in range(len(grid.columns)):
             column = grid.columns[column_index]
             format_string_list.append("{" + str(column_index + 1) + ":" + display_alignment +
@@ -327,8 +325,8 @@ class JsonRenderer(CLIRenderer):
         final_output = ({}, [])
 
         def visitor(
-            node: Optional[interfaces.renderers.TreeNode],
-            accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]],
+                node: Optional[interfaces.renderers.TreeNode],
+                accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]
         ) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             acc_map, final_tree = accumulator

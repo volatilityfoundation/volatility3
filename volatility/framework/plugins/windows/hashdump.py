@@ -73,6 +73,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
         lsa_base = "ControlSet{0:03}".format(cs) + "\\Control\\Lsa"
         lsa_keys = ["JD", "Skew1", "GBG", "Data"]
 
+
         lsa = syshive.get_key(lsa_base)
 
         if not lsa:
@@ -296,3 +297,4 @@ class Hashdump(interfaces.plugins.PluginInterface):
 
         return renderers.TreeGrid([("User", str), ("rid", int), ("lmhash", str), ("nthash", str)],
                                   self._generator(syshive, samhive))
+
