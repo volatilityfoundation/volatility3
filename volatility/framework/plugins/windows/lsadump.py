@@ -43,7 +43,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
 
         data = b""
         for i in range(60, len(secret), 16):
-            aes = AES.new(aeskey, AES.MODE_CBC, '\x00' * 16)
+            aes = AES.new(aeskey, AES.MODE_CBC, b'\x00' * 16)
             buf = secret[i : i + 16]
             if len(buf) < 16:
                 buf += (16 - len(buf)) * "\00"
