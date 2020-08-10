@@ -215,7 +215,7 @@ the accumulator, but instead uses print to directly produce the output.  This is
 
     def visitor(node, _accumulator):
         # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
-        print("*" * max(0, node.path_depth - 1) + " ")
+        print("*" * max(0, node.path_depth - 1), end = " ")
         for column_index in range(len(grid.columns)):
             column = grid.columns[column_index]
             print(repr(node.values[column_index]), end = '\t')
