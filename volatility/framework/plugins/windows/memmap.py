@@ -3,11 +3,10 @@
 #
 
 from typing import List
-
 from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.plugins.windows import pslist, dlllist, ssdt, vadinfo
+from volatility.plugins.windows import pslist
 
 
 class Memmap(interfaces.plugins.PluginInterface):
@@ -22,7 +21,6 @@ class Memmap(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'vadinfo', plugin = vadinfo.VadInfo, version = (1, 0, 0)),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
                                         optional = True)
@@ -30,7 +28,6 @@ class Memmap(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs):
         for proc in procs:
-            reverse_map = dict()
             offset = 0
             pid = "Unknown"
 

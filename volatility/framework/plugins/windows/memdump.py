@@ -3,12 +3,10 @@
 #
 
 from typing import List
-import sys
 from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.framework.objects import utility
-from volatility.plugins.windows import pslist, dlllist, ssdt, vadinfo
+from volatility.plugins.windows import pslist
 
 
 class Memdump(interfaces.plugins.PluginInterface):
@@ -23,7 +21,6 @@ class Memdump(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'vadinfo', plugin = vadinfo.VadInfo, version = (1, 0, 0)),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
                                         optional = True)
@@ -38,6 +35,8 @@ class Memdump(interfaces.plugins.PluginInterface):
             pid = "Unknown"
             try:
                 pid = proc.UniqueProcessId
+                offset = format_hints.Hex(proc.vol.offset)
+                filename = str(pid) + "." + str(offset)
                 proc_layer_name = proc.add_process_layer()
                 proc_layer = self.context.layers[proc_layer_name]
             except exceptions.InvalidAddressException as excp:
@@ -45,7 +44,7 @@ class Memdump(interfaces.plugins.PluginInterface):
                 continue
 
             #Create file for writing
-            filedata = interfaces.plugins.FileInterface("{}.dmp".format(proc.UniqueProcessId))
+            filedata = interfaces.plugins.FileInterface("{}.dmp".format(filename))
 
             for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                 vadd, _, vpage, page_size, maplayer = mapval
@@ -57,10 +56,10 @@ class Memdump(interfaces.plugins.PluginInterface):
                     continue
 
             try:
-                result_text = "Writing {} [ {} ] to {}.dmp".format(process_name, proc.UniqueProcessId, proc.UniqueProcessId)
+                result_text = "Writing {} [ {} ] to {}.dmp".format(process_name, proc.UniqueProcessId, filename)
                 self.produce_file(filedata)
             except exceptions.InvalidAddressException:
-                result_text = "Unable to write {} [ {} ]to {}.dmp".format(process_name, proc.UniqueProcessId, proc.UniqueProcessId)
+                result_text = "Unable to write {} [ {} ]to {}.dmp".format(process_name, proc.UniqueProcessId, filename)
             
             yield(0, (result_text,))
             
