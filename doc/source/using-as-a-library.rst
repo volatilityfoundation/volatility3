@@ -208,11 +208,17 @@ return an updated accumulator.
 When provided a :py:class:`~volatility.framework.interfaces.renderers.TreeNode`, it can be accessed as a dictionary
 based on the column names that the treegrid contains.  It should be noted that each column can contain only the
 type specified in the `column.type` field (which can be a simple type like string, integer, float, bytes or
-a more complex type, like a DateTime, a Disassembly or a descendent of
+a more complex type, like a DateTime, a Disassembly or a descendant of
 :py:class:`~volatility.framework.interfaces.renderers.BaseAbsentValue`).  The various fields may also be wrapped in
 `format_hints` designed to tell the user interface how to render the data.  These hints can be things like Bin, Hex or
 HexBytes, so that fields like offsets are displayed in hex form or so that bytes are displayed in their hex form rather
-than their raw form.
+than their raw form.  Descendants of :py:class:`~volatility.framework.interfaces.renderers.BaseAbsentValue` can currently
+be one of
+:py:class:`~volatility.framework.renderers.UnreadableValue`,
+:py:class:`~volatility.framework.renderers.UnparsableValue`,
+:py:class:`~volatility.framework.renderers.NotApplicableValue` or
+:py:class:`~volatility.framework.renderers.NotAvailableValue`.  These indicate that data could not be read from the
+memory for some reason, could not be parsed properly, was not applicable or was not available.
 
 A simple text renderer (that returns output immediately) would appear as follows.  This doesn't use
 the accumulator, but instead uses print to directly produce the output.  This is not recommended:
