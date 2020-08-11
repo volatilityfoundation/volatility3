@@ -106,7 +106,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         if not is_vista_or_later:
             secret = cls.decrypt_secret(enc_secret[0xC:], lsakey)
         else:
-            secret = cls.decrypt_aes(enc_secret, lsakey).decode('latin1')
+            secret = cls.decrypt_aes(enc_secret, lsakey)
         return secret
 
     @classmethod
@@ -119,17 +119,17 @@ class Lsadump(interfaces.plugins.PluginInterface):
         j = 0   # key index
 
         for i in range(0, len(secret), 8):
-            enc_block = secret[i:i + 8].decode('latin1')
+            enc_block = secret[i:i + 8]
             block_key = key[j:j + 7]
             des_key = hashdump.Hashdump.sidbytes_to_key(block_key)
             des = DES.new(des_key, DES.MODE_ECB)
-            enc_block = enc_block + "\x00" * int(abs(8 - len(enc_block)) % 8)
-            decrypted_data += des.decrypt(enc_block.encode('latin1')).decode('latin1')
+            enc_block = enc_block + b"\x00" * int(abs(8 - len(enc_block)) % 8)
+            decrypted_data += des.decrypt(enc_block)
             j += 7
             if len(key[j:j + 7]) < 7:
                 j = len(key[j:j + 7])
 
-        (dec_data_len,) = unpack("<L", decrypted_data[:4].encode('latin1'))
+        (dec_data_len,) = unpack("<L", decrypted_data[:4])
 
         return decrypted_data[8:8 + dec_data_len]
 
