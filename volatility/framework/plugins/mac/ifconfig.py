@@ -1,12 +1,11 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
 from volatility.framework import exceptions, renderers, contexts
-from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
+from volatility.framework.symbols import mac
 
 
 class Ifconfig(plugins.PluginInterface):

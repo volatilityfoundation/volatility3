@@ -17,6 +17,9 @@ vollog = logging.getLogger(__name__)
 
 class Lsadump(interfaces.plugins.PluginInterface):
     """Dumps lsa secrets from memory"""
+
+    _version = (1, 0, 0)
+ 
     @classmethod
     def get_requirements(cls):
         return [requirements.TranslationLayerRequirement(name = 'primary',
@@ -40,7 +43,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
 
         data = b""
         for i in range(60, len(secret), 16):
-            aes = AES.new(aeskey, AES.MODE_CBC, '\x00' * 16)
+            aes = AES.new(aeskey, AES.MODE_CBC, b'\x00' * 16)
             buf = secret[i : i + 16]
             if len(buf) < 16:
                 buf += (16 - len(buf)) * "\00"

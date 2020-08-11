@@ -7,10 +7,10 @@ import logging
 from typing import List
 
 from volatility.framework import renderers, interfaces, constants
-from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
+from volatility.framework.symbols import linux
 from volatility.plugins.linux import pslist
 
 vollog = logging.getLogger(__name__)

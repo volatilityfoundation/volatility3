@@ -2,6 +2,23 @@
   "symbols": {
   },
   "user_types": {
+    "Elf": {
+      "fields": {
+        "e_ident": {
+          "offset": 0,
+          "type": {
+            "count": 16,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 16
+    },
     "Elf64_Ehdr": {
       "fields": {
         "e_ident": {
@@ -18,8 +35,8 @@
         "e_type": {
           "offset": 16,
           "type": {
-            "kind": "base",
-            "name": "unsigned short"
+            "kind": "enum",
+            "name": "EtypeEnum"
           }
         },
         "e_machine": {
@@ -247,9 +264,635 @@
       },
       "kind": "struct",
       "size": 56
+    },
+    "Elf64_Dyn": {
+      "fields": {
+        "d_tag": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "long long"
+          }
+        },
+        "d_ptr": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 16
+    },
+    "Elf64_Note": {
+      "fields": {
+        "n_namesz": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "n_descsz": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "n_type": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12
+    },
+    "Elf64_Sym": {
+      "fields": {
+        "st_name": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "st_info": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "st_other": {
+          "offset": 5,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "st_shndx": {
+          "offset": 6,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "st_value": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "st_size": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 24
+    },
+    "Elf64_LinkMap": {
+      "fields": {
+        "l_addr": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "l_name": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "l_ld": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "l_next": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "l_prev": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 40
+    },
+    "Elf64_Rel": {
+      "fields": {
+        "r_offset": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "r_info": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 16
+    },
+    "Elf64_Rela": {
+      "fields": {
+        "r_offset": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "r_info": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "r_addend": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "long long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 24
+    },
+    "Elf32_Ehdr": {
+      "fields": {
+        "e_ident": {
+          "offset": 0,
+          "type": {
+            "count": 16,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "e_type": {
+          "offset": 16,
+          "type": {
+            "kind": "enum",
+            "name": "EtypeEnum"
+          }
+        },
+        "e_machine": {
+          "offset": 18,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_version": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "e_entry": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "e_phoff": {
+          "offset": 28,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "e_shoff": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "e_flags": {
+          "offset": 36,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "e_ehsize": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_phentsize": {
+          "offset": 42,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_phnum": {
+          "offset": 44,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_shentsize": {
+          "offset": 46,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_shnum": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "e_shstrndx": {
+          "offset": 50,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 52
+    },
+    "Elf32_Shdr": {
+      "fields": {
+        "sh_name": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_type": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_flags": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_addr": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_offset": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_size": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_link": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_info": {
+          "offset": 28,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_addralign": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "sh_entsize": {
+          "offset": 36,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 40
+    },
+    "Elf32_Phdr": {
+      "fields": {
+        "p_type": {
+          "offset": 0,
+          "type": {
+            "kind": "enum",
+            "name": "PtypeEnum"
+          }
+        },
+        "p_offset": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "p_vaddr": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "p_paddr": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "p_filesz": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "p_memsz": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "p_flags": {
+          "offset": 24,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "p_align": {
+          "offset": 28,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 32
+    },
+    "Elf32_Dyn": {
+      "fields": {
+        "d_tag": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        },
+        "d_ptr": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    },
+    "Elf32_Note": {
+      "fields": {
+        "n_namesz": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "n_descsz": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "n_type": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12
+    },
+    "Elf32_Sym": {
+      "fields": {
+        "st_name": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "st_value": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "st_size": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "st_info": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "st_other": {
+          "offset": 13,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "st_shndx": {
+          "offset": 14,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 16
+    },
+    "Elf32_LinkMap": {
+      "fields": {
+        "l_addr": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "l_name": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "l_ld": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "l_next": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "l_prev": {
+          "offset": 16,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 20
+    },
+    "Elf32_Rel": {
+      "fields": {
+        "r_offset": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "r_info": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8
+    },
+    "Elf32_Rela": {
+      "fields": {
+        "r_offset": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "r_info": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "r_addend": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "long"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 12
     }
+
   },
   "enums": {
+    "EtypeEnum": {
+      "base": "unsigned short",
+      "constants": {
+        "ET_NONE": 0,
+        "ET_REL": 1,
+        "ET_EXEC": 2,
+        "ET_DYN": 3,
+        "ET_CORE": 4,
+        "ET_LOPROC": 65280,
+        "ET_HIPROC": 65535
+      },
+      "size": 2
+    },
     "PtypeEnum": {
       "base": "unsigned long",
       "constants": {
@@ -260,6 +903,7 @@
         "PT_NOTE": 4,
         "PT_SHLIB": 5,
         "PT_PHDR": 6,
+        "PT_TLS": 7,
         "PT_LOOS": 1610612736,
         "PT_HIOS": 1879048191,
         "PT_LOWPROC": 1879048192,

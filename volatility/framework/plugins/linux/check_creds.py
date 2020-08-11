@@ -11,7 +11,7 @@ from volatility.plugins.linux import pslist
 vollog = logging.getLogger(__name__)
 
 
-class check_creds(interfaces.plugins.PluginInterface):
+class Check_creds(interfaces.plugins.PluginInterface):
     """Checks if any processes are sharing credential structures"""
 
     @classmethod
