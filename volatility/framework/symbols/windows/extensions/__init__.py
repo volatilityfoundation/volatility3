@@ -778,24 +778,6 @@ class VACB(objects.StructType):
 
     FILEOFFSET_MASK = 0xFFFFFFFFFFFF0000
 
-    def is_valid(self, shared_cache_map: interfaces.objects.ObjectInterface) -> bool:
-        """Determine if the object is valid."""
-        try:
-            layer = self._context.layers[self.vol.layer_name]
-
-            # Check if the Overlay member of _VACB is resident. The Overlay member stores information
-            # about the FileOffset and the ActiveCount. This is just another proactive sanity check.
-            #if not self.Overlay:
-            #    return False
-
-            if not layer.is_valid(self.SharedCacheMap):
-                return False
-
-            # Make sure that the SharedCacheMap member of the VACB points back to the parent object.
-            return self.SharedCacheMap == shared_cache_map.vol.offset
-        except exceptions.InvalidAddressException:
-            return False
-
     def get_file_offset(self) -> int:
         # The FileOffset member of VACB is used to denote the offset within the file where the
         # view begins. Since all views are 256 KB in size, the bottom 16 bits are used to
@@ -887,15 +869,19 @@ class SHARED_CACHE_MAP(objects.StructType):
         iterval = 0
         while (iterval < full_blocks) and (full_blocks <= 4):
             vacb_obj = self.InitialVacbs[iterval]
-            if vacb_obj.is_valid(shared_cache_map=self):
-                self.save_vacb(vacb_obj, vacb_list)
+            try:
+                # Make sure that the SharedCacheMap member of the VACB points back to the parent object.
+                if vacb_obj.SharedCacheMap == self.vol.offset:
+                    self.save_vacb(vacb_obj, vacb_list)
+            except exceptions.InvalidAddressException:
+                pass
             iterval += 1
 
         # We also have to account for the spill over data that is not found in the full blocks.
         # The first case to consider is when the spill over is still in InitialVacbs.
         if (left_over > 0) and (full_blocks < 4):
             vacb_obj = self.InitialVacbs[iterval]
-            if vacb_obj.is_valid(shared_cache_map=self):
+            if vacb_obj.SharedCacheMap == self.vol.offset:
                 self.save_vacb(vacb_obj, vacb_list)
 
         # If the file is larger than 1 MB, a seperate VACB index array needs to be allocated.
@@ -932,7 +918,7 @@ class SHARED_CACHE_MAP(objects.StructType):
                     continue
 
                 vacb = vacb_entry.dereference().cast(symbol_table_name + constants.BANG + "_VACB")
-                if vacb.is_valid(shared_cache_map=self):
+                if vacb.SharedCacheMap == self.vol.offset:
                     self.save_vacb(vacb, vacb_list)
 
             if left_over > 0:
@@ -944,7 +930,7 @@ class SHARED_CACHE_MAP(objects.StructType):
                     return vacb_list
 
                 vacb = vacb_entry.dereference().cast(symbol_table_name + constants.BANG + "_VACB")
-                if vacb.is_valid(shared_cache_map=self):
+                if vacb.SharedCacheMap == self.vol.offset:
                     self.save_vacb(vacb, vacb_list)
 
             # The file is less than 32 MB, so we can stop processing.
@@ -976,8 +962,7 @@ class SHARED_CACHE_MAP(objects.StructType):
 
                 vacb = vacb_array[counter].dereference().cast(symbol_table_name + constants.BANG + "_VACB")
                 if vacb.SharedCacheMap == self.vol.offset:
-                    if vacb.is_valid(shared_cache_map=self):
-                        self.save_vacb(vacb, vacb_list)
+                    self.save_vacb(vacb, vacb_list)
                 else:
                     # Process the next level of the multi-level array. We set the limit_depth to be
                     # the depth of the tree as determined from the size and we initialize the
