@@ -5,7 +5,7 @@
 import logging
 import re
 from typing import Dict, Generator, List, Set, Tuple
-from os.path import getsize
+from os import path
 
 from volatility.framework import interfaces, renderers, exceptions
 from volatility.framework.configuration import requirements
@@ -42,7 +42,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
         accessor = resources.ResourceAccessor()
         strings_fp = accessor.open(self.config['strings_file'], "rb")
-        strings_size = getsize(strings_fp.name)
+        strings_size = path.getsize(strings_fp.name)
 
         line = strings_fp.readline()
         while line != '':
