@@ -4,8 +4,8 @@
 
 import logging
 import re
-from typing import Dict, Generator, List, Set, Tuple
 from os import path
+from typing import Dict, Generator, List, Set, Tuple
 
 from volatility.framework import interfaces, renderers, exceptions
 from volatility.framework.configuration import requirements
@@ -20,6 +20,7 @@ class Strings(interfaces.plugins.PluginInterface):
     """Reads output from the strings command and indicates which process(es) each string belongs to."""
 
     strings_pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
@@ -90,12 +91,12 @@ class Strings(interfaces.plugins.PluginInterface):
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors = True):
-                vpage, _, kpage, page_size, maplayer = mapval
-                for val in range(kpage, kpage + page_size, 0x1000):
-                    cur_set = reverse_map.get(kpage >> 12, set())
-                    cur_set.add(("kernel", vpage))
-                    reverse_map[kpage >> 12] = cur_set
-                self._progress_callback((vpage * 100) / layer.maximum_address, "Creating reverse kernel map")
+                offset, _, mapped_offset, mapped_size, maplayer = mapval
+                for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
+                    cur_set = reverse_map.get(mapped_offset >> 12, set())
+                    cur_set.add(("kernel", offset))
+                    reverse_map[mapped_offset >> 12] = cur_set
+                self._progress_callback((offset * 100) / layer.maximum_address, "Creating reverse kernel map")
 
             # TODO: Include kernel modules
 
@@ -113,13 +114,13 @@ class Strings(interfaces.plugins.PluginInterface):
                 proc_layer = self.context.layers[proc_layer_name]
                 if isinstance(proc_layer, linear.LinearlyMappedLayer):
                     for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
-                        kpage, _, vpage, page_size, maplayer = mapval
-                        for val in range(kpage, kpage + page_size, 0x1000):
-                            cur_set = reverse_map.get(kpage >> 12, set())
-                            cur_set.add(("Process {}".format(process.UniqueProcessId), vpage))
-                            reverse_map[kpage >> 12] = cur_set
+                        mapped_offset, _, offset, mapped_size, maplayer = mapval
+                        for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
+                            cur_set = reverse_map.get(mapped_offset >> 12, set())
+                            cur_set.add(("Process {}".format(process.UniqueProcessId), offset))
+                            reverse_map[mapped_offset >> 12] = cur_set
                         # FIXME: make the progress for all processes, rather than per-process
-                        self._progress_callback((vpage * 100) / layer.maximum_address,
+                        self._progress_callback((offset * 100) / layer.maximum_address,
                                                 "Creating mapping for task {}".format(process.UniqueProcessId))
 
         return reverse_map

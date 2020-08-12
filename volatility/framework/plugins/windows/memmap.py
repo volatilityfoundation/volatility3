@@ -1,12 +1,15 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import logging
 from typing import List
+
 from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
+
+vollog = logging.getLogger(__name__)
 
 
 class Memmap(interfaces.plugins.PluginInterface):
@@ -37,26 +40,27 @@ class Memmap(interfaces.plugins.PluginInterface):
                 proc_layer = self.context.layers[proc_layer_name]
             except exceptions.InvalidAddressException as excp:
                 vollog.debug("Process {}: invalid address {} in layer {}".format(
-                        pid, excp.invalid_address, excp.layer_name))
+                    pid, excp.invalid_address, excp.layer_name))
                 continue
 
             for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
-                kpage, _, vpage, page_size, maplayer = mapval
-               
-                yield(0, (
-                    format_hints.Hex(kpage), 
-                    format_hints.Hex(vpage), 
-                    format_hints.Hex(page_size), 
-                    format_hints.Hex(offset)))
-                offset += page_size
+                offset, _, mapped_offset, mapped_size, maplayer = mapval
 
+                yield (0, (
+                    format_hints.Hex(offset),
+                    format_hints.Hex(mapped_offset),
+                    format_hints.Hex(mapped_size),
+                    format_hints.Hex(offset)))
+                offset += mapped_size
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([ ("Virtual", format_hints.Hex),("Physical", format_hints.Hex), ("Size", format_hints.Hex), ("Offset", format_hints.Hex)],
-                                  self._generator(
-                                      pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
-                                                                   filter_func = filter_func)))
+        return renderers.TreeGrid(
+            [("Virtual", format_hints.Hex), ("Physical", format_hints.Hex), ("Size", format_hints.Hex),
+             ("Offset", format_hints.Hex)],
+            self._generator(
+                pslist.PsList.list_processes(context = self.context,
+                                             layer_name = self.config['primary'],
+                                             symbol_table = self.config['nt_symbols'],
+                                             filter_func = filter_func)))
