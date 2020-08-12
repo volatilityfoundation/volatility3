@@ -37,8 +37,11 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             requirements.IntRequirement(name='pid',
                                         description="Process ID to include (all other processes are excluded)",
                                         optional=True),
-            requirements.IntRequirement(name='fileoffset',
-                                        description="Dump a single _FILE_OBJECT at this offset",
+            requirements.IntRequirement(name='virtaddr',
+                                        description="Dump a single _FILE_OBJECT at this virtual address",
+                                        optional=True),
+            requirements.IntRequirement(name='physaddr',
+                                        description="Dump a single _FILE_OBJECT at this physical address",
                                         optional=True),
             requirements.PluginRequirement(name='pslist', plugin=pslist.PsList, version=(1, 0, 0)),
             requirements.PluginRequirement(name='handles', plugin=handles.Handles, version=(1, 0, 0))
@@ -145,13 +148,12 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 result_text)
 
     def _generator(self, procs: List, offsets: List):
-        # The handles plugin doesn't expose any staticmethod/classmethod, and it also requires stashing
-        # private variables, so we need an instance (for now, anyway). We _could_ call Handles._generator()
-        # to do some of the other work that is duplicated here, but then we'd need to parse the TreeGrid
-        # results instead of just dealing with them as direct objects here.
 
         if procs:
-            # Standard code for invoking the Handles() plugin from another plugin.
+            # The handles plugin doesn't expose any staticmethod/classmethod, and it also requires stashing
+            # private variables, so we need an instance (for now, anyway). We _could_ call Handles._generator()
+            # to do some of the other work that is duplicated here, but then we'd need to parse the TreeGrid
+            # results instead of just dealing with them as direct objects here.
             handles_plugin = handles.Handles(context=self.context, config_path=self._config_path)
             type_map = handles_plugin.get_type_map(context=self.context,
                                                    layer_name=self.config["primary"],
@@ -204,10 +206,15 @@ class DumpFiles(interfaces.plugins.PluginInterface):
 
         elif offsets:
             # Now process any offsets explicitly requested by the user.
-            for offset in offsets:
+            for offset, is_virtual in offsets:
                 try:
+                    layer_name = self.config["primary"]
+                    # switch to a memory layer if the user provided --physaddr instead of --virtaddr
+                    if not is_virtual:
+                        layer_name = self.context.layers[layer_name].config["memory_layer"]
+
                     file_obj = self.context.object(self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
-                                                   layer_name=self.config["primary"],
+                                                   layer_name=layer_name,
                                                    native_layer_name=self.config["primary"],
                                                    offset=offset)
                     for result in self.process_file_object(file_obj):
@@ -217,12 +224,17 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                                "Cannot extract file at {0:#x}".format(offset))
 
     def run(self):
-        if self.config.get("fileoffset", None) is not None:
-            offsets = [self.config["fileoffset"]]
-            procs = []
+        # a list of tuples (<int>, <bool>) where <int> is the address and <bool> is True for virtual.
+        offsets = []
+        # a list of processes matching the pid filter. all files for these process(es) will be dumped.
+        procs = []
+
+        if self.config.get("virtaddr", None) is not None:
+            offsets.append((self.config["virtaddr"], True))
+        elif self.config.get("physaddr", None) is not None:
+            offsets.append((self.config["physaddr"], False))
         else:
             filter_func = pslist.PsList.create_pid_filter([self.config.get("pid", None)])
-            offsets = []
             procs = pslist.PsList.list_processes(self.context,
                                                  self.config["primary"],
                                                  self.config["nt_symbols"],
