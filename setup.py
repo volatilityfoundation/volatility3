@@ -35,6 +35,7 @@ setuptools.setup(name = "volatility",
                  extras_require = {
                      'jsonschema': ["jsonschema>=2.3.0"],
                      'yara': ["yara-python>=3.8.0"],
+                     'crypto': ["pycryptodome>=3"],
                      'disasm': ["capstone;platform_system=='Linux'", "capstone-windows;platform_system=='Windows'"],
                      'doc': ["sphinx>=1.8.2", "sphinx_autodoc_typehints>=1.4.0", "sphinx-rtd-theme>=0.4.3"],
                  })
