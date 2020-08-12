@@ -5,6 +5,7 @@
 import logging
 import re
 from typing import Dict, Generator, List, Set, Tuple
+from os.path import getsize
 
 from volatility.framework import interfaces, renderers, exceptions
 from volatility.framework.configuration import requirements
@@ -18,6 +19,7 @@ vollog = logging.getLogger(__name__)
 class Strings(interfaces.plugins.PluginInterface):
     """Reads output from the strings command and indicates which process(es) each string belongs to."""
 
+    strings_pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
@@ -39,8 +41,11 @@ class Strings(interfaces.plugins.PluginInterface):
         revmap = self.generate_mapping(self.config['primary'])
 
         accessor = resources.ResourceAccessor()
+        strings_fp = accessor.open(self.config['strings_file'], "rb")
+        strings_size = getsize(strings_fp.name)
 
-        for line in accessor.open(self.config['strings_file'], "rb").readlines():
+        line = strings_fp.readline()
+        while line != '':
             try:
                 offset, string = self._parse_line(line)
                 try:
@@ -51,9 +56,10 @@ class Strings(interfaces.plugins.PluginInterface):
             except ValueError:
                 vollog.error("Strings file is in the wrong format")
                 return
+            line = strings_fp.readline()
+            self._progress_callback(strings_fp.tell() / strings_size * 100, "Matching strings in memory")
 
-    @staticmethod
-    def _parse_line(line: bytes) -> Tuple[int, bytes]:
+    def _parse_line(self, line: bytes) -> Tuple[int, bytes]:
         """Parses a single line from a strings file.
 
         Args:
@@ -62,8 +68,8 @@ class Strings(interfaces.plugins.PluginInterface):
         Returns:
             Tuple of the offset and the string found at that offset
         """
-        pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)")
-        match = pattern.search(line)
+
+        match = self.strings_pattern.search(line)
         if not match:
             raise ValueError("Strings file contains invalid strings line")
         offset, string = match.group(1, 2)
