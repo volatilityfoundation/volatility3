@@ -390,6 +390,8 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
         name = renderers.UnreadableValue()  # type: Union[str, interfaces.renderers.BaseAbsentValue]
 
+        # this pointer needs to be checked against native_layer_name because the object may
+        # be instantiated from a primary (virtual) layer or a memory (physical) layer.
         if self._context.layers[self.vol.native_layer_name].is_valid(self.DeviceObject):
             try:
                 name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
