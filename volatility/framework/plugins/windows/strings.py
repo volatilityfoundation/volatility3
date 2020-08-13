@@ -6,7 +6,6 @@ import logging
 import re
 from os import path
 from typing import Dict, Generator, List, Set, Tuple
-from os import path
 
 from volatility.framework import interfaces, renderers, exceptions
 from volatility.framework.configuration import requirements
