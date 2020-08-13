@@ -21,20 +21,23 @@ class Malfind(interfaces.plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.ListRequirement(name = 'pid',
-                                         element_type = int,
-                                         description = "Process IDs to include (all other processes are excluded)",
-                                         optional = True),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'vadinfo', plugin = vadinfo.VadInfo, version = (1, 0, 0)),
+            requirements.TranslationLayerRequirement(name='primary',
+                                                     description='Memory layer for the kernel',
+                                                     architectures=["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name="nt_symbols", description="Windows kernel symbols"),
+            requirements.ListRequirement(name='pid',
+                                         element_type=int,
+                                         description="Process IDs to include (all other processes are excluded)",
+                                         optional=True),
+            requirements.StringRequirement(name='output_dir',
+                                           description="Output directory to dump memory areas to",
+                                           optional=True),
+            requirements.PluginRequirement(name='pslist', plugin=pslist.PsList, version=(1, 0, 0)),
+            requirements.PluginRequirement(name='vadinfo', plugin=vadinfo.VadInfo, version=(1, 0, 0)),
         ]
 
-    @classmethod
-    def is_vad_empty(cls, proc_layer, vad):
+    @staticmethod
+    def is_vad_empty(proc_layer, vad):
         """Check if a VAD region is either entirely unavailable due to paging,
         entirely consisting of zeros, or a combination of the two. This helps
         ignore false positives whose VAD flags match task._injection_filter
@@ -62,9 +65,8 @@ class Malfind(interfaces.plugins.PluginInterface):
 
         return True
 
-    @classmethod
     def list_injections(
-            cls, context: interfaces.context.ContextInterface, kernel_layer_name: str, symbol_table: str,
+            self, context: interfaces.context.ContextInterface, kernel_layer_name: str, symbol_table: str,
             proc: interfaces.objects.ObjectInterface) -> Iterable[Tuple[interfaces.objects.ObjectInterface, bytes]]:
         """Generate memory regions for a process that may contain injected
         code.
@@ -88,8 +90,10 @@ class Malfind(interfaces.plugins.PluginInterface):
             return
 
         proc_layer = context.layers[proc_layer_name]
+        output_dir = self.config.get('output_dir', None)
 
         for vad in proc.get_vad_root().traverse():
+            result_text = "Displayed"
             protection_string = vad.get_protection(
                 vadinfo.VadInfo.protect_values(context, kernel_layer_name, symbol_table), vadinfo.winnt_protections)
             write_exec = "EXECUTE" in protection_string and "WRITE" in protection_string
@@ -101,11 +105,24 @@ class Malfind(interfaces.plugins.PluginInterface):
             if (vad.get_private_memory() == 1
                     and vad.get_tag() == "VadS") or (vad.get_private_memory() == 0
                                                      and protection_string != "PAGE_EXECUTE_WRITECOPY"):
-                if cls.is_vad_empty(proc_layer, vad):
+                if self.is_vad_empty(proc_layer, vad):
                     continue
 
                 data = proc_layer.read(vad.get_start(), 64, pad = True)
-                yield vad, data
+                if output_dir is not None:
+                    try:
+                        filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(
+                            proc.UniqueProcessId, vad.get_start()))
+                        a = proc_layer.read(vad.get_start(), vad.get_end() - vad.get_start(), pad=True)
+                        filedata.data.write(a)
+
+                        self.produce_file(filedata)
+                        result_text = "Stored {}".format(filedata.preferred_filename)
+                    except Exception as ex:
+                        print(ex)
+                        result_text = "Unable to dump memory region at {0:#x}".format(vad.get_start())
+
+                yield vad, data, result_text
 
     def _generator(self, procs):
         # determine if we're on a 32 or 64 bit kernel
@@ -114,8 +131,9 @@ class Malfind(interfaces.plugins.PluginInterface):
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
 
-            for vad, data in self.list_injections(self.context, self.config["primary"], self.config["nt_symbols"],
-                                                  proc):
+            for vad, data, result_text in self.list_injections(self.context, self.config["primary"],
+                                                               self.config["nt_symbols"],
+                                                               proc):
 
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
                 if is_32bit_arch or proc.get_is_wow64():
@@ -130,15 +148,16 @@ class Malfind(interfaces.plugins.PluginInterface):
                            vad.get_protection(
                                vadinfo.VadInfo.protect_values(self.context, self.config["primary"],
                                                               self.config["nt_symbols"]), vadinfo.winnt_protections),
-                           vad.get_commit_charge(), vad.get_private_memory(), format_hints.HexBytes(data), disasm))
+                           vad.get_commit_charge(), vad.get_private_memory(), result_text, format_hints.HexBytes(data),
+                           disasm))
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start VPN", format_hints.Hex),
                                    ("End VPN", format_hints.Hex), ("Tag", str), ("Protection", str),
-                                   ("CommitCharge", int), ("PrivateMemory", int), ("Hexdump", format_hints.HexBytes),
-                                   ("Disasm", interfaces.renderers.Disassembly)],
+                                   ("CommitCharge", int), ("PrivateMemory", int), ("Result", str),
+                                   ("Hexdump", format_hints.HexBytes), ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
                                                                    layer_name = self.config['primary'],
