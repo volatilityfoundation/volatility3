@@ -22,6 +22,7 @@ from volatility.framework.symbols import native, metadata
 
 vollog = logging.getLogger(__name__)
 
+
 # ## TODO
 #
 # All symbol tables should take a label to an object template
@@ -48,7 +49,6 @@ vollog = logging.getLogger(__name__)
 
 
 def _construct_delegate_function(name: str, is_property: bool = False) -> Any:
-
     def _delegate_function(self, *args, **kwargs):
         if is_property:
             return getattr(self._delegate, name)
@@ -642,11 +642,23 @@ class Version8Format(Version7Format):
         for member in members:
             if isinstance(members[member], dict) and members[member].get('anonymous', False):
                 # Do checks to make sure the new dictionary is appropriate
-                parent_item = members[member]
-                submembers = self._reduce_indirect_members(self._json_object['user_types'].get(parent_item['type'], {}))
-                for item in submembers:
-                    result[item] = submembers[item].copy()
-                    result[item]['offset'] = submembers[item]['offset'] + parent_item.get('offset', 0)
+                child_type = members[member].get('type', {})
+                child_offset = members[member].get('offset', 0)
+                child_kind = child_type.get('kind', '')
+                child_name = child_type.get('name', '')
+                # We don't mess with base types
+                if child_kind in ['union', 'struct']:
+                    # Pull out the replacement dictionary
+                    replacement = self._json_object['user_types'].get(child_name, {})
+                    # Flatten it recursively
+                    replacement_fields = self._reduce_indirect_members(replacement.get('fields', {}))
+                    # Whatever was there is now in our fields list, with a modified offset
+                    for replacement_field in replacement_fields:
+                        result[replacement_field] = replacement_fields[replacement_field].copy()
+                        result[replacement_field]['offset'] = replacement_fields[replacement_field][
+                                                                  'offset'] + child_offset
+                else:
+                    result[member] = members[member]
             else:
                 result[member] = members[member]
         return result
@@ -662,18 +674,15 @@ class Version8Format(Version7Format):
         if type_name not in self._json_object['user_types']:
             # Fall back to the natives table
             return self.natives.get_type(self.name + constants.BANG + type_name)
-        curdict = self._json_object['user_types'][type_name]
-        members = {}
-        for member_name in curdict['fields']:
-            interdict = self._reduce_indirect_members(curdict['fields'][member_name])
-            member = (interdict['offset'], self._interdict_to_template(interdict['type']))
-            members[member_name] = member
+        type_definition = self._json_object['user_types'][type_name]
+        members = self._reduce_indirect_members(type_definition['fields'])
+
         object_class = self.get_type_class(type_name)
         if object_class == objects.AggregateType:
             for clazz in objects.AggregateTypes:
-                if objects.AggregateTypes[clazz] == curdict['kind']:
+                if objects.AggregateTypes[clazz] == type_definition['kind']:
                     object_class = clazz
         return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
                                                 object_class = object_class,
-                                                size = curdict['size'],
+                                                size = type_definition['size'],
                                                 members = members)
