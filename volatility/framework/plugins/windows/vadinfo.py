@@ -33,7 +33,7 @@ winnt_protections = {
 class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
