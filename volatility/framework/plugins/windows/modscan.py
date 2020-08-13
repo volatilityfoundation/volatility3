@@ -7,7 +7,9 @@ from typing import Iterable
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.plugins.windows import poolscanner
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import extensions
+from volatility.plugins.windows import poolscanner, dlllist
 
 
 class ModScan(interfaces.plugins.PluginInterface):
@@ -20,6 +22,13 @@ class ModScan(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.VersionRequirement(name = 'poolerscanner', component = poolscanner.PoolScanner,
+                                            version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (1, 0, 0)),
+            requirements.BooleanRequirement(name = 'dump',
+                                            description = "Extract listed modules",
+                                            default = False,
+                                            optional = True)
         ]
 
     @classmethod
@@ -47,6 +56,12 @@ class ModScan(interfaces.plugins.PluginInterface):
             yield mem_object
 
     def _generator(self):
+        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                self.config_path,
+                                                                "windows",
+                                                                "pe",
+                                                                class_types = extensions.pe.class_types)
+
         for mod in self.scan_modules(self.context, self.config['primary'], self.config['nt_symbols']):
 
             try:
@@ -59,14 +74,22 @@ class ModScan(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 FullDllName = ""
 
+            dumped = False
+            if self.config['dump']:
+                filedata = dlllist.DllList.dump_dll(self.context, pe_table_name, mod)
+                if filedata:
+                    self.produce_file(filedata)
+                    dumped = True
+
             yield (0, (
                 format_hints.Hex(mod.vol.offset),
                 format_hints.Hex(mod.DllBase),
                 format_hints.Hex(mod.SizeOfImage),
                 BaseDllName,
                 FullDllName,
+                dumped
             ))
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Base", format_hints.Hex), ("Size", format_hints.Hex),
-                                   ("Name", str), ("Path", str)], self._generator())
+                                   ("Name", str), ("Path", str), ("Dumped", bool)], self._generator())
