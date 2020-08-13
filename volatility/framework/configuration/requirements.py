@@ -300,7 +300,8 @@ class TranslationLayerRequirement(interfaces.configuration.ConstructableRequirem
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
+                [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                 not subreq.optional]):
             return None
 
         obj = self._construct_class(context, config_path, args)
@@ -355,7 +356,8 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
+                [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                 not subreq.optional]):
             return None
 
         # Fill out the parameter for class creation
@@ -403,7 +405,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         config_path = interfaces.configuration.path_join(config_path, self.name)
         if len(self._version) > 0 and self._component.version[0] != self._version[0]:
             return {config_path: self}
-        if len(self._version) > 1 and self._component.version[1] > self._version[1]:
+        if len(self._version) > 1 and self._component.version[1] < self._version[1]:
             return {config_path: self}
         return {}
 
