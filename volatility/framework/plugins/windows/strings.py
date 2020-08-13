@@ -43,7 +43,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
         accessor = resources.ResourceAccessor()
         strings_fp = accessor.open(self.config['strings_file'], "rb")
-        strings_size = path.getsize(strings_fp.name)
+        strings_size = path.getsize(strings_fp.file.name)
 
         line = strings_fp.readline()
         while line != '':
