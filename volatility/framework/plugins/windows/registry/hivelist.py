@@ -6,6 +6,7 @@ from typing import Iterator, List, Tuple, Iterable, Optional
 
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
+from volatility.framework.interfaces import plugins
 from volatility.framework.layers import registry
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows.registry import hivescan
@@ -13,7 +14,7 @@ from volatility.plugins.windows.registry import hivescan
 vollog = logging.getLogger(__name__)
 
 
-class HiveGenerator():
+class HiveGenerator:
     """Walks the registry HiveList linked list in a given direction and stores an invalid offset
     if it's unable to fully walk the list"""
 
@@ -51,15 +52,52 @@ class HiveList(interfaces.plugins.PluginInterface):
                                            optional = True,
                                            default = None),
             requirements.PluginRequirement(name = 'hivescan', plugin = hivescan.HiveScan, version = (1, 0, 0)),
+            requirements.BooleanRequirement(name = 'dump',
+                                            description = "Extract listed processes",
+                                            default = False,
+                                            optional = True)
+
         ]
 
-    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
-        for hive in self.list_hive_objects(context = self.context,
-                                           layer_name = self.config["primary"],
-                                           symbol_table = self.config["nt_symbols"],
-                                           filter_string = self.config.get('filter', None)):
+    def _sanitize_hive_name(self, name: str) -> str:
+        return name.split('\\')[-1].replace(' ', '_').replace('.', '').replace('[', '').replace(']', '')
 
-            yield (0, (format_hints.Hex(hive.vol.offset), hive.get_name() or ""))
+    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
+        chunk_size = 0x500000
+
+        for hive_object in self.list_hive_objects(context = self.context,
+                                                  layer_name = self.config["primary"],
+                                                  symbol_table = self.config["nt_symbols"],
+                                                  filter_string = self.config.get('filter', None)):
+
+            dumped = False
+            if self.config['dump']:
+                # Construct the hive
+                hive = next(self.list_hives(self.context,
+                                            self.config_path,
+                                            layer_name = self.config["primary"],
+                                            symbol_table = self.config["nt_symbols"],
+                                            hive_offsets = [hive_object.vol.offset]))
+                maxaddr = hive.hive.Storage[0].Length
+                hive_name = self._sanitize_hive_name(hive.get_name())
+
+                filedata = plugins.FileInterface('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset)))
+                if hive._base_block:
+                    hive_data = self.context.layers[hive.dependencies[0]].read(hive.hive.BaseBlock, 1 << 12)
+                else:
+                    hive_data = '\x00' * (1 << 12)
+                filedata.data.write(hive_data)
+
+                for i in range(0, maxaddr, chunk_size):
+                    current_chunk_size = min(chunk_size, maxaddr - i)
+                    data = hive.read(i, current_chunk_size, pad = True)
+                    filedata.data.write(data)
+                    # if self._progress_callback:
+                    #     self._progress_callback((i / maxaddr) * 100, 'Writing layer {}'.format(hive_name))
+                self.produce_file(filedata)
+                dumped = True
+
+            yield (0, (format_hints.Hex(hive_object.vol.offset), hive_object.get_name() or "", dumped))
 
     @classmethod
     def list_hives(cls,
@@ -77,7 +115,7 @@ class HiveList(interfaces.plugins.PluginInterface):
             base_config_path: The configuration path for any settings required by the new table
             layer_name: The name of the layer on which to operate
             symbol_table: The name of the table containing the kernel symbols
-            filter_string: An optional string which must be present in the hive name if specified 
+            filter_string: An optional string which must be present in the hive name if specified
             offset: An optional offset to specify a specific hive to iterate over (takes precedence over filter_string)
 
         Yields:
@@ -141,8 +179,8 @@ class HiveList(interfaces.plugins.PluginInterface):
         hg = HiveGenerator(cmhive, forward = True)
         for hive in hg:
             if hive.vol.offset in seen:
-                vollog.debug("Hivelist found an already seen offset {} while "\
-                               "traversing forwards, this should not occur".format(hex(hive.vol.offset)))
+                vollog.debug("Hivelist found an already seen offset {} while " \
+                             "traversing forwards, this should not occur".format(hex(hive.vol.offset)))
                 break
             seen.add(hive.vol.offset)
             if filter_string is None or filter_string.lower() in str(hive.get_name() or "").lower():
@@ -156,7 +194,7 @@ class HiveList(interfaces.plugins.PluginInterface):
             hg = HiveGenerator(cmhive, forward = False)
             for hive in hg:
                 if hive.vol.offset in seen:
-                    vollog.debug("Hivelist found an already seen offset {} while "\
+                    vollog.debug("Hivelist found an already seen offset {} while " \
                                  "traversing backwards, list walking met in the middle".format(hex(hive.vol.offset)))
                     break
                 seen.add(hive.vol.offset)
@@ -173,8 +211,8 @@ class HiveList(interfaces.plugins.PluginInterface):
                 # therefore, there must be more 2 or more invalid hives, so the middle of the list is not reachable
                 # by walking the list, so revert to scanning, and walk the list forwards and backwards from each
                 # found hive
-                vollog.debug("Hivelist failed traversing backwards at {}, a different "\
-                               "location from forwards, revert to scanning".format(hex(backward_invalid)))
+                vollog.debug("Hivelist failed traversing backwards at {}, a different " \
+                             "location from forwards, revert to scanning".format(hex(backward_invalid)))
                 for hive in hivescan.HiveScan.scan_hives(context, layer_name, symbol_table):
                     try:
                         if hive.HiveList.Flink:
@@ -198,4 +236,5 @@ class HiveList(interfaces.plugins.PluginInterface):
                             hex(hive.vol.offset)))
 
     def run(self) -> renderers.TreeGrid:
-        return renderers.TreeGrid([("Offset", format_hints.Hex), ("FileFullPath", str)], self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("FileFullPath", str), ("Dumped", bool)],
+                                  self._generator())
