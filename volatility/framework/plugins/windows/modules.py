@@ -19,7 +19,7 @@ vollog = logging.getLogger(__name__)
 class Modules(interfaces.plugins.PluginInterface):
     """Lists the loaded kernel modules."""
 
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
