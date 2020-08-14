@@ -57,7 +57,7 @@ class Modules(interfaces.plugins.PluginInterface):
 
             dumped = False
             if self.config['dump']:
-                filedata = dlllist.DllList.dump_dll(self.context, pe_table_name, mod)
+                filedata = dlllist.DllList.dump_pe(self.context, pe_table_name, mod)
                 if filedata:
                     self.produce_file(filedata)
                     dumped = True

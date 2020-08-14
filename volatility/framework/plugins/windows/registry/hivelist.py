@@ -53,7 +53,7 @@ class HiveList(interfaces.plugins.PluginInterface):
                                            default = None),
             requirements.PluginRequirement(name = 'hivescan', plugin = hivescan.HiveScan, version = (1, 0, 0)),
             requirements.BooleanRequirement(name = 'dump',
-                                            description = "Extract listed processes",
+                                            description = "Extract listed registry hives",
                                             default = False,
                                             optional = True)
 

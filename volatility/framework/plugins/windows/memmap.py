@@ -71,8 +71,6 @@ class Memmap(interfaces.plugins.PluginInterface):
                     dumped))
                 offset += mapped_size
 
-            import pdb
-            pdb.set_trace()
             self.produce_file(filedata)
 
     def run(self):
