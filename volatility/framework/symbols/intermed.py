@@ -657,7 +657,7 @@ class Version8Format(Version7Format):
                     replacement_fields = self._process_fields(replacement.get('fields', {}))
                     # Whatever was there is now in our fields list, with a modified offset
                     for replacement_field in replacement_fields:
-                        # These will already have been converted into (offset, template) pairs by
+                        # These will already have been converted into (offset, template) pairs by the recursed call
                         replacement_offset, replacement_object = replacement_fields[replacement_field]
                         result[replacement_field] = (replacement_offset + child_offset,
                                                      replacement_object)
