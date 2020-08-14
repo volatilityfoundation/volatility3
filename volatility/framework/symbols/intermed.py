@@ -637,7 +637,10 @@ class Version8Format(Version7Format):
     """Class for storing intermediate debugging data as objects and classes."""
     version = (6, 2, 0)
 
-    def _reduce_indirect_members(self, members: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    def _process_fields(self, members: Dict[str, Dict[str, Any]]) -> Dict[str, Tuple[int, interfaces.objects.Template]]:
+        """Takes a list of field (and type dictionaries) and replaces any anonymous types with their children
+        This step also replaces dictionaries with appropriate templates
+        """
         result = {}
         for member in members:
             if isinstance(members[member], dict) and members[member].get('anonymous', False):
@@ -651,16 +654,19 @@ class Version8Format(Version7Format):
                     # Pull out the replacement dictionary
                     replacement = self._json_object['user_types'].get(child_name, {})
                     # Flatten it recursively
-                    replacement_fields = self._reduce_indirect_members(replacement.get('fields', {}))
+                    replacement_fields = self._process_fields(replacement.get('fields', {}))
                     # Whatever was there is now in our fields list, with a modified offset
                     for replacement_field in replacement_fields:
-                        result[replacement_field] = replacement_fields[replacement_field].copy()
-                        result[replacement_field]['offset'] = replacement_fields[replacement_field][
-                                                                  'offset'] + child_offset
+                        # These will already have been converted into (offset, template) pairs by
+                        replacement_offset, replacement_object = replacement_fields[replacement_field]
+                        result[replacement_field] = (replacement_offset + child_offset,
+                                                     replacement_object)
                 else:
-                    result[member] = members[member]
+                    interdict = members[member]
+                    result[member] = (interdict['offset'], self._interdict_to_template(interdict['type']))
             else:
-                result[member] = members[member]
+                interdict = members[member]
+                result[member] = (interdict['offset'], self._interdict_to_template(interdict['type']))
         return result
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:
@@ -675,7 +681,7 @@ class Version8Format(Version7Format):
             # Fall back to the natives table
             return self.natives.get_type(self.name + constants.BANG + type_name)
         type_definition = self._json_object['user_types'][type_name]
-        members = self._reduce_indirect_members(type_definition['fields'])
+        members = self._process_fields(type_definition['fields'])
 
         object_class = self.get_type_class(type_name)
         if object_class == objects.AggregateType:
