@@ -27,6 +27,7 @@ class Lsof(plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,

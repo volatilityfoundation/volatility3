@@ -36,8 +36,10 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
             self.set_type_class('mount', extensions.mount)
 
 
-class LinuxUtilities(object):
+class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
+
+    _verison = (1, 0, 0)
 
     # based on __d_path from the Linux kernel
     @classmethod
@@ -221,13 +223,13 @@ class LinuxUtilities(object):
         end_addr = end_addr.vol.offset & mask
 
         return [(constants.linux.KERNEL_NAME, start_addr, end_addr)] + \
-            LinuxUtilities.mask_mods_list(context, layer_name, mods_list)
+               LinuxUtilities.mask_mods_list(context, layer_name, mods_list)
 
     @classmethod
     def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: Tuple[str, str],
                               target_address):
         """
-        Searches between the start and end address of the kernel module using target_address.  
+        Searches between the start and end address of the kernel module using target_address.
         Returns the module and symbol name of the address provided.
         """
 

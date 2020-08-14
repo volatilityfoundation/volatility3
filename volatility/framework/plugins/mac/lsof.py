@@ -23,6 +23,7 @@ class Lsof(plugins.PluginInterface):
                                                      description = 'Kernel Address Space',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
+            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
