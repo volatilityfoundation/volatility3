@@ -4,7 +4,7 @@
 import logging
 from typing import Iterable, Tuple
 
-from volatility.framework import interfaces, symbols, exceptions
+from volatility.framework import interfaces, symbols, exceptions, constants
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
@@ -21,16 +21,20 @@ class Malfind(interfaces.plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.ListRequirement(name = 'pid',
-                                         element_type = int,
-                                         description = "Process IDs to include (all other processes are excluded)",
-                                         optional = True),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'vadinfo', plugin = vadinfo.VadInfo, version = (1, 0, 0)),
+            requirements.TranslationLayerRequirement(name='primary',
+                                                     description='Memory layer for the kernel',
+                                                     architectures=["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name="nt_symbols", description="Windows kernel symbols"),
+            requirements.ListRequirement(name='pid',
+                                         element_type=int,
+                                         description="Process IDs to include (all other processes are excluded)",
+                                         optional=True),
+            requirements.BooleanRequirement(name='dump',
+                                            description="Extract injected VADs",
+                                            default=False,
+                                            optional=True),
+            requirements.PluginRequirement(name='pslist', plugin=pslist.PsList, version=(1, 0, 0)),
+            requirements.PluginRequirement(name='vadinfo', plugin=vadinfo.VadInfo, version=(1, 0, 0)),
         ]
 
     @classmethod
@@ -61,6 +65,43 @@ class Malfind(interfaces.plugins.PluginInterface):
             offset += CHUNK_SIZE
 
         return True
+
+    @classmethod
+    def vad_dump(cls, context: interfaces.context.ContextInterface, proc: interfaces.objects.ObjectInterface, vad)\
+            -> interfaces.plugins.FileInterface:
+        """Extracts the memory regions for a process that may contain injected for a process as a FileInterface
+        code.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            proc: an _EPROCESS instance
+            vad: The suspected VAD to extract
+
+        Returns:
+            A FileInterface object containing the complete data for the process or None in the case of failure
+        """
+        proc_id = "Unknown"
+        try:
+            proc_id = proc.UniqueProcessId
+            proc_layer_name = proc.add_process_layer()
+        except exceptions.InvalidAddressException as excp:
+            vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
+                                                                             excp.layer_name))
+            return
+
+        proc_layer = context.layers[proc_layer_name]
+        vad_start = vad.get_start()
+
+        try:
+            filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId,
+                                                                                    vad_start))
+            filedata.data.write(proc_layer.read(vad_start, vad.get_end() - vad_start, pad=True))
+
+        except Exception as excp:
+            vollog.debug("Unable to dump PE with pid {0}.{1:#x}: {2}".format(proc.UniqueProcessId, vad_start, excp))
+            return
+
+        return filedata
 
     @classmethod
     def list_injections(
@@ -125,20 +166,32 @@ class Malfind(interfaces.plugins.PluginInterface):
 
                 disasm = interfaces.renderers.Disassembly(data, vad.get_start(), architecture)
 
+                dumped = False
+                if self.config['dump']:
+                    filedata = self.vad_dump(self.context, proc, vad)
+                    if filedata:
+                        try:
+                            self.produce_file(filedata)
+                            dumped = True
+                        except Exception as excp:
+                            vollog.debug("Unable to dump PE with pid {0}.{1:#x}: {2}".format(proc.UniqueProcessId,
+                                                                                             vad.get_start(), excp))
+
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.get_start()),
                            format_hints.Hex(vad.get_end()), vad.get_tag(),
                            vad.get_protection(
                                vadinfo.VadInfo.protect_values(self.context, self.config["primary"],
                                                               self.config["nt_symbols"]), vadinfo.winnt_protections),
-                           vad.get_commit_charge(), vad.get_private_memory(), format_hints.HexBytes(data), disasm))
+                           vad.get_commit_charge(), vad.get_private_memory(), dumped, format_hints.HexBytes(data),
+                           disasm))
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start VPN", format_hints.Hex),
                                    ("End VPN", format_hints.Hex), ("Tag", str), ("Protection", str),
-                                   ("CommitCharge", int), ("PrivateMemory", int), ("Hexdump", format_hints.HexBytes),
-                                   ("Disasm", interfaces.renderers.Disassembly)],
+                                   ("CommitCharge", int), ("PrivateMemory", int), ("Dumped", bool),
+                                   ("Hexdump", format_hints.HexBytes), ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
                                                                    layer_name = self.config['primary'],
