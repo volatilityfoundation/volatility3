@@ -300,7 +300,8 @@ class TranslationLayerRequirement(interfaces.configuration.ConstructableRequirem
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
+                [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                 not subreq.optional]):
             return None
 
         obj = self._construct_class(context, config_path, args)
@@ -355,7 +356,8 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
+                [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                 not subreq.optional]):
             return None
 
         # Fill out the parameter for class creation
@@ -380,19 +382,19 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         return context.symbol_space[value].build_configuration()
 
 
-class PluginRequirement(interfaces.configuration.RequirementInterface):
+class VersionRequirement(interfaces.configuration.RequirementInterface):
 
     def __init__(self,
                  name: str,
                  description: str = None,
                  default: None = None,
                  optional: bool = False,
-                 plugin: Type[interfaces.plugins.PluginInterface] = None,
+                 component: Type[interfaces.configuration.VersionableInterface] = None,
                  version: Optional[Tuple[int, ...]] = None) -> None:
         super().__init__(name = name, description = description, default = default, optional = optional)
-        if plugin is None:
-            raise TypeError("Plugin cannot be None")
-        self._plugin = plugin
+        if component is None:
+            raise TypeError("Component cannot be None")
+        self._component = component
         if version is None:
             raise TypeError("Version cannot be None")
         self._version = version
@@ -401,8 +403,25 @@ class PluginRequirement(interfaces.configuration.RequirementInterface):
                     config_path: str) -> Dict[str, interfaces.configuration.RequirementInterface]:
         # Mypy doesn't appreciate our classproperty implementation, self._plugin.version has no type
         config_path = interfaces.configuration.path_join(config_path, self.name)
-        if len(self._version) > 0 and self._plugin.version[0] != self._version[0]:
+        if len(self._version) > 0 and self._component.version[0] != self._version[0]:
             return {config_path: self}
-        if len(self._version) > 1 and self._plugin.version[1] > self._version[1]:
+        if len(self._version) > 1 and self._component.version[1] < self._version[1]:
             return {config_path: self}
         return {}
+
+
+class PluginRequirement(VersionRequirement):
+
+    def __init__(self,
+                 name: str,
+                 description: str = None,
+                 default: None = None,
+                 optional: bool = False,
+                 plugin: Type[interfaces.plugins.PluginInterface] = None,
+                 version: Optional[Tuple[int, ...]] = None) -> None:
+        super().__init__(name = name,
+                         description = description,
+                         default = default,
+                         optional = optional,
+                         component = plugin,
+                         version = version)

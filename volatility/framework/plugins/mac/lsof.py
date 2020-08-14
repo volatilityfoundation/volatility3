@@ -5,9 +5,9 @@
 import logging
 
 from volatility.framework import renderers
-from volatility.framework.automagic import mac
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
+from volatility.framework.symbols import mac
 from volatility.plugins.mac import pslist
 
 vollog = logging.getLogger(__name__)

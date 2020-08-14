@@ -306,3 +306,4 @@ class Hashdump(interfaces.plugins.PluginInterface):
 
         return renderers.TreeGrid([("User", str), ("rid", int), ("lmhash", str), ("nthash", str)],
                                   self._generator(syshive, samhive))
+

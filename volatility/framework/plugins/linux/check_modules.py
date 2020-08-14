@@ -6,18 +6,16 @@ import logging
 from typing import List
 
 from volatility.framework import interfaces, renderers, exceptions, constants, contexts
-from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
-from volatility.framework.layers import intel
 from volatility.framework.objects import utility
-from volatility.plugins.linux import lsmod
 from volatility.framework.renderers import format_hints
+from volatility.plugins.linux import lsmod
 
 vollog = logging.getLogger(__name__)
 
 
-class check_modules(plugins.PluginInterface):
+class Check_modules(plugins.PluginInterface):
     """Compares module list to sysfs info, if available"""
 
     @classmethod

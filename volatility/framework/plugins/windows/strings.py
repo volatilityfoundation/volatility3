@@ -4,6 +4,7 @@
 
 import logging
 import re
+from os import path
 from typing import Dict, Generator, List, Set, Tuple
 
 from volatility.framework import interfaces, renderers, exceptions
@@ -17,6 +18,8 @@ vollog = logging.getLogger(__name__)
 
 class Strings(interfaces.plugins.PluginInterface):
     """Reads output from the strings command and indicates which process(es) each string belongs to."""
+
+    strings_pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -39,8 +42,11 @@ class Strings(interfaces.plugins.PluginInterface):
         revmap = self.generate_mapping(self.config['primary'])
 
         accessor = resources.ResourceAccessor()
+        strings_fp = accessor.open(self.config['strings_file'], "rb")
+        strings_size = path.getsize(strings_fp.file.name)
 
-        for line in accessor.open(self.config['strings_file'], "rb").readlines():
+        line = strings_fp.readline()
+        while line != '':
             try:
                 offset, string = self._parse_line(line)
                 try:
@@ -51,9 +57,10 @@ class Strings(interfaces.plugins.PluginInterface):
             except ValueError:
                 vollog.error("Strings file is in the wrong format")
                 return
+            line = strings_fp.readline()
+            self._progress_callback(strings_fp.tell() / strings_size * 100, "Matching strings in memory")
 
-    @staticmethod
-    def _parse_line(line: bytes) -> Tuple[int, bytes]:
+    def _parse_line(self, line: bytes) -> Tuple[int, bytes]:
         """Parses a single line from a strings file.
 
         Args:
@@ -62,8 +69,8 @@ class Strings(interfaces.plugins.PluginInterface):
         Returns:
             Tuple of the offset and the string found at that offset
         """
-        pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)")
-        match = pattern.search(line)
+
+        match = self.strings_pattern.search(line)
         if not match:
             raise ValueError("Strings file contains invalid strings line")
         offset, string = match.group(1, 2)
@@ -84,12 +91,12 @@ class Strings(interfaces.plugins.PluginInterface):
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors = True):
-                vpage, _, kpage, page_size, maplayer = mapval
-                for val in range(kpage, kpage + page_size, 0x1000):
-                    cur_set = reverse_map.get(kpage >> 12, set())
-                    cur_set.add(("kernel", vpage))
-                    reverse_map[kpage >> 12] = cur_set
-                self._progress_callback((vpage * 100) / layer.maximum_address, "Creating reverse kernel map")
+                offset, _, mapped_offset, mapped_size, maplayer = mapval
+                for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
+                    cur_set = reverse_map.get(mapped_offset >> 12, set())
+                    cur_set.add(("kernel", offset))
+                    reverse_map[mapped_offset >> 12] = cur_set
+                self._progress_callback((offset * 100) / layer.maximum_address, "Creating reverse kernel map")
 
             # TODO: Include kernel modules
 
@@ -107,13 +114,13 @@ class Strings(interfaces.plugins.PluginInterface):
                 proc_layer = self.context.layers[proc_layer_name]
                 if isinstance(proc_layer, linear.LinearlyMappedLayer):
                     for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
-                        kpage, _, vpage, page_size, maplayer = mapval
-                        for val in range(kpage, kpage + page_size, 0x1000):
-                            cur_set = reverse_map.get(kpage >> 12, set())
-                            cur_set.add(("Process {}".format(process.UniqueProcessId), vpage))
-                            reverse_map[kpage >> 12] = cur_set
+                        mapped_offset, _, offset, mapped_size, maplayer = mapval
+                        for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
+                            cur_set = reverse_map.get(mapped_offset >> 12, set())
+                            cur_set.add(("Process {}".format(process.UniqueProcessId), offset))
+                            reverse_map[mapped_offset >> 12] = cur_set
                         # FIXME: make the progress for all processes, rather than per-process
-                        self._progress_callback((vpage * 100) / layer.maximum_address,
+                        self._progress_callback((offset * 100) / layer.maximum_address,
                                                 "Creating mapping for task {}".format(process.UniqueProcessId))
 
         return reverse_map

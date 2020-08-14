@@ -7,10 +7,13 @@ import logging
 from typing import Generator, Iterable, Iterator, Optional, Tuple
 
 from volatility.framework import constants
-from volatility.framework import exceptions, objects, interfaces
-from volatility.framework.automagic import linux
+from volatility.framework import exceptions, objects, interfaces, symbols
 from volatility.framework.layers import linear
-from volatility.framework.symbols import generic
+from volatility.framework.symbols import generic, linux
+from volatility.framework.objects import utility
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.linux import extensions
+from volatility.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
 
@@ -18,6 +21,14 @@ vollog = logging.getLogger(__name__)
 
 
 class module(generic.GenericIntelProcess):
+
+    def get_module_base(self):
+        if self.has_member("core_layout"):
+            return self.core_layout.base
+        else:
+            return self.module_core
+
+        raise AttributeError("module -> get_module_core: Unable to determine base address of module")
 
     def get_init_size(self):
         if self.has_member("init_layout"):
@@ -35,7 +46,122 @@ class module(generic.GenericIntelProcess):
         elif self.has_member("core_size"):
             return self.core_size
 
-        raise AttributeError("module -> get_core_size: Unable to determine initial size of module")
+        raise AttributeError("module -> get_core_size: Unable to determine core size of module")
+
+    def get_module_core(self):
+        if self.has_member("core_layout"):
+            return self.core_layout.base
+        elif self.has_member("module_core"):
+            return self.module_core
+
+        raise AttributeError("module -> get_module_core: Unable to get module core")
+
+    def get_module_init(self):
+        if self.has_member("init_layout"):
+            return self.init_layout.base
+        elif self.has_member("module_init"):
+            return self.module_init
+
+        raise AttributeError("module -> get_module_core: Unable to get module init")
+
+    def get_name(self):
+        """ Get the name of the module as a string """
+        return utility.array_to_string(self.name)
+
+    def _get_sect_count(self, grp):
+        """ Try to determine the number of valid sections """
+        arr = self._context.object(
+            self.get_symbol_table().name + constants.BANG + "array",
+            layer_name = self.vol.layer_name,
+            offset = grp.attrs,
+            subtype = self._context.symbol_space.get_type(self.get_symbol_table().name + constants.BANG + "pointer"),
+            count = 25)
+
+        idx = 0
+        while arr[idx]:
+            idx = idx + 1
+
+        return idx
+
+    def get_sections(self):
+        """ Get sections of the module """
+        if self.sect_attrs.has_member("nsections"):
+            num_sects = self.sect_attrs.nsections
+        else:
+            num_sects = self._get_sect_count(self.sect_attrs.grp)
+
+        arr = self._context.object(self.get_symbol_table().name + constants.BANG + "array",
+                                   layer_name = self.vol.layer_name,
+                                   offset = self.sect_attrs.attrs.vol.offset,
+                                   subtype = self._context.symbol_space.get_type(self.get_symbol_table().name +
+                                                                                 constants.BANG + 'module_sect_attr'),
+                                   count = num_sects)
+
+        for attr in arr:
+            yield attr
+
+    def get_symbols(self):
+        ret_syms = []
+
+        if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table().name):
+            prefix = "Elf64_"
+        else:
+            prefix = "Elf32_"
+
+        elf_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                 self.config_path,
+                                                                 "linux",
+                                                                 "elf",
+                                                                 native_types = None,
+                                                                 class_types = extensions.elf.class_types)
+
+        syms = self._context.object(
+            self.get_symbol_table().name + constants.BANG + "array",
+            layer_name = self.vol.layer_name,
+            offset = self.section_symtab,
+            subtype = self._context.symbol_space.get_type(elf_table_name + constants.BANG + prefix + "Sym"),
+            count = self.num_symtab + 1)
+        if self.section_strtab:
+            for sym in syms:
+                sym.set_cached_strtab(self.section_strtab)
+                yield sym
+
+    def get_symbol(self, wanted_sym_name):
+        """ Get value for a given symbol name """
+        for sym in self.get_symbols():
+            sym_name = sym.get_name()
+            sym_addr = sym.st_value
+            if wanted_sym_name == sym_name:
+                return sym_addr
+
+    @property
+    def section_symtab(self):
+        if self.has_member("kallsyms"):
+            return self.kallsyms.symtab
+        elif self.has_member("symtab"):
+            return self.symtab
+
+        raise AttributeError("module -> symtab: Unable to get symtab")
+
+    @property
+    def num_symtab(self):
+        if self.has_member("kallsyms"):
+            return int(self.kallsyms.num_symtab)
+        elif self.has_member("num_symtab"):
+            return int(self.num_symtab)
+
+        raise AttributeError("module -> num_symtab: Unable to determine number of symbols")
+
+    @property
+    def section_strtab(self):
+        #Newer kernels
+        if self.has_member("kallsyms"):
+            return self.kallsyms.strtab
+        #Older kernels
+        elif self.has_member("strtab"):
+            strtab = self.strtab
+
+        raise AttributeError("module -> strtab: Unable to get strtab")
 
 
 class task_struct(generic.GenericIntelProcess):
@@ -290,7 +416,10 @@ class list_head(objects.StructType, collections.abc.Iterable):
         direction = 'prev'
         if forward:
             direction = 'next'
-        link = getattr(self, direction).dereference()
+        try:
+            link = getattr(self, direction).dereference()
+        except exceptions.InvalidAddressException:
+            return
 
         if not sentinel:
             yield self._context.object(symbol_type, layer, offset = self.vol.offset - relative_offset)
@@ -302,7 +431,10 @@ class list_head(objects.StructType, collections.abc.Iterable):
             yield obj
 
             seen.add(link.vol.offset)
-            link = getattr(link, direction).dereference()
+            try:
+                link = getattr(link, direction).dereference()
+            except exceptions.InvalidAddressException:
+                break
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
