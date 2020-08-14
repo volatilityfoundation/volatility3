@@ -4,7 +4,7 @@
 import logging
 from typing import Iterable, Tuple
 
-from volatility.framework import interfaces, symbols, exceptions, constants
+from volatility.framework import interfaces, symbols, exceptions
 from volatility.framework import renderers
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
