@@ -28,8 +28,10 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('sysctl_oid', extensions.sysctl_oid)
 
 
-class MacUtilities(object):
+class MacUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful mac functions."""
+
+    _version = (1, 0, 0)
 
     @classmethod
     def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,

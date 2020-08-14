@@ -10,6 +10,7 @@ from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import mac
 
+
 class Mount(plugins.PluginInterface):
     """A module containing a collection of plugins that produce data typically
     foundin Mac's mount command"""
@@ -22,6 +23,7 @@ class Mount(plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
+            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols")
         ]
 
@@ -43,13 +45,13 @@ class Mount(plugins.PluginInterface):
 
         for mount in mac.MacUtilities.walk_tailq(list_head, "mnt_list"):
             yield mount
-        
+
     def _generator(self):
         for mount in self.list_mounts(self.context, self.config['primary'], self.config['darwin']):
             vfs = mount.mnt_vfsstat
             device_name = utility.array_to_string(vfs.f_mntonname)
             mount_point = utility.array_to_string(vfs.f_mntfromname)
-            mount_type  = utility.array_to_string(vfs.f_fstypename)
+            mount_type = utility.array_to_string(vfs.f_fstypename)
 
             yield 0, (device_name, mount_point, mount_type)
 

@@ -27,6 +27,7 @@ class Trustedbsd(plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
+            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
         ]
 
