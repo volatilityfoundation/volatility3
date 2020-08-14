@@ -58,7 +58,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                              optional = True),
                 requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
                 requirements.BooleanRequirement(name = 'dump',
-                                                description = "Extract listed processes",
+                                                description = "Extract listed memory ranges",
                                                 default = False,
                                                 optional = True)
                 ]

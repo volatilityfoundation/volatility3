@@ -34,17 +34,17 @@ class DllList(interfaces.plugins.PluginInterface):
                                          description = "Process IDs to include (all other processes are excluded)",
                                          optional = True),
             requirements.BooleanRequirement(name = 'dump',
-                                            description = "Extract listed processes",
+                                            description = "Extract listed DLLs",
                                             default = False,
                                             optional = True)
         ]
 
     @classmethod
-    def dump_dll(cls,
-                 context: interfaces.context.ContextInterface,
-                 pe_table_name: str,
-                 dll_entry: interfaces.objects.ObjectInterface,
-                 layer_name: str = None) -> interfaces.plugins.FileInterface:
+    def dump_pe(cls,
+                context: interfaces.context.ContextInterface,
+                pe_table_name: str,
+                dll_entry: interfaces.objects.ObjectInterface,
+                layer_name: str = None) -> interfaces.plugins.FileInterface:
         """Extracts the complete data for a process as a FileInterface
 
         Args:
@@ -103,7 +103,7 @@ class DllList(interfaces.plugins.PluginInterface):
 
                 dumped = False
                 if self.config['dump']:
-                    filedata = self.dump_dll(self.context, pe_table_name, entry, proc_layer_name)
+                    filedata = self.dump_pe(self.context, pe_table_name, entry, proc_layer_name)
                     if filedata:
                         filedata.preferred_filename = "pid.{0}.".format(proc_id) + filedata.preferred_filename
                         dumped = True
