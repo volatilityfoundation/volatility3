@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, Type
 
 class elf(objects.StructType):
     '''
-    Class used to create elf objects. It overrides the typename to Elf32_ or Elf64_, 
+    Class used to create elf objects. It overrides the typename to `Elf32_` or `Elf64_`,
     depending on the corresponding value on e_ident
     '''
 
