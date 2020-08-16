@@ -12,7 +12,7 @@ suitable output.
 import datetime
 from abc import abstractmethod, ABCMeta
 from collections import abc
-from typing import Any, Callable, ClassVar, Generator, Iterable, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union
+from typing import Any, Callable, ClassVar, Generator, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union
 
 Column = NamedTuple('Column', [('name', str), ('type', Any)])
 
@@ -53,7 +53,7 @@ class TreeNode(abc.Sequence, metaclass = ABCMeta):
 
     @property
     @abstractmethod
-    def values(self) -> Iterable['BaseTypes']:
+    def values(self) -> List['BaseTypes']:
         """Returns the list of values from the particular node, based on column
         index."""
 
@@ -149,7 +149,10 @@ class TreeGrid(object, metaclass = ABCMeta):
         """Method used to sanitize column names for TreeNodes."""
 
     @abstractmethod
-    def populate(self, function: VisitorSignature = None, initial_accumulator: Any = None) -> None:
+    def populate(self,
+                 function: VisitorSignature = None,
+                 initial_accumulator: Any = None,
+                 fail_on_errors: bool = True) -> Optional[Exception]:
         """Populates the tree by consuming the TreeGrid's construction
         generator Func is called on every node, so can be used to create output
         on demand.

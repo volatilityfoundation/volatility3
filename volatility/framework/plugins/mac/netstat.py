@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Iterable, Callable
+from typing import Iterable, Callable, Tuple
 
 from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
@@ -39,7 +39,9 @@ class Netstat(plugins.PluginInterface):
                      layer_name: str,
                      darwin_symbols: str,
                      filter_func: Callable[[int], bool] = lambda _: False) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+            Iterable[Tuple[interfaces.objects.ObjectInterface,
+                           interfaces.objects.ObjectInterface,
+                           interfaces.objects.ObjectInterface]]:
         """
         Returns the open socket descriptors of a process
 

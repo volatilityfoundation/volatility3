@@ -33,6 +33,7 @@ except ImportError:
 
 vollog = logging.getLogger(__name__)
 
+
 # TODO: Type-annotating the ResourceAccessor.open method is difficult because HTTPResponse is not actually an IO[Any] type
 #   fix this
 
@@ -117,7 +118,8 @@ class ResourceAccessor(object):
                 # TODO: find a way to check if we already have this file (look at http headers?)
                 block_size = 1028 * 8
                 temp_filename = os.path.join(constants.CACHE_PATH,
-                                             "data_" + hashlib.sha512(bytes(url, 'raw_unicode_escape')).hexdigest() + ".cache")
+                                             "data_" + hashlib.sha512(
+                                                 bytes(url, 'raw_unicode_escape')).hexdigest() + ".cache")
 
                 if not os.path.exists(temp_filename):
                     vollog.debug("Caching file at: {}".format(temp_filename))
@@ -182,8 +184,8 @@ class ResourceAccessor(object):
             stop = False
             while not stop:
                 url_path_split = url_path.split(".")
-                url_path, extension = url_path_split[:-1], url_path_split[-1]
-                url_path = ".".join(url_path)
+                url_path_list, extension = url_path_split[:-1], url_path_split[-1]
+                url_path = ".".join(url_path_list)
                 if extension == "xz":
                     curfile = cascadeCloseFile(lzma.LZMAFile(curfile, mode), curfile)
                 elif extension == "bz2":

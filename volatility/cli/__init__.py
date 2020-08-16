@@ -17,7 +17,7 @@ import logging
 import os
 import sys
 import traceback
-from typing import Dict, Type, Union
+from typing import Dict, Type, Union, Any
 from urllib import parse, request
 
 import volatility.plugins
@@ -358,7 +358,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             detail = "{}".format(excp)
             caused_by = [
                 "An invalid symbol table", "A plugin requesting a bad symbol"
-                "A plugin requesting a symbol from the wrong table"
+                                           "A plugin requesting a symbol from the wrong table"
             ]
         elif isinstance(excp, exceptions.LayerException):
             general = "Volatility experienced a layer-related issue: {}".format(excp.layer_name)

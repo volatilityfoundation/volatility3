@@ -151,10 +151,12 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Repeatedly apply "determine what this is" code and build as much up as possible
         stacked = True
         stacked_layers = [initial_layer]
+        if stack_set is None:
+            stack_set = list(framework.class_subclasses(interfaces.automagic.StackerLayerInterface))
 
-        for stacker in stack_set:
-            if not issubclass(stacker, interfaces.automagic.StackerLayerInterface):
-                raise TypeError("Stacker {} is not a descendent of StackerLayerInterface".format(stacker.__name__))
+        for stacker_item in stack_set:
+            if not issubclass(stacker_item, interfaces.automagic.StackerLayerInterface):
+                raise TypeError("Stacker {} is not a descendent of StackerLayerInterface".format(stacker_item.__name__))
 
         while stacked:
             stacked = False
@@ -184,7 +186,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                 stack_set.remove(stacker_cls)
         return stacked_layers
 
-    def create_stackers_list(self):
+    def create_stackers_list(self) -> List[Type[interfaces.automagic.StackerLayerInterface]]:
         """Creates the list of stackers to use based on the config option"""
         stack_set = sorted(framework.class_subclasses(interfaces.automagic.StackerLayerInterface),
                            key = lambda x: x.stack_order)

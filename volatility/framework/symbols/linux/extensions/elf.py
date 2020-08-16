@@ -2,11 +2,10 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from volatility.framework import exceptions, constants
+from typing import Dict, Tuple
+
+from volatility.framework import constants
 from volatility.framework import objects, interfaces
-from volatility.framework.objects import utility
-from volatility.framework.renderers import conversion
-from typing import Any, Dict, List, Optional, Tuple, Union, Type
 
 
 class elf(objects.StructType):
@@ -46,7 +45,7 @@ class elf(objects.StructType):
         elif ei_class == 2:
             self._type_prefix = "Elf64_"
         else:
-            self._type_prefix = None
+            raise ValueError("Unsupported ei_class value {}".format(ei_class))
 
         # Construct the full header
         self._hdr = self._context.object(symbol_table_name + constants.BANG + self._type_prefix + "Ehdr",

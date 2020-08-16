@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import Iterator, Any, Iterable
+from typing import Iterator, Any, Iterable, List, Tuple, Set
 
 from volatility.framework import interfaces, objects, exceptions, constants
 from volatility.framework.symbols import intermed
@@ -33,7 +33,7 @@ class MacUtilities(object):
 
     @classmethod
     def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                       mods: Iterator[Any]) -> Iterator[Any]:
+                       mods: Iterator[Any]) -> List[Tuple[interfaces.objects.ObjectInterface, Any, Any]]:
         """
         A helper function to mask the starting and end address of kernel modules
         """

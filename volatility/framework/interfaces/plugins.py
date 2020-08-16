@@ -119,7 +119,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         """Returns a list of Requirement objects for this plugin."""
-        return super(cls).get_requirements()
+        return super().get_requirements()
 
     @abstractmethod
     def run(self) -> interfaces.renderers.TreeGrid:

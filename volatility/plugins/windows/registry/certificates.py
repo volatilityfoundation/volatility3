@@ -21,7 +21,7 @@ class Certificates(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(name = 'printkey', plugin = printkey.PrintKey, version = (1, 0, 0))
         ]
 
-    def parse_data(self, data: bytes):
+    def parse_data(self, data: bytes) -> Tuple[str, bytes]:
         name = renderers.NotAvailableValue()
         certificate_data = renderers.NotAvailableValue()
         while len(data) > 12:
@@ -33,15 +33,15 @@ class Certificates(interfaces.plugins.PluginInterface):
                 certificate_data = cvalue
         return (name, certificate_data)
 
-    def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
+    def _generator(self) -> Iterator[Tuple[int, Tuple[str, str, str, str]]]:
         for hive in hivelist.HiveList.list_hives(self.context,
                                                  base_config_path = self.config_path,
                                                  layer_name = self.config['primary'],
                                                  symbol_table = self.config['nt_symbols']):
 
             for top_key in [
-                    "Microsoft\\SystemCertificates",
-                    "Software\\Microsoft\\SystemCertificates",
+                "Microsoft\\SystemCertificates",
+                "Software\\Microsoft\\SystemCertificates",
             ]:
                 try:
                     # Walk it

@@ -366,6 +366,8 @@ class PdbReader:
             offset += length_len
             output, consumed = self.consume_type(module, offset, length)
             leaf_type, name, value = output
+            if name is None:
+                name = 'NO_NAME_RETURNED'
             for tag_type in ['unnamed', 'anonymous']:
                 if name == '<{}-tag>'.format(tag_type) or name == '__{}'.format(tag_type):
                     name = '__{}_'.format(tag_type) + hex(len(self.types) + 0x1000)[2:]
@@ -619,8 +621,8 @@ class PdbReader:
         else:
             leaf_type, name, value = self.types[index - 0x1000]
             if leaf_type in [
-                    leaf_type.LF_UNION, leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE,
-                    leaf_type.LF_STRUCTURE_ST, leaf_type.LF_INTERFACE
+                leaf_type.LF_UNION, leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE,
+                leaf_type.LF_STRUCTURE_ST, leaf_type.LF_INTERFACE
             ]:
                 if not value.properties.forward_reference:
                     result = value.size
@@ -664,8 +666,8 @@ class PdbReader:
             self._progress_callback(index * 100 / max_len, "Processing types")
             leaf_type, name, value = self.types[index]
             if leaf_type in [
-                    leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
-                    leaf_type.LF_INTERFACE
+                leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
+                leaf_type.LF_INTERFACE
             ]:
                 if not value.properties.forward_reference:
                     self.user_types[name] = {
@@ -686,20 +688,23 @@ class PdbReader:
                     base = self.get_type_from_index(value.subtype_index)
                     if not isinstance(base, Dict):
                         raise ValueError("Invalid base type returned for Enumeration")
+                    constants = self.get_type_from_index(value.fields)
+                    if not isinstance(constants, list):
+                        raise ValueError("Enumeration fields type not a list")
                     self.enumerations[name] = {
                         'base': base['name'],
                         'size': self.get_size_from_index(value.subtype_index),
                         'constants':
-                        dict([(name, enum.value) for _, name, enum in self.get_type_from_index(value.fields)])
+                            dict([(name, enum.value) for _, name, enum in constants])
                     }
 
         # Re-run through for ForwardSizeReferences
         self.user_types = self.replace_forward_references(self.user_types, type_references)
 
     def consume_type(
-        self, module: interfaces.context.ModuleInterface, offset: int, length: int
+            self, module: interfaces.context.ModuleInterface, offset: int, length: int
     ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Union[
-            None, List, interfaces.objects.ObjectInterface]], int]:
+        None, List, interfaces.objects.ObjectInterface]], int]:
         """Returns a (leaf_type, name, object) Tuple for a type, and the number
         of bytes consumed."""
         result = None, None, None  # type: Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Optional[Union[List, interfaces.objects.ObjectInterface]]]
@@ -710,8 +715,8 @@ class PdbReader:
         remaining = length - consumed
 
         if leaf_type in [
-                leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
-                leaf_type.LF_INTERFACE
+            leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
+            leaf_type.LF_INTERFACE
         ]:
             structure = module.object(object_type = "LF_STRUCTURE", offset = offset + consumed)
             name_offset = structure.name.vol.offset - structure.vol.offset
@@ -911,6 +916,7 @@ class PdbRetreiver:
 if __name__ == '__main__':
     import argparse
 
+
     class PrintedProgress(object):
         """A progress handler that prints the progress value and the
         description onto the command line."""
@@ -930,6 +936,7 @@ if __name__ == '__main__':
             message_len = len(message)
             self._max_message_len = max([self._max_message_len, message_len])
             print(message, end = (' ' * (self._max_message_len - message_len)) + '\r')
+
 
     parser = argparse.ArgumentParser(
         description = "Read PDB files and convert to Volatility 3 Intermediate Symbol Format")

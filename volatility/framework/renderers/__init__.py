@@ -86,7 +86,7 @@ class TreeNode(interfaces.renderers.TreeNode):
             #     tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
 
     @property
-    def values(self) -> Iterable[interfaces.renderers.BaseTypes]:
+    def values(self) -> List[interfaces.renderers.BaseTypes]:
         """Returns the list of values from the particular node, based on column
         index."""
         return self._values
@@ -124,6 +124,10 @@ class TreeNode(interfaces.renderers.TreeNode):
         if int(components[changed_index]) >= int(changed[-1]):
             components[changed_index] = str(int(components[changed_index]) + (1 if added else -1))
         self._path = TreeGrid.path_sep.join(components)
+
+
+def RowStructureConstructor(names: List[str]):
+    return collections.namedtuple("RowStructure", [TreeGrid.sanitize_name(name) for name in names])
 
 
 class TreeGrid(interfaces.renderers.TreeGrid):
@@ -165,8 +169,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 raise TypeError("Column {}'s type is not a simple type: {}".format(name,
                                                                                    column_type.__class__.__name__))
             converted_columns.append(interfaces.renderers.Column(name, column_type))
-        self.RowStructure = collections.namedtuple("RowStructure",
-                                                   [self.sanitize_name(column.name) for column in converted_columns])
+        self.RowStructure = RowStructureConstructor([column.name for column in converted_columns])
         self._columns = converted_columns
         if generator is None:
             generator = []
@@ -221,6 +224,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
                 self._populated = True
                 return excp
         self._populated = True
+        return None
 
     @property
     def populated(self):

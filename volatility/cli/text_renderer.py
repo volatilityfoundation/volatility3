@@ -9,7 +9,7 @@ import random
 import string
 import sys
 from functools import wraps
-from typing import Any, List, Tuple, Dict, Optional
+from typing import Any, List, Tuple, Dict
 
 from volatility.framework.interfaces.renderers import RenderOption
 from volatility.framework.renderers import format_hints
@@ -162,7 +162,7 @@ class QuickTextRenderer(CLIRenderer):
             line.append("{}".format(column.name))
         outfd.write("\n{}\n".format("\t".join(line)))
 
-        def visitor(node, accumulator):
+        def visitor(node: interfaces.renderers.TreeNode, accumulator):
             accumulator.write("\n")
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             accumulator.write("*" * max(0, node.path_depth - 1) + ("" if (node.path_depth <= 1) else " "))
@@ -215,7 +215,7 @@ class CSVRenderer(CLIRenderer):
             line.append("{}".format('"' + column.name + '"'))
         outfd.write("{}".format(",".join(line)))
 
-        def visitor(node, accumulator):
+        def visitor(node: interfaces.renderers.TreeNode, accumulator):
             accumulator.write("\n")
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             accumulator.write(str(max(0, node.path_depth - 1)) + ",")
@@ -264,7 +264,8 @@ class PrettyTextRenderer(CLIRenderer):
         max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
 
         def visitor(
-                node, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
+                node: interfaces.renderers.TreeNode,
+                accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
         ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
@@ -322,15 +323,16 @@ class JsonRenderer(CLIRenderer):
         outfd = sys.stdout
 
         outfd.write("\n")
-        final_output = ({}, [])
+        final_output = (
+            {}, [])  # type: Tuple[Dict[str, List[interfaces.renderers.TreeNode]], List[interfaces.renderers.TreeNode]]
 
         def visitor(
-                node: Optional[interfaces.renderers.TreeNode],
+                node: interfaces.renderers.TreeNode,
                 accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]
         ) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             acc_map, final_tree = accumulator
-            node_dict = {'__children': []}
+            node_dict = {'__children': []}  # type: Dict[str, Any]
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])

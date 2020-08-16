@@ -210,6 +210,10 @@ class BaseSymbolTableInterface:
             yield sort_symbols[result][1]
             result += 1
 
+    def clear_symbol_cache(self) -> None:
+        """Clears the symbol cache of this symbol table."""
+        pass
+
 
 class SymbolSpaceInterface(collections.abc.Mapping):
     """An interface for the container that holds all the symbol-containing

@@ -299,7 +299,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         """Displays the output for a particular plugin (with keyword arguments)"""
         treegrid = self.generate_treegrid(plugin, **kwargs)
         if treegrid is not None:
-            self.render_treegrid(self.generate_treegrid(plugin, **kwargs))
+            self.render_treegrid(treegrid)
 
     def display_symbols(self, symbol_table: str = None):
         """Prints an alphabetical list of symbols for a symbol table"""

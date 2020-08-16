@@ -105,7 +105,7 @@ class POOL_HEADER(objects.StructType):
                             continue
                         padding_length = struct.unpack(
                             "<I", infomask_data[addr - optional_headers_length:addr - optional_headers_length + 4])[0]
-                        padding_length -= lengths_of_optional_headers[padding_available]
+                        padding_length -= lengths_of_optional_headers[padding_available or 0]
 
                     # Certain versions of windows have PADDING_INFO lengths that are too long
                     # So we now check that the padding length is at a minimum the right length
@@ -149,8 +149,8 @@ class POOL_HEADER(objects.StructType):
         headers = []
         sizes = []
         for header in [
-                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
-                'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
+            'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
+            'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
         ]:
             try:
                 type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)
@@ -169,7 +169,7 @@ class POOL_HEADER(objects.StructType):
 class POOL_TRACKER_BIG_PAGES(objects.StructType):
     """A kernel big page pool tracker."""
 
-    pool_type_lookup = {}
+    pool_type_lookup = {}  # type: Dict[str, str]
 
     def _generate_pool_type_lookup(self):
         # Enumeration._generate_inverse_choices() raises ValueError because multiple enum names map to the same
