@@ -47,7 +47,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
         line = strings_fp.readline()
         last_prog = 0
-        while line != b'':
+        while line:
             try:
                 offset, string = self._parse_line(line)
                 try:
