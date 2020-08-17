@@ -637,43 +637,52 @@ class Version8Format(Version7Format):
     """Class for storing intermediate debugging data as objects and classes."""
     version = (6, 2, 0)
 
-    def _reduce_indirect_members(self, members: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-        result = {}
-        for member in members:
-            if isinstance(members[member], dict) and members[member].get('anonymous', False):
-                # Do checks to make sure the new dictionary is appropriate
-                parent_item = members[member]
-                submembers = self._reduce_indirect_members(self._json_object['user_types'].get(parent_item['type'], {}))
-                for item in submembers:
-                    result[item] = submembers[item].copy()
-                    result[item]['offset'] = submembers[item]['offset'] + parent_item.get('offset', 0)
+    def _process_fields(self, fields: Dict[str, Dict[str, Any]]) -> Dict[Any, Tuple[int, interfaces.objects.Template]]:
+        """For each type field, it walks its tree of subtypes, reducing the hierarchy to just one level.
+        It creates a tuple of offset and object templates for each field.
+        """
+        members = {}
+        for new_offset, member_name, member_value in self._reduce_fields(fields):
+            member = (new_offset, self._interdict_to_template(member_value['type']))
+            members[member_name] = member
+        return members
+
+    def _reduce_fields(self,
+                       fields: Dict[str, Dict[str, Any]],
+                       parent_offset: int = 0) -> Generator[Tuple[int, str, Dict], None, None]:
+        """Reduce the fields bringing them one level up. It supports anonymous types such as structs or unions in any
+        level of depth."""
+        for member_name, member_value in fields.items():
+            new_offset = parent_offset + member_value.get('offset', 0)
+            if member_value.get('anonymous', False) and isinstance(member_value, dict):
+                # Gets the subtype from the json ISF and recursively reduce its fields
+                subtype = self._json_object['user_types'].get(member_value['type']['name'], {})
+                yield from self._reduce_fields(subtype['fields'], new_offset)
             else:
-                result[member] = members[member]
-        return result
+                yield new_offset, member_name, member_value
 
     def get_type(self, type_name: str) -> interfaces.objects.Template:
         """Resolves an individual symbol."""
-        if constants.BANG in type_name:
-            index = type_name.find(constants.BANG)
+        index = type_name.find(constants.BANG)
+        if index != -1:
             table_name, type_name = type_name[:index], type_name[index + 1:]
             raise exceptions.SymbolError(
                 type_name, table_name,
                 "Symbol for a different table requested: {}".format(table_name + constants.BANG + type_name))
-        if type_name not in self._json_object['user_types']:
+
+        type_definition = self._json_object['user_types'].get(type_name)
+        if type_definition is None:
             # Fall back to the natives table
             return self.natives.get_type(self.name + constants.BANG + type_name)
-        curdict = self._json_object['user_types'][type_name]
-        members = {}
-        for member_name in curdict['fields']:
-            interdict = self._reduce_indirect_members(curdict['fields'][member_name])
-            member = (interdict['offset'], self._interdict_to_template(interdict['type']))
-            members[member_name] = member
+
+        members = self._process_fields(type_definition['fields'])
+
         object_class = self.get_type_class(type_name)
         if object_class == objects.AggregateType:
             for clazz in objects.AggregateTypes:
-                if objects.AggregateTypes[clazz] == curdict['kind']:
+                if objects.AggregateTypes[clazz] == type_definition['kind']:
                     object_class = clazz
         return objects.templates.ObjectTemplate(type_name = self.name + constants.BANG + type_name,
                                                 object_class = object_class,
-                                                size = curdict['size'],
+                                                size = type_definition['size'],
                                                 members = members)
