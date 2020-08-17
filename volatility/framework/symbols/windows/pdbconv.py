@@ -366,8 +366,6 @@ class PdbReader:
             offset += length_len
             output, consumed = self.consume_type(module, offset, length)
             leaf_type, name, value = output
-            if name is None:
-                name = 'NO_NAME_RETURNED'
             for tag_type in ['unnamed', 'anonymous']:
                 if name == '<{}-tag>'.format(tag_type) or name == '__{}'.format(tag_type):
                     name = '__{}_'.format(tag_type) + hex(len(self.types) + 0x1000)[2:]
