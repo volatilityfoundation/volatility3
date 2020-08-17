@@ -265,8 +265,7 @@ class PdbReader:
         if not progress_callback:
             progress_callback = lambda x, y: None
         self._progress_callback = progress_callback
-        self.types = [
-        ]  # type: List[Tuple[interfaces.objects.ObjectInterface, str, interfaces.objects.ObjectInterface]]
+        self.types = []  # type: List[Tuple[interfaces.objects.ObjectInterface, Optional[str], interfaces.objects.ObjectInterface]]
         self.bases = {}  # type: Dict[str, Any]
         self.user_types = {}  # type: Dict[str, Any]
         self.enumerations = {}  # type: Dict[str, Any]
@@ -369,7 +368,8 @@ class PdbReader:
             for tag_type in ['unnamed', 'anonymous']:
                 if name == '<{}-tag>'.format(tag_type) or name == '__{}'.format(tag_type):
                     name = '__{}_'.format(tag_type) + hex(len(self.types) + 0x1000)[2:]
-            type_references[name] = len(self.types)
+            if name:
+                type_references[name] = len(self.types)
             self.types.append((leaf_type, name, value))
             offset += length
             type_index += 1
@@ -609,7 +609,7 @@ class PdbReader:
         """Returns the size of the structure based on the type index
         provided."""
         result = -1
-        name = ''
+        name = ''  # type: Optional[str]
         if index < 0x1000:
             if (index & 0xf00):
                 _, base = indirections[index & 0xf00]
@@ -667,14 +667,14 @@ class PdbReader:
                 leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
                 leaf_type.LF_INTERFACE
             ]:
-                if not value.properties.forward_reference:
+                if not value.properties.forward_reference and name:
                     self.user_types[name] = {
                         "kind": "struct",
                         "size": value.size,
                         "fields": self.convert_fields(value.fields - 0x1000)
                     }
             elif leaf_type in [leaf_type.LF_UNION]:
-                if not value.properties.forward_reference:
+                if not value.properties.forward_reference and name:
                     # Deal with UNION types
                     self.user_types[name] = {
                         "kind": "union",
@@ -682,7 +682,7 @@ class PdbReader:
                         "fields": self.convert_fields(value.fields - 0x1000)
                     }
             elif leaf_type in [leaf_type.LF_ENUM]:
-                if not value.properties.forward_reference:
+                if not value.properties.forward_reference and name:
                     base = self.get_type_from_index(value.subtype_index)
                     if not isinstance(base, Dict):
                         raise ValueError("Invalid base type returned for Enumeration")
