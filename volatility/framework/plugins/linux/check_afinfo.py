@@ -8,7 +8,6 @@ from typing import List
 
 from volatility.framework import exceptions, interfaces, contexts
 from volatility.framework import renderers
-from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import format_hints
