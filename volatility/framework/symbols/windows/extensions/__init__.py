@@ -122,14 +122,15 @@ class MMVAD_SHORT(objects.StructType):
         elif self.has_member("Right"):
             return self.Right
 
+        # this is for windows 8 and 10
         elif self.has_member("VadNode"):
             if self.VadNode.has_member("RightChild"):
                 return self.VadNode.RightChild
             if self.VadNode.has_member("Right"):
                 return self.VadNode.Right
 
-        # if to avoid MMVAD that has both
-        if self.has_member("Core"):
+        # also for windows 8 and 10
+        elif self.has_member("Core"):
             if self.Core.has_member("VadNode"):
                 if self.Core.VadNode.has_member("RightChild"):
                     return self.Core.VadNode.RightChild
@@ -147,14 +148,15 @@ class MMVAD_SHORT(objects.StructType):
         elif self.has_member("Left"):
             return self.Left
 
+        # this is for windows 8 and 10
         elif self.has_member("VadNode"):
             if self.VadNode.has_member("LeftChild"):
                 return self.VadNode.LeftChild
             if self.VadNode.has_member("Left"):
                 return self.VadNode.Left
 
-        # if to avoid MMVAD that has both
-        if self.has_member("Core"):
+        # also for windows 8 and 10
+        elif self.has_member("Core"):
             if self.Core.has_member("VadNode"):
                 if self.Core.VadNode.has_member("LeftChild"):
                     return self.Core.VadNode.LeftChild
