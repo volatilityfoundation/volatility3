@@ -120,6 +120,20 @@ class MMVAD_SHORT(objects.StructType):
         elif self.has_member("Right"):
             return self.Right
 
+        elif self.has_member("VadNode"):
+            if self.VadNode.has_member("RightChild"):
+                return self.VadNode.RightChild
+            if self.VadNode.has_member("Right"):
+                return self.VadNode.Right
+
+        # if to avoid MMVAD that has both
+        if self.has_member("Core"):
+            if self.Core.has_member("VadNode"):
+                if self.Core.VadNode.has_member("RightChild"):
+                    return self.Core.VadNode.RightChild
+                if self.Core.VadNode.has_member("Right"):
+                    return self.Core.VadNode.Right
+
         raise AttributeError("Unable to find the right child member")
 
     def get_left_child(self):
@@ -130,6 +144,20 @@ class MMVAD_SHORT(objects.StructType):
 
         elif self.has_member("Left"):
             return self.Left
+
+        elif self.has_member("VadNode"):
+            if self.VadNode.has_member("LeftChild"):
+                return self.VadNode.LeftChild
+            if self.VadNode.has_member("Left"):
+                return self.VadNode.Left
+
+        # if to avoid MMVAD that has both
+        if self.has_member("Core"):
+            if self.Core.has_member("VadNode"):
+                if self.Core.VadNode.has_member("LeftChild"):
+                    return self.Core.VadNode.LeftChild
+                if self.Core.VadNode.has_member("Left"):
+                    return self.Core.VadNode.Left
 
         raise AttributeError("Unable to find the left child member")
 
