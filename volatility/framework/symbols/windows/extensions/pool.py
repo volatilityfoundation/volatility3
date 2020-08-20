@@ -165,6 +165,29 @@ class POOL_HEADER(objects.StructType):
                 pass
         return headers, sizes
 
+    def is_free_pool(self):
+        return self.PoolType == 0
+
+    def is_paged_pool(self):
+        return self.PoolType % 2 == 0 and self.PoolType > 0
+
+    def is_nonpaged_pool(self):
+        return self.PoolType % 2 == 1
+
+
+class POOL_HEADER_VISTA(POOL_HEADER):
+    """A kernel pool allocation header, updated for Vista and later.
+
+    Exists at the base of the allocation and provides a tag that we can
+    scan for.
+    """
+
+    def is_paged_pool(self):
+        return self.PoolType % 2 == 1
+
+    def is_nonpaged_pool(self):
+        return self.PoolType % 2 == 0 and self.PoolType > 0
+
 
 class POOL_TRACKER_BIG_PAGES(objects.StructType):
     """A kernel big page pool tracker."""

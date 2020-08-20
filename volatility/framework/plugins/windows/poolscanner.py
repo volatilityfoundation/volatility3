@@ -85,11 +85,11 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
                 if constraint.page_type is not None:
                     checks_pass = False
 
-                    if (constraint.page_type & PoolType.FREE) and header.PoolType == 0:
+                    if (constraint.page_type & PoolType.FREE) and header.is_free_pool():
                         checks_pass = True
-                    elif (constraint.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
+                    elif (constraint.page_type & PoolType.NONPAGED) and header.is_nonpaged_pool():
                         checks_pass = True
-                    elif (constraint.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
+                    elif (constraint.page_type & PoolType.PAGED) and header.is_paged_pool:
                         checks_pass = True
 
                     if not checks_pass:
@@ -201,6 +201,9 @@ class PoolScanner(plugins.PluginInterface):
     is_windows_7 = os_distinguisher(version_check = lambda x: x == (6, 1),
                                     fallback_checks = [("_OBJECT_HEADER", "TypeIndex", True),
                                                        ("_HANDLE_TABLE", "HandleCount", True)])
+
+    is_vista_or_later = os_distinguisher(version_check = lambda x: x >= (6, 0),
+                                         fallback_checks = [("KdCopyDataBlock", None, True)])
 
     def _generator(self):
 
@@ -445,13 +448,19 @@ class PoolScanner(plugins.PluginInterface):
             else:
                 pool_header_json_filename = "poolheader-x86"
 
+            is_vista_or_later = cls.is_vista_or_later(context, symbol_table)
+            if is_vista_or_later:
+                class_type = extensions.pool.POOL_HEADER_VISTA
+            else:
+                class_type = extensions.pool.POOL_HEADER
+
             new_table_name = intermed.IntermediateSymbolTable.create(
                 context = context,
                 config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "poolheader"),
                 sub_path = "windows",
                 filename = pool_header_json_filename,
                 table_mapping = {'nt_symbols': symbol_table},
-                class_types = {'_POOL_HEADER': extensions.pool.POOL_HEADER})
+                class_types = {'_POOL_HEADER': class_type})
             module = context.module(new_table_name, layer_name, offset = 0)
         return module
 
