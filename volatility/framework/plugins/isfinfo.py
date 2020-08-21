@@ -31,7 +31,7 @@ class IsfInfo(plugins.PluginInterface):
                                          description = 'String that must be present to display the ISF',
                                          optional = True,
                                          default = []),
-            requirements.URIRequirement(name = 'file',
+            requirements.URIRequirement(name = 'isf',
                                         description = "Specific ISF file to process",
                                         default = None,
                                         optional = True),
@@ -70,8 +70,8 @@ class IsfInfo(plugins.PluginInterface):
         return banner_symbol
 
     def _generator(self):
-        if self.config.get('file', None) is not None:
-            file_list = [self.config['file']]
+        if self.config.get('isf', None) is not None:
+            file_list = [self.config['isf']]
         else:
             file_list = list(self.list_all_isf_files())
 
