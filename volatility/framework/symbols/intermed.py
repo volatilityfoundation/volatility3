@@ -180,7 +180,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         """
 
         # Check user-modifiable files first, then compressed ones
-        extensions = ['.json', '.json.xz', '.json.gz', '.json.bz2']
+        extensions = constants.ISF_EXTENSIONS
         if filename is None:
             filename = "*"
             zip_match = filename
