@@ -448,6 +448,7 @@ class PoolScanner(plugins.PluginInterface):
             else:
                 pool_header_json_filename = "poolheader-x86"
 
+            # set the class_type to match the normal WindowsKernelIntermedSymbols
             is_vista_or_later = cls.is_vista_or_later(context, symbol_table)
             if is_vista_or_later:
                 class_type = extensions.pool.POOL_HEADER_VISTA
