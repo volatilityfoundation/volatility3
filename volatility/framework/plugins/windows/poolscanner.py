@@ -437,7 +437,7 @@ class PoolScanner(plugins.PluginInterface):
         doesn't contain one.
 
         Args:
-            content: The context that the symbol tables does (or will) reside in
+            context: The context that the symbol tables does (or will) reside in
             symbol_table: The expected symbol_table to contain the _POOL_HEADER type
         """
         # Setup the pool header and offset differential
