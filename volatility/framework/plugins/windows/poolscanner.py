@@ -112,9 +112,9 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
 
 
 def os_distinguisher(
-    version_check: Callable[[Tuple[int, ...]], bool],
-    fallback_checks: List[Tuple[str, Optional[str],
-                                bool]]) -> Callable[[interfaces.context.ContextInterface, str], bool]:
+        version_check: Callable[[Tuple[int, ...]], bool],
+        fallback_checks: List[Tuple[str, Optional[str],
+                                    bool]]) -> Callable[[interfaces.context.ContextInterface, str], bool]:
     """Distinguishes a symbol table as being above a particular version or
     point.
 
@@ -162,7 +162,7 @@ def os_distinguisher(
         for name, member, response in fallback_checks:
             if member is None:
                 if (context.symbol_space.has_symbol(symbol_table + constants.BANG + name)
-                        or context.symbol_space.has_type(symbol_table + constants.BANG + name)) != response:
+                    or context.symbol_space.has_type(symbol_table + constants.BANG + name)) != response:
                     return False
             else:
                 try:
@@ -423,7 +423,7 @@ class PoolScanner(plugins.PluginInterface):
                 raise ValueError("Constraint tag is used for more than one constraint: {}".format(repr(constraint.tag)))
             constraint_lookup[constraint.tag] = constraint
 
-        module = cls._get_pool_header_module(context, layer_name, symbol_table)
+        module = cls.get_pool_header_module(context, layer_name, symbol_table)
 
         # Run the scan locating the offsets of a particular tag
         layer = context.layers[layer_name]
@@ -431,7 +431,7 @@ class PoolScanner(plugins.PluginInterface):
         yield from layer.scan(context, scanner, progress_callback)
 
     @classmethod
-    def _get_pool_header_module(cls, context, layer_name, symbol_table):
+    def get_pool_header_module(cls, context, layer_name, symbol_table):
         # Setup the pool header and offset differential
         try:
             module = context.module(symbol_table, layer_name, offset = 0)
