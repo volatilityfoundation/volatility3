@@ -6,8 +6,7 @@ import collections.abc
 import datetime
 import functools
 import logging
-import struct
-from typing import Iterable, Iterator, Optional, Union, Dict, Tuple, List
+from typing import Iterable, Iterator, Optional, Union
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
@@ -16,6 +15,7 @@ from volatility.framework.symbols import generic
 from volatility.framework.symbols.windows.extensions import pool
 
 vollog = logging.getLogger(__name__)
+
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 

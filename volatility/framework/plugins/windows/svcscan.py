@@ -10,6 +10,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import winver
 from volatility.framework.symbols.windows.extensions import services
 from volatility.plugins.windows import poolscanner, vadyarascan, pslist
 
@@ -21,34 +22,34 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
     _version = (1, 0, 0)
 
-    is_vista_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (6, 0),
-                                                     fallback_checks = [("KdCopyDataBlock", None, True)])
+    is_vista_or_later = winver.os_distinguisher(version_check = lambda x: x >= (6, 0),
+                                                fallback_checks = [("KdCopyDataBlock", None, True)])
 
-    is_windows_xp = poolscanner.os_distinguisher(version_check = lambda x: (5, 1) <= x < (5, 2),
-                                                 fallback_checks = [("KdCopyDataBlock", None, False),
-                                                                    ("_HANDLE_TABLE", "HandleCount", True)])
+    is_windows_xp = winver.os_distinguisher(version_check = lambda x: (5, 1) <= x < (5, 2),
+                                            fallback_checks = [("KdCopyDataBlock", None, False),
+                                                               ("_HANDLE_TABLE", "HandleCount", True)])
 
-    is_xp_or_2003 = poolscanner.os_distinguisher(version_check = lambda x: (5, 1) <= x < (6, 0),
-                                                 fallback_checks = [("KdCopyDataBlock", None, False),
-                                                                    ("_HANDLE_TABLE", "HandleCount", True)])
+    is_xp_or_2003 = winver.os_distinguisher(version_check = lambda x: (5, 1) <= x < (6, 0),
+                                            fallback_checks = [("KdCopyDataBlock", None, False),
+                                                               ("_HANDLE_TABLE", "HandleCount", True)])
 
-    is_win10_up_to_15063 = poolscanner.os_distinguisher(version_check = lambda x: (10, 0) <= x < (10, 0, 15063),
-                                                        fallback_checks = [("ObHeaderCookie", None, True),
-                                                                           ("_HANDLE_TABLE", "HandleCount", False),
-                                                                           ("_EPROCESS", "KeepAliveCounter", True)])
+    is_win10_up_to_15063 = winver.os_distinguisher(version_check = lambda x: (10, 0) <= x < (10, 0, 15063),
+                                                   fallback_checks = [("ObHeaderCookie", None, True),
+                                                                      ("_HANDLE_TABLE", "HandleCount", False),
+                                                                      ("_EPROCESS", "KeepAliveCounter", True)])
 
-    is_win10_15063 = poolscanner.os_distinguisher(version_check = lambda x: x == (10, 0, 15063),
-                                                  fallback_checks = [("ObHeaderCookie", None, True),
-                                                                     ("_HANDLE_TABLE", "HandleCount", False),
-                                                                     ("_EPROCESS", "KeepAliveCounter", False),
-                                                                     ("_EPROCESS", "ControlFlowGuardEnabled", True)])
+    is_win10_15063 = winver.os_distinguisher(version_check = lambda x: x == (10, 0, 15063),
+                                             fallback_checks = [("ObHeaderCookie", None, True),
+                                                                ("_HANDLE_TABLE", "HandleCount", False),
+                                                                ("_EPROCESS", "KeepAliveCounter", False),
+                                                                ("_EPROCESS", "ControlFlowGuardEnabled", True)])
 
-    is_win10_16299_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (10, 0, 16299),
-                                                           fallback_checks = [("ObHeaderCookie", None, True),
-                                                                              ("_HANDLE_TABLE", "HandleCount", False),
-                                                                              ("_EPROCESS", "KeepAliveCounter", False),
-                                                                              ("_EPROCESS", "ControlFlowGuardEnabled",
-                                                                               False)])
+    is_win10_16299_or_later = winver.os_distinguisher(version_check = lambda x: x >= (10, 0, 16299),
+                                                      fallback_checks = [("ObHeaderCookie", None, True),
+                                                                         ("_HANDLE_TABLE", "HandleCount", False),
+                                                                         ("_EPROCESS", "KeepAliveCounter", False),
+                                                                         ("_EPROCESS", "ControlFlowGuardEnabled",
+                                                                          False)])
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
