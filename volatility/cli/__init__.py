@@ -217,14 +217,13 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         plugin_list = framework.list_plugins()
 
         seen_automagics = set()
-        configurables_list = {}
+        chosen_configurables_list = {}
         for amagic in automagics:
             if amagic in seen_automagics:
                 continue
             seen_automagics.add(amagic)
             if isinstance(amagic, interfaces.configuration.ConfigurableInterface):
                 self.populate_requirements_argparse(parser, amagic.__class__)
-                configurables_list[amagic.__class__.__name__] = amagic
 
         subparser = parser.add_subparsers(title = "Plugins",
                                           dest = "plugin",
@@ -248,7 +247,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
 
         plugin = plugin_list[args.plugin]
-        configurables_list[plugin] = plugin
+        chosen_configurables_list[args.plugin] = plugin
         base_config_path = "plugins"
         plugin_config_path = interfaces.configuration.path_join(base_config_path, plugin.__name__)
 
@@ -270,7 +269,16 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                 json_val = json.load(f)
                 ctx.config.splice(plugin_config_path, interfaces.configuration.HierarchicalDict(json_val))
 
-        self.populate_config(ctx, configurables_list, args, plugin_config_path)
+        # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
+        automagics = automagic.choose_automagic(automagics, plugin)
+        for amagic in automagics:
+            chosen_configurables_list[plugin] = plugin
+
+        if ctx.config.get('automagic.LayerStacker.stackers', None) is None:
+            ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
+        self.output_dir = args.output_dir
+
+        self.populate_config(ctx, chosen_configurables_list, args, plugin_config_path)
 
         if args.extend:
             for extension in args.extend:
@@ -278,12 +286,6 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                     raise ValueError("Invalid extension (extensions must be of the format \"conf.path.value='value'\")")
                 address, value = extension[:extension.find('=')], json.loads(extension[extension.find('=') + 1:])
                 ctx.config[address] = value
-
-        # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
-        automagics = automagic.choose_automagic(automagics, plugin)
-        if ctx.config.get('automagic.LayerStacker.stackers', None) is None:
-            ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
-        self.output_dir = args.output_dir
 
         ###
         # BACK TO THE FRAMEWORK
@@ -410,7 +412,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                   "\tThe necessary symbols are present and identified by volatility")
 
     def populate_config(self, context: interfaces.context.ContextInterface,
-                        configurables_list: Dict[str, interfaces.configuration.ConfigurableInterface],
+                        configurables_list: Dict[str, Type[interfaces.configuration.ConfigurableInterface]],
                         args: argparse.Namespace, plugin_config_path: str) -> None:
         """Populate the context config based on the returned args.
 
