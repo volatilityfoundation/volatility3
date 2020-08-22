@@ -272,7 +272,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         # It should be up to the UI to determine which automagics to run, so this is before BACK TO THE FRAMEWORK
         automagics = automagic.choose_automagic(automagics, plugin)
         for amagic in automagics:
-            chosen_configurables_list[plugin] = plugin
+            chosen_configurables_list[amagic.__class__.__name__] = amagic
 
         if ctx.config.get('automagic.LayerStacker.stackers', None) is None:
             ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
