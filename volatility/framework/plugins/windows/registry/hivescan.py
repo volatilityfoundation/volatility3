@@ -7,6 +7,7 @@ from typing import Iterable
 from volatility.framework import renderers, interfaces, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
+from volatility.framework.symbols.windows import winver
 from volatility.plugins.windows import poolscanner, bigpools
 
 
@@ -16,8 +17,8 @@ class HiveScan(interfaces.plugins.PluginInterface):
 
     _version = (1, 0, 0)
 
-    is_windows_8_1_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (6, 3),
-                                                           fallback_checks = [("_KPRCB", "PendingTickFlags", True)])
+    is_windows_8_1_or_later = winver.os_distinguisher(version_check = lambda x: x >= (6, 3),
+                                                      fallback_checks = [("_KPRCB", "PendingTickFlags", True)])
 
     @classmethod
     def get_requirements(cls):
@@ -71,7 +72,7 @@ class HiveScan(interfaces.plugins.PluginInterface):
     def _generator(self):
         for hive in self.scan_hives(self.context, self.config['primary'], self.config['nt_symbols']):
 
-            yield (0, (format_hints.Hex(hive.vol.offset), ))
+            yield (0, (format_hints.Hex(hive.vol.offset),))
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex)], self._generator())

@@ -7,11 +7,11 @@ from typing import List, Optional, Tuple, Iterator
 
 from volatility.framework import interfaces, renderers, exceptions, symbols
 from volatility.framework.configuration import requirements
-from volatility.framework.renderers import format_hints
 from volatility.framework.interfaces import configuration
+from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
-from volatility.plugins.windows import poolscanner
+from volatility.framework.symbols.windows import winver
 
 vollog = logging.getLogger(__name__)
 
@@ -21,12 +21,12 @@ class BigPools(interfaces.plugins.PluginInterface):
 
     _version = (1, 0, 0)
 
-    is_vista_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (6, 0),
-                                                     fallback_checks = [("KdCopyDataBlock", None, True)])
+    is_vista_or_later = winver.os_distinguisher(version_check = lambda x: x >= (6, 0),
+                                                fallback_checks = [("KdCopyDataBlock", None, True)])
 
-    is_win10 = poolscanner.os_distinguisher(version_check = lambda x: (10, 0) <= x,
-                                            fallback_checks = [("ObHeaderCookie", None, True),
-                                                               ("_HANDLE_TABLE", "HandleCount", False)])
+    is_win10 = winver.os_distinguisher(version_check = lambda x: (10, 0) <= x,
+                                       fallback_checks = [("ObHeaderCookie", None, True),
+                                                          ("_HANDLE_TABLE", "HandleCount", False)])
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
