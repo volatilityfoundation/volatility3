@@ -33,7 +33,7 @@ class OsDistinguisher:
 
     def __init__(self, version_check: Callable[[Tuple[int, ...]], bool],
                  fallback_checks: List[Tuple[str, Optional[str], bool]]):
-        self._verison_check = version_check
+        self._version_check = version_check
         self._fallback_checks = fallback_checks
 
     # try the primary method based on the pe version in the ISF
