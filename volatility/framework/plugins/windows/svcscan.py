@@ -22,35 +22,6 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
     _version = (1, 0, 0)
 
-    is_vista_or_later = winver.os_distinguisher(version_check = lambda x: x >= (6, 0),
-                                                fallback_checks = [("KdCopyDataBlock", None, True)])
-
-    is_windows_xp = winver.os_distinguisher(version_check = lambda x: (5, 1) <= x < (5, 2),
-                                            fallback_checks = [("KdCopyDataBlock", None, False),
-                                                               ("_HANDLE_TABLE", "HandleCount", True)])
-
-    is_xp_or_2003 = winver.os_distinguisher(version_check = lambda x: (5, 1) <= x < (6, 0),
-                                            fallback_checks = [("KdCopyDataBlock", None, False),
-                                                               ("_HANDLE_TABLE", "HandleCount", True)])
-
-    is_win10_up_to_15063 = winver.os_distinguisher(version_check = lambda x: (10, 0) <= x < (10, 0, 15063),
-                                                   fallback_checks = [("ObHeaderCookie", None, True),
-                                                                      ("_HANDLE_TABLE", "HandleCount", False),
-                                                                      ("_EPROCESS", "KeepAliveCounter", True)])
-
-    is_win10_15063 = winver.os_distinguisher(version_check = lambda x: x == (10, 0, 15063),
-                                             fallback_checks = [("ObHeaderCookie", None, True),
-                                                                ("_HANDLE_TABLE", "HandleCount", False),
-                                                                ("_EPROCESS", "KeepAliveCounter", False),
-                                                                ("_EPROCESS", "ControlFlowGuardEnabled", True)])
-
-    is_win10_16299_or_later = winver.os_distinguisher(version_check = lambda x: x >= (10, 0, 16299),
-                                                      fallback_checks = [("ObHeaderCookie", None, True),
-                                                                         ("_HANDLE_TABLE", "HandleCount", False),
-                                                                         ("_EPROCESS", "KeepAliveCounter", False),
-                                                                         ("_EPROCESS", "ControlFlowGuardEnabled",
-                                                                          False)])
-
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
@@ -86,30 +57,30 @@ class SvcScan(interfaces.plugins.PluginInterface):
         native_types = context.symbol_space[symbol_table].natives
         is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
 
-        if SvcScan.is_windows_xp(context = context, symbol_table = symbol_table) and not is_64bit:
+        if winver.is_windows_xp(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-xp-x86"
-        elif SvcScan.is_xp_or_2003(context = context, symbol_table = symbol_table) and is_64bit:
+        elif winver.is_xp_or_2003(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-xp-2003-x64"
-        elif SvcScan.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and is_64bit:
+        elif winver.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win10-16299-x64"
-        elif SvcScan.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
+        elif winver.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win10-16299-x86"
-        elif SvcScan.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and is_64bit:
+        elif winver.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win8-x64"
-        elif SvcScan.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and not is_64bit:
+        elif winver.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win8-x86"
-        elif SvcScan.is_win10_15063(context = context, symbol_table = symbol_table) and is_64bit:
+        elif winver.is_win10_15063(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win10-15063-x64"
-        elif SvcScan.is_win10_15063(context = context, symbol_table = symbol_table) and not is_64bit:
+        elif winver.is_win10_15063(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win10-15063-x86"
-        elif poolscanner.PoolScanner.is_windows_8_or_later(context = context, symbol_table = symbol_table) and is_64bit:
+        elif winver.is_windows_8_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win8-x64"
-        elif poolscanner.PoolScanner.is_windows_8_or_later(context = context,
-                                                           symbol_table = symbol_table) and not is_64bit:
+        elif winver.is_windows_8_or_later(context = context,
+                                          symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win8-x86"
-        elif SvcScan.is_vista_or_later(context = context, symbol_table = symbol_table) and is_64bit:
+        elif winver.is_vista_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-vista-x64"
-        elif SvcScan.is_vista_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
+        elif winver.is_vista_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-vista-x86"
         else:
             raise NotImplementedError("This version of Windows is not supported!")
@@ -130,7 +101,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_name_filter(["services.exe"])
 
-        is_vista_or_later = SvcScan.is_vista_or_later(context = self.context, symbol_table = self.config["nt_symbols"])
+        is_vista_or_later = winver.is_vista_or_later(context = self.context, symbol_table = self.config["nt_symbols"])
 
         if is_vista_or_later:
             service_tag = b"serH"

@@ -127,18 +127,6 @@ class PoolScanner(plugins.PluginInterface):
             requirements.PluginRequirement(name = 'handles', plugin = handles.Handles, version = (1, 0, 0)),
         ]
 
-    is_windows_10 = winver.os_distinguisher(version_check = lambda x: x >= (10, 0),
-                                            fallback_checks = [("ObHeaderCookie", None, True)])
-    is_windows_8_or_later = winver.os_distinguisher(version_check = lambda x: x >= (6, 2),
-                                                    fallback_checks = [("_HANDLE_TABLE", "HandleCount", False)])
-    # Technically, this is win7 or less
-    is_windows_7 = winver.os_distinguisher(version_check = lambda x: x == (6, 1),
-                                           fallback_checks = [("_OBJECT_HEADER", "TypeIndex", True),
-                                                              ("_HANDLE_TABLE", "HandleCount", True)])
-
-    is_vista_or_later = winver.os_distinguisher(version_check = lambda x: x >= (6, 0),
-                                         fallback_checks = [("KdCopyDataBlock", None, True)])
-
     def _generator(self):
 
         symbol_table = self.config["nt_symbols"]
@@ -288,8 +276,8 @@ class PoolScanner(plugins.PluginInterface):
 
         cookie = handles.Handles.find_cookie(context = context, layer_name = layer_name, symbol_table = symbol_table)
 
-        is_windows_10 = cls.is_windows_10(context, symbol_table)
-        is_windows_8_or_later = cls.is_windows_8_or_later(context, symbol_table)
+        is_windows_10 = winver.is_windows_10(context, symbol_table)
+        is_windows_8_or_later = winver.is_windows_8_or_later(context, symbol_table)
 
         # start off with the primary virtual layer
         scan_layer = layer_name
@@ -383,7 +371,7 @@ class PoolScanner(plugins.PluginInterface):
             # We have to manually load a symbol table
 
             if symbols.symbol_table_is_64bit(context, symbol_table):
-                is_win_7 = cls.is_windows_7(context, symbol_table)
+                is_win_7 = winver.is_windows_7(context, symbol_table)
                 if is_win_7:
                     pool_header_json_filename = "poolheader-x64-win7"
                 else:
@@ -392,7 +380,7 @@ class PoolScanner(plugins.PluginInterface):
                 pool_header_json_filename = "poolheader-x86"
 
             # set the class_type to match the normal WindowsKernelIntermedSymbols
-            is_vista_or_later = cls.is_vista_or_later(context, symbol_table)
+            is_vista_or_later = winver.is_vista_or_later(context, symbol_table)
             if is_vista_or_later:
                 class_type = extensions.pool.POOL_HEADER_VISTA
             else:

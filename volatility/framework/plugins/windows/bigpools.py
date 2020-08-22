@@ -21,13 +21,6 @@ class BigPools(interfaces.plugins.PluginInterface):
 
     _version = (1, 0, 0)
 
-    is_vista_or_later = winver.os_distinguisher(version_check = lambda x: x >= (6, 0),
-                                                fallback_checks = [("KdCopyDataBlock", None, True)])
-
-    is_win10 = winver.os_distinguisher(version_check = lambda x: (10, 0) <= x,
-                                       fallback_checks = [("ObHeaderCookie", None, True),
-                                                          ("_HANDLE_TABLE", "HandleCount", False)])
-
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
@@ -72,8 +65,8 @@ class BigPools(interfaces.plugins.PluginInterface):
             big_page_table_type = ntkrnlmp.get_type("_POOL_TRACKER_BIG_PAGES")
         except exceptions.SymbolError:
             # We have to manually load a symbol table
-            is_vista_or_later = cls.is_vista_or_later(context, symbol_table)
-            is_win10 = cls.is_win10(context, symbol_table)
+            is_vista_or_later = winver.is_vista_or_later(context, symbol_table)
+            is_win10 = winver.is_win10(context, symbol_table)
             if is_win10:
                 big_pools_json_filename = "bigpools-win10"
             elif is_vista_or_later:
