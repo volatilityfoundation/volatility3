@@ -89,7 +89,7 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
                         checks_pass = True
                     elif (constraint.page_type & PoolType.NONPAGED) and header.is_nonpaged_pool():
                         checks_pass = True
-                    elif (constraint.page_type & PoolType.PAGED) and header.is_paged_pool:
+                    elif (constraint.page_type & PoolType.PAGED) and header.is_paged_pool():
                         checks_pass = True
 
                     if not checks_pass:
