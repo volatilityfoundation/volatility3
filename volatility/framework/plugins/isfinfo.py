@@ -28,7 +28,7 @@ class IsfInfo(plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ListRequirement(name = 'filter',
-                                         description = 'String that must be present to display the ISF',
+                                         description = 'String that must be present in the file URI to display the ISF',
                                          optional = True,
                                          default = []),
             requirements.URIRequirement(name = 'isf',
