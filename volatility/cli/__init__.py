@@ -234,7 +234,6 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         for plugin in sorted(plugin_list):
             plugin_parser = subparser.add_parser(plugin, help = plugin_list[plugin].__doc__)
             self.populate_requirements_argparse(plugin_parser, plugin_list[plugin])
-            configurables_list[plugin] = plugin_list[plugin]
 
         ###
         # PASS TO UI
@@ -249,6 +248,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
         vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
 
         plugin = plugin_list[args.plugin]
+        configurables_list[plugin] = plugin
         base_config_path = "plugins"
         plugin_config_path = interfaces.configuration.path_join(base_config_path, plugin.__name__)
 
@@ -358,7 +358,7 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             detail = "{}".format(excp)
             caused_by = [
                 "An invalid symbol table", "A plugin requesting a bad symbol"
-                                           "A plugin requesting a symbol from the wrong table"
+                "A plugin requesting a symbol from the wrong table"
             ]
         elif isinstance(excp, exceptions.LayerException):
             general = "Volatility experienced a layer-related issue: {}".format(excp.layer_name)
@@ -436,7 +436,8 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
                                 value = "file://" + request.pathname2url(os.path.abspath(value))
                     if isinstance(requirement, requirements.ListRequirement):
                         if not isinstance(value, list):
-                            raise TypeError("Configuration for ListRequirement was not a list")
+                            raise TypeError("Configuration for ListRequirement was not a list: {}".format(
+                                requirement.name))
                         value = [requirement.element_type(x) for x in value]
                     if not inspect.isclass(configurables_list[configurable]):
                         config_path = configurables_list[configurable].config_path
