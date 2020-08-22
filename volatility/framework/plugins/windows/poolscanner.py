@@ -423,7 +423,8 @@ class PoolScanner(plugins.PluginInterface):
                 raise ValueError("Constraint tag is used for more than one constraint: {}".format(repr(constraint.tag)))
             constraint_lookup[constraint.tag] = constraint
 
-        module = cls.get_pool_header_module(context, layer_name, symbol_table)
+        pool_header_table_name = cls.get_pool_header_table(context, symbol_table)
+        module = context.module(pool_header_table_name, layer_name, offset = 0)
 
         # Run the scan locating the offsets of a particular tag
         layer = context.layers[layer_name]
@@ -431,11 +432,18 @@ class PoolScanner(plugins.PluginInterface):
         yield from layer.scan(context, scanner, progress_callback)
 
     @classmethod
-    def get_pool_header_module(cls, context, layer_name, symbol_table):
+    def get_pool_header_table(cls, context: interfaces.context.ContextInterface, symbol_table: str) -> str:
+        """Returns the appropriate symbol_table containing a _POOL_HEADER type, even if the original symbol table
+        doesn't contain one.
+
+        Args:
+            content: The context that the symbol tables does (or will) reside in
+            symbol_table: The expected symbol_table to contain the _POOL_HEADER type
+        """
         # Setup the pool header and offset differential
         try:
-            module = context.module(symbol_table, layer_name, offset = 0)
-            module.get_type("_POOL_HEADER")
+            context.symbol_space.get_type(symbol_table + constants.BANG + "_POOL_HEADER")
+            table_name = symbol_table
         except exceptions.SymbolError:
             # We have to manually load a symbol table
 
@@ -455,15 +463,14 @@ class PoolScanner(plugins.PluginInterface):
             else:
                 class_type = extensions.pool.POOL_HEADER
 
-            new_table_name = intermed.IntermediateSymbolTable.create(
+            table_name = intermed.IntermediateSymbolTable.create(
                 context = context,
                 config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "poolheader"),
                 sub_path = "windows",
                 filename = pool_header_json_filename,
                 table_mapping = {'nt_symbols': symbol_table},
                 class_types = {'_POOL_HEADER': class_type})
-            module = context.module(new_table_name, layer_name, offset = 0)
-        return module
+        return table_name
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Tag", str), ("Offset", format_hints.Hex), ("Layer", str), ("Name", str)],
