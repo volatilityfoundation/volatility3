@@ -94,7 +94,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         try:
             enc_secret_key = sechive.get_key("Policy\\Secrets\\" + name + "\\CurrVal")
         except KeyError:
-            raise Exception("Unable to read cache from memory")
+            raise ValueError("Unable to read cache from memory")
             
 
         enc_secret_value = next(enc_secret_key.get_values())
@@ -118,7 +118,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
 
         Decrypts a block of data with DES using given key.
         Note that key can be longer than 7 bytes."""
-        decrypted_data = ''
+        decrypted_data = b''
         j = 0   # key index
 
         for i in range(0, len(secret), 8):
@@ -145,14 +145,14 @@ class Lsadump(interfaces.plugins.PluginInterface):
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         lsakey = self.get_lsa_key(sechive, bootkey, vista_or_later)
         if not bootkey:
-            raise Exception('Unable to find bootkey')
+            raise ValueError('Unable to find bootkey')
         
         if not lsakey:
-            raise Exception('Unable to find lsa key')
+            raise ValueError('Unable to find lsa key')
 
         secrets_key = sechive.get_key('Policy\\Secrets')
         if not secrets_key:
-            raise Exception('Unable to find secrets key')
+            raise ValueError('Unable to find secrets key')
 
         for key in secrets_key.get_subkeys():
 
@@ -171,10 +171,10 @@ class Lsadump(interfaces.plugins.PluginInterface):
             if not vista_or_later:
                 secret = self.decrypt_secret(enc_secret[0xC:], lsakey)
             else:
-                secret = self.decrypt_aes(enc_secret, lsakey).decode('latin1')
+                secret = self.decrypt_aes(enc_secret, lsakey)
 
 
-            yield (0,(key.get_name()+'\n', secret+'\n', secret.encode('latin1')))
+            yield (0,(key.get_name(), secret.decode('latin1'), secret))
 
 
 

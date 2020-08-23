@@ -277,7 +277,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
                     rid = int(str(user.get_name()), 16)
                     yield (0, (name, rid, lmout, ntout))
         else:
-            raise Exception("Hbootkey is not valid")
+            raise ValueError("Hbootkey is not valid")
 
     def run(self):
         offset = self.config.get('offset', None)
