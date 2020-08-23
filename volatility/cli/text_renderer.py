@@ -134,7 +134,7 @@ class QuickTextRenderer(CLIRenderer):
         format_hints.HexBytes: optional(hex_bytes_as_text),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         interfaces.renderers.Disassembly: optional(display_disassembly),
-        bytes: optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
+        bytes: optional(lambda x: " ".join(["{0:02x}".format(b) for b in x])),
         datetime.datetime: optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
         'default': optional(lambda x: "{}".format(x))
     }
@@ -190,7 +190,7 @@ class CSVRenderer(CLIRenderer):
         format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
         format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
-        bytes: quoted_optional(lambda x: " ".join(["{0:2x}".format(b) for b in x])),
+        bytes: quoted_optional(lambda x: " ".join(["{0:02x}".format(b) for b in x])),
         datetime.datetime: quoted_optional(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f %Z")),
         'default': quoted_optional(lambda x: "{}".format(x))
     }
