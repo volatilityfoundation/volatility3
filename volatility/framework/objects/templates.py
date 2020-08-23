@@ -23,8 +23,8 @@ class ObjectTemplate(interfaces.objects.Template):
     """
 
     def __init__(self, object_class: Type[interfaces.objects.ObjectInterface], type_name: str, **arguments) -> None:
+        arguments['object_class'] = object_class
         super().__init__(type_name = type_name, **arguments)
-        self._arguments['object_class'] = object_class
 
         proxy_cls = self.vol.object_class.VolTemplateProxy
         for method_name in proxy_cls._methods:
@@ -43,7 +43,7 @@ class ObjectTemplate(interfaces.objects.Template):
         return self.vol.object_class.VolTemplateProxy.children(self)
 
     def relative_child_offset(self, child: str) -> int:
-        """Returns the relative offset of a child of the templated object (see 
+        """Returns the relative offset of a child of the templated object (see
         :class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTem
         plateProxy`)"""
         return self.vol.object_class.VolTemplateProxy.relative_child_offset(self, child)
