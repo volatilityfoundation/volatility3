@@ -9,7 +9,8 @@ from Crypto.Hash import MD5, SHA256
 
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
-from volatility.plugins.windows import hashdump, poolscanner
+from volatility.framework.symbols.windows import winver
+from volatility.plugins.windows import hashdump
 from volatility.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
@@ -136,9 +137,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
 
     def _generator(self, syshive, sechive):
 
-        is_vista_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (6, 0),
-                                                         fallback_checks = [("KdCopyDataBlock", None, True)])
-        vista_or_later = is_vista_or_later(context = self.context, symbol_table = self.config['nt_symbols'])
+        vista_or_later = winver.is_vista_or_later(context = self.context, symbol_table = self.config['nt_symbols'])
 
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         lsakey = self.get_lsa_key(sechive, bootkey, vista_or_later)
