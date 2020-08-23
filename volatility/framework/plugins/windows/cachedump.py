@@ -81,7 +81,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
     def _generator(self, syshive, sechive):
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         if not bootkey:
-            raise Exception('Unable to find bootkey')
+            raise ValueError('Unable to find bootkey')
         
         is_vista_or_later = poolscanner.os_distinguisher(version_check = lambda x: x >= (6, 0),
                                                      fallback_checks = [("KdCopyDataBlock", None, True)])
@@ -89,15 +89,15 @@ class Cachedump(interfaces.plugins.PluginInterface):
 
         lsakey = lsadump.Lsadump.get_lsa_key(sechive, bootkey, vista_or_later)
         if not lsakey:
-            raise Exception('Unable to find lsa key') 
+            raise ValueError('Unable to find lsa key') 
 
         nlkm = self.get_nlkm(sechive, lsakey, vista_or_later)
         if not nlkm:
-            raise Exception('Unable to find nlkma key') 
+            raise ValueError('Unable to find nlkma key') 
 
         cache = sechive.get_key("Cache")
         if not cache:
-            raise Exception('Unable to find cache key') 
+            raise ValueError('Unable to find cache key') 
         
 
         for cache_item in cache.get_values():
