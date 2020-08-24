@@ -106,52 +106,96 @@ class NetScan(interfaces.plugins.PluginInterface):
 
         kuser = info.Info.get_kuser_structure(context, layer_name, nt_symbol_table)
 
-        vollog.debug("Determined OS Major/Minor Version: {}.{}".format(vers.MajorVersion, vers.MinorVersion))
+        try:
+            vers_minor_version = int(vers.MinorVersion)
+            nt_major_version = int(kuser.NtMajorVersion)
+            nt_minor_version = int(kuser.NtMinorVersion)
+        except ValueError:
+            # vers struct exists, but is not an int anymore?
+            raise NotImplementedError("Kernel Debug Structure version format not supported!")
+        except:
+            # unsure what to raise here. Also, it might be useful to add some kind of fallback,
+            # either to a user-provided version or to another method to determine tcpip.sys's version
+            raise exceptions.VolatilityException("Kernel Debug Structure missing VERSION/KUSER structure, unable to determine Windows version!")
 
-        vers_minor_version = int(vers.MinorVersion)
+        vollog.debug("Determined OS Version: {}.{} {}.{}".format(kuser.NtMajorVersion, kuser.NtMinorVersion, 
+            vers.MajorVersion, vers.MinorVersion))
 
-        nt_major_version = str(kuser.NtMajorVersion)
-        nt_minor_version = str(kuser.NtMinorVersion)
-
-        # default to general class types, may be overwritten later.
-        class_types = network.class_types
-        if nt_major_version == "10":
-            if arch == "x64":
-                # win10 x64 has an additional class type we have to include.
-                class_types = network.win10_x64_class_types
-
-            if vers_minor_version < 14393:
-                # all win10 below 14393 have the same structs for our needs.
-                filename = "netscan-win10-{arch}".format(arch=arch)
-            elif vers_minor_version < 15063:
-                if arch == "x64":
-                    filename = "netscan-win10-x64"
-                else:
-                    # 14393 x86 is special.
-                    filename = "netscan-win10-14393-x86"
-            else:
-                # for now all newer windows versions share the same structs.
-                filename = "netscan-win10-15063-{arch}".format(arch=arch)
-
-        elif nt_major_version == "6":
-            # win between vista and 8.1
-            if nt_minor_version == "0":
-                # vista
-                # if vista sp 12 x64 then:
-                # filename = "netscan-vista-sp12-x64"
-                filename = "netscan-vista-{arch}".format(arch=arch)
-            elif nt_minor_version == "1":
-                # 7
-                filename = "netscan-win7-{arch}".format(arch=arch)
-            elif nt_minor_version == "2":
-                # 8
-                filename = "netscan-win8-{arch}".format(arch=arch)
-            elif nt_minor_version == "3":
-                # 8.1
-                filename = "netscan-win81-{arch}".format(arch=arch)
+        if nt_major_version == 10 and arch == "x64":
+            # win10 x64 has an additional class type we have to include.
+            class_types = network.win10_x64_class_types
         else:
-            # default to a fallback, but this *should* not happen.
-            filename = "netscan-win{vers}-{arch}".format(vers=major_version, arch=arch)
+            # default to general class types
+            class_types = network.class_types
+        
+        # these versions are listed explicitly because symbol files differ based on 
+        # version *and* architecture. this is currently the clearest way to show 
+        # the differences, even if it introduces a fair bit of redundancy.
+        # furthermore, it is easy to append new versions.
+        if arch == "x86":
+            version_dict = {
+                (6, 0, 6000): "netscan-vista-x86",
+                (6, 0, 6001): "netscan-vista-x86",
+                (6, 0, 6002): "netscan-vista-x86",
+                (6, 0, 6003): "netscan-vista-x86",
+                (6, 1, 7600): "netscan-win7-x86",
+                (6, 1, 7601): "netscan-win7-x86",
+                (6, 1, 8400): "netscan-win7-x86",
+                (6, 2, 9200): "netscan-win8-x86",
+                (6, 3, 9600): "netscan-win81-x86",
+                (10, 0, 10240): "netscan-win10-x86",
+                (10, 0, 10586): "netscan-win10-x86",
+                (10, 0, 14393): "netscan-win10-14393-x86",
+                (10, 0, 15063): "netscan-win10-15063-x86",
+                (10, 0, 16299): "netscan-win10-15063-x86",
+                (10, 0, 17134): "netscan-win10-15063-x86",
+                (10, 0, 17763): "netscan-win10-15063-x86",
+                (10, 0, 18362): "netscan-win10-15063-x86",
+                (10, 0, 18363): "netscan-win10-15063-x86"
+            }
+        else:
+            version_dict = {
+                (6, 0, 6000): "netscan-vista-x64",
+                (6, 0, 6001): "netscan-vista-sp12-x64",
+                (6, 0, 6002): "netscan-vista-sp12-x64",
+                (6, 0, 6003): "netscan-vista-sp12-x64",
+                (6, 1, 7600): "netscan-win7-x64",
+                (6, 1, 7601): "netscan-win7-x64",
+                (6, 1, 8400): "netscan-win7-x64",
+                (6, 2, 9200): "netscan-win8-x64",
+                (6, 3, 9600): "netscan-win81-x64",
+                (10, 0, 10240): "netscan-win10-x64",
+                (10, 0, 10586): "netscan-win10-x64",
+                (10, 0, 14393): "netscan-win10-x64",
+                (10, 0, 15063): "netscan-win10-15063-x64",
+                (10, 0, 16299): "netscan-win10-15063-x64",
+                (10, 0, 17134): "netscan-win10-15063-x64",
+                (10, 0, 17763): "netscan-win10-15063-x64",
+                (10, 0, 18362): "netscan-win10-15063-x64",
+                (10, 0, 18363): "netscan-win10-15063-x64"
+            }
+
+        # when determining the symbol file we have to consider the following cases:
+        # the determined version's symbol file is found by intermed.create -> proceed
+        # the determined version's symbol file is not found by intermed -> intermed will throw an exc and abort
+        # the determined version has no mapped symbol file -> if win10 use latest, otherwise throw exc
+        # windows version cannot be determined -> throw exc
+        filename = version_dict.get((nt_major_version, nt_minor_version, vers_minor_version))
+        if not filename:
+            if nt_major_version == 10:
+                # NtMajorVersion of 10 without a match means a newer version than listed
+                # hence try the latest supported version. If this one throws an error,
+                # support has to be added manually.
+                win_10_versions = sorted([key for key in list(version_dict.keys()) if key[0] == 10])
+                # as win10 MinorVersion counts upwards we can take the last entry
+                latest_version = win_10_versions[-1]
+                filename = version_dict.get(latest_version)
+                vollog.debug("Unable to find exact matching symbol file, going with latest: {}".format(filename))
+            else:
+                raise NotImplementedError("This version of Windows is not supported: {}.{} {}.{}!".format(nt_major_version, 
+                    nt_minor_version, 
+                    vers.MajorVersion, 
+                    vers_minor_version))
 
         vollog.debug("Determined symbol filename: {}".format(filename))
 
