@@ -60,7 +60,7 @@ class CmdLine(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
-            proc_id = "Unknown"
+            proc_id = proc.UniqueProcessId
 
             try:
                 proc_id = proc.UniqueProcessId
@@ -77,7 +77,7 @@ class CmdLine(interfaces.plugins.PluginInterface):
                     proc_id, exp.invalid_address, exp.layer_name)
     
             yield (0, (proc.UniqueProcessId, process_name, result_text))
-
+    
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
