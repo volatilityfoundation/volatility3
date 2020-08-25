@@ -60,7 +60,7 @@ class CmdLine(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
-            proc_id = proc.UniqueProcessId
+            proc_id = "Unknown"
 
             try:
                 proc_id = proc.UniqueProcessId
