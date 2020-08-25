@@ -30,35 +30,54 @@ class CmdLine(interfaces.plugins.PluginInterface):
                                          optional = True)
         ]
 
+    @classmethod
+    def get_cmdline(self, context: interfaces.context.ContextInterface, 
+                    kernel_table_name: str, proc):
+        """Extracts the cmdline from PEB
+
+        Args:
+            context: the context to operate upon
+            kernel_table_name: the name for the symbol table containing the kernel's symbols
+            proc: the process object
+
+        Returns:
+            A string with the command line
+        """
+        try:
+            proc_id = proc.UniqueProcessId
+            proc_layer_name = proc.add_process_layer()
+
+        except exceptions.InvalidAddressException as excp:
+            vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
+                                                                             excp.layer_name))
+            return "Invalid address for PID"
+
+        try:
+            peb = context.object(kernel_table_name + constants.BANG + "_PEB",
+                                       layer_name = proc_layer_name,
+                                       offset = proc.Peb)
+            result_text = peb.ProcessParameters.CommandLine.get_string()
+
+        except exceptions.SwappedInvalidAddressException as exp:
+            result_text = "Required memory at {0:#x} is inaccessible (swapped)".format(exp.invalid_address)
+
+        except exceptions.PagedInvalidAddressException as exp:
+            result_text = "Required memory at {0:#x} is not valid (process exited?)".format(exp.invalid_address)
+
+        except exceptions.InvalidAddressException as exp:
+            result_text = "Required memory at {0:#x} is not valid (incomplete layer {1}?)".format(
+                exp.invalid_address, exp.layer_name)
+
+        return result_text
+
+
     def _generator(self, procs):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
             proc_id = "Unknown"
-            try:
-                proc_id = proc.UniqueProcessId
-                proc_layer_name = proc.add_process_layer()
-            except exceptions.InvalidAddressException as excp:
-                vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
-                                                                                 excp.layer_name))
-                continue
 
-            try:
-                peb = self._context.object(self.config["nt_symbols"] + constants.BANG + "_PEB",
-                                           layer_name = proc_layer_name,
-                                           offset = proc.Peb)
-
-                result_text = peb.ProcessParameters.CommandLine.get_string()
-
-            except exceptions.SwappedInvalidAddressException as exp:
-                result_text = "Required memory at {0:#x} is inaccessible (swapped)".format(exp.invalid_address)
-
-            except exceptions.PagedInvalidAddressException as exp:
-                result_text = "Required memory at {0:#x} is not valid (process exited?)".format(exp.invalid_address)
-
-            except exceptions.InvalidAddressException as exp:
-                result_text = "Required memory at {0:#x} is not valid (incomplete layer {1}?)".format(
-                    exp.invalid_address, exp.layer_name)
+            result_text = self.get_cmdline(self.context, self.config["nt_symbols"], proc)
 
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 
