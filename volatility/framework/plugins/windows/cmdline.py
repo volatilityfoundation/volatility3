@@ -15,6 +15,8 @@ vollog = logging.getLogger(__name__)
 class CmdLine(interfaces.plugins.PluginInterface):
     """Lists process command line arguments."""
 
+    _version = (1, 0, 0)
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
@@ -59,9 +61,10 @@ class CmdLine(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
-            proc_id = proc.UniqueProcessId
+            proc_id = "Unknown"
 
             try:
+                proc_id = proc.UniqueProcessId
                 result_text = self.get_cmdline(self.context, self.config["nt_symbols"], proc)
 
             except exceptions.SwappedInvalidAddressException as exp:
