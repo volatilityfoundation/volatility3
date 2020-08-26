@@ -40,7 +40,7 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _verison = (1, 0, 0)
+    _version = (1, 0, 0)
 
     # based on __d_path from the Linux kernel
     @classmethod

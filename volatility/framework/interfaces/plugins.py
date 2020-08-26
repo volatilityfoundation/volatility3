@@ -79,7 +79,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
     """
 
     # Be careful with inheritance around this
-    _required_framework_verison = (1, 0, 0)  # type: Tuple[int, int, int]
+    _required_framework_version = (1, 0, 0)  # type: Tuple[int, int, int]
     """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
 
     def __init__(self,
@@ -102,7 +102,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
         self._file_consumer = None  # type: Optional[FileConsumerInterface]
 
-        framework.require_interface_version(*self._required_framework_verison)
+        framework.require_interface_version(*self._required_framework_version)
 
     def set_file_consumer(self, consumer: FileConsumerInterface) -> None:
         """Sets the file consumer to be used by this plugin."""
