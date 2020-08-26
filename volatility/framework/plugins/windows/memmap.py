@@ -35,7 +35,6 @@ class Memmap(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs):
         for proc in procs:
-            offset = 0
             pid = "Unknown"
 
             try:
@@ -47,8 +46,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                     pid, excp.invalid_address, excp.layer_name))
                 continue
 
-            filename = str(pid)
-            filedata = interfaces.plugins.FileInterface("pid.{}.dmp".format(filename))
+            filedata = interfaces.plugins.FileInterface("pid.{}.dmp".format(pid))
 
             for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                 offset, size, mapped_offset, mapped_size, maplayer = mapval
