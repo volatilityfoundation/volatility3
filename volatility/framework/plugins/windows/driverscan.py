@@ -13,6 +13,7 @@ from volatility.plugins.windows import poolscanner
 class DriverScan(interfaces.plugins.PluginInterface):
     """Scans for drivers present in a particular windows memory image."""
 
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod

@@ -13,6 +13,8 @@ from volatility.plugins.windows import poolscanner
 class FileScan(interfaces.plugins.PluginInterface):
     """Scans for file objects present in a particular windows memory image."""
 
+    _required_framework_version = (2, 0, 0)
+
     @classmethod
     def get_requirements(cls):
         return [

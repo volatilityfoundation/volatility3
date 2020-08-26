@@ -15,6 +15,7 @@ class HiveScan(interfaces.plugins.PluginInterface):
     """Scans for registry hives present in a particular windows memory
     image."""
 
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod

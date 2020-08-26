@@ -15,6 +15,8 @@ from volatility.plugins.windows import poolscanner, dlllist
 class ModScan(interfaces.plugins.PluginInterface):
     """Scans for modules present in a particular windows memory image."""
 
+    _required_framework_version = (2, 0, 0)
+
     @classmethod
     def get_requirements(cls):
         return [

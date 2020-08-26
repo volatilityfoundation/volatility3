@@ -17,6 +17,8 @@ vollog = logging.getLogger(__name__)
 class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
 
+    _required_framework_version = (2, 0, 0)
+
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
@@ -103,8 +105,8 @@ class Malfind(interfaces.plugins.PluginInterface):
                 continue
 
             if (vad.get_private_memory() == 1
-                    and vad.get_tag() == "VadS") or (vad.get_private_memory() == 0
-                                                     and protection_string != "PAGE_EXECUTE_WRITECOPY"):
+                and vad.get_tag() == "VadS") or (vad.get_private_memory() == 0
+                                                 and protection_string != "PAGE_EXECUTE_WRITECOPY"):
                 if cls.is_vad_empty(proc_layer, vad):
                     continue
 

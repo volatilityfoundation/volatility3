@@ -23,6 +23,8 @@ vollog = logging.getLogger(__name__)
 class UserAssist(interfaces.plugins.PluginInterface):
     """Print userassist registry keys and information."""
 
+    _required_framework_version = (2, 0, 0)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._userassist_size = 0

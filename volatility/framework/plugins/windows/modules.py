@@ -19,6 +19,7 @@ vollog = logging.getLogger(__name__)
 class Modules(interfaces.plugins.PluginInterface):
     """Lists the loaded kernel modules."""
 
+    _required_framework_version = (2, 0, 0)
     _version = (1, 1, 0)
 
     @classmethod

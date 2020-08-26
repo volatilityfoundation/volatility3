@@ -21,6 +21,8 @@ except ImportError:
 
 class VadYaraScan(interfaces.plugins.PluginInterface):
     """Scans all the Virtual Address Descriptor memory maps using yara."""
+
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
