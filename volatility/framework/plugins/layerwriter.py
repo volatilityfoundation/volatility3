@@ -19,6 +19,7 @@ class LayerWriter(plugins.PluginInterface):
     default_output_name = "output.raw"
     default_block_size = 0x500000
 
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
@@ -72,9 +73,9 @@ class LayerWriter(plugins.PluginInterface):
 
     def _generator(self):
         if self.config['primary'] not in self.context.layers:
-            yield 0, ('Layer Name does not exist', )
+            yield 0, ('Layer Name does not exist',)
         elif os.path.exists(self.config.get('output', self.default_output_name)):
-            yield 0, ('Refusing to overwrite existing output file', )
+            yield 0, ('Refusing to overwrite existing output file',)
         else:
             output_name = self.config.get('output', self.default_output_name)
             try:
@@ -83,9 +84,9 @@ class LayerWriter(plugins.PluginInterface):
                                             self._progress_callback)
                 self.produce_file(filedata)
             except IOError as excp:
-                yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp), )
+                yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp),)
 
-            yield 0, ('Layer has been written to {}'.format(output_name), )
+            yield 0, ('Layer has been written to {}'.format(output_name),)
 
     def run(self):
         return renderers.TreeGrid([("Status", str)], self._generator())

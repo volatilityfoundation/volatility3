@@ -16,6 +16,8 @@ vollog = logging.getLogger(__name__)
 class Keyboard_notifiers(interfaces.plugins.PluginInterface):
     """Parses the keyboard notifier call chain"""
 
+    _required_framework_version = (2, 0, 0)
+
     @classmethod
     def get_requirements(cls):
         return [

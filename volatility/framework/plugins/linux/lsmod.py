@@ -9,7 +9,6 @@ from typing import List, Iterable
 
 from volatility.framework import contexts
 from volatility.framework import exceptions, renderers, constants, interfaces
-from volatility.framework.automagic import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
@@ -21,6 +20,7 @@ vollog = logging.getLogger(__name__)
 class Lsmod(plugins.PluginInterface):
     """Lists loaded kernel modules."""
 
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod

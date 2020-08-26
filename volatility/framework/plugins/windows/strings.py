@@ -19,6 +19,7 @@ vollog = logging.getLogger(__name__)
 class Strings(interfaces.plugins.PluginInterface):
     """Reads output from the strings command and indicates which process(es) each string belongs to."""
 
+    _required_framework_version = (2, 0, 0)
     strings_pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
 
     @classmethod

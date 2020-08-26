@@ -42,6 +42,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
     """Runs all relevant plugins that provide time related information and
     orders the results by time."""
 
+    _required_framework_version = (2, 0, 0)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.timeline = {}
@@ -183,7 +185,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
 
                 plugin = plugins.construct_plugin(self.context, automagics, plugin_class, self.config_path,
-                                                  self._progress_callback, self._file_consumer)
+                                                  self._progress_callback, self._file_template)
 
                 if isinstance(plugin, TimeLinerInterface):
                     if not len(filter_list) or any(

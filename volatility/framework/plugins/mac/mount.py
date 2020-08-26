@@ -7,13 +7,14 @@ from volatility.framework import renderers, interfaces, contexts
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
-from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import mac
 
 
 class Mount(plugins.PluginInterface):
     """A module containing a collection of plugins that produce data typically
     foundin Mac's mount command"""
+
+    _required_framework_version = (2, 0, 0)
 
     _version = (1, 0, 0)
 

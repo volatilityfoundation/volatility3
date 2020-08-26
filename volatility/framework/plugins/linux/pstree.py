@@ -10,6 +10,8 @@ class PsTree(pslist.PsList):
     """Plugin for listing processes in a tree based on their parent process
     ID."""
 
+    _required_framework_version = (2, 0, 0)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._processes = {}

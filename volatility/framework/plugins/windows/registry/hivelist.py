@@ -18,6 +18,8 @@ class HiveGenerator:
     """Walks the registry HiveList linked list in a given direction and stores an invalid offset
     if it's unable to fully walk the list"""
 
+    _required_framework_version = (2, 0, 0)
+
     def __init__(self, cmhive, forward = True):
         self._cmhive = cmhive
         self._forward = forward

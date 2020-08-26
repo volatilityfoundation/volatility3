@@ -12,6 +12,8 @@ from volatility.framework.objects import utility
 class PsList(interfaces.plugins.PluginInterface):
     """Lists the processes present in a particular linux memory image."""
 
+    _required_framework_version = (2, 0, 0)
+
     _version = (1, 0, 0)
 
     @classmethod
