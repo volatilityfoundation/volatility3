@@ -7,7 +7,7 @@ from typing import Iterable
 from volatility.framework import renderers, interfaces, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
-from volatility.framework.symbols.windows import winver
+from volatility.framework.symbols.windows import versions
 from volatility.plugins.windows import poolscanner, bigpools
 
 
@@ -46,7 +46,7 @@ class HiveScan(interfaces.plugins.PluginInterface):
         """
 
         is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
-        is_windows_8_1_or_later = winver.is_windows_8_1_or_later(context = context, symbol_table = symbol_table)
+        is_windows_8_1_or_later = versions.is_windows_8_1_or_later(context = context, symbol_table = symbol_table)
 
         if is_windows_8_1_or_later and is_64bit:
             kvo = context.layers[layer_name].config['kernel_virtual_offset']

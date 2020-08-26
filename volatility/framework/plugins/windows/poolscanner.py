@@ -12,7 +12,7 @@ from volatility.framework.interfaces import plugins, configuration
 from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
-from volatility.framework.symbols.windows import extensions, winver
+from volatility.framework.symbols.windows import extensions, versions
 from volatility.plugins.windows import handles
 
 vollog = logging.getLogger(__name__)
@@ -275,8 +275,8 @@ class PoolScanner(plugins.PluginInterface):
 
         cookie = handles.Handles.find_cookie(context = context, layer_name = layer_name, symbol_table = symbol_table)
 
-        is_windows_10 = winver.is_windows_10(context, symbol_table)
-        is_windows_8_or_later = winver.is_windows_8_or_later(context, symbol_table)
+        is_windows_10 = versions.is_windows_10(context, symbol_table)
+        is_windows_8_or_later = versions.is_windows_8_or_later(context, symbol_table)
 
         # start off with the primary virtual layer
         scan_layer = layer_name
@@ -369,7 +369,7 @@ class PoolScanner(plugins.PluginInterface):
             # We have to manually load a symbol table
 
             if symbols.symbol_table_is_64bit(context, symbol_table):
-                is_win_7 = winver.is_windows_7(context, symbol_table)
+                is_win_7 = versions.is_windows_7(context, symbol_table)
                 if is_win_7:
                     pool_header_json_filename = "poolheader-x64-win7"
                 else:
@@ -378,7 +378,7 @@ class PoolScanner(plugins.PluginInterface):
                 pool_header_json_filename = "poolheader-x86"
 
             # set the class_type to match the normal WindowsKernelIntermedSymbols
-            is_vista_or_later = winver.is_vista_or_later(context, symbol_table)
+            is_vista_or_later = versions.is_vista_or_later(context, symbol_table)
             if is_vista_or_later:
                 class_type = extensions.pool.POOL_HEADER_VISTA
             else:
