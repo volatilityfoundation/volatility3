@@ -9,7 +9,7 @@ from volatility.framework import exceptions, renderers, interfaces, constants
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
-from volatility.framework.symbols.windows import extensions
+from volatility.framework.symbols.windows.extensions import pe
 from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class DllList(interfaces.plugins.PluginInterface):
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
-                                                                class_types = extensions.pe.class_types)
+                                                                class_types = pe.class_types)
 
         for proc in procs:
 
