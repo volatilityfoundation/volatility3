@@ -10,7 +10,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.layers import scanners
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
-from volatility.framework.symbols.windows import winver
+from volatility.framework.symbols.windows import versions
 from volatility.framework.symbols.windows.extensions import services
 from volatility.plugins.windows import poolscanner, vadyarascan, pslist
 
@@ -57,30 +57,30 @@ class SvcScan(interfaces.plugins.PluginInterface):
         native_types = context.symbol_space[symbol_table].natives
         is_64bit = symbols.symbol_table_is_64bit(context, symbol_table)
 
-        if winver.is_windows_xp(context = context, symbol_table = symbol_table) and not is_64bit:
+        if versions.is_windows_xp(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-xp-x86"
-        elif winver.is_xp_or_2003(context = context, symbol_table = symbol_table) and is_64bit:
+        elif versions.is_xp_or_2003(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-xp-2003-x64"
-        elif winver.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and is_64bit:
+        elif versions.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win10-16299-x64"
-        elif winver.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
+        elif versions.is_win10_16299_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win10-16299-x86"
-        elif winver.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and is_64bit:
+        elif versions.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win8-x64"
-        elif winver.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and not is_64bit:
+        elif versions.is_win10_up_to_15063(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win8-x86"
-        elif winver.is_win10_15063(context = context, symbol_table = symbol_table) and is_64bit:
+        elif versions.is_win10_15063(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win10-15063-x64"
-        elif winver.is_win10_15063(context = context, symbol_table = symbol_table) and not is_64bit:
+        elif versions.is_win10_15063(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win10-15063-x86"
-        elif winver.is_windows_8_or_later(context = context, symbol_table = symbol_table) and is_64bit:
+        elif versions.is_windows_8_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win8-x64"
-        elif winver.is_windows_8_or_later(context = context,
-                                          symbol_table = symbol_table) and not is_64bit:
+        elif versions.is_windows_8_or_later(context = context,
+                                            symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win8-x86"
-        elif winver.is_vista_or_later(context = context, symbol_table = symbol_table) and is_64bit:
+        elif versions.is_vista_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-vista-x64"
-        elif winver.is_vista_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
+        elif versions.is_vista_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-vista-x86"
         else:
             raise NotImplementedError("This version of Windows is not supported!")
@@ -101,7 +101,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
         filter_func = pslist.PsList.create_name_filter(["services.exe"])
 
-        is_vista_or_later = winver.is_vista_or_later(context = self.context, symbol_table = self.config["nt_symbols"])
+        is_vista_or_later = versions.is_vista_or_later(context = self.context, symbol_table = self.config["nt_symbols"])
 
         if is_vista_or_later:
             service_tag = b"serH"

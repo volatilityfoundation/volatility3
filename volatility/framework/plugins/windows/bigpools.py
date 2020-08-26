@@ -11,7 +11,7 @@ from volatility.framework.interfaces import configuration
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
-from volatility.framework.symbols.windows import winver
+from volatility.framework.symbols.windows import versions
 
 vollog = logging.getLogger(__name__)
 
@@ -65,8 +65,8 @@ class BigPools(interfaces.plugins.PluginInterface):
             big_page_table_type = ntkrnlmp.get_type("_POOL_TRACKER_BIG_PAGES")
         except exceptions.SymbolError:
             # We have to manually load a symbol table
-            is_vista_or_later = winver.is_vista_or_later(context, symbol_table)
-            is_win10 = winver.is_win10(context, symbol_table)
+            is_vista_or_later = versions.is_vista_or_later(context, symbol_table)
+            is_win10 = versions.is_win10(context, symbol_table)
             if is_win10:
                 big_pools_json_filename = "bigpools-win10"
             elif is_vista_or_later:

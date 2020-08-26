@@ -9,7 +9,7 @@ from Crypto.Hash import HMAC
 
 from volatility.framework import interfaces, renderers
 from volatility.framework.configuration import requirements
-from volatility.framework.symbols.windows import winver
+from volatility.framework.symbols.windows import versions
 from volatility.plugins.windows import hashdump, lsadump
 from volatility.plugins.windows.registry import hivelist
 
@@ -82,7 +82,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
         if not bootkey:
             raise ValueError('Unable to find bootkey')
 
-        vista_or_later = winver.is_vista_or_later(context = self.context, symbol_table = self.config['nt_symbols'])
+        vista_or_later = versions.is_vista_or_later(context = self.context, symbol_table = self.config['nt_symbols'])
 
         lsakey = lsadump.Lsadump.get_lsa_key(sechive, bootkey, vista_or_later)
         if not lsakey:
