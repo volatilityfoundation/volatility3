@@ -6,7 +6,7 @@ import collections
 import collections.abc
 import enum
 import logging
-from typing import Any, Dict, Iterable, Iterator, TypeVar
+from typing import Any, Dict, Iterable, Iterator, TypeVar, List
 
 from volatility.framework import constants, exceptions, interfaces, objects
 
@@ -39,9 +39,9 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
     def clear_symbol_cache(self, table_name: str = None) -> None:
         """Clears the symbol cache for the specified table name. If no table
         name is specified, the caches of all symbol tables are cleared."""
-        table_list = list()
+        table_list = list()  # type: List[interfaces.symbols.BaseSymbolTableInterface]
         if table_name is None:
-            table_list = self._dict.values()
+            table_list = list(self._dict.values())
         else:
             table_list.append(self._dict[table_name])
         for table in table_list:

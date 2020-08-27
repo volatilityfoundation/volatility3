@@ -26,12 +26,15 @@ class Memmap(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
-                                        optional = True)
+                                        optional = True),
+            requirements.BooleanRequirement(name = 'dump',
+                                            description = "Extract listed memory segments",
+                                            default = False,
+                                            optional = True)
         ]
 
     def _generator(self, procs):
         for proc in procs:
-            offset = 0
             pid = "Unknown"
 
             try:
@@ -43,22 +46,37 @@ class Memmap(interfaces.plugins.PluginInterface):
                     pid, excp.invalid_address, excp.layer_name))
                 continue
 
+            filedata = interfaces.plugins.FileInterface("pid.{}.dmp".format(pid))
+
             for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
-                offset, _, mapped_offset, mapped_size, maplayer = mapval
+                offset, size, mapped_offset, mapped_size, maplayer = mapval
+
+                dumped = False
+                if self.config['dump']:
+                    try:
+                        data = proc_layer.read(offset, size, pad = True)
+                        filedata.data.write(data)
+                        dumped = True
+                    except exceptions.InvalidAddressException:
+                        vollog.debug("Unable to write {}'s address {} to {}.dmp".format(proc_layer_name, offset,
+                                                                                        filedata.preferred_filename))
 
                 yield (0, (
                     format_hints.Hex(offset),
                     format_hints.Hex(mapped_offset),
                     format_hints.Hex(mapped_size),
-                    format_hints.Hex(offset)))
+                    format_hints.Hex(offset),
+                    dumped))
                 offset += mapped_size
+
+            self.produce_file(filedata)
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid(
             [("Virtual", format_hints.Hex), ("Physical", format_hints.Hex), ("Size", format_hints.Hex),
-             ("Offset", format_hints.Hex)],
+             ("Offset", format_hints.Hex), ("Dumped", bool)],
             self._generator(
                 pslist.PsList.list_processes(context = self.context,
                                              layer_name = self.config['primary'],

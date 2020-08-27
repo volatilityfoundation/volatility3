@@ -273,9 +273,8 @@ class Template:
         """Stores the keyword arguments for later object creation."""
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
-        self._arguments = arguments
         empty_dict = {}  # type: Dict[str, Any]
-        self._vol = collections.ChainMap(empty_dict, self._arguments, {'type_name': type_name})
+        self._vol = collections.ChainMap(empty_dict, arguments, {'type_name': type_name})
 
     @property
     def vol(self) -> ReadOnlyMapping:

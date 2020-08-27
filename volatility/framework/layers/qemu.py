@@ -1,10 +1,10 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import functools
 import json
 import math
-from typing import Optional, Dict, Any, Tuple, List
+from typing import Optional, Dict, Any, Tuple, List, Set
 
 from volatility.framework import interfaces, exceptions, constants
 from volatility.framework.layers import segmented
@@ -40,8 +40,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         self._qemu_table_name = intermed.IntermediateSymbolTable.create(context, config_path, 'generic', 'qemu')
         self._configuration = None
-        self._compressed = set()
-        self._current_segment_name = ''
+        self._compressed = set()  # type: Set[int]
+        self._current_segment_name = b''
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
     @classmethod
@@ -212,6 +212,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             return (data * 0x1000)[:output_length]
         return data
 
+    @functools.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         return super().read(offset, length, pad)
 

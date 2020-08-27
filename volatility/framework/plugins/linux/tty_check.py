@@ -6,12 +6,12 @@ import logging
 from typing import List
 
 from volatility.framework import interfaces, renderers, exceptions, constants, contexts
-from volatility.framework.symbols import linux
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
-from volatility.plugins.linux import lsmod
 from volatility.framework.renderers import format_hints
+from volatility.framework.symbols import linux
+from volatility.plugins.linux import lsmod
 
 vollog = logging.getLogger(__name__)
 
@@ -26,7 +26,8 @@ class tty_check(plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (1, 0, 0))
         ]
 
     def _generator(self):

@@ -131,8 +131,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
             except Exception:
                 vollog.log(logging.INFO, "Exception occurred running plugin: {}".format(plugin_name))
                 vollog.log(logging.DEBUG, traceback.format_exc())
-        for item in sorted(data, key = self._sort_function):
-            yield item
+        for data_item in sorted(data, key = self._sort_function):
+            yield data_item
 
         # Write out a body file if necessary
         if self.config.get('create-bodyfile', True):

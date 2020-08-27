@@ -139,13 +139,22 @@ can define a mapping method as follows:
                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
 
 This takes a (domain) offset and a length of block, and returns a sorted list of chunks that cover the requested amount
-of data.  Each chunk contains the following information (in order):
+of data.  Each chunk contains the following information, in order:
 
-* (domain) offset - requested offset in the domain
-* chunk length - the length of the data in the domain
-* (range) offset - where the data lives in the lower layer
-* mapped length - the length of the data in the range
-* layer_name - the layer that this data comes from
+**offset (domain offset)**
+    requested offset in the domain
+
+**chunk length**
+    the length of the data in the domain
+
+**mapped offset (range offset)**
+    where the data lives in the lower layer
+
+**mapped length**
+    the length of the data in the range
+
+**layer_name**
+    the layer that this data comes from
 
 An example (and the most common layer encountered in memory forensics) would be an Intel layer, which models the intel
 page mapping system.  Based on a series of tables stored within the layer itself, an intel layer can convert a virtual

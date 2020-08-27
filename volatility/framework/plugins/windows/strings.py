@@ -46,7 +46,8 @@ class Strings(interfaces.plugins.PluginInterface):
         strings_size = path.getsize(strings_fp.file.name)
 
         line = strings_fp.readline()
-        while line != '':
+        last_prog = 0
+        while line:
             try:
                 offset, string = self._parse_line(line)
                 try:
@@ -58,7 +59,10 @@ class Strings(interfaces.plugins.PluginInterface):
                 vollog.error("Strings file is in the wrong format")
                 return
             line = strings_fp.readline()
-            self._progress_callback(strings_fp.tell() / strings_size * 100, "Matching strings in memory")
+            prog = strings_fp.tell() / strings_size * 100
+            if round(prog, 1) > last_prog:
+                last_prog = round(prog, 1)
+                self._progress_callback(prog, "Matching strings in memory")
 
     def _parse_line(self, line: bytes) -> Tuple[int, bytes]:
         """Parses a single line from a strings file.

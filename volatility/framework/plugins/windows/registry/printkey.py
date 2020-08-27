@@ -43,10 +43,10 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     @classmethod
     def key_iterator(
-        cls,
-        hive: RegistryHive,
-        node_path: Sequence[objects.StructType] = None,
-        recurse: bool = False
+            cls,
+            hive: RegistryHive,
+            node_path: Sequence[objects.StructType] = None,
+            recurse: bool = False
     ) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
         """Walks through a set of nodes from a given node (last one in
         node_path). Avoids loops by not traversing into nodes already present
@@ -130,10 +130,10 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
                 if isinstance(value_type, renderers.UnreadableValue):
                     vollog.debug("Couldn't read registry value type, so data is unreadable")
-                    value_data = renderers.UnreadableValue()
+                    value_data = renderers.UnreadableValue()  # type: Union[interfaces.renderers.BaseAbsentValue, bytes]
                 else:
                     try:
-                        value_data = node.decode_data()  # type: Union[interfaces.renderers.BaseAbsentValue, bytes]
+                        value_data = node.decode_data()
 
                         if isinstance(value_data, int):
                             value_data = format_hints.MultiTypeData(value_data, encoding = 'utf-8')

@@ -34,10 +34,9 @@ class MultiTypeData(bytes):
         return super().__new__(cls, original)
 
     def __init__(self, original: bytes, encoding: str = 'utf-16-le', split_nulls: bool = False, show_hex: bool = False):
+        self.converted_int = False  # type: bool
         if isinstance(original, int):
             self.converted_int = True
-        else:
-            self.converted_int = False
         self.encoding = encoding
         self.split_nulls = split_nulls
         self.show_hex = show_hex

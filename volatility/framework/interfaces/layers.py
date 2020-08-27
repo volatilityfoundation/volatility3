@@ -13,6 +13,7 @@ import math
 import multiprocessing
 import threading
 import traceback
+import types
 from abc import ABCMeta, abstractmethod
 from multiprocessing import managers
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
@@ -196,7 +197,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         """Returns a list of Requirement objects for this type of layer."""
-        return super(cls).get_requirements()
+        return super().get_requirements()
 
     @property
     def dependencies(self) -> List[str]:
@@ -253,7 +254,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                     yield from scan_chunk(value)
             else:
                 progress = multiprocessing.Manager().Value("Q", 0)
-                parallel_module = multiprocessing
+                parallel_module = multiprocessing  # type: types.ModuleType
                 if constants.PARALLELISM == constants.Parallelism.Threading:
                     progress = DummyProgress()
                     parallel_module = threading

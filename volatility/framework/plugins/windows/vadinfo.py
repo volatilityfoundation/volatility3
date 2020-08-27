@@ -33,7 +33,7 @@ winnt_protections = {
 class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -57,6 +57,10 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                              element_type = int,
                                              optional = True),
                 requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+                requirements.BooleanRequirement(name = 'dump',
+                                                description = "Extract listed memory ranges",
+                                                default = False,
+                                                optional = True)
                 ]
 
     @classmethod
@@ -96,29 +100,70 @@ class VadInfo(interfaces.plugins.PluginInterface):
             if not filter_func(vad):
                 yield vad
 
+    @classmethod
+    def vad_dump(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                 vad: interfaces.objects.ObjectInterface) -> bytes:
+        """Extracts the complete data for Vad as a FileInterface
+
+        Args:
+            context: the context to operate upon
+            layer_name: the name of the layer that the VAD lives within
+            vad: the virtual address descriptor to be dumped
+
+        Returns:
+            bytes containing the data from the vad
+        """
+
+        tmp_data = b""
+        proc_layer = context.layers[layer_name]
+        chunk_size = 1024 * 1024 * 10
+        offset = vad.get_start()
+        out_of_range = vad.get_end()
+        # print("walking from {:x} to {:x} | {:x}".format(offset, out_of_range, out_of_range-offset))
+        while offset < out_of_range:
+            to_read = min(chunk_size, out_of_range - offset)
+            data = proc_layer.read(offset, to_read, pad = True)
+            if not data:
+                break
+            tmp_data += data
+            offset += to_read
+
+        return tmp_data
+
     def _generator(self, procs):
 
-        def passthrough(_: 'interfaces.objects.ObjectInterface') -> bool:
+        def passthrough(_: interfaces.objects.ObjectInterface) -> bool:
             return False
 
         filter_func = passthrough
         if self.config.get('address', None) is not None:
 
-            def filter_function(x: 'interfaces.objects.ObjectInterface') -> bool:
+            def filter_function(x: interfaces.objects.ObjectInterface) -> bool:
                 return x.get_start() not in [self.config['address']]
 
             filter_func = filter_function
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
+            proc_layer_name = proc.add_process_layer()
 
             for vad in self.list_vads(proc, filter_func = filter_func):
+
+                dumped = False
+                if self.config['dump']:
+                    data = self.vad_dump(self.context, proc_layer_name, vad)
+                    filedata = interfaces.plugins.FileInterface("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
+                        proc.UniqueProcessId, vad.get_start(), vad.get_end()))
+                    filedata.data.write(data)
+                    self.produce_file(filedata)
+                    dumped = True
+
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.vol.offset),
                            format_hints.Hex(vad.get_start()), format_hints.Hex(vad.get_end()), vad.get_tag(),
                            vad.get_protection(
                                self.protect_values(self.context, self.config['primary'], self.config['nt_symbols']),
                                winnt_protections), vad.get_commit_charge(), vad.get_private_memory(),
-                           format_hints.Hex(vad.get_parent()), vad.get_file_name()))
+                           format_hints.Hex(vad.get_parent()), vad.get_file_name(), dumped))
 
     def run(self):
 
@@ -127,7 +172,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Offset", format_hints.Hex),
                                    ("Start VPN", format_hints.Hex), ("End VPN", format_hints.Hex), ("Tag", str),
                                    ("Protection", str), ("CommitCharge", int), ("PrivateMemory", int),
-                                   ("Parent", format_hints.Hex), ("File", str)],
+                                   ("Parent", format_hints.Hex), ("File", str), ("Dumped", bool)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
                                                                    layer_name = self.config['primary'],

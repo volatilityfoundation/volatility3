@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Iterable, Callable
+from typing import Iterable, Callable, Tuple
 
 from volatility.framework import exceptions, renderers, interfaces
 from volatility.framework.configuration import requirements
@@ -27,6 +27,7 @@ class Netstat(plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -39,7 +40,9 @@ class Netstat(plugins.PluginInterface):
                      layer_name: str,
                      darwin_symbols: str,
                      filter_func: Callable[[int], bool] = lambda _: False) -> \
-            Iterable[interfaces.objects.ObjectInterface]:
+            Iterable[Tuple[interfaces.objects.ObjectInterface,
+                           interfaces.objects.ObjectInterface,
+                           interfaces.objects.ObjectInterface]]:
         """
         Returns the open socket descriptors of a process
 

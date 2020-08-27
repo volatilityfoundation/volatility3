@@ -85,11 +85,11 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
                 if constraint.page_type is not None:
                     checks_pass = False
 
-                    if (constraint.page_type & PoolType.FREE) and header.PoolType == 0:
+                    if (constraint.page_type & PoolType.FREE) and header.is_free_pool():
                         checks_pass = True
-                    elif (constraint.page_type & PoolType.PAGED) and header.PoolType % 2 == 0 and header.PoolType > 0:
+                    elif (constraint.page_type & PoolType.NONPAGED) and header.is_nonpaged_pool():
                         checks_pass = True
-                    elif (constraint.page_type & PoolType.NONPAGED) and header.PoolType % 2 == 1:
+                    elif (constraint.page_type & PoolType.PAGED) and header.is_paged_pool():
                         checks_pass = True
 
                     if not checks_pass:
@@ -112,9 +112,9 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
 
 
 def os_distinguisher(
-    version_check: Callable[[Tuple[int, ...]], bool],
-    fallback_checks: List[Tuple[str, Optional[str],
-                                bool]]) -> Callable[[interfaces.context.ContextInterface, str], bool]:
+        version_check: Callable[[Tuple[int, ...]], bool],
+        fallback_checks: List[Tuple[str, Optional[str],
+                                    bool]]) -> Callable[[interfaces.context.ContextInterface, str], bool]:
     """Distinguishes a symbol table as being above a particular version or
     point.
 
@@ -162,7 +162,7 @@ def os_distinguisher(
         for name, member, response in fallback_checks:
             if member is None:
                 if (context.symbol_space.has_symbol(symbol_table + constants.BANG + name)
-                        or context.symbol_space.has_type(symbol_table + constants.BANG + name)) != response:
+                    or context.symbol_space.has_type(symbol_table + constants.BANG + name)) != response:
                     return False
             else:
                 try:
@@ -182,6 +182,7 @@ class PoolScanner(plugins.PluginInterface):
     """A generic pool scanner plugin."""
 
     _version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -201,6 +202,9 @@ class PoolScanner(plugins.PluginInterface):
     is_windows_7 = os_distinguisher(version_check = lambda x: x == (6, 1),
                                     fallback_checks = [("_OBJECT_HEADER", "TypeIndex", True),
                                                        ("_HANDLE_TABLE", "HandleCount", True)])
+
+    is_vista_or_later = os_distinguisher(version_check = lambda x: x >= (6, 0),
+                                         fallback_checks = [("KdCopyDataBlock", None, True)])
 
     def _generator(self):
 
@@ -371,7 +375,8 @@ class PoolScanner(plugins.PluginInterface):
             mem_object = header.get_object(type_name = constraint.type_name,
                                            use_top_down = is_windows_8_or_later,
                                            executive = constraint.object_type is not None,
-                                           native_layer_name = 'primary')
+                                           native_layer_name = 'primary',
+                                           kernel_symbol_table = symbol_table)
 
             if mem_object is None:
                 vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
@@ -420,7 +425,8 @@ class PoolScanner(plugins.PluginInterface):
                 raise ValueError("Constraint tag is used for more than one constraint: {}".format(repr(constraint.tag)))
             constraint_lookup[constraint.tag] = constraint
 
-        module = cls._get_pool_header_module(context, layer_name, symbol_table)
+        pool_header_table_name = cls.get_pool_header_table(context, symbol_table)
+        module = context.module(pool_header_table_name, layer_name, offset = 0)
 
         # Run the scan locating the offsets of a particular tag
         layer = context.layers[layer_name]
@@ -428,11 +434,18 @@ class PoolScanner(plugins.PluginInterface):
         yield from layer.scan(context, scanner, progress_callback)
 
     @classmethod
-    def _get_pool_header_module(cls, context, layer_name, symbol_table):
+    def get_pool_header_table(cls, context: interfaces.context.ContextInterface, symbol_table: str) -> str:
+        """Returns the appropriate symbol_table containing a _POOL_HEADER type, even if the original symbol table
+        doesn't contain one.
+
+        Args:
+            context: The context that the symbol tables does (or will) reside in
+            symbol_table: The expected symbol_table to contain the _POOL_HEADER type
+        """
         # Setup the pool header and offset differential
         try:
-            module = context.module(symbol_table, layer_name, offset = 0)
-            module.get_type("_POOL_HEADER")
+            context.symbol_space.get_type(symbol_table + constants.BANG + "_POOL_HEADER")
+            table_name = symbol_table
         except exceptions.SymbolError:
             # We have to manually load a symbol table
 
@@ -445,15 +458,21 @@ class PoolScanner(plugins.PluginInterface):
             else:
                 pool_header_json_filename = "poolheader-x86"
 
-            new_table_name = intermed.IntermediateSymbolTable.create(
+            # set the class_type to match the normal WindowsKernelIntermedSymbols
+            is_vista_or_later = cls.is_vista_or_later(context, symbol_table)
+            if is_vista_or_later:
+                class_type = extensions.pool.POOL_HEADER_VISTA
+            else:
+                class_type = extensions.pool.POOL_HEADER
+
+            table_name = intermed.IntermediateSymbolTable.create(
                 context = context,
                 config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "poolheader"),
                 sub_path = "windows",
                 filename = pool_header_json_filename,
                 table_mapping = {'nt_symbols': symbol_table},
-                class_types = {'_POOL_HEADER': extensions.pool.POOL_HEADER})
-            module = context.module(new_table_name, layer_name, offset = 0)
-        return module
+                class_types = {'_POOL_HEADER': class_type})
+        return table_name
 
     def run(self) -> renderers.TreeGrid:
         return renderers.TreeGrid([("Tag", str), ("Offset", format_hints.Hex), ("Layer", str), ("Name", str)],

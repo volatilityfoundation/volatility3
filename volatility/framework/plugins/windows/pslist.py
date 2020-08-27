@@ -3,19 +3,24 @@
 #
 
 import datetime
+import logging
 from typing import Callable, Iterable, List
 
-from volatility.framework import renderers, interfaces, layers
+from volatility.framework import renderers, interfaces, layers, constants
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import extensions
 from volatility.plugins import timeliner
+
+vollog = logging.getLogger(__name__)
 
 
 class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular windows memory image."""
 
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
     PHYSICAL_DEFAULT = False
 
     @classmethod
@@ -25,7 +30,6 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            # TODO: Convert this to a ListRequirement so that people can filter on sets of pids
             requirements.BooleanRequirement(name = 'physical',
                                             description = 'Display physical offsets instead of virtual',
                                             default = cls.PHYSICAL_DEFAULT,
@@ -33,8 +37,47 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process ID to include (all other processes are excluded)",
-                                         optional = True)
+                                         optional = True),
+            requirements.BooleanRequirement(name = 'dump',
+                                            description = "Extract listed processes",
+                                            default = False,
+                                            optional = True)
         ]
+
+    @classmethod
+    def process_dump(cls, context: interfaces.context.ContextInterface, kernel_table_name: str, pe_table_name: str,
+                     proc: interfaces.objects.ObjectInterface) -> interfaces.plugins.FileInterface:
+        """Extracts the complete data for a process as a FileInterface
+
+        Args:
+            context: the context to operate upon
+            kernel_table_name: the name for the symbol table containing the kernel's symbols
+            pe_table_name: the name for the symbol table containing the PE format symbols
+            proc: the process object whose memory should be output
+
+        Returns:
+            A FileInterface object containing the complete data for the process or None in the case of failure
+        """
+
+        filedata = None
+        try:
+            proc_layer_name = proc.add_process_layer()
+            peb = context.object(kernel_table_name + constants.BANG + "_PEB",
+                                 layer_name = proc_layer_name,
+                                 offset = proc.Peb)
+
+            dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
+                                        offset = peb.ImageBaseAddress,
+                                        layer_name = proc_layer_name)
+            filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId,
+                                                                                    peb.ImageBaseAddress))
+            for offset, data in dos_header.reconstruct():
+                filedata.data.seek(offset)
+                filedata.data.write(data)
+        except Exception as excp:
+            vollog.debug("Unable to dump PE with pid {}: {}".format(proc.UniqueProcessId, excp))
+
+        return filedata
 
     @classmethod
     def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
@@ -120,6 +163,11 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield proc
 
     def _generator(self):
+        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                self.config_path,
+                                                                "windows",
+                                                                "pe",
+                                                                class_types = extensions.pe.class_types)
 
         memory = self.context.layers[self.config['primary']]
         if not isinstance(memory, layers.intel.Intel):
@@ -135,10 +183,17 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             else:
                 (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
+            dumped = False
+            if self.config['dump']:
+                filedata = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc)
+                if filedata:
+                    dumped = True
+                    self.produce_file(filedata)
+
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
                        format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
-                       proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time()))
+                       proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), dumped))
 
     def generate_timeline(self):
         for row in self._generator():
@@ -153,5 +208,6 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str),
                                    ("Offset{0}".format(offsettype), format_hints.Hex), ("Threads", int),
                                    ("Handles", int), ("SessionId", int), ("Wow64", bool),
-                                   ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime)],
+                                   ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),
+                                   ("Dumped", bool)],
                                   self._generator())

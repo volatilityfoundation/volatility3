@@ -26,6 +26,9 @@ SYMBOL_BASEPATHS = [
 ]
 """Default list of paths to load symbols from (volatility/symbols and volatility/framework/symbols)"""
 
+ISF_EXTENSIONS = ['.json', '.json.xz', '.json.gz', '.json.bz2']
+"""List of accepted extensions for ISF files"""
+
 if hasattr(sys, 'frozen') and sys.frozen:
     # Ensure we include the executable's directory as the base for plugins and symbols
     PLUGINS_PATH = [os.path.abspath(os.path.join(os.path.dirname(sys.executable), 'plugins'))] + PLUGINS_PATH
@@ -36,7 +39,7 @@ BANG = "!"
 
 # We use the SemVer 2.0.0 versioning scheme
 VERSION_MAJOR = 1  # Number of releases of the library with a breaking change
-VERSION_MINOR = 1  # Number of changes that only add to the interface
+VERSION_MINOR = 2  # Number of changes that only add to the interface
 VERSION_PATCH = 0  # Number of changes that do not change the interface
 VERSION_SUFFIX = "-beta.1"
 

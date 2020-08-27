@@ -61,9 +61,6 @@ class Hashdump(interfaces.plugins.PluginInterface):
     @classmethod
     def get_user_keys(cls, samhive: registry.RegistryHive) -> List[interfaces.objects.ObjectInterface]:
         user_key_path = "SAM\\Domains\\Account\\Users"
-        root = samhive.root_cell_offset
-        if not root:
-            return []
 
         user_key = samhive.get_key(user_key_path)
         if not user_key:
@@ -75,9 +72,6 @@ class Hashdump(interfaces.plugins.PluginInterface):
         cs = 1
         lsa_base = "ControlSet{0:03}".format(cs) + "\\Control\\Lsa"
         lsa_keys = ["JD", "Skew1", "GBG", "Data"]
-        root = syshive.root_cell_offset
-        if not root:
-            return None
 
         lsa = syshive.get_key(lsa_base)
 
@@ -104,10 +98,6 @@ class Hashdump(interfaces.plugins.PluginInterface):
         sam_account_path = "SAM\\Domains\\Account"
 
         if not bootkey:
-            return None
-
-        root = samhive.root_cell_offset
-        if not root:
             return None
 
         sam_account_key = samhive.get_key(sam_account_path)
@@ -287,7 +277,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
                     rid = int(str(user.get_name()), 16)
                     yield (0, (name, rid, lmout, ntout))
         else:
-            raise Exception("Hbootkey is not valid")
+            raise ValueError("Hbootkey is not valid")
 
     def run(self):
         offset = self.config.get('offset', None)

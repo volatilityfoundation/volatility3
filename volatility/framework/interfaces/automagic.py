@@ -105,7 +105,7 @@ class StackerLayerInterface(metaclass = ABCMeta):
 
     stack_order = 0
     """The order in which to attempt stacking, the lower the earlier"""
-    exclusion_list = []
+    exclusion_list = []  # type: List[str]
     """The list operating systems/first-level plugin hierarchy that should exclude this stacker"""
 
     @classmethod

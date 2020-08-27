@@ -11,7 +11,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
-from volatility.plugins.windows import pslist, moddump, modules
+from volatility.plugins.windows import pslist, modules, dlllist
 
 vollog = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
         return [
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'moddump', plugin = moddump.ModDump, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (1, 0, 0)),
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
@@ -107,14 +107,14 @@ class VerInfo(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 BaseDllName = renderers.UnreadableValue()
 
-            session_layer_name = moddump.ModDump.find_session_layer(self.context, session_layers, mod.DllBase)
+            session_layer_name = modules.Modules.find_session_layer(self.context, session_layers, mod.DllBase)
             (major, minor, product, build) = [
-                renderers.NotAvailableValue()
-            ] * 4  # type: Tuple[Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue]]
+                                                 renderers.NotAvailableValue()
+                                             ] * 4  # type: Tuple[Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue]]
             try:
                 (major, minor, product, build) = self.get_version_information(self._context, pe_table_name,
                                                                               session_layer_name, mod.DllBase)
-            except (exceptions.InvalidAddressException, ValueError, AttributeError):
+            except (exceptions.InvalidAddressException, TypeError, AttributeError):
                 (major, minor, product, build) = [renderers.UnreadableValue()] * 4
 
             # the pid and process are not applicable for kernel modules
@@ -157,7 +157,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
         mods = modules.Modules.list_modules(self.context, self.config["primary"], self.config["nt_symbols"])
 
         # populate the session layers for kernel modules
-        session_layers = moddump.ModDump.get_session_layers(self.context, self.config['primary'],
+        session_layers = modules.Modules.get_session_layers(self.context, self.config['primary'],
                                                             self.config['nt_symbols'])
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex), ("Name", str),
