@@ -3,18 +3,25 @@
 #
 
 import datetime
-from typing import Iterable
+import logging
+from typing import Iterable, Callable
 
 from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins import timeliner
+from volatility.plugins.windows import pslist
+from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import extensions
 from volatility.plugins.windows import poolscanner
 
+vollog = logging.getLogger(__name__)
 
 class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image."""
 
+    _version = (1, 1, 0)
+    
     @classmethod
     def get_requirements(cls):
         return [
@@ -22,13 +29,23 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.ListRequirement(name = 'pid',
+                                         element_type = int,
+                                         description = "Process ID to include (all other processes are excluded)",
+                                         optional = True),
+            requirements.BooleanRequirement(name = 'dump',
+                                            description = "Extract listed processes",
+                                            default = False,
+                                            optional = True),
         ]
-
+ 
     @classmethod
     def scan_processes(cls,
                        context: interfaces.context.ContextInterface,
                        layer_name: str,
-                       symbol_table: str) -> \
+                       symbol_table: str,
+                       filter_func: Callable[[interfaces.objects.ObjectInterface], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Scans for processes using the poolscanner module and constraints.
 
@@ -46,16 +63,32 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         for result in poolscanner.PoolScanner.generate_pool_scan(context, layer_name, symbol_table, constraints):
 
             _constraint, mem_object, _header = result
-            yield mem_object
+            if not filter_func(mem_object):
+                yield mem_object
 
     def _generator(self):
-        for proc in self.scan_processes(self.context, self.config['primary'], self.config['nt_symbols']):
+        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                self.config_path,
+                                                                "windows",
+                                                                "pe",
+                                                                class_types = extensions.pe.class_types)
+        for proc in self.scan_processes(self.context, 
+                                        self.config['primary'], 
+                                        self.config['nt_symbols'],
+                                        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))):
+
+            dumped = False
+            if self.config['dump']:
+                filedata = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc)
+                if filedata:
+                    dumped = True
+                    self.produce_file(filedata)
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
                        format_hints.Hex(proc.vol.offset), proc.ActiveThreads, proc.get_handle_count(),
-                       proc.get_session_id(), proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time()))
-
+                       proc.get_session_id(), proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), dumped))
+ 
     def generate_timeline(self):
         for row in self._generator():
             _depth, row_data = row
@@ -66,5 +99,5 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def run(self):
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str), ("Offset", format_hints.Hex),
                                    ("Threads", int), ("Handles", int), ("SessionId", int), ("Wow64", bool),
-                                   ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime)],
+                                   ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),("Dumped", bool)],
                                   self._generator())
