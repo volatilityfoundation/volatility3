@@ -44,7 +44,7 @@ def available(context: interfaces.context.ContextInterface) -> List[interfaces.a
         clazz(context, interfaces.configuration.path_join(config_path, clazz.__name__))
         for clazz in class_subclasses(interfaces.automagic.AutomagicInterface)
     ],
-                  key = lambda x: x.priority)
+        key = lambda x: x.priority)
 
 
 def choose_automagic(

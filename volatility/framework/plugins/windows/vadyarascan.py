@@ -44,7 +44,7 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
                                         default = 0x40000000,
                                         description = "Set the maximum size (default is 1GB)",
                                         optional = True),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'yarascanner', component = yarascan.YaraScanner,
                                             version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',

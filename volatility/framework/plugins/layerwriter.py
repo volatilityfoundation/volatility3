@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import List, Optional
+from typing import List, Optional, Type
 
 from volatility.framework import renderers, interfaces, constants, exceptions
 from volatility.framework.configuration import requirements
@@ -43,8 +43,10 @@ class LayerWriter(plugins.PluginInterface):
                     context: interfaces.context.ContextInterface,
                     layer_name: str,
                     preferred_name: str,
+                    file_handler: Type[plugins.FileHandlerInterface],
                     chunk_size: Optional[int] = None,
-                    progress_callback: Optional[constants.ProgressCallback] = None) -> Optional[plugins.FileInterface]:
+                    progress_callback: Optional[constants.ProgressCallback] = None) -> Optional[
+        plugins.FileHandlerInterface]:
         """Produces a filedata from the named layer in the provided context
 
         Args:
@@ -62,11 +64,11 @@ class LayerWriter(plugins.PluginInterface):
         if chunk_size is None:
             chunk_size = cls.default_block_size
 
-        filedata = plugins.FileInterface(preferred_name)
+        filedata = file_handler(preferred_name)
         for i in range(0, layer.maximum_address, chunk_size):
             current_chunk_size = min(chunk_size, layer.maximum_address - i)
             data = layer.read(i, current_chunk_size, pad = True)
-            filedata.data.write(data)
+            filedata.write(data)
             if progress_callback:
                 progress_callback((i / layer.maximum_address) * 100, 'Writing layer {}'.format(layer_name))
         return filedata
@@ -80,9 +82,10 @@ class LayerWriter(plugins.PluginInterface):
             output_name = self.config.get('output', self.default_output_name)
             try:
                 filedata = self.write_layer(self.context, self.config['primary'], output_name,
+                                            self._file_handler,
                                             self.config.get('block_size', self.default_block_size),
-                                            self._progress_callback)
-                self.produce_file(filedata)
+                                            progress_callback = self._progress_callback)
+                filedata.commit()
             except IOError as excp:
                 yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp),)
 

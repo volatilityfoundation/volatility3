@@ -10,6 +10,8 @@ from volatility.plugins.windows.registry import hivelist, printkey
 class Certificates(interfaces.plugins.PluginInterface):
     """Lists the certificates in the registry's Certificate Store."""
 
+    _required_framework_version = (2, 0, 0)
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
@@ -55,10 +57,9 @@ class Certificates(interfaces.plugins.PluginInterface):
                             key_hash = key_path[key_path.rindex("\\") + 1:]
 
                             if not isinstance(certificate_data, interfaces.renderers.BaseAbsentValue):
-                                filedata = interfaces.plugins.FileInterface("{} - {} - {}.crt".format(
-                                    hex(hive.hive_offset), reg_section, key_hash))
-                                filedata.data.write(certificate_data)
-                                self.produce_file(filedata)
+                                with self._file_handler("{} - {} - {}.crt".format(
+                                        hex(hive.hive_offset), reg_section, key_hash), True) as filedata:
+                                    filedata.write(certificate_data)
                             yield (0, (top_key, reg_section, key_hash, name))
                 except KeyError:
                     # Key wasn't found in this hive, carry on
