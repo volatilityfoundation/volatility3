@@ -5,7 +5,7 @@
 import logging
 from typing import Callable, List, Generator, Iterable
 
-from volatility.framework import renderers, interfaces
+from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
@@ -101,34 +101,48 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 yield vad
 
     @classmethod
-    def vad_dump(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                 vad: interfaces.objects.ObjectInterface) -> bytes:
-        """Extracts the complete data for Vad as a FileInterface
+    def vad_dump(cls, context: interfaces.context.ContextInterface, proc: interfaces.objects.ObjectInterface,
+                 vad: interfaces.objects.ObjectInterface) -> interfaces.plugins.FileInterface:
+        """Extracts the complete data for Vad as a FileInterface.
 
         Args:
-            context: the context to operate upon
-            layer_name: the name of the layer that the VAD lives within
-            vad: the virtual address descriptor to be dumped
+            context: The context to retrieve required elements (layers, symbol tables) from
+            proc: an _EPROCESS instance
+            vad: The suspected VAD to extract (ObjectInterface)
 
         Returns:
-            bytes containing the data from the vad
+            A FileInterface object containing the complete data for the process or None in the case of failure
         """
+        proc_id = "Unknown"
+        try:
+            proc_id = proc.UniqueProcessId
+            proc_layer_name = proc.add_process_layer()
+        except exceptions.InvalidAddressException as excp:
+            vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
+                                                                             excp.layer_name))
+            return
 
-        tmp_data = b""
-        proc_layer = context.layers[layer_name]
-        chunk_size = 1024 * 1024 * 10
-        offset = vad.get_start()
-        out_of_range = vad.get_end()
-        # print("walking from {:x} to {:x} | {:x}".format(offset, out_of_range, out_of_range-offset))
-        while offset < out_of_range:
-            to_read = min(chunk_size, out_of_range - offset)
-            data = proc_layer.read(offset, to_read, pad = True)
-            if not data:
-                break
-            tmp_data += data
-            offset += to_read
+        proc_layer = context.layers[proc_layer_name]
+        vad_start = vad.get_start()
+        vad_end = vad.get_end()
+        file_name = "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc_id, vad_start, vad_end)
+        try:
+            filedata = interfaces.plugins.FileInterface(file_name)
+            chunk_size = 1024 * 1024 * 10
+            offset = vad_start
+            while offset < vad_end:
+                to_read = min(chunk_size, vad_end - offset)
+                data = proc_layer.read(offset, to_read, pad=True)
+                if not data:
+                    break
+                filedata.data.write(data)
+                offset += to_read
 
-        return tmp_data
+        except Exception as excp:
+            vollog.debug("Unable to dump VAD {}: {}".format(file_name, excp))
+            return
+
+        return filedata
 
     def _generator(self, procs):
 
@@ -145,16 +159,12 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
-            proc_layer_name = proc.add_process_layer()
 
             for vad in self.list_vads(proc, filter_func = filter_func):
 
                 dumped = False
                 if self.config['dump']:
-                    data = self.vad_dump(self.context, proc_layer_name, vad)
-                    filedata = interfaces.plugins.FileInterface("pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(
-                        proc.UniqueProcessId, vad.get_start(), vad.get_end()))
-                    filedata.data.write(data)
+                    filedata = self.vad_dump(self.context, proc, vad)
                     self.produce_file(filedata)
                     dumped = True
 
