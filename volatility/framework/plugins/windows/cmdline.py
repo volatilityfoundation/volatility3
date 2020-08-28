@@ -33,7 +33,7 @@ class CmdLine(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def get_cmdline(cls, context: interfaces.context.ContextInterface, 
+    def get_cmdline(cls, context: interfaces.context.ContextInterface,
                     kernel_table_name: str, proc):
         """Extracts the cmdline from PEB
 
@@ -56,7 +56,6 @@ class CmdLine(interfaces.plugins.PluginInterface):
 
         return result_text
 
-
     def _generator(self, procs):
 
         for proc in procs:
@@ -75,11 +74,10 @@ class CmdLine(interfaces.plugins.PluginInterface):
 
             except exceptions.InvalidAddressException as exp:
                 result_text = "Process {}: Required memory at {:#x} is not valid (incomplete layer {}?)".format(
-                               proc_id, exp.invalid_address, exp.layer)
+                    proc_id, exp.invalid_address, exp.layer_name)
     
- 
             yield (0, (proc.UniqueProcessId, process_name, result_text))
-    
+
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
