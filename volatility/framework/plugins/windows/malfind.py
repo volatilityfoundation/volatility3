@@ -33,8 +33,8 @@ class Malfind(interfaces.plugins.PluginInterface):
                                             description="Extract injected VADs",
                                             default=False,
                                             optional=True),
-            requirements.PluginRequirement(name='pslist', plugin=pslist.PsList, version=(1, 0, 0)),
-            requirements.PluginRequirement(name='vadinfo', plugin=vadinfo.VadInfo, version=(1, 0, 0)),
+            requirements.VersionRequirement(name='pslist', component=pslist.PsList, version=(1, 1, 0)),
+            requirements.VersionRequirement(name='vadinfo', component=vadinfo.VadInfo, version=(1, 1, 0))
         ]
 
     @classmethod
@@ -66,42 +66,7 @@ class Malfind(interfaces.plugins.PluginInterface):
 
         return True
 
-    @classmethod
-    def vad_dump(cls, context: interfaces.context.ContextInterface, proc: interfaces.objects.ObjectInterface, vad)\
-            -> interfaces.plugins.FileInterface:
-        """Extracts the memory regions for a process that may contain injected for a process as a FileInterface
-        code.
 
-        Args:
-            context: The context to retrieve required elements (layers, symbol tables) from
-            proc: an _EPROCESS instance
-            vad: The suspected VAD to extract
-
-        Returns:
-            A FileInterface object containing the complete data for the process or None in the case of failure
-        """
-        proc_id = "Unknown"
-        try:
-            proc_id = proc.UniqueProcessId
-            proc_layer_name = proc.add_process_layer()
-        except exceptions.InvalidAddressException as excp:
-            vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
-                                                                             excp.layer_name))
-            return
-
-        proc_layer = context.layers[proc_layer_name]
-        vad_start = vad.get_start()
-
-        try:
-            filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId,
-                                                                                    vad_start))
-            filedata.data.write(proc_layer.read(vad_start, vad.get_end() - vad_start, pad=True))
-
-        except Exception as excp:
-            vollog.debug("Unable to dump PE with pid {0}.{1:#x}: {2}".format(proc.UniqueProcessId, vad_start, excp))
-            return
-
-        return filedata
 
     @classmethod
     def list_injections(
@@ -168,7 +133,7 @@ class Malfind(interfaces.plugins.PluginInterface):
 
                 dumped = False
                 if self.config['dump']:
-                    filedata = self.vad_dump(self.context, proc, vad)
+                    filedata = vadinfo.VadInfo.vad_dump(self.context, proc, vad)
                     if filedata:
                         try:
                             self.produce_file(filedata)
