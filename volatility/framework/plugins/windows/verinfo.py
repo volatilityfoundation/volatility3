@@ -10,7 +10,7 @@ from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
-from volatility.framework.symbols.windows import extensions
+from volatility.framework.symbols.windows.extensions import pe
 from volatility.plugins.windows import pslist, modules, dlllist
 
 vollog = logging.getLogger(__name__)
@@ -32,9 +32,9 @@ class VerInfo(interfaces.plugins.PluginInterface):
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
-            requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (2, 0, 0)),
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
@@ -101,7 +101,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
-                                                                class_types = extensions.pe.class_types)
+                                                                class_types = pe.class_types)
 
         for mod in mods:
             try:

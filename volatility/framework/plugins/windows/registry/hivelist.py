@@ -6,7 +6,6 @@ from typing import Iterator, List, Tuple, Iterable, Optional
 
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
-from volatility.framework.interfaces import plugins
 from volatility.framework.layers import registry
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows.registry import hivescan
@@ -71,7 +70,7 @@ class HiveList(interfaces.plugins.PluginInterface):
                                                   symbol_table = self.config["nt_symbols"],
                                                   filter_string = self.config.get('filter', None)):
 
-            dumped = False
+            file_output = "Disabled"
             if self.config['dump']:
                 # Construct the hive
                 hive = next(
@@ -83,23 +82,22 @@ class HiveList(interfaces.plugins.PluginInterface):
                 maxaddr = hive.hive.Storage[0].Length
                 hive_name = self._sanitize_hive_name(hive.get_name())
 
-                filedata = plugins.FileInterface('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset)))
-                if hive._base_block:
-                    hive_data = self.context.layers[hive.dependencies[0]].read(hive.hive.BaseBlock, 1 << 12)
-                else:
-                    hive_data = '\x00' * (1 << 12)
-                filedata.data.write(hive_data)
+                with self._file_handler('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset))) as filedata:
+                    if hive._base_block:
+                        hive_data = self.context.layers[hive.dependencies[0]].read(hive.hive.BaseBlock, 1 << 12)
+                    else:
+                        hive_data = '\x00' * (1 << 12)
+                    filedata.write(hive_data)
 
-                for i in range(0, maxaddr, chunk_size):
-                    current_chunk_size = min(chunk_size, maxaddr - i)
-                    data = hive.read(i, current_chunk_size, pad = True)
-                    filedata.data.write(data)
-                    # if self._progress_callback:
-                    #     self._progress_callback((i / maxaddr) * 100, 'Writing layer {}'.format(hive_name))
-                self.produce_file(filedata)
-                dumped = True
+                    for i in range(0, maxaddr, chunk_size):
+                        current_chunk_size = min(chunk_size, maxaddr - i)
+                        data = hive.read(i, current_chunk_size, pad = True)
+                        filedata.write(data)
+                        # if self._progress_callback:
+                        #     self._progress_callback((i / maxaddr) * 100, 'Writing layer {}'.format(hive_name))
+                    file_output = filedata.preferred_filename
 
-            yield (0, (format_hints.Hex(hive_object.vol.offset), hive_object.get_name() or "", dumped))
+            yield (0, (format_hints.Hex(hive_object.vol.offset), hive_object.get_name() or "", file_output))
 
     @classmethod
     def list_hives(cls,
@@ -238,5 +236,5 @@ class HiveList(interfaces.plugins.PluginInterface):
                             hex(hive.vol.offset)))
 
     def run(self) -> renderers.TreeGrid:
-        return renderers.TreeGrid([("Offset", format_hints.Hex), ("FileFullPath", str), ("Dumped", bool)],
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("FileFullPath", str), ("File output", str)],
                                   self._generator())

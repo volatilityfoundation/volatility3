@@ -46,7 +46,7 @@ class Handles(interfaces.plugins.PluginInterface):
                                          element_type = int,
                                          description = "Process IDs to include (all other processes are excluded)",
                                          optional = True),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0))
         ]
 
     def _decode_pointer(self, value, magic):

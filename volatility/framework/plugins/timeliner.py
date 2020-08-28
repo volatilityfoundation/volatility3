@@ -138,8 +138,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
         # Write out a body file if necessary
         if self.config.get('create-bodyfile', True):
-            filedata = interfaces.plugins.FileInterface("volatility.body")
-            with io.TextIOWrapper(filedata.data, write_through = True) as fp:
+            filedata = self._file_handler("volatility.body", True)
+            with io.TextIOWrapper(filedata, write_through = True) as fp:
                 for (plugin_name, item) in self.timeline:
                     times = self.timeline[(plugin_name, item)]
                     # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
@@ -151,7 +151,6 @@ class Timeliner(interfaces.plugins.PluginInterface):
                             self._text_format(times.get(TimeLinerType.MODIFIED, "")),
                             self._text_format(times.get(TimeLinerType.CHANGED, "")),
                             self._text_format(times.get(TimeLinerType.CREATED, ""))))
-                self.produce_file(filedata)
 
     def _sanitize_body_format(self, value):
         return value.replace("|", "_")
@@ -185,7 +184,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
 
                 plugin = plugins.construct_plugin(self.context, automagics, plugin_class, self.config_path,
-                                                  self._progress_callback, self._file_template)
+                                                  self._progress_callback, self._file_handler)
 
                 if isinstance(plugin, TimeLinerInterface):
                     if not len(filter_list) or any(
@@ -203,10 +202,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 for entry in old_dict:
                     total_config[interfaces.configuration.path_join(plugin.__class__.__name__, entry)] = old_dict[entry]
 
-            filedata = interfaces.plugins.FileInterface("config.json")
-            with io.TextIOWrapper(filedata.data, write_through = True) as fp:
+            filedata = self._file_handler("config.json", True)
+            with io.TextIOWrapper(filedata, write_through = True) as fp:
                 json.dump(total_config, fp, sort_keys = True, indent = 2)
-                self.produce_file(filedata)
 
         return renderers.TreeGrid(columns = [("Plugin", str), ("Description", str), ("Created Date", datetime.datetime),
                                              ("Modified Date", datetime.datetime), ("Accessed Date", datetime.datetime),

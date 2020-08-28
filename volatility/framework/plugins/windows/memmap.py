@@ -25,7 +25,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
                                         optional = True),
@@ -48,34 +48,38 @@ class Memmap(interfaces.plugins.PluginInterface):
                                                                                  excp.layer_name))
                 continue
 
-            filedata = interfaces.plugins.FileInterface("pid.{}.dmp".format(pid))
+            filedata = self._file_handler("pid.{}.dmp".format(pid))
 
             for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                 offset, size, mapped_offset, mapped_size, maplayer = mapval
 
-                dumped = False
+                file_output = "Disabled"
                 if self.config['dump']:
                     try:
                         data = proc_layer.read(offset, size, pad = True)
-                        filedata.data.write(data)
-                        dumped = True
+                        filedata.write(data)
+                        file_output = filedata.preferred_filename
                     except exceptions.InvalidAddressException:
+                        file_output = "Error outputting file"
                         vollog.debug("Unable to write {}'s address {} to {}.dmp".format(
                             proc_layer_name, offset, filedata.preferred_filename))
 
-                yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
-                           format_hints.Hex(offset), dumped))
+                yield (0, (
+                    format_hints.Hex(offset),
+                    format_hints.Hex(mapped_offset),
+                    format_hints.Hex(mapped_size),
+                    format_hints.Hex(offset),
+                    file_output))
                 offset += mapped_size
-
-            self.produce_file(filedata)
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid([("Virtual", format_hints.Hex), ("Physical", format_hints.Hex),
-                                   ("Size", format_hints.Hex), ("Offset", format_hints.Hex), ("Dumped", bool)],
-                                  self._generator(
-                                      pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
-                                                                   filter_func = filter_func)))
+        return renderers.TreeGrid(
+            [("Virtual", format_hints.Hex), ("Physical", format_hints.Hex), ("Size", format_hints.Hex),
+             ("Offset", format_hints.Hex), ("File output", str)],
+            self._generator(
+                pslist.PsList.list_processes(context = self.context,
+                                             layer_name = self.config['primary'],
+                                             symbol_table = self.config['nt_symbols'],
+                                             filter_func = filter_func)))

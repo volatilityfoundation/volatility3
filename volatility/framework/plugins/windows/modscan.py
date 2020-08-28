@@ -8,7 +8,7 @@ from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
-from volatility.framework.symbols.windows import extensions
+from volatility.framework.symbols.windows.extensions import pe
 from volatility.plugins.windows import poolscanner, dlllist
 
 
@@ -27,7 +27,7 @@ class ModScan(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(name = 'poolerscanner',
                                             component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),
-            requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (2, 0, 0)),
             requirements.BooleanRequirement(name = 'dump',
                                             description = "Extract listed modules",
                                             default = False,
@@ -63,7 +63,7 @@ class ModScan(interfaces.plugins.PluginInterface):
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
-                                                                class_types = extensions.pe.class_types)
+                                                                class_types = pe.class_types)
 
         for mod in self.scan_modules(self.context, self.config['primary'], self.config['nt_symbols']):
 
@@ -77,16 +77,23 @@ class ModScan(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 FullDllName = ""
 
-            dumped = False
+            file_output = "Disabled"
             if self.config['dump']:
-                filedata = dlllist.DllList.dump_pe(self.context, pe_table_name, mod)
-                if filedata:
-                    self.produce_file(filedata)
-                    dumped = True
+                filedata = dlllist.DllList.dump_pe(self.context, pe_table_name, mod, self._file_handler)
+                if filedata and filedata.committed:
+                    file_output = filedata.preferred_filename
+                else:
+                    file_output = "Error outputting file"
 
-            yield (0, (format_hints.Hex(mod.vol.offset), format_hints.Hex(mod.DllBase),
-                       format_hints.Hex(mod.SizeOfImage), BaseDllName, FullDllName, dumped))
+            yield (0, (
+                format_hints.Hex(mod.vol.offset),
+                format_hints.Hex(mod.DllBase),
+                format_hints.Hex(mod.SizeOfImage),
+                BaseDllName,
+                FullDllName,
+                file_output
+            ))
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Base", format_hints.Hex), ("Size", format_hints.Hex),
-                                   ("Name", str), ("Path", str), ("Dumped", bool)], self._generator())
+                                   ("Name", str), ("Path", str), ("File output", str)], self._generator())

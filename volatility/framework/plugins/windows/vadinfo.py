@@ -5,7 +5,7 @@
 import logging
 from typing import Callable, List, Generator, Iterable, Optional
 
-from volatility.framework import renderers, interfaces, exceptions
+from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
@@ -58,7 +58,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                              description = 'Filter on specific process IDs',
                                              element_type = int,
                                              optional = True),
-                requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+                requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
                 requirements.BooleanRequirement(name = 'dump',
                                                 description = "Extract listed memory ranges",
                                                 default = False,
@@ -180,6 +180,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
+            proc_layer_name = proc.add_process_layer()
 
             for vad in self.list_vads(proc, filter_func = filter_func):
 

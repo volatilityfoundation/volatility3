@@ -21,7 +21,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the loaded modules in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -31,7 +31,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
@@ -48,7 +48,8 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 context: interfaces.context.ContextInterface,
                 pe_table_name: str,
                 dll_entry: interfaces.objects.ObjectInterface,
-                layer_name: str = None) -> interfaces.plugins.FileInterface:
+                file_handler: Type[interfaces.plugins.FileHandlerInterface],
+                layer_name: str = None) -> interfaces.plugins.FileHandlerInterface:
         """Extracts the complete data for a process as a FileInterface
 
         Args:
@@ -56,6 +57,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             pe_table_name: the name for the symbol table containing the PE format symbols
             dll_entry: the object representing the module
             layer_name: the layer that the DLL lives within
+            file_handler: class for constructing output files
 
         Returns:
             A FileInterface object containing the complete data for the DLL or None in the case of failure"""
@@ -69,17 +71,21 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if layer_name is None:
                 layer_name = dll_entry.vol.layer_name
 
-            filedata = interfaces.plugins.FileInterface("{0}.{1:#x}.{2:#x}.dmp".format(
-                ntpath.basename(name), dll_entry.vol.offset, dll_entry.DllBase))
+            filedata = file_handler(
+                "{0}.{1}.{2:#x}.{3:#x}.dmp".format(layer_name, ntpath.basename(name), dll_entry.vol.offset,
+                                                   dll_entry.DllBase), True)
 
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = dll_entry.DllBase,
                                         layer_name = layer_name)
 
-            for offset, data in dos_header.reconstruct():
-                filedata.data.seek(offset)
-                filedata.data.write(data)
-        except Exception as excp:
+            with file_handler("{0}.{1}.{2:#x}.{3:#x}.dmp".format(layer_name, ntpath.basename(name),
+                                                                 dll_entry.vol.offset,
+                                                                 dll_entry.DllBase)):
+                for offset, data in dos_header.reconstruct():
+                    filedata.seek(offset)
+                    filedata.write(data)
+        except (IOError, exceptions.VolatilityException) as excp:
             vollog.debug("Unable to dump dll at offset {}: {}".format(dll_entry.DllBase, excp))
         return filedata
 
@@ -120,13 +126,14 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 else:
                     DllLoadTime = renderers.NotApplicableValue()
 
-                dumped = False
+                file_output = "Disabled"
                 if self.config['dump']:
-                    filedata = self.dump_pe(self.context, pe_table_name, entry, proc_layer_name)
-                    if filedata:
-                        filedata.preferred_filename = "pid.{0}.".format(proc_id) + filedata.preferred_filename
-                        dumped = True
-                        self.produce_file(filedata)
+                    filedata = self.dump_pe(self.context, pe_table_name, entry, self._file_handler,
+                                            proc_layer_name)
+                    if filedata and filedata.committed:
+                        file_output = filedata.preferred_filename
+                    else:
+                        file_output = "Error outputting file"
 
                 yield (0, (proc.UniqueProcessId,
                            proc.ImageFileName.cast("string",

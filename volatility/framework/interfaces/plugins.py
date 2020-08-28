@@ -8,10 +8,10 @@ using objects constructed from symbols.
 """
 
 # Configuration interfaces must be imported separately, since we're part of interfaces and can't import ourselves
-import io
 import logging
+import os
 from abc import ABCMeta, abstractmethod
-from typing import List, Optional, Tuple
+from typing import List, Tuple, Type, IO
 
 from volatility import framework
 from volatility.framework import exceptions, constants, interfaces
@@ -19,38 +19,61 @@ from volatility.framework import exceptions, constants, interfaces
 vollog = logging.getLogger(__name__)
 
 
-class FileInterface(metaclass = ABCMeta):
+class FileHandlerInterface(IO[bytes]):
     """Class for storing Files in the plugin as a means to output a file or
     files when necessary."""
 
-    def __init__(self, filename: str, data: bytes = None) -> None:
-        """
+    def __init__(self, filename: str, immediate_commit: bool = False) -> None:
+        """Creates a FileTemplate
 
         Args:
             filename: The requested name of the filename for the data
-            data: The data to be stored in a file
         """
+        self._immediate_commit = immediate_commit
+        self._committed = False
+        self._preferred_filename = None
         self.preferred_filename = filename
-        if data is None:
-            data = b''
-        self.data = io.BytesIO(data)
+        super().__init__()
 
+    @property
+    def committed(self):
+        return self._committed
 
-class FileConsumerInterface(object):
-    """Class for consuming files potentially produced by plugins.
+    @property
+    def preferred_filename(self):
+        return self._preferred_filename
 
-    We use the producer/consumer model to ensure we can avoid running
-    out of memory by storing every file produced. The downside is, we
-    can't provide much feedback to the producer about what happened to
-    their file (other than exceptions).
-    """
+    @preferred_filename.setter
+    def preferred_filename(self, filename):
+        """Sets the preferred filename"""
+        if self._committed:
+            raise IOError
+        if not isinstance(filename, str):
+            raise TypeError("FileTemplateInterface preferred filenames must be strings")
+        if os.path.sep in filename:
+            raise ValueError("FileTemplateInterface filenames cannot contain path separators")
+        self._preferred_filename = filename
 
-    def consume_file(self, file: FileInterface) -> None:
-        """Consumes a file as passed back to a UI by a plugin.
+    def __enter__(self):
+        return self
 
-        Args:
-            file: A FileInterface object with the data to write to a file
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None and exc_value is None and traceback is None:
+            self.close()
+            if self._immediate_commit:
+                self.commit()
+        else:
+            vollog.warning("File {} could not be written: {}".format(self._preferred_filename, str(exc_value)))
+            self.close()
+
+    def commit(self):
+        """Commits the file to whatever medium is necessary, the file cannot be altered after this point
+        nor can its preferred_name be chaned
+
+        This also ensures that a UI can determine when a file is fully complete rather than partially written
         """
+        self.close()
+        self._committed = True
 
 
 #
@@ -105,21 +128,21 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
             if requirement.name not in self.config:
                 self.config[requirement.name] = requirement.default
 
-        self._file_consumer = None  # type: Optional[FileConsumerInterface]
+        self._file_handler = FileHandlerInterface  # type: Type[FileHandlerInterface]
 
         framework.require_interface_version(*self._required_framework_version)
 
-    def set_file_consumer(self, consumer: FileConsumerInterface) -> None:
-        """Sets the file consumer to be used by this plugin."""
-        self._file_consumer = consumer
+    def open(self, preferred_filename: str) -> FileHandlerInterface:
+        """Opens a file for output"""
+        if self._file_handler is not None:
+            return self._file_handler(preferred_filename)
+        raise IOError("FileTemplate not specified for this plugin")
 
-    def produce_file(self, filedata: FileInterface) -> None:
-        """Adds a file to the plugin's file store and returns the chosen
-        filename for the file."""
-        if self._file_consumer:
-            self._file_consumer.consume_file(filedata)
-        else:
-            vollog.debug("No file consumer specified to consume: {}".format(filedata.preferred_filename))
+    def set_file_handler(self, handler: Type[FileHandlerInterface]) -> None:
+        """Sets the file handler to be used by this plugin."""
+        if not issubclass(handler, FileHandlerInterface):
+            raise ValueError("FileHandler must be a subclass of FileHandlerInterface")
+        self._file_handler = handler
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

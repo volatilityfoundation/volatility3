@@ -168,7 +168,7 @@ be called whenever a plugin produces an auxiliary file.
 ::
 
     constructed = plugin(context, plugin_config_path, progress_callback = progress_callback)
-    constructed.set_file_consumer(file_consumer)
+    constructed.set_file_handler(file_consumer)
 
 The file_consumer must adhere to the :py:class:`~volatility.framework.interfaces.plugins.FileConsumerInterface`,
 which has a `consume_file` method that takes a :py:class:`~volatility.framework.interfaces.plugins.FileInterface`

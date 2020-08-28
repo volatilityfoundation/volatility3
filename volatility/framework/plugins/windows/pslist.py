@@ -4,14 +4,14 @@
 
 import datetime
 import logging
-from typing import Callable, Iterable, List
+from typing import Callable, Iterable, List, Type
 
 from volatility.framework import renderers, interfaces, layers, constants
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
-from volatility.framework.symbols.windows import extensions
+from volatility.framework.symbols.windows.extensions import pe
 from volatility.plugins import timeliner
 
 vollog = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 1, 0)
+    _version = (2, 0, 0)
     PHYSICAL_DEFAULT = False
 
     @classmethod
@@ -46,18 +46,23 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
-    def process_dump(cls, context: interfaces.context.ContextInterface, kernel_table_name: str, pe_table_name: str,
-                     proc: interfaces.objects.ObjectInterface) -> interfaces.plugins.FileInterface:
-        """Extracts the complete data for a process as a FileInterface
+    def process_dump(cls,
+                     context: interfaces.context.ContextInterface,
+                     kernel_table_name: str, pe_table_name: str,
+                     proc: interfaces.objects.ObjectInterface,
+                     file_handler: Type[
+                         interfaces.plugins.FileHandlerInterface]) -> interfaces.plugins.FileHandlerInterface:
+        """Extracts the complete data for a process as a FileHandlerInterface
 
         Args:
             context: the context to operate upon
             kernel_table_name: the name for the symbol table containing the kernel's symbols
             pe_table_name: the name for the symbol table containing the PE format symbols
             proc: the process object whose memory should be output
+            file_handler: class to write construct for writing the file
 
         Returns:
-            A FileInterface object containing the complete data for the process or None in the case of failure
+            A FileHandlerInterface object containing the complete data for the process or None in the case of failure
         """
 
         filedata = None
@@ -70,11 +75,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = peb.ImageBaseAddress,
                                         layer_name = proc_layer_name)
-            filedata = interfaces.plugins.FileInterface("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId,
-                                                                                    peb.ImageBaseAddress))
+            filedata = file_handler("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
             for offset, data in dos_header.reconstruct():
-                filedata.data.seek(offset)
-                filedata.data.write(data)
+                filedata.seek(offset)
+                filedata.write(data)
         except Exception as excp:
             vollog.debug("Unable to dump PE with pid {}: {}".format(proc.UniqueProcessId, excp))
 
@@ -168,7 +172,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
-                                                                class_types = extensions.pe.class_types)
+                                                                class_types = pe.class_types)
 
         memory = self.context.layers[self.config['primary']]
         if not isinstance(memory, layers.intel.Intel):
@@ -184,17 +188,19 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             else:
                 (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
-            dumped = False
+            file_output = "Disabled"
             if self.config['dump']:
-                filedata = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc)
-                if filedata:
-                    dumped = True
-                    self.produce_file(filedata)
+                filedata = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc,
+                                             self._file_handler)
+                if filedata and filedata.committed:
+                    file_output = filedata.preferred_filename
+                else:
+                    file_output = "Error outputting file"
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
                        format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
-                       proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), dumped))
+                       proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), file_output))
 
     def generate_timeline(self):
         for row in self._generator():
@@ -210,4 +216,4 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                    ("Offset{0}".format(offsettype), format_hints.Hex), ("Threads", int),
                                    ("Handles", int), ("SessionId", int), ("Wow64", bool),
                                    ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),
-                                   ("Dumped", bool)], self._generator())
+                                   ("File output", str)], self._generator())

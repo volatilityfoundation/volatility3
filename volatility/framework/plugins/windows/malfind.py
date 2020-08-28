@@ -35,7 +35,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                                             description = "Extract injected VADs",
                                             default = False,
                                             optional = True),
-            requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (1, 1, 0)),
+            requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'vadinfo', component = vadinfo.VadInfo, version = (1, 1, 0))
         ]
 
