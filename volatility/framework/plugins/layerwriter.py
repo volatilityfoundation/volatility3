@@ -20,7 +20,7 @@ class LayerWriter(plugins.PluginInterface):
     default_block_size = 0x500000
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -39,14 +39,14 @@ class LayerWriter(plugins.PluginInterface):
         ]
 
     @classmethod
-    def write_layer(cls,
-                    context: interfaces.context.ContextInterface,
-                    layer_name: str,
-                    preferred_name: str,
-                    file_handler: Type[plugins.FileHandlerInterface],
-                    chunk_size: Optional[int] = None,
-                    progress_callback: Optional[constants.ProgressCallback] = None) -> Optional[
-        plugins.FileHandlerInterface]:
+    def write_layer(
+            cls,
+            context: interfaces.context.ContextInterface,
+            layer_name: str,
+            preferred_name: str,
+            file_handler: Type[plugins.FileHandlerInterface],
+            chunk_size: Optional[int] = None,
+            progress_callback: Optional[constants.ProgressCallback] = None) -> Optional[plugins.FileHandlerInterface]:
         """Produces a FileHandler from the named layer in the provided context or None on failure
 
         Args:
@@ -54,6 +54,7 @@ class LayerWriter(plugins.PluginInterface):
             layer_name: the name of the layer to write out
             preferred_name: a string with the preferred filename for hte file
             chunk_size: an optional size for the chunks that should be written (defaults to 0x500000)
+            file_handler: class for creating FileHandler context managers
             progress_callback: an optional function that takes a percentage and a string that displays output
         """
 
@@ -76,20 +77,22 @@ class LayerWriter(plugins.PluginInterface):
 
     def _generator(self):
         if self.config['primary'] not in self.context.layers:
-            yield 0, ('Layer Name does not exist',)
+            yield 0, ('Layer Name does not exist', )
         elif os.path.exists(self.config.get('output', self.default_output_name)):
-            yield 0, ('Refusing to overwrite existing output file',)
+            yield 0, ('Refusing to overwrite existing output file', )
         else:
             output_name = self.config.get('output', self.default_output_name)
             try:
-                self.write_layer(self.context, self.config['primary'], output_name,
+                self.write_layer(self.context,
+                                 self.config['primary'],
+                                 output_name,
                                  self._file_handler,
                                  self.config.get('block_size', self.default_block_size),
                                  progress_callback = self._progress_callback)
             except IOError as excp:
-                yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp),)
+                yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp), )
 
-            yield 0, ('Layer has been written to {}'.format(output_name),)
+            yield 0, ('Layer has been written to {}'.format(output_name), )
 
     def run(self):
         return renderers.TreeGrid([("Status", str)], self._generator())
