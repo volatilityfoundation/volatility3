@@ -29,7 +29,7 @@ class ModScan(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(name = 'poolerscanner',
                                             component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),
-            requirements.VersionRequirement(name = 'pslist', component = dlllist.DllList, version = (2, 0, 0)),
+            requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (2, 0, 0)),
             requirements.BooleanRequirement(name = 'dump',
                                             description = "Extract listed modules",
