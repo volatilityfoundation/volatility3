@@ -18,6 +18,7 @@ class ModScan(interfaces.plugins.PluginInterface):
     """Scans for modules present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -161,20 +162,17 @@ class ModScan(interfaces.plugins.PluginInterface):
                 session_layer_name = self.find_session_layer(self.context, session_layers, mod.DllBase)
                 file_output = "Cannot find a viable session layer for {0:#x}".format(mod.DllBase)
                 if session_layer_name:
-                    file_handle = dlllist.DllList.dump_pe(self.context, pe_table_name, mod, self.open,
+                    file_handle = dlllist.DllList.dump_pe(self.context,
+                                                          pe_table_name,
+                                                          mod,
+                                                          self.open,
                                                           layer_name = session_layer_name)
                     file_output = "Error outputting file"
                     if file_handle:
                         file_output = file_handle.preferred_filename
 
-            yield (0, (
-                format_hints.Hex(mod.vol.offset),
-                format_hints.Hex(mod.DllBase),
-                format_hints.Hex(mod.SizeOfImage),
-                BaseDllName,
-                FullDllName,
-                file_output
-            ))
+            yield (0, (format_hints.Hex(mod.vol.offset), format_hints.Hex(mod.DllBase),
+                       format_hints.Hex(mod.SizeOfImage), BaseDllName, FullDllName, file_output))
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Base", format_hints.Hex), ("Size", format_hints.Hex),
