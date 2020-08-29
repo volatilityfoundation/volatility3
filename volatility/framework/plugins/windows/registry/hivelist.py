@@ -82,7 +82,7 @@ class HiveList(interfaces.plugins.PluginInterface):
                 maxaddr = hive.hive.Storage[0].Length
                 hive_name = self._sanitize_hive_name(hive.get_name())
 
-                with self._file_handler('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset))) as filedata:
+                with self.open('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset))) as filedata:
                     if hive._base_block:
                         hive_data = self.context.layers[hive.dependencies[0]].read(hive.hive.BaseBlock, 1 << 12)
                     else:

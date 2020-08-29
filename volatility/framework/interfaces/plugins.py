@@ -116,7 +116,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
         framework.require_interface_version(*self._required_framework_version)
 
     def open(self, preferred_filename: str) -> FileHandlerInterface:
-        """Opens a file for output"""
+        """Opens a file for output in bytes mode"""
         if self._file_handler is not None:
             return self._file_handler(preferred_filename)
         raise IOError("FileTemplate not specified for this plugin")

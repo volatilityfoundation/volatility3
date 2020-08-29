@@ -82,11 +82,10 @@ class LayerWriter(plugins.PluginInterface):
         else:
             output_name = self.config.get('output', self.default_output_name)
             try:
-                filedata = self.write_layer(self.context, self.config['primary'], output_name,
-                                            self._file_handler,
-                                            self.config.get('block_size', self.default_block_size),
-                                            progress_callback = self._progress_callback)
-                filedata.commit()
+                self.write_layer(self.context, self.config['primary'], output_name,
+                                 self._file_handler,
+                                 self.config.get('block_size', self.default_block_size),
+                                 progress_callback = self._progress_callback)
             except IOError as excp:
                 yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp),)
 
