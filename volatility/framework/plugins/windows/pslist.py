@@ -65,7 +65,6 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             A FileHandlerInterface object containing the complete data for the process or None in the case of failure
         """
 
-        filedata = None
         try:
             proc_layer_name = proc.add_process_layer()
             peb = context.object(kernel_table_name + constants.BANG + "_PEB",
@@ -75,14 +74,15 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = peb.ImageBaseAddress,
                                         layer_name = proc_layer_name)
-            filedata = file_handler("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
-            for offset, data in dos_header.reconstruct():
-                filedata.seek(offset)
-                filedata.write(data)
+            filehandler = file_handler("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
+            with filehandler as filedata:
+                for offset, data in dos_header.reconstruct():
+                    filedata.seek(offset)
+                    filedata.write(data)
         except Exception as excp:
             vollog.debug("Unable to dump PE with pid {}: {}".format(proc.UniqueProcessId, excp))
 
-        return filedata
+        return filehandler
 
     @classmethod
     def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
@@ -192,10 +192,9 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if self.config['dump']:
                 filedata = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc,
                                              self._file_handler)
-                if filedata and filedata.committed:
+                file_output = "Error outputting file"
+                if filedata:
                     file_output = filedata.preferred_filename
-                else:
-                    file_output = "Error outputting file"
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),

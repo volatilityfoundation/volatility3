@@ -59,10 +59,9 @@ class Modules(interfaces.plugins.PluginInterface):
             file_output = "Disabled"
             if self.config['dump']:
                 filedata = dlllist.DllList.dump_pe(self.context, pe_table_name, mod, self._file_handler)
-                if filedata and filedata.committed:
+                file_output = "Error outputting file"
+                if filedata:
                     file_output = filedata.preferred_filename
-                else:
-                    file_output = "Error outputting file"
 
             yield (0, (
                 format_hints.Hex(mod.vol.offset),

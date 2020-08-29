@@ -138,19 +138,20 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
         # Write out a body file if necessary
         if self.config.get('create-bodyfile', True):
-            filedata = self._file_handler("volatility.body", True)
-            with io.TextIOWrapper(filedata, write_through = True) as fp:
-                for (plugin_name, item) in self.timeline:
-                    times = self.timeline[(plugin_name, item)]
-                    # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
+            with self._file_handler("volatility.body") as filedata:
+                with io.TextIOWrapper(filedata, write_through = True) as fp:
+                    for (plugin_name, item) in self.timeline:
+                        times = self.timeline[(plugin_name, item)]
+                        # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
 
-                    if self._any_time_present(times):
-                        fp.write("|{} - {}||||||{}|{}|{}|{}\n".format(
-                            plugin_name, self._sanitize_body_format(item),
-                            self._text_format(times.get(TimeLinerType.ACCESSED, "")),
-                            self._text_format(times.get(TimeLinerType.MODIFIED, "")),
-                            self._text_format(times.get(TimeLinerType.CHANGED, "")),
-                            self._text_format(times.get(TimeLinerType.CREATED, ""))))
+                        if self._any_time_present(times):
+                            fp.write(
+                                "|{} - {}||||||{}|{}|{}|{}\n".format(
+                                    plugin_name, self._sanitize_body_format(item),
+                                    self._text_format(times.get(TimeLinerType.ACCESSED, "")),
+                                    self._text_format(times.get(TimeLinerType.MODIFIED, "")),
+                                    self._text_format(times.get(TimeLinerType.CHANGED, "")),
+                                    self._text_format(times.get(TimeLinerType.CREATED, ""))))
 
     def _sanitize_body_format(self, value):
         return value.replace("|", "_")
@@ -202,9 +203,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 for entry in old_dict:
                     total_config[interfaces.configuration.path_join(plugin.__class__.__name__, entry)] = old_dict[entry]
 
-            filedata = self._file_handler("config.json", True)
-            with io.TextIOWrapper(filedata, write_through = True) as fp:
-                json.dump(total_config, fp, sort_keys = True, indent = 2)
+            with self._file_handler("config.json") as filedata:
+                with io.TextIOWrapper(filedata, write_through = True) as fp:
+                    json.dump(total_config, fp, sort_keys = True, indent = 2)
 
         return renderers.TreeGrid(columns = [("Plugin", str), ("Description", str), ("Created Date", datetime.datetime),
                                              ("Modified Date", datetime.datetime), ("Accessed Date", datetime.datetime),
