@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import sys
+import tempfile
 import traceback
 from typing import Dict, Type, Union, Any
 from urllib import parse, request
@@ -451,20 +452,13 @@ class CommandLine:
                     extended_path = interfaces.configuration.path_join(config_path, requirement.name)
                     context.config[extended_path] = value
 
-    def file_handler_class_factory(self):
+    def file_handler_class_factory(self, direct = True):
         output_dir = self.output_dir
 
-        class CLIFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):
-            def __init__(self, filename: str):
-                io.BytesIO.__init__(self)
-                interfaces.plugins.FileHandlerInterface.__init__(self, filename)
+        class CLIFileHandler(interfaces.plugins.FileHandlerInterface):
 
-            def close(self):
-                # Don't overcommit
-                if self.closed:
-                    return
-
-                self.seek(0)
+            def _get_final_filename(self):
+                """Gets the final filename"""
 
                 if output_dir is None:
                     raise TypeError("Output directory is not a string")
@@ -478,14 +472,67 @@ class CommandLine:
                 while os.path.exists(output_filename):
                     output_filename = "{}-{}.{}".format(filename, counter, extension)
                     counter += 1
-                    with open(output_filename, "wb") as current_file:
-                        current_file.write(self.read())
-                        self._committed = True
-                        vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
+                return output_filename
+
+        class CLIMemFileHandler(io.BytesIO, CLIFileHandler):
+            def __init__(self, filename: str):
+                io.BytesIO.__init__(self)
+                CLIFileHandler.__init__(self, filename)
+
+            def close(self):
+                # Don't overcommit
+                if self.closed:
+                    return
+
+                self.seek(0)
+
+                output_filename = self._get_final_filename()
+
+                with open(output_filename, "wb") as current_file:
+                    current_file.write(self.read())
+                    self._committed = True
+                    vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
 
                 super().close()
 
-        return CLIFileHandler
+        class CLIDirectFileHandler(CLIFileHandler):
+            def __init__(self, filename: str):
+                fd, self._name = tempfile.mkstemp('vol3', dir = output_dir)
+                self._file = io.open(fd, mode = 'w+b')
+                CLIFileHandler.__init__(self, filename)
+                for item in dir(self._file):
+                    if not item.startswith('_') and not item in ['closed', 'close', 'mode', 'name']:
+                        setattr(self, item, getattr(self._file, item))
+
+            def __getattr__(self, item):
+                return getattr(self._file, item)
+
+            @property
+            def closed(self):
+                return self._file.closed
+
+            @property
+            def mode(self):
+                return self._file.mode
+
+            @property
+            def name(self):
+                return self._file.name
+
+            def close(self):
+                """Closes and commits the file (by moving the temporary file to the correct name"""
+                # Don't overcommit
+                if self._file.closed:
+                    return
+
+                self._file.close()
+                output_filename = self._get_final_filename()
+                os.rename(self._name, output_filename)
+
+        if direct:
+            return CLIDirectFileHandler
+        else:
+            return CLIMemFileHandler
 
     def populate_requirements_argparse(self, parser: Union[argparse.ArgumentParser, argparse._ArgumentGroup],
                                        configurable: Type[interfaces.configuration.ConfigurableInterface]):
