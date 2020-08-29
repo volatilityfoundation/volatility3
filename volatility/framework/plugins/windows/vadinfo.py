@@ -191,7 +191,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                     filedata = self.vad_dump(self.context, proc, vad, self._file_handler)
                     file_output = "Error outputting file"
                     if filedata:
-                        file_output = filedata.preferred_name
+                        file_output = filedata.preferred_filename
 
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.vol.offset),
                            format_hints.Hex(vad.get_start()), format_hints.Hex(vad.get_end()), vad.get_tag(),
