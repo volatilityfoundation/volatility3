@@ -320,8 +320,8 @@ class Volshell(interfaces.plugins.PluginInterface):
 class NullFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):
     """Null FileHandler that swallows files whole without consuming memory"""
 
-    def __init__(self, preferred_name: str, immediate_commit: bool = False):
-        interfaces.plugins.FileHandlerInterface.__init__(self, preferred_name, immediate_commit)
+    def __init__(self, preferred_name: str):
+        interfaces.plugins.FileHandlerInterface.__init__(self, preferred_name)
         super().__init__()
 
     def writelines(self, lines):

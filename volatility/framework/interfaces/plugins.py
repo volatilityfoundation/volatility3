@@ -23,21 +23,15 @@ class FileHandlerInterface(IO[bytes]):
     """Class for storing Files in the plugin as a means to output a file or
     files when necessary."""
 
-    def __init__(self, filename: str, immediate_commit: bool = False) -> None:
+    def __init__(self, filename: str) -> None:
         """Creates a FileTemplate
 
         Args:
             filename: The requested name of the filename for the data
         """
-        self._immediate_commit = immediate_commit
-        self._committed = False
         self._preferred_filename = None
         self.preferred_filename = filename
         super().__init__()
-
-    @property
-    def committed(self):
-        return self._committed
 
     @property
     def preferred_filename(self):
@@ -46,8 +40,8 @@ class FileHandlerInterface(IO[bytes]):
     @preferred_filename.setter
     def preferred_filename(self, filename):
         """Sets the preferred filename"""
-        if self._committed:
-            raise IOError
+        if self.closed:
+            raise IOError("FileTemplate name cannot be changed once closed")
         if not isinstance(filename, str):
             raise TypeError("FileTemplateInterface preferred filenames must be strings")
         if os.path.sep in filename:
@@ -60,20 +54,9 @@ class FileHandlerInterface(IO[bytes]):
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is None and exc_value is None and traceback is None:
             self.close()
-            if self._immediate_commit:
-                self.commit()
         else:
             vollog.warning("File {} could not be written: {}".format(self._preferred_filename, str(exc_value)))
             self.close()
-
-    def commit(self):
-        """Commits the file to whatever medium is necessary, the file cannot be altered after this point
-        nor can its preferred_name be chaned
-
-        This also ensures that a UI can determine when a file is fully complete rather than partially written
-        """
-        self.close()
-        self._committed = True
 
 
 #

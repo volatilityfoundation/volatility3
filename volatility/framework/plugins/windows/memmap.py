@@ -48,29 +48,29 @@ class Memmap(interfaces.plugins.PluginInterface):
                                                                                  excp.layer_name))
                 continue
 
-            filedata = self._file_handler("pid.{}.dmp".format(pid))
+            with self._file_handler("pid.{}.dmp".format(pid)) as filedata:
 
-            for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
-                offset, size, mapped_offset, mapped_size, maplayer = mapval
+                for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
+                    offset, size, mapped_offset, mapped_size, maplayer = mapval
 
-                file_output = "Disabled"
-                if self.config['dump']:
-                    try:
-                        data = proc_layer.read(offset, size, pad = True)
-                        filedata.write(data)
-                        file_output = filedata.preferred_filename
-                    except exceptions.InvalidAddressException:
-                        file_output = "Error outputting file"
-                        vollog.debug("Unable to write {}'s address {} to {}.dmp".format(
-                            proc_layer_name, offset, filedata.preferred_filename))
+                    file_output = "Disabled"
+                    if self.config['dump']:
+                        try:
+                            data = proc_layer.read(offset, size, pad = True)
+                            filedata.write(data)
+                            file_output = filedata.preferred_filename
+                        except exceptions.InvalidAddressException:
+                            file_output = "Error outputting to file"
+                            vollog.debug("Unable to write {}'s address {} to {}.dmp".format(proc_layer_name, offset,
+                                                                                            filedata.preferred_filename))
 
-                yield (0, (
-                    format_hints.Hex(offset),
-                    format_hints.Hex(mapped_offset),
-                    format_hints.Hex(mapped_size),
-                    format_hints.Hex(offset),
-                    file_output))
-                offset += mapped_size
+                    yield (0, (
+                        format_hints.Hex(offset),
+                        format_hints.Hex(mapped_offset),
+                        format_hints.Hex(mapped_size),
+                        format_hints.Hex(offset),
+                        file_output))
+                    offset += mapped_size
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])

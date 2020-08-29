@@ -362,7 +362,7 @@ class CommandLine:
             detail = "{}".format(excp)
             caused_by = [
                 "An invalid symbol table", "A plugin requesting a bad symbol",
-                "A plugin requesting a symbol from the wrong table"
+                                           "A plugin requesting a symbol from the wrong table"
             ]
         elif isinstance(excp, exceptions.LayerException):
             general = "Volatility experienced a layer-related issue: {}".format(excp.layer_name)
@@ -455,28 +455,31 @@ class CommandLine:
         output_dir = self.output_dir
 
         class CLIFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):
-            def __init__(self, filename: str, immediate_commit: bool = False):
+            def __init__(self, filename: str):
                 io.BytesIO.__init__(self)
-                interfaces.plugins.FileHandlerInterface.__init__(self, filename, immediate_commit)
+                interfaces.plugins.FileHandlerInterface.__init__(self, filename)
 
             def close(self):
+                # Don't overcommit
                 if self.closed:
                     return
 
+                self.seek(0)
                 if output_dir is None:
-            raise TypeError("Output directory is not a string")
+                    raise TypeError("Output directory is not a string")
                 os.makedirs(output_dir, exist_ok = True)
 
                 pref_name_array = self.preferred_filename.split('.')
                 filename, extension = os.path.join(output_dir, '.'.join(pref_name_array[:-1])), pref_name_array[-1]
-        output_filename = "{}.{}".format(filename, extension)
+                output_filename = "{}.{}".format(filename, extension)
 
-        if not os.path.exists(output_filename):
-            with open(output_filename, "wb") as current_file:
+                if not os.path.exists(output_filename):
+                    with open(output_filename, "wb") as current_file:
                         current_file.write(self.read())
-                vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
-        else:
-            vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
+                        self._committed = True
+                        vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
+                else:
+                    vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
                 super().close()
 
         return CLIFileHandler

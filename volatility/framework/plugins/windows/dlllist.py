@@ -4,7 +4,7 @@
 import logging
 import ntpath
 import datetime
-from typing import List
+from typing import List, Optional
 
 from volatility.framework import exceptions, renderers, interfaces, constants
 from volatility.framework.configuration import requirements
@@ -49,7 +49,8 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 pe_table_name: str,
                 dll_entry: interfaces.objects.ObjectInterface,
                 file_handler: Type[interfaces.plugins.FileHandlerInterface],
-                layer_name: str = None) -> interfaces.plugins.FileHandlerInterface:
+                layer_name: str = None,
+                prefix: str = '') -> Optional[interfaces.plugins.FileHandlerInterface]:
         """Extracts the complete data for a process as a FileInterface
 
         Args:
@@ -61,7 +62,6 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         Returns:
             A FileInterface object containing the complete data for the DLL or None in the case of failure"""
-        filedata = None
         try:
             try:
                 name = dll_entry.FullDllName.get_string()
@@ -71,23 +71,23 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if layer_name is None:
                 layer_name = dll_entry.vol.layer_name
 
-            filedata = file_handler(
-                "{0}.{1}.{2:#x}.{3:#x}.dmp".format(layer_name, ntpath.basename(name), dll_entry.vol.offset,
-                                                   dll_entry.DllBase), True)
+            filehandler = file_handler("{}{}.{:#x}.{:#x}.dmp".format(prefix,
+                                                                     ntpath.basename(name),
+                                                                     dll_entry.vol.offset,
+                                                                     dll_entry.DllBase))
 
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = dll_entry.DllBase,
                                         layer_name = layer_name)
 
-            with file_handler("{0}.{1}.{2:#x}.{3:#x}.dmp".format(layer_name, ntpath.basename(name),
-                                                                 dll_entry.vol.offset,
-                                                                 dll_entry.DllBase)):
+            with filehandler as filedata:
                 for offset, data in dos_header.reconstruct():
                     filedata.seek(offset)
                     filedata.write(data)
-        except (IOError, exceptions.VolatilityException) as excp:
+        except (IOError, exceptions.VolatilityException, OverflowError) as excp:
             vollog.debug("Unable to dump dll at offset {}: {}".format(dll_entry.DllBase, excp))
-        return filedata
+            return None
+        return filehandler
 
     def _generator(self, procs):
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
@@ -129,17 +129,16 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 file_output = "Disabled"
                 if self.config['dump']:
                     filedata = self.dump_pe(self.context, pe_table_name, entry, self._file_handler,
-                                            proc_layer_name)
-                    if filedata and filedata.committed:
+                                            proc_layer_name, prefix = "pid.{}.".format(proc_id))
+                    file_output = "Error outputting file"
+                    if filedata:
                         file_output = filedata.preferred_filename
-                    else:
-                        file_output = "Error outputting file"
 
                 yield (0, (proc.UniqueProcessId,
                            proc.ImageFileName.cast("string",
                                                    max_length = proc.ImageFileName.vol.count,
                                                    errors = 'replace'), format_hints.Hex(entry.DllBase),
-                           format_hints.Hex(entry.SizeOfImage), BaseDllName, FullDllName, DllLoadTime, dumped))
+                           format_hints.Hex(entry.SizeOfImage), BaseDllName, FullDllName, DllLoadTime, file_output))
 
     def generate_timeline(self):
         for row in self._generator(
@@ -158,7 +157,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex),
                                    ("Size", format_hints.Hex), ("Name", str), ("Path", str),
-                                   ("LoadTime", datetime.datetime), ("Dumped", bool)],
+                                   ("LoadTime", datetime.datetime), ("File output", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
                                                                    layer_name = self.config['primary'],
