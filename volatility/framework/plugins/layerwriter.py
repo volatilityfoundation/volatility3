@@ -47,7 +47,7 @@ class LayerWriter(plugins.PluginInterface):
                     chunk_size: Optional[int] = None,
                     progress_callback: Optional[constants.ProgressCallback] = None) -> Optional[
         plugins.FileHandlerInterface]:
-        """Produces a filedata from the named layer in the provided context
+        """Produces a FileHandler from the named layer in the provided context or None on failure
 
         Args:
             context: the context from which to read the memory layer
@@ -65,11 +65,11 @@ class LayerWriter(plugins.PluginInterface):
             chunk_size = cls.default_block_size
 
         filehandler = file_handler(preferred_name)
-        with filehandler as filedata:
+        with filehandler as file_data:
             for i in range(0, layer.maximum_address, chunk_size):
                 current_chunk_size = min(chunk_size, layer.maximum_address - i)
                 data = layer.read(i, current_chunk_size, pad = True)
-                filedata.write(data)
+                file_data.write(data)
                 if progress_callback:
                     progress_callback((i / layer.maximum_address) * 100, 'Writing layer {}'.format(layer_name))
         return filehandler

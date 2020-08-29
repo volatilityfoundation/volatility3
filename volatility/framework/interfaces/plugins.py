@@ -20,11 +20,13 @@ vollog = logging.getLogger(__name__)
 
 
 class FileHandlerInterface(IO[bytes]):
-    """Class for storing Files in the plugin as a means to output a file or
-    files when necessary."""
+    """Class for storing Files in the plugin as a means to output a file when necessary.
+
+    This can be used as ContextManager that will close/produce the file automatically when exiting the context block
+    """
 
     def __init__(self, filename: str) -> None:
-        """Creates a FileTemplate
+        """Creates a FileHandler
 
         Args:
             filename: The requested name of the filename for the data
@@ -35,18 +37,25 @@ class FileHandlerInterface(IO[bytes]):
 
     @property
     def preferred_filename(self):
+        """The preferred filename to save the data to.
+        Until this file has been written, this value may not be the final filename the data is written to.
+        """
         return self._preferred_filename
 
     @preferred_filename.setter
     def preferred_filename(self, filename):
         """Sets the preferred filename"""
         if self.closed:
-            raise IOError("FileTemplate name cannot be changed once closed")
+            raise IOError("FileHandler name cannot be changed once closed")
         if not isinstance(filename, str):
-            raise TypeError("FileTemplateInterface preferred filenames must be strings")
+            raise TypeError("FileHandler preferred filenames must be strings")
         if os.path.sep in filename:
-            raise ValueError("FileTemplateInterface filenames cannot contain path separators")
+            raise ValueError("FileHandler filenames cannot contain path separators")
         self._preferred_filename = filename
+
+    @abstractmethod
+    def close(self):
+        """Method that commits the file and fixes the final filename for use"""
 
     def __enter__(self):
         return self
@@ -115,11 +124,10 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
 
         framework.require_interface_version(*self._required_framework_version)
 
-    def open(self, preferred_filename: str) -> FileHandlerInterface:
-        """Opens a file for output in bytes mode"""
-        if self._file_handler is not None:
-            return self._file_handler(preferred_filename)
-        raise IOError("FileTemplate not specified for this plugin")
+    @property
+    def open(self):
+        """Returns a context manager and thus can be called like open"""
+        return self._file_handler
 
     def set_file_handler(self, handler: Type[FileHandlerInterface]) -> None:
         """Sets the file handler to be used by this plugin."""

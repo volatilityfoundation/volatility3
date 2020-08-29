@@ -82,20 +82,21 @@ class HiveList(interfaces.plugins.PluginInterface):
                 maxaddr = hive.hive.Storage[0].Length
                 hive_name = self._sanitize_hive_name(hive.get_name())
 
-                with self.open('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset))) as filedata:
+                file_handler = self.open('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset)))
+                with file_handler as file_data:
                     if hive._base_block:
                         hive_data = self.context.layers[hive.dependencies[0]].read(hive.hive.BaseBlock, 1 << 12)
                     else:
                         hive_data = '\x00' * (1 << 12)
-                    filedata.write(hive_data)
+                    file_data.write(hive_data)
 
                     for i in range(0, maxaddr, chunk_size):
                         current_chunk_size = min(chunk_size, maxaddr - i)
                         data = hive.read(i, current_chunk_size, pad = True)
-                        filedata.write(data)
+                        file_data.write(data)
                         # if self._progress_callback:
                         #     self._progress_callback((i / maxaddr) * 100, 'Writing layer {}'.format(hive_name))
-                    file_output = filedata.preferred_filename
+                file_output = file_handler.preferred_filename
 
             yield (0, (format_hints.Hex(hive_object.vol.offset), hive_object.get_name() or "", file_output))
 
