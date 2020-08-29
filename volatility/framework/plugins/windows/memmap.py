@@ -48,7 +48,8 @@ class Memmap(interfaces.plugins.PluginInterface):
                                                                                  excp.layer_name))
                 continue
 
-            with self.open("pid.{}.dmp".format(pid)) as filedata:
+            file_handler = self.open("pid.{}.dmp".format(pid))
+            with file_handler as file_data:
 
                 for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                     offset, size, mapped_offset, mapped_size, maplayer = mapval
@@ -57,12 +58,12 @@ class Memmap(interfaces.plugins.PluginInterface):
                     if self.config['dump']:
                         try:
                             data = proc_layer.read(offset, size, pad = True)
-                            filedata.write(data)
-                            file_output = filedata.preferred_filename
+                            file_data.write(data)
+                            file_output = file_handler.preferred_filename
                         except exceptions.InvalidAddressException:
                             file_output = "Error outputting to file"
-                            vollog.debug("Unable to write {}'s address {} to {}.dmp".format(proc_layer_name, offset,
-                                                                                            filedata.preferred_filename))
+                            vollog.debug("Unable to write {}'s address {} to {}".format(proc_layer_name, offset,
+                                                                                        file_handler.preferred_filename))
 
                     yield (0, (
                         format_hints.Hex(offset),

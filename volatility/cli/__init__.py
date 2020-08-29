@@ -465,6 +465,7 @@ class CommandLine:
                     return
 
                 self.seek(0)
+
                 if output_dir is None:
                     raise TypeError("Output directory is not a string")
                 os.makedirs(output_dir, exist_ok = True)
@@ -473,13 +474,15 @@ class CommandLine:
                 filename, extension = os.path.join(output_dir, '.'.join(pref_name_array[:-1])), pref_name_array[-1]
                 output_filename = "{}.{}".format(filename, extension)
 
-                if not os.path.exists(output_filename):
+                counter = 1
+                while os.path.exists(output_filename):
+                    output_filename = "{}-{}.{}".format(filename, counter, extension)
+                    counter += 1
                     with open(output_filename, "wb") as current_file:
                         current_file.write(self.read())
                         self._committed = True
                         vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
-                else:
-                    vollog.warning("Refusing to overwrite an existing file: {}".format(output_filename))
+
                 super().close()
 
         return CLIFileHandler

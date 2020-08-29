@@ -36,7 +36,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                                             default = False,
                                             optional = True),
             requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
-            requirements.VersionRequirement(name = 'vadinfo', component = vadinfo.VadInfo, version = (1, 1, 0))
+            requirements.VersionRequirement(name = 'vadinfo', component = vadinfo.VadInfo, version = (2, 0, 0))
         ]
 
     @classmethod
@@ -135,8 +135,8 @@ class Malfind(interfaces.plugins.PluginInterface):
                 if self.config['dump']:
                     file_output = "Error outputting to file"
                     try:
-                        filedata = vadinfo.VadInfo.vad_dump(self.context, proc, vad, self._file_handler)
-                        file_output = filedata.preferred_filename
+                        file_handler = vadinfo.VadInfo.vad_dump(self.context, proc, vad, self._file_handler)
+                        file_output = file_handler.preferred_filename
                     except (exceptions.InvalidAddressException, OverflowError) as excp:
                         vollog.debug("Unable to dump PE with pid {0}.{1:#x}: {2}".format(proc.UniqueProcessId,
                                                                                          vad.get_start(), excp))

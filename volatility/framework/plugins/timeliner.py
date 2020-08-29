@@ -138,8 +138,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
         # Write out a body file if necessary
         if self.config.get('create-bodyfile', True):
-            with self.open("volatility.body") as filedata:
-                with io.TextIOWrapper(filedata, write_through = True) as fp:
+            with self.open("volatility.body") as file_data:
+                with io.TextIOWrapper(file_data, write_through = True) as fp:
                     for (plugin_name, item) in self.timeline:
                         times = self.timeline[(plugin_name, item)]
                         # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
@@ -203,8 +203,8 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 for entry in old_dict:
                     total_config[interfaces.configuration.path_join(plugin.__class__.__name__, entry)] = old_dict[entry]
 
-            with self.open("config.json") as filedata:
-                with io.TextIOWrapper(filedata, write_through = True) as fp:
+            with self.open("config.json") as file_data:
+                with io.TextIOWrapper(file_data, write_through = True) as fp:
                     json.dump(total_config, fp, sort_keys = True, indent = 2)
 
         return renderers.TreeGrid(columns = [("Plugin", str), ("Description", str), ("Created Date", datetime.datetime),

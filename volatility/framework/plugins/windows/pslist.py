@@ -74,15 +74,15 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = peb.ImageBaseAddress,
                                         layer_name = proc_layer_name)
-            filehandler = file_handler("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
-            with filehandler as filedata:
+            file_handler = file_handler("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
+            with file_handler as file_data:
                 for offset, data in dos_header.reconstruct():
-                    filedata.seek(offset)
-                    filedata.write(data)
+                    file_data.seek(offset)
+                    file_data.write(data)
         except Exception as excp:
             vollog.debug("Unable to dump PE with pid {}: {}".format(proc.UniqueProcessId, excp))
 
-        return filehandler
+        return file_handler
 
     @classmethod
     def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
@@ -190,11 +190,11 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             file_output = "Disabled"
             if self.config['dump']:
-                filedata = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc,
-                                             self._file_handler)
+                file_handler = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc,
+                                                 self._file_handler)
                 file_output = "Error outputting file"
-                if filedata:
-                    file_output = filedata.preferred_filename
+                if file_handler:
+                    file_output = file_handler.preferred_filename
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
