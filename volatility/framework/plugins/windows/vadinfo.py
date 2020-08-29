@@ -149,8 +149,8 @@ class VadInfo(interfaces.plugins.PluginInterface):
         proc_layer = context.layers[proc_layer_name]
         file_name = "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc_id, vad_start, vad_end)
         try:
-            file_handler = file_handler(file_name)
-            with file_handler as file_data:
+            file_handle = file_handler(file_name)
+            with file_handle as file_data:
                 chunk_size = 1024 * 1024 * 10
                 offset = vad_start
                 while offset < vad_end:
@@ -165,7 +165,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             vollog.debug("Unable to dump VAD {}: {}".format(file_name, excp))
             return
 
-        return file_handler
+        return file_handle
 
     def _generator(self, procs):
 
@@ -188,10 +188,10 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
                 file_output = "Disabled"
                 if self.config['dump']:
-                    file_handler = self.vad_dump(self.context, proc, vad, self._file_handler)
+                    file_handle = self.vad_dump(self.context, proc, vad, self._file_handler)
                     file_output = "Error outputting file"
-                    if file_handler:
-                        file_output = file_handler.preferred_filename
+                    if file_handle:
+                        file_output = file_handle.preferred_filename
 
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.vol.offset),
                            format_hints.Hex(vad.get_start()), format_hints.Hex(vad.get_end()), vad.get_tag(),

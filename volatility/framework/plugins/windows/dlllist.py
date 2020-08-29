@@ -71,23 +71,23 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if layer_name is None:
                 layer_name = dll_entry.vol.layer_name
 
-            file_handler = file_handler("{}{}.{:#x}.{:#x}.dmp".format(prefix,
-                                                                      ntpath.basename(name),
-                                                                      dll_entry.vol.offset,
-                                                                      dll_entry.DllBase))
+            file_handle = file_handler("{}{}.{:#x}.{:#x}.dmp".format(prefix,
+                                                                     ntpath.basename(name),
+                                                                     dll_entry.vol.offset,
+                                                                     dll_entry.DllBase))
 
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = dll_entry.DllBase,
                                         layer_name = layer_name)
 
-            with file_handler as file_data:
+            with file_handle as file_data:
                 for offset, data in dos_header.reconstruct():
                     file_data.seek(offset)
                     file_data.write(data)
         except (IOError, exceptions.VolatilityException, OverflowError, ValueError) as excp:
             vollog.debug("Unable to dump dll at offset {}: {}".format(dll_entry.DllBase, excp))
             return None
-        return file_handler
+        return file_handle
 
     def _generator(self, procs):
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
@@ -128,11 +128,11 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                 file_output = "Disabled"
                 if self.config['dump']:
-                    file_handler = self.dump_pe(self.context, pe_table_name, entry, self._file_handler,
-                                                proc_layer_name, prefix = "pid.{}.".format(proc_id))
+                    file_handle = self.dump_pe(self.context, pe_table_name, entry, self._file_handler,
+                                               proc_layer_name, prefix = "pid.{}.".format(proc_id))
                     file_output = "Error outputting file"
-                    if file_handler:
-                        file_output = file_handler.preferred_filename
+                    if file_handle:
+                        file_output = file_handle.preferred_filename
 
                 yield (0, (proc.UniqueProcessId,
                            proc.ImageFileName.cast("string",
