@@ -161,11 +161,11 @@ class ModScan(interfaces.plugins.PluginInterface):
                 session_layer_name = self.find_session_layer(self.context, session_layers, mod.DllBase)
                 file_output = "Cannot find a viable session layer for {0:#x}".format(mod.DllBase)
                 if session_layer_name:
-                    file_handler = dlllist.DllList.dump_pe(self.context, pe_table_name, mod, self.open,
-                                                           layer_name = session_layer_name)
+                    file_handle = dlllist.DllList.dump_pe(self.context, pe_table_name, mod, self.open,
+                                                          layer_name = session_layer_name)
                     file_output = "Error outputting file"
-                    if file_handler:
-                        file_output = file_handler.preferred_filename
+                    if file_handle:
+                        file_output = file_handle.preferred_filename
 
             yield (0, (
                 format_hints.Hex(mod.vol.offset),

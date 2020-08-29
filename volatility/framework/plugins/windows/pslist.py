@@ -59,12 +59,13 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             kernel_table_name: the name for the symbol table containing the kernel's symbols
             pe_table_name: the name for the symbol table containing the PE format symbols
             proc: the process object whose memory should be output
-            file_handler: class to write construct for writing the file
+            file_handler: class to provide context manager for opening the file
 
         Returns:
             A FileHandlerInterface object containing the complete data for the process or None in the case of failure
         """
 
+        file_handle = None
         try:
             proc_layer_name = proc.add_process_layer()
             peb = context.object(kernel_table_name + constants.BANG + "_PEB",
@@ -74,15 +75,15 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = peb.ImageBaseAddress,
                                         layer_name = proc_layer_name)
-            file_handler = file_handler("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
-            with file_handler as file_data:
+            file_handle = file_handler("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
+            with file_handle as file_data:
                 for offset, data in dos_header.reconstruct():
                     file_data.seek(offset)
                     file_data.write(data)
         except Exception as excp:
             vollog.debug("Unable to dump PE with pid {}: {}".format(proc.UniqueProcessId, excp))
 
-        return file_handler
+        return file_handle
 
     @classmethod
     def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
@@ -190,11 +191,11 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             file_output = "Disabled"
             if self.config['dump']:
-                file_handler = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc,
-                                                 self._file_handler)
+                file_handle = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc,
+                                                self._file_handler)
                 file_output = "Error outputting file"
-                if file_handler:
-                    file_output = file_handler.preferred_filename
+                if file_handle:
+                    file_output = str(file_handle.preferred_filename)
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
