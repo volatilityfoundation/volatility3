@@ -497,7 +497,7 @@ class CommandLine:
 
         class CLIDirectFileHandler(CLIFileHandler):
             def __init__(self, filename: str):
-                fd, self._name = tempfile.mkstemp('vol3', dir = output_dir)
+                fd, self._name = tempfile.mkstemp(suffix = '.vol3', prefix = 'tmp_', dir = output_dir)
                 self._file = io.open(fd, mode = 'w+b')
                 CLIFileHandler.__init__(self, filename)
                 for item in dir(self._file):
