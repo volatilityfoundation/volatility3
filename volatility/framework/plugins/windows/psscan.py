@@ -11,8 +11,6 @@ from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins import timeliner
 from volatility.plugins.windows import pslist
-from volatility.framework.symbols import intermed
-from volatility.framework.symbols.windows import extensions
 from volatility.plugins.windows import poolscanner
 
 vollog = logging.getLogger(__name__)
@@ -33,11 +31,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process ID to include (all other processes are excluded)",
-                                         optional = True),
-            requirements.BooleanRequirement(name = 'dump',
-                                            description = "Extract listed processes",
-                                            default = False,
-                                            optional = True),
+                                         optional = True)
         ]
  
     @classmethod
@@ -67,27 +61,16 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield mem_object
 
     def _generator(self):
-        pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
-                                                                self.config_path,
-                                                                "windows",
-                                                                "pe",
-                                                                class_types = extensions.pe.class_types)
+
         for proc in self.scan_processes(self.context, 
                                         self.config['primary'], 
                                         self.config['nt_symbols'],
                                         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))):
 
-            dumped = False
-            if self.config['dump']:
-                filedata = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc)
-                if filedata:
-                    dumped = True
-                    self.produce_file(filedata)
-
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
                        format_hints.Hex(proc.vol.offset), proc.ActiveThreads, proc.get_handle_count(),
-                       proc.get_session_id(), proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), dumped))
+                       proc.get_session_id(), proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time()))
  
     def generate_timeline(self):
         for row in self._generator():
@@ -99,5 +82,5 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def run(self):
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str), ("Offset", format_hints.Hex),
                                    ("Threads", int), ("Handles", int), ("SessionId", int), ("Wow64", bool),
-                                   ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),("Dumped", bool)],
+                                   ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime)],
                                   self._generator())
