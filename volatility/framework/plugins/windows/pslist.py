@@ -184,7 +184,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
             dumped = False
-            if self.config['dump']:
+            if self.config.get('dump'):
                 filedata = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc)
                 if filedata:
                     dumped = True

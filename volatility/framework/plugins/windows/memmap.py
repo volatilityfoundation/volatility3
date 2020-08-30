@@ -52,7 +52,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                 offset, size, mapped_offset, mapped_size, maplayer = mapval
 
                 dumped = False
-                if self.config['dump']:
+                if self.config.get('dump'):
                     try:
                         data = proc_layer.read(offset, size, pad = True)
                         filedata.data.write(data)
