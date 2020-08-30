@@ -76,7 +76,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def generate_timeline(self):
         for row in self._generator():
             _depth, row_data = row
-            description = "Process: {} ({})".format(row_data[2], row_data[3])
+            description = "Process: {} {} ({})".format(row_data[0], row_data[2], row_data[3])
             yield (description, timeliner.TimeLinerType.CREATED, row_data[8])
             yield (description, timeliner.TimeLinerType.MODIFIED, row_data[9])
 
