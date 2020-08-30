@@ -94,7 +94,6 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         nt_minor_version = int(kuser.NtMinorVersion)
         # this only applies to versions higher or equal to Window 7 (6.1 and higher)
         dll_load_time_field = (nt_major_version > 6) or (nt_major_version == 6 and nt_minor_version >= 1)
-        time_delta_1600 = datetime.timedelta(days=(1970 - 1601) * 365 + 89)
         for proc in procs:
 
             proc_id = proc.UniqueProcessId
