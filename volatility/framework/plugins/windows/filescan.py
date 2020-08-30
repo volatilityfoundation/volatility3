@@ -55,10 +55,11 @@ class FileScan(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 continue
 
-            yield (0, (format_hints.Hex(fileobj.vol.offset), file_name))
+            yield (0, (format_hints.Hex(fileobj.vol.offset), file_name, fileobj.Size))
 
     def run(self):
         return renderers.TreeGrid([
             ("Offset", format_hints.Hex),
             ("Name", str),
+            ("Size", int)
         ], self._generator())

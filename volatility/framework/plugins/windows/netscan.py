@@ -16,7 +16,7 @@ from volatility.plugins.windows import info, poolscanner
 
 vollog = logging.getLogger(__name__)
 
-class NetScan(interfaces.plugins.PluginInterface):
+class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for network objects present in a particular windows memory image."""
 
     _version = (1, 0, 0)
@@ -28,8 +28,8 @@ class NetScan(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'info', plugin = info.Info, version= (1, 0, 0)),
+            requirements.VersionRequirement(name='poolscanner', component=poolscanner.PoolScanner, version=(1, 0, 0)),
+            requirements.VersionRequirement(name='info', component=info.Info, version=(1, 0, 0)),
             requirements.BooleanRequirement(name = 'include-corrupt',
                 description = "Radically eases result validation. This will show partially overwritten data. WARNING: the results are likely to include garbage and/or corrupt data. Be cautious!",
                 default = False,
@@ -331,6 +331,21 @@ class NetScan(interfaces.plugins.PluginInterface):
             else:
                 # this should not happen therefore we log it.
                 vollog.debug("Found network object unsure of its type: {} of type {}".format(netw_obj, type(netw_obj)))
+
+    def generate_timeline(self):
+        for row in self._generator():
+            _depth, row_data = row
+            # Skip network connections without creation time
+            if not isinstance(row_data[9], datetime.datetime):
+                continue
+            row_data = ["N/A" if isinstance(i, renderers.UnreadableValue) or isinstance(i, renderers.UnparsableValue)
+                        else i for i in row_data]
+            description = "Network connection: Process {} {} Local Address {}:{} " \
+                          "Remote Address {}:{} State {} Protocol {} ".format(row_data[7], row_data[8],
+                                                                              row_data[2], row_data[3],
+                                                                              row_data[4], row_data[5],
+                                                                              row_data[6], row_data[1])
+            yield (description, timeliner.TimeLinerType.CREATED, row_data[9])
 
     def run(self):
         show_corrupt_results = self.config.get('include-corrupt', None)
