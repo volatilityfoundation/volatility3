@@ -46,12 +46,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
-    def process_dump(cls,
-                     context: interfaces.context.ContextInterface,
-                     kernel_table_name: str, pe_table_name: str,
-                     proc: interfaces.objects.ObjectInterface,
-                     file_handler: Type[
-                         interfaces.plugins.FileHandlerInterface]) -> interfaces.plugins.FileHandlerInterface:
+    def process_dump(
+            cls, context: interfaces.context.ContextInterface, kernel_table_name: str, pe_table_name: str,
+            proc: interfaces.objects.ObjectInterface,
+            file_handler: Type[interfaces.plugins.FileHandlerInterface]) -> interfaces.plugins.FileHandlerInterface:
         """Extracts the complete data for a process as a FileHandlerInterface
 
         Args:

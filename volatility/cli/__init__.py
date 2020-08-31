@@ -459,7 +459,6 @@ class CommandLine:
 
             def _get_final_filename(self):
                 """Gets the final filename"""
-
                 if output_dir is None:
                     raise TypeError("Output directory is not a string")
                 os.makedirs(output_dir, exist_ok = True)
