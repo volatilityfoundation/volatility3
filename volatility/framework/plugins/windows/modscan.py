@@ -75,7 +75,7 @@ class ModScan(interfaces.plugins.PluginInterface):
                 FullDllName = ""
 
             dumped = False
-            if self.config.get('dump'):
+            if self.config['dump']:
                 filedata = dlllist.DllList.dump_pe(self.context, pe_table_name, mod)
                 if filedata:
                     self.produce_file(filedata)

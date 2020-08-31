@@ -71,7 +71,7 @@ class HiveList(interfaces.plugins.PluginInterface):
                                                   filter_string = self.config.get('filter', None)):
 
             dumped = False
-            if self.config.get('dump'):
+            if self.config['dump']:
                 # Construct the hive
                 hive = next(self.list_hives(self.context,
                                             self.config_path,
