@@ -209,5 +209,4 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                    ("Offset{0}".format(offsettype), format_hints.Hex), ("Threads", int),
                                    ("Handles", int), ("SessionId", int), ("Wow64", bool),
                                    ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),
-                                   ("Dumped", bool)],
-                                  self._generator())
+                                   ("Dumped", bool)], self._generator())

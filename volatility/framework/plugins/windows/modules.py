@@ -62,14 +62,8 @@ class Modules(interfaces.plugins.PluginInterface):
                     self.produce_file(filedata)
                     dumped = True
 
-            yield (0, (
-                format_hints.Hex(mod.vol.offset),
-                format_hints.Hex(mod.DllBase),
-                format_hints.Hex(mod.SizeOfImage),
-                BaseDllName,
-                FullDllName,
-                dumped
-            ))
+            yield (0, (format_hints.Hex(mod.vol.offset), format_hints.Hex(mod.DllBase),
+                       format_hints.Hex(mod.SizeOfImage), BaseDllName, FullDllName, dumped))
 
     @classmethod
     def get_session_layers(cls,

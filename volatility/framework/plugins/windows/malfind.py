@@ -21,20 +21,20 @@ class Malfind(interfaces.plugins.PluginInterface):
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name='primary',
-                                                     description='Memory layer for the kernel',
-                                                     architectures=["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name="nt_symbols", description="Windows kernel symbols"),
-            requirements.ListRequirement(name='pid',
-                                         element_type=int,
-                                         description="Process IDs to include (all other processes are excluded)",
-                                         optional=True),
-            requirements.BooleanRequirement(name='dump',
-                                            description="Extract injected VADs",
-                                            default=False,
-                                            optional=True),
-            requirements.VersionRequirement(name='pslist', component=pslist.PsList, version=(1, 1, 0)),
-            requirements.VersionRequirement(name='vadinfo', component=vadinfo.VadInfo, version=(1, 1, 0))
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ListRequirement(name = 'pid',
+                                         element_type = int,
+                                         description = "Process IDs to include (all other processes are excluded)",
+                                         optional = True),
+            requirements.BooleanRequirement(name = 'dump',
+                                            description = "Extract injected VADs",
+                                            default = False,
+                                            optional = True),
+            requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (1, 1, 0)),
+            requirements.VersionRequirement(name = 'vadinfo', component = vadinfo.VadInfo, version = (1, 1, 0))
         ]
 
     @classmethod
@@ -65,8 +65,6 @@ class Malfind(interfaces.plugins.PluginInterface):
             offset += CHUNK_SIZE
 
         return True
-
-
 
     @classmethod
     def list_injections(
@@ -139,16 +137,16 @@ class Malfind(interfaces.plugins.PluginInterface):
                             self.produce_file(filedata)
                             dumped = True
                         except Exception as excp:
-                            vollog.debug("Unable to dump PE with pid {0}.{1:#x}: {2}".format(proc.UniqueProcessId,
-                                                                                             vad.get_start(), excp))
+                            vollog.debug("Unable to dump PE with pid {0}.{1:#x}: {2}".format(
+                                proc.UniqueProcessId, vad.get_start(), excp))
 
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.get_start()),
                            format_hints.Hex(vad.get_end()), vad.get_tag(),
                            vad.get_protection(
                                vadinfo.VadInfo.protect_values(self.context, self.config["primary"],
-                                                              self.config["nt_symbols"]), vadinfo.winnt_protections),
-                           vad.get_commit_charge(), vad.get_private_memory(), dumped, format_hints.HexBytes(data),
-                           disasm))
+                                                              self.config["nt_symbols"]),
+                               vadinfo.winnt_protections), vad.get_commit_charge(), vad.get_private_memory(), dumped,
+                           format_hints.HexBytes(data), disasm))
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))

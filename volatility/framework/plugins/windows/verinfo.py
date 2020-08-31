@@ -109,8 +109,8 @@ class VerInfo(interfaces.plugins.PluginInterface):
 
             session_layer_name = modules.Modules.find_session_layer(self.context, session_layers, mod.DllBase)
             (major, minor, product, build) = [
-                                                 renderers.NotAvailableValue()
-                                             ] * 4  # type: Tuple[Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue]]
+                renderers.NotAvailableValue()
+            ] * 4  # type: Tuple[Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue]]
             try:
                 (major, minor, product, build) = self.get_version_information(self._context, pe_table_name,
                                                                               session_layer_name, mod.DllBase)

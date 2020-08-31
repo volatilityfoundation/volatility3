@@ -22,7 +22,8 @@ class ModScan(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.VersionRequirement(name = 'poolerscanner', component = poolscanner.PoolScanner,
+            requirements.VersionRequirement(name = 'poolerscanner',
+                                            component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (1, 0, 0)),
             requirements.BooleanRequirement(name = 'dump',
@@ -81,14 +82,8 @@ class ModScan(interfaces.plugins.PluginInterface):
                     self.produce_file(filedata)
                     dumped = True
 
-            yield (0, (
-                format_hints.Hex(mod.vol.offset),
-                format_hints.Hex(mod.DllBase),
-                format_hints.Hex(mod.SizeOfImage),
-                BaseDllName,
-                FullDllName,
-                dumped
-            ))
+            yield (0, (format_hints.Hex(mod.vol.offset), format_hints.Hex(mod.DllBase),
+                       format_hints.Hex(mod.SizeOfImage), BaseDllName, FullDllName, dumped))
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Base", format_hints.Hex), ("Size", format_hints.Hex),

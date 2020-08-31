@@ -21,14 +21,14 @@ class Cachedump(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Memory layer for the kernel',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolTableRequirement(name = "nt_symbols",
-                                                    description = "Windows kernel symbols"),
-                requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
-                requirements.PluginRequirement(name = 'lsadump', plugin = lsadump.Lsadump, version = (1, 0, 0))
-                ]
+        return [
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'lsadump', plugin = lsadump.Lsadump, version = (1, 0, 0))
+        ]
 
     def get_nlkm(self, sechive, lsakey, is_vista_or_later):
         return lsadump.Lsadump.get_secret_by_name(sechive, 'NL$KM', lsakey, is_vista_or_later)
@@ -44,7 +44,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
             aes = AES.new(nlkm[16:32], AES.MODE_CBC, ch)
             data = ""
             for i in range(0, len(edata), 16):
-                buf = edata[i: i + 16]
+                buf = edata[i:i + 16]
                 if len(buf) < 16:
                     buf += (16 - len(buf)) * "\00"
                 data += aes.decrypt(buf)
@@ -54,13 +54,12 @@ class Cachedump(interfaces.plugins.PluginInterface):
         (uname_len, domain_len) = unpack("<HH", cache_data[:4])
         if len(cache_data[60:62]) == 0:
             return (uname_len, domain_len, 0, '', '')
-        (domain_name_len,) = unpack("<H", cache_data[60:62])
+        (domain_name_len, ) = unpack("<H", cache_data[60:62])
         ch = cache_data[64:80]
         enc_data = cache_data[96:]
         return (uname_len, domain_len, domain_name_len, enc_data, ch)
 
-    def parse_decrypted_cache(self, dec_data, uname_len,
-                              domain_len, domain_name_len):
+    def parse_decrypted_cache(self, dec_data, uname_len, domain_len, domain_name_len):
         """Get the data from the cache and separate it into the username, domain name, and hash data"""
         uname_offset = 72
         pad = 2 * ((uname_len / 2) % 2)
@@ -103,16 +102,14 @@ class Cachedump(interfaces.plugins.PluginInterface):
             data = sechive.read(cache_item.Data + 4, cache_item.DataLength)
             if data == None:
                 continue
-            (uname_len, domain_len, domain_name_len,
-             enc_data, ch) = self.parse_cache_entry(data)
+            (uname_len, domain_len, domain_name_len, enc_data, ch) = self.parse_cache_entry(data)
             # Skip if nothing in this cache entry
             if uname_len == 0 or len(ch) == 0:
                 continue
             dec_data = self.decrypt_hash(enc_data, nlkm, ch, not vista_or_later)
 
-            (username, domain, domain_name,
-             hashh) = self.parse_decrypted_cache(dec_data, uname_len,
-                                                 domain_len, domain_name_len)
+            (username, domain, domain_name, hashh) = self.parse_decrypted_cache(dec_data, uname_len, domain_len,
+                                                                                domain_name_len)
             yield (0, (username, domain, domain_name, hashh))
 
     def run(self):

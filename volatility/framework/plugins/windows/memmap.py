@@ -42,8 +42,8 @@ class Memmap(interfaces.plugins.PluginInterface):
                 proc_layer_name = proc.add_process_layer()
                 proc_layer = self.context.layers[proc_layer_name]
             except exceptions.InvalidAddressException as excp:
-                vollog.debug("Process {}: invalid address {} in layer {}".format(
-                    pid, excp.invalid_address, excp.layer_name))
+                vollog.debug("Process {}: invalid address {} in layer {}".format(pid, excp.invalid_address,
+                                                                                 excp.layer_name))
                 continue
 
             filedata = interfaces.plugins.FileInterface("pid.{}.dmp".format(pid))
@@ -58,15 +58,11 @@ class Memmap(interfaces.plugins.PluginInterface):
                         filedata.data.write(data)
                         dumped = True
                     except exceptions.InvalidAddressException:
-                        vollog.debug("Unable to write {}'s address {} to {}.dmp".format(proc_layer_name, offset,
-                                                                                        filedata.preferred_filename))
+                        vollog.debug("Unable to write {}'s address {} to {}.dmp".format(
+                            proc_layer_name, offset, filedata.preferred_filename))
 
-                yield (0, (
-                    format_hints.Hex(offset),
-                    format_hints.Hex(mapped_offset),
-                    format_hints.Hex(mapped_size),
-                    format_hints.Hex(offset),
-                    dumped))
+                yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
+                           format_hints.Hex(offset), dumped))
                 offset += mapped_size
 
             self.produce_file(filedata)
@@ -74,11 +70,10 @@ class Memmap(interfaces.plugins.PluginInterface):
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid(
-            [("Virtual", format_hints.Hex), ("Physical", format_hints.Hex), ("Size", format_hints.Hex),
-             ("Offset", format_hints.Hex), ("Dumped", bool)],
-            self._generator(
-                pslist.PsList.list_processes(context = self.context,
-                                             layer_name = self.config['primary'],
-                                             symbol_table = self.config['nt_symbols'],
-                                             filter_func = filter_func)))
+        return renderers.TreeGrid([("Virtual", format_hints.Hex), ("Physical", format_hints.Hex),
+                                   ("Size", format_hints.Hex), ("Offset", format_hints.Hex), ("Dumped", bool)],
+                                  self._generator(
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))

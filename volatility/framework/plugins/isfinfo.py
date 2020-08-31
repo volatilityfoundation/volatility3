@@ -93,6 +93,7 @@ class IsfInfo(plugins.PluginInterface):
             def check_valid(data):
                 return "True" if schemas.validate(data, True) else "False"
         except ImportError:
+
             def check_valid(data):
                 return "Unknown"
 
@@ -116,14 +117,13 @@ class IsfInfo(plugins.PluginInterface):
                     valid = check_valid(data)
                 except (UnicodeDecodeError, json.decoder.JSONDecodeError):
                     vollog.warning("Invalid ISF: {}".format(entry))
-            yield (0, (entry, valid, num_bases, num_types, num_symbols, num_enums,
-                       windows_info, linux_banner, mac_banner))
+            yield (0, (entry, valid, num_bases, num_types, num_symbols, num_enums, windows_info, linux_banner,
+                       mac_banner))
 
     # Try to open the file, load it as JSON, read the data from it
 
     def run(self):
-        return renderers.TreeGrid(
-            [("URI", str), ("Valid", str),
-             ("Number of base_types", int), ("Number of types", int), ("Number of symbols", int),
-             ("Number of enums", int), ("Windows info", str), ("Linux banner", str), ("Mac banner", str)],
-            self._generator())
+        return renderers.TreeGrid([("URI", str), ("Valid", str),
+                                   ("Number of base_types", int), ("Number of types", int), ("Number of symbols", int),
+                                   ("Number of enums", int), ("Windows info", str), ("Linux banner", str),
+                                   ("Mac banner", str)], self._generator())

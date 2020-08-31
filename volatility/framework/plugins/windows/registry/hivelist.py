@@ -56,7 +56,6 @@ class HiveList(interfaces.plugins.PluginInterface):
                                             description = "Extract listed registry hives",
                                             default = False,
                                             optional = True)
-
         ]
 
     def _sanitize_hive_name(self, name: str) -> str:
@@ -73,11 +72,12 @@ class HiveList(interfaces.plugins.PluginInterface):
             dumped = False
             if self.config['dump']:
                 # Construct the hive
-                hive = next(self.list_hives(self.context,
-                                            self.config_path,
-                                            layer_name = self.config["primary"],
-                                            symbol_table = self.config["nt_symbols"],
-                                            hive_offsets = [hive_object.vol.offset]))
+                hive = next(
+                    self.list_hives(self.context,
+                                    self.config_path,
+                                    layer_name = self.config["primary"],
+                                    symbol_table = self.config["nt_symbols"],
+                                    hive_offsets = [hive_object.vol.offset]))
                 maxaddr = hive.hive.Storage[0].Length
                 hive_name = self._sanitize_hive_name(hive.get_name())
 

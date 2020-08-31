@@ -58,8 +58,4 @@ class FileScan(interfaces.plugins.PluginInterface):
             yield (0, (format_hints.Hex(fileobj.vol.offset), file_name, fileobj.Size))
 
     def run(self):
-        return renderers.TreeGrid([
-            ("Offset", format_hints.Hex),
-            ("Name", str),
-            ("Size", int)
-        ], self._generator())
+        return renderers.TreeGrid([("Offset", format_hints.Hex), ("Name", str), ("Size", int)], self._generator())

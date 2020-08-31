@@ -33,7 +33,6 @@ except ImportError:
 
 vollog = logging.getLogger(__name__)
 
-
 # TODO: Type-annotating the ResourceAccessor.open method is difficult because HTTPResponse is not actually an IO[Any] type
 #   fix this
 
@@ -117,9 +116,9 @@ class ResourceAccessor(object):
             else:
                 # TODO: find a way to check if we already have this file (look at http headers?)
                 block_size = 1028 * 8
-                temp_filename = os.path.join(constants.CACHE_PATH,
-                                             "data_" + hashlib.sha512(
-                                                 bytes(url, 'raw_unicode_escape')).hexdigest() + ".cache")
+                temp_filename = os.path.join(
+                    constants.CACHE_PATH,
+                    "data_" + hashlib.sha512(bytes(url, 'raw_unicode_escape')).hexdigest() + ".cache")
 
                 if not os.path.exists(temp_filename):
                     vollog.debug("Caching file at: {}".format(temp_filename))

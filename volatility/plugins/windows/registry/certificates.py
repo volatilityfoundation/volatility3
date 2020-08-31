@@ -40,8 +40,8 @@ class Certificates(interfaces.plugins.PluginInterface):
                                                  symbol_table = self.config['nt_symbols']):
 
             for top_key in [
-                "Microsoft\\SystemCertificates",
-                "Software\\Microsoft\\SystemCertificates",
+                    "Microsoft\\SystemCertificates",
+                    "Software\\Microsoft\\SystemCertificates",
             ]:
                 try:
                     # Walk it

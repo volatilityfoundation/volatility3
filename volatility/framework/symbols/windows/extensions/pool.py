@@ -39,11 +39,11 @@ class POOL_HEADER(objects.StructType):
         # because symbol_table_name will be different from kernel_symbol_table.
         if kernel_symbol_table:
             object_header_type = self._context.symbol_space.get_type(kernel_symbol_table + constants.BANG +
-                                                                 "_OBJECT_HEADER")
+                                                                     "_OBJECT_HEADER")
         else:
             # otherwise symbol_table_name *is* the kernel symbol table, so just use that.
             object_header_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG +
-                                                                 "_OBJECT_HEADER")
+                                                                     "_OBJECT_HEADER")
 
         pool_header_size = self.vol.size
 
@@ -160,8 +160,8 @@ class POOL_HEADER(objects.StructType):
         headers = []
         sizes = []
         for header in [
-            'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
-            'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
+                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
+                'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
         ]:
             try:
                 type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)

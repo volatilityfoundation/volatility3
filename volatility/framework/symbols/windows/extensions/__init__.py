@@ -16,7 +16,6 @@ from volatility.framework.symbols.windows.extensions import pool
 
 vollog = logging.getLogger(__name__)
 
-
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
 

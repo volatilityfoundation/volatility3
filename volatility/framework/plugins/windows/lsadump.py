@@ -23,13 +23,13 @@ class Lsadump(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls):
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Memory layer for the kernel',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolTableRequirement(name = "nt_symbols",
-                                                    description = "Windows kernel symbols"),
-                requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
-                ]
+        return [
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
+        ]
 
     @classmethod
     def decrypt_aes(cls, secret, key):
@@ -45,7 +45,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         data = b""
         for i in range(60, len(secret), 16):
             aes = AES.new(aeskey, AES.MODE_CBC, b'\x00' * 16)
-            buf = secret[i: i + 16]
+            buf = secret[i:i + 16]
             if len(buf) < 16:
                 buf += (16 - len(buf)) * "\00"
             data += aes.decrypt(buf)
@@ -100,8 +100,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         if not enc_secret_value:
             return None
 
-        enc_secret = sechive.read(enc_secret_value.Data + 4,
-                                  enc_secret_value.DataLength)
+        enc_secret = sechive.read(enc_secret_value.Data + 4, enc_secret_value.DataLength)
         if not enc_secret:
             return None
 
@@ -131,7 +130,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             if len(key[j:j + 7]) < 7:
                 j = len(key[j:j + 7])
 
-        (dec_data_len,) = unpack("<L", decrypted_data[:4])
+        (dec_data_len, ) = unpack("<L", decrypted_data[:4])
 
         return decrypted_data[8:8 + dec_data_len]
 
@@ -161,8 +160,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             if not enc_secret_value:
                 continue
 
-            enc_secret = sechive.read(enc_secret_value.Data + 4,
-                                      enc_secret_value.DataLength)
+            enc_secret = sechive.read(enc_secret_value.Data + 4, enc_secret_value.DataLength)
             if not enc_secret:
                 continue
             if not vista_or_later:
@@ -187,5 +185,4 @@ class Lsadump(interfaces.plugins.PluginInterface):
             if hive.get_name().split('\\')[-1].upper() == 'SECURITY':
                 sechive = hive
 
-        return renderers.TreeGrid([("Key", str), ("Secret", str), ('Hex', bytes)],
-                                  self._generator(syshive, sechive))
+        return renderers.TreeGrid([("Key", str), ("Secret", str), ('Hex', bytes)], self._generator(syshive, sechive))

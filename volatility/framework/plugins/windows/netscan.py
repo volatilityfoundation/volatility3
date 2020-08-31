@@ -16,6 +16,7 @@ from volatility.plugins.windows import info, poolscanner
 
 vollog = logging.getLogger(__name__)
 
+
 class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for network objects present in a particular windows memory image."""
 
@@ -28,17 +29,21 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.VersionRequirement(name='poolscanner', component=poolscanner.PoolScanner, version=(1, 0, 0)),
-            requirements.VersionRequirement(name='info', component=info.Info, version=(1, 0, 0)),
-            requirements.BooleanRequirement(name = 'include-corrupt',
-                description = "Radically eases result validation. This will show partially overwritten data. WARNING: the results are likely to include garbage and/or corrupt data. Be cautious!",
+            requirements.VersionRequirement(name = 'poolscanner',
+                                            component = poolscanner.PoolScanner,
+                                            version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
+            requirements.BooleanRequirement(
+                name = 'include-corrupt',
+                description =
+                "Radically eases result validation. This will show partially overwritten data. WARNING: the results are likely to include garbage and/or corrupt data. Be cautious!",
                 default = False,
-                optional = True
-            ),
+                optional = True),
         ]
 
     @staticmethod
-    def create_netscan_constraints(context: interfaces.context.ContextInterface, symbol_table: str) -> List[poolscanner.PoolConstraint]:
+    def create_netscan_constraints(context: interfaces.context.ContextInterface,
+                                   symbol_table: str) -> List[poolscanner.PoolConstraint]:
         """Creates a list of Pool Tag Constraints for network objects.
 
         Args:
@@ -74,10 +79,8 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     @classmethod
-    def determine_tcpip_version(cls,
-             context: interfaces.context.ContextInterface,
-             layer_name: str,
-             nt_symbol_table: str) -> str:
+    def determine_tcpip_version(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                                nt_symbol_table: str) -> str:
         """Tries to determine which symbol filename to use for the image's tcpip driver. The logic is partially taken from the info plugin.
 
         Args:
@@ -116,10 +119,11 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         except:
             # unsure what to raise here. Also, it might be useful to add some kind of fallback,
             # either to a user-provided version or to another method to determine tcpip.sys's version
-            raise exceptions.VolatilityException("Kernel Debug Structure missing VERSION/KUSER structure, unable to determine Windows version!")
+            raise exceptions.VolatilityException(
+                "Kernel Debug Structure missing VERSION/KUSER structure, unable to determine Windows version!")
 
-        vollog.debug("Determined OS Version: {}.{} {}.{}".format(kuser.NtMajorVersion, kuser.NtMinorVersion, 
-            vers.MajorVersion, vers.MinorVersion))
+        vollog.debug("Determined OS Version: {}.{} {}.{}".format(kuser.NtMajorVersion, kuser.NtMinorVersion,
+                                                                 vers.MajorVersion, vers.MinorVersion))
 
         if nt_major_version == 10 and arch == "x64":
             # win10 x64 has an additional class type we have to include.
@@ -127,9 +131,9 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         else:
             # default to general class types
             class_types = network.class_types
-        
-        # these versions are listed explicitly because symbol files differ based on 
-        # version *and* architecture. this is currently the clearest way to show 
+
+        # these versions are listed explicitly because symbol files differ based on
+        # version *and* architecture. this is currently the clearest way to show
         # the differences, even if it introduces a fair bit of redundancy.
         # furthermore, it is easy to append new versions.
         if arch == "x86":
@@ -192,21 +196,16 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 filename = version_dict.get(latest_version)
                 vollog.debug("Unable to find exact matching symbol file, going with latest: {}".format(filename))
             else:
-                raise NotImplementedError("This version of Windows is not supported: {}.{} {}.{}!".format(nt_major_version, 
-                    nt_minor_version, 
-                    vers.MajorVersion, 
-                    vers_minor_version))
+                raise NotImplementedError("This version of Windows is not supported: {}.{} {}.{}!".format(
+                    nt_major_version, nt_minor_version, vers.MajorVersion, vers_minor_version))
 
         vollog.debug("Determined symbol filename: {}".format(filename))
 
         return filename, class_types
 
     @classmethod
-    def create_netscan_symbol_table(cls,
-             context: interfaces.context.ContextInterface,
-             layer_name: str,
-             nt_symbol_table: str,
-             config_path: str) -> str:
+    def create_netscan_symbol_table(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                                    nt_symbol_table: str, config_path: str) -> str:
         """Creates a symbol table for TCP Listeners and TCP/UDP Endpoints.
 
         Args:
@@ -262,10 +261,8 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def _generator(self, show_corrupt_results: Optional[bool] = None):
         """ Generates the network objects for use in rendering. """
 
-        netscan_symbol_table = self.create_netscan_symbol_table(self.context,
-                                                                self.config["primary"],
-                                                                self.config["nt_symbols"],
-                                                                self.config_path)
+        netscan_symbol_table = self.create_netscan_symbol_table(self.context, self.config["primary"],
+                                                                self.config["nt_symbols"], self.config_path)
 
         for netw_obj in self.scan(self.context, self.config['primary'], self.config['nt_symbols'],
                                   netscan_symbol_table):
@@ -280,14 +277,10 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                 # For UdpA, the state is always blank and the remote end is asterisks
                 for ver, laddr, _ in netw_obj.dual_stack_sockets():
-                    yield (0, (format_hints.Hex(netw_obj.vol.offset),
-                               "UDP" + ver,
-                               laddr,
-                               netw_obj.Port,
-                               "*", 0, "",
-                               netw_obj.get_owner_pid() or renderers.UnreadableValue(),
-                               netw_obj.get_owner_procname() or renderers.UnreadableValue(),
-                               netw_obj.get_create_time() or renderers.UnreadableValue()))
+                    yield (0, (format_hints.Hex(netw_obj.vol.offset), "UDP" + ver, laddr, netw_obj.Port, "*", 0, "",
+                               netw_obj.get_owner_pid() or renderers.UnreadableValue(), netw_obj.get_owner_procname()
+                               or renderers.UnreadableValue(), netw_obj.get_create_time()
+                               or renderers.UnreadableValue()))
 
             elif isinstance(netw_obj, network._TCP_ENDPOINT):
                 vollog.debug("Found _TCP_ENDPOINT @ 0x{:2x}".format(netw_obj.vol.offset))
@@ -303,14 +296,10 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 except ValueError:
                     state = renderers.UnreadableValue()
 
-                yield (0, (format_hints.Hex(netw_obj.vol.offset), proto,
-                           netw_obj.get_local_address() or renderers.UnreadableValue(),
-                           netw_obj.LocalPort,
-                           netw_obj.get_remote_address() or renderers.UnreadableValue(),
-                           netw_obj.RemotePort,
-                           state,
-                           netw_obj.get_owner_pid() or renderers.UnreadableValue(),
-                           netw_obj.get_owner_procname() or renderers.UnreadableValue(),
+                yield (0, (format_hints.Hex(netw_obj.vol.offset), proto, netw_obj.get_local_address()
+                           or renderers.UnreadableValue(), netw_obj.LocalPort, netw_obj.get_remote_address()
+                           or renderers.UnreadableValue(), netw_obj.RemotePort, state, netw_obj.get_owner_pid()
+                           or renderers.UnreadableValue(), netw_obj.get_owner_procname() or renderers.UnreadableValue(),
                            netw_obj.get_create_time() or renderers.UnreadableValue()))
 
             # check for isinstance of tcp listener last, because all other objects are inherited from here
@@ -319,15 +308,10 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                 # For TcpL, the state is always listening and the remote port is zero
                 for ver, laddr, raddr in netw_obj.dual_stack_sockets():
-                    yield (0, (format_hints.Hex(netw_obj.vol.offset), "TCP" + ver,
-                               laddr,
-                               netw_obj.Port,
-                               raddr,
-                               0,
-                               "LISTENING",
-                               netw_obj.get_owner_pid() or renderers.UnreadableValue(),
-                               netw_obj.get_owner_procname() or renderers.UnreadableValue(),
-                               netw_obj.get_create_time() or renderers.UnreadableValue()))
+                    yield (0, (format_hints.Hex(netw_obj.vol.offset), "TCP" + ver, laddr, netw_obj.Port, raddr, 0,
+                               "LISTENING", netw_obj.get_owner_pid() or renderers.UnreadableValue(),
+                               netw_obj.get_owner_procname() or renderers.UnreadableValue(), netw_obj.get_create_time()
+                               or renderers.UnreadableValue()))
             else:
                 # this should not happen therefore we log it.
                 vollog.debug("Found network object unsure of its type: {} of type {}".format(netw_obj, type(netw_obj)))
@@ -338,8 +322,10 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # Skip network connections without creation time
             if not isinstance(row_data[9], datetime.datetime):
                 continue
-            row_data = ["N/A" if isinstance(i, renderers.UnreadableValue) or isinstance(i, renderers.UnparsableValue)
-                        else i for i in row_data]
+            row_data = [
+                "N/A" if isinstance(i, renderers.UnreadableValue) or isinstance(i, renderers.UnparsableValue) else i
+                for i in row_data
+            ]
             description = "Network connection: Process {} {} Local Address {}:{} " \
                           "Remote Address {}:{} State {} Protocol {} ".format(row_data[7], row_data[8],
                                                                               row_data[2], row_data[3],
@@ -361,4 +347,4 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             ("PID", int),
             ("Owner", str),
             ("Created", datetime.datetime),
-        ], self._generator(show_corrupt_results=show_corrupt_results))
+        ], self._generator(show_corrupt_results = show_corrupt_results))
