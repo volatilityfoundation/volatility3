@@ -177,10 +177,12 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
         return valid_kernels
 
-    def method_module_offset(self,
-                             context: interfaces.context.ContextInterface,
-                             vlayer: layers.intel.Intel,
-                             progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
+    def _method_offset(self,
+                       context: interfaces.context.ContextInterface,
+                       vlayer: layers.intel.Intel,
+                       pattern: bytes,
+                       result_offset: int,
+                       progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
         """Method for finding a suitable kernel offset based on a module
         table."""
         vollog.debug("Kernel base determination - searching layer module list structure")
@@ -191,14 +193,14 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         physical_layer = context.layers[physical_layer_name]
         # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
         results = physical_layer.scan(context,
-                                      scanners.BytesScanner(b"\\SystemRoot\\system32\\nt"),
+                                      scanners.BytesScanner(pattern),
                                       progress_callback = progress_callback)
         seen = set()  # type: Set[int]
         # Because this will launch a scan of the virtual layer, we want to be careful
         for result in results:
             # TODO: Identify the specific structure we're finding and document this a bit better
             pointer = context.object("pdbscan!unsigned long long",
-                                     offset = (result - 16 - int(vlayer.bits_per_register / 8)),
+                                     offset = (result + result_offset),
                                      layer_name = physical_layer_name)
             address = pointer & vlayer.address_mask
             if address in seen:
@@ -210,34 +212,19 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             if valid_kernels:
                 break
         return valid_kernels
+
+    def method_module_offset(self,
+                             context: interfaces.context.ContextInterface,
+                             vlayer: layers.intel.Intel,
+                             progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
+        return self._method_offset(context, vlayer, b"\\SystemRoot\\system32\\nt",
+                                   -16 - int(vlayer.bits_per_register / 8), progress_callback)
 
     def method_kdbg_offset(self,
                            context: interfaces.context.ContextInterface,
                            vlayer: layers.intel.Intel,
                            progress_callback: constants.ProgressCallback = None) -> ValidKernelsType:
-        vollog.debug("Kernel base determination - using KDBG structure for kernel offset")
-        valid_kernels = {}  # type: ValidKernelsType
-        physical_layer_name = self.get_physical_layer_name(context, vlayer)
-        physical_layer = context.layers[physical_layer_name]
-        results = physical_layer.scan(context, scanners.BytesScanner(b"KDBG"), progress_callback = progress_callback)
-
-        seen = set()  # type: Set[int]
-        for result in results:
-            # TODO: Identify the specific structure we're finding and document this a bit better
-            pointer = context.object("pdbscan!unsigned long long",
-                                     offset = result + 8,
-                                     layer_name = physical_layer_name)
-            address = pointer & vlayer.address_mask
-            if address in seen:
-                continue
-            seen.add(address)
-
-            valid_kernels = self.check_kernel_offset(context, vlayer, address, progress_callback)
-
-            if valid_kernels:
-                break
-
-        return valid_kernels
+        return self._method_offset(context, vlayer, b"KDBG", 8, progress_callback)
 
     def check_kernel_offset(self,
                             context: interfaces.context.ContextInterface,
