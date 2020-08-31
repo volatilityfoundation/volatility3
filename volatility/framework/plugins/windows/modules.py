@@ -63,14 +63,8 @@ class Modules(interfaces.plugins.PluginInterface):
                 if file_handle:
                     file_output = file_handle.preferred_filename
 
-            yield (0, (
-                format_hints.Hex(mod.vol.offset),
-                format_hints.Hex(mod.DllBase),
-                format_hints.Hex(mod.SizeOfImage),
-                BaseDllName,
-                FullDllName,
-                file_output
-            ))
+            yield (0, (format_hints.Hex(mod.vol.offset), format_hints.Hex(mod.DllBase),
+                       format_hints.Hex(mod.SizeOfImage), BaseDllName, FullDllName, file_output))
 
     @classmethod
     def get_session_layers(cls,

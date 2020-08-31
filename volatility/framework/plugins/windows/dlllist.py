@@ -71,10 +71,8 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if layer_name is None:
                 layer_name = dll_entry.vol.layer_name
 
-            file_handle = file_handler("{}{}.{:#x}.{:#x}.dmp".format(prefix,
-                                                                     ntpath.basename(name),
-                                                                     dll_entry.vol.offset,
-                                                                     dll_entry.DllBase))
+            file_handle = file_handler("{}{}.{:#x}.{:#x}.dmp".format(prefix, ntpath.basename(name),
+                                                                     dll_entry.vol.offset, dll_entry.DllBase))
 
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = dll_entry.DllBase,
@@ -128,8 +126,12 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                 file_output = "Disabled"
                 if self.config['dump']:
-                    file_handle = self.dump_pe(self.context, pe_table_name, entry, self._file_handler,
-                                               proc_layer_name, prefix = "pid.{}.".format(proc_id))
+                    file_handle = self.dump_pe(self.context,
+                                               pe_table_name,
+                                               entry,
+                                               self._file_handler,
+                                               proc_layer_name,
+                                               prefix = "pid.{}.".format(proc_id))
                     file_output = "Error outputting file"
                     if file_handle:
                         file_output = file_handle.preferred_filename

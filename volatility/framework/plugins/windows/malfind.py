@@ -105,8 +105,8 @@ class Malfind(interfaces.plugins.PluginInterface):
                 continue
 
             if (vad.get_private_memory() == 1
-                and vad.get_tag() == "VadS") or (vad.get_private_memory() == 0
-                                                 and protection_string != "PAGE_EXECUTE_WRITECOPY"):
+                    and vad.get_tag() == "VadS") or (vad.get_private_memory() == 0
+                                                     and protection_string != "PAGE_EXECUTE_WRITECOPY"):
                 if cls.is_vad_empty(proc_layer, vad):
                     continue
 
@@ -138,16 +138,16 @@ class Malfind(interfaces.plugins.PluginInterface):
                         file_handle = vadinfo.VadInfo.vad_dump(self.context, proc, vad, self._file_handler)
                         file_output = file_handle.preferred_filename
                     except (exceptions.InvalidAddressException, OverflowError) as excp:
-                        vollog.debug("Unable to dump PE with pid {0}.{1:#x}: {2}".format(proc.UniqueProcessId,
-                                                                                         vad.get_start(), excp))
+                        vollog.debug("Unable to dump PE with pid {0}.{1:#x}: {2}".format(
+                            proc.UniqueProcessId, vad.get_start(), excp))
 
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.get_start()),
                            format_hints.Hex(vad.get_end()), vad.get_tag(),
                            vad.get_protection(
                                vadinfo.VadInfo.protect_values(self.context, self.config["primary"],
-                                                              self.config["nt_symbols"]), vadinfo.winnt_protections),
-                           vad.get_commit_charge(), vad.get_private_memory(), file_output, format_hints.HexBytes(data),
-                           disasm))
+                                                              self.config["nt_symbols"]),
+                               vadinfo.winnt_protections), vad.get_commit_charge(), vad.get_private_memory(),
+                           file_output, format_hints.HexBytes(data), disasm))
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))

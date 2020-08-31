@@ -62,25 +62,20 @@ class Memmap(interfaces.plugins.PluginInterface):
                             file_output = file_handle.preferred_filename
                         except exceptions.InvalidAddressException:
                             file_output = "Error outputting to file"
-                            vollog.debug("Unable to write {}'s address {} to {}".format(proc_layer_name, offset,
-                                                                                        file_handle.preferred_filename))
+                            vollog.debug("Unable to write {}'s address {} to {}".format(
+                                proc_layer_name, offset, file_handle.preferred_filename))
 
-                    yield (0, (
-                        format_hints.Hex(offset),
-                        format_hints.Hex(mapped_offset),
-                        format_hints.Hex(mapped_size),
-                        format_hints.Hex(offset),
-                        file_output))
+                    yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
+                               format_hints.Hex(offset), file_output))
                     offset += mapped_size
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
-        return renderers.TreeGrid(
-            [("Virtual", format_hints.Hex), ("Physical", format_hints.Hex), ("Size", format_hints.Hex),
-             ("Offset", format_hints.Hex), ("File output", str)],
-            self._generator(
-                pslist.PsList.list_processes(context = self.context,
-                                             layer_name = self.config['primary'],
-                                             symbol_table = self.config['nt_symbols'],
-                                             filter_func = filter_func)))
+        return renderers.TreeGrid([("Virtual", format_hints.Hex), ("Physical", format_hints.Hex),
+                                   ("Size", format_hints.Hex), ("Offset", format_hints.Hex), ("File output", str)],
+                                  self._generator(
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))
