@@ -144,7 +144,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         valid_kernels = {}
         virtual_layer_name = vlayer.name
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
-        kvo_path = interfaces.configuration.path_join(vlayer.config_path, 'kernel_virtual_offset')
 
         kernel_pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
         kernels = PDBUtility.pdbname_scan(ctx = context,
@@ -166,9 +165,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                 if (any([(p == kernel['mz_offset'] and layer_name == physical_layer_name)
                          for (_, _, p, _, layer_name) in kvp])):
                     valid_kernels[virtual_layer_name] = (kvo, kernel)
-                    # Sit the virtual offset under the TranslationLayer it applies to
-                    context.config[kvo_path] = kvo
-                    vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
                     break
                 else:
                     vollog.debug("Potential kernel_virtual_offset did not map to expected location: {}".format(
@@ -188,7 +184,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         vollog.debug("Kernel base determination - searching layer module list structure")
         valid_kernels = {}  # type: ValidKernelsType
         # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
-        virtual_layer_name = vlayer.name
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         physical_layer = context.layers[physical_layer_name]
         # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
