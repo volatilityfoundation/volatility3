@@ -1,10 +1,10 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import datetime
 import logging
 import ntpath
-import datetime
-from typing import List, Optional
+from typing import List, Optional, Type
 
 from volatility.framework import exceptions, renderers, interfaces, constants
 from volatility.framework.configuration import requirements
