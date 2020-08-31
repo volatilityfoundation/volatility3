@@ -100,6 +100,11 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
         if self.unsatisfied(context, config_path):
             vollog.warning("Plugin failed validation")
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
+        # Populate any optional defaults
+        for requirement in self.get_requirements():
+            if requirement.name not in self.config:
+                self.config[requirement.name] = requirement.default
+
         self._file_consumer = None  # type: Optional[FileConsumerInterface]
 
         framework.require_interface_version(*self._required_framework_version)
