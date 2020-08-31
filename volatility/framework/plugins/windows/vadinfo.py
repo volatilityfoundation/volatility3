@@ -163,7 +163,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             for vad in self.list_vads(proc, filter_func = filter_func):
 
                 dumped = False
-                if self.config.get('dump'):
+                if self.config['dump']:
                     filedata = self.vad_dump(self.context, proc, vad)
                     self.produce_file(filedata)
                     dumped = True

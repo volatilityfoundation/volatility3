@@ -132,7 +132,7 @@ class Malfind(interfaces.plugins.PluginInterface):
                 disasm = interfaces.renderers.Disassembly(data, vad.get_start(), architecture)
 
                 dumped = False
-                if self.config.get('dump'):
+                if self.config['dump']:
                     filedata = vadinfo.VadInfo.vad_dump(self.context, proc, vad)
                     if filedata:
                         try:
