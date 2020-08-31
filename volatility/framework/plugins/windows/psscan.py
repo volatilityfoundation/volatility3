@@ -10,16 +10,17 @@ from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.plugins import timeliner
-from volatility.plugins.windows import pslist
 from volatility.plugins.windows import poolscanner
+from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
+
 
 class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image."""
 
     _version = (1, 1, 0)
-    
+
     @classmethod
     def get_requirements(cls):
         return [
@@ -33,7 +34,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                          description = "Process ID to include (all other processes are excluded)",
                                          optional = True)
         ]
- 
+
     @classmethod
     def scan_processes(cls,
                        context: interfaces.context.ContextInterface,
@@ -62,8 +63,8 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def _generator(self):
 
-        for proc in self.scan_processes(self.context, 
-                                        self.config['primary'], 
+        for proc in self.scan_processes(self.context,
+                                        self.config['primary'],
                                         self.config['nt_symbols'],
                                         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))):
 
@@ -71,7 +72,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
                        format_hints.Hex(proc.vol.offset), proc.ActiveThreads, proc.get_handle_count(),
                        proc.get_session_id(), proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time()))
- 
+
     def generate_timeline(self):
         for row in self._generator():
             _depth, row_data = row

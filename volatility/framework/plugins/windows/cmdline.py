@@ -75,9 +75,9 @@ class CmdLine(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException as exp:
                 result_text = "Process {}: Required memory at {:#x} is not valid (incomplete layer {}?)".format(
                     proc_id, exp.invalid_address, exp.layer_name)
-    
+
             yield (0, (proc.UniqueProcessId, process_name, result_text))
-    
+
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
