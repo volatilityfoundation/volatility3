@@ -24,8 +24,8 @@ def pointer_to_string(pointer: 'objects.Pointer', count: int, errors: str = 'rep
     """Takes a volatility Pointer to characters and returns a string."""
     if not isinstance(pointer, objects.Pointer):
         raise TypeError("pointer_to_string takes a Pointer")
-    if count < 1:
-        raise ValueError("pointer_to_string requires a positive count")
+    if count < 0:
+        raise ValueError("pointer_to_string requires a positive or zero count")
     char = pointer.dereference()
     return char.cast("string", max_length = count, errors = errors)
 
