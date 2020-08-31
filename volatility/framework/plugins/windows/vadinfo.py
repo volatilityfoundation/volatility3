@@ -34,6 +34,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
     _version = (1, 1, 0)
+    MAXSIZE_DEFAULT = 0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -60,7 +61,12 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 requirements.BooleanRequirement(name = 'dump',
                                                 description = "Extract listed memory ranges",
                                                 default = False,
-                                                optional = True)
+                                                optional = True),
+                requirements.IntRequirement(name = 'maxsize',
+                                            description = "Maximum size for dumped VAD sections " \
+                                                          "(all the bigger sections will be ignored)",
+                                            default = cls.MAXSIZE_DEFAULT,
+                                            optional = True),
                 ]
 
     @classmethod
@@ -102,17 +108,31 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
     @classmethod
     def vad_dump(cls, context: interfaces.context.ContextInterface, proc: interfaces.objects.ObjectInterface,
-                 vad: interfaces.objects.ObjectInterface) -> interfaces.plugins.FileInterface:
+                 vad: interfaces.objects.ObjectInterface, 
+                 maxsize = MAXSIZE_DEFAULT) -> interfaces.plugins.FileInterface:
         """Extracts the complete data for Vad as a FileInterface.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             proc: an _EPROCESS instance
             vad: The suspected VAD to extract (ObjectInterface)
+            maxsize: Max size of VAD section (default MAXSIZE_DEFAULT)
 
         Returns:
             A FileInterface object containing the complete data for the process or None in the case of failure
         """
+
+        try:
+            vad_start = vad.get_start()
+            vad_end = vad.get_end()
+        except Exception as excp:
+            vollog.debug("Unable to get VAD information")
+            return
+
+        if maxsize != 0 and (vad_end - vad_start) > maxsize:
+            vollog.debug("Skip VAD dump {0:#x}-{1:#x} due to maxsize limit".format(vad_start, vad_end))
+            return
+
         proc_id = "Unknown"
         try:
             proc_id = proc.UniqueProcessId
@@ -123,8 +143,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
             return
 
         proc_layer = context.layers[proc_layer_name]
-        vad_start = vad.get_start()
-        vad_end = vad.get_end()
         file_name = "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc_id, vad_start, vad_end)
         try:
             filedata = interfaces.plugins.FileInterface(file_name)
@@ -164,9 +182,10 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
                 dumped = False
                 if self.config['dump']:
-                    filedata = self.vad_dump(self.context, proc, vad)
-                    self.produce_file(filedata)
-                    dumped = True
+                    filedata = self.vad_dump(self.context, proc, vad, self.config['maxsize'])
+                    if filedata:
+                        self.produce_file(filedata)
+                        dumped = True
 
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.vol.offset),
                            format_hints.Hex(vad.get_start()), format_hints.Hex(vad.get_end()), vad.get_tag(),
