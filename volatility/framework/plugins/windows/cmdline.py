@@ -33,8 +33,7 @@ class CmdLine(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def get_cmdline(cls, context: interfaces.context.ContextInterface,
-                    kernel_table_name: str, proc):
+    def get_cmdline(cls, context: interfaces.context.ContextInterface, kernel_table_name: str, proc):
         """Extracts the cmdline from PEB
 
         Args:

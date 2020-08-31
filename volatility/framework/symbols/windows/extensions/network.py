@@ -17,6 +17,7 @@ from typing import Dict, Tuple
 
 vollog = logging.getLogger(__name__)
 
+
 def inet_ntop(address_family: int, packed_ip: Array) -> str:
 
     def inet_ntop4(packed_ip: Array) -> str:
@@ -68,6 +69,7 @@ def inet_ntop(address_family: int, packed_ip: Array) -> str:
         return inet_ntop6(packed_ip)
     raise socket.error("[Errno 97] Address family not supported by protocol")
 
+
 # Python's socket.AF_INET6 is 0x1e but Microsoft defines it
 # as a constant value of 0x17 in their source code. Thus we
 # need Microsoft's since that's what is found in memory.
@@ -77,6 +79,7 @@ AF_INET6 = 0x17
 # String representations of INADDR_ANY and INADDR6_ANY
 inaddr_any = inet_ntop(socket.AF_INET, [0] * 4)
 inaddr6_any = inet_ntop(socket.AF_INET6, [0] * 16)
+
 
 class _TCP_LISTENER(objects.StructType):
     """Class for objects found in TcpL pools.
@@ -132,8 +135,9 @@ class _TCP_LISTENER(objects.StructType):
     def get_owner_procname(self):
         if self.get_owner().is_valid():
             if self.get_owner().has_valid_member("ImageFileName"):
-                return self.get_owner().ImageFileName.cast(
-                        "string", max_length = self.get_owner().ImageFileName.vol.count, errors = "replace")
+                return self.get_owner().ImageFileName.cast("string",
+                                                           max_length = self.get_owner().ImageFileName.vol.count,
+                                                           errors = "replace")
 
         return None
 
@@ -196,6 +200,7 @@ class _TCP_LISTENER(objects.StructType):
             return False
         return True
 
+
 class _TCP_ENDPOINT(_TCP_LISTENER):
     """Class for objects found in TcpE pools"""
 
@@ -237,7 +242,8 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
                 vollog.debug("invalid due to invalid address_family {}".format(self.get_address_family()))
                 return False
 
-            if not self.get_local_address() and (not self.get_owner() or self.get_owner().UniqueProcessId == 0 or self.get_owner().UniqueProcessId > 65535):
+            if not self.get_local_address() and (not self.get_owner() or self.get_owner().UniqueProcessId == 0
+                                                 or self.get_owner().UniqueProcessId > 65535):
                 vollog.debug("invalid due to invalid owner data")
                 return False
 
@@ -247,8 +253,10 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
 
         return True
 
+
 class _UDP_ENDPOINT(_TCP_LISTENER):
     """Class for objects found in UdpA pools"""
+
 
 class _LOCAL_ADDRESS(objects.StructType):
 
@@ -256,11 +264,13 @@ class _LOCAL_ADDRESS(objects.StructType):
     def inaddr(self):
         return self.pData.dereference().dereference()
 
+
 class _LOCAL_ADDRESS_WIN10_UDP(objects.StructType):
 
     @property
     def inaddr(self):
         return self.pData.dereference()
+
 
 win10_x64_class_types = {
     '_TCP_ENDPOINT': _TCP_ENDPOINT,

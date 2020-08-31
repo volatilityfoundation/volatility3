@@ -68,8 +68,8 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if layer_name is None:
                 layer_name = dll_entry.vol.layer_name
 
-            filedata = interfaces.plugins.FileInterface(
-                "{0}.{1:#x}.{2:#x}.dmp".format(ntpath.basename(name), dll_entry.vol.offset, dll_entry.DllBase))
+            filedata = interfaces.plugins.FileInterface("{0}.{1:#x}.{2:#x}.dmp".format(
+                ntpath.basename(name), dll_entry.vol.offset, dll_entry.DllBase))
 
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = dll_entry.DllBase,
@@ -92,7 +92,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         kuser = info.Info.get_kuser_structure(self.context, self.config['primary'], self.config['nt_symbols'])
         nt_major_version = int(kuser.NtMajorVersion)
         nt_minor_version = int(kuser.NtMinorVersion)
-        # this only applies to versions higher or equal to Window 7 (6.1 and higher)
+        # LoadTime only applies to versions higher or equal to Window 7 (6.1 and higher)
         dll_load_time_field = (nt_major_version > 6) or (nt_major_version == 6 and nt_minor_version >= 1)
         for proc in procs:
 
@@ -110,13 +110,15 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     pass
 
                 if dll_load_time_field:
+                    # Versions prior to 6.1 won't have the LoadTime attribute
+                    # and 32bit version shouldn't have the Quadpart according to MSDN
                     try:
                         DllLoadTime = conversion.wintime_to_datetime(entry.LoadTime.QuadPart)
-                    except:
+                    except AttributeError:
                         pass
 
                 dumped = False
-                if self.config.get('dump'):
+                if self.config['dump']:
                     filedata = self.dump_pe(self.context, pe_table_name, entry, proc_layer_name)
                     if filedata:
                         filedata.preferred_filename = "pid.{0}.".format(proc_id) + filedata.preferred_filename
@@ -130,16 +132,15 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                            format_hints.Hex(entry.SizeOfImage), BaseDllName, FullDllName, DllLoadTime, dumped))
 
     def generate_timeline(self):
-        for row in self._generator(pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
-                                                                   filter_func = pslist.PsList.create_pid_filter(None))):
+        for row in self._generator(
+                pslist.PsList.list_processes(context = self.context,
+                                             layer_name = self.config['primary'],
+                                             symbol_table = self.config['nt_symbols'])):
             _depth, row_data = row
             if not isinstance(row_data[6], datetime.datetime):
                 continue
-            description = "DLL Load: Process {} {} Loaded {} ({}) Size {} Offset {}".format(row_data[0], row_data[1],
-                                                                                            row_data[4], row_data[5],
-                                                                                            row_data[3], row_data[2])
+            description = "DLL Load: Process {} {} Loaded {} ({}) Size {} Offset {}".format(
+                row_data[0], row_data[1], row_data[4], row_data[5], row_data[3], row_data[2])
             yield (description, timeliner.TimeLinerType.CREATED, row_data[6])
 
     def run(self):

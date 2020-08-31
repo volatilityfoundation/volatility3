@@ -75,8 +75,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
             symbol_filename = "services-win10-15063-x86"
         elif versions.is_windows_8_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-win8-x64"
-        elif versions.is_windows_8_or_later(context = context,
-                                            symbol_table = symbol_table) and not is_64bit:
+        elif versions.is_windows_8_or_later(context = context, symbol_table = symbol_table) and not is_64bit:
             symbol_filename = "services-win8-x86"
         elif versions.is_vista_or_later(context = context, symbol_table = symbol_table) and is_64bit:
             symbol_filename = "services-vista-x64"

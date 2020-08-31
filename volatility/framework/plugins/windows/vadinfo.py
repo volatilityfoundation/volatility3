@@ -132,7 +132,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             offset = vad_start
             while offset < vad_end:
                 to_read = min(chunk_size, vad_end - offset)
-                data = proc_layer.read(offset, to_read, pad=True)
+                data = proc_layer.read(offset, to_read, pad = True)
                 if not data:
                     break
                 filedata.data.write(data)

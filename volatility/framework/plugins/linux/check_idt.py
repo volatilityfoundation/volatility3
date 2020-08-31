@@ -23,7 +23,6 @@ class Check_idt(interfaces.plugins.PluginInterface):
             requirements.TranslationLayerRequirement(name = 'primary',
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
             requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
@@ -61,7 +60,9 @@ class Check_idt(interfaces.plugins.PluginInterface):
 
         addrs = vmlinux.object_from_symbol("idt_table")
 
-        table = vmlinux.object(object_type = 'array', offset = addrs.vol.offset, subtype = vmlinux.get_type(idt_type),
+        table = vmlinux.object(object_type = 'array',
+                               offset = addrs.vol.offset,
+                               subtype = vmlinux.get_type(idt_type),
                                count = idt_table_size)
 
         for i in check_idxs:
@@ -90,6 +91,5 @@ class Check_idt(interfaces.plugins.PluginInterface):
             yield (0, [format_hints.Hex(i), format_hints.Hex(idt_addr), module_name, symbol_name])
 
     def run(self):
-        return renderers.TreeGrid(
-            [("Index", format_hints.Hex), ("Address", format_hints.Hex), ("Module", str), ("Symbol", str)],
-            self._generator())
+        return renderers.TreeGrid([("Index", format_hints.Hex), ("Address", format_hints.Hex), ("Module", str),
+                                   ("Symbol", str)], self._generator())

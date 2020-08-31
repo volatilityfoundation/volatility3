@@ -69,7 +69,7 @@ class HiveScan(interfaces.plugins.PluginInterface):
     def _generator(self):
         for hive in self.scan_hives(self.context, self.config['primary'], self.config['nt_symbols']):
 
-            yield (0, (format_hints.Hex(hive.vol.offset),))
+            yield (0, (format_hints.Hex(hive.vol.offset), ))
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex)], self._generator())

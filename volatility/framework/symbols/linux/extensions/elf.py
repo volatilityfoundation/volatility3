@@ -6,6 +6,7 @@ from typing import Dict, Tuple
 from volatility.framework import constants
 from volatility.framework import objects, interfaces
 
+
 class elf(objects.StructType):
     '''
     Class used to create elf objects. It overrides the typename to `Elf32_` or `Elf64_`,

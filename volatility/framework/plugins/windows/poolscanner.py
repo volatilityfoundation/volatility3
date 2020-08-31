@@ -386,13 +386,14 @@ class PoolScanner(plugins.PluginInterface):
             else:
                 class_type = extensions.pool.POOL_HEADER
 
-            table_name = intermed.IntermediateSymbolTable.create(
-                context = context,
-                config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "poolheader"),
-                sub_path = "windows",
-                filename = pool_header_json_filename,
-                table_mapping = {'nt_symbols': symbol_table},
-                class_types = {'_POOL_HEADER': class_type})
+            table_name = intermed.IntermediateSymbolTable.create(context = context,
+                                                                 config_path = configuration.path_join(
+                                                                     context.symbol_space[symbol_table].config_path,
+                                                                     "poolheader"),
+                                                                 sub_path = "windows",
+                                                                 filename = pool_header_json_filename,
+                                                                 table_mapping = {'nt_symbols': symbol_table},
+                                                                 class_types = {'_POOL_HEADER': class_type})
         return table_name
 
     def run(self) -> renderers.TreeGrid:
