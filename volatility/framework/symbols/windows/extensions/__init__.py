@@ -755,12 +755,11 @@ class KTHREAD(objects.StructType):
         dictState = {0:'Initialized', 1: 'Ready', 2: 'Running', 3: 'Standby', 4: 'Terminated',
                     5: 'Waiting', 6: 'Transition', 7: 'DeferredReady', 8: 'GateWait'}
         state = int(self.State)
-        stringState = ''
-        for flag in dictState:
-            if state == flag:
-                stringState += '{} '.format(dictState[flag])
 
-        return stringState[:-1] if len(stringState) else stringState
+        if state in dictState:
+            return dictState[state]
+
+        return renderers.NotApplicableValue()
 
     def get_wait_reason(self) -> str:
         dictWaitReason = {0: 'Executive', 1: 'FreePage', 2: 'PageIn', 3: 'PoolAllocation',
@@ -774,9 +773,8 @@ class KTHREAD(objects.StructType):
                     33: 'WrYieldExecution', 34: 'WrFastMutex', 35: 'WrGuardedMutex',
                     36: 'WrRundown', 37: 'MaximumWaitReason'}
         waitReason = int(self.WaitReason)
-        stringWaitReason = ''
-        for flag in dictWaitReason:
-            if waitReason == flag:
-                stringWaitReason += '{} '.format(dictWaitReason[flag])
 
-        return stringWaitReason[:-1] if len(stringWaitReason) else stringWaitReason
+        if waitReason in dictWaitReason:
+            return dictWaitReason[waitReason]
+        
+        return renderers.NotApplicableValue()
