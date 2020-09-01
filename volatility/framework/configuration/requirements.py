@@ -300,7 +300,8 @@ class TranslationLayerRequirement(interfaces.configuration.ConstructableRequirem
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
+                [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                 not subreq.optional]):
             return None
 
         obj = self._construct_class(context, config_path, args)
@@ -355,7 +356,8 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         args = {"context": context, "config_path": config_path, "name": name}
 
         if any(
-            [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if not subreq.optional]):
+                [subreq.unsatisfied(context, config_path) for subreq in self.requirements.values() if
+                 not subreq.optional]):
             return None
 
         # Fill out the parameter for class creation
@@ -385,7 +387,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
     def __init__(self,
                  name: str,
                  description: str = None,
-                 default: None = None,
+                 default: bool = False,
                  optional: bool = False,
                  component: Type[interfaces.configuration.VersionableInterface] = None,
                  version: Optional[Tuple[int, ...]] = None) -> None:
@@ -405,6 +407,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
             return {config_path: self}
         if len(self._version) > 1 and self._component.version[1] < self._version[1]:
             return {config_path: self}
+        context.config[interfaces.configuration.path_join(config_path, self.name)] = True
         return {}
 
 
@@ -413,7 +416,7 @@ class PluginRequirement(VersionRequirement):
     def __init__(self,
                  name: str,
                  description: str = None,
-                 default: None = None,
+                 default: bool = False,
                  optional: bool = False,
                  plugin: Type[interfaces.plugins.PluginInterface] = None,
                  version: Optional[Tuple[int, ...]] = None) -> None:
