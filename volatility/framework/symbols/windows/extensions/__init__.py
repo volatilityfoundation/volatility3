@@ -29,7 +29,6 @@ class KSYSTEM_TIME(objects.StructType):
 
 class MMVAD_SHORT(objects.StructType):
     """A class that represents process virtual memory ranges.
-
     Each instance is a node in a binary tree structure and is pointed to
     by VadRoot.
     """
@@ -293,7 +292,6 @@ class MMVAD(MMVAD_SHORT):
 class EX_FAST_REF(objects.StructType):
     """This is a standard Windows structure that stores a pointer to an object
     but also leverages the least significant bits to encode additional details.
-
     When dereferencing the pointer, we need to strip off the extra bits.
     """
 
@@ -372,6 +370,16 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
             pass
 
         return name
+  
+    def access_string(self):
+        ## Make a nicely formatted ACL string
+        AccessStr = (((self.ReadAccess > 0 and "R") or '-') +
+                     ((self.WriteAccess > 0  and "W") or '-') +
+                     ((self.DeleteAccess > 0 and "D") or '-') +
+                     ((self.SharedRead > 0 and "r") or '-') +
+                     ((self.SharedWrite > 0 and "w") or '-') +
+                     ((self.SharedDelete > 0 and "d") or '-'))
+        return AccessStr
 
 
 class KMUTANT(objects.StructType, pool.ExecutiveObject):
@@ -608,6 +616,32 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             # windows xp and 2003
             return self.VadRoot.dereference().cast("_MMVAD")
 
+    def environment_variables(self):
+        """Generator for environment variables. 
+
+        The PEB points to our env block - a series of null-terminated
+        unicode strings. Each string cannot be more than 0x7FFF chars. 
+        End of the list is a quad-null. 
+        """
+        context = self._context
+        process_space = self.add_process_layer()
+
+        try:
+            block = self.get_peb().ProcessParameters.Environment
+            block_size = self.get_peb().ProcessParameters.EnvironmentSize
+            envars = context.layers[process_space].read(block, block_size).decode().split('\x00\x00\x00')[:-1]
+        except exceptions.InvalidAddressException:
+            return renderers.UnreadableValue()
+
+        for envar in envars:
+            split_index = envar.find('=')
+            env = envar[:split_index].replace('\x00', '')
+            var = envar[split_index+1:].replace('\x00', '')
+
+            # Exlude parse problem with some types of env
+            if env!= '' and var != '':
+                yield env, var
+
 
 class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
     """A class for double-linked lists on Windows."""
@@ -666,3 +700,83 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
+
+
+class TOKEN(objects.StructType):
+    """A class for process etoken object."""
+
+    def get_sids(self) -> Iterable[str]:
+        """Yield a sid for the current token object."""
+
+        userAndGroupCount = int(self.UserAndGroupCount)
+        if userAndGroupCount < 0xFFFF:
+            layer_name = self.vol.layer_name
+            kvo = self._context.layers[layer_name].config["kernel_virtual_offset"]        
+            symbol_table = self.get_symbol_table_name()
+            ntkrnlmp = self._context.module(symbol_table,
+                                      layer_name = layer_name,
+                                      offset = kvo)
+            UserAndGroups = ntkrnlmp.object(object_type="array",
+                                       offset=self.UserAndGroups.dereference().vol.get("offset") - kvo,
+                                       subtype = ntkrnlmp.get_type("_SID_AND_ATTRIBUTES"),
+                                       count=userAndGroupCount)
+            for saa in UserAndGroups:
+                sid = saa.Sid.dereference().cast("_SID")
+                 # catch invalid pointers (UserAndGroupCount is too high)
+                if sid == None:
+                    raise StopIteration
+                # this mimics the windows API IsValidSid
+                if sid.Revision & 0xF != 1 or sid.SubAuthorityCount > 15:
+                    raise StopIteration
+                id_auth = ""
+                for i in sid.IdentifierAuthority.Value:
+                    id_auth = i
+                SubAuthority = ntkrnlmp.object(object_type="array",
+                                               offset=sid.SubAuthority.vol.offset - kvo,
+                                               subtype = ntkrnlmp.get_type("unsigned long"),
+                                               count= int(sid.SubAuthorityCount))
+                yield "S-" + "-".join(str(i) for i in (sid.Revision, id_auth) +
+                                      tuple(SubAuthority))
+            
+
+    def privileges(self):
+        "Return a list of privileges for the current token object."
+        for priv_index in range(64):
+            yield (priv_index,
+                   self.Privileges.Present & (2**priv_index) !=0,
+                   self.Privileges.Enabled & (2**priv_index) !=0,
+                   self.Privileges.EnabledByDefault & (2**priv_index) !=0)
+
+
+class KTHREAD(objects.StructType):
+    """A class for thread control block objects."""
+        
+    def get_state(self) -> str:
+        dictState = {0:'Initialized', 1: 'Ready', 2: 'Running', 3: 'Standby', 4: 'Terminated',
+                    5: 'Waiting', 6: 'Transition', 7: 'DeferredReady', 8: 'GateWait'}
+        state = int(self.State)
+        stringState = ''
+        for flag in dictState:
+            if state == flag:
+                stringState += '{} '.format(dictState[flag])
+
+        return stringState[:-1] if len(stringState) else stringState
+
+    def get_wait_reason(self) -> str:
+        dictWaitReason = {0: 'Executive', 1: 'FreePage', 2: 'PageIn', 3: 'PoolAllocation',
+                    4: 'DelayExecution', 5: 'Suspended', 6: 'UserRequest', 7: 'WrExecutive',
+                    8: 'WrFreePage', 9: 'WrPageIn', 10: 'WrPoolAllocation', 11: 'WrDelayExecution',
+                    12: 'WrSuspended', 13: 'WrUserRequest', 14: 'WrEventPair', 15: 'WrQueue',
+                    16: 'WrLpcReceive', 17: 'WrLpcReply', 18: 'WrVirtualMemory', 19: 'WrPageOut',
+                    20: 'WrRendezvous', 21: 'Spare2', 22: 'Spare3', 23: 'Spare4', 24: 'Spare5',
+                    25: 'Spare6', 26: 'WrKernel', 27: 'WrResource', 28: 'WrPushLock', 29: 'WrMutex',
+                    30: 'WrQuantumEnd', 31: 'WrDispatchInt', 32: 'WrPreempted',
+                    33: 'WrYieldExecution', 34: 'WrFastMutex', 35: 'WrGuardedMutex',
+                    36: 'WrRundown', 37: 'MaximumWaitReason'}
+        waitReason = int(self.WaitReason)
+        stringWaitReason = ''
+        for flag in dictWaitReason:
+            if waitReason == flag:
+                stringWaitReason += '{} '.format(dictWaitReason[flag])
+
+        return stringWaitReason[:-1] if len(stringWaitReason) else stringWaitReason
