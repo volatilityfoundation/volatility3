@@ -18,6 +18,7 @@ class WindowsKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('_EPROCESS', extensions.EPROCESS)
         self.set_type_class('_UNICODE_STRING', extensions.UNICODE_STRING)
         self.set_type_class('_EX_FAST_REF', extensions.EX_FAST_REF)
+        self.set_type_class('_TOKEN', extensions.TOKEN)
         self.set_type_class('_OBJECT_HEADER', pool.OBJECT_HEADER)
         self.set_type_class('_FILE_OBJECT', extensions.FILE_OBJECT)
         self.set_type_class('_DEVICE_OBJECT', extensions.DEVICE_OBJECT)
