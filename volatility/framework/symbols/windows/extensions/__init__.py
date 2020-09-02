@@ -400,7 +400,7 @@ class ETHREAD(objects.StructType):
         """Return the EPROCESS that owns this thread."""
         return self.ThreadsProcess.dereference(kernel_layer)
 
-      def get_cross_thread_flags(self) -> str:
+    def get_cross_thread_flags(self) -> str:
         dictCrossThreadFlags = {'PS_CROSS_THREAD_FLAGS_TERMINATED': 0,
                                 'PS_CROSS_THREAD_FLAGS_DEADTHREAD': 1,
                                 'PS_CROSS_THREAD_FLAGS_HIDEFROMDBG': 2,
