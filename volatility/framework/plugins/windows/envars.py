@@ -1,4 +1,4 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 # Creator: Aviel Zohar (memoryforensicsanalysis@gmail.com) # Fix vol2 plugin to vol3
 
@@ -7,8 +7,7 @@ from volatility.framework import renderers, interfaces, objects, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.plugins.windows import pslist
-from volatility.framework.symbols.windows.extensions.registry import RegValueTypes
-import volatility.plugins.windows.registry.hivelist as hivelist
+from volatility.plugins.windows.registry import hivelist
 
 class Envars(interfaces.plugins.PluginInterface):
     "Display process environment variables"
@@ -17,7 +16,6 @@ class Envars(interfaces.plugins.PluginInterface):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._protect_values = None
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -116,20 +114,20 @@ class Envars(interfaces.plugins.PluginInterface):
 
         ## These are variables set explicitly but are
         ## common enough to ignore safely. 
-        values.extend(["ProgramFiles", "CommonProgramFiles", "SystemDrive", 
-                "SystemRoot", "ProgramData", "PUBLIC", "ALLUSERSPROFILE", 
-                "COMPUTERNAME", "SESSIONNAME", "USERNAME", "USERPROFILE", 
-                "PROMPT", "USERDOMAIN", "AppData", "CommonFiles", "CommonDesktop", 
-                "CommonProgramGroups", "CommonStartMenu", "CommonStartUp", 
-                "Cookies", "DesktopDirectory", "Favorites", "History", "NetHood", 
-                "PersonalDocuments", "RecycleBin", "StartMenu", "Templates", 
-                "AltStartup", "CommonFavorites", "ConnectionWizard", 
-                "DocAndSettingRoot", "InternetCache", "windir", "Path", "HOMEDRIVE", 
-                "PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS", "ProgramFiles(x86)", 
-                "CommonProgramFiles(x86)", "CommonProgramW6432", "PSModulePath", 
-                "PROCESSOR_IDENTIFIER", "FP_NO_HOST_CHECK", "LOCALAPPDATA", "TMP", 
-                "ProgramW6432", 
-                ])
+        values.extend(["ProgramFiles", "CommonProgramFiles", "SystemDrive",
+                       "SystemRoot", "ProgramData", "PUBLIC", "ALLUSERSPROFILE",
+                       "COMPUTERNAME", "SESSIONNAME", "USERNAME", "USERPROFILE",
+                       "PROMPT", "USERDOMAIN", "AppData", "CommonFiles", "CommonDesktop",
+                       "CommonProgramGroups", "CommonStartMenu", "CommonStartUp",
+                       "Cookies", "DesktopDirectory", "Favorites", "History", "NetHood",
+                       "PersonalDocuments", "RecycleBin", "StartMenu", "Templates",
+                       "AltStartup", "CommonFavorites", "ConnectionWizard",
+                       "DocAndSettingRoot", "InternetCache", "windir", "Path", "HOMEDRIVE",
+                       "PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS", "ProgramFiles(x86)",
+                       "CommonProgramFiles(x86)", "CommonProgramW6432", "PSModulePath",
+                       "PROCESSOR_IDENTIFIER", "FP_NO_HOST_CHECK", "LOCALAPPDATA", "TMP",
+                       "ProgramW6432",
+                       ])
 
         return values
 
