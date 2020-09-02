@@ -739,11 +739,11 @@ class TOKEN(objects.StructType):
             for sid_and_attr in UserAndGroups:
                 sid = sid_and_attr.Sid.dereference().cast("_SID")
                  # catch invalid pointers (UserAndGroupCount is too high)
-                if sid == None:
-                    raise StopIteration
+                if sid is None:
+                    return
                 # this mimics the windows API IsValidSid
                 if sid.Revision & 0xF != 1 or sid.SubAuthorityCount > 15:
-                    raise StopIteration
+                    return
                 id_auth = ""
                 for i in sid.IdentifierAuthority.Value:
                     id_auth = i
@@ -759,9 +759,9 @@ class TOKEN(objects.StructType):
         "Return a list of privileges for the current token object."
         for priv_index in range(64):
             yield (priv_index,
-                   self.Privileges.Present & (2**priv_index) !=0,
-                   self.Privileges.Enabled & (2**priv_index) !=0,
-                   self.Privileges.EnabledByDefault & (2**priv_index) !=0)
+                   bool(self.Privileges.Present & (2**priv_index)),
+                   bool(self.Privileges.Enabled & (2**priv_index)),
+                   bool(self.Privileges.EnabledByDefault & (2**priv_index)))
 
 
 class KTHREAD(objects.StructType):
