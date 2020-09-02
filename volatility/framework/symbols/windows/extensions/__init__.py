@@ -373,14 +373,12 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
   
     def access_string(self):
         ## Make a nicely formatted ACL string
-        AccessStr = (((self.ReadAccess > 0 and "R") or '-') +
-                     ((self.WriteAccess > 0  and "W") or '-') +
-                     ((self.DeleteAccess > 0 and "D") or '-') +
-                     ((self.SharedRead > 0 and "r") or '-') +
-                     ((self.SharedWrite > 0 and "w") or '-') +
-                     ((self.SharedDelete > 0 and "d") or '-'))
-        return AccessStr
-
+        return (('R' if self.ReadAccess else '-') +
+                ('W' if self.WriteAccess else '-') +
+                ('D' if self.DeleteAccess else '-') +
+                ('r' if self.SharedRead else '-') +
+                ('w' if self.SharedWrite else '-') +
+                ('d' if self.SharedDelete else '-'))
 
 class KMUTANT(objects.StructType, pool.ExecutiveObject):
     """A class for windows mutant objects."""
@@ -401,6 +399,25 @@ class ETHREAD(objects.StructType):
     def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
         return self.ThreadsProcess.dereference(kernel_layer)
+
+      def get_cross_thread_flags(self) -> str:
+        dictCrossThreadFlags = {'PS_CROSS_THREAD_FLAGS_TERMINATED': 0,
+                                'PS_CROSS_THREAD_FLAGS_DEADTHREAD': 1,
+                                'PS_CROSS_THREAD_FLAGS_HIDEFROMDBG': 2,
+                                'PS_CROSS_THREAD_FLAGS_IMPERSONATING': 3,
+                                'PS_CROSS_THREAD_FLAGS_SYSTEM': 4,
+                                'PS_CROSS_THREAD_FLAGS_HARD_ERRORS_DISABLED': 5,
+                                'PS_CROSS_THREAD_FLAGS_BREAK_ON_TERMINATION': 6,
+                                'PS_CROSS_THREAD_FLAGS_SKIP_CREATION_MSG': 7,
+                                'PS_CROSS_THREAD_FLAGS_SKIP_TERMINATION_MSG': 8}
+        
+        flags = self.CrossThreadFlags
+        stringCrossThreadFlags = ''
+        for flag in dictCrossThreadFlags:
+            if flags & 2**dictCrossThreadFlags[flag]:
+                stringCrossThreadFlags += '{} '.format(flag)
+
+        return stringCrossThreadFlags[:-1] if stringCrossThreadFlags else stringCrossThreadFlags
 
 
 class UNICODE_STRING(objects.StructType):
@@ -629,17 +646,17 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             block = self.get_peb().ProcessParameters.Environment
             block_size = self.get_peb().ProcessParameters.EnvironmentSize
-            envars = context.layers[process_space].read(block, block_size).decode().split('\x00\x00\x00')[:-1]
+            envars = context.layers[process_space].read(block, block_size).decode("utf-16-le", errors='replace').split('\x00')[:-1]
         except exceptions.InvalidAddressException:
             return renderers.UnreadableValue()
 
         for envar in envars:
             split_index = envar.find('=')
-            env = envar[:split_index].replace('\x00', '')
-            var = envar[split_index+1:].replace('\x00', '')
+            env = envar[:split_index]
+            var = envar[split_index+1:]
 
             # Exlude parse problem with some types of env
-            if env!= '' and var != '':
+            if env and var:
                 yield env, var
 
 
@@ -708,20 +725,19 @@ class TOKEN(objects.StructType):
     def get_sids(self) -> Iterable[str]:
         """Yield a sid for the current token object."""
 
-        userAndGroupCount = int(self.UserAndGroupCount)
-        if userAndGroupCount < 0xFFFF:
+        if self.UserAndGroupCount < 0xFFFF:
             layer_name = self.vol.layer_name
             kvo = self._context.layers[layer_name].config["kernel_virtual_offset"]        
             symbol_table = self.get_symbol_table_name()
             ntkrnlmp = self._context.module(symbol_table,
-                                      layer_name = layer_name,
-                                      offset = kvo)
+                                            layer_name = layer_name,
+                                            offset = kvo)
             UserAndGroups = ntkrnlmp.object(object_type="array",
-                                       offset=self.UserAndGroups.dereference().vol.get("offset") - kvo,
-                                       subtype = ntkrnlmp.get_type("_SID_AND_ATTRIBUTES"),
-                                       count=userAndGroupCount)
-            for saa in UserAndGroups:
-                sid = saa.Sid.dereference().cast("_SID")
+                                            offset=self.UserAndGroups.dereference().vol.get("offset") - kvo,
+                                            subtype = ntkrnlmp.get_type("_SID_AND_ATTRIBUTES"),
+                                            count=self.UserAndGroupCount)
+            for sid_and_attr in UserAndGroups:
+                sid = sid_and_attr.Sid.dereference().cast("_SID")
                  # catch invalid pointers (UserAndGroupCount is too high)
                 if sid == None:
                     raise StopIteration
@@ -753,28 +769,17 @@ class KTHREAD(objects.StructType):
         
     def get_state(self) -> str:
         dictState = {0:'Initialized', 1: 'Ready', 2: 'Running', 3: 'Standby', 4: 'Terminated',
-                    5: 'Waiting', 6: 'Transition', 7: 'DeferredReady', 8: 'GateWait'}
-        state = int(self.State)
-
-        if state in dictState:
-            return dictState[state]
-
-        return renderers.NotApplicableValue()
+                     5: 'Waiting', 6: 'Transition', 7: 'DeferredReady', 8: 'GateWait'}
+        return dictState.get(self.State, renderers.NotApplicableValue())
 
     def get_wait_reason(self) -> str:
         dictWaitReason = {0: 'Executive', 1: 'FreePage', 2: 'PageIn', 3: 'PoolAllocation',
-                    4: 'DelayExecution', 5: 'Suspended', 6: 'UserRequest', 7: 'WrExecutive',
-                    8: 'WrFreePage', 9: 'WrPageIn', 10: 'WrPoolAllocation', 11: 'WrDelayExecution',
-                    12: 'WrSuspended', 13: 'WrUserRequest', 14: 'WrEventPair', 15: 'WrQueue',
-                    16: 'WrLpcReceive', 17: 'WrLpcReply', 18: 'WrVirtualMemory', 19: 'WrPageOut',
-                    20: 'WrRendezvous', 21: 'Spare2', 22: 'Spare3', 23: 'Spare4', 24: 'Spare5',
-                    25: 'Spare6', 26: 'WrKernel', 27: 'WrResource', 28: 'WrPushLock', 29: 'WrMutex',
-                    30: 'WrQuantumEnd', 31: 'WrDispatchInt', 32: 'WrPreempted',
-                    33: 'WrYieldExecution', 34: 'WrFastMutex', 35: 'WrGuardedMutex',
-                    36: 'WrRundown', 37: 'MaximumWaitReason'}
-        waitReason = int(self.WaitReason)
-
-        if waitReason in dictWaitReason:
-            return dictWaitReason[waitReason]
-        
-        return renderers.NotApplicableValue()
+                          4: 'DelayExecution', 5: 'Suspended', 6: 'UserRequest', 7: 'WrExecutive',
+                          8: 'WrFreePage', 9: 'WrPageIn', 10: 'WrPoolAllocation', 11: 'WrDelayExecution',
+                          12: 'WrSuspended', 13: 'WrUserRequest', 14: 'WrEventPair', 15: 'WrQueue',
+                          16: 'WrLpcReceive', 17: 'WrLpcReply', 18: 'WrVirtualMemory', 19: 'WrPageOut',
+                          20: 'WrRendezvous', 21: 'Spare2', 22: 'Spare3', 23: 'Spare4', 24: 'Spare5',
+                          25: 'Spare6', 26: 'WrKernel', 27: 'WrResource', 28: 'WrPushLock', 29: 'WrMutex',
+                          30: 'WrQuantumEnd', 31: 'WrDispatchInt', 32: 'WrPreempted',33: 'WrYieldExecution', 34: 'WrFastMutex', 35: 'WrGuardedMutex',
+                          36: 'WrRundown', 37: 'MaximumWaitReason'}
+        return dictWaitReason.get(self.WaitReason, renderers.NotApplicableValue())
