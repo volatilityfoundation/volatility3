@@ -103,7 +103,10 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
         # Populate any optional defaults
         for requirement in self.get_requirements():
             if requirement.name not in self.config:
-                self.config[requirement.name] = requirement.default
+                if requirement.default is None:
+                    vollog.warning("Invalid default value provided for requirement: {}".format(requirement.name))
+                else:
+                    self.config[requirement.name] = requirement.default
 
         self._file_consumer = None  # type: Optional[FileConsumerInterface]
 
