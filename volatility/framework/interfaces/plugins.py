@@ -102,7 +102,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
             raise exceptions.PluginRequirementException("The plugin configuration failed to validate")
         # Populate any optional defaults
         for requirement in self.get_requirements():
-            if requirement.name not in self.config and requirement.default is not None:
+            if requirement.name not in self.config:
                 self.config[requirement.name] = requirement.default
 
         self._file_consumer = None  # type: Optional[FileConsumerInterface]

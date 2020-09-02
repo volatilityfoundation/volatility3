@@ -35,7 +35,7 @@ vollog = logging.getLogger(__name__)
 
 BasicTypes = (int, bool, bytes, str)
 SimpleTypes = Union[int, bool, bytes, str]
-ConfigSimpleType = Union[SimpleTypes, List[SimpleTypes]]
+ConfigSimpleType = Optional[Union[SimpleTypes, List[SimpleTypes]]]
 
 
 def path_join(*args) -> str:
@@ -184,6 +184,8 @@ class HierarchicalDict(collections.abc.Mapping):
                     raise TypeError("Configuration list types cannot contain list types")
                 new_list.append(element_value)
             return new_list
+        elif value is None:
+            return None
         else:
             raise TypeError("Invalid type stored in configuration")
 
@@ -296,7 +298,7 @@ class RequirementInterface(metaclass = ABCMeta):
     def __init__(self,
                  name: str,
                  description: str = None,
-                 default: Optional[ConfigSimpleType] = None,
+                 default: ConfigSimpleType = None,
                  optional: bool = False) -> None:
         """
 
@@ -334,7 +336,7 @@ class RequirementInterface(metaclass = ABCMeta):
         return self._description
 
     @property
-    def default(self) -> Optional[ConfigSimpleType]:
+    def default(self) -> ConfigSimpleType:
         """Returns the default value if one is set."""
         return self._default
 
