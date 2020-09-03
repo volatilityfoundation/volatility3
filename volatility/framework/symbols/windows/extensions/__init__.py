@@ -634,7 +634,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             return self.VadRoot.dereference().cast("_MMVAD")
 
     def environment_variables(self):
-        """Generator for environment variables.
+        """Generator for environment variables. 
 
         The PEB points to our env block - a series of null-terminated
         unicode strings. Each string cannot be more than 0x7FFF chars. 
