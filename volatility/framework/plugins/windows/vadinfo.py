@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Callable, List, Generator, Iterable
+from typing import Callable, List, Generator, Iterable, Optional
 
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.configuration import requirements
@@ -109,7 +109,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
     @classmethod
     def vad_dump(cls, context: interfaces.context.ContextInterface, proc: interfaces.objects.ObjectInterface,
                  vad: interfaces.objects.ObjectInterface, 
-                 maxsize = MAXSIZE_DEFAULT) -> interfaces.plugins.FileInterface:
+                 maxsize = MAXSIZE_DEFAULT) -> Optional[interfaces.plugins.FileInterface]:
         """Extracts the complete data for Vad as a FileInterface.
 
         Args:
@@ -125,11 +125,11 @@ class VadInfo(interfaces.plugins.PluginInterface):
         try:
             vad_start = vad.get_start()
             vad_end = vad.get_end()
-        except Exception as excp:
-            vollog.debug("Unable to get VAD information")
+        except exceptions.AttributeError:
+            vollog.debug("Unable to find the starting/ending VPN member")
             return
 
-        if maxsize != 0 and (vad_end - vad_start) > maxsize:
+        if maxsize > 0 and (vad_end - vad_start) > maxsize:
             vollog.debug("Skip VAD dump {0:#x}-{1:#x} due to maxsize limit".format(vad_start, vad_end))
             return
 
