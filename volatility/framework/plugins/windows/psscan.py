@@ -143,7 +143,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                            self.config['nt_symbols'], proc)
 
                 file_handle = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name,
-                                                         vproc)
+                                                         vproc, self._file_handler)
                 file_output = "Error outputting file"
                 if file_handle:
                     file_output = file_handle.preferred_filename
