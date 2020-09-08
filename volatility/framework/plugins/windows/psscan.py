@@ -12,9 +12,9 @@ from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows.extensions import pe
 from volatility.plugins import timeliner
+from volatility.plugins.windows import info
 from volatility.plugins.windows import poolscanner
 from volatility.plugins.windows import pslist
-from volatility.plugins.windows import info
 
 vollog = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                       layer_name: str,
                                       symbol_table: str,
                                       proc: interfaces.objects.ObjectInterface) -> \
-                Iterable[interfaces.objects.ObjectInterface]:
+            Iterable[interfaces.objects.ObjectInterface]:
         """ Returns a virtual process from a physical addressed one
 
         Args:
@@ -123,7 +123,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             (_, _, ph_offset, _, _) = list(context.layers[layer_name].mapping(offset = virtual_process.vol.offset,
                                                                               length = 0))[0]
             if virtual_process and \
-               proc.vol.offset == ph_offset:
+                    proc.vol.offset == ph_offset:
                 return virtual_process
 
     def _generator(self):
@@ -137,21 +137,22 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                         self.config['nt_symbols'],
                                         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))):
 
-            dumped = False
+            file_output = "Disabled"
             if self.config['dump']:
                 vproc = self.virtual_process_from_physical(self.context, self.config['primary'],
                                                            self.config['nt_symbols'], proc)
 
-                filedata = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name, vproc)
-                if filedata:
-                    dumped = True
-                    self.produce_file(filedata)
+                file_handle = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name,
+                                                         vproc)
+                file_output = "Error outputting file"
+                if file_handle:
+                    file_output = file_handle.preferred_filename
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
                                                errors = 'replace'), format_hints.Hex(proc.vol.offset),
                        proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(), proc.get_is_wow64(),
-                       proc.get_create_time(), proc.get_exit_time(), dumped))
+                       proc.get_create_time(), proc.get_exit_time(), file_output))
 
     def generate_timeline(self):
         for row in self._generator():
@@ -164,4 +165,4 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str), ("Offset", format_hints.Hex),
                                    ("Threads", int), ("Handles", int), ("SessionId", int), ("Wow64", bool),
                                    ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),
-                                   ("Dumped", bool)], self._generator())
+                                   ("File output", str)], self._generator())
