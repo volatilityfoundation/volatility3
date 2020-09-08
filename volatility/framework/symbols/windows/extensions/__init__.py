@@ -353,7 +353,8 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
-        return self.FileName.Length > 0 and self._context.layers[self.vol.layer_name].is_valid(self.FileName.Buffer)
+        return self.FileName.Length > 0 and self._context.layers[self.FileName.Buffer.vol.native_layer_name].is_valid(
+            self.FileName.Buffer)
 
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
         name = renderers.UnreadableValue()  # type: Union[str, interfaces.renderers.BaseAbsentValue]
