@@ -10,7 +10,7 @@ from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
-from volatility.framework.symbols.windows import extensions
+from volatility.framework.symbols.windows.extensions import pe
 from volatility.plugins import timeliner
 from volatility.plugins.windows import poolscanner
 from volatility.plugins.windows import pslist
@@ -94,7 +94,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
         tleoffset = ntkrnlmp.get_type("_ETHREAD").relative_child_offset("ThreadListEntry")
-        # Start out with the member offset given to us from the profile
+        # Start out with the member offset
         offsets = [tleoffset]
 
         # If (and only if) we're dealing with 64-bit Windows 7 SP1
@@ -130,7 +130,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
-                                                                class_types = extensions.pe.class_types)
+                                                                class_types = pe.class_types)
         for proc in self.scan_processes(self.context,
                                         self.config['primary'],
                                         self.config['nt_symbols'],
