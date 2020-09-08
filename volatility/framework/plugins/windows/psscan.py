@@ -85,7 +85,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             proc: the process object with phisical address
 
         Returns:
-            A process object on virtual address space
+            A process object on virtual address layer
 
         """
 
@@ -115,10 +115,10 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                       offset = proc.ThreadListHead.Flink - ofs,
                                       absolute = True)
 
-            # Ask for the thread's process to get an _EPROCESS with a virtual address space
+            # Ask for the thread's process to get an _EPROCESS with a virtual address layer
             virtual_process = ethread.owning_process()
             # Sanity check the bounce.
-            # This compares the original offset with the new one (translated from virtual space)
+            # This compares the original offset with the new one (translated from virtual layer)
             (_, _, ph_offset, _, _) = list(context.layers[layer_name].mapping(offset = virtual_process.vol.offset,
                                                                               length = 0))[0]
             if virtual_process and \
