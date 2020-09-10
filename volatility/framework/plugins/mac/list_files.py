@@ -3,7 +3,7 @@
 #
 import logging
 
-from typing import Iterable
+from typing import Iterable, Optional
 
 from volatility.framework import renderers, interfaces, exceptions
 from volatility.framework.objects import utility
@@ -16,20 +16,6 @@ from volatility.plugins.mac import mount
 vollog = logging.getLogger(__name__)
 
 import sys
-
-def cprint(msg):
-    return
-    print("")
-    sys.stdout.flush()
-    print("grepme: %s" % msg)
-    sys.stdout.flush()
-
-def dprint(msg):
-    if 0:
-        print("")
-        sys.stdout.flush()
-        print("grepme: %s" % msg)
-        sys.stdout.flush()
 
 class List_Files(plugins.PluginInterface):
     """Lists all open file descriptors for all processes."""
@@ -45,14 +31,13 @@ class List_Files(plugins.PluginInterface):
     ]
 
     @classmethod
-    def _vnode_name(cls, vnode):
+    def _vnode_name(cls, vnode: interfaces.objects.ObjectInterface) -> Optional[str]:
         # roots of mount points have special name handling
         if vnode.v_flag & 1 == 1:
             v_name = vnode.full_path()
-            print("found root mount at %x" % vnode.dereference().vol.offset)
         else:
             try:
-                v_name = utility.pointer_to_string(vnode.dereference().v_name, 255)
+                v_name = utility.pointer_to_string(vnode.v_name, 255)
             except exceptions.InvalidAddressException:
                 v_name = None
 
@@ -73,18 +58,25 @@ class List_Files(plugins.PluginInterface):
 
     @classmethod
     def _add_vnode(cls, vnode, loop_vnodes):
-        key = vnode.dereference().vol.offset
+        """
+        Adds the given vnode to loop_vnodes.
+
+        loop_vnodes is key off the address of a vnode
+        and holds its name, parent address, and object
+        """
+
+        key = vnode
         added = False
 
         if not key in loop_vnodes:
             # We can't do anything with a no-name vnode
             v_name = cls._vnode_name(vnode)
-            if v_name == None:
+            if v_name is None:
                 return added
 
             parent = cls._get_parent(vnode)
             if parent:
-                parent_val = parent.dereference().vol.offset
+                parent_val = parent
             else:
                 parent_val = None
         
@@ -96,6 +88,10 @@ class List_Files(plugins.PluginInterface):
 
     @classmethod
     def _walk_vnode(cls, vnode, loop_vnodes):
+        """
+        Iterates over the list of vnodes associated with the given one.
+        Also traverses the parent chain for the vnode and adds each one.
+        """
         while vnode:
             if not cls._add_vnode(vnode, loop_vnodes):
                 break
@@ -111,13 +107,9 @@ class List_Files(plugins.PluginInterface):
                 break
 
     @classmethod
-    def _process_vnode(cls, vnode, loop_vnodes):
-        cls._walk_vnode(vnode, loop_vnodes)
-   
-    @classmethod
     def _walk_vnodelist(cls, list_head, loop_vnodes):
         for vnode in mac.MacUtilities.walk_tailq(list_head,  "v_mntvnodes"):
-            cls._process_vnode(vnode, loop_vnodes)
+            cls._walk_vnode(vnode, loop_vnodes)
 
     @classmethod
     def _walk_mounts(cls,
@@ -135,9 +127,9 @@ class List_Files(plugins.PluginInterface):
             cls._walk_vnodelist(mnt.mnt_workerqueue, loop_vnodes)
             cls._walk_vnodelist(mnt.mnt_newvnodes,   loop_vnodes)
 
-            cls._process_vnode(mnt.mnt_vnodecovered, loop_vnodes)
-            cls._process_vnode(mnt.mnt_realrootvp, loop_vnodes)
-            cls._process_vnode(mnt.mnt_devvp, loop_vnodes)
+            cls._walk_vnode(mnt.mnt_vnodecovered, loop_vnodes)
+            cls._walk_vnode(mnt.mnt_realrootvp, loop_vnodes)
+            cls._walk_vnode(mnt.mnt_devvp, loop_vnodes)
            
         return loop_vnodes
 
@@ -147,7 +139,7 @@ class List_Files(plugins.PluginInterface):
         
         while parent_offset in vnodes:
             parent_name, parent_offset, _ = vnodes[parent_offset]
-            if parent_offset == None:
+            if parent_offset is None:
                 parent_offset = 0
             
             path.insert(0, parent_name)
@@ -156,6 +148,9 @@ class List_Files(plugins.PluginInterface):
             path = "/".join(path)
         else:
             path = vnode_name
+
+        if path.startswith("//"):
+            path = path[1:]
 
         return path
     
@@ -168,8 +163,6 @@ class List_Files(plugins.PluginInterface):
 
         vnodes = cls._walk_mounts(context, layer_name, darwin_symbols)
 
-        dprint("got %d vnodes" % len(vnodes))
-
         for voff, (vnode_name, parent_offset, vnode) in vnodes.items():
             full_path = cls._build_path(vnodes, vnode_name, parent_offset)
        
@@ -180,7 +173,7 @@ class List_Files(plugins.PluginInterface):
                                            self.config['primary'],
                                            self.config['darwin']):
 
-            yield (0, (format_hints.Hex(vnode.dereference().vol.offset), full_path))
+            yield (0, (format_hints.Hex(vnode), full_path))
 
     def run(self):
         return renderers.TreeGrid([("Address", format_hints.Hex), ("File Path", str)],
