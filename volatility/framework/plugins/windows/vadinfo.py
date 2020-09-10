@@ -108,7 +108,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
     @classmethod
     def vad_dump(cls, context: interfaces.context.ContextInterface, proc: interfaces.objects.ObjectInterface,
-                 vad: interfaces.objects.ObjectInterface, 
+                 vad: interfaces.objects.ObjectInterface,
                  maxsize = MAXSIZE_DEFAULT) -> Optional[interfaces.plugins.FileInterface]:
         """Extracts the complete data for Vad as a FileInterface.
 
@@ -125,7 +125,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
         try:
             vad_start = vad.get_start()
             vad_end = vad.get_end()
-        except exceptions.AttributeError:
+        except AttributeError:
             vollog.debug("Unable to find the starting/ending VPN member")
             return
 
