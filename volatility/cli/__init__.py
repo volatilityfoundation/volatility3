@@ -351,15 +351,15 @@ class CommandLine(interfaces.plugins.FileConsumerInterface):
             general = "Volatility experienced a symbol-related issue:"
             detail = "{}{}{}: {}".format(excp.table_name, constants.BANG, excp.symbol_name, excp)
             caused_by = [
-                "An invalid symbol table"
-                "A plugin requesting a bad symbol"
-                "A plugin requesting a symbol from the wrong table"
+                "An invalid symbol table",
+                "A plugin requesting a bad symbol",
+                "A plugin requesting a symbol from the wrong table",
             ]
         elif isinstance(excp, exceptions.SymbolSpaceError):
             general = "Volatility experienced an issue related to a symbol table:"
             detail = "{}".format(excp)
             caused_by = [
-                "An invalid symbol table", "A plugin requesting a bad symbol"
+                "An invalid symbol table", "A plugin requesting a bad symbol",
                 "A plugin requesting a symbol from the wrong table"
             ]
         elif isinstance(excp, exceptions.LayerException):
