@@ -1,6 +1,5 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
-# Creator: Aviel Zohar (memoryforensicsanalysis@gmail.com) # Fix vol2 plugin to vol3
 
 from typing import Callable, List, Generator, Iterable, Dict
 from volatility.framework import renderers, interfaces, objects, exceptions
@@ -13,9 +12,6 @@ class Envars(interfaces.plugins.PluginInterface):
     "Display process environment variables"
 
     _version = (1, 0, 0)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
