@@ -8,6 +8,7 @@ from typing import Callable, Iterable, List, Dict
 from volatility.framework import renderers, interfaces, contexts, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
+from volatility.framework.symbols import mac
 
 vollog = logging.getLogger(__name__)
 
@@ -208,24 +209,9 @@ class PsList(interfaces.plugins.PluginInterface):
                                    subtype = kernel.get_type("sesshashhead"))
 
         for proc_list in proc_array:
-            # test the validity of the current element
-            # it is expected that many won't be initialized
-            try:
-                p = proc_list.lh_first
-            except exceptions.PagedInvalidAddressException:
-                continue
-
-            seen = set()
-            while p and p.vol.offset not in seen:
-                seen.add(p.vol.offset)
-
-                if p.is_readable() and p.s_leader.is_readable() and not filter_func(p.s_leader):
+            for p in mac.MacUtilities.walk_list_head(proc_list, "s_hash"):
+                if p.s_leader.is_readable() and not filter_func(p.s_leader):
                     yield p.s_leader
-
-                try:
-                    p = p.s_hash.le_next
-                except exceptions.PagedInvalidAddressException:
-                    break
 
     @classmethod
     def list_tasks_process_group(cls,
@@ -258,40 +244,10 @@ class PsList(interfaces.plugins.PluginInterface):
                                    subtype = kernel.get_type("pgrphashhead"))
 
         for proc_list in proc_array:
-            # test the validity of the current element
-            # it is expected that many won't be initialized
-            try:
-                pgrp = proc_list.lh_first
-            except exceptions.InvalidAddressException:
-                continue
-
-            seen_pgrps = set()
-
-            # this walks the particular process group
-            while pgrp and pgrp.vol.offset not in seen_pgrps:
-                seen_pgrps.add(pgrp.vol.offset)
-
-                # nothing can be done if this list pointer is invalid, so move on
-                try:
-                    p = pgrp.pg_members.lh_first
-                except exceptions.InvalidAddressException:
-                    break
-
-                seen_pg = set()
-                while p and p.vol.offset not in seen_pg:
-                    seen_pg.add(p.vol.offset)
-
-                    if p.is_readable() and not filter_func(p):
+            for pgrp in mac.MacUtilities.walk_list_head(proc_list, "pg_hash"):
+                for p in mac.MacUtilities.walk_list_head(pgrp.pg_members, "p_pglist"):
+                    if not filter_func(p):
                         yield p
-
-                    try:
-                        p = p.p_pglist.le_next
-                    except exceptions.InvalidAddressException:
-                        break
-                try:
-                    pgrp = pgrp.pg_hash.le_next
-                except exceptions.InvalidAddressException:
-                    break
 
     @classmethod
     def list_tasks_pid_hash_table(cls,
@@ -324,24 +280,9 @@ class PsList(interfaces.plugins.PluginInterface):
                                    subtype = kernel.get_type("pidhashhead"))
 
         for proc_list in proc_array:
-            # test the validity of the current element
-            # it is expected that many won't be initialized
-            try:
-                p = proc_list.lh_first
-            except exceptions.PagedInvalidAddressException:
-                continue
-
-            seen = set()
-            while p and p.vol.offset not in seen:
-                seen.add(p.vol.offset)
-
-                if p.is_readable() and not filter_func(p):
+            for p in mac.MacUtilities.walk_list_head(proc_list, "p_hash"):
+                if not filter_func(p):
                     yield p
-
-                try:
-                    p = p.p_hash.le_next
-                except exceptions.PagedInvalidAddressException:
-                    break
 
     def run(self):
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())
