@@ -50,28 +50,31 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self.check_header(hdr_layer, hdr_offset)
 
         # Need to create a header object
-        self.header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
-                                          offset = hdr_offset,
-                                          layer_name = self._base_layer)
+        header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
+                                     offset = hdr_offset,
+                                     layer_name = self._base_layer)
 
         # Extract the DTB
-        self.dtb = self.header.DirectoryTableBase
+        self.dtb = int(header.DirectoryTableBase)
 
         # Verify that it is a supported format
-        if self.header.DumpType not in self.supported_dumptypes:
+        if header.DumpType not in self.supported_dumptypes:
             raise WindowsCrashDumpFormatException(self.name,
-                                                  "unsupported dump format 0x{:x}".format(self.header.DumpType))
+                                                  "unsupported dump format 0x{:x}".format(header.DumpType))
 
         super().__init__(context, config_path, name)
 
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer."""
+        header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
+                                     offset = 0,
+                                     layer_name = self._base_layer)
 
         segments = []
 
         offset = self.headerpages
-        self.header.PhysicalMemoryBlockBuffer.Run.count = self.header.PhysicalMemoryBlockBuffer.NumberOfRuns
-        for x in self.header.PhysicalMemoryBlockBuffer.Run:
+        header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
+        for x in header.PhysicalMemoryBlockBuffer.Run:
             segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
             # print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
             #                  offset * 0x1000,
@@ -129,7 +132,8 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
         summary_header.BufferLong.count = (summary_header.BitmapSize + 31) // 32
         previous_bit = 0
         start_position = 0
-        mapped_offset = summary_header.HeaderSize
+        # We cast as an int because we don't want to carry the context around with us for infinite loop reasons
+        mapped_offset = int(summary_header.HeaderSize)
         current_word = None
         for bit_position in range(len(summary_header.BufferLong) * 32):
             if (bit_position % 32) == 0:
