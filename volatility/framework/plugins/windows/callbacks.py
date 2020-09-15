@@ -9,6 +9,7 @@ from volatility.framework import constants, exceptions, renderers, interfaces, s
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import versions
 from volatility.plugins.windows import ssdt
 from volatility.plugins.windows import svcscan
 
@@ -77,7 +78,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
 
-        is_vista_or_later = svcscan.SvcScan.is_vista_or_later(context = context, symbol_table = symbol_table)
+        is_vista_or_later = versions.is_vista_or_later(context = context, symbol_table = symbol_table)
         full_type_name = callback_table_name + constants.BANG + "_GENERIC_CALLBACK"
 
         symbol_names = [("PspLoadImageNotifyRoutine", False), ("PspCreateThreadNotifyRoutine", True),
