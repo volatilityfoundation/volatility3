@@ -31,7 +31,12 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class MacUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful mac functions."""
 
-    _version = (1, 0, 0)
+
+    """
+    Version History:
+    1.1.0 -> added walk_list_head API
+    """
+    _version = (1, 1, 0)
 
     @classmethod
     def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,

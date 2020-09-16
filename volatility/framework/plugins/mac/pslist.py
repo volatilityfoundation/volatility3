@@ -26,6 +26,7 @@ class PsList(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
+            requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 1, 0)),
             requirements.ChoiceRequirement(name = 'pslist_method',
                                            description = 'Method to determine for processes',
                                            choices = cls.pslist_methods,
@@ -209,9 +210,9 @@ class PsList(interfaces.plugins.PluginInterface):
                                    subtype = kernel.get_type("sesshashhead"))
 
         for proc_list in proc_array:
-            for p in mac.MacUtilities.walk_list_head(proc_list, "s_hash"):
-                if p.s_leader.is_readable() and not filter_func(p.s_leader):
-                    yield p.s_leader
+            for proc in mac.MacUtilities.walk_list_head(proc_list, "s_hash"):
+                if proc.s_leader.is_readable() and not filter_func(proc.s_leader):
+                    yield proc.s_leader
 
     @classmethod
     def list_tasks_process_group(cls,
@@ -245,9 +246,9 @@ class PsList(interfaces.plugins.PluginInterface):
 
         for proc_list in proc_array:
             for pgrp in mac.MacUtilities.walk_list_head(proc_list, "pg_hash"):
-                for p in mac.MacUtilities.walk_list_head(pgrp.pg_members, "p_pglist"):
-                    if not filter_func(p):
-                        yield p
+                for proc in mac.MacUtilities.walk_list_head(pgrp.pg_members, "p_pglist"):
+                    if not filter_func(proc):
+                        yield proc
 
     @classmethod
     def list_tasks_pid_hash_table(cls,
@@ -280,9 +281,9 @@ class PsList(interfaces.plugins.PluginInterface):
                                    subtype = kernel.get_type("pidhashhead"))
 
         for proc_list in proc_array:
-            for p in mac.MacUtilities.walk_list_head(proc_list, "p_hash"):
-                if not filter_func(p):
-                    yield p
+            for proc in mac.MacUtilities.walk_list_head(proc_list, "p_hash"):
+                if not filter_func(proc):
+                    yield proc
 
     def run(self):
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())
