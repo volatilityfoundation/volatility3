@@ -2,12 +2,15 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import logging
 import struct
 from typing import Tuple, Optional
 
 from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.layers import segmented
 from volatility.framework.symbols import intermed
+
+vollog = logging.getLogger(__name__)
 
 
 class WindowsCrashDumpFormatException(exceptions.LayerException):
@@ -59,7 +62,8 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         # Verify that it is a supported format
         if header.DumpType not in self.supported_dumptypes:
-            raise WindowsCrashDumpFormatException(self.name,
+            vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(header.DumpType))
+            raise WindowsCrashDumpFormatException(name,
                                                   "unsupported dump format 0x{:x}".format(header.DumpType))
 
         super().__init__(context, config_path, name)
