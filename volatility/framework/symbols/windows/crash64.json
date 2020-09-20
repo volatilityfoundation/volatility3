@@ -378,7 +378,7 @@
           "offset": 4,
           "type": {
             "kind": "base",
-            "name": "unsigned long long"
+            "name": "unsigned long"
           }
         },
         "NumberOfRuns": {
@@ -389,7 +389,7 @@
           }
         },
         "Run": {
-          "offset": 12,
+          "offset": 16,
           "type": {
             "count": 1,
             "kind": "array",

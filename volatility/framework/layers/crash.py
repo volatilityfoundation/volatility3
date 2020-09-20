@@ -60,6 +60,8 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         # Extract the DTB
         self.dtb = int(header.DirectoryTableBase)
 
+        self.dump_type = int(header.DumpType)
+
         # Verify that it is a supported format
         if header.DumpType not in self.supported_dumptypes:
             vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(header.DumpType))
@@ -122,7 +124,8 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
     VALIDDUMP = 0x34365544
     crashdump_json = 'crash64'
     dump_header_name = '_DUMP_HEADER64'
-    supported_dumptypes = [0x05]
+    supported_dumptypes = [0x1, 0x05]
+    headerpages = 2
 
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer."""
@@ -133,33 +136,49 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
                                              offset = 0x2000,
                                              layer_name = self._base_layer)
 
-        summary_header.BufferLong.count = (summary_header.BitmapSize + 31) // 32
-        previous_bit = 0
-        start_position = 0
-        # We cast as an int because we don't want to carry the context around with us for infinite loop reasons
-        mapped_offset = int(summary_header.HeaderSize)
-        current_word = None
-        for bit_position in range(len(summary_header.BufferLong) * 32):
-            if (bit_position % 32) == 0:
-                current_word = summary_header.BufferLong[bit_position // 32]
-            current_bit = (current_word >> (bit_position % 32)) & 1
-            if current_bit != previous_bit:
-                if previous_bit == 0:
-                    # Start
-                    start_position = bit_position
-                else:
-                    # Finish
+        if self.dump_type == 0x1:
+            header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
+                                         offset = 0,
+                                         layer_name = self._base_layer)
+
+            offset = self.headerpages
+            header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
+            for x in header.PhysicalMemoryBlockBuffer.Run:
+                segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
+                offset += x.PageCount
+
+        elif self.dump_type == 0x05:
+            summary_header.BufferLong.count = (summary_header.BitmapSize + 31) // 32
+            previous_bit = 0
+            start_position = 0
+            # We cast as an int because we don't want to carry the context around with us for infinite loop reasons
+            mapped_offset = int(summary_header.HeaderSize)
+            current_word = None
+            for bit_position in range(len(summary_header.BufferLong) * 32):
+                if (bit_position % 32) == 0:
+                    current_word = summary_header.BufferLong[bit_position // 32]
+                current_bit = (current_word >> (bit_position % 32)) & 1
+                if current_bit != previous_bit:
+                    if previous_bit == 0:
+                        # Start
+                        start_position = bit_position
+                    else:
+                        # Finish
+                        length = (bit_position - start_position) * 0x1000
+                        segments.append((start_position * 0x1000, mapped_offset, length, length))
+                        mapped_offset += length
+
+                # Finish it off
+                if bit_position == (len(summary_header.BufferLong) * 32) - 1 and current_bit == 1:
                     length = (bit_position - start_position) * 0x1000
                     segments.append((start_position * 0x1000, mapped_offset, length, length))
                     mapped_offset += length
 
-            # Finish it off
-            if bit_position == (len(summary_header.BufferLong) * 32) - 1 and current_bit == 1:
-                length = (bit_position - start_position) * 0x1000
-                segments.append((start_position * 0x1000, mapped_offset, length, length))
-                mapped_offset += length
-
-            previous_bit = current_bit
+                previous_bit = current_bit
+        else:
+            vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(self.dump_type))
+            raise WindowsCrashDumpFormatException(self.name,
+                                                  "unsupported dump format 0x{:x}".format(self.dump_type))
 
         if len(segments) == 0:
             raise WindowsCrashDumpFormatException(self.name,
