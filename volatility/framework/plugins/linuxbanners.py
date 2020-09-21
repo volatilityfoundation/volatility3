@@ -12,7 +12,7 @@ from volatility.framework.renderers import format_hints
 vollog = logging.getLogger(__name__)
 
 
-class LinuxBanners(interfaces.plugins.PluginInterface):
+class Banners(interfaces.plugins.PluginInterface):
     """Attempts to identify potential linux banners in an image"""
 
     @classmethod
@@ -23,22 +23,23 @@ class LinuxBanners(interfaces.plugins.PluginInterface):
         layer = self.context.layers[self.config['primary']]
         if isinstance(layer, layers.intel.Intel):
             layer = self.context.layers[layer.config['memory_layer']]
-        for offset, banner in self.locate_linux_banners(self.context, layer.name):
+        for offset, banner in self.locate_banners(self.context, layer.name):
             yield 0, (offset, banner)
 
     @classmethod
-    def locate_linux_banners(cls, context: interfaces.context.ContextInterface, layer_name: str):
-        """Identifies linux banners from a memory image"""
+    def locate_banners(cls, context: interfaces.context.ContextInterface, layer_name: str):
+        """Identifies banners from a memory image"""
         layer = context.layers[layer_name]
         for offset in layer.scan(context = context,
-                                 scanner = scanners.RegExScanner(rb"Linux version [0-9]+\.[0-9]+\.[0-9]+")):
+                                 scanner = scanners.RegExScanner(
+                                     rb"(Linux version|Darwin Kernel Version) [0-9]+\.[0-9]+\.[0-9]+")):
             data = layer.read(offset, 0xfff)
-            data_index = data.find(b'\n\x00')
+            data_index = data.find(b'\x00')
             if data_index > 0:
-                data = data[:data_index]
+                data = data[:data_index].strip()
                 failed = [
                     char for char in data
-                    if char not in b' #()+,-.0123456789:@ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~'
+                    if char not in b' #()+,;/-.0123456789:@ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~'
                 ]
                 if not failed:
                     yield format_hints.Hex(offset), str(data, encoding = 'latin-1', errors = '?')
