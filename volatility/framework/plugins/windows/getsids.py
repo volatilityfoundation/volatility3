@@ -9,7 +9,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
-from volatility.framework.layers.registry import RegistryFormatException
+import volatility.framework.layers.registry
 import volatility.framework.symbols.windows.extensions.registry as registry
 import volatility.plugins.windows.registry.hivelist as hivelist
 
@@ -90,7 +90,7 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                     for node in subkey.get_values():
                         try:
                             value_node_name = node.get_name() or "(Default)"
-                        except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
+                        except (exceptions.InvalidAddressException, volatility.framework.layers.registry.RegistryFormatException) as excp:
                             continue
                         try:
                             value_data = node.decode_data()
@@ -108,7 +108,7 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                                 path = str(value_data).replace('\\x00', '')[:-1]
                                 user = ntpath.basename(path)
                                 sids[sid] = user
-                        except (ValueError, exceptions.InvalidAddressException, RegistryFormatException) as excp:
+                        except (ValueError, exceptions.InvalidAddressException, volatility.framework.layers.registry.RegistryFormatException) as excp:
                             continue
             except (KeyError, exceptions.InvalidAddressException):
                 continue
