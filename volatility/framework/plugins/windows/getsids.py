@@ -12,16 +12,14 @@ from volatility.plugins.windows import pslist
 from volatility.plugins.windows.registry import hivelist
 import volatility.framework.symbols.windows.extensions.registry as registry
 
-
-
 vollog = logging.getLogger(__name__)
-
 
 
 def find_sid_re(sid_string, sid_re_list) -> str:
     for reg, name in sid_re_list:
         if reg.search(sid_string):
             return name
+
 
 class GetSIDs(interfaces.plugins.PluginInterface):
     """Print the SIDs owning each process"""
@@ -31,13 +29,13 @@ class GetSIDs(interfaces.plugins.PluginInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for plugin_dir in constants.PLUGINS_PATH:
-            sids_json_file_name = os.path.join(plugin_dir, os.path.join("windows", "well_known_sids.json"))
+            sids_json_file_name = os.path.join(plugin_dir, os.path.join("windows", "sids_and_privileges.json"))
             if os.path.exists(sids_json_file_name):
                 break
         else:
-            vollog.log(constants.LOGLOVEL_VVV, 'well_known_sids.json file is missing plugin error')
-            raise RuntimeError("The well_known_sids.json file missed from you plugin directory")
-        
+            vollog.log(constants.LOGLEVEL_VVV, 'sids_and_privileges.json file is missing plugin error')
+            raise RuntimeError("The sids_and_privileges.json file missed from you plugin directory")
+
         # Get all the sids from the json file.
         with open(sids_json_file_name, 'r') as file_handle:
             sids_json_data = json.load(file_handle)
@@ -47,22 +45,20 @@ class GetSIDs(interfaces.plugins.PluginInterface):
             # Compile all the sids regex.
             self.well_known_sid_re = [(re.compile(c_list[0]), c_list[1]) for c_list in sids_json_data['sids re']]
 
-            
-            
-
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Memory layer for the kernel',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-                requirements.ListRequirement(name = 'pid',
-                                             description = 'Filter on specific process IDs',
-                                             element_type = int,
-                                             optional = True),
-                requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-                requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
-                ]
+        return [
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
+        ]
 
     def lookup_user_sids(self) -> Dict[str, str]:
         """
@@ -77,11 +73,11 @@ class GetSIDs(interfaces.plugins.PluginInterface):
 
         sids = {}
         for hive in hivelist.HiveList.list_hives(context = self.context,
-                                 base_config_path = self.config_path,
-                                 layer_name = self.config['primary'],
-                                 symbol_table = self.config['nt_symbols'],
-                                 hive_offsets = None):
-        
+                                                 base_config_path = self.config_path,
+                                                 layer_name = self.config['primary'],
+                                                 symbol_table = self.config['nt_symbols'],
+                                                 hive_offsets = None):
+
             try:
                 for subkey in hive.get_key(key).get_subkeys():
                     sid = str(subkey.get_name())
@@ -107,7 +103,8 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                                 path = str(value_data).replace('\\x00', '')[:-1]
                                 user = ntpath.basename(path)
                                 sids[sid] = user
-                        except (ValueError, exceptions.InvalidAddressException, layers.registry.RegistryFormatException) as excp:
+                        except (ValueError, exceptions.InvalidAddressException,
+                                layers.registry.RegistryFormatException) as excp:
                             continue
             except (KeyError, exceptions.InvalidAddressException):
                 continue
@@ -129,10 +126,7 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                 token = False
 
             if not token:
-                yield (0, [int(task.UniqueProcessId),
-                                 str(task.ImageFileName),
-                                 "Token unreadable",
-                                 ""])
+                yield (0, [int(task.UniqueProcessId), str(task.ImageFileName), "Token unreadable", ""])
                 continue
 
             # Go all over the sids and try to translate them with one of the tables we have
@@ -150,18 +144,20 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                     else:
                         sid_name = ""
 
-                yield (0, [int(task.UniqueProcessId),
-                                 objects.utility.array_to_string(task.ImageFileName),
-                                 str(sid_string),
-                                 str(sid_name)])
+                yield (0, [
+                    int(task.UniqueProcessId),
+                    objects.utility.array_to_string(task.ImageFileName),
+                    str(sid_string),
+                    str(sid_name)
+                ])
 
-        
     def run(self):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
-        return renderers.TreeGrid([("PID", int),("Process", str),("SID", str),("Name", str)],
-                                  self._generator(pslist.PsList.list_processes(context = self.context,
-                                                                         layer_name = self.config['primary'],
-                                                                         symbol_table = self.config['nt_symbols'],
-                                                                         filter_func = filter_func)))
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("SID", str), ("Name", str)],
+                                  self._generator(
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))
