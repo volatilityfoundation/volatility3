@@ -1,7 +1,7 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
-import volatility.plugins.windows.registry.hivelist as hivelist
+from volatility.plugins.windows.registry import hivelist
 from volatility.framework import renderers, interfaces, objects, constants, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
