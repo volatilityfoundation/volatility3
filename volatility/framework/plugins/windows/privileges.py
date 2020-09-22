@@ -28,7 +28,7 @@ class Privs(interfaces.plugins.PluginInterface):
                 break
         else:
             vollog.log(constants.LOGLEVEL_VVV, 'well_known_sids.json file is missing plugin error')
-            raise RuntimeError("The well_known_sids.json file missed from you plugin directory")
+            raise RuntimeError("The sids_and_privileges.json file missed from you plugin directory")
 
 
         # Get service sids dictionary (we need only the service sids).
