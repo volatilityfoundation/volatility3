@@ -786,7 +786,7 @@ class TOKEN(objects.StructType):
                     yield "S-" + "-".join(str(i) for i in (sid.Revision, id_auth) +
                                           tuple(SubAuthority))
                 except exceptions.InvalidAddressException:
-                    pass
+                    vollog.log(constants.LOGLEVEL_VVVV, "InvalidAddressException while parsing for token sid")
 
 
     def privileges(self):
