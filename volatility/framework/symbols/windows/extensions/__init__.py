@@ -120,6 +120,21 @@ class MMVAD_SHORT(objects.StructType):
         elif self.has_member("Right"):
             return self.Right
 
+        # this is for windows 8 and 10
+        elif self.has_member("VadNode"):
+            if self.VadNode.has_member("RightChild"):
+                return self.VadNode.RightChild
+            if self.VadNode.has_member("Right"):
+                return self.VadNode.Right
+
+        # also for windows 8 and 10
+        elif self.has_member("Core"):
+            if self.Core.has_member("VadNode"):
+                if self.Core.VadNode.has_member("RightChild"):
+                    return self.Core.VadNode.RightChild
+                if self.Core.VadNode.has_member("Right"):
+                    return self.Core.VadNode.Right
+
         raise AttributeError("Unable to find the right child member")
 
     def get_left_child(self):
@@ -130,6 +145,21 @@ class MMVAD_SHORT(objects.StructType):
 
         elif self.has_member("Left"):
             return self.Left
+
+        # this is for windows 8 and 10
+        elif self.has_member("VadNode"):
+            if self.VadNode.has_member("LeftChild"):
+                return self.VadNode.LeftChild
+            if self.VadNode.has_member("Left"):
+                return self.VadNode.Left
+
+        # also for windows 8 and 10
+        elif self.has_member("Core"):
+            if self.Core.has_member("VadNode"):
+                if self.Core.VadNode.has_member("LeftChild"):
+                    return self.Core.VadNode.LeftChild
+                if self.Core.VadNode.has_member("Left"):
+                    return self.Core.VadNode.Left
 
         raise AttributeError("Unable to find the left child member")
 
@@ -353,12 +383,13 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
 
     def is_valid(self) -> bool:
         """Determine if the object is valid."""
-        return self.FileName.Length > 0 and self._context.layers[self.vol.layer_name].is_valid(self.FileName.Buffer)
+        return self.FileName.Length > 0 and self._context.layers[self.FileName.Buffer.vol.native_layer_name].is_valid(
+            self.FileName.Buffer)
 
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
         name = renderers.UnreadableValue()  # type: Union[str, interfaces.renderers.BaseAbsentValue]
 
-        if self._context.layers[self.vol.layer_name].is_valid(self.DeviceObject):
+        if self._context.layers[self.DeviceObject.vol.native_layer_name].is_valid(self.DeviceObject):
             try:
                 name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
             except ValueError:
@@ -635,6 +666,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
     def environment_variables(self):
         """Generator for environment variables. 
+
         The PEB points to our env block - a series of null-terminated
         unicode strings. Each string cannot be more than 0x7FFF chars. 
         End of the list is a quad-null. 
@@ -736,23 +768,26 @@ class TOKEN(objects.StructType):
                                             subtype = ntkrnlmp.get_type("_SID_AND_ATTRIBUTES"),
                                             count=self.UserAndGroupCount)
             for sid_and_attr in UserAndGroups:
-                sid = sid_and_attr.Sid.dereference().cast("_SID")
-                 # catch invalid pointers (UserAndGroupCount is too high)
-                if sid is None:
-                    return
-                # this mimics the windows API IsValidSid
-                if sid.Revision & 0xF != 1 or sid.SubAuthorityCount > 15:
-                    return
-                id_auth = ""
-                for i in sid.IdentifierAuthority.Value:
-                    id_auth = i
-                SubAuthority = ntkrnlmp.object(object_type="array",
-                                               offset=sid.SubAuthority.vol.offset - kvo,
-                                               subtype = ntkrnlmp.get_type("unsigned long"),
-                                               count= int(sid.SubAuthorityCount))
-                yield "S-" + "-".join(str(i) for i in (sid.Revision, id_auth) +
-                                      tuple(SubAuthority))
-            
+                try:
+                    sid = sid_and_attr.Sid.dereference().cast("_SID")
+                     # catch invalid pointers (UserAndGroupCount is too high)
+                    if sid is None:
+                        return
+                    # this mimics the windows API IsValidSid
+                    if sid.Revision & 0xF != 1 or sid.SubAuthorityCount > 15:
+                        return
+                    id_auth = ""
+                    for i in sid.IdentifierAuthority.Value:
+                        id_auth = i
+                    SubAuthority = ntkrnlmp.object(object_type="array",
+                                                   offset=sid.SubAuthority.vol.offset - kvo,
+                                                   subtype = ntkrnlmp.get_type("unsigned long"),
+                                                   count= int(sid.SubAuthorityCount))
+                    yield "S-" + "-".join(str(i) for i in (sid.Revision, id_auth) +
+                                          tuple(SubAuthority))
+                except exceptions.InvalidAddressException:
+                    pass
+                
 
     def privileges(self):
         "Return a list of privileges for the current token object."
