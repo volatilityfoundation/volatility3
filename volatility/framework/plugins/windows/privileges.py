@@ -27,7 +27,7 @@ class Privs(interfaces.plugins.PluginInterface):
             if os.path.exists(sids_json_file_name):
                 break
         else:
-            vollog.log(constants.LOGLEVEL_VVV, 'well_known_sids.json file is missing plugin error')
+            vollog.log(constants.LOGLEVEL_VVV, 'sids_and_privileges.json file is missing plugin error')
             raise RuntimeError("The sids_and_privileges.json file missed from you plugin directory")
 
 
