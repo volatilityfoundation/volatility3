@@ -768,23 +768,26 @@ class TOKEN(objects.StructType):
                                             subtype = ntkrnlmp.get_type("_SID_AND_ATTRIBUTES"),
                                             count=self.UserAndGroupCount)
             for sid_and_attr in UserAndGroups:
-                sid = sid_and_attr.Sid.dereference().cast("_SID")
-                 # catch invalid pointers (UserAndGroupCount is too high)
-                if sid is None:
-                    return
-                # this mimics the windows API IsValidSid
-                if sid.Revision & 0xF != 1 or sid.SubAuthorityCount > 15:
-                    return
-                id_auth = ""
-                for i in sid.IdentifierAuthority.Value:
-                    id_auth = i
-                SubAuthority = ntkrnlmp.object(object_type="array",
-                                               offset=sid.SubAuthority.vol.offset - kvo,
-                                               subtype = ntkrnlmp.get_type("unsigned long"),
-                                               count= int(sid.SubAuthorityCount))
-                yield "S-" + "-".join(str(i) for i in (sid.Revision, id_auth) +
-                                      tuple(SubAuthority))
-            
+                try:
+                    sid = sid_and_attr.Sid.dereference().cast("_SID")
+                     # catch invalid pointers (UserAndGroupCount is too high)
+                    if sid is None:
+                        return
+                    # this mimics the windows API IsValidSid
+                    if sid.Revision & 0xF != 1 or sid.SubAuthorityCount > 15:
+                        return
+                    id_auth = ""
+                    for i in sid.IdentifierAuthority.Value:
+                        id_auth = i
+                    SubAuthority = ntkrnlmp.object(object_type="array",
+                                                   offset=sid.SubAuthority.vol.offset - kvo,
+                                                   subtype = ntkrnlmp.get_type("unsigned long"),
+                                                   count= int(sid.SubAuthorityCount))
+                    yield "S-" + "-".join(str(i) for i in (sid.Revision, id_auth) +
+                                          tuple(SubAuthority))
+                except exceptions.InvalidAddressException:
+                    vollog.log(constants.LOGLEVEL_VVVV, "InvalidAddressException while parsing for token sid")
+
 
     def privileges(self):
         "Return a list of privileges for the current token object."
