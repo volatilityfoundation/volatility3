@@ -101,7 +101,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             for entry in proc.load_order_modules():
 
-                BaseDllName = FullDllName = DllLoadTime = renderers.UnreadableValue()
+                BaseDllName = FullDllName = renderers.UnreadableValue()
                 try:
                     BaseDllName = entry.BaseDllName.get_string()
                     # We assume that if the BaseDllName points to an invalid buffer, so will FullDllName
@@ -114,8 +114,10 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     # and 32bit version shouldn't have the Quadpart according to MSDN
                     try:
                         DllLoadTime = conversion.wintime_to_datetime(entry.LoadTime.QuadPart)
-                    except AttributeError:
-                        pass
+                    except exceptions.InvalidAddressException:
+                        DllLoadTime = renderers.UnreadableValue()
+                else:
+                    DllLoadTime = renderers.NotApplicableValue()
 
                 dumped = False
                 if self.config['dump']:
