@@ -1,12 +1,16 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+import logging
+from typing import List
 
-from typing import Callable, List, Generator, Iterable, Dict
-from volatility.framework import renderers, interfaces, objects, exceptions
+from volatility.framework import renderers, interfaces, objects, exceptions, constants
 from volatility.framework.configuration import requirements
-from volatility.framework.objects import utility
+from volatility.framework.layers import registry
 from volatility.plugins.windows import pslist
 from volatility.plugins.windows.registry import hivelist
+
+vollog = logging.getLogger(__name__)
+
 
 class Envars(interfaces.plugins.PluginInterface):
     "Display process environment variables"
@@ -24,18 +28,18 @@ class Envars(interfaces.plugins.PluginInterface):
                                              description = 'Filter on specific process IDs',
                                              element_type = int,
                                              optional = True),
-                requirements.BooleanRequirement(name='silent',
-                                             description='Suppress common and non-persistent variables',
-                                             optional=True),
+                requirements.BooleanRequirement(name = 'silent',
+                                                description = 'Suppress common and non-persistent variables',
+                                                optional = True),
                 requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
                 requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
                 ]
 
     def _get_silent_vars(self) -> List[str]:
         """Enumerate persistent & common variables.
-        
-        This function collects the global (all users) and 
-        user-specific environment variables from the 
+
+        This function collects the global (all users) and
+        user-specific environment variables from the
         registry. Any variables in a process env block that
         does not exist in the persistent list was explicitly
         set with the SetEnvironmentVariable() API.
@@ -43,16 +47,15 @@ class Envars(interfaces.plugins.PluginInterface):
 
         values = []
 
-
         for hive in hivelist.HiveList.list_hives(context = self.context,
-                                 base_config_path = self.config_path,
-                                 layer_name = self.config['primary'],
-                                 symbol_table = self.config['nt_symbols'],
-                                 hive_offsets = None):
+                                                 base_config_path = self.config_path,
+                                                 layer_name = self.config['primary'],
+                                                 symbol_table = self.config['nt_symbols'],
+                                                 hive_offsets = None):
             sys = False
             ntuser = False
 
-            ## The global variables 
+            ## The global variables
             try:
                 key = hive.get_key('CurrentControlSet\\Control\\Session Manager\\Environment')
                 sys = True
@@ -69,8 +72,9 @@ class Envars(interfaces.plugins.PluginInterface):
                             value_node_name = node.get_name()
                             if value_node_name:
                                 values.append(value_node_name)
-                        except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
-                            vollog.log(constants.LOGLEVEL_VVV, "Error while parsing global environment variables keys (some keys might be excluded)")
+                        except (exceptions.InvalidAddressException, registry.RegistryFormatException) as excp:
+                            vollog.log(constants.LOGLEVEL_VVV,
+                                       "Error while parsing global environment variables keys (some keys might be excluded)")
                             continue
                 except KeyError:
                     pass
@@ -88,8 +92,9 @@ class Envars(interfaces.plugins.PluginInterface):
                             value_node_name = node.get_name()
                             if value_node_name:
                                 values.append(value_node_name)
-                        except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
-                            vollog.log(constants.LOGLEVEL_VVV, "Error while parsing user environment variables keys (some keys might be excluded)")
+                        except (exceptions.InvalidAddressException, registry.RegistryFormatException) as excp:
+                            vollog.log(constants.LOGLEVEL_VVV,
+                                       "Error while parsing user environment variables keys (some keys might be excluded)")
                             continue
                 except KeyError:
                     pass
@@ -105,15 +110,15 @@ class Envars(interfaces.plugins.PluginInterface):
                         value_node_name = node.get_name()
                         if value_node_name:
                             values.append(value_node_name)
-                    except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
-                        vollog.log(constants.LOGLEVEL_VVV, "Error while parsing volatile environment variables keys (some keys might be excluded)")
+                    except (exceptions.InvalidAddressException, registry.RegistryFormatException) as excp:
+                        vollog.log(constants.LOGLEVEL_VVV,
+                                   "Error while parsing volatile environment variables keys (some keys might be excluded)")
                         continue
             except KeyError:
                 continue
 
-
         ## These are variables set explicitly but are
-        ## common enough to ignore safely. 
+        ## common enough to ignore safely.
         values.extend(["ProgramFiles", "CommonProgramFiles", "SystemDrive",
                        "SystemRoot", "ProgramData", "PUBLIC", "ALLUSERSPROFILE",
                        "COMPUTERNAME", "SESSIONNAME", "USERNAME", "USERPROFILE",
@@ -132,27 +137,27 @@ class Envars(interfaces.plugins.PluginInterface):
         return values
 
     def _generator(self, data):
+        silent_vars = []
         if self.config.get('SILENT', None):
             silent_vars = self._get_silent_vars()
 
         for task in data:
             for var, val in task.environment_variables():
-                if self.config.get('SILENT', None):
+                if self.config.get('silent', None):
                     if var in silent_vars:
-                        continue 
-                yield (0, [int(task.UniqueProcessId),
-                        str(objects.utility.array_to_string(task.ImageFileName)),
-                        hex(task.get_peb().ProcessParameters.Environment.vol.offset),
-                        str(var),
-                        str(val)])
-
+                        continue
+                yield (0, (int(task.UniqueProcessId),
+                           str(objects.utility.array_to_string(task.ImageFileName)),
+                           hex(task.get_peb().ProcessParameters.Environment.vol.offset),
+                           str(var),
+                           str(val)))
 
     def run(self):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
-        return renderers.TreeGrid([("PID", int),("Process", str),("Block", str),("Variable", str),("Value", str)],
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("Block", str), ("Variable", str), ("Value", str)],
                                   self._generator(pslist.PsList.list_processes(context = self.context,
-                                                                         layer_name = self.config['primary'],
-                                                                         symbol_table = self.config['nt_symbols'],
-                                                                         filter_func = filter_func)))
+                                                                               layer_name = self.config['primary'],
+                                                                               symbol_table = self.config['nt_symbols'],
+                                                                               filter_func = filter_func)))

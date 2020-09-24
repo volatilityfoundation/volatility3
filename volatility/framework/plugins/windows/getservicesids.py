@@ -1,17 +1,16 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
-from volatility.plugins.windows.registry import hivelist
-from volatility.framework import renderers, interfaces, objects, constants, exceptions
-from volatility.framework.configuration import requirements
-from volatility.framework.objects import utility
-from volatility.framework.renderers import format_hints
-
-from typing import List
-import logging
 import hashlib
+import json
+import logging
+import os
 import struct
-import os, json
+from typing import List
+
+from volatility.framework import renderers, interfaces, constants, exceptions
+from volatility.framework.configuration import requirements
+from volatility.plugins.windows.registry import hivelist
 
 vollog = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
                 for s in services.get_subkeys():
                     if s.get_name() not in self.servicesids.values():
                         sid = createservicesid(s.get_name())
-                        yield (0, [sid, s.get_name()])
+                        yield (0, (sid, s.get_name()))
 
     def run(self):
         return renderers.TreeGrid([("SID", str), ("Service", str)], self._generator())

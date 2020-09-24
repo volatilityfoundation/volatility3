@@ -1,24 +1,28 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
+import json
 import logging
-import re, ntpath, os, json
-from typing import Callable, List, Generator, Iterable, Dict
+import ntpath
+import os
+import re
+from typing import List, Dict, Union
+
 from volatility.framework import renderers, interfaces, objects, exceptions, constants, layers
 from volatility.framework.configuration import requirements
-from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
+from volatility.framework.symbols.windows.extensions import registry
 from volatility.plugins.windows import pslist
 from volatility.plugins.windows.registry import hivelist
-import volatility.framework.symbols.windows.extensions.registry as registry
 
 vollog = logging.getLogger(__name__)
 
 
-def find_sid_re(sid_string, sid_re_list) -> str:
+def find_sid_re(sid_string, sid_re_list) -> Union[str, interfaces.renderers.BaseAbsentValue]:
     for reg, name in sid_re_list:
         if reg.search(sid_string):
             return name
+    return renderers.NotAvailableValue()
 
 
 class GetSIDs(interfaces.plugins.PluginInterface):
@@ -117,15 +121,13 @@ class GetSIDs(interfaces.plugins.PluginInterface):
 
         # Go all over the process list, get the token
         for task in procs:
-            #print('here')
-            #print(task.UniqueProcessId)
             # Make sure we have a valid token
             try:
                 token = task.Token.dereference().cast("_TOKEN")
             except exceptions.InvalidAddressException:
                 token = False
 
-            if not token:
+            if not token or not isinstance(token, interfaces.objects.ObjectInterface):
                 yield (0, [int(task.UniqueProcessId), str(task.ImageFileName), "Token unreadable", ""])
                 continue
 
@@ -144,12 +146,12 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                     else:
                         sid_name = ""
 
-                yield (0, [
-                    int(task.UniqueProcessId),
+                yield (0, (
+                    task.UniqueProcessId,
                     objects.utility.array_to_string(task.ImageFileName),
-                    str(sid_string),
-                    str(sid_name)
-                ])
+                    sid_string,
+                    sid_name
+                ))
 
     def run(self):
 
