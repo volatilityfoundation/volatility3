@@ -66,6 +66,8 @@ class POOL_HEADER(objects.StructType):
             if use_top_down:
                 body_offset = object_header_type.relative_child_offset('Body')
                 infomask_offset = object_header_type.relative_child_offset('InfoMask')
+                pointercount_offset = object_header_type.relative_child_offset('PointerCount')
+                pointercount_size = object_header_type.members['PointerCount'][1].size
                 optional_headers, lengths_of_optional_headers = self._calculate_optional_header_lengths(
                     self._context, symbol_table_name)
                 padding_available = None if 'PADDING_INFO' not in optional_headers else optional_headers.index(
@@ -88,6 +90,13 @@ class POOL_HEADER(objects.StructType):
                 # It will always be aligned to a particular alignment
                 for addr in range(0, addr_limit, alignment):
                     infomask_value = infomask_data[addr + infomask_offset]
+                    pointercount_value = int.from_bytes(
+                        infomask_data[addr + pointercount_offset:addr + pointercount_offset + pointercount_size],
+                        byteorder = 'little', signed = True)
+                    if not 0x1000000 > pointercount_value >= 0:
+                        continue
+                    if not infomask_value:
+                        continue
 
                     padding_present = False
                     optional_headers_length = 0
