@@ -15,7 +15,7 @@ class Arm64Exception(exceptions.LayerException):
 
 
 class AArch64(linear.LinearlyMappedLayer):
-    _page_size_in_bits = 12  # Minimum page size, for skipping invliad addresses
+    _page_size_in_bits = 12  # Minimum page size, for skipping invlad addresses
     _bits_per_register = 64
     _maxphyaddr = 48
     _maxvirtaddr = _maxphyaddr
@@ -47,8 +47,11 @@ class AArch64(linear.LinearlyMappedLayer):
 
         self._translation_table_base = [self.config["translation_table_base0"],
                                         self.config["translation_table_base1"]]
-        self._structure_index = [self.structures[self._mask(self._translation_control_register, 15, 14)],
-                                 self.structures[self._mask(self._translation_control_register, 31, 30)]]
+        try:
+            self._structure_index = [self.structures[self._mask(self._translation_control_register, 15, 14)],
+                                     self.structures[self._mask(self._translation_control_register, 31, 30)]]
+        except IndexError:
+            raise Arm64Exception("Invalid translation control register")
         self._most_significant_bits = [self._mask(self._translation_control_register, 5, 0),
                                        self._mask(self._translation_control_register, 21, 16)]
 
