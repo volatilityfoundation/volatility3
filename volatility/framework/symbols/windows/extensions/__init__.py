@@ -678,7 +678,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             block = self.get_peb().ProcessParameters.Environment
             try:
                 block_size = self.get_peb().ProcessParameters.EnvironmentSize
-            except:
+            except AttributeError: # Windows XP
                 block_size = self.get_peb().ProcessParameters.Length
             envars = context.layers[process_space].read(block, block_size).decode("utf-16-le", errors='replace').split('\x00')[:-1]
         except exceptions.InvalidAddressException:
