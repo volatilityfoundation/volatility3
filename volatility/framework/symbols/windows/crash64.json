@@ -2,7 +2,7 @@
   "symbols": {
   },
   "user_types": {
-    "_DUMP_HEADER": {
+    "_DUMP_HEADER64": {
       "fields": {
         "Signature": {
           "offset": 0,
@@ -44,64 +44,64 @@
           "offset": 16,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned long long"
           }
         },
         "PfnDataBase": {
-          "offset": 20,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "PsLoadedModuleList": {
           "offset": 24,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned long long"
           }
         },
-        "PsActiveProcessHead": {
-          "offset": 28,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "MachineImageType": {
+        "PsLoadedModuleList": {
           "offset": 32,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned long long"
           }
         },
-        "NumberProcessors": {
-          "offset": 36,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "BugCheckCode": {
+        "PsActiveProcessHead": {
           "offset": 40,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
-        "BugCheckCodeParameter": {
+        "MachineImageType": {
           "offset": 44,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "NumberProcessors": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "BugCheckCode": {
+          "offset": 60,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "BugCheckCodeParameter": {
+          "offset": 64,
           "type": {
             "count": 4,
             "kind": "array",
             "subtype": {
               "kind": "base",
-              "name": "unsigned long"
+              "name": "unsigned long long"
             }
           }
         },
         "VersionUser": {
-          "offset": 60,
+          "offset": 96,
           "type": {
             "count": 32,
             "kind": "array",
@@ -111,49 +111,24 @@
             }
           }
         },
-        "PaeEnabled": {
-          "offset": 92,
-          "type": {
-            "kind": "base",
-            "name": "unsigned char"
-          }
-        },
-        "KdSecondaryVersion": {
-          "offset": 93,
-          "type": {
-            "kind": "base",
-            "name": "unsigned char"
-          }
-        },
-        "VersionUser2": {
-          "offset": 94,
-          "type": {
-            "count": 2,
-            "kind": "array",
-            "subtype": {
-              "kind": "base",
-              "name": "unsigned char"
-            }
-          }
-        },
         "KdDebuggerDataBlock": {
-          "offset": 96,
+          "offset": 128,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned long long"
           }
         },
         "PhysicalMemoryBlockBuffer": {
-          "offset": 100,
+          "offset": 136,
           "type": {
             "kind": "struct",
-            "name": "_PHYSICAL_MEMORY_DESCRIPTOR"
+            "name": "_PHYSICAL_MEMORY_DESCRIPTOR64"
           }
         },
         "ContextRecord": {
-          "offset": 800,
+          "offset": 840,
           "type": {
-            "count": 1200,
+            "count": 3000,
             "kind": "array",
             "subtype": {
               "kind": "base",
@@ -162,60 +137,14 @@
           }
         },
         "Exception": {
-          "offset": 2000,
+          "offset": 3840,
           "type": {
             "kind": "struct",
-            "name": "_EXCEPTION_RECORD32"
-          }
-        },
-        "Comment": {
-          "offset": 2080,
-          "type": {
-            "count": 128,
-            "kind": "array",
-            "subtype": {
-              "kind": "base",
-              "name": "unsigned char"
-            }
+            "name": "_EXCEPTION_RECORD64"
           }
         },
         "DumpType": {
-          "offset": 3976,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "MiniDumpFields": {
-          "offset": 3980,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "SecondaryDataState": {
-          "offset": 3984,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "ProductType": {
-          "offset": 3988,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "SuiteMask": {
           "offset": 3992,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "WriterStatus": {
-          "offset": 3996,
           "type": {
             "kind": "base",
             "name": "unsigned long"
@@ -229,24 +158,158 @@
           }
         },
         "SystemUpTime": {
-          "offset": 4024,
+          "offset": 4008,
           "type": {
             "kind": "base",
             "name": "unsigned long long"
+          }
+        },
+        "Comment": {
+          "offset": 4016,
+          "type": {
+            "count": 128,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
           }
         },
         "SystemTime": {
-          "offset": 4032,
+          "offset": 4144,
           "type": {
             "kind": "base",
             "name": "unsigned long long"
           }
         },
-        "reserved3": {
-          "offset": 4040,
+        "MiniDumpFields": {
+          "offset": 4152,
           "type": {
-            "count": 56,
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SecondaryDataState": {
+          "offset": 4156,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "ProductType": {
+          "offset": 4160,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "SuiteMask": {
+          "offset": 4164,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "WriterStatus": {
+          "offset": 4168,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "Unused1": {
+          "offset": 4172,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "KdSecondaryVersion": {
+          "offset": 4173,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        },
+        "Unused2": {
+          "offset": 4174,
+          "type": {
+            "kind": "base",
+            "name": "unsigned char"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 8192
+    },
+    "_SUMMARY_DUMP64": {
+      "fields": {
+        "Signature": {
+          "offset": 0,
+          "type": {
+            "count": 4,
             "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "ValidDump": {
+          "offset": 4,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "DumpOptions": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "HeaderSize": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "BitmapSize": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "Pages": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "BufferLong": {
+          "offset": 56,
+          "type": {
+            "kind": "array",
+            "count": 1,
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "BufferChar": {
+          "offset": 56,
+          "type": {
+            "kind": "array",
+            "count": 1,
             "subtype": {
               "kind": "base",
               "name": "unsigned char"
@@ -255,9 +318,9 @@
         }
       },
       "kind": "struct",
-      "size": 4096
+      "size": 56
     },
-    "_EXCEPTION_RECORD32": {
+    "_EXCEPTION_RECORD64": {
       "fields": {
         "ExceptionCode": {
           "offset": 0,
@@ -277,39 +340,39 @@
           "offset": 8,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned long long"
           }
         },
         "ExceptionAddress": {
-          "offset": 12,
+          "offset": 16,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned long long"
           }
         },
         "NumberParameters": {
-          "offset": 16,
+          "offset": 24,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
         "ExceptionInformation": {
-          "offset": 20,
+          "offset": 32,
           "type": {
             "count": 15,
             "kind": "array",
             "subtype": {
               "kind": "base",
-              "name": "unsigned long"
+              "name": "unsigned long long"
             }
           }
         }
       },
       "kind": "struct",
-      "size": 80
+      "size": 152
     },
-    "_PHYSICAL_MEMORY_DESCRIPTOR": {
+    "_PHYSICAL_MEMORY_DESCRIPTOR64": {
       "fields": {
         "NumberOfPages": {
           "offset": 4,
@@ -326,39 +389,39 @@
           }
         },
         "Run": {
-          "offset": 8,
+          "offset": 16,
           "type": {
             "count": 1,
             "kind": "array",
             "subtype": {
               "kind": "struct",
-              "name": "_PHYSICAL_MEMORY_RUN"
+              "name": "_PHYSICAL_MEMORY_RUN64"
             }
           }
         }
       },
       "kind": "struct",
-      "size": 16
+      "size": 20
     },
-    "_PHYSICAL_MEMORY_RUN": {
+    "_PHYSICAL_MEMORY_RUN64": {
       "fields": {
         "BasePage": {
           "offset": 0,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned long long"
           }
         },
         "PageCount": {
-          "offset": 4,
+          "offset": 8,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned long long"
           }
         }
       },
       "kind": "struct",
-      "size": 8
+      "size": 16
     }
   },
   "enums": {
@@ -409,10 +472,10 @@
   },
   "metadata": {
     "producer": {
-      "version": "0.0.2",
-      "name": "awalters-by-hand",
-      "datetime": "2018-05-01T16:30:00"
+      "version": "0.0.1",
+      "name": "ikelos-by-hand",
+      "datetime": "2020-09-10T00:20:00"
     },
-    "format": "4.1.0"
+    "format": "6.2.0"
   }
 }
