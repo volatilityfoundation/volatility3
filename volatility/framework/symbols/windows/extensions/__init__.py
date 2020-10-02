@@ -802,20 +802,16 @@ class TOKEN(objects.StructType):
                        bool(self.Privileges.Enabled & (2**priv_index)),
                        bool(self.Privileges.EnabledByDefault & (2**priv_index)))
         except AttributeError: # Windows XP
-            layer_name = self.vol.layer_name
-            kvo = self._context.layers[layer_name].config["kernel_virtual_offset"]        
-            symbol_table = self.get_symbol_table_name()
-            ntkrnlmp = self._context.module(symbol_table,
-                                            layer_name = layer_name,
-                                            offset = kvo)
             if self.PrivilegeCount < 1024:
                 # This is a pointer to an array of _LUID_AND_ATTRIBUTES
                 for luid in self.Privileges.dereference().cast("array", count=self.PrivilegeCount,
-                                                               subtype=ntkrnlmp.get_type("_LUID_AND_ATTRIBUTES")):
+                                                               subtype=self._context.symbol_space[self.get_symbol_table_name()].get_type("_LUID_AND_ATTRIBUTES")):
                     # The Attributes member is a flag 
                     enabled = luid.Attributes & 2 != 0
                     default = luid.Attributes & 1 != 0
                     yield luid.Luid.LowPart, True, enabled, default
+            else:
+                vollog.log(constants.LOGLEVEL_VVVV, "Broken Token Privileges.")
 
 
 class KTHREAD(objects.StructType):
