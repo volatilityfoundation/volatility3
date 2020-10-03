@@ -7,14 +7,13 @@ from typing import Optional, Tuple, Type
 
 from volatility.framework import interfaces, constants
 from volatility.framework.automagic import symbol_cache, symbol_finder
-from volatility.framework.layers import intel, scanners
+from volatility.framework.layers import intel, scanners, arm
 from volatility.framework.symbols import linux
-from volatility.framework.objects import utility
 
 vollog = logging.getLogger(__name__)
 
 
-class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
+class LinuxStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 45
     exclusion_list = ['mac', 'windows']
 
@@ -43,48 +42,65 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             dtb = None
             vollog.debug("Identified banner: {}".format(repr(banner)))
-
             symbol_files = linux_banners.get(banner, None)
             if symbol_files:
                 isf_path = symbol_files[0]
-                table_name = context.symbol_space.free_table_name('LintelStacker')
+                table_name = context.symbol_space.free_table_name('LinuxStacker')
                 table = linux.LinuxKernelIntermedSymbols(context,
                                                          'temporary.' + table_name,
                                                          name = table_name,
                                                          isf_url = isf_path)
                 context.symbol_space.append(table)
-                kaslr_shift, aslr_shift = cls.find_aslr(context,
-                                                        table_name,
-                                                        layer_name,
-                                                        progress_callback = progress_callback)
-
-                layer_class = intel.Intel  # type: Type
-                if 'init_top_pgt' in table.symbols:
-                    layer_class = intel.Intel32e
-                    dtb_symbol_name = 'init_top_pgt'
-                elif 'init_level4_pgt' in table.symbols:
-                    layer_class = intel.Intel32e
-                    dtb_symbol_name = 'init_level4_pgt'
-                else:
-                    dtb_symbol_name = 'swapper_pg_dir'
-
-                dtb = cls.virtual_to_physical_address(table.get_symbol(dtb_symbol_name).address + kaslr_shift)
-
-                # Build the new layer
-                new_layer_name = context.layers.free_layer_name("IntelLayer")
-                config_path = join("IntelHelper", new_layer_name)
+                new_layer_name = context.layers.free_layer_name("LinuxLayer")
+                config_path = join("LinuxHelper", new_layer_name)
                 context.config[join(config_path, "memory_layer")] = layer_name
-                context.config[join(config_path, "page_map_offset")] = dtb
                 context.config[join(config_path, LinuxSymbolFinder.banner_config_key)] = str(banner, 'latin-1')
 
-                layer = layer_class(context,
-                                    config_path = config_path,
-                                    name = new_layer_name,
-                                    metadata = {'kaslr_value': aslr_shift})
+                if b"-arm64" in banner:
+                    layer_class = arm.AArch64
 
-            if layer and dtb:
-                vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
-                return layer
+                    # Build the new layer
+                    context.config[join(config_path, "translation_table_base0")] = 25614225010319360
+                    context.config[join(config_path, "translation_table_base1")] = 1074253824
+                    context.config[join(config_path, "translation_control_register")] = 226376627481
+
+                    layer = layer_class(context,
+                                        config_path = config_path,
+                                        name = new_layer_name,
+                                        metadata = {})
+
+                    if layer:
+                        vollog.debug("AArch64 image found")
+                        return layer
+                else:
+                    kaslr_shift, aslr_shift = cls.find_aslr(context,
+                                                            table_name,
+                                                            layer_name,
+                                                            progress_callback = progress_callback)
+
+                    layer_class = intel.Intel  # type: Type
+                    if 'init_top_pgt' in table.symbols:
+                        layer_class = intel.Intel32e
+                        dtb_symbol_name = 'init_top_pgt'
+                    elif 'init_level4_pgt' in table.symbols:
+                        layer_class = intel.Intel32e
+                        dtb_symbol_name = 'init_level4_pgt'
+                    else:
+                        dtb_symbol_name = 'swapper_pg_dir'
+
+                    dtb = cls.virtual_to_physical_address(table.get_symbol(dtb_symbol_name).address + kaslr_shift)
+
+                    # Build the new layer
+                    context.config[join(config_path, "page_map_offset")] = dtb
+
+                    layer = layer_class(context,
+                                        config_path = config_path,
+                                        name = new_layer_name,
+                                        metadata = {'kaslr_value': aslr_shift})
+
+                    if layer and dtb:
+                        vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
+                        return layer
         return None
 
     @classmethod
@@ -154,4 +170,4 @@ class LinuxSymbolFinder(symbol_finder.SymbolFinder):
     banner_config_key = "kernel_banner"
     banner_cache = LinuxBannerCache
     symbol_class = "volatility.framework.symbols.linux.LinuxKernelIntermedSymbols"
-    find_aslr = lambda cls, *args: LinuxIntelStacker.find_aslr(*args)[1]
+    find_aslr = lambda cls, *args: LinuxStacker.find_aslr(*args)[1]

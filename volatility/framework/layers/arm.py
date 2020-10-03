@@ -50,18 +50,20 @@ class AArch64(linear.LinearlyMappedLayer):
         try:
             self._structure_index = [self.structures[self._mask(self._translation_control_register, 15, 14)],
                                      self.structures[self._mask(self._translation_control_register, 31, 30)]]
-        except IndexError:
+        except KeyError:
             raise Arm64Exception("Invalid translation control register")
         self._most_significant_bits = [self._mask(self._translation_control_register, 5, 0),
                                        self._mask(self._translation_control_register, 21, 16)]
 
     @staticmethod
-    def _mask(value: int, high_bit: int, low_bit: int, shift: int = 0) -> int:
+    def _mask(value: int, high_bit: int, low_bit: int, shift: Optional[int] = None) -> int:
         """Returns the bits of a value between highbit and lowbit inclusive."""
+        if shift is None:
+            shift = low_bit
         high_mask = (1 << (high_bit + 1)) - 1
         low_mask = (1 << low_bit) - 1
         mask = (high_mask ^ low_mask)
-        return (value & mask) >> (low_bit - 1)
+        return (value & mask) >> shift
 
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         """Translates a virtual offset to a physical one within this segment
