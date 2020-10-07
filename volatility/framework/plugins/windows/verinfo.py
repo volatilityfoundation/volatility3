@@ -140,6 +140,11 @@ class VerInfo(interfaces.plugins.PluginInterface):
                     BaseDllName = renderers.UnreadableValue()
 
                 try:
+                    DllBase = format_hints.Hex(entry.DllBase)
+                except exceptions.InvalidAddressException:
+                    DllBase = renderers.UnreadableValue()
+
+                try:
                     (major, minor, product, build) = self.get_version_information(self._context, pe_table_name,
                                                                                   proc_layer_name, entry.DllBase)
                 except (exceptions.InvalidAddressException, ValueError, AttributeError):
@@ -148,7 +153,9 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 yield (0, (proc.UniqueProcessId,
                            proc.ImageFileName.cast("string",
                                                    max_length = proc.ImageFileName.vol.count,
-                                                   errors = "replace"), format_hints.Hex(entry.DllBase), BaseDllName,
+                                                   errors = "replace"),
+                           DllBase,
+                           BaseDllName,
                            major, minor, product, build))
 
     def run(self):
