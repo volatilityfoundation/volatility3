@@ -334,6 +334,8 @@ class Pointer(Integer):
     def __getattr__(self, attr: str) -> Any:
         """Convenience function to access unknown attributes by getting them
         from the subtype object."""
+        if attr in ['vol', '_vol']:
+            raise AttributeError("Pointer not initialized before use")
         return getattr(self.dereference(), attr)
 
     def has_member(self, member_name: str) -> bool:
@@ -701,6 +703,8 @@ class AggregateType(interfaces.objects.ObjectInterface):
 
     def __getattr__(self, attr: str) -> Any:
         """Method for accessing members of the type."""
+        if attr in ['_concrete_members', 'vol']:
+            raise AttributeError("Object has not been properly initialized")
         if attr in self._concrete_members:
             return self._concrete_members[attr]
         elif attr in self.vol.members:
