@@ -95,8 +95,6 @@ class POOL_HEADER(objects.StructType):
                         byteorder = 'little', signed = True)
                     if not 0x1000000 > pointercount_value >= 0:
                         continue
-                    if not infomask_value:
-                        continue
 
                     padding_present = False
                     optional_headers_length = 0
@@ -169,8 +167,8 @@ class POOL_HEADER(objects.StructType):
         headers = []
         sizes = []
         for header in [
-                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
-                'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
+            'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
+            'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
         ]:
             try:
                 type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)
