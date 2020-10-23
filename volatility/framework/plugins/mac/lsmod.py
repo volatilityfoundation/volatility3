@@ -38,12 +38,29 @@ class Lsmod(plugins.PluginInterface):
         """
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
+        kernel_layer = context.layers[layer_name]
+
         kmod_ptr = kernel.object_from_symbol(symbol_name = "kmod")
 
-        # TODO - use smear-proof list walking API after dev release
         kmod = kmod_ptr.dereference().cast("kmod_info")
-        while kmod != 0:
+
+        yield kmod
+
+        kmod = kmod.next
+
+        seen = set()
+
+        while kmod != 0 and \
+              kmod not in seen and \
+              len(seen) < 1024:
+
+            if not kernel_layer.is_valid(kmod.dereference().vol.offset, kmod.dereference().vol.size):
+                break
+
+            seen.add(kmod)
+
             yield kmod
+
             kmod = kmod.next
 
     def _generator(self):
