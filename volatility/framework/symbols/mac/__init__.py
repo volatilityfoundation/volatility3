@@ -26,6 +26,7 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
         self.set_type_class('sockaddr_dl', extensions.sockaddr_dl)
         self.set_type_class('sockaddr', extensions.sockaddr)
         self.set_type_class('sysctl_oid', extensions.sysctl_oid)
+        self.set_type_class('kauth_scope', extensions.kauth_scope)
 
 
 class MacUtilities(interfaces.configuration.VersionableInterface):
