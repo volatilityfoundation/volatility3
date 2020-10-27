@@ -146,12 +146,8 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                     else:
                         sid_name = ""
 
-                yield (0, (
-                    task.UniqueProcessId,
-                    objects.utility.array_to_string(task.ImageFileName),
-                    sid_string,
-                    sid_name
-                ))
+                yield (0, (task.UniqueProcessId, objects.utility.array_to_string(task.ImageFileName), sid_string,
+                           sid_name))
 
     def run(self):
 

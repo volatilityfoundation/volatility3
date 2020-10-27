@@ -65,8 +65,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         # Verify that it is a supported format
         if header.DumpType not in self.supported_dumptypes:
             vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(header.DumpType))
-            raise WindowsCrashDumpFormatException(name,
-                                                  "unsupported dump format 0x{:x}".format(header.DumpType))
+            raise WindowsCrashDumpFormatException(name, "unsupported dump format 0x{:x}".format(header.DumpType))
 
         super().__init__(context, config_path, name)
 
@@ -88,8 +87,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             offset += x.PageCount
 
         if len(segments) == 0:
-            raise WindowsCrashDumpFormatException(self.name,
-                                                  "No Crash segments defined in {}".format(self._base_layer))
+            raise WindowsCrashDumpFormatException(self.name, "No Crash segments defined in {}".format(self._base_layer))
 
         self._segments = segments
 
@@ -108,8 +106,8 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             raise WindowsCrashDumpFormatException(
                 base_layer.name, "Bad signature 0x{:x} at file offset 0x{:x}".format(signature, offset))
         if validdump != cls.VALIDDUMP:
-            raise WindowsCrashDumpFormatException(
-                base_layer.name, "Invalid dump 0x{:x} at file offset 0x{:x}".format(validdump, offset))
+            raise WindowsCrashDumpFormatException(base_layer.name,
+                                                  "Invalid dump 0x{:x} at file offset 0x{:x}".format(validdump, offset))
 
         return signature, validdump
 
@@ -177,12 +175,10 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
                 previous_bit = current_bit
         else:
             vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(self.dump_type))
-            raise WindowsCrashDumpFormatException(self.name,
-                                                  "unsupported dump format 0x{:x}".format(self.dump_type))
+            raise WindowsCrashDumpFormatException(self.name, "unsupported dump format 0x{:x}".format(self.dump_type))
 
         if len(segments) == 0:
-            raise WindowsCrashDumpFormatException(self.name,
-                                                  "No Crash segments defined in {}".format(self._base_layer))
+            raise WindowsCrashDumpFormatException(self.name, "No Crash segments defined in {}".format(self._base_layer))
 
         self._segments = segments
 

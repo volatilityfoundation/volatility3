@@ -92,7 +92,8 @@ class POOL_HEADER(objects.StructType):
                     infomask_value = infomask_data[addr + infomask_offset]
                     pointercount_value = int.from_bytes(
                         infomask_data[addr + pointercount_offset:addr + pointercount_offset + pointercount_size],
-                        byteorder = 'little', signed = True)
+                        byteorder = 'little',
+                        signed = True)
                     if not 0x1000000 > pointercount_value >= 0:
                         continue
 
@@ -167,8 +168,8 @@ class POOL_HEADER(objects.StructType):
         headers = []
         sizes = []
         for header in [
-            'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
-            'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
+                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
+                'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
         ]:
             try:
                 type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)

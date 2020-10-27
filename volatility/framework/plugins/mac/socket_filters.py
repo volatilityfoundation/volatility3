@@ -46,7 +46,7 @@ class Socket_filters(plugins.PluginInterface):
 
         for filter_container in mac.MacUtilities.walk_tailq(filter_list, "sf_global_next"):
             current_filter = filter_container.sf_filter
-            
+
             filter_name = utility.pointer_to_string(current_filter.sf_name, count = 128)
 
             try:
@@ -66,4 +66,5 @@ class Socket_filters(plugins.PluginInterface):
 
     def run(self):
         return renderers.TreeGrid([("Filter", format_hints.Hex), ("Name", str), ("Member", str),
-                                   ("Socket", format_hints.Hex), ("Handler", format_hints.Hex), ("Module", str), ("Symbol", str)], self._generator())
+                                   ("Socket", format_hints.Hex), ("Handler", format_hints.Hex), ("Module", str),
+                                   ("Symbol", str)], self._generator())

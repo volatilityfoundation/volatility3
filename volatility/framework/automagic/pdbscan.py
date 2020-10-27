@@ -184,9 +184,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         physical_layer = context.layers[physical_layer_name]
         # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
-        results = physical_layer.scan(context,
-                                      scanners.BytesScanner(pattern),
-                                      progress_callback = progress_callback)
+        results = physical_layer.scan(context, scanners.BytesScanner(pattern), progress_callback = progress_callback)
         seen = set()  # type: Set[int]
         # Because this will launch a scan of the virtual layer, we want to be careful
         for result in results:

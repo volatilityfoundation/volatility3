@@ -153,10 +153,8 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 yield (0, (proc.UniqueProcessId,
                            proc.ImageFileName.cast("string",
                                                    max_length = proc.ImageFileName.vol.count,
-                                                   errors = "replace"),
-                           DllBase,
-                           BaseDllName,
-                           major, minor, product, build))
+                                                   errors = "replace"), DllBase, BaseDllName, major, minor, product,
+                           build))
 
     def run(self):
         procs = pslist.PsList.list_processes(self.context, self.config["primary"], self.config["nt_symbols"])

@@ -14,44 +14,35 @@ from volatility.plugins.mac import pslist
 
 
 class Kevents(interfaces.plugins.PluginInterface):
-    """ Lists event handlers registered by processes """ 
+    """ Lists event handlers registered by processes """
 
-    event_types = { 1 : "EVFILT_READ", 
-                    2 : "EVFILT_WRITE", 
-                    3 : "EVFILT_AIO", 
-                    4 : "EVFILT_VNODE", 
-                    5 : "EVFILT_PROC", 
-                    6 : "EVFILT_SIGNAL",
-                    7 : "EVFILT_TIMER", 
-                    8 : "EVFILT_MACHPORT", 
-                    9 : "EVFILT_FS", 
-                    10 : "EVFILT_USER", 
-                    12 : "EVFILT_VM" }
+    event_types = {
+        1: "EVFILT_READ",
+        2: "EVFILT_WRITE",
+        3: "EVFILT_AIO",
+        4: "EVFILT_VNODE",
+        5: "EVFILT_PROC",
+        6: "EVFILT_SIGNAL",
+        7: "EVFILT_TIMER",
+        8: "EVFILT_MACHPORT",
+        9: "EVFILT_FS",
+        10: "EVFILT_USER",
+        12: "EVFILT_VM"
+    }
 
-    vnode_filters = [("NOTE_DELETE", 1), 
-                     ("NOTE_WRITE",  2), 
-                     ("NOTE_EXTEND", 4), 
-                     ("NOTE_ATTRIB", 8),
-                     ("NOTE_LINK",   0x10), 
-                     ("NOTE_RENAME", 0x20), 
-                     ("NOTE_REVOKE", 0x40)]
+    vnode_filters = [("NOTE_DELETE", 1), ("NOTE_WRITE", 2), ("NOTE_EXTEND", 4), ("NOTE_ATTRIB", 8), ("NOTE_LINK", 0x10),
+                     ("NOTE_RENAME", 0x20), ("NOTE_REVOKE", 0x40)]
 
-    proc_filters = [("NOTE_EXIT",       0x80000000), 
-                    ("NOTE_EXITSTATUS", 0x04000000), 
-                    ("NOTE_FORK",       0x40000000),
-                    ("NOTE_EXEC",       0x20000000), 
-                    ("NOTE_SIGNAL",     0x08000000), 
-                    ("NOTE_REAP",       0x10000000)]
+    proc_filters = [("NOTE_EXIT", 0x80000000), ("NOTE_EXITSTATUS", 0x04000000), ("NOTE_FORK", 0x40000000),
+                    ("NOTE_EXEC", 0x20000000), ("NOTE_SIGNAL", 0x08000000), ("NOTE_REAP", 0x10000000)]
 
-    timer_filters = [("NOTE_SECONDS",   1), 
-                     ("NOTE_USECONDS", 2), 
-                     ("NOTE_NSECONDS", 4), 
-                     ("NOTE_ABSOLUTE", 8)]
+    timer_filters = [("NOTE_SECONDS", 1), ("NOTE_USECONDS", 2), ("NOTE_NSECONDS", 4), ("NOTE_ABSOLUTE", 8)]
 
-    all_filters = {4 : vnode_filters, # EVFILT_VNODE
-                   5 : proc_filters,  # EVFILT_PROC
-                   7 : timer_filters  # EVFILT_TIMER
-                   }
+    all_filters = {
+        4: vnode_filters,  # EVFILT_VNODE
+        5: proc_filters,  # EVFILT_PROC
+        7: timer_filters  # EVFILT_TIMER
+    }
 
     @classmethod
     def get_requirements(cls):
@@ -71,7 +62,7 @@ class Kevents(interfaces.plugins.PluginInterface):
     def _parse_flags(self, filter_index, filter_flags):
         if filter_flags == 0 or filter_index not in self.all_filters:
             return ""
-        
+
         context = []
 
         filters = self.all_filters[filter_index]
@@ -90,12 +81,12 @@ class Kevents(interfaces.plugins.PluginInterface):
         try:
             klist_array_pointer = getattr(fdp, array_pointer_member)
             array_size = getattr(fdp, array_size_member)
-        
+
             klist_array = kernel.object(object_type = "array",
-                                    offset = klist_array_pointer,
-                                    count = array_size + 1,
-                                    subtype = kernel.get_type("klist"))
-        
+                                        offset = klist_array_pointer,
+                                        count = array_size + 1,
+                                        subtype = kernel.get_type("klist"))
+
         except exceptions.InvalidAddressException:
             return
 
@@ -145,13 +136,13 @@ class Kevents(interfaces.plugins.PluginInterface):
                 3) The object of the associated kernel event filter
         """
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
-       
+
         list_tasks = pslist.PsList.get_list_tasks(pslist.PsList.pslist_methods[0])
-        
+
         for task in list_tasks(context, layer_name, darwin_symbols, filter_func):
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
-            
+
             for kn in cls._get_task_kevents(kernel, task):
                 yield task_name, pid, kn
 
@@ -159,9 +150,9 @@ class Kevents(interfaces.plugins.PluginInterface):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for task_name, pid, kn in self.list_kernel_events(self.context,
-                                                self.config['primary'],
-                                                self.config['darwin'],
-                                                filter_func = filter_func):
+                                                          self.config['primary'],
+                                                          self.config['darwin'],
+                                                          filter_func = filter_func):
 
             filter_index = kn.kn_kevent.filter * -1
             if filter_index in self.event_types:
@@ -174,12 +165,10 @@ class Kevents(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 continue
 
-            context = self._parse_flags(filter_index, kn.kn_sfflags) 
+            context = self._parse_flags(filter_index, kn.kn_sfflags)
 
             yield (0, (pid, task_name, ident, filter_name, context))
 
     def run(self):
-        return renderers.TreeGrid([("PID", int), ("Process", str), ("Ident", int),
-                                   ("Filter", str), ("Context", str)],
+        return renderers.TreeGrid([("PID", int), ("Process", str), ("Ident", int), ("Filter", str), ("Context", str)],
                                   self._generator())
-

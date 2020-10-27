@@ -31,8 +31,6 @@ class MacKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 
 class MacUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful mac functions."""
-
-
     """
     Version History:
     1.1.0 -> added walk_list_head API
@@ -157,11 +155,11 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
 
     @classmethod
     def _walk_iterable(cls,
-                   queue: interfaces.objects.ObjectInterface,
-                   list_head_member: str,
-                   list_next_member: str,
-                   next_member: str,
-                   max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
+                       queue: interfaces.objects.ObjectInterface,
+                       list_head_member: str,
+                       list_next_member: str,
+                       next_member: str,
+                       max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
         seen = set()  # type: Set[int]
 
         try:
@@ -191,25 +189,24 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                    queue: interfaces.objects.ObjectInterface,
                    next_member: str,
                    max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
- 
+
         for element in cls._walk_iterable(queue, "tqh_first", "tqe_next", next_member, max_elements):
             yield element
 
     @classmethod
     def walk_list_head(cls,
-                   queue: interfaces.objects.ObjectInterface,
-                   next_member: str,
-                   max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
+                       queue: interfaces.objects.ObjectInterface,
+                       next_member: str,
+                       max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
 
         for element in cls._walk_iterable(queue, "lh_first", "le_next", next_member, max_elements):
             yield element
 
     @classmethod
     def walk_slist(cls,
-                   queue : interfaces.objects.ObjectInterface,
+                   queue: interfaces.objects.ObjectInterface,
                    next_member: str,
                    max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
-            
-        for element in cls._walk_iterable(queue, "slh_first", "sle_next", next_member, max_elements):
-            yield element    
 
+        for element in cls._walk_iterable(queue, "slh_first", "sle_next", next_member, max_elements):
+            yield element

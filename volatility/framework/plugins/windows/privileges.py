@@ -13,6 +13,7 @@ from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
+
 class Privs(interfaces.plugins.PluginInterface):
     """Lists process token privileges"""
 
@@ -30,25 +31,25 @@ class Privs(interfaces.plugins.PluginInterface):
             vollog.log(constants.LOGLEVEL_VVV, 'sids_and_privileges.json file is missing plugin error')
             raise RuntimeError("The sids_and_privileges.json file missed from you plugin directory")
 
-
         # Get service sids dictionary (we need only the service sids).
         with open(sids_json_file_name, 'r') as file_handle:
             temp_json = json.load(file_handle)['privileges']
-            self.privilege_info = {int(priv_num):temp_json[priv_num] for priv_num in temp_json}
+            self.privilege_info = {int(priv_num): temp_json[priv_num] for priv_num in temp_json}
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Memory layer for the kernel',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-                requirements.ListRequirement(name = 'pid',
-                                             description = 'Filter on specific process IDs',
-                                             element_type = int,
-                                             optional = True),
-                requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-                ]
+        return [
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+        ]
 
     def _generator(self, procs):
 
@@ -58,15 +59,14 @@ class Privs(interfaces.plugins.PluginInterface):
             except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV, 'Skeep invalid token.')
                 continue
-                
-            
+
             for value, present, enabled, default in process_token.privileges():
                 # Skip privileges whose bit positions cannot be
                 # translated to a privilege name
                 if not self.privilege_info.get(int(value)):
                     vollog.log(constants.LOGLEVEL_VVV, 'Skeep invalid privilege ({}).'.format(value))
                     continue
-                
+
                 name, desc = self.privilege_info.get(int(value))
 
                 # Set the attributes
@@ -78,14 +78,14 @@ class Privs(interfaces.plugins.PluginInterface):
                 if default:
                     attributes.append("Default")
 
-                yield (0,
-                       [int(task.UniqueProcessId),
-                        objects.utility.array_to_string(task.ImageFileName),
-                        int(value),
-                        str(name),
-                        ",".join(attributes),
-                        str(desc)])
-        
+                yield (0, [
+                    int(task.UniqueProcessId),
+                    objects.utility.array_to_string(task.ImageFileName),
+                    int(value),
+                    str(name), ",".join(attributes),
+                    str(desc)
+                ])
+
     def run(self):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))

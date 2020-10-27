@@ -17,7 +17,6 @@ from volatility.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
 
-
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
 

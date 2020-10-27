@@ -16,7 +16,7 @@ from volatility.framework.renderers import format_hints
 
 class Kauth_scopes(interfaces.plugins.PluginInterface):
     """ Lists kauth scopes and their status """
-    
+
     _version = (1, 0, 0)
 
     @classmethod
@@ -49,7 +49,7 @@ class Kauth_scopes(interfaces.plugins.PluginInterface):
         scopes = kernel.object_from_symbol("kauth_scopes")
 
         for scope in mac.MacUtilities.walk_tailq(scopes, "ks_link"):
-            yield scope 
+            yield scope
 
     def _generator(self):
         kernel = contexts.Module(self.context, self.config['darwin'], self.config['primary'], 0)
@@ -58,10 +58,8 @@ class Kauth_scopes(interfaces.plugins.PluginInterface):
 
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 
-        for scope in self.list_kauth_scopes(self.context,
-                                            self.config['primary'],
-                                            self.config['darwin']):
-          
+        for scope in self.list_kauth_scopes(self.context, self.config['primary'], self.config['darwin']):
+
             callback = scope.ks_callback
             if callback == 0:
                 continue
@@ -77,4 +75,3 @@ class Kauth_scopes(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([("Name", str), ("IData", format_hints.Hex), ("Listeners", int),
                                    ("Callback Address", format_hints.Hex), ("Module", str), ("Symbol", str)],
                                   self._generator())
-

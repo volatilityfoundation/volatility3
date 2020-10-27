@@ -562,10 +562,10 @@ class sysctl_oid(objects.StructType):
 
         return ret
 
+
 class kauth_scope(objects.StructType):
-    
+
     def get_listeners(self):
         for listener in self.ks_listeners:
             if listener != 0 and listener.kll_callback != 0:
                 yield listener
-

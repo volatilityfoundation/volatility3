@@ -26,7 +26,9 @@ class Kauth_listeners(interfaces.plugins.PluginInterface):
             requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel"),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 1, 0)),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'kauth_scopes', plugin = kauth_scopes.Kauth_scopes, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'kauth_scopes',
+                                           plugin = kauth_scopes.Kauth_scopes,
+                                           version = (1, 0, 0))
         ]
 
     def _generator(self):
@@ -39,12 +41,11 @@ class Kauth_listeners(interfaces.plugins.PluginInterface):
 
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
 
-        for scope in kauth_scopes.Kauth_scopes.list_kauth_scopes(self.context,
-                                            self.config['primary'],
-                                            self.config['darwin']):
-          
+        for scope in kauth_scopes.Kauth_scopes.list_kauth_scopes(self.context, self.config['primary'],
+                                                                 self.config['darwin']):
+
             scope_name = utility.pointer_to_string(scope.ks_identifier, 128)
-           
+
             for listener in scope.get_listeners():
                 callback = listener.kll_callback
                 if callback == 0:
@@ -52,11 +53,9 @@ class Kauth_listeners(interfaces.plugins.PluginInterface):
 
                 module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, callback)
 
-                yield (0, (scope_name, format_hints.Hex(listener.kll_idata),
-                       format_hints.Hex(callback), module_name, symbol_name))
+                yield (0, (scope_name, format_hints.Hex(listener.kll_idata), format_hints.Hex(callback), module_name,
+                           symbol_name))
 
     def run(self):
-        return renderers.TreeGrid([("Name", str), ("IData", format_hints.Hex),
-                                   ("Callback Address", format_hints.Hex), ("Module", str), ("Symbol", str)],
-                                  self._generator())
-
+        return renderers.TreeGrid([("Name", str), ("IData", format_hints.Hex), ("Callback Address", format_hints.Hex),
+                                   ("Module", str), ("Symbol", str)], self._generator())

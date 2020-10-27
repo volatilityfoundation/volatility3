@@ -30,9 +30,9 @@ class Banners(interfaces.plugins.PluginInterface):
     def locate_banners(cls, context: interfaces.context.ContextInterface, layer_name: str):
         """Identifies banners from a memory image"""
         layer = context.layers[layer_name]
-        for offset in layer.scan(context = context,
-                                 scanner = scanners.RegExScanner(
-                                     rb"(Linux version|Darwin Kernel Version) [0-9]+\.[0-9]+\.[0-9]+")):
+        for offset in layer.scan(
+                context = context,
+                scanner = scanners.RegExScanner(rb"(Linux version|Darwin Kernel Version) [0-9]+\.[0-9]+\.[0-9]+")):
             data = layer.read(offset, 0xfff)
             data_index = data.find(b'\x00')
             if data_index > 0:

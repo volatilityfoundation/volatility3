@@ -20,20 +20,21 @@ class Envars(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Memory layer for the kernel',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-                requirements.ListRequirement(name = 'pid',
-                                             description = 'Filter on specific process IDs',
-                                             element_type = int,
-                                             optional = True),
-                requirements.BooleanRequirement(name = 'silent',
-                                                description = 'Suppress common and non-persistent variables',
-                                                optional = True),
-                requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-                requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
-                ]
+        return [
+            requirements.TranslationLayerRequirement(name = 'primary',
+                                                     description = 'Memory layer for the kernel',
+                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ListRequirement(name = 'pid',
+                                         description = 'Filter on specific process IDs',
+                                         element_type = int,
+                                         optional = True),
+            requirements.BooleanRequirement(name = 'silent',
+                                            description = 'Suppress common and non-persistent variables',
+                                            optional = True),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
+        ]
 
     def _get_silent_vars(self) -> List[str]:
         """Enumerate persistent & common variables.
@@ -73,8 +74,9 @@ class Envars(interfaces.plugins.PluginInterface):
                             if value_node_name:
                                 values.append(value_node_name)
                         except (exceptions.InvalidAddressException, registry.RegistryFormatException) as excp:
-                            vollog.log(constants.LOGLEVEL_VVV,
-                                       "Error while parsing global environment variables keys (some keys might be excluded)")
+                            vollog.log(
+                                constants.LOGLEVEL_VVV,
+                                "Error while parsing global environment variables keys (some keys might be excluded)")
                             continue
                 except KeyError:
                     pass
@@ -93,8 +95,9 @@ class Envars(interfaces.plugins.PluginInterface):
                             if value_node_name:
                                 values.append(value_node_name)
                         except (exceptions.InvalidAddressException, registry.RegistryFormatException) as excp:
-                            vollog.log(constants.LOGLEVEL_VVV,
-                                       "Error while parsing user environment variables keys (some keys might be excluded)")
+                            vollog.log(
+                                constants.LOGLEVEL_VVV,
+                                "Error while parsing user environment variables keys (some keys might be excluded)")
                             continue
                 except KeyError:
                     pass
@@ -111,28 +114,64 @@ class Envars(interfaces.plugins.PluginInterface):
                         if value_node_name:
                             values.append(value_node_name)
                     except (exceptions.InvalidAddressException, registry.RegistryFormatException) as excp:
-                        vollog.log(constants.LOGLEVEL_VVV,
-                                   "Error while parsing volatile environment variables keys (some keys might be excluded)")
+                        vollog.log(
+                            constants.LOGLEVEL_VVV,
+                            "Error while parsing volatile environment variables keys (some keys might be excluded)")
                         continue
             except KeyError:
                 continue
 
         ## These are variables set explicitly but are
         ## common enough to ignore safely.
-        values.extend(["ProgramFiles", "CommonProgramFiles", "SystemDrive",
-                       "SystemRoot", "ProgramData", "PUBLIC", "ALLUSERSPROFILE",
-                       "COMPUTERNAME", "SESSIONNAME", "USERNAME", "USERPROFILE",
-                       "PROMPT", "USERDOMAIN", "AppData", "CommonFiles", "CommonDesktop",
-                       "CommonProgramGroups", "CommonStartMenu", "CommonStartUp",
-                       "Cookies", "DesktopDirectory", "Favorites", "History", "NetHood",
-                       "PersonalDocuments", "RecycleBin", "StartMenu", "Templates",
-                       "AltStartup", "CommonFavorites", "ConnectionWizard",
-                       "DocAndSettingRoot", "InternetCache", "windir", "Path", "HOMEDRIVE",
-                       "PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS", "ProgramFiles(x86)",
-                       "CommonProgramFiles(x86)", "CommonProgramW6432", "PSModulePath",
-                       "PROCESSOR_IDENTIFIER", "FP_NO_HOST_CHECK", "LOCALAPPDATA", "TMP",
-                       "ProgramW6432",
-                       ])
+        values.extend([
+            "ProgramFiles",
+            "CommonProgramFiles",
+            "SystemDrive",
+            "SystemRoot",
+            "ProgramData",
+            "PUBLIC",
+            "ALLUSERSPROFILE",
+            "COMPUTERNAME",
+            "SESSIONNAME",
+            "USERNAME",
+            "USERPROFILE",
+            "PROMPT",
+            "USERDOMAIN",
+            "AppData",
+            "CommonFiles",
+            "CommonDesktop",
+            "CommonProgramGroups",
+            "CommonStartMenu",
+            "CommonStartUp",
+            "Cookies",
+            "DesktopDirectory",
+            "Favorites",
+            "History",
+            "NetHood",
+            "PersonalDocuments",
+            "RecycleBin",
+            "StartMenu",
+            "Templates",
+            "AltStartup",
+            "CommonFavorites",
+            "ConnectionWizard",
+            "DocAndSettingRoot",
+            "InternetCache",
+            "windir",
+            "Path",
+            "HOMEDRIVE",
+            "PROCESSOR_ARCHITECTURE",
+            "NUMBER_OF_PROCESSORS",
+            "ProgramFiles(x86)",
+            "CommonProgramFiles(x86)",
+            "CommonProgramW6432",
+            "PSModulePath",
+            "PROCESSOR_IDENTIFIER",
+            "FP_NO_HOST_CHECK",
+            "LOCALAPPDATA",
+            "TMP",
+            "ProgramW6432",
+        ])
 
         return values
 
@@ -146,18 +185,16 @@ class Envars(interfaces.plugins.PluginInterface):
                 if self.config.get('silent', None):
                     if var in silent_vars:
                         continue
-                yield (0, (int(task.UniqueProcessId),
-                           str(objects.utility.array_to_string(task.ImageFileName)),
-                           hex(task.get_peb().ProcessParameters.Environment.vol.offset),
-                           str(var),
-                           str(val)))
+                yield (0, (int(task.UniqueProcessId), str(objects.utility.array_to_string(task.ImageFileName)),
+                           hex(task.get_peb().ProcessParameters.Environment.vol.offset), str(var), str(val)))
 
     def run(self):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Block", str), ("Variable", str), ("Value", str)],
-                                  self._generator(pslist.PsList.list_processes(context = self.context,
-                                                                               layer_name = self.config['primary'],
-                                                                               symbol_table = self.config['nt_symbols'],
-                                                                               filter_func = filter_func)))
+                                  self._generator(
+                                      pslist.PsList.list_processes(context = self.context,
+                                                                   layer_name = self.config['primary'],
+                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   filter_func = filter_func)))
