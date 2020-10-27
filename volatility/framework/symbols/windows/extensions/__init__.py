@@ -12,7 +12,7 @@ from volatility.framework import constants, exceptions, interfaces, objects, ren
 from volatility.framework.layers import intel
 from volatility.framework.renderers import conversion
 from volatility.framework.symbols import generic
-from volatility.framework.symbols.windows.extensions import pool
+from volatility.framework.symbols.windows.extensions import pool, pe
 
 vollog = logging.getLogger(__name__)
 
