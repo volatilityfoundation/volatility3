@@ -29,7 +29,7 @@ def setup(app):
     # Go through the volatility.framework.plugins files and change them to volatility.plugins
     for dir, _, files in os.walk(os.path.dirname(__file__)):
         for filename in files:
-            if filename.startswith('volatility.framework.plugins'):
+            if filename.startswith('volatility.framework.plugins') and filename != 'volatility.framework.plugins.rst':
                 # Change all volatility.framework.plugins to volatility.plugins in the file
                 # Rename the file
                 new_filename = filename.replace('volatility.framework.plugins', 'volatility.plugins')
@@ -55,9 +55,14 @@ def setup(app):
             elif filename == 'volatility.framework.rst':
                 with open(os.path.join(dir, filename), "rb") as contents:
                     lines = contents.readlines()
+                plugins_seen = False
                 with open(os.path.join(dir, filename), "wb") as contents:
                     for line in lines:
-                        contents.write(line.replace(b'volatility.framework.plugins', b'volatility.plugins'))
+                        if b'volatility.framework.plugins' in line:
+                            plugins_seen = True
+                        if plugins_seen and line == b'':
+                            contents.write(b'   volatility.plugins')
+                        contents.write(line)
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
