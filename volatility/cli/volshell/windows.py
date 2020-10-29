@@ -17,7 +17,7 @@ class Volshell(generic.Volshell):
     def get_requirements(cls):
         return (super().get_requirements() + [
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.IntRequirement(name = 'pid', description = "Process ID", optional = True)
         ])
 
