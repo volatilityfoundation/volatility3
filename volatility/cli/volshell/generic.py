@@ -25,6 +25,7 @@ except ImportError:
 
 class Volshell(interfaces.plugins.PluginInterface):
     """Shell environment to directly interact with a memory image."""
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

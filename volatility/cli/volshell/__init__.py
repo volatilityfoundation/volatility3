@@ -224,7 +224,8 @@ class VolShell(cli.CommandLine):
             if args.quiet:
                 progress_callback = cli.MuteProgress()
 
-            constructed = plugins.construct_plugin(ctx, automagics, plugin, base_config_path, progress_callback, self)
+            constructed = plugins.construct_plugin(ctx, automagics, plugin, base_config_path, progress_callback,
+                                                   self.file_handler_class_factory())
 
             if args.write_config:
                 vollog.debug("Writing out configuration data to config.json")
