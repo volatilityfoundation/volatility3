@@ -29,7 +29,7 @@ available plugins that feature a Timeliner interface).  This can be achieved wit
 
     automagics = automagic.choose_automagic(automagic.available(self._context), plugin_class)
     plugin = plugins.construct_plugin(self.context, automagics, plugin_class, self.config_path,
-                                self._progress_callback, self._file_consumer)
+                                self._progress_callback, self.open)
 
 This code will first generate suitable automagics for running against the context.  Unfortunately this must be re-run for
 each plugin in order to populate the context's configuration correctly based on the plugin's requirements (which may vary
@@ -40,11 +40,35 @@ between plugins).  Once the automagics have been constructed, the plugin can be 
  * the plugin class to run,
  * the configuration path within the context for the plugin
  * any callback to determine progress in lengthy operations
- * any file consumers for files created during running of the plugin
+ * an open method for the plugin to create files during the run
 
 With the constructed plugin, it can either be run by calling its
 :py:meth:`~volatility.framework.interfaces.plugins.PluginInterface.run` method, or any other known method can
 be invoked on it.
+
+Writing plugins that output files
+---------------------------------
+
+Every plugin can create files, but since the user interface must decide how to actually provide these files to the user,
+an abstraction layer is used.
+
+The user interface specifies an open_method (which is actually a class constructor that can double as a python
+ContextManager, so it can be used by the python `with` keyword).  This is set on the plugin using
+`plugin.set_open_method` and can then be called or accessed using `plugin.open(preferred_filename)`.  There are no additional options
+that can be set on the filename, and a :py:class:`~volatility.framework.interfaces.plugins.FileHandlerInterface` is the result.
+This mimics an `IO[bytes]` object, which closely mimics a standard python file-like object.
+
+As such code for outputting to a file would be expected to look something like:
+
+.. code-block:: python
+
+    with self.open(preferred_filename) as file_handle:
+        file_handle.write(data)
+
+Since self.open returns a ContextManager the file is closed automatically and thus committed for the UI to process as
+necessary.  If the file is not closed, the UI may not be able to properly process it and unexpected results may arise.
+In certain instances you may receive a file_handle from another plugin's method, in which case the file is unlikely to be
+closed to allow the preferred filename to be changed (or data to be added/modified, if necessary).
 
 Writing Scanners
 ----------------
