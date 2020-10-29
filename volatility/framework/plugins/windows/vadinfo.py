@@ -112,18 +112,20 @@ class VadInfo(interfaces.plugins.PluginInterface):
                  context: interfaces.context.ContextInterface,
                  proc: interfaces.objects.ObjectInterface,
                  vad: interfaces.objects.ObjectInterface,
-                 file_handler: Type[
-                     interfaces.plugins.FileHandlerInterface]) -> Optional[interfaces.plugins.FileHandlerInterface]:
+                 open_method: Type[
+                     interfaces.plugins.FileHandlerInterface],
+                 maxsize: int = MAXSIZE_DEFAULT) -> Optional[interfaces.plugins.FileHandlerInterface]:
         """Extracts the complete data for Vad as a FileInterface.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             proc: an _EPROCESS instance
             vad: The suspected VAD to extract (ObjectInterface)
+            open_method: class to provide context manager for opening the file
             maxsize: Max size of VAD section (default MAXSIZE_DEFAULT)
 
         Returns:
-            A FileInterface object containing the complete data for the process or None in the case of failure
+            An open FileInterface object containing the complete data for the process or None in the case of failure
         """
 
         try:
@@ -149,17 +151,16 @@ class VadInfo(interfaces.plugins.PluginInterface):
         proc_layer = context.layers[proc_layer_name]
         file_name = "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc_id, vad_start, vad_end)
         try:
-            file_handle = file_handler(file_name)
-            with file_handle as file_data:
-                chunk_size = 1024 * 1024 * 10
-                offset = vad_start
-                while offset < vad_end:
-                    to_read = min(chunk_size, vad_end - offset)
-                    data = proc_layer.read(offset, to_read, pad = True)
-                    if not data:
-                        break
-                    file_data.write(data)
-                    offset += to_read
+            file_handle = open_method(file_name)
+            chunk_size = 1024 * 1024 * 10
+            offset = vad_start
+            while offset < vad_end:
+                to_read = min(chunk_size, vad_end - offset)
+                data = proc_layer.read(offset, to_read, pad = True)
+                if not data:
+                    break
+                file_handle.write(data)
+                offset += to_read
 
         except Exception as excp:
             vollog.debug("Unable to dump VAD {}: {}".format(file_name, excp))
@@ -188,9 +189,10 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
                 file_output = "Disabled"
                 if self.config['dump']:
-                    file_handle = self.vad_dump(self.context, proc, vad, self._file_handler)
+                    file_handle = self.vad_dump(self.context, proc, vad, self.open)
                     file_output = "Error outputting file"
                     if file_handle:
+                        file_handle.close()
                         file_output = file_handle.preferred_filename
 
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.vol.offset),

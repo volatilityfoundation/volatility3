@@ -49,7 +49,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def process_dump(
             cls, context: interfaces.context.ContextInterface, kernel_table_name: str, pe_table_name: str,
             proc: interfaces.objects.ObjectInterface,
-            file_handler: Type[interfaces.plugins.FileHandlerInterface]) -> interfaces.plugins.FileHandlerInterface:
+            open_method: Type[interfaces.plugins.FileHandlerInterface]) -> interfaces.plugins.FileHandlerInterface:
         """Extracts the complete data for a process as a FileHandlerInterface
 
         Args:
@@ -57,10 +57,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             kernel_table_name: the name for the symbol table containing the kernel's symbols
             pe_table_name: the name for the symbol table containing the PE format symbols
             proc: the process object whose memory should be output
-            file_handler: class to provide context manager for opening the file
+            open_method: class to provide context manager for opening the file
 
         Returns:
-            A FileHandlerInterface object containing the complete data for the process or None in the case of failure
+            An open FileHandlerInterface object containing the complete data for the process or None in the case of failure
         """
 
         file_handle = None
@@ -73,11 +73,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = peb.ImageBaseAddress,
                                         layer_name = proc_layer_name)
-            file_handle = file_handler("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
-            with file_handle as file_data:
-                for offset, data in dos_header.reconstruct():
-                    file_data.seek(offset)
-                    file_data.write(data)
+            file_handle = open_method("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
+            for offset, data in dos_header.reconstruct():
+                file_handle.seek(offset)
+                file_handle.write(data)
         except Exception as excp:
             vollog.debug("Unable to dump PE with pid {}: {}".format(proc.UniqueProcessId, excp))
 
@@ -190,9 +189,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             file_output = "Disabled"
             if self.config['dump']:
                 file_handle = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc,
-                                                self._file_handler)
+                                                self.open)
                 file_output = "Error outputting file"
                 if file_handle:
+                    file_handle.close()
                     file_output = str(file_handle.preferred_filename)
 
             yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
