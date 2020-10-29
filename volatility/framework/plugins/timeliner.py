@@ -184,11 +184,11 @@ class Timeliner(interfaces.plugins.PluginInterface):
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
 
                 plugin = plugins.construct_plugin(self.context, automagics, plugin_class, self.config_path,
-                                                  self._progress_callback, self._file_handler)
+                                                  self._progress_callback, self.open)
 
                 if isinstance(plugin, TimeLinerInterface):
                     if not len(filter_list) or any(
-                        [filter in plugin.__module__ + '.' + plugin.__class__.__name__ for filter in filter_list]):
+                            [filter in plugin.__module__ + '.' + plugin.__class__.__name__ for filter in filter_list]):
                         plugins_to_run.append(plugin)
             except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue

@@ -48,7 +48,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 context: interfaces.context.ContextInterface,
                 pe_table_name: str,
                 dll_entry: interfaces.objects.ObjectInterface,
-                file_handler: Type[interfaces.plugins.FileHandlerInterface],
+                open_method: Type[interfaces.plugins.FileHandlerInterface],
                 layer_name: str = None,
                 prefix: str = '') -> Optional[interfaces.plugins.FileHandlerInterface]:
         """Extracts the complete data for a process as a FileInterface
@@ -58,10 +58,11 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             pe_table_name: the name for the symbol table containing the PE format symbols
             dll_entry: the object representing the module
             layer_name: the layer that the DLL lives within
-            file_handler: class for constructing output files
+            open_method: class for constructing output files
 
         Returns:
-            A FileInterface object containing the complete data for the DLL or None in the case of failure"""
+            An open FileHandlerInterface object containing the complete data for the DLL or None in the case of failure
+            """
         try:
             try:
                 name = dll_entry.FullDllName.get_string()
@@ -71,17 +72,16 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if layer_name is None:
                 layer_name = dll_entry.vol.layer_name
 
-            file_handle = file_handler("{}{}.{:#x}.{:#x}.dmp".format(prefix, ntpath.basename(name),
-                                                                     dll_entry.vol.offset, dll_entry.DllBase))
+            file_handle = open_method("{}{}.{:#x}.{:#x}.dmp".format(prefix, ntpath.basename(name),
+                                                                    dll_entry.vol.offset, dll_entry.DllBase))
 
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = dll_entry.DllBase,
                                         layer_name = layer_name)
 
-            with file_handle as file_data:
-                for offset, data in dos_header.reconstruct():
-                    file_data.seek(offset)
-                    file_data.write(data)
+            for offset, data in dos_header.reconstruct():
+                file_handle.seek(offset)
+                file_handle.write(data)
         except (IOError, exceptions.VolatilityException, OverflowError, ValueError) as excp:
             vollog.debug("Unable to dump dll at offset {}: {}".format(dll_entry.DllBase, excp))
             return None
@@ -129,11 +129,12 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     file_handle = self.dump_pe(self.context,
                                                pe_table_name,
                                                entry,
-                                               self._file_handler,
+                                               self.open,
                                                proc_layer_name,
                                                prefix = "pid.{}.".format(proc_id))
                     file_output = "Error outputting file"
                     if file_handle:
+                        file_handle.close()
                         file_output = file_handle.preferred_filename
 
                 yield (0, (proc.UniqueProcessId,

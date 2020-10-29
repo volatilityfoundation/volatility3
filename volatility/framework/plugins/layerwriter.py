@@ -44,7 +44,7 @@ class LayerWriter(plugins.PluginInterface):
             context: interfaces.context.ContextInterface,
             layer_name: str,
             preferred_name: str,
-            file_handler: Type[plugins.FileHandlerInterface],
+            open_method: Type[plugins.FileHandlerInterface],
             chunk_size: Optional[int] = None,
             progress_callback: Optional[constants.ProgressCallback] = None) -> Optional[plugins.FileHandlerInterface]:
         """Produces a FileHandler from the named layer in the provided context or None on failure
@@ -54,7 +54,7 @@ class LayerWriter(plugins.PluginInterface):
             layer_name: the name of the layer to write out
             preferred_name: a string with the preferred filename for hte file
             chunk_size: an optional size for the chunks that should be written (defaults to 0x500000)
-            file_handler: class for creating FileHandler context managers
+            open_method: class for creating FileHandler context managers
             progress_callback: an optional function that takes a percentage and a string that displays output
         """
 
@@ -65,34 +65,34 @@ class LayerWriter(plugins.PluginInterface):
         if chunk_size is None:
             chunk_size = cls.default_block_size
 
-        file_handle = file_handler(preferred_name)
-        with file_handle as file_data:
-            for i in range(0, layer.maximum_address, chunk_size):
-                current_chunk_size = min(chunk_size, layer.maximum_address - i)
-                data = layer.read(i, current_chunk_size, pad = True)
-                file_data.write(data)
-                if progress_callback:
-                    progress_callback((i / layer.maximum_address) * 100, 'Writing layer {}'.format(layer_name))
+        file_handle = open_method(preferred_name)
+        for i in range(0, layer.maximum_address, chunk_size):
+            current_chunk_size = min(chunk_size, layer.maximum_address - i)
+            data = layer.read(i, current_chunk_size, pad = True)
+            file_handle.write(data)
+            if progress_callback:
+                progress_callback((i / layer.maximum_address) * 100, 'Writing layer {}'.format(layer_name))
         return file_handle
 
     def _generator(self):
         if self.config['primary'] not in self.context.layers:
-            yield 0, ('Layer Name does not exist', )
+            yield 0, ('Layer Name does not exist',)
         elif os.path.exists(self.config.get('output', self.default_output_name)):
-            yield 0, ('Refusing to overwrite existing output file', )
+            yield 0, ('Refusing to overwrite existing output file',)
         else:
             output_name = self.config.get('output', self.default_output_name)
             try:
-                self.write_layer(self.context,
-                                 self.config['primary'],
-                                 output_name,
-                                 self._file_handler,
-                                 self.config.get('block_size', self.default_block_size),
-                                 progress_callback = self._progress_callback)
+                file_handle = self.write_layer(self.context,
+                                               self.config['primary'],
+                                               output_name,
+                                               self.open,
+                                               self.config.get('block_size', self.default_block_size),
+                                               progress_callback = self._progress_callback)
+                file_handle.close()
             except IOError as excp:
-                yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp), )
+                yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp),)
 
-            yield 0, ('Layer has been written to {}'.format(output_name), )
+            yield 0, ('Layer has been written to {}'.format(output_name),)
 
     def run(self):
         return renderers.TreeGrid([("Status", str)], self._generator())

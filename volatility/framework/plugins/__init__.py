@@ -19,7 +19,7 @@ def construct_plugin(context: interfaces.context.ContextInterface,
                      automagics: List[interfaces.automagic.AutomagicInterface],
                      plugin: Type[interfaces.plugins.PluginInterface], base_config_path: str,
                      progress_callback: constants.ProgressCallback,
-                     file_handler: Type[interfaces.plugins.FileHandlerInterface]) -> interfaces.plugins.PluginInterface:
+                     open_method: Type[interfaces.plugins.FileHandlerInterface]) -> interfaces.plugins.PluginInterface:
     """Constructs a plugin object based on the parameters.
 
     Clever magic figures out how to fulfill each requirement that might not be fulfilled
@@ -30,7 +30,7 @@ def construct_plugin(context: interfaces.context.ContextInterface,
         plugin: The plugin to run
         base_config_path: The path within the context's config containing the plugin's configuration
         progress_callback: Callback function to provide feedback for ongoing processes
-        file_handler: Object to pass any generated files to
+        open_method: class to provide context manager for opening the file
 
     Returns:
         The constructed plugin object
@@ -49,6 +49,6 @@ def construct_plugin(context: interfaces.context.ContextInterface,
         raise exceptions.UnsatisfiedException(unsatisfied)
 
     constructed = plugin(context, plugin_config_path, progress_callback = progress_callback)
-    if file_handler:
-        constructed.set_file_handler(file_handler)
+    if open_method:
+        constructed.set_open_method(open_method)
     return constructed

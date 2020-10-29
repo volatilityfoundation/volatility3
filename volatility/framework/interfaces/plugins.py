@@ -129,7 +129,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
         """Returns a context manager and thus can be called like open"""
         return self._file_handler
 
-    def set_file_handler(self, handler: Type[FileHandlerInterface]) -> None:
+    def set_open_method(self, handler: Type[FileHandlerInterface]) -> None:
         """Sets the file handler to be used by this plugin."""
         if not issubclass(handler, FileHandlerInterface):
             raise ValueError("FileHandler must be a subclass of FileHandlerInterface")

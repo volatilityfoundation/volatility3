@@ -162,17 +162,16 @@ Dictionary of the hierarchy paths and their associated requirements that weren't
 
 The plugin can then be instantiated with the context (containing the plugin's configuration) and the path that the
 plugin can find its configuration at.  A progress_callback can also be provided to give users feedback whilst the
-plugin is running.  Also, should the plugin produce files, a file_consumer can be set on the plugin, which will
+plugin is running.  Also, should the plugin produce files, an open_method can be set on the plugin, which will
 be called whenever a plugin produces an auxiliary file.
 
 ::
 
     constructed = plugin(context, plugin_config_path, progress_callback = progress_callback)
-    constructed.set_file_handler(file_consumer)
+    constructed.set_open_method(file_handler)
 
-The file_consumer must adhere to the :py:class:`~volatility.framework.interfaces.plugins.FileConsumerInterface`,
-which has a `consume_file` method that takes a :py:class:`~volatility.framework.interfaces.plugins.FileInterface`
-whose data attribute roughly mimics an IO class, but also contains a `preferred_filename` attribute as a hint.
+The file_handler must adhere to the :py:class:`~volatility.framework.interfaces.plugins.FileHandlerInterface`,
+which represents an IO[bytes] object but also contains a `preferred_filename` attribute as a hint.
 
 All of this functionality has been condensed into a framework method called `construct_plugin` which will
 take and run the automagics, and instantiate the plugin on the provided `base_config_path`.  It also
