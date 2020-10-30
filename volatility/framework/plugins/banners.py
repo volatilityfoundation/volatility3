@@ -15,6 +15,8 @@ vollog = logging.getLogger(__name__)
 class Banners(interfaces.plugins.PluginInterface):
     """Attempts to identify potential linux banners in an image"""
 
+    _required_framework_version = (2, 0, 0)
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer to scan')]
