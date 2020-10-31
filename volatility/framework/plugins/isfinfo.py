@@ -9,7 +9,7 @@ import pathlib
 import zipfile
 from typing import List, Type, Any, Generator
 
-from volatility import schemas
+from volatility import schemas, symbols
 from volatility.framework import interfaces, renderers, constants
 from volatility.framework.automagic import mac, linux, symbol_cache
 from volatility.framework.configuration import requirements
@@ -45,7 +45,7 @@ class IsfInfo(plugins.PluginInterface):
     @classmethod
     def list_all_isf_files(cls) -> Generator[str, None, None]:
         """Lists all the ISF files that can be found"""
-        for symbol_path in constants.SYMBOL_BASEPATHS:
+        for symbol_path in symbols.__path__:
             for root, dirs, files in os.walk(symbol_path, followlinks = True):
                 for filename in files:
                     base_name = os.path.join(root, filename)
