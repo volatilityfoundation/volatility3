@@ -16,7 +16,10 @@ vollog = logging.getLogger(__name__)
 
 def inet_ntop(address_family: int, packed_ip: Union[List[int], Array]) -> str:
     if address_family in [socket.AF_INET6, socket.AF_INET]:
-        return socket.inet_ntop(address_family, bytes(packed_ip))
+        try:
+            return socket.inet_ntop(address_family, bytes(packed_ip))
+        except AttributeError:
+            raise RuntimeError("This version of python does not have socket.inet_ntop, please upgrade")
     raise socket.error("[Errno 97] Address family not supported by protocol")
 
 
