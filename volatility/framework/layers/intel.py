@@ -28,6 +28,7 @@ class Intel(linear.LinearlyMappedLayer):
     _maxvirtaddr = _maxphyaddr
     _structure = [('page directory', 10, False), ('page table', 10, True)]
     _direct_metadata = collections.ChainMap({'architecture': 'Intel32'},
+                                            {'mapped': True},
                                             interfaces.layers.TranslationLayerInterface._direct_metadata)
 
     def __init__(self,
