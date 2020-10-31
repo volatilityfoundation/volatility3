@@ -122,3 +122,6 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
 
         # Rewrite the cached banners each run, since writing is faster than the banner_cache validation portion
         self.save_banners(banners)
+
+        if progress_callback is not None:
+            progress_callback(100, "Built {} caches".format(self.os))

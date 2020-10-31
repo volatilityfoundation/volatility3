@@ -300,3 +300,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     if valid_kernel:
                         self.recurse_symbol_fulfiller(context, valid_kernel, progress_callback)
                         self.set_kernel_virtual_offset(context, valid_kernel)
+
+        if progress_callback is not None:
+            progress_callback(100, "PDB scanning finished")

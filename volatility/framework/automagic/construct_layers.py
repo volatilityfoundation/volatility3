@@ -60,4 +60,8 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
             elif isinstance(requirement, interfaces.configuration.ConstructableRequirementInterface):
                 # We know all the subrequirements are filled, so let's populate
                 requirement.construct(context, config_path)
+
+        if progress_callback is not None:
+            progress_callback(100, "Reconstruction finished")
+
         return []

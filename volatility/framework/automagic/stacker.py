@@ -66,6 +66,8 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Search for suitable requirements
         self.stack(context, config_path, requirement, progress_callback)
 
+        if progress_callback is not None:
+            progress_callback(100, "Stacking attempts finished")
         return None
 
     def stack(self, context: interfaces.context.ContextInterface, config_path: str,
