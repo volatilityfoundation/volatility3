@@ -249,7 +249,8 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
         useful = []
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if (isinstance(requirement, requirements.TranslationLayerRequirement)
-                and requirement.requirements.get("class", False)):
+                and requirement.requirements.get("class", False)
+                and requirement.unsatisfied(context, config_path)):
             class_req = requirement.requirements["class"]
 
             for test in self.tests:
