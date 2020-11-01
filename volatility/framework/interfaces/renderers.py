@@ -12,11 +12,45 @@ suitable output.
 import datetime
 from abc import abstractmethod, ABCMeta
 from collections import abc
-from typing import Any, Callable, ClassVar, Generator, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union
+from typing import Any, Callable, ClassVar, Generator, List, NamedTuple, Optional, TypeVar, Type, Tuple, Union, Dict
+
+from volatility.framework import interfaces
 
 Column = NamedTuple('Column', [('name', str), ('type', Any)])
 
-RenderOption = Any
+
+class RenderOption:
+    """Class to support simple type options for renderers"""
+
+    def __init__(self, name: str, description: str, option_type: Type[interfaces.configuration.SimpleTypes],
+                 default: interfaces.configuration.SimpleTypes):
+        self._value = default
+        self._name = name
+        self._description = description
+        self._option_type = option_type
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def description(self) -> str:
+        return self._description
+
+    @property
+    def option_type(self) -> Type[interfaces.configuration.SimpleTypes]:
+        return self._option_type
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        if isinstance(val, self.option_type):
+            self._value = val
+        else:
+            raise TypeError("Expected type {} cannot be filled by {}".format(repr(self.option_type), repr(type(val))))
 
 
 class Renderer(metaclass = ABCMeta):
@@ -25,11 +59,30 @@ class Renderer(metaclass = ABCMeta):
 
     def __init__(self, options: Optional[List[RenderOption]] = None) -> None:
         """Accepts an options object to configure the renderers."""
-        # FIXME: Once the config option objects are in place, put the _type_check in place
+        self._options = self._create_named_dict(self.get_render_options())
+        if options:
+            for option in options:
+                if option.name not in self._options:
+                    raise ValueError("Unknown option provided to renderer")
+                self._options[option.name].value = option.value
 
-    @abstractmethod
-    def get_render_options(self) -> List[RenderOption]:
+    def _create_named_dict(self, option_list: List[RenderOption]) -> Dict[str, RenderOption]:
+        result = {}
+        for option in option_list:
+            if option.name in result:
+                raise KeyError("Option defined twice with the same renderer")
+            result[option.name] = option
+        return result
+
+    @classmethod
+    def get_render_options(cls) -> List[RenderOption]:
         """Returns a list of rendering options."""
+        return []
+
+    @property
+    def options(self) -> Dict[str, RenderOption]:
+        """Returns the dictionary of the available options"""
+        return self._options
 
     @abstractmethod
     def render(self, grid: 'TreeGrid') -> None:
