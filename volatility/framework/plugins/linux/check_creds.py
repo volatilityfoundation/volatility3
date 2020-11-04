@@ -4,7 +4,7 @@
 
 import logging
 
-from volatility.framework import interfaces, renderers, constants, contexts
+from volatility.framework import interfaces, renderers, constants
 from volatility.framework.configuration import requirements
 from volatility.plugins.linux import pslist
 
@@ -27,7 +27,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
         ]
 
     def _generator(self):
-        vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
+        # vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
 
         type_task = self.context.symbol_space.get_type(self.config['vmlinux'] + constants.BANG + "task_struct")
 

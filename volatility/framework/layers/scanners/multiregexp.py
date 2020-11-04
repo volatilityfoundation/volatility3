@@ -3,7 +3,7 @@
 #
 
 import re
-from typing import Generator, List, Tuple, Union
+from typing import Generator, List, Tuple
 
 
 class MultiRegexp(object):

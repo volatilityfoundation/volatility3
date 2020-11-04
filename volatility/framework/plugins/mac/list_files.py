@@ -2,20 +2,17 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-
 from typing import Iterable, Optional
 
 from volatility.framework import renderers, interfaces, exceptions
-from volatility.framework.objects import utility
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
+from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import mac
 from volatility.plugins.mac import mount
 
 vollog = logging.getLogger(__name__)
-
-import sys
 
 
 class List_Files(plugins.PluginInterface):
@@ -114,9 +111,9 @@ class List_Files(plugins.PluginInterface):
 
     @classmethod
     def _walk_mounts(cls,
-                   context: interfaces.context.ContextInterface,
-                   layer_name: str,
-                   darwin_symbols: str) -> \
+                     context: interfaces.context.ContextInterface,
+                     layer_name: str,
+                     darwin_symbols: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
 
         loop_vnodes = {}

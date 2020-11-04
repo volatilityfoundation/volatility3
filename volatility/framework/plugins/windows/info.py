@@ -11,7 +11,6 @@ from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import TreeGrid
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import extensions
-from volatility.framework.symbols.windows.extensions import kdbg
 
 
 class Info(plugins.PluginInterface):

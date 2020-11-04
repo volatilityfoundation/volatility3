@@ -46,7 +46,6 @@ class CmdLine(interfaces.plugins.PluginInterface):
             A string with the command line
         """
 
-        proc_id = proc.UniqueProcessId
         proc_layer_name = proc.add_process_layer()
 
         peb = context.object(kernel_table_name + constants.BANG + "_PEB",

@@ -2,11 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import logging
-
-from typing import Iterable, Callable, Tuple
-
-from volatility.framework import renderers, interfaces, constants, exceptions, contexts
+from volatility.framework import renderers, interfaces, exceptions, contexts
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 

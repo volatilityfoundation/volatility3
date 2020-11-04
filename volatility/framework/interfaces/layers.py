@@ -11,27 +11,18 @@ import functools
 import logging
 import math
 import multiprocessing
+import multiprocessing.managers
 import threading
 import traceback
 import types
 from abc import ABCMeta, abstractmethod
-from multiprocessing import managers
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 from volatility.framework import constants, exceptions, interfaces
 
 vollog = logging.getLogger(__name__)
 
-IMPORTED_MAGIC = False
-try:
-    import magic
-
-    IMPORTED_MAGIC = True
-    vollog.debug("Imported python-magic, autodetecting compressed files based on content")
-except ImportError:
-    pass
-
-ProgressValue = Union['DummyProgress', managers.ValueProxy]
+ProgressValue = Union['DummyProgress', multiprocessing.managers.ValueProxy]
 IteratorValue = Tuple[List[Tuple[str, int, int]], int]
 
 

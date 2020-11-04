@@ -151,9 +151,9 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                                            layer_name = self._base_layer,
                                            max_length = name_len)
                 index += name_len
-                instance_id = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
-                                                  offset = index,
-                                                  layer_name = self._base_layer)
+                # instance_id = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
+                #                                    offset = index,
+                #                                    layer_name = self._base_layer)
                 index += 4
                 version_id = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
                                                  offset = index,

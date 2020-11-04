@@ -12,9 +12,10 @@ from volatility.framework import constants, exceptions, interfaces, objects, ren
 from volatility.framework.layers import intel
 from volatility.framework.renderers import conversion
 from volatility.framework.symbols import generic
-from volatility.framework.symbols.windows.extensions import pool, pe
+from volatility.framework.symbols.windows.extensions import pool, pe, kdbg
 
 vollog = logging.getLogger(__name__)
+
 
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
@@ -665,11 +666,11 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             return self.VadRoot.dereference().cast("_MMVAD")
 
     def environment_variables(self):
-        """Generator for environment variables. 
+        """Generator for environment variables.
 
         The PEB points to our env block - a series of null-terminated
-        unicode strings. Each string cannot be more than 0x7FFF chars. 
-        End of the list is a quad-null. 
+        unicode strings. Each string cannot be more than 0x7FFF chars.
+        End of the list is a quad-null.
         """
         context = self._context
         process_space = self.add_process_layer()

@@ -1,14 +1,13 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 
+import json
 import logging
-import os, json
-from typing import Callable, List, Generator, Iterable
+import os
+from typing import List
 
 from volatility.framework import renderers, interfaces, objects, exceptions, constants
 from volatility.framework.configuration import requirements
-from volatility.framework.objects import utility
-from volatility.framework.renderers import format_hints
 from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)

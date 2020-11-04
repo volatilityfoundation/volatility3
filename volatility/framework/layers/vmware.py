@@ -49,7 +49,7 @@ class VmwareLayer(segmented.SegmentedLayer):
             raise VmwareFormatException(self.name, "Wrong magic bytes for Vmware layer: {}".format(repr(magic)))
 
         # TODO: Change certain structure sizes based on the version
-        version = magic[1] & 0xf
+        # version = magic[1] & 0xf
 
         group_size = struct.calcsize(self.group_structure)
 
@@ -91,9 +91,9 @@ class VmwareLayer(segmented.SegmentedLayer):
         if tags[("regionsCount", ())][1] == 0:
             raise VmwareFormatException(self.name, "VMware VMEM is not split into regions")
         for region in range(tags[("regionsCount", ())][1]):
-            offset = tags[("regionPPN", (region, ))][1] * self._page_size
-            mapped_offset = tags[("regionPageNum", (region, ))][1] * self._page_size
-            length = tags[("regionSize", (region, ))][1] * self._page_size
+            offset = tags[("regionPPN", (region,))][1] * self._page_size
+            mapped_offset = tags[("regionPageNum", (region,))][1] * self._page_size
+            length = tags[("regionSize", (region,))][1] * self._page_size
             self._segments.append((offset, mapped_offset, length, length))
 
     @property
@@ -111,7 +111,6 @@ class VmwareLayer(segmented.SegmentedLayer):
 
 
 class VmwareStacker(interfaces.automagic.StackerLayerInterface):
-
     stack_order = 20
 
     @classmethod

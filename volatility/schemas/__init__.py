@@ -64,16 +64,19 @@ def valid(input: Dict[str, Any], schema: Dict[str, Any], use_cache: bool = True)
         return True
     try:
         import jsonschema
-        vollog.debug("Validating JSON against schema...")
-        jsonschema.validate(input, schema)
-        cached_validations.add(input_hash)
-        vollog.debug("JSON validated against schema (result cached)")
     except ImportError:
         vollog.info("Dependency for validation unavailable: jsonschema")
         vollog.debug("All validations will report success, even with malformed input")
         return True
-    except:
+
+    try:
+        vollog.debug("Validating JSON against schema...")
+        jsonschema.validate(input, schema)
+        cached_validations.add(input_hash)
+        vollog.debug("JSON validated against schema (result cached)")
+    except jsonschema.exceptions.SchemaError:
         vollog.debug("Schema validation error", exc_info = True)
         return False
+
     record_cached_validations(cached_validations)
     return True

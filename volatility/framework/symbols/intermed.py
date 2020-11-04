@@ -13,7 +13,6 @@ import zipfile
 from abc import ABCMeta
 from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Tuple, Mapping
 
-import volatility
 import volatility.framework.layers.resources
 from volatility import schemas, symbols
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
@@ -21,6 +20,7 @@ from volatility.framework.configuration import requirements
 from volatility.framework.symbols import native, metadata
 
 vollog = logging.getLogger(__name__)
+
 
 # ## TODO
 #
@@ -48,7 +48,6 @@ vollog = logging.getLogger(__name__)
 
 
 def _construct_delegate_function(name: str, is_property: bool = False) -> Any:
-
     def _delegate_function(self, *args, **kwargs):
         if is_property:
             return getattr(self._delegate, name)

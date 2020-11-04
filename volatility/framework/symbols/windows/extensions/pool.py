@@ -168,15 +168,15 @@ class POOL_HEADER(objects.StructType):
         headers = []
         sizes = []
         for header in [
-                'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
-                'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
+            'CREATOR_INFO', 'NAME_INFO', 'HANDLE_INFO', 'QUOTA_INFO', 'PROCESS_INFO', 'AUDIT_INFO', 'EXTENDED_INFO',
+            'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
         ]:
             try:
                 type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)
                 header_type = context.symbol_space.get_type(type_name)
                 headers.append(header)
                 sizes.append(header_type.size)
-            except:
+            except AttributeError:
                 # Some of these may not exist, for example:
                 #   if build < 9200: PADDING_INFO else: AUDIT_INFO
                 #   if build == 10586: HANDLE_REVOCATION_INFO else EXTENDED_INFO

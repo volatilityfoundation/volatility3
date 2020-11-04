@@ -33,6 +33,7 @@ except ImportError:
 
 vollog = logging.getLogger(__name__)
 
+
 # TODO: Type-annotating the ResourceAccessor.open method is difficult because HTTPResponse is not actually an IO[Any] type
 #   fix this
 
@@ -155,9 +156,7 @@ class ResourceAccessor(object):
                     IMPORTED_MAGIC = True
                     # This is because python-magic and file provide a magic module
                     # Only file's python has magic.detect_from_fobj
-                except AttributeError:
-                    pass
-                except:
+                except (AttributeError, IOError):
                     pass
 
                 if detected:

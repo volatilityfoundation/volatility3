@@ -4,7 +4,7 @@
 
 import enum
 import logging
-from typing import Dict, Generator, List, Optional, Tuple, Callable
+from typing import Dict, Generator, List, Optional, Tuple
 
 from volatility.framework import constants, interfaces, renderers, exceptions, symbols
 from volatility.framework.configuration import requirements

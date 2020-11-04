@@ -183,7 +183,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
-            proc_layer_name = proc.add_process_layer()
 
             for vad in self.list_vads(proc, filter_func = filter_func):
 

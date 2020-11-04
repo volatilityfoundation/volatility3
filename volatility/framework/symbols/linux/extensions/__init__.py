@@ -12,7 +12,6 @@ from volatility.framework.layers import linear
 from volatility.framework.objects import utility
 from volatility.framework.symbols import generic, linux
 from volatility.framework.symbols import intermed
-from volatility.framework.symbols.linux import extensions
 from volatility.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
@@ -100,8 +99,6 @@ class module(generic.GenericIntelProcess):
             yield attr
 
     def get_symbols(self):
-        ret_syms = []
-
         if symbols.symbol_table_is_64bit(self._context, self.get_symbol_table().name):
             prefix = "Elf64_"
         else:
@@ -158,7 +155,7 @@ class module(generic.GenericIntelProcess):
             return self.kallsyms.strtab
         # Older kernels
         elif self.has_member("strtab"):
-            strtab = self.strtab
+            return self.strtab
 
         raise AttributeError("module -> strtab: Unable to get strtab")
 

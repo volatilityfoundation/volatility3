@@ -7,7 +7,6 @@ import abc
 import collections
 import collections.abc
 import logging
-from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, List, Mapping, Optional
 
 from volatility.framework import constants, interfaces
@@ -88,7 +87,7 @@ class ObjectInformation(ReadOnlyMapping):
         })
 
 
-class ObjectInterface(metaclass = ABCMeta):
+class ObjectInterface(metaclass = abc.ABCMeta):
     """A base object required to be the ancestor of every object used in
     volatility."""
 
@@ -129,7 +128,7 @@ class ObjectInterface(metaclass = ABCMeta):
         # Wrap the outgoing vol in a read-only proxy
         return ReadOnlyMapping(self._vol)
 
-    @abstractmethod
+    @abc.abstractmethod
     def write(self, value: Any):
         """Writes the new value into the format at the offset the object
         currently resides at."""
@@ -296,20 +295,20 @@ class Template:
         return []
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def size(self) -> int:
         """Returns the size of the template."""
 
-    @abstractmethod
+    @abc.abstractmethod
     def relative_child_offset(self, child: str) -> int:
         """Returns the relative offset of the `child` member from its parent
         offset."""
 
-    @abstractmethod
+    @abc.abstractmethod
     def replace_child(self, old_child: 'Template', new_child: 'Template') -> None:
         """Replaces `old_child` with `new_child` in the list of children."""
 
-    @abstractmethod
+    @abc.abstractmethod
     def has_member(self, member_name: str) -> bool:
         """Returns whether the object would contain a member called
         `member_name`"""

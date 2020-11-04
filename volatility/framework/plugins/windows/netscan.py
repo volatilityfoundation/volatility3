@@ -2,11 +2,11 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import logging
 import datetime
+import logging
 from typing import Iterable, List, Optional
 
-from volatility.framework import constants, exceptions, interfaces, renderers, symbols, layers
+from volatility.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
@@ -239,7 +239,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
              layer_name: str,
              nt_symbol_table: str,
              netscan_symbol_table: str) -> \
-        Iterable[interfaces.objects.ObjectInterface]:
+            Iterable[interfaces.objects.ObjectInterface]:
         """Scans for network objects using the poolscanner module and constraints.
 
         Args:
