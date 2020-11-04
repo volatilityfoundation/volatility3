@@ -279,7 +279,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             self.config[path_join(plugin_config_suffix, plugin.__name__, name)] = value
 
         try:
-            constructed = plugins.construct_plugin(self.context, [], plugin, plugin_path, None, NullFileHandler())
+            constructed = plugins.construct_plugin(self.context, [], plugin, plugin_path, None, NullFileHandler)
             return constructed.run()
         except exceptions.UnsatisfiedException as excp:
             print("Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))

@@ -231,7 +231,6 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
         if progress_callback is not None and not callable(progress_callback):
             raise TypeError("Progress_callback is not callable")
 
-        scanner = scanner
         scanner.context = context
         scanner.layer_name = self.name
 
