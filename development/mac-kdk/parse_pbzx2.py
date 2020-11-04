@@ -7,14 +7,15 @@
 # Cleaned up C version (as the basis for my code) here, thanks to Pepijn Bruienne / @bruienne
 # https://gist.github.com/bruienne/029494bbcfb358098b41
 
-import struct, sys
+import struct
+import sys
 
 
 def seekread(f, offset = None, length = 0, relative = True):
-    if (offset != None):
+    if offset is not None:
         # offset provided, let's seek
         f.seek(offset, [0, 1, 2][relative])
-    if (length != 0):
+    if length:
         return f.read(length)
 
 
@@ -26,13 +27,13 @@ def parse_pbzx(pbzx_path):
     # f.close()
     magic = seekread(f, length = 4)
     if magic != 'pbzx':
-        raise "Error: Not a pbzx file"
+        raise RuntimeError("Error: Not a pbzx file")
     # Read 8 bytes for initial flags
     flags = seekread(f, length = 8)
     # Interpret the flags as a 64-bit big-endian unsigned int
     flags = struct.unpack('>Q', flags)[0]
     xar_f = open(xar_out_path, 'wb')
-    while (flags & (1 << 24)):
+    while flags & (1 << 24):
         # Read in more flags
         flags = seekread(f, length = 8)
         flags = struct.unpack('>Q', flags)[0]
@@ -65,17 +66,17 @@ def parse_pbzx(pbzx_path):
             xar_f.write(f_content)
             if tail != 'YZ':
                 xar_f.close()
-                raise "Error: Footer is not xar file footer"
+                raise RuntimeError("Error: Footer is not xar file footer")
     try:
         f.close()
         xar_f.close()
-    except:
+    except IOError:
         pass
 
 
 def main():
-    result = parse_pbzx(sys.argv[1])
-    print "Now xz decompress the .xz chunks, then 'cat' them all together in order into a single new.cpio file"
+    parse_pbzx(sys.argv[1])
+    print("Now xz decompress the .xz chunks, then 'cat' them all together in order into a single new.cpio file")
 
 
 if __name__ == '__main__':
