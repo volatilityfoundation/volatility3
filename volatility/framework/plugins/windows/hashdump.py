@@ -250,11 +250,11 @@ class Hashdump(interfaces.plugins.PluginInterface):
 
     # replaces the dump_hashes method in vol2
     def _generator(self, syshive: registry.RegistryHive, samhive: registry.RegistryHive):
-        if syshive == None:
+        if syshive is None:
             vollog.debug("SYSTEM address is None: Did you use the correct profile?")
             yield (0, (renderers.NotAvailableValue(), renderers.NotAvailableValue(), renderers.NotAvailableValue(),
                        renderers.NotAvailableValue()))
-        if samhive == None:
+        if samhive is None:
             vollog.debug("SAM address is None: Did you use the correct profile?")
             yield (0, (renderers.NotAvailableValue(), renderers.NotAvailableValue(), renderers.NotAvailableValue(),
                        renderers.NotAvailableValue()))
