@@ -540,6 +540,9 @@ class LayerContainer(collections.abc.Mapping):
         """
         return self[layer].read(offset, length, pad)
 
+    def __eq__(self, other):
+        return dict(self) == dict(other)
+
     def write(self, layer: str, offset: int, data: bytes) -> None:
         """Writes to a particular layer at offset for length bytes."""
         self[layer].write(offset, data)

@@ -438,6 +438,9 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
 
         self._vol['base_type'] = base_type
 
+    def __eq__(self, other):
+        return super(self) == super(other) and self.choices == other.choices
+
     @classmethod
     def _generate_inverse_choices(cls, choices: Dict[str, int]) -> Dict[int, str]:
         """Generates the inverse choices for the object."""

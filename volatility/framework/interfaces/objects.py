@@ -46,6 +46,9 @@ class ReadOnlyMapping(collections.abc.Mapping):
         """Returns the length of the internal dictionary."""
         return len(self._dict)
 
+    def __eq__(self, other):
+        return dict(self) == dict(other)
+
 
 class ObjectInformation(ReadOnlyMapping):
     """Contains common information useful/pertinent only to an individual

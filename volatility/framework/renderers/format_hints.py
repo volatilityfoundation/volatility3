@@ -41,3 +41,10 @@ class MultiTypeData(bytes):
         self.split_nulls = split_nulls
         self.show_hex = show_hex
         bytes.__init__(original)
+
+    def __eq__(self, other):
+        return super(self) == super(other) and \
+               self.converted_int == other.converted_int and \
+               self.encoding == other.encoding and \
+               self.split_nulls == other.split_nulls and \
+               self.show_hex == other.show_hex

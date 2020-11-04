@@ -175,8 +175,6 @@ class Hashdump(interfaces.plugins.PluginInterface):
                 lmhash = cls.decrypt_single_salted_hash(rid, hbootkey, enc_lm_hash, cls.almpassword, lm_salt)
 
         # NT hash decryption
-        nt_len = unpack("<L", sam_data[0xac:0xb0])[0]
-
         nthash = None
         nt_revision = sam_data[nt_offset + 2:nt_offset + 3]
         if nt_revision == b'\x01':

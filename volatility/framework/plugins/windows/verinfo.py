@@ -4,7 +4,7 @@
 
 import io
 import logging
-from typing import Generator, List, Tuple, Union
+from typing import Generator, List, Tuple
 
 from volatility.framework import exceptions, renderers, constants, interfaces
 from volatility.framework.configuration import requirements
@@ -110,9 +110,6 @@ class VerInfo(interfaces.plugins.PluginInterface):
                 BaseDllName = renderers.UnreadableValue()
 
             session_layer_name = modules.Modules.find_session_layer(self.context, session_layers, mod.DllBase)
-            (major, minor, product, build) = [
-                renderers.NotAvailableValue()
-            ] * 4  # type: Tuple[Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue],Union[int, interfaces.renderers.BaseAbsentValue]]
             try:
                 (major, minor, product, build) = self.get_version_information(self._context, pe_table_name,
                                                                               session_layer_name, mod.DllBase)

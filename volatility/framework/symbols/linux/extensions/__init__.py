@@ -17,6 +17,7 @@ from volatility.framework.symbols.linux.extensions import elf
 
 vollog = logging.getLogger(__name__)
 
+
 # Keep these in a basic module, to prevent import cycles when symbol providers require them
 
 
@@ -27,8 +28,6 @@ class module(generic.GenericIntelProcess):
             return self.core_layout.base
         else:
             return self.module_core
-
-        raise AttributeError("module -> get_module_core: Unable to determine base address of module")
 
     def get_init_size(self):
         if self.has_member("init_layout"):

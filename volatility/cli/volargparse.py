@@ -6,6 +6,7 @@ import argparse
 import gettext
 import re
 
+
 # This effectively overrides/monkeypatches the core argparse module to provide more helpful output around choices
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
 
@@ -27,7 +28,7 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         arg_strings = values[1:]
 
         # set the parser name if requested
-        if self.dest is not argparse.SUPPRESS:
+        if self.dest != argparse.SUPPRESS:
             setattr(namespace, self.dest, parser_name)
 
         matched_parsers = [name for name in self._name_parser_map if parser_name in name]

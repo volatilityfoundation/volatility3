@@ -221,12 +221,11 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
                     context.config[child_config_path] = layer_name
                     if not requirement.unsatisfied(context, config_path):
                         return child_config_path, layer_name
+                # Clean-up to restore the config
+                if original_setting:
+                    context.config[child_config_path] = original_setting
                 else:
-                    # Clean-up to restore the config
-                    if original_setting:
-                        context.config[child_config_path] = original_setting
-                    else:
-                        del context.config[child_config_path]
+                    del context.config[child_config_path]
             else:
                 return child_config_path, context.config.get(child_config_path, None)
         for req_name, req in requirement.requirements.items():

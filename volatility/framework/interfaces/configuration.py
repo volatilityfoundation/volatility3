@@ -90,6 +90,10 @@ class HierarchicalDict(collections.abc.Mapping):
             raise TypeError(
                 "Initial_dict must be a dictionary or JSON string containing a dictionary: {}".format(initial_dict))
 
+    def __eq__(self, other):
+        """Define equality between HierarchicalDicts"""
+        return dict(self) == dict(other)
+
     @property
     def separator(self) -> str:
         """Specifies the hierarchy separator in use in this HierarchyDict."""
