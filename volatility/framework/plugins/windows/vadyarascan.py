@@ -13,11 +13,6 @@ from volatility.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
-try:
-    import yara
-except ImportError:
-    vollog.info("Python Yara module not found, plugin (and dependent plugins) not available")
-
 
 class VadYaraScan(interfaces.plugins.PluginInterface):
     """Scans all the Virtual Address Descriptor memory maps using yara."""

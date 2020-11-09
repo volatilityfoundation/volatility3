@@ -27,7 +27,8 @@ except ImportError:
     HAS_MAGIC = False
 
 try:
-    import smb.SMBHandler
+    # Import so that the handler is found by the framework.class_subclasses callc
+    import smb.SMBHandler  # lgtm [py/unused-import]
 except ImportError:
     pass
 
