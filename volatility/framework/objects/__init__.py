@@ -438,7 +438,12 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         self._vol['base_type'] = base_type
 
     def __eq__(self, other):
-        return super().__eq__(other) and isinstance(other, Enumeration) and self.choices == other.choices
+        """An enumeration must be equivalent to its value, even if the other value is not an enumeration"""
+        return int(self) == other
+
+    def __hash__(self):
+        """Enumerations must be hashed as equivalent to their integer counterparts"""
+        return super().__hash__()
 
     @classmethod
     def _generate_inverse_choices(cls, choices: Dict[str, int]) -> Dict[int, str]:
