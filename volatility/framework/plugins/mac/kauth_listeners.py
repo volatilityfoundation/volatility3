@@ -13,6 +13,8 @@ from volatility.plugins.mac import lsmod, kauth_scopes
 class Kauth_listeners(interfaces.plugins.PluginInterface):
     """ Lists kauth listeners and their status """
 
+    _required_framework_version = (2, 0, 0)
+
     @classmethod
     def get_requirements(cls):
         return [

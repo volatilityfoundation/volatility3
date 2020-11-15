@@ -10,6 +10,8 @@ from volatility.framework.objects import utility
 class VFSevents(interfaces.plugins.PluginInterface):
     """ Lists processes that are filtering file system events """
 
+    _required_framework_version = (2, 0, 0)
+
     event_types = [
         "CREATE_FILE", "DELETE", "STAT_CHANGED", "RENAME", "CONTENT_MODIFIED", "EXCHANGE", "FINDER_INFO_CHANGED",
         "CREATE_DIR", "CHOWN", "XATTR_MODIFIED", "XATTR_REMOVED", "DOCID_CREATED", "DOCID_CHANGED"
