@@ -1,9 +1,12 @@
 import functools
+import logging
 import struct
 from typing import Optional, Tuple, List, Dict, Union
 
 from volatility.framework import objects, interfaces, constants, symbols, exceptions, renderers
 from volatility.framework.renderers import conversion
+
+vollog = logging.getLogger(__name__)
 
 
 class POOL_HEADER(objects.StructType):
@@ -176,7 +179,7 @@ class POOL_HEADER(objects.StructType):
                 header_type = context.symbol_space.get_type(type_name)
                 headers.append(header)
                 sizes.append(header_type.size)
-            except AttributeError:
+            except (AttributeError, exceptions.SymbolError):
                 # Some of these may not exist, for example:
                 #   if build < 9200: PADDING_INFO else: AUDIT_INFO
                 #   if build == 10586: HANDLE_REVOCATION_INFO else EXTENDED_INFO
