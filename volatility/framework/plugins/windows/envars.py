@@ -33,7 +33,7 @@ class Envars(interfaces.plugins.PluginInterface):
             requirements.BooleanRequirement(name = 'silent',
                                             description = 'Suppress common and non-persistent variables',
                                             optional = True),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
 
