@@ -8,10 +8,11 @@ using objects constructed from symbols.
 """
 
 # Configuration interfaces must be imported separately, since we're part of interfaces and can't import ourselves
+import io
 import logging
 import os
 from abc import ABCMeta, abstractmethod
-from typing import List, Tuple, Type, IO
+from typing import List, Tuple, Type
 
 from volatility import framework
 from volatility.framework import exceptions, constants, interfaces
@@ -19,7 +20,7 @@ from volatility.framework import exceptions, constants, interfaces
 vollog = logging.getLogger(__name__)
 
 
-class FileHandlerInterface(IO[bytes]):
+class FileHandlerInterface(io.RawIOBase):
     """Class for storing Files in the plugin as a means to output a file when necessary.
 
     This can be used as ContextManager that will close/produce the file automatically when exiting the context block
