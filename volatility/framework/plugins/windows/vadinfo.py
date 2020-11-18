@@ -188,7 +188,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
                 file_output = "Disabled"
                 if self.config['dump']:
-                    file_handle = self.vad_dump(self.context, proc, vad, self.open)
+                    file_handle = self.vad_dump(self.context, proc, vad, self.open, self.config['maxsize'])
                     file_output = "Error outputting file"
                     if file_handle:
                         file_handle.close()
