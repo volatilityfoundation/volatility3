@@ -4,7 +4,7 @@
 
 import datetime
 import logging
-from typing import Iterable, Callable
+from typing import Iterable, Callable, Tuple
 
 from volatility.framework import renderers, interfaces
 from volatility.framework.configuration import requirements
@@ -90,41 +90,63 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         """
 
-        # We'll use the first thread to bounce back to the virtual process
-        kvo = context.layers[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
+        version = cls.get_osversion(context, layer_name, symbol_table)
+        if version < (10, 0, 0):
+            # If it's WinXP->8.1 we have now a physical process address.
+            # We'll use the first thread to bounce back to the virtual process
+            kvo = context.layers[layer_name].config['kernel_virtual_offset']
+            ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
+    
+            tleoffset = ntkrnlmp.get_type("_ETHREAD").relative_child_offset("ThreadListEntry")
+            # Start out with the member offset
+            offsets = [tleoffset]
+    
+            # If (and only if) we're dealing with 64-bit Windows 7 SP1
+            # then add the other commonly seen member offset to the list
+            bits = context.layers[layer_name].bits_per_register
+            if version == (6, 1, 7601) and bits == 64:
+                offsets.append(tleoffset + 8)
+    
+            # Now we can try to bounce back
+            for ofs in offsets:
+                ethread = ntkrnlmp.object(object_type = "_ETHREAD",
+                                          offset = proc.ThreadListHead.Flink - ofs,
+                                          absolute = True)
+    
+                # Ask for the thread's process to get an _EPROCESS with a virtual address layer
+                virtual_process = ethread.owning_process()
+                # Sanity check the bounce.
+                # This compares the original offset with the new one (translated from virtual layer)
+                (_, _, ph_offset, _, _) = list(context.layers[layer_name].mapping(offset = virtual_process.vol.offset,
+                                                                                  length = 0))[0]
+                if virtual_process and \
+                        proc.vol.offset == ph_offset:
+                    return virtual_process
+        else:
+            # If it's greater than Win 8.1, we already have the virtual proc
+            return proc
 
-        tleoffset = ntkrnlmp.get_type("_ETHREAD").relative_child_offset("ThreadListEntry")
-        # Start out with the member offset
-        offsets = [tleoffset]
+    @classmethod
+    def get_osversion(cls,
+                      context: interfaces.context.ContextInterface,
+                      layer_name: str,
+                      symbol_table: str) -> Tuple[int, int, int]:
+        """Returns the complete OS version (MAJ,MIN,BUILD)
 
-        # If (and only if) we're dealing with 64-bit Windows 7 SP1
-        # then add the other commonly seen member offset to the list
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            symbol_table: The name of the table containing the kernel symbols
+
+        Returns:
+            A tuple with (MAJ,MIN,BUILD)
+        """
         kuser = info.Info.get_kuser_structure(context, layer_name, symbol_table)
         nt_major_version = int(kuser.NtMajorVersion)
         nt_minor_version = int(kuser.NtMinorVersion)
         vers = info.Info.get_version_structure(context, layer_name, symbol_table)
         build = vers.MinorVersion
-        bits = context.layers[layer_name].bits_per_register
-        version = (nt_major_version, nt_minor_version, build)
-        if version == (6, 1, 7601) and bits == 64:
-            offsets.append(tleoffset + 8)
-
-        # Now we can try to bounce back
-        for ofs in offsets:
-            ethread = ntkrnlmp.object(object_type = "_ETHREAD",
-                                      offset = proc.ThreadListHead.Flink - ofs,
-                                      absolute = True)
-
-            # Ask for the thread's process to get an _EPROCESS with a virtual address layer
-            virtual_process = ethread.owning_process()
-            # Sanity check the bounce.
-            # This compares the original offset with the new one (translated from virtual layer)
-            (_, _, ph_offset, _, _) = list(context.layers[layer_name].mapping(offset = virtual_process.vol.offset,
-                                                                              length = 0))[0]
-            if virtual_process and \
-                    proc.vol.offset == ph_offset:
-                return virtual_process
+        return (nt_major_version, nt_minor_version, build)
 
     def _generator(self):
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
