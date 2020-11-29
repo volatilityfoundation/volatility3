@@ -353,7 +353,8 @@ class PdbReader:
         type_references = self._read_info_stream(4, "IPI", ipi_list)
 
         for name in type_references.keys():
-            if '.pdb' in name:
+            # This doesn't break, because we want to use the last string/pdbname in the list
+            if name.endswith('.pdb'):
                 self._database_name = name.split('\\')[-1]
 
     def _read_info_stream(self, stream_number, stream_name, info_list):
