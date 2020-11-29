@@ -16,7 +16,7 @@ from volatility.framework import constants, exceptions, interfaces, layers
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import intel, scanners
 from volatility.framework.symbols import native
-from volatility.framework.symbols.windows.pdb import PDBUtility
+from volatility.framework.symbols.windows.pdbutil import PDBUtility
 
 if __name__ == "__main__":
     import sys

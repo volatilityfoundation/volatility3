@@ -173,7 +173,7 @@ class PDBUtility:
                     if filename:
                         tmp_files.append(filename)
                         location = "file:" + request.pathname2url(tmp_files[-1])
-                        json_output = pdbconv.PdbReader(context, location, progress_callback).get_json()
+                        json_output = pdbconv.PdbReader(context, location, pdb_name, progress_callback).get_json()
                         of.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
                         # After we've successfully written it out, record the fact so we don't clear it out
                         data_written = True

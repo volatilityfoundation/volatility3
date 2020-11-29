@@ -259,6 +259,7 @@ class PdbReader:
     def __init__(self,
                  context: interfaces.context.ContextInterface,
                  location: str,
+                 database_name: Optional[str] = None,
                  progress_callback: constants.ProgressCallback = None) -> None:
         self._layer_name, self._context = self.load_pdb_layer(context, location)
         self._dbiheader = None  # type: Optional[interfaces.objects.ObjectInterface]
@@ -274,6 +275,7 @@ class PdbReader:
         self._omap_mapping = []  # type: List[Tuple[int, int]]
         self._sections = []  # type: List[interfaces.objects.ObjectInterface]
         self.metadata = {"format": "6.1.0", "windows": {}}
+        self._database_name = database_name
 
     @property
     def context(self):
@@ -333,33 +335,52 @@ class PdbReader:
 
     def read_tpi_stream(self) -> None:
         """Reads the TPI type steam."""
-        vollog.debug("Reading TPI")
-        tpi_layer = self._context.layers.get(self._layer_name + "_stream2", None)
-        if not tpi_layer:
-            raise ValueError("No TPI stream available")
-        module = self._context.module(module_name = tpi_layer.pdb_symbol_table, layer_name = tpi_layer.name, offset = 0)
-        header = module.object(object_type = "TPI_HEADER", offset = 0)
+        self.types = []
 
+        type_references = self._read_info_stream(2, "TPI", self.types)
+
+        self.process_types(type_references)
+
+    def read_ipi_stream(self):
+        """"""
+        if not self._dbiheader:
+            self.read_dbi_stream()
+
+        vollog.debug("Reading IPI layer")
+
+        ipi_list = []
+
+        type_references = self._read_info_stream(4, "IPI", ipi_list)
+
+        for name in type_references.keys():
+            if '.pdb' in name:
+                self._database_name = name.split('\\')[-1]
+
+    def _read_info_stream(self, stream_number, stream_name, info_list):
+        vollog.debug("Reading {}".format(stream_name))
+        info_layer = self._context.layers.get(self._layer_name + "_stream" + str(stream_number), None)
+        if not info_layer:
+            raise ValueError("No TPI stream available")
+        module = self._context.module(module_name = info_layer.pdb_symbol_table, layer_name = info_layer.name,
+                                      offset = 0)
+        header = module.object(object_type = "TPI_HEADER", offset = 0)
         # Check the header
         if not (56 <= header.header_size < 1024):
-            raise ValueError("TPI Stream Header size outside normal bounds")
+            raise ValueError("{} Stream Header size outside normal bounds".format(stream_name))
         if header.index_min < 4096:
-            raise ValueError("Minimum TPI index is 4096, found: {}".format(header.index_min))
+            raise ValueError("Minimum {} index is 4096, found: {}".format(stream_name, header.index_min))
         if header.index_max < header.index_min:
-            raise ValueError("Maximum TPI index is smaller than minimum TPI index, found: {} < {} ".format(
-                header.index_max, header.index_min))
-
+            raise ValueError("Maximum {} index is smaller than minimum TPI index, found: {} < {} ".format(
+                stream_name, header.index_max, header.index_min))
         # Reset the state
-        self.types = []
-        type_references = {}  # type: Dict[str, int]
-
+        info_references = {}  # type: Dict[str, int]
         offset = header.header_size
         # Ensure we use the same type everywhere
         length_type = "unsigned short"
         length_len = module.get_type(length_type).size
-        type_index = 1
-        while tpi_layer.maximum_address - offset > 0:
-            self._progress_callback(offset * 100 / tpi_layer.maximum_address, "Reading TPI layer")
+        info_index = 1
+        while info_layer.maximum_address - offset > 0:
+            self._progress_callback(offset * 100 / info_layer.maximum_address, "Reading TPI layer")
             length = module.object(object_type = length_type, offset = offset)
             if not isinstance(length, int):
                 raise TypeError("Non-integer length provided")
@@ -368,18 +389,16 @@ class PdbReader:
             leaf_type, name, value = output
             for tag_type in ['unnamed', 'anonymous']:
                 if name == '<{}-tag>'.format(tag_type) or name == '__{}'.format(tag_type):
-                    name = '__{}_'.format(tag_type) + hex(len(self.types) + 0x1000)[2:]
+                    name = '__{}_'.format(tag_type) + hex(len(info_list) + 0x1000)[2:]
             if name:
-                type_references[name] = len(self.types)
-            self.types.append((leaf_type, name, value))
+                info_references[name] = len(info_list)
+            info_list.append((leaf_type, name, value))
             offset += length
-            type_index += 1
+            info_index += 1
             # Since types can only refer to earlier types, assigning the name at this point is fine
-
-        if tpi_layer.maximum_address - offset != 0:
+        if info_layer.maximum_address - offset != 0:
             raise ValueError("Type values did not fill the TPI stream correctly")
-
-        self.process_types(type_references)
+        return info_references
 
     def read_dbi_stream(self) -> None:
         """Reads the DBI Stream."""
@@ -480,6 +499,8 @@ class PdbReader:
         """Reads in the pdb information stream."""
         if not self._dbiheader:
             self.read_dbi_stream()
+        if self._database_name is None:
+            self.read_ipi_stream()
 
         vollog.debug("Reading PDB Info")
         pdb_info_layer = self._context.layers.get(self._layer_name + "_stream1", None)
@@ -493,7 +514,7 @@ class PdbReader:
         self.metadata['windows']['pdb'] = {
             "GUID": self.convert_bytes_to_guid(pdb_info.GUID),
             "age": pdb_info.age,
-            "database": "ntkrnlmp.pdb",
+            "database": self._database_name or 'unknown.pdb',
             "machine_type": self._dbiheader.machine
         }
 
@@ -781,6 +802,19 @@ class PdbReader:
             bitfield = module.object(object_type = "LF_BITFIELD", offset = offset + consumed)
             result = leaf_type, None, bitfield
             consumed += remaining
+        elif leaf_type in [leaf_type.LF_STRING_ID, leaf_type.LF_FUNC_ID]:
+            string_id = module.object(object_type = leaf_type.lookup(), offset = offset + consumed)
+            name_offset = string_id.name.vol.offset - string_id.vol.offset
+            name = self.parse_string(string_id.name, leaf_type < leaf_type.LF_ST_MAX, size = remaining - name_offset)
+            result = leaf_type, name, string_id
+        elif leaf_type in [leaf_type.LF_UDT_SRC_LINE, leaf_type.LF_UDT_MOD_SRC_LINE]:
+            src_line = module.object(object_type = leaf_type.lookup(), offset = offset + consumed)
+            result = leaf_type, None, src_line
+        elif leaf_type in [leaf_type.LF_BUILDINFO]:
+            buildinfo = module.object(object_type = leaf_type.lookup(), offset = offset + consumed)
+            buildinfo.arguments.count = buildinfo.count
+            consumed += buildinfo.arguments.vol.size
+            result = leaf_type, None, buildinfo
         else:
             raise TypeError("Unhandled leaf_type: {}".format(leaf_type))
 
@@ -974,7 +1008,7 @@ if __name__ == '__main__':
         parser.error("File {} does not exists".format(filename))
     location = "file:" + request.pathname2url(filename)
 
-    convertor = PdbReader(ctx, location, progress_callback = pg_cb)
+    convertor = PdbReader(ctx, location, database_name = args.pattern, progress_callback = pg_cb)
 
     with open(args.output, "w") as f:
         json.dump(convertor.get_json(), f, indent = 2, sort_keys = True)
