@@ -148,11 +148,14 @@ class PDBUtility:
             return None
 
         # Swap the Pointer with the Address since the de-virtualization doesn't apply to the fields
-        debug_data = pe_data.DIRECTORY_ENTRY_DEBUG[0]
-        pe_data.set_dword_at_offset(debug_data.struct.get_field_absolute_offset('AddressOfRawData'),
-                                    debug_data.struct.PointerToRawData)
-        pe_data.full_load()
-        debug_entry = pe_data.DIRECTORY_ENTRY_DEBUG[0].entry
+        debug_entry = None
+        for index in range(len(pe_data.DIRECTORY_ENTRY_DEBUG)):
+            if pe_data.DIRECTORY_ENTRY_DEBUG[index].struct.Type == 2:
+                debug_data = pe_data.DIRECTORY_ENTRY_DEBUG[index]
+                pe_data.set_dword_at_offset(debug_data.struct.get_field_absolute_offset('AddressOfRawData'),
+                                            debug_data.struct.PointerToRawData)
+                pe_data.full_load()
+                debug_entry = pe_data.DIRECTORY_ENTRY_DEBUG[index].entry
 
         if debug_entry is None:
             return None
