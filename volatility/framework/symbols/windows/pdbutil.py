@@ -3,7 +3,6 @@
 #
 
 import binascii
-import io
 import json
 import logging
 import lzma
@@ -17,7 +16,6 @@ from volatility.framework import constants, interfaces
 from volatility.framework.configuration.requirements import SymbolTableRequirement
 from volatility.framework.symbols import intermed
 from volatility.framework.symbols.windows import pdbconv
-from volatility.framework.symbols.windows.extensions import pe
 
 vollog = logging.getLogger(__name__)
 
@@ -126,36 +124,39 @@ class PDBUtility:
         if mz_sig != b"MZ":
             return None
 
-        pe_table_name = intermed.IntermediateSymbolTable.create(context,
-                                                                'pdbutility',
-                                                                "windows",
-                                                                "pe",
-                                                                class_types = pe.class_types)
+        nt_header_start = ord(layer.read(offset + 0x3C, 1))
+        optional_header_size = struct.unpack('<H', layer.read(offset + nt_header_start + 0x14, 2))[0]
+        # Just enough to tell us the max size
+        pe_header = layer.read(offset, nt_header_start + 0x16 + optional_header_size)
+        pe_data = pefile.PE(data = pe_header)
+        max_size = pe_data.OPTIONAL_HEADER.SizeOfImage
 
-        dos_header = context.object(pe_table_name + constants.BANG + '_IMAGE_DOS_HEADER', offset = offset,
-                                    layer_name = layer_name)
-        mz_data = io.BytesIO()
-        for offset, data in dos_header.reconstruct():
-            mz_data.seek(offset)
-            mz_data.write(data)
-        mz_data = bytes(mz_data.getbuffer())
+        # Proper data
+        virtual_data = layer.read(offset, max_size)
+        pe_data = pefile.PE(data = virtual_data)
 
-        pe_data = pefile.PE(data = mz_data)
+        # De-virtualize the memory
+        sizeofHdrs = pe_data.OPTIONAL_HEADER.SizeOfHeaders
+        physical_data = virtual_data[:sizeofHdrs]
+        # Might need to put them in order by PointerToRawData just validate they are in order
+        for sect in pe_data.sections:
+            physical_data += virtual_data[sect.VirtualAddress:sect.VirtualAddress + sect.SizeOfRawData]
+
+        pe_data = pefile.PE(data = physical_data)
 
         if not hasattr(pe_data, 'DIRECTORY_ENTRY_DEBUG') or not len(pe_data.DIRECTORY_ENTRY_DEBUG):
             return None
 
-        # Extract the data
+        # Swap the Pointer with the Address since the de-virtualization doesn't apply to the fields
         debug_data = pe_data.DIRECTORY_ENTRY_DEBUG[0]
-
-        # We don't fix up subvalues in reconstruction
-        # This resets the PointerToRawData to the AddressOfRawData
-        pe_data.set_dword_at_offset(debug_data.struct.get_field_absolute_offset('PointerToRawData'),
-                                    debug_data.struct.AddressOfRawData)
-        debug_entry = debug_data.entry
+        pe_data.set_dword_at_offset(debug_data.struct.get_field_absolute_offset('AddressOfRawData'),
+                                    debug_data.struct.PointerToRawData)
+        pe_data.full_load()
+        debug_entry = pe_data.DIRECTORY_ENTRY_DEBUG[0].entry
 
         if debug_entry is None:
             return None
+
         pdb_name = debug_entry.PdbFileName.decode("utf-8").strip('\x00')
         age = debug_entry.Age
         guid = "{:x}{:x}{:x}{}".format(debug_entry.Signature_Data1, debug_entry.Signature_Data2,
