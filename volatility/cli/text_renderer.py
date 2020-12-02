@@ -304,6 +304,7 @@ class JsonRenderer(CLIRenderer):
     _type_renderers = {
         format_hints.HexBytes: quoted_optional(hex_bytes_as_text),
         interfaces.renderers.Disassembly: quoted_optional(display_disassembly),
+        format_hints.MultiTypeData: quoted_optional(multitypedata_as_text),
         bytes: optional(lambda x: " ".join(["{0:02x}".format(b) for b in x])),
         datetime.datetime: lambda x: x.isoformat() if not isinstance(x, interfaces.renderers.BaseAbsentValue) else None,
         'default': lambda x: x
