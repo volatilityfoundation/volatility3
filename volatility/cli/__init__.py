@@ -279,6 +279,8 @@ class CommandLine:
         if ctx.config.get('automagic.LayerStacker.stackers', None) is None:
             ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
         self.output_dir = args.output_dir
+        if not os.path.exists(self.output_dir):
+            parser.error("The output directory specified does not exist: {}".format(self.output_dir))
 
         self.populate_config(ctx, chosen_configurables_list, args, plugin_config_path)
 
@@ -363,7 +365,7 @@ class CommandLine:
             detail = "{}".format(excp)
             caused_by = [
                 "An invalid symbol table", "A plugin requesting a bad symbol",
-                                           "A plugin requesting a symbol from the wrong table"
+                "A plugin requesting a symbol from the wrong table"
             ]
         elif isinstance(excp, exceptions.LayerException):
             general = "Volatility experienced a layer-related issue: {}".format(excp.layer_name)
