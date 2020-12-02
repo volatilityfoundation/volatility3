@@ -91,40 +91,38 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         """
 
         version = cls.get_osversion(context, layer_name, symbol_table)
-        if version < (10, 0, 0):
-            # If it's WinXP->8.1 we have now a physical process address.
-            # We'll use the first thread to bounce back to the virtual process
-            kvo = context.layers[layer_name].config['kernel_virtual_offset']
-            ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
-    
-            tleoffset = ntkrnlmp.get_type("_ETHREAD").relative_child_offset("ThreadListEntry")
-            # Start out with the member offset
-            offsets = [tleoffset]
-    
-            # If (and only if) we're dealing with 64-bit Windows 7 SP1
-            # then add the other commonly seen member offset to the list
-            bits = context.layers[layer_name].bits_per_register
-            if version == (6, 1, 7601) and bits == 64:
-                offsets.append(tleoffset + 8)
-    
-            # Now we can try to bounce back
-            for ofs in offsets:
-                ethread = ntkrnlmp.object(object_type = "_ETHREAD",
-                                          offset = proc.ThreadListHead.Flink - ofs,
-                                          absolute = True)
-    
-                # Ask for the thread's process to get an _EPROCESS with a virtual address layer
-                virtual_process = ethread.owning_process()
-                # Sanity check the bounce.
-                # This compares the original offset with the new one (translated from virtual layer)
-                (_, _, ph_offset, _, _) = list(context.layers[layer_name].mapping(offset = virtual_process.vol.offset,
-                                                                                  length = 0))[0]
-                if virtual_process and \
-                        proc.vol.offset == ph_offset:
-                    return virtual_process
-        else:
-            # If it's greater than Win 8.1, we already have the virtual proc
-            return proc
+
+        # If it's WinXP->8.1 we have now a physical process address.
+        # We'll use the first thread to bounce back to the virtual process
+        kvo = context.layers[layer_name].config['kernel_virtual_offset']
+        ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
+
+        tleoffset = ntkrnlmp.get_type("_ETHREAD").relative_child_offset("ThreadListEntry")
+        # Start out with the member offset
+        offsets = [tleoffset]
+
+        # If (and only if) we're dealing with 64-bit Windows 7 SP1
+        # then add the other commonly seen member offset to the list
+        bits = context.layers[layer_name].bits_per_register
+        if version == (6, 1, 7601) and bits == 64:
+            offsets.append(tleoffset + 8)
+
+        # Now we can try to bounce back
+        for ofs in offsets:
+            ethread = ntkrnlmp.object(object_type = "_ETHREAD",
+                                      offset = proc.ThreadListHead.Flink - ofs,
+                                      absolute = True)
+
+            # Ask for the thread's process to get an _EPROCESS with a virtual address layer
+            virtual_process = ethread.owning_process()
+            # Sanity check the bounce.
+            # This compares the original offset with the new one (translated from virtual layer)
+            (_, _, ph_offset, _, _) = list(context.layers[layer_name].mapping(offset = virtual_process.vol.offset,
+                                                                              length = 0))[0]
+            if virtual_process and \
+                    proc.vol.offset == ph_offset:
+                return virtual_process
+
 
     @classmethod
     def get_osversion(cls,
@@ -161,8 +159,12 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             file_output = "Disabled"
             if self.config['dump']:
-                vproc = self.virtual_process_from_physical(self.context, self.config['primary'],
-                                                           self.config['nt_symbols'], proc)
+                # windows 10 objects (maybe others in the future) are already in virtual memory
+                if proc.vol.layer_name == self.config['primary']:
+                    vproc = proc
+                else:
+                    vproc = self.virtual_process_from_physical(self.context, self.config['primary'],
+                                                               self.config['nt_symbols'], proc)
 
                 file_handle = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name,
                                                          vproc, self.open)
