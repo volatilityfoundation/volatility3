@@ -84,6 +84,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
             if layer and dtb:
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
                 return layer
+        vollog.debug("No suitable linux banner could be matched")
         return None
 
     @classmethod

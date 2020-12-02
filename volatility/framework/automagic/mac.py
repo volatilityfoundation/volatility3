@@ -44,6 +44,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         for banner_offset, banner in layer.scan(context = context, scanner = mss,
                                                 progress_callback = progress_callback):
             dtb = None
+            vollog.debug("Identified banner: {}".format(repr(banner)))
 
             symbol_files = mac_banners.get(banner, None)
             if symbol_files:
@@ -102,9 +103,9 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                                            metadata = {'kaslr_value': kaslr_shift})
 
             if new_layer and dtb:
-                vollog.debug("Identified banner: {}".format(repr(banner)))
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
                 return new_layer
+        vollog.debug("No suitable mac banner could be matched")
         return None
 
     @classmethod
