@@ -125,6 +125,10 @@ class CLIRenderer(interfaces.renderers.Renderer):
     name = "unnamed"
     structured_output = False
 
+    @classmethod
+    def get_render_options(cls) -> List[RenderOption]:
+        return []
+
 
 class QuickTextRenderer(CLIRenderer):
     _type_renderers = {
@@ -140,8 +144,12 @@ class QuickTextRenderer(CLIRenderer):
 
     name = "quick"
 
-    def get_render_options(self):
-        pass
+    @classmethod
+    def get_render_options(cls) -> List[RenderOption]:
+        return [
+            RenderOption(name = 'skip-errors', description = 'Skips rows that would otherwise error',
+                         option_type = bool,
+                         default = False)]
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         """Renders each column immediately to stdout.
@@ -175,7 +183,7 @@ class QuickTextRenderer(CLIRenderer):
             return accumulator
 
         if not grid.populated:
-            grid.populate(visitor, outfd)
+            grid.populate(visitor, outfd, fail_on_errors = not self.options['skip-errors'].value)
         else:
             grid.visit(node = None, function = visitor, initial_accumulator = outfd)
 
@@ -196,9 +204,6 @@ class CSVRenderer(CLIRenderer):
 
     name = "csv"
     structured_output = True
-
-    def get_render_options(self):
-        pass
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         """Renders each row immediately to stdout.
@@ -239,8 +244,14 @@ class PrettyTextRenderer(CLIRenderer):
 
     name = "pretty"
 
-    def get_render_options(self):
-        pass
+    @classmethod
+    def get_render_options(cls) -> List[RenderOption]:
+        return [
+            RenderOption(name = 'skip-errors', description = 'Skips rows that would otherwise error',
+                         option_type = bool,
+                         default = False),
+            RenderOption(name = 'separator', description = 'Dividing characters to separate columns', option_type = str,
+                         default = ' | ')]
 
     def render(self, grid: interfaces.renderers.TreeGrid) -> None:
         """Renders each column immediately to stdout.
@@ -257,7 +268,7 @@ class PrettyTextRenderer(CLIRenderer):
         sys.stderr.write("Formatting...\n")
 
         display_alignment = ">"
-        column_separator = " | "
+        column_separator = self.options['separator'].value
 
         tree_indent_column = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
         max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
@@ -281,7 +292,7 @@ class PrettyTextRenderer(CLIRenderer):
 
         final_output = []  # type: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
         if not grid.populated:
-            grid.populate(visitor, final_output)
+            grid.populate(visitor, final_output, fail_on_errors = not self.options['skip-errors'].value)
         else:
             grid.visit(node = None, function = visitor, initial_accumulator = final_output)
 
@@ -312,9 +323,6 @@ class JsonRenderer(CLIRenderer):
 
     name = 'JSON'
     structured_output = True
-
-    def get_render_options(self) -> List[RenderOption]:
-        pass
 
     def output_result(self, outfd, result):
         """Outputs the JSON data to a file in a particular format"""

@@ -167,7 +167,8 @@ class CommandLine:
         partial_args, _ = parser.parse_known_args(known_args)
 
         banner_output = sys.stdout
-        if renderers[partial_args.renderer].structured_output:
+        renderer = renderers[partial_args.renderer]
+        if renderer.structured_output:
             banner_output = sys.stderr
         banner_output.write("Volatility 3 Framework {}\n".format(constants.PACKAGE_VERSION))
 
@@ -226,6 +227,8 @@ class CommandLine:
             seen_automagics.add(amagic)
             if isinstance(amagic, interfaces.configuration.ConfigurableInterface):
                 self.populate_requirements_argparse(parser, amagic.__class__)
+
+        self.populate_requirements_renderer_options(parser, renderers)
 
         subparser = parser.add_subparsers(title = "Plugins",
                                           dest = "plugin",
@@ -313,8 +316,9 @@ class CommandLine:
 
         try:
             # Construct and run the plugin
+            options = []
             if constructed:
-                renderers[args.renderer]().render(constructed.run())
+                renderer(options).render(constructed.run())
         except (exceptions.VolatilityException) as excp:
             self.process_exceptions(excp)
 
@@ -576,6 +580,24 @@ class CommandLine:
                                 dest = requirement.name,
                                 required = not requirement.optional,
                                 **additional)
+
+    def populate_requirements_renderer_options(self, parser: argparse.ArgumentParser,
+                                               renderers: Dict[str, Type[text_renderer.CLIRenderer]]):
+        renderer_parser = parser.add_argument_group('renderer', 'Renderer options')
+        for renderer_name in renderers:
+            renderer = renderers[renderer_name]
+            for option in renderer.get_render_options():
+                config_name = '-'.join([renderer.name, option.name])
+                extra_options = {
+                    'help': option.description,
+                    'type': option.option_type,
+                    'dest': config_name.replace('-', '_')
+                }
+                if option.option_type == bool:
+                    del extra_options['type']
+                    extra_options['action'] = 'store_true'
+                renderer_parser.add_argument("--" + config_name,
+                                             **extra_options)
 
 
 def main():
