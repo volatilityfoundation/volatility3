@@ -160,6 +160,10 @@ class CommandLine:
                             help = "Clears out all short-term cached items",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--output-sqlitepath",
+                            help = "Path in which to output sqlite db",
+                            default = os.getcwd(),
+                            type = str)
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -314,7 +318,10 @@ class CommandLine:
         try:
             # Construct and run the plugin
             if constructed:
-                renderers[args.renderer]().render(constructed.run())
+                if args.renderer != "sqlite":
+                    renderers[args.renderer]().render(constructed.run())
+                else:
+                    renderers[args.renderer]().render(constructed.run(), [args.plugin, args.output_sqlitepath])
         except (exceptions.VolatilityException) as excp:
             self.process_exceptions(excp)
 
