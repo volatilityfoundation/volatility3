@@ -182,8 +182,9 @@ of data.  Each chunk contains the following information, in order:
 
 An example (and the most common layer encountered in memory forensics) would be an Intel layer, which models the intel
 page mapping system.  Based on a series of tables stored within the layer itself, an intel layer can convert a virtual
-address to a physical address.  It should be noted that intel layers are surjective in that a single virtual address can
-map to multiple physical addresses, but a single virtual address can only ever map to a single physical address.
+address to a physical address.  It should be noted that intel layers are surjective. Meaning a single virtual address 
+can only ever map to a single physical address, but a single physical address can be mapped to multiple virtual 
+addresses.
 
 As a simple example, in a virtual layer which looks like `abracadabra` but maps to a physical layer that looks
 like `abcdr`, requesting `mapping(5, 4)` would return:
