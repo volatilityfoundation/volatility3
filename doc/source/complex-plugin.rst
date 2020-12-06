@@ -284,4 +284,74 @@ generic names aren't used for something and then best describe something else th
 Writing new Templates and Objects
 ---------------------------------
 
+In most cases, a whole new type of object is unnecessary.  It will usually be derived from an
+:py:class:`~volatility.framework.objects.StructType` (which is itself just another name for a
+:py:class:`~volatility.framework.objects.AggregateType`, but it's better to use `StructType` for readability).
+
+This can be used as a class override for a particular symbol table, so that an existing structure can be augmented with
+additional methods.  An example of this would be:
+
+.. code-block:: python
+
+    symbol_table = contexts.symbol_space[symbol_table_name]
+    symbol_table.set_type_class('<structure_name>', NewStructureClass)
+
+This will mean that when a specific structure is loaded from the symbol_space, it is not constructed as a standard
+`StructType`, but instead is instantiated using the NewStructureClass, meaning new methods can be called directly on it.
+
+If the situation really calls for an entirely new object, that isn't covered by one of the existing
+:py:class:`~volatility.framework.objects.PrimativeObject` objects (such as
+:py:class:`~volatility.framework.objects.Integer`,
+:py:class:`~volatility.framework.objects.Boolean`,
+:py:class:`~volatility.framework.objects.Float`,
+:py:class:`~volatility.framework.objects.Char`,
+:py:class:`~volatility.framework.objects.Bytes`)
+or the other builtins (such as
+:py:class:`~volatility.framework.objects.Array`,
+:py:class:`~volatility.framework.objects.Bitfield`,
+:py:class:`~volatility.framework.objects.Enumeration`,
+:py:class:`~volatility.framework.objects.Pointer`,
+:py:class:`~volatility.framework.objects.String`,
+:py:class:`~volatility.framework.objects.Void`) then you can review the following information about defining an entirely
+new object.
+
+All objects must inherit from :py:class:`~volatility.framework.interfaces.objects.ObjectInterface` which defines a
+constructor that takes a context, a `type_name`, an :py:class:`~volatility.framework.interfaces.objects.ObjectInformation`
+object and then can accept additional keywords (which will not necessarily be provided if the object is constructed
+from a JSON reference).
+
+The :py:class:`~volatility.framework.interfaces.objects.ObjectInformation` class contains all the basic elements that
+define an object, which include:
+
+* layer_name
+* offset
+* member_name
+* parent
+* native_layer_name
+* size
+
+The layer_name and offset are how volatility reads the data of the object.  Since objects can reference other objects
+(specifically pointers), and contain values that are used as offsets in a particular layer, there is also the concept
+of a native_layer_name.  The native_layer_name allows an object to be constructed based on physical data (for instance)
+but to reference virtual addresses, or for an object in the kernel virtual layer to reference offsets in a process
+virtual layer.
+
+The member_name and parent are optional and are used for when an object is constructed as a member of a structure.
+The parent points back to the object that created this one, and member_name is the name of the attribute of the parent
+used to get to this object.
+
+Finally, some objects are dynamically sized, and this size parameter allows a constructor to specify how big the object
+should be.  Note, the size can change throughout the lifespan of the object, and the object will need to ensure that
+it compensates for such a change.
+
+Objects must also contain a specific class called `VolTemplateProxy` which must inherit from
+:py:class:`~volatility.framework.interfaces.objects.ObjectInterface`.  This is used to access information about
+a structure before it has been associated with data and becomes an Object.  The
+:py:class:`~volatility.framework.interfaces.objects.ObjectInterface.VolTemplateProxy` class contains a number of
+abstract classmethods, which take a :py:class:`~volatility.framework.interfaces.objects.Template`.  The main method
+that is likely to need overwriting is the `size` method, which should return the size of the object (for the template
+of a dynamically-sized object, this should be a suitable value, and calculated based on the best available information).
+For most objects, this can be determined from the JSON data used to construct a normal `Struct` and therefore only needs
+to be defined for very specific objects.
+
 
