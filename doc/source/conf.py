@@ -63,6 +63,26 @@ def setup(app):
                         if plugins_seen and line == b'':
                             contents.write(b'   volatility.plugins')
                         contents.write(line)
+            elif filename == 'volatility.plugins.rst':
+                with open(os.path.join(dir, filename), "rb") as contents:
+                    lines = contents.readlines()
+                with open(os.path.join(dir, 'volatility.framework.plugins.rst'), "rb") as contents:
+                    real_lines = contents.readlines()
+
+                # Process real_lines
+                for line_index in range(len(real_lines)):
+                    if b'Submodules' in real_lines[line_index]:
+                        break
+                else:
+                    line_index = len(real_lines)
+                submodule_lines = real_lines[line_index:]
+
+                plugins_seen = False
+                with open(os.path.join(dir, filename), "wb") as contents:
+                    for line in lines:
+                        contents.write(line)
+                    for line in submodule_lines:
+                        contents.write(line.replace(b'volatility.framework.plugins', b'volatility.plugins'))
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
