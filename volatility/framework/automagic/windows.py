@@ -114,7 +114,7 @@ class DtbTest:
 
 class DtbTest32bit(DtbTest):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntel,
                          ptr_struct = "I",
                          ptr_reference = 0x300,
@@ -123,7 +123,7 @@ class DtbTest32bit(DtbTest):
 
 class DtbTest64bit(DtbTest):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
                          ptr_reference = 0x1ED,
@@ -132,7 +132,7 @@ class DtbTest64bit(DtbTest):
 
 class DtbTestPae(DtbTest):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntelPAE,
                          ptr_struct = "Q",
                          ptr_reference = 0x3,
@@ -201,7 +201,7 @@ class DtbSelfRef32bit(DtbSelfReferential):
 
 class DtbSelfRef64bit(DtbSelfReferential):
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
                          ptr_reference = 0x1ED,
@@ -249,8 +249,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
         useful = []
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
         if (isinstance(requirement, requirements.TranslationLayerRequirement)
-                and requirement.requirements.get("class", False)
-                and requirement.unsatisfied(context, config_path)):
+                and requirement.requirements.get("class", False) and requirement.unsatisfied(context, config_path)):
             class_req = requirement.requirements["class"]
 
             for test in self.tests:

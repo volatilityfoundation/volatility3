@@ -2,7 +2,6 @@ import functools
 from typing import List, Optional, Tuple, Iterable
 
 from volatility.framework import exceptions, interfaces
-from volatility.framework.interfaces.layers import IteratorValue
 
 
 class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
@@ -68,5 +67,5 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
     def _scan_iterator(self,
                        scanner: 'interfaces.layers.ScannerInterface',
                        sections: Iterable[Tuple[int, int]],
-                       linear: bool = True) -> Iterable[IteratorValue]:
+                       linear: bool = True) -> Iterable[interfaces.layers.IteratorValue]:
         return super()._scan_iterator(scanner, sections, linear)

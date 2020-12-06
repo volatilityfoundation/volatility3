@@ -25,7 +25,7 @@ def load_cached_validations() -> Set[str]:
     return validhashes
 
 
-def record_cached_validations(validations):
+def record_cached_validations(validations: Set[str]) -> None:
     """Record the cached validations, so we don't need to revalidate them in
     future."""
     with open(cached_validation_filepath, "w") as f:

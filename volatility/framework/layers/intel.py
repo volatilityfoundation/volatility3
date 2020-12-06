@@ -27,8 +27,7 @@ class Intel(linear.LinearlyMappedLayer):
     _maxphyaddr = 32
     _maxvirtaddr = _maxphyaddr
     _structure = [('page directory', 10, False), ('page table', 10, True)]
-    _direct_metadata = collections.ChainMap({'architecture': 'Intel32'},
-                                            {'mapped': True},
+    _direct_metadata = collections.ChainMap({'architecture': 'Intel32'}, {'mapped': True},
                                             interfaces.layers.TranslationLayerInterface._direct_metadata)
 
     def __init__(self,
@@ -107,7 +106,7 @@ class Intel(linear.LinearlyMappedLayer):
 
         return page, 1 << (position + 1), self._base_layer
 
-    def _translate_entry(self, offset):
+    def _translate_entry(self, offset: int) -> Tuple[int, int]:
         """Translates a specific offset based on paging tables.
 
         Returns the translated entry value
@@ -271,7 +270,7 @@ class WindowsMixin(Intel):
         """
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
-    def _translate_swap(self, layer: Intel, offset: int, bit_offset: int):
+    def _translate_swap(self, layer: Intel, offset: int, bit_offset: int) -> Tuple[int, int, str]:
         try:
             return super()._translate(offset)
         except exceptions.PagedInvalidAddressException as excp:
@@ -308,11 +307,11 @@ class WindowsIntel(WindowsMixin, Intel):
 
 class WindowsIntelPAE(WindowsMixin, IntelPAE):
 
-    def _translate(self, offset):
+    def _translate(self, offset: int) -> Tuple[int, int, str]:
         return self._translate_swap(self, offset, self._bits_per_register)
 
 
 class WindowsIntel32e(WindowsMixin, Intel32e):
 
-    def _translate(self, offset):
+    def _translate(self, offset: int) -> Tuple[int, int, str]:
         return self._translate_swap(self, offset, self._bits_per_register // 2)

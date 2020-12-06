@@ -32,7 +32,7 @@ class WarningFindSpec(abc.MetaPathFinder):
     used."""
 
     @staticmethod
-    def find_spec(fullname: str, path, target = None):
+    def find_spec(fullname: str, path: Optional[List[str]], target: None = None, **kwargs) -> None:
         """Mock find_spec method that just checks the name, this must go
         first."""
         if fullname.startswith("volatility.framework.plugins."):

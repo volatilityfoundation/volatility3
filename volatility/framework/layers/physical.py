@@ -63,10 +63,10 @@ class BufferDataLayer(interfaces.layers.DataLayerInterface):
 
 class DummyLock:
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         pass
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type, value, traceback) -> None:
         pass
 
 

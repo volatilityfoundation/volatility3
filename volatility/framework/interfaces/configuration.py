@@ -23,7 +23,7 @@ import random
 import string
 import sys
 from abc import ABCMeta, abstractmethod
-from typing import Any, ClassVar, Dict, Generator, List, Optional, Type, Union, Tuple
+from typing import Any, ClassVar, Dict, Generator, Iterator, List, Optional, Type, Union, Tuple
 
 from volatility import classproperty
 from volatility.framework import constants, interfaces
@@ -120,7 +120,7 @@ class HierarchicalDict(collections.abc.Mapping):
             return key[key.index(self.separator) + 1:]
         return ''
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Any]:
         """Returns an iterator object that supports the iterator protocol."""
         return self.generator()
 
@@ -137,7 +137,7 @@ class HierarchicalDict(collections.abc.Mapping):
             for key in self._subdict[subdict_key]:
                 yield subdict_key + self.separator + key
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> ConfigSimpleType:
         """Gets an item, traversing down the trees to get to the final
         value."""
         try:
@@ -465,7 +465,7 @@ class ClassRequirement(RequirementInterface):
     :class:`SymbolTableRequirement` classes.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._cls = None
 
@@ -512,7 +512,7 @@ class ConstructableRequirementInterface(RequirementInterface):
     arguments.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.add_requirement(ClassRequirement("class", "Class of the constructable requirement"))
         self._current_class_requirements = set()

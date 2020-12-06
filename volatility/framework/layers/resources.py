@@ -13,7 +13,7 @@ import ssl
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import Optional, Any
+from typing import Optional, Any, IO
 from urllib import error
 
 from volatility import framework
@@ -34,12 +34,11 @@ except ImportError:
 
 vollog = logging.getLogger(__name__)
 
-
 # TODO: Type-annotating the ResourceAccessor.open method is difficult because HTTPResponse is not actually an IO[Any] type
 #   fix this
 
 
-def cascadeCloseFile(new_fp, original_fp):
+def cascadeCloseFile(new_fp: IO[bytes], original_fp: IO[bytes]) -> IO[bytes]:
     """Really horrible solution for ensuring files aren't left open
 
     Args:

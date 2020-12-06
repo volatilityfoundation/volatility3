@@ -13,14 +13,13 @@ import zipfile
 from abc import ABCMeta
 from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Tuple, Mapping
 
-import volatility.framework.layers.resources
+from volatility.framework.layers import resources
 from volatility import schemas, symbols
 from volatility.framework import class_subclasses, constants, exceptions, interfaces, objects
 from volatility.framework.configuration import requirements
 from volatility.framework.symbols import native, metadata
 
 vollog = logging.getLogger(__name__)
-
 
 # ## TODO
 #
@@ -48,6 +47,7 @@ vollog = logging.getLogger(__name__)
 
 
 def _construct_delegate_function(name: str, is_property: bool = False) -> Any:
+
     def _delegate_function(self, *args, **kwargs):
         if is_property:
             return getattr(self._delegate, name)
@@ -104,7 +104,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         # Check there are no obvious errors
         # Open the file and test the version
         self._versions = dict([(x.version, x) for x in class_subclasses(ISFormatTable)])
-        fp = volatility.framework.layers.resources.ResourceAccessor().open(isf_url)
+        fp = resources.ResourceAccessor().open(isf_url)
         reader = codecs.getreader("utf-8")
         json_object = json.load(reader(fp))  # type: ignore
         fp.close()
@@ -188,9 +188,8 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             zip_match = "/".join(os.path.split(filename))
 
         # Check user symbol directory first, then fallback to the framework's library to allow for overloading
-        vollog.log(constants.LOGLEVEL_VVVV,
-                   "Searching for symbols in {}".format(", ".join(volatility.symbols.__path__)))
-        for path in volatility.symbols.__path__:
+        vollog.log(constants.LOGLEVEL_VVVV, "Searching for symbols in {}".format(", ".join(symbols.__path__)))
+        for path in symbols.__path__:
             if not os.path.isabs(path):
                 path = os.path.abspath(os.path.join(__file__, path))
             for extension in extensions:

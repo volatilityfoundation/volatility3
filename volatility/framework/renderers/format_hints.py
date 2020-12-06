@@ -8,6 +8,7 @@ These hints allow a plugin to indicate how they would like data from a particula
 
 Text renderers should attempt to honour all hints provided in this module where possible
 """
+from typing import Type
 
 
 class Bin(int):
@@ -28,12 +29,20 @@ class HexBytes(bytes):
 class MultiTypeData(bytes):
     """The contents are supposed to be a string, but may contain binary data."""
 
-    def __new__(cls, original, encoding: str = 'utf-16-le', split_nulls: bool = False, show_hex: bool = False):
+    def __new__(cls: Type['MultiTypeData'],
+                original: int,
+                encoding: str = 'utf-16-le',
+                split_nulls: bool = False,
+                show_hex: bool = False) -> 'MultiTypeData':
         if isinstance(original, int):
             original = str(original).encode(encoding)
         return super().__new__(cls, original)
 
-    def __init__(self, original: bytes, encoding: str = 'utf-16-le', split_nulls: bool = False, show_hex: bool = False):
+    def __init__(self,
+                 original: bytes,
+                 encoding: str = 'utf-16-le',
+                 split_nulls: bool = False,
+                 show_hex: bool = False) -> None:
         self.converted_int = False  # type: bool
         if isinstance(original, int):
             self.converted_int = True

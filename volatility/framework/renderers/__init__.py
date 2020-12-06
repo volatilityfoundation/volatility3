@@ -9,7 +9,7 @@ or file or graphical output
 import collections
 import datetime
 import logging
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union
 
 from volatility.framework import interfaces
 from volatility.framework.interfaces import renderers
@@ -85,7 +85,7 @@ class TreeNode(interfaces.renderers.TreeNode):
             #     tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
 
     @property
-    def values(self) -> List[interfaces.renderers.BaseTypes]:
+    def values(self) -> Sequence[interfaces.renderers.BaseTypes]:
         """Returns the list of values from the particular node, based on column
         index."""
         return self._values
@@ -158,7 +158,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """
         self._populated = False
         self._row_count = 0
-        self._children = []  # type: List[TreeNode]
+        self._children = []  # type: List[interfaces.renderers.TreeNode]
         converted_columns = []  # type: List[interfaces.renderers.Column]
         if len(columns) < 1:
             raise ValueError("Columns must be a list containing at least one column")
@@ -207,7 +207,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
 
         if not self.populated:
             try:
-                prev_nodes = []  # type: List[TreeNode]
+                prev_nodes = []  # type: List[interfaces.renderers.TreeNode]
                 for (level, item) in self._generator:
                     parent_index = min(len(prev_nodes), level)
                     parent = prev_nodes[parent_index - 1] if parent_index > 0 else None
@@ -226,7 +226,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         return None
 
     @property
-    def populated(self):
+    def populated(self) -> bool:
         """Indicates that population has completed and the tree may now be
         manipulated separately."""
         return self._populated
@@ -241,11 +241,11 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         """Returns the number of rows populated."""
         return self._row_count
 
-    def children(self, node) -> List[interfaces.renderers.TreeNode]:
+    def children(self, node: Optional[interfaces.renderers.TreeNode]) -> List[interfaces.renderers.TreeNode]:
         """Returns the subnodes of a particular node in order."""
         return [node for node, _ in self._find_children(node)]
 
-    def _find_children(self, node):
+    def _find_children(self, node: Optional[interfaces.renderers.TreeNode]) -> Any:
         """Returns the children list associated with a particular node.
 
         Returns None if the node does not exist
@@ -268,13 +268,13 @@ class TreeGrid(interfaces.renderers.TreeGrid):
             raise TypeError("Node must be a valid node within the TreeGrid")
         return node.values
 
-    def _append(self, parent, values):
+    def _append(self, parent: Optional[interfaces.renderers.TreeNode], values: Any) -> TreeNode:
         """Adds a new node at the top level if parent is None, or under the
         parent node otherwise, after all other children."""
         children = self.children(parent)
         return self._insert(parent, len(children), values)
 
-    def _insert(self, parent, position, values):
+    def _insert(self, parent: Optional[interfaces.renderers.TreeNode], position: int, values: Any) -> TreeNode:
         """Inserts an element into the tree at a specific position."""
         parent_path = ""
         children = self._find_children(parent)
@@ -334,7 +334,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
         return accumulator
 
     def _visit(self,
-               list_of_children: List['TreeNode'],
+               list_of_children: List[interfaces.renderers.TreeNode],
                function: Callable,
                accumulator: _T,
                sort_key: Optional[interfaces.renderers.ColumnSortKey] = None) -> _T:

@@ -609,5 +609,5 @@ class LayerContainer(collections.abc.Mapping):
 class DummyProgress(object):
     """A class to emulate Multiprocessing/threading Value objects."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.value = 0

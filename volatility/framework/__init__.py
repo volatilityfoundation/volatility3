@@ -17,7 +17,7 @@ import importlib
 import inspect
 import logging
 import os
-from typing import Any, Dict, Generator, List, Type, TypeVar
+from typing import Any, Dict, Generator, List, Tuple, Type, TypeVar
 
 from volatility.framework import constants, interfaces
 
@@ -32,7 +32,7 @@ from volatility.framework import constants, interfaces
 #     PATCH version when you make backwards compatible bug fixes.
 
 
-def interface_version():
+def interface_version() -> Tuple[int, int, int]:
     """Provides the so version number of the library."""
     return constants.VERSION_MAJOR, constants.VERSION_MINOR, constants.VERSION_PATCH
 

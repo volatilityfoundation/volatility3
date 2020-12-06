@@ -5,7 +5,7 @@
 import argparse
 import gettext
 import re
-
+from typing import List
 
 # This effectively overrides/monkeypatches the core argparse module to provide more helpful output around choices
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
@@ -18,12 +18,16 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
     """Class to either select a unique plugin based on a substring, or identify
     the alternatives."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # We don't want the action self-check to kick in, so we remove the choices list, the check happens in __call__
         self.choices = None
 
-    def __call__(self, parser, namespace, values, option_string = None):
+    def __call__(self,
+                 parser: 'HelpfulArgParser',
+                 namespace: argparse.Namespace,
+                 values: List[str],
+                 option_string: None = None) -> None:
         parser_name = values[0]
         arg_strings = values[1:]
 

@@ -8,9 +8,9 @@ import random
 import string
 import sys
 from functools import wraps
-from typing import Any, List, Tuple, Dict
+from typing import Callable, Any, List, Tuple, Dict
 
-from volatility.framework.interfaces.renderers import RenderOption
+from volatility.framework import interfaces, renderers
 from volatility.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -21,8 +21,6 @@ try:
 except ImportError:
     CAPSTONE_PRESENT = False
     vollog.debug("Disassembly library capstone not found")
-
-from volatility.framework import interfaces, renderers
 
 
 def hex_bytes_as_text(value: bytes) -> str:
@@ -67,7 +65,8 @@ def multitypedata_as_text(value: format_hints.MultiTypeData) -> str:
     return hex_bytes_as_text(value)
 
 
-def optional(func):
+def optional(func: Callable) -> Callable:
+
     @wraps(func)
     def wrapped(x: Any) -> str:
         if isinstance(x, interfaces.renderers.BaseAbsentValue):
@@ -80,7 +79,8 @@ def optional(func):
     return wrapped
 
 
-def quoted_optional(func):
+def quoted_optional(func: Callable) -> Callable:
+
     @wraps(func)
     def wrapped(x: Any) -> str:
         result = optional(func)(x)
@@ -263,8 +263,7 @@ class PrettyTextRenderer(CLIRenderer):
         max_column_widths = dict([(column.name, len(column.name)) for column in grid.columns])
 
         def visitor(
-                node: interfaces.renderers.TreeNode,
-                accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
+            node: interfaces.renderers.TreeNode, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
         ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
@@ -313,7 +312,7 @@ class JsonRenderer(CLIRenderer):
     name = 'JSON'
     structured_output = True
 
-    def get_render_options(self) -> List[RenderOption]:
+    def get_render_options(self) -> List[interfaces.renderers.RenderOption]:
         pass
 
     def output_result(self, outfd, result):
@@ -328,7 +327,7 @@ class JsonRenderer(CLIRenderer):
             {}, [])  # type: Tuple[Dict[str, List[interfaces.renderers.TreeNode]], List[interfaces.renderers.TreeNode]]
 
         def visitor(
-                node: interfaces.renderers.TreeNode, accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]
+            node: interfaces.renderers.TreeNode, accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]
         ) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             acc_map, final_tree = accumulator
