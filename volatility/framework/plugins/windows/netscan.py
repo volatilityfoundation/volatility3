@@ -153,10 +153,10 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (10, 0, 14393): "netscan-win10-14393-x86",
                 (10, 0, 15063): "netscan-win10-15063-x86",
                 (10, 0, 16299): "netscan-win10-15063-x86",
-                (10, 0, 17134): "netscan-win10-15063-x86",
-                (10, 0, 17763): "netscan-win10-15063-x86",
-                (10, 0, 18362): "netscan-win10-15063-x86",
-                (10, 0, 18363): "netscan-win10-15063-x86"
+                (10, 0, 17134): "netscan-win10-17134-x86",
+                (10, 0, 17763): "netscan-win10-17134-x86",
+                (10, 0, 18362): "netscan-win10-17134-x86",
+                (10, 0, 18363): "netscan-win10-17134-x86"
             }
         else:
             version_dict = {
@@ -173,11 +173,12 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (10, 0, 10586): "netscan-win10-x64",
                 (10, 0, 14393): "netscan-win10-x64",
                 (10, 0, 15063): "netscan-win10-15063-x64",
-                (10, 0, 16299): "netscan-win10-15063-x64",
-                (10, 0, 17134): "netscan-win10-15063-x64",
-                (10, 0, 17763): "netscan-win10-15063-x64",
-                (10, 0, 18362): "netscan-win10-15063-x64",
-                (10, 0, 18363): "netscan-win10-15063-x64"
+                (10, 0, 16299): "netscan-win10-16299-x64",
+                (10, 0, 17134): "netscan-win10-17134-x64",
+                (10, 0, 17763): "netscan-win10-17763-x64",
+                (10, 0, 18362): "netscan-win10-17763-x64",
+                (10, 0, 18363): "netscan-win10-17763-x64",
+                (10, 0, 19041): "netscan-win10-19041-x64"
             }
 
         # when determining the symbol file we have to consider the following cases:
@@ -187,13 +188,15 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # windows version cannot be determined -> throw exc
         filename = version_dict.get((nt_major_version, nt_minor_version, vers_minor_version))
         if not filename:
-            if nt_major_version == 10:
-                # NtMajorVersion of 10 without a match means a newer version than listed
-                # hence try the latest supported version. If this one throws an error,
-                # support has to be added manually.
-                win_10_versions = sorted([key for key in list(version_dict.keys()) if key[0] == 10])
-                # as win10 MinorVersion counts upwards we can take the last entry
-                latest_version = win_10_versions[-1]
+            # no match on filename means that we possibly have a version newer than those listed here.
+            # try to grab the latest supported version of the current image NT version. If that symbol
+            # version does not work, support has to be added manually.
+            current_versions = [key for key in list(version_dict.keys()) if key[0] == nt_major_version and key[1] == nt_minor_version]
+            current_versions.sort()
+    
+            if current_versions:
+                latest_version = current_versions[-1]
+
                 filename = version_dict.get(latest_version)
                 vollog.debug("Unable to find exact matching symbol file, going with latest: {}".format(filename))
             else:
