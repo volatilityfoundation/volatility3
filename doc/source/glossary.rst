@@ -50,9 +50,13 @@ M
 .. _Map:
 
 Map, mapping
-    A mapping is a relationship between two values, where one value (the :ref:`Domain<domain>` maps to the :ref:`Range<range>` value).
-    Mappings can be seen as a mathematical function, and therefore volatility 3 attempts to use mathematical functional
-    notation where possible.
+    A mapping is a relationship between two sets (where elements of the :ref:`Domain<domain>` map to elements
+    of the :ref:`Range<range>`).  Mappings can be seen as a mathematical function, and therefore volatility 3
+    attempts to use mathematical functional notation where possible.  Within volatility a mapping is most often
+    used to refer to the function for translating addresses from a higher layer (domain) to a lower layer (range).
+    For further information, please see
+    `Function (mathematics) in wikipedia https://en.wikipedia.org/wiki/Function_(mathematics)`
+
 
 .. _Member:
 
@@ -66,13 +70,14 @@ O
 
 Object
     This has a specific meaning within computer programming (as in Object Oriented Programming), but within the world
-    of Volatility it is used to refer to a type that has been associated with a chunk of data.  See all :ref:`Type<type>`.
+    of Volatility it is used to refer to a type that has been associated with a chunk of data, or a specific instance
+    of a type.  See also :ref:`Type<type>`.
 
 .. _Offset:
 
 Offset
     A numeric value that identifies a distance within a group of bytes, to uniquely identify a single byte, or the
-    start of a run of bytes.  This is often relative (offset from another object/item) but can be absolute (offset from
+    start of a run of bytes.  An offset is often relative (offset from another object/item) but can be absolute (offset from
     the start of a region of data).
 
 P
@@ -81,17 +86,18 @@ P
 
 Packed
     Structures are often :ref:`aligned<alignment>` meaning that the various members (subtypes) are always aligned at
-    particular values (usually multiples of 2, 4 or 8).  Thus if a particular value is an odd number of bytes, the
-    next chunk of data containing useful information would start at an even offset, and a single byte of
-    :ref:`padding<padding>` would be used to ensure appropriate :ref:`alignment<alignment>`.  In packed structures, no
-    padding is used, and offsets may be at odd offsets.
+    particular values (usually multiples of 2, 4 or 8).  Thus if the data used to represent a particular value has
+    an odd number of bytes, not a multiple of the chosen number, there will be :ref:`padding<padding>` between it and
+    the next member.  In packed structs, no padding is used and the offset of the next member depends on the length of
+    the previous one.
 
 .. _Padding:
 
 Padding
-    Data that (usually) contains no useful information.  The typical value used for padding is 0, so should a string
-    :ref:`object<object>` that has been allocated a particular number of bytes, contain a string of fewer bytes, the remaing bytes
-    will be padded with null (0) bytes.
+    Data that (usually) contains no useful information.  The typical value used for padding is 0 (sometimes called
+    a null byte).  As an example, if a string :ref:`object<object>` that has been allocated a particular number of
+    bytes, actually contains fewer bytes, the rest of the data (to make up the original length) will be padded with
+    null (0) bytes.
 
 .. _Page:
 
@@ -115,14 +121,15 @@ Page Table
 Pointer
     A value within memory that points to a different area of memory.  This allows objects to contain references to
     other objects without containing all the data of the other object.  Following a pointer is known as :ref:`dereferencing<dereference>`
-    a pointer.  Pointers are usually as large as the size of the
+    a pointer.  Pointers are usually the same length as the maximum address of the address space, since they
+    should be able to point to any address within the space.
 
 R
 -
 .. _Range:
 
 Range
-    This is the grouping the output values for a mapping or mathematical function.
+    This is the set of the possible output values for a mapping or mathematical function.
 
 S
 -
@@ -130,16 +137,18 @@ S
 
 Struct, Structure
     A means of containing multiple different :ref:`type<types>` associated together.  A struct typically contains
-    other :ref:`type<types>`, one directly after another (unless :ref:`packing<packed>` is involved).  In this way
+    other :ref:`type<types>`, usually :ref:`aligned<alignment>` (unless :ref:`packing<packed>` is involved).  In this way
     the :ref:`members<member>` of a type can be accessed by finding the data at the relative :ref:`offset<offset>` to
     the start of the structure.
 
 .. _Symbol:
 
 Symbol
-    This is used in many different contexts, as short term for many things.  A symbol is a construct that usually
-    encompasses a specific :ref:`offset<Offset>` and a :ref:`type<Type>`, representing a specific instance of a type within the memory of a
-    compiled and running program.
+    This is used in many different contexts, as a short term for many things.  Within Volatility, a symbol is a
+    construct that usually encompasses a specific type :ref:`type<Type>` at a specfific :ref:`offset<Offset>`,
+    representing a particular instance of that type within the memory of a compiled and running program.  An example
+    would be the location in memory of a list of active tcp endpoints maintained by the networking stack
+    within an operating system.
 
 T
 -
