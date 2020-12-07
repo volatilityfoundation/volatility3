@@ -10,7 +10,7 @@ from volatility.plugins.windows import pslist
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.objects import utility
-from typing import List, Tuple, Type
+from typing import List, Tuple, Type, Optional
 vollog = logging.getLogger(__name__)
 
 FILE_DEVICE_DISK = 0x7
@@ -48,11 +48,13 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(name='handles', component=handles.Handles, version=(1, 0, 0))
         ]
 
-    def dump_file_producer(self, file_object: interfaces.objects.ObjectInterface,
+    @classmethod
+    def dump_file_producer(cls,
+                           file_object: interfaces.objects.ObjectInterface,
                            memory_object: interfaces.objects.ObjectInterface,
                            open_method: Type[interfaces.plugins.FileHandlerInterface],
                            layer: interfaces.layers.DataLayerInterface,
-                           desired_file_name: str) -> str:
+                           desired_file_name: str) -> Optional[interfaces.plugins.FileHandlerInterface]:
         """Produce a file from the memory object's get_available_pages() interface.
 
         :param file_object: the parent _FILE_OBJECT
@@ -77,13 +79,15 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 filedata.write(data)
 
             if not bytes_written:
-                result_text = "No data is cached for the file at {0:#x}".format(file_object.vol.offset)
+                #vollog.debug("No data is cached for the file at {0:#x}".format(file_object.vol.offset))
+                return None
             else:
-                result_text = "Stored {}".format(filedata.preferred_filename)
+                vollog.debug("Stored {}".format(filedata.preferred_filename))
+                return filedata
         except exceptions.InvalidAddressException:
-            result_text = "Unable to dump file at {0:#x}".format(file_object.vol.offset)
-
-        return result_text
+            #vollog.debug("Unable to dump file at {0:#x}".format(
+                #file_object.vol.offset))
+            return None
 
     def process_file_object(self, file_obj: interfaces.objects.ObjectInterface) -> Tuple:
         """Given a FILE_OBJECT, dump data to separate files for each of the three file caches.
@@ -144,11 +148,16 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                                                                         ntpath.basename(obj_name),
                                                                         extension)
 
-            result_text = self.dump_file_producer(file_obj, memory_object, self.open, layer, desired_file_name)
+            file_handle = self.dump_file_producer(file_obj, memory_object, self.open, layer, desired_file_name)
+
+            file_output = "Error dumping file"
+            if file_handle:
+                file_handle.close()
+                file_output = file_handle.preferred_filename
 
             yield (cache_name, format_hints.Hex(file_obj.vol.offset),
                 ntpath.basename(obj_name), # temporary, so its easier to visualize output
-                result_text)
+                file_output)
 
     def _generator(self, procs: List, offsets: List):
 
