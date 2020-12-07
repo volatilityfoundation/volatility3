@@ -79,14 +79,14 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 filedata.write(data)
 
             if not bytes_written:
-                #vollog.debug("No data is cached for the file at {0:#x}".format(file_object.vol.offset))
+                vollog.debug("No data is cached for the file at {0:#x}".format(file_object.vol.offset))
                 return None
             else:
                 vollog.debug("Stored {}".format(filedata.preferred_filename))
                 return filedata
         except exceptions.InvalidAddressException:
-            #vollog.debug("Unable to dump file at {0:#x}".format(
-                #file_object.vol.offset))
+            vollog.debug("Unable to dump file at {0:#x}".format(
+                file_object.vol.offset))
             return None
 
     def process_file_object(self, file_obj: interfaces.objects.ObjectInterface) -> Tuple:
