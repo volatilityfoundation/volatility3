@@ -756,7 +756,6 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
 
-
 class TOKEN(objects.StructType):
     """A class for process etoken object."""
 
