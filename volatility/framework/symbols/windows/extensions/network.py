@@ -109,6 +109,18 @@ class _TCP_LISTENER(objects.StructType):
     def get_in_addr(self):
         try:
             local_addr = self.LocalAddr.dereference()
+            # there is a rare edge case here we have to consider:
+            # if the struct has a null pointer at the LocalAddr offset,
+            # this generally means this struct has no associated local address.
+            # however, sometimes a pointer to the offset of 0 can be valid because
+            # it points to a valid virtual memory address of 0. this confuses this
+            # plugin because trying to access the nullpointer does not raise any
+            # errors, leading to errors later down the line when accessing the
+            # pointed-to _IN_ADDR addr4/6 attributes.
+
+            # addr4/6 are at the same offset, accessing the first byte covers both.
+            # if this causes no error, we can expect a valid network addr.
+            _ = local_addr.pData.dereference().addr4[0]
 
             if local_addr.pData.dereference():
                 inaddr = local_addr.inaddr
@@ -147,9 +159,11 @@ class _TCP_LISTENER(objects.StructType):
 
         try:
             if not self.get_address_family() in (AF_INET, AF_INET6):
+                vollog.debug("netw obj 0x{:x} invalid due to invalid address_family {}".format(self.vol.offset, self.get_address_family()))
                 return False
 
         except exceptions.InvalidAddressException:
+            vollog.debug("netw obj 0x{:x} invalid due to invalid address access".format(self.vol.offset))
             return False
         return True
 

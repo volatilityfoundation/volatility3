@@ -246,7 +246,7 @@
     "_TCP_LISTENER": {
         "fields": {
             "Owner": {
-                "offset": 24,
+                "offset": 28,
                 "type": {
                     "kind": "pointer",
                     "subtype": {
@@ -257,14 +257,14 @@
                 }
             },
             "CreateTime": {
-                "offset": 32,
+                "offset": 40,
                 "type": {
                     "kind": "union",
                     "name": "_LARGE_INTEGER"
                 }
             },
             "LocalAddr": {
-                "offset": 52,
+                "offset": 60,
                 "type":{
                     "kind": "pointer",
                     "subtype": {
@@ -275,7 +275,7 @@
                 }
             },
             "InetAF": {
-                "offset": 56,
+                "offset": 64,
                 "type":{
                     "kind": "pointer",
                     "subtype": {
@@ -286,7 +286,7 @@
                 }
             },
             "Port": {
-                "offset": 62,
+                "offset": 70,
                 "type": {
                     "kind": "base",
                     "name": "unsigned be short"
@@ -294,7 +294,7 @@
             }
         },
         "kind": "struct",
-        "size": 64
+        "size": 72
     },
     "_TCP_ENDPOINT": {
         "fields": {
@@ -309,7 +309,7 @@
                 }
             },
             "CreateTime": {
-                "offset": 0,
+                "offset": 440,
                 "type": {
                     "kind": "union",
                     "name": "_LARGE_INTEGER"
@@ -365,7 +365,7 @@
             }
         },
         "kind": "struct",
-        "size": 436
+        "size": 448
     },
     "_LOCAL_ADDRESS": {
         "fields": {
