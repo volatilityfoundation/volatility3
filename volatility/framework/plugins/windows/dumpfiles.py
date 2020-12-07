@@ -43,8 +43,8 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             requirements.IntRequirement(name='physaddr',
                                         description="Dump a single _FILE_OBJECT at this physical address",
                                         optional=True),
-            requirements.PluginRequirement(name='pslist', plugin=pslist.PsList, version=(1, 0, 0)),
-            requirements.PluginRequirement(name='handles', plugin=handles.Handles, version=(1, 0, 0))
+            requirements.VersionRequirement(name='pslist', component=pslist.PsList, version=(2, 0, 0)),
+            requirements.VersionRequirement(name='handles', component=handles.Handles, version=(1, 0, 0))
         ]
 
     def dump_file_producer(self, file_object: interfaces.objects.ObjectInterface,
