@@ -10,6 +10,7 @@ from volatility.framework import constants, exceptions, interfaces, renderers, s
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import versions
 from volatility.framework.symbols.windows.extensions import network
 from volatility.plugins import timeliner
 from volatility.plugins.windows import info, poolscanner
@@ -101,6 +102,8 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         is_64bit = symbols.symbol_table_is_64bit(context, nt_symbol_table)
 
+        is_18363_or_later = versions.is_win10_18363_or_later(context = context, symbol_table = nt_symbol_table)
+
         if is_64bit:
             arch = "x64"
         else:
@@ -180,6 +183,14 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (10, 0, 18363): "netscan-win10-18363-x64",
                 (10, 0, 19041): "netscan-win10-19041-x64"
             }
+
+        # special use case: Win10_18363 is not recognized by windows.info as 18363
+        # because all kernel file headers and debug structures report 18363 as 
+        # "10.0.18362.1198" with the last part being incremented. However, we can use
+        # os_distinguisher to differentiate between 18362 and 18363
+        if vers_minor_version == 18362 and is_18363_or_later:
+            vollog.debug("Detected 18363 data structures: working with 18363 symbol table.")
+            vers_minor_version = 18363
 
         # when determining the symbol file we have to consider the following cases:
         # the determined version's symbol file is found by intermed.create -> proceed
