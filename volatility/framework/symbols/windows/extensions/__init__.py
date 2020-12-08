@@ -393,7 +393,7 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
 
         # this pointer needs to be checked against native_layer_name because the object may
         # be instantiated from a primary (virtual) layer or a memory (physical) layer.
-        if self._context.layers[self.vol.native_layer_name].is_valid(self.DeviceObject):
+        if self.context.layers[self.vol.native_layer_name].is_valid(self.DeviceObject):
             try:
                 name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
             except ValueError:
@@ -922,7 +922,7 @@ class CONTROL_AREA(objects.StructType):
         The tuples generated are (physical_offset, file_offset, page_size).
         """
         symbol_table_name = self.get_symbol_table_name()
-        mmpte_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "_MMPTE")
+        mmpte_type = self.context.symbol_space.get_type(symbol_table_name + constants.BANG + "_MMPTE")
         mmpte_size = mmpte_type.size
         subsection = self.get_subsection()
         is_64bit = symbols.symbol_table_is_64bit(self._context, symbol_table_name)
@@ -1026,10 +1026,10 @@ class SHARED_CACHE_MAP(objects.StructType):
             return []
 
         symbol_table_name = self.get_symbol_table_name()
-        pointer_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer")
+        pointer_type = self.context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer")
 
         # Create an array of 128 entries for the VACB index array
-        vacb_array = self._context.object(object_type=symbol_table_name + constants.BANG + "array",
+        vacb_array = self.context.object(object_type=symbol_table_name + constants.BANG + "array",
                                           layer_name=self.vol.layer_name,
                                           offset=array_pointer,
                                           count=self.VACB_ARRAY,
