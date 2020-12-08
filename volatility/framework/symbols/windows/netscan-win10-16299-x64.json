@@ -105,7 +105,7 @@
 
                 }
             },
-            "MaskedPrevObj": {
+            "Next": {
                 "offset": 112,
                 "type":{
                     "kind": "pointer",
@@ -175,7 +175,7 @@
                     "name": "unsigned be short"
                 }
             },
-            "MaskedPrevObj": {
+            "Next": {
                 "offset": 120,
                 "type":{
                     "kind": "pointer",
@@ -259,7 +259,7 @@
                     "name": "TCPStateEnum"
                 }
             },
-            "MaskedPrevObj": {
+            "Next": {
                 "offset": 112,
                 "type":{
                     "kind": "pointer",
@@ -459,7 +459,7 @@
     },
     "_PORT_ASSIGNMENT_ENTRY": {
         "fields": {
-            "MaskedObjectPtr": {
+            "Entry": {
                 "offset": 8,
                 "type": {
                     "kind": "pointer",
