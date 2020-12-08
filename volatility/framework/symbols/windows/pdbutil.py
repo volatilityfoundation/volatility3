@@ -24,20 +24,21 @@ class PDBUtility:
     """Class to handle and manage all getting symbols based on MZ header"""
 
     @classmethod
-    def symbol_table_from_offset(cls,
-                                 context: interfaces.context.ContextInterface,
-                                 layer_name: str,
-                                 offset: int,
-                                 symbol_table_class: str,
-                                 config_path: str = None,
-                                 progress_callback: constants.ProgressCallback = None) -> Optional[str]:
+    def symbol_table_from_offset(
+            cls,
+            context: interfaces.context.ContextInterface,
+            layer_name: str,
+            offset: int,
+            symbol_table_class: str = "volatility.framework.symbols.intermed.IntermediateSymbolTable",
+            config_path: str = None,
+            progress_callback: constants.ProgressCallback = None) -> Optional[str]:
         """Produces the name of a symbol table loaded from the offset for an MZ header
 
         Args:
             context: The context on which to operate
             layer_name: The name of the (contiguous) layer within the context that contains the MZ file
             offset: The offset in the layer at which the MZ file begins
-            symbol_table_class: The type of symbol class to construct the SymbolTable
+            symbol_table_class: The class to use when constructing the SymbolTable
             config_path: New path for the produced symbol table configuration with the config tree
             progress_callback: Callable called to update ongoing progress
 
