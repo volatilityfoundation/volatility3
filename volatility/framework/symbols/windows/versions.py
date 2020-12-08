@@ -107,6 +107,9 @@ is_win10_16299_or_later = OsDistinguisher(version_check = lambda x: x >= (10, 0,
                                                              ("_EPROCESS", "KeepAliveCounter", False),
                                                              ("_EPROCESS", "ControlFlowGuardEnabled", False)])
 
+is_win10_18363_or_later = OsDistinguisher(version_check = lambda x: x >= (10, 0, 18363),
+                                          fallback_checks = [("_KQOS_GROUPING_SETS", None, True)])
+
 is_windows_10 = OsDistinguisher(version_check = lambda x: x >= (10, 0),
                                 fallback_checks = [("ObHeaderCookie", None, True)])
 
