@@ -59,6 +59,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
 
         :param file_object: the parent _FILE_OBJECT
         :param memory_object: the _CONTROL_AREA or _SHARED_CACHE_MAP
+        :param open_method: class for constructing output files
         :param layer: the memory layer to read from
         :param desired_file_name: name of the output file
         :return: result status
@@ -89,9 +90,17 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 file_object.vol.offset))
             return None
 
-    def process_file_object(self, file_obj: interfaces.objects.ObjectInterface) -> Tuple:
+    @classmethod
+    def process_file_object(cls, 
+                            context: interfaces.context.ContextInterface, 
+                            primary_layer_name: str,
+                            open_method: Type[interfaces.plugins.FileHandlerInterface],
+                            file_obj: interfaces.objects.ObjectInterface) -> Tuple:
         """Given a FILE_OBJECT, dump data to separate files for each of the three file caches.
 
+        :param context: the context to operate upon
+        :param primary_layer_name: primary/virtual layer to operate on
+        :param open_method: class for constructing output files
         :param file_object: the FILE_OBJECT
         """
 
@@ -104,8 +113,9 @@ class DumpFiles(interfaces.plugins.PluginInterface):
 
         # Depending on the type of object (DataSection, ImageSection, SharedCacheMap) we may need to
         # read from the memory layer or the primary layer.
-        memory_layer = self.context.layers["memory_layer"]
-        primary_layer = self.context.layers[self.config["primary"]]
+        memory_layer_name = context.layers[primary_layer_name].config['memory_layer']
+        memory_layer = context.layers[memory_layer_name]
+        primary_layer = context.layers[primary_layer_name]
 
         obj_name = file_obj.file_name_with_device()
 
@@ -148,7 +158,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                                                                         ntpath.basename(obj_name),
                                                                         extension)
 
-            file_handle = self.dump_file_producer(file_obj, memory_object, self.open, layer, desired_file_name)
+            file_handle = DumpFiles.dump_file_producer(file_obj, memory_object, open_method, layer, desired_file_name)
 
             file_output = "Error dumping file"
             if file_handle:
@@ -175,6 +185,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                                                 symbol_table=self.config["nt_symbols"])
 
             for proc in procs:
+
                 try:
                     object_table = proc.ObjectTable
                 except exceptions.InvalidAddressException:
@@ -187,7 +198,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                         obj_type = entry.get_object_type(type_map, cookie)
                         if obj_type == "File":
                             file_obj = entry.Body.cast("_FILE_OBJECT")
-                            for result in self.process_file_object(file_obj):
+                            for result in self.process_file_object(self.context, self.config["primary"], self.open, file_obj):
                                 yield (0, result)
                     except exceptions.InvalidAddressException:
                         vollog.log(constants.LOGLEVEL_VVV,
@@ -210,7 +221,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                         if not file_obj.is_valid():
                             continue
 
-                        for result in self.process_file_object(file_obj):
+                        for result in self.process_file_object(self.context, self.config["primary"], self.open, file_obj):
                             yield (0, result)
                     except exceptions.InvalidAddressException:
                         vollog.log(constants.LOGLEVEL_VVV,
@@ -229,7 +240,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                                                    layer_name=layer_name,
                                                    native_layer_name=self.config["primary"],
                                                    offset=offset)
-                    for result in self.process_file_object(file_obj):
+                    for result in self.process_file_object(self.context, self.config["primary"], self.open, file_obj):
                         yield (0, result)
                 except exceptions.InvalidAddressException:
                     vollog.log(constants.LOGLEVEL_VVV,
