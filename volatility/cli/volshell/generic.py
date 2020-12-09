@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, Type
 from volatility.cli import text_renderer
 from volatility.framework import renderers, interfaces, objects, plugins, exceptions
 from volatility.framework.configuration import requirements
-from volatility.framework.layers import intel
+from volatility.framework.layers import intel, physical
 
 try:
     import capstone
@@ -31,13 +31,12 @@ class Volshell(interfaces.plugins.PluginInterface):
         super().__init__(*args, **kwargs)
         self.__current_layer = None  # type: Optional[str]
 
+    def random_string(self, length: int = 32) -> str:
+        return ''.join(random.sample(string.ascii_uppercase + string.digits, length))
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"])
-        ]
+        return [requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer for the kernel')]
 
     def run(self, additional_locals: Dict[str, Any] = None) -> interfaces.renderers.TreeGrid:
         """Runs the interactive volshell plugin.
@@ -108,7 +107,8 @@ class Volshell(interfaces.plugins.PluginInterface):
                 (['dpo', 'display_plugin_output'], self.display_plugin_output),
                 (['gt', 'generate_treegrid'], self.generate_treegrid), (['rt',
                                                                          'render_treegrid'], self.render_treegrid),
-                (['ds', 'display_symbols'], self.display_symbols), (['hh', 'help'], self.help)]
+                (['ds', 'display_symbols'], self.display_symbols), (['hh', 'help'], self.help),
+                (['cc', 'create_configurable'], self.create_configurable), (['lf', 'load_file'], self.load_file)]
 
     def _construct_locals_dict(self) -> Dict[str, Any]:
         """Returns a dictionary of the locals """
@@ -271,7 +271,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         path_join = interfaces.configuration.path_join
 
         # Generate a temporary configuration path
-        plugin_config_suffix = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(32))
+        plugin_config_suffix = self.random_string()
         plugin_path = path_join(self.config_path, plugin_config_suffix)
 
         # Populate the configuration
@@ -316,6 +316,49 @@ class Volshell(interfaces.plugins.PluginInterface):
             symbol = table.get_symbol(symbol_name)
             len_offset = len(hex(symbol.address))
             print(" " * (longest_offset - len_offset), hex(symbol.address), " ", symbol.name)
+
+    def load_file(self, filename: str):
+        """Loads a file into a layer and returns the name of the layer"""
+        layer_name = self.context.layers.free_layer_name()
+        current_config_path = 'volshell.layers.' + layer_name
+        self.context.config[interfaces.configuration.path_join(current_config_path, "location")] = filename
+        layer = physical.FileLayer(self.context, current_config_path, layer_name)
+        self.context.add_layer(layer)
+        return layer_name
+
+    def create_configurable(self, clazz: Type[interfaces.configuration.ConfigurableInterface], **kwargs):
+        """Creates a configurable object, converting arguments to configuration"""
+        config_name = self.random_string()
+        config_path = 'volshell.configurable.' + config_name
+
+        constructor_args = {}
+        constructor_keywords = []
+        if issubclass(clazz, interfaces.layers.DataLayerInterface):
+            constructor_keywords = [('name', self.context.layers.free_layer_name(config_name)), ('metadata', None)]
+        if issubclass(clazz, interfaces.symbols.SymbolTableInterface):
+            constructor_keywords = [('name', self.context.symbol_space.free_table_name(config_name)),
+                                    ('native_types', None), ('table_mapping', None), ('class_types', None)]
+
+        for argname, default in constructor_keywords:
+            constructor_args[argname] = kwargs.get(argname, default)
+            if argname in kwargs:
+                del kwargs[argname]
+
+        for keyword in kwargs:
+            val = kwargs[keyword]
+            if not isinstance(val, interfaces.configuration.BasicTypes) and not isinstance(val, list):
+                if not isinstance(val, list) or all([isinstance(x, interfaces.configuration.BasicTypes) for x in val]):
+                    raise TypeError("Configurable values must be simple types (int, bool, str, bytes)")
+            self.context.config[config_path + '.' + keyword] = val
+
+        constructed = clazz(self.context, config_path, **constructor_args)
+
+        if isinstance(constructed, interfaces.layers.DataLayerInterface):
+            self.context.add_layer(constructed)
+        if isinstance(constructed, interfaces.symbols.SymbolTableInterface):
+            self.context.symbol_space.append(constructed)
+
+        return constructed
 
 
 class NullFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):
