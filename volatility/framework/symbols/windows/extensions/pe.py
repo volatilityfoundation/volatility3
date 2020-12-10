@@ -3,11 +3,13 @@
 #
 
 from typing import Generator, Tuple
+import logging
 
 from volatility.framework import constants
 from volatility.framework import objects, interfaces
 from volatility.framework.renderers import conversion
 
+vollog = logging.getLogger(__name__)
 
 class IMAGE_DOS_HEADER(objects.StructType):
 
@@ -74,8 +76,16 @@ class IMAGE_DOS_HEADER(objects.StructType):
         image_base_offset = nt_header.OptionalHeader.ImageBase.vol.offset - self.vol.offset
         image_base_type = nt_header.OptionalHeader.ImageBase.vol.type_name
         member_size = self._context.symbol_space.get_type(image_base_type).size
-        newval = objects.convert_value_to_data(self.vol.offset, int, nt_header.OptionalHeader.ImageBase.vol.data_format)
-        return raw_data[:image_base_offset] + newval + raw_data[image_base_offset + member_size:]
+        try:
+            newval = objects.convert_value_to_data(self.vol.offset, int, nt_header.OptionalHeader.ImageBase.vol.data_format)
+            new_pe = raw_data[:image_base_offset] + newval + raw_data[image_base_offset + member_size:]
+        except OverflowError:
+            vollog.warning("Volatility was unable to fix the image base for the PE file at base address {:#x}. " \
+                        "This will cause issues with many static analysis tools if you do not inform the " \
+                        "tool of the in-memory load address.".format(self.vol.offset))
+            new_pe = raw_data
+
+        return new_pe
 
     def reconstruct(self) -> Generator[Tuple[int, bytes], None, None]:
         """This method generates the content necessary to reconstruct a PE file
