@@ -324,7 +324,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         if location is None:
             location = "file:" + request.pathname2url(filename)
         current_config_path = 'volshell.layers.' + layer_name
-        self.context.config[interfaces.configuration.path_join(current_config_path, "location")] = filename
+        self.context.config[interfaces.configuration.path_join(current_config_path, "location")] = location
         layer = physical.FileLayer(self.context, current_config_path, layer_name)
         self.context.add_layer(layer)
         return layer_name
