@@ -10,11 +10,13 @@ import struct
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from volatility import classproperty
-from volatility.framework import exceptions, interfaces
+from volatility.framework import exceptions, interfaces, constants
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import linear
 
 vollog = logging.getLogger(__name__)
+
+INTEL_TRANSLATION_DEBUGGING = False
 
 
 class Intel(linear.LinearlyMappedLayer):
@@ -143,6 +145,11 @@ class Intel(linear.LinearlyMappedLayer):
 
             # Read the data for the next entry
             entry_data = table[(index << self._index_shift):(index << self._index_shift) + self._entry_size]
+
+            if INTEL_TRANSLATION_DEBUGGING:
+                vollog.log(
+                    constants.LOGLEVEL_VVVV, "Entry {} at index {} gives data {} as {}".format(
+                        hex(entry), hex(index), hex(struct.unpack(self._entry_format, entry_data)[0]), name))
 
             # Read out the new entry from memory
             entry, = struct.unpack(self._entry_format, entry_data)
