@@ -123,11 +123,8 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     proc.vol.offset == ph_offset:
                 return virtual_process
 
-
     @classmethod
-    def get_osversion(cls,
-                      context: interfaces.context.ContextInterface,
-                      layer_name: str,
+    def get_osversion(cls, context: interfaces.context.ContextInterface, layer_name: str,
                       symbol_table: str) -> Tuple[int, int, int]:
         """Returns the complete OS version (MAJ,MIN,BUILD)
 
@@ -166,8 +163,8 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     vproc = self.virtual_process_from_physical(self.context, self.config['primary'],
                                                                self.config['nt_symbols'], proc)
 
-                file_handle = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name,
-                                                         vproc, self.open)
+                file_handle = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name, vproc,
+                                                         self.open)
                 file_output = "Error outputting file"
                 if file_handle:
                     file_output = file_handle.preferred_filename

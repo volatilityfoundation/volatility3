@@ -55,7 +55,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
         (uname_len, domain_len) = unpack("<HH", cache_data[:4])
         if len(cache_data[60:62]) == 0:
             return (uname_len, domain_len, 0, '', '')
-        (domain_name_len,) = unpack("<H", cache_data[60:62])
+        (domain_name_len, ) = unpack("<H", cache_data[60:62])
         ch = cache_data[64:80]
         enc_data = cache_data[96:]
         return (uname_len, domain_len, domain_name_len, enc_data, ch)

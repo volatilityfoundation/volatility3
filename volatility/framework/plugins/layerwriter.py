@@ -80,7 +80,7 @@ class LayerWriter(plugins.PluginInterface):
     def _generator(self):
         if self.config['list']:
             for name in self.context.layers:
-                yield 0, (name,)
+                yield 0, (name, )
         else:
             import pdb
             pdb.set_trace()
@@ -94,7 +94,7 @@ class LayerWriter(plugins.PluginInterface):
             for name in self.config['layers']:
                 # Check the layer exists and validate the output file
                 if name not in self.context.layers:
-                    yield 0, ('Layer Name {} does not exist'.format(name),)
+                    yield 0, ('Layer Name {} does not exist'.format(name), )
                 else:
                     output_name = self.config.get('output', ".".join([name, "raw"]))
                     try:
@@ -106,14 +106,14 @@ class LayerWriter(plugins.PluginInterface):
                                                        progress_callback = self._progress_callback)
                         file_handle.close()
                     except IOError as excp:
-                        yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp),)
+                        yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp), )
 
-                    yield 0, ('Layer has been written to {}'.format(output_name),)
+                    yield 0, ('Layer has been written to {}'.format(output_name), )
 
     def _generate_layers(self):
         """List layer names from this run"""
         for name in self.context.layers:
-            yield (0, (name,))
+            yield (0, (name, ))
 
     def run(self):
         if self.config['list']:

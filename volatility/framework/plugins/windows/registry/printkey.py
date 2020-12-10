@@ -43,10 +43,10 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     @classmethod
     def key_iterator(
-            cls,
-            hive: RegistryHive,
-            node_path: Sequence[objects.StructType] = None,
-            recurse: bool = False
+        cls,
+        hive: RegistryHive,
+        node_path: Sequence[objects.StructType] = None,
+        recurse: bool = False
     ) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
         """Walks through a set of nodes from a given node (last one in
         node_path). Avoids loops by not traversing into nodes already present

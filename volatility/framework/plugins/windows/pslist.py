@@ -188,8 +188,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             file_output = "Disabled"
             if self.config['dump']:
-                file_handle = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc,
-                                                self.open)
+                file_handle = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc, self.open)
                 file_output = "Error outputting file"
                 if file_handle:
                     file_handle.close()

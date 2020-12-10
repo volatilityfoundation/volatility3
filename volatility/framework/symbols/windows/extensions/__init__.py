@@ -405,6 +405,7 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
             pass
 
         return name
+
     def access_string(self):
         ## Make a nicely formatted ACL string
         return (('R' if self.ReadAccess else '-') + ('W' if self.WriteAccess else '-') +
@@ -431,6 +432,7 @@ class ETHREAD(objects.StructType):
     def owning_process(self, kernel_layer: str = None) -> interfaces.objects.ObjectInterface:
         """Return the EPROCESS that owns this thread."""
         return self.ThreadsProcess.dereference(kernel_layer)
+
     def get_cross_thread_flags(self) -> str:
         dictCrossThreadFlags = {
             'PS_CROSS_THREAD_FLAGS_TERMINATED': 0,
@@ -665,6 +667,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         else:
             # windows xp and 2003
             return self.VadRoot.dereference().cast("_MMVAD")
+
     def environment_variables(self):
         """Generator for environment variables.
 
@@ -753,6 +756,7 @@ class LIST_ENTRY(objects.StructType, collections.abc.Iterable):
 
     def __iter__(self) -> Iterator[interfaces.objects.ObjectInterface]:
         return self.to_list(self.vol.parent.vol.type_name, self.vol.member_name)
+
 
 class TOKEN(objects.StructType):
     """A class for process etoken object."""
@@ -873,6 +877,7 @@ class KTHREAD(objects.StructType):
         }
         return dictWaitReason.get(self.WaitReason, renderers.NotApplicableValue())
 
+
 class CONTROL_AREA(objects.StructType):
     """A class for _CONTROL_AREA structures"""
 
@@ -904,17 +909,17 @@ class CONTROL_AREA(objects.StructType):
         """Get the Subsection object, which is found immediately after the _CONTROL_AREA."""
 
         return self._context.object(self.get_symbol_table_name() + constants.BANG + "_SUBSECTION",
-                             layer_name=self.vol.layer_name,
-                             offset=self.vol.offset + self.vol.size,
-                             native_layer_name=self.vol.native_layer_name)
+                                    layer_name = self.vol.layer_name,
+                                    offset = self.vol.offset + self.vol.size,
+                                    native_layer_name = self.vol.native_layer_name)
 
     def get_pte(self, offset: int) -> interfaces.objects.ObjectInterface:
         """Get a PTE object at the requested offset"""
 
         return self._context.object(self.get_symbol_table_name() + constants.BANG + "_MMPTE",
-                             layer_name=self.vol.layer_name,
-                             offset=offset,
-                             native_layer_name=self.vol.native_layer_name)
+                                    layer_name = self.vol.layer_name,
+                                    offset = offset,
+                                    native_layer_name = self.vol.native_layer_name)
 
     def get_available_pages(self) -> Iterable[Tuple[int, int, int]]:
         """Get the available pages that correspond to a cached file.
@@ -963,8 +968,8 @@ class CONTROL_AREA(objects.StructType):
 
                 elif mmpte.u.Soft.Prototype == 1:
                     if not is_64bit and not is_pae:
-                        subsection_offset = ((mmpte.u.Subsect.SubsectionAddressHigh << 7) | (
-                                mmpte.u.Subsect.SubsectionAddressLow << 3))
+                        subsection_offset = ((mmpte.u.Subsect.SubsectionAddressHigh << 7) |
+                                             (mmpte.u.Subsect.SubsectionAddressLow << 3))
 
                 # If the entry is not a valid physical address then see if it is in transition.
                 elif mmpte.u.Trans.Transition == 1:
@@ -977,6 +982,7 @@ class CONTROL_AREA(objects.StructType):
             # Go to the next Subsection in the single-linked list
             subsection = subsection.NextSubsection
 
+
 class VACB(objects.StructType):
     """A class for _VACB structures"""
 
@@ -987,6 +993,7 @@ class VACB(objects.StructType):
         # view begins. Since all views are 256 KB in size, the bottom 16 bits are used to
         # store the number of references to the view.
         return self.Overlay.FileOffset.QuadPart & self.FILEOFFSET_MASK
+
 
 class SHARED_CACHE_MAP(objects.StructType):
     """A class for _SHARED_CACHE_MAP structures"""
@@ -1003,13 +1010,16 @@ class SHARED_CACHE_MAP(objects.StructType):
         if self.FileSize.QuadPart <= 0 or self.ValidDataLength.QuadPart <= 0:
             return False
 
-        if self.SectionSize.QuadPart < 0 or ((self.FileSize.QuadPart < self.ValidDataLength.QuadPart) and (
-                   self.ValidDataLength.QuadPart != 0x7fffffffffffffff)):
+        if self.SectionSize.QuadPart < 0 or ((self.FileSize.QuadPart < self.ValidDataLength.QuadPart) and
+                                             (self.ValidDataLength.QuadPart != 0x7fffffffffffffff)):
             return False
 
         return True
 
-    def process_index_array(self, array_pointer: interfaces.objects.ObjectInterface, level: int, limit: int,
+    def process_index_array(self,
+                            array_pointer: interfaces.objects.ObjectInterface,
+                            level: int,
+                            limit: int,
                             vacb_list: Optional[List] = None) -> List:
         """Recursively process the sparse multilevel VACB index array.
 
@@ -1029,11 +1039,11 @@ class SHARED_CACHE_MAP(objects.StructType):
         pointer_type = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + "pointer")
 
         # Create an array of 128 entries for the VACB index array
-        vacb_array = self._context.object(object_type=symbol_table_name + constants.BANG + "array",
-                                          layer_name=self.vol.layer_name,
-                                          offset=array_pointer,
-                                          count=self.VACB_ARRAY,
-                                          subtype=pointer_type)
+        vacb_array = self._context.object(object_type = symbol_table_name + constants.BANG + "array",
+                                          layer_name = self.vol.layer_name,
+                                          offset = array_pointer,
+                                          count = self.VACB_ARRAY,
+                                          subtype = pointer_type)
 
         # Iterate through the entries
         for counter in range(0, self.VACB_ARRAY):
@@ -1042,7 +1052,7 @@ class SHARED_CACHE_MAP(objects.StructType):
                 continue
 
             vacb_obj = vacb_array[counter].dereference().cast(symbol_table_name + constants.BANG + "_VACB")
-            if vacb_obj.is_valid(shared_cache_map=self):
+            if vacb_obj.is_valid(shared_cache_map = self):
                 self.save_vacb(vacb_obj, vacb_list)
             else:
                 # Process the next level of the multi-level array
@@ -1112,8 +1122,8 @@ class SHARED_CACHE_MAP(objects.StructType):
             array_head = vacb_obj
             for counter in range(0, full_blocks):
                 vacb_entry = self._context.object(symbol_table_name + constants.BANG + "pointer",
-                                                  layer_name=self.vol.layer_name,
-                                                  offset=array_head + (counter * size_of_pointer))
+                                                  layer_name = self.vol.layer_name,
+                                                  offset = array_head + (counter * size_of_pointer))
 
                 # If we find a zero entry, then we proceed to the next one. If the entry is zero,
                 # then the view is not mapped and we skip. We do not pad because we use the
@@ -1127,8 +1137,8 @@ class SHARED_CACHE_MAP(objects.StructType):
 
             if left_over > 0:
                 vacb_entry = self._context.object(symbol_table_name + constants.BANG + "pointer",
-                                                  layer_name=self.vol.layer_name,
-                                                  offset=array_head + ((counter + 1) * size_of_pointer))
+                                                  layer_name = self.vol.layer_name,
+                                                  offset = array_head + ((counter + 1) * size_of_pointer))
 
                 if not vacb_entry:
                     return vacb_list
@@ -1152,11 +1162,11 @@ class SHARED_CACHE_MAP(objects.StructType):
         if section_size > self.VACB_SIZE_OF_FIRST_LEVEL:
 
             # Create an array of 128 entries for the VACB index array.
-            vacb_array = self._context.object(object_type=symbol_table_name + constants.BANG + "array",
-                                              layer_name=self.vol.layer_name,
-                                              offset=vacb_obj,
-                                              count=self.VACB_ARRAY,
-                                              subtype=pointer_type)
+            vacb_array = self._context.object(object_type = symbol_table_name + constants.BANG + "array",
+                                              layer_name = self.vol.layer_name,
+                                              offset = vacb_obj,
+                                              count = self.VACB_ARRAY,
+                                              subtype = pointer_type)
 
             # Walk the array and if any entry points to the shared cache map object then we extract it.
             # Otherwise, if it is non-zero, then traverse to the next level.

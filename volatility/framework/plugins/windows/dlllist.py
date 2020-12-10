@@ -72,8 +72,8 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if layer_name is None:
                 layer_name = dll_entry.vol.layer_name
 
-            file_handle = open_method("{}{}.{:#x}.{:#x}.dmp".format(prefix, ntpath.basename(name),
-                                                                    dll_entry.vol.offset, dll_entry.DllBase))
+            file_handle = open_method("{}{}.{:#x}.{:#x}.dmp".format(prefix, ntpath.basename(name), dll_entry.vol.offset,
+                                                                    dll_entry.DllBase))
 
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = dll_entry.DllBase,

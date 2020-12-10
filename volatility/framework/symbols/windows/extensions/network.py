@@ -159,7 +159,8 @@ class _TCP_LISTENER(objects.StructType):
 
         try:
             if not self.get_address_family() in (AF_INET, AF_INET6):
-                vollog.debug("netw obj 0x{:x} invalid due to invalid address_family {}".format(self.vol.offset, self.get_address_family()))
+                vollog.debug("netw obj 0x{:x} invalid due to invalid address_family {}".format(
+                    self.vol.offset, self.get_address_family()))
                 return False
 
         except exceptions.InvalidAddressException:
