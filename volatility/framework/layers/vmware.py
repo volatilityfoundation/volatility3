@@ -91,9 +91,9 @@ class VmwareLayer(segmented.SegmentedLayer):
         if tags[("regionsCount", ())][1] == 0:
             raise VmwareFormatException(self.name, "VMware VMEM is not split into regions")
         for region in range(tags[("regionsCount", ())][1]):
-            offset = tags[("regionPPN", (region,))][1] * self._page_size
-            mapped_offset = tags[("regionPageNum", (region,))][1] * self._page_size
-            length = tags[("regionSize", (region,))][1] * self._page_size
+            offset = tags[("regionPPN", (region, ))][1] * self._page_size
+            mapped_offset = tags[("regionPageNum", (region, ))][1] * self._page_size
+            length = tags[("regionSize", (region, ))][1] * self._page_size
             self._segments.append((offset, mapped_offset, length, length))
 
     @property

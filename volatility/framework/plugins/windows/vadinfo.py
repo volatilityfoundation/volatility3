@@ -112,8 +112,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                  context: interfaces.context.ContextInterface,
                  proc: interfaces.objects.ObjectInterface,
                  vad: interfaces.objects.ObjectInterface,
-                 open_method: Type[
-                     interfaces.plugins.FileHandlerInterface],
+                 open_method: Type[interfaces.plugins.FileHandlerInterface],
                  maxsize: int = MAXSIZE_DEFAULT) -> Optional[interfaces.plugins.FileHandlerInterface]:
         """Extracts the complete data for Vad as a FileInterface.
 

@@ -185,7 +185,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             }
 
         # special use case: Win10_18363 is not recognized by windows.info as 18363
-        # because all kernel file headers and debug structures report 18363 as 
+        # because all kernel file headers and debug structures report 18363 as
         # "10.0.18362.1198" with the last part being incremented. However, we can use
         # os_distinguisher to differentiate between 18362 and 18363
         if vers_minor_version == 18362 and is_18363_or_later:
@@ -202,9 +202,11 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # no match on filename means that we possibly have a version newer than those listed here.
             # try to grab the latest supported version of the current image NT version. If that symbol
             # version does not work, support has to be added manually.
-            current_versions = [key for key in list(version_dict.keys()) if key[0] == nt_major_version and key[1] == nt_minor_version]
+            current_versions = [
+                key for key in list(version_dict.keys()) if key[0] == nt_major_version and key[1] == nt_minor_version
+            ]
             current_versions.sort()
-    
+
             if current_versions:
                 latest_version = current_versions[-1]
 
