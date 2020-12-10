@@ -9,6 +9,7 @@ import string
 import struct
 import sys
 from typing import Any, Dict, List, Optional, Tuple, Union, Type
+from urllib import request
 
 from volatility.cli import text_renderer
 from volatility.framework import renderers, interfaces, objects, plugins, exceptions
@@ -317,9 +318,11 @@ class Volshell(interfaces.plugins.PluginInterface):
             len_offset = len(hex(symbol.address))
             print(" " * (longest_offset - len_offset), hex(symbol.address), " ", symbol.name)
 
-    def load_file(self, filename: str):
-        """Loads a file into a layer and returns the name of the layer"""
+    def load_file(self, location: str = None, filename: str = ''):
+        """Loads a file into a Filelayer and returns the name of the layer"""
         layer_name = self.context.layers.free_layer_name()
+        if location is None:
+            location = "file:" + request.pathname2url(filename)
         current_config_path = 'volshell.layers.' + layer_name
         self.context.config[interfaces.configuration.path_join(current_config_path, "location")] = filename
         layer = physical.FileLayer(self.context, current_config_path, layer_name)
