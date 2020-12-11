@@ -4,6 +4,7 @@
 import binascii
 import code
 import io
+import os
 import random
 import string
 import struct
@@ -31,6 +32,7 @@ class Volshell(interfaces.plugins.PluginInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__current_layer = None  # type: Optional[str]
+        self.__console = None
 
     def random_string(self, length: int = 32) -> str:
         return ''.join(random.sample(string.ascii_uppercase + string.digits, length))
@@ -73,7 +75,8 @@ class Volshell(interfaces.plugins.PluginInterface):
         """.format(mode, self.current_layer)
 
         sys.ps1 = "({}) >>> ".format(self.current_layer)
-        code.interact(banner = banner, local = self._construct_locals_dict())
+        self.__console = code.InteractiveConsole(locals = self._construct_locals_dict())
+        self.__console.interact(banner = banner)
 
         return renderers.TreeGrid([("Terminating", str)], None)
 
@@ -109,7 +112,8 @@ class Volshell(interfaces.plugins.PluginInterface):
                 (['gt', 'generate_treegrid'], self.generate_treegrid), (['rt',
                                                                          'render_treegrid'], self.render_treegrid),
                 (['ds', 'display_symbols'], self.display_symbols), (['hh', 'help'], self.help),
-                (['cc', 'create_configurable'], self.create_configurable), (['lf', 'load_file'], self.load_file)]
+                (['cc', 'create_configurable'], self.create_configurable), (['lf', 'load_file'], self.load_file),
+                (['rs', 'run_script'], self.run_script)]
 
     def _construct_locals_dict(self) -> Dict[str, Any]:
         """Returns a dictionary of the locals """
@@ -317,6 +321,13 @@ class Volshell(interfaces.plugins.PluginInterface):
             symbol = table.get_symbol(symbol_name)
             len_offset = len(hex(symbol.address))
             print(" " * (longest_offset - len_offset), hex(symbol.address), " ", symbol.name)
+
+    def run_script(self, filename: str):
+        """Runs a python script within the context of volshell"""
+        print("Running code from {}\n".format(filename))
+        with open(filename) as fp:
+            self.__console.runsource(fp.read(), symbol = 'exec')
+        print("\nCode complete")
 
     def load_file(self, location: str = None, filename: str = ''):
         """Loads a file into a Filelayer and returns the name of the layer"""
