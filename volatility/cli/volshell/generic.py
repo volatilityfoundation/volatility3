@@ -10,12 +10,12 @@ import string
 import struct
 import sys
 from typing import Any, Dict, List, Optional, Tuple, Union, Type
-from urllib import request
+from urllib import request, parse
 
 from volatility.cli import text_renderer
 from volatility.framework import renderers, interfaces, objects, plugins, exceptions
 from volatility.framework.configuration import requirements
-from volatility.framework.layers import intel, physical
+from volatility.framework.layers import intel, physical, resources
 
 try:
     import capstone
@@ -39,7 +39,17 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer for the kernel')]
+        reqs = []  # type: List[interfaces.configuration.RequirementInterface]
+        if cls == Volshell:
+            reqs = [
+                requirements.URIRequirement(name = 'script',
+                                            description = 'File to load and execute at start',
+                                            default = None,
+                                            optional = True)
+            ]
+        return reqs + [
+            requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer for the kernel'),
+        ]
 
     def run(self, additional_locals: Dict[str, Any] = None) -> interfaces.renderers.TreeGrid:
         """Runs the interactive volshell plugin.
@@ -76,6 +86,9 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         sys.ps1 = "({}) >>> ".format(self.current_layer)
         self.__console = code.InteractiveConsole(locals = self._construct_locals_dict())
+        if self.config['script'] is not None:
+            self.run_script(location = self.config['script'])
+
         self.__console.interact(banner = banner)
 
         return renderers.TreeGrid([("Terminating", str)], None)
@@ -322,18 +335,21 @@ class Volshell(interfaces.plugins.PluginInterface):
             len_offset = len(hex(symbol.address))
             print(" " * (longest_offset - len_offset), hex(symbol.address), " ", symbol.name)
 
-    def run_script(self, filename: str):
+    def run_script(self, location: str = None):
         """Runs a python script within the context of volshell"""
-        print("Running code from {}\n".format(filename))
-        with open(filename) as fp:
+        if not parse.urlparse(location).scheme:
+            location = "file:" + request.pathname2url(location)
+        print("Running code from {}\n".format(location))
+        accessor = resources.ResourceAccessor()
+        with io.TextIOWrapper(accessor.open(url = location), encoding = 'utf-8') as fp:
             self.__console.runsource(fp.read(), symbol = 'exec')
         print("\nCode complete")
 
-    def load_file(self, location: str = None, filename: str = ''):
+    def load_file(self, location: str = None):
         """Loads a file into a Filelayer and returns the name of the layer"""
         layer_name = self.context.layers.free_layer_name()
-        if location is None:
-            location = "file:" + request.pathname2url(filename)
+        if not parse.urlparse(location).scheme:
+            location = "file:" + request.pathname2url(location)
         current_config_path = 'volshell.layers.' + layer_name
         self.context.config[interfaces.configuration.path_join(current_config_path, "location")] = location
         layer = physical.FileLayer(self.context, current_config_path, layer_name)
