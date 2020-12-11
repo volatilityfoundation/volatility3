@@ -107,7 +107,7 @@ class CommandLine:
                             default = None,
                             type = str)
         parser.add_argument("--parallelism",
-                            help = "Enables parallelism (defaults to processes if no argument given)",
+                            help = "Enables parallelism (defaults to off if no argument given)",
                             nargs = '?',
                             choices = ['processes', 'threads', 'off'],
                             const = 'processes',
