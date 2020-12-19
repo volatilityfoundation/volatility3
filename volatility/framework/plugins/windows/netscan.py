@@ -179,7 +179,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (10, 0, 16299): "netscan-win10-16299-x64",
                 (10, 0, 17134): "netscan-win10-17134-x64",
                 (10, 0, 17763): "netscan-win10-17763-x64",
-                (10, 0, 18362): "netscan-win10-17763-x64",
+                (10, 0, 18362): "netscan-win10-18362-x64",
                 (10, 0, 18363): "netscan-win10-18363-x64",
                 (10, 0, 19041): "netscan-win10-19041-x64"
             }

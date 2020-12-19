@@ -229,7 +229,7 @@
                     "name": "unsigned be short"
                 }
             },
-            "HashTableEntry": {
+            "ListEntry": {
                 "offset": 40,
                 "type":{
                     "kind": "pointer",
@@ -496,7 +496,7 @@
     "_INET_PORT_POOL": {
         "fields": {
             "PortAssignments": {
-                "offset": 232,
+                "offset": 224,
                 "type": {
                     "count": 256,
                     "kind": "array",
@@ -510,7 +510,7 @@
                 }
             },
             "PortBitMap": {
-                "offset": 216,
+                "offset": 208,
                 "type": {
                     "kind": "struct",
                     "name": "nt_symbols!_RTL_BITMAP"

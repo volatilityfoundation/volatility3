@@ -242,7 +242,7 @@
                     "name": "unsigned be short"
                 }
             },
-            "HashTableEntry": {
+            "ListEntry": {
                 "offset": 40,
                 "type":{
                     "kind": "pointer",

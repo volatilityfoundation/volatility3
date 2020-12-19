@@ -42,7 +42,9 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def _decode_pointer(self, value):
-        """Windows encodes pointers to objects and decodes them on the fly
+        """Copied from `windows.handles`.
+
+        Windows encodes pointers to objects and decodes them on the fly
         before using them.
 
         This function mimics the decoding routine so we can generate the
@@ -59,6 +61,17 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                      layer_name: str,
                      offset: int,
                      length: int) -> int:
+        """Reads a pointer at a given offset and returns the address it points to.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            offset: Offset of pointer
+            length: Pointer length
+
+        Returns:
+            The value the pointer points to.
+        """
 
         return int.from_bytes(context.layers[layer_name].read(offset, length), "little")
 
@@ -68,6 +81,17 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                      layer_name: str,
                      bitmap_offset: int,
                      bitmap_size_in_byte: int) -> list:
+        """Parses a given bitmap and looks for each occurence of a 1.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            bitmap_offset: Start address of bitmap
+            bitmap_size_in_byte: Bitmap size in Byte, not in bit.
+
+        Returns:
+            The list of indices at which a 1 was found.
+        """
         ret = []
         for idx in range(bitmap_size_in_byte-1):
             current_byte = context.layers[layer_name].read(bitmap_offset + idx, 1)[0]
@@ -96,8 +120,22 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                        layer_name: str,
                        net_symbol_table: str,
                        port: int,
-                       ppobj,
-                       proto="tcp"):
+                       port_pool: interfaces.objects.ObjectInterface,
+                       proto="tcp") -> \
+            Iterable[interfaces.objects.ObjectInterface]:
+        """Lists all UDP Endpoints and TCP Listeners by parsing UdpPortPool and TcpPortPool.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            net_symbol_table: The name of the table containing the tcpip types
+            port: Current port as integer to lookup the associated object.
+            port_pool: Port pool object
+            proto: Either "tcp" or "udp" to decide which types to use.
+
+        Returns:
+            The list of network objects from this image's TCP and UDP `PortPools`
+        """
         if proto == "tcp":
             obj_name = net_symbol_table + constants.BANG + "_TCP_LISTENER"
             ptr_offset = context.symbol_space.get_type(obj_name).relative_child_offset("Next")
@@ -105,36 +143,168 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             obj_name = net_symbol_table + constants.BANG + "_UDP_ENDPOINT"
             ptr_offset = context.symbol_space.get_type(obj_name).relative_child_offset("Next")
         else:
+            # invalid argument.
             yield
+
+        # the given port serves as a shifted index into the port pool lists
         list_index = port >> 8
         truncated_port = port & 0xff
-        inpa = ppobj.PortAssignments[list_index].dereference()
+
+        # first, grab the given port's PortAssignment (`_PORT_ASSIGNMENT`)
+        inpa = port_pool.PortAssignments[list_index].dereference()
+
+        # then parse the port assignment list (`_PORT_ASSIGNMENT_LIST`) and grab the correct entry
         assignment = inpa.InPaBigPoolBase.dereference().Assignments[truncated_port]
+
         if not assignment:
             yield
+
+        # the value within assignment.Entry is a) masked and b) points inside of the network object
+        # first decode the pointer
         netw_inside = cls._decode_pointer(assignment.Entry)
+
         if netw_inside:
+            # if the value is valid, calculate the actual object address by subtracting the offset
             curr_obj = context.object(obj_name, layer_name = layer_name, offset = netw_inside - ptr_offset)
-            vollog.debug("Found object @ 0x{:2x}, yielding...".format(curr_obj.vol.offset))
+            vollog.debug("Found {} object @ 0x{:2x}, yielding...".format(proto, curr_obj.vol.offset))
             yield curr_obj
 
-            vollog.debug("PrevPointer val: {}".format(curr_obj.Next))
+            # if the same port is used on different interfaces multiple objects are created
+            # those can be found by following the pointer within the object's `Next` field until it is empty
             while curr_obj.Next:
                 curr_obj = context.object(obj_name, layer_name = layer_name, offset = cls._decode_pointer(curr_obj.Next) - ptr_offset)
                 yield curr_obj
-                vollog.debug("Checking if PrevPointer is valid (val: {})".format(curr_obj.Next))
 
     @classmethod
-    def get_tcpip_module(cls, context, layer_name, nt_symbols):
+    def get_tcpip_module(cls,
+                         context: interfaces.context.ContextInterface,
+                         layer_name: str,
+                         nt_symbols: str) -> interfaces.objects.ObjectInterface:
+        """Uses `windows.modules` to find tcpip.sys in memory.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            nt_symbols: The name of the table containing the kernel symbols
+
+        Returns:
+            The constructed tcpip.sys module object.
+        """
         for mod in modules.Modules.list_modules(context, layer_name, nt_symbols):
-            # ~ print(mod.BaseDllName.get_string())
             if mod.BaseDllName.get_string() == "tcpip.sys":
-                vollog.debug("Found tcpip.sys offset @ 0x{:x}".format(mod.DllBase))
+                vollog.debug("Found tcpip.sys image base @ 0x{:x}".format(mod.DllBase))
                 return mod
 
     @classmethod
-    def get_tcpip_guid(cls, context, layer_name, tcpip_module):
-        return list(
+    def parse_hashtable(cls,
+                        context: interfaces.context.ContextInterface,
+                        layer_name: str,
+                        ht_offset: int,
+                        ht_length: int,
+                        alignment: int,
+                        pointer_length: int) -> list:
+        """Parses a hashtable quick and dirty.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            ht_offset: Beginning of the hash table
+            ht_length: Length of the hash table
+            pointer_length: Length of this architecture's pointers
+
+        Returns:
+            The hash table entries which are _not_ empty
+        """
+        for index in range(ht_length):
+            # mask pointer so we do not get confused with abbreviated virtual offsets
+            # this currently only works for 64-bit.
+            # TODO: add x86 support.
+            current_qword = (0xffff000000000000 | cls.read_pointer(context, layer_name, ht_offset + index * alignment, pointer_length))
+            if current_qword == (0xffff000000000000 | (ht_offset + index * alignment)):
+                continue
+            yield current_qword
+
+    @classmethod
+    def parse_partitions(cls,
+                       context: interfaces.context.ContextInterface,
+                       layer_name: str,
+                       net_symbol_table: str,
+                       tcpip_symbol_table: str,
+                       tcpip_module_offset: int,
+                       pointer_length: int) -> Iterable[interfaces.objects.ObjectInterface]:
+        """Parses tcpip.sys's PartitionTable containing established TCP connections.
+        The amount of Partition depends on the value of the symbol `PartitionCount` and correlates with
+        the maximum processor count (refer to Art of Memory Forensics, chapter 11).
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            nt_symbols: The name of the table containing the kernel symbols
+            net_symbol_table: The name of the table containing the tcpip types
+            tcpip_module: The created vol Windows module object of the given memory image
+            tcpip_symbol_table: The name of the table containing the tcpip driver symbols
+
+        Returns:
+            The list of TCP endpoint objects from the `layer_name` layer's `PartitionTable`
+        """
+        if symbols.symbol_table_is_64bit(context, net_symbol_table):
+            alignment = 0x10
+        else:
+            alignment = 8
+
+        obj_name = net_symbol_table + constants.BANG + "_TCP_ENDPOINT"
+
+        # part_table_symbol is the offset within tcpip.sys which contains the address of the partition table itself
+        part_table_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "PartitionTable").address
+        part_count_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "PartitionCount").address
+
+        # part_table is the actual partition table offset
+        part_table = cls.read_pointer(context, layer_name, tcpip_module_offset + part_table_symbol, pointer_length)
+        part_count = int.from_bytes(context.layers[layer_name].read(tcpip_module_offset + part_count_symbol, 1), "little")
+
+        part_table_size = context.symbol_space.get_type(net_symbol_table + constants.BANG + "_PARTITION").size
+
+        partitions = []
+
+        # create partition objects for each partition and append to list
+        for part_idx in range(part_count):
+            current_partition = context.object(net_symbol_table + constants.BANG + "_PARTITION",
+                                               layer_name = layer_name,
+                                               offset = part_table + part_table_size * part_idx)
+
+            partitions.append(current_partition)
+
+        for partition in partitions:
+            if partition.Endpoints.NumEntries > 0:
+                for endpoint_entry in cls.parse_hashtable(context,
+                                                          layer_name,
+                                                          partition.Endpoints.Directory,
+                                                          part_table_size,
+                                                          alignment,
+                                                          pointer_length):
+
+                    entry_offset = context.symbol_space.get_type(obj_name).relative_child_offset("ListEntry")
+                    endpoint = context.object(obj_name, layer_name = layer_name, offset = endpoint_entry - entry_offset)
+                    yield endpoint
+
+    @classmethod
+    def create_tcpip_symbol_table(cls,
+                                    context: interfaces.context.ContextInterface,
+                                    config_path: str,
+                                    layer_name: str,
+                                    tcpip_module: interfaces.objects.ObjectInterface) -> str:
+        """Creates
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            config_path: The config path where to find symbol files
+            layer_name: The name of the layer on which to operate
+            tcpip_module: The created vol Windows module object of the given memory image
+
+        Returns:
+            The name of the constructed and loaded symbol table
+        """
+        guids = list(
             PDBUtility.pdbname_scan(
                 context,
                 layer_name,
@@ -145,49 +315,8 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             )
         )
 
-    @classmethod
-    def parse_hashtable(cls, context, layer_name, ht_offset, ht_length, pointer_length) -> list:
-        # ~ ret = []
-        for idx in range(ht_length):
-            current_qword = (0xffff000000000000 | cls.read_pointer(context, layer_name, ht_offset + idx * 16, pointer_length))
-            if current_qword == (0xffff000000000000 | (ht_offset + idx * 16)):
-                continue
-            yield current_qword
-
-    @classmethod
-    def parse_partitions(cls, context, layer_name, net_symbol_table, tcpip_symbol_table, tcpip_module_offset, pointer_length):
-        # ~ endpoints = []
-        obj_name = net_symbol_table + constants.BANG + "_TCP_ENDPOINT"
-        pto = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "PartitionTable").address
-        pco = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "PartitionCount").address
-        part_table = cls.read_pointer(context, layer_name, tcpip_module_offset + pto, pointer_length)
-        part_count = int.from_bytes(context.layers[layer_name].read(tcpip_module_offset + pco, 1), "little")
-        partitions = []
-        for part_idx in range(part_count):
-            current_partition = context.object(net_symbol_table + "!_PARTITION", layer_name = layer_name, offset = part_table + 128 * part_idx)
-            partitions.append(current_partition)
-        for partition in partitions:
-            if partition.Endpoints.NumEntries > 0:
-                for endpoint_entry in cls.parse_hashtable(context, layer_name, partition.Endpoints.Directory, 128, pointer_length):
-                    # ~ yield endpoint
-                    entry_offset = context.symbol_space.get_type(obj_name).relative_child_offset("HashTableEntry")
-                    endpoint = context.object(obj_name, layer_name = layer_name, offset = endpoint_entry - entry_offset)
-                    yield endpoint
-                # ~ endpoints.extend(parse_hashtable(partition.Endpoints.Directory, 128))
-        # ~ return endpoints
-
-    @classmethod
-    def create_tcpip_symbol_table(cls,
-                                    context: interfaces.context.ContextInterface,
-                                    config_path: str,
-                                    layer_name: str,
-                                    tcpip_module):
-
-        guids = cls.get_tcpip_guid(context, layer_name, tcpip_module)
-
         if not guids:
-            print("no pdb found!")
-            raise
+            raise exceptions.VolatilityException("Did not find GUID of tcpip.pdb in tcpip.sys module @ 0x{:x}!".format(tcpip_module.DllBase))
 
         guid = guids[0]
 
@@ -201,56 +330,104 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                     config_path="tcpip")
 
     @classmethod
+    def find_port_pools(cls,
+                       context: interfaces.context.ContextInterface,
+                       layer_name: str,
+                       net_symbol_table: str,
+                       tcpip_symbol_table: str,
+                       tcpip_module_offset: int,
+                       pointer_length: int) -> (int, int):
+        """Finds the given image's port pools. Older Windows versions (presumably < Win10 build 14251) use driver
+        symbols called `UdpPortPool` and `TcpPortPool` which point towards the pools.
+        Newer Windows versions use `UdpCompartmentSet` and `TcpCompartmentSet`, which we first have to translate into
+        the port pool address. See also: http://redplait.blogspot.com/2016/06/tcpip-port-pools-in-fresh-windows-10.html
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            layer_name: The name of the layer on which to operate
+            net_symbol_table: The name of the table containing the tcpip types
+            tcpip_module_offset: This memory dump's tcpip.sys image offset
+            tcpip_symbol_table: The name of the table containing the tcpip driver symbols
+            pointer_length: Length of this architecture's pointers
+
+        Returns:
+            The tuple containing the address of the UDP and TCP port pool respectively.
+        """
+
+        if "UdpPortPool" in context.symbol_space[tcpip_symbol_table].symbols:
+            # older Windows versions
+            upp_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "UdpPortPool").address
+            upp_addr = cls.read_pointer(context, layer_name, tcpip_module_offset + upp_symbol, pointer_length)
+
+            tpp_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "TcpPortPool").address
+            tpp_addr = cls.read_pointer(context, layer_name, tcpip_module_offset + tpp_symbol, pointer_length)
+
+        elif "UdpCompartmentSet" in context.symbol_space[tcpip_symbol_table].symbols:
+            # newer Windows versions since 10.14xxx
+            ucs = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "UdpCompartmentSet").address
+            tcs = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "TcpCompartmentSet").address
+
+            ucs_offset = cls.read_pointer(context, layer_name, tcpip_module_offset + ucs, pointer_length)
+            tcs_offset = cls.read_pointer(context, layer_name, tcpip_module_offset + tcs, pointer_length)
+
+            ucs_obj = context.object(net_symbol_table + constants.BANG + "_INET_COMPARTMENT_SET", layer_name = layer_name, offset = ucs_offset)
+            upp_addr = ucs_obj.InetCompartment.dereference().ProtocolCompartment.dereference().PortPool
+
+            tcs_obj = context.object(net_symbol_table + constants.BANG + "_INET_COMPARTMENT_SET", layer_name = layer_name, offset = tcs_offset)
+            tpp_addr = tcs_obj.InetCompartment.dereference().ProtocolCompartment.dereference().PortPool
+
+        else:
+            # this branch should not be reached.
+            raise exceptions.SymbolError("UdpPortPool", tcpip_symbol_table,
+                                         "Neither UdpPortPool nor UdpCompartmentSet found in {} table".format(tcpip_symbol_table))
+
+        vollog.debug("Found PortPools @ 0x{:x} (TCP) && 0x{:x} (UDP)".format(upp_addr, tpp_addr))
+        return upp_addr, tpp_addr
+
+    @classmethod
     def list_sockets(cls,
                        context: interfaces.context.ContextInterface,
                        layer_name: str,
-                       nt_symbols,
+                       nt_symbols: str,
                        net_symbol_table: str,
-                       tcpip_module,
+                       tcpip_module: interfaces.objects.ObjectInterface,
                        tcpip_symbol_table: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
-        """Lists all the processes in the primary layer that are in the pid
-        config option.
+        """Lists all UDP Endpoints, TCP Listeners and TCP Endpoints in the primary layer that
+        are in tcpip.sys's UdpPortPool, TcpPortPool and TCP Endpoint partition table, respectively.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
             nt_symbols: The name of the table containing the kernel symbols
-            net_symbol_table: The name of the table containing the tcpip symbols
+            net_symbol_table: The name of the table containing the tcpip types
+            tcpip_module: The created vol Windows module object of the given memory image
+            tcpip_symbol_table: The name of the table containing the tcpip driver symbols
 
         Returns:
             The list of network objects from the `layer_name` layer's `PartitionTable` and `PortPools`
         """
 
-        tcpip_vo = tcpip_module.DllBase
+        tcpip_module_offset = tcpip_module.DllBase
 
         pointer_length = context.symbol_space.get_type(net_symbol_table + constants.BANG + "pointer").size
 
-        # tcpe
-
-        for endpoint in cls.parse_partitions(context, layer_name, net_symbol_table, tcpip_symbol_table, tcpip_vo, pointer_length):
+        # first, TCP endpoints by parsing the partition table
+        for endpoint in cls.parse_partitions(context, layer_name, net_symbol_table, tcpip_symbol_table, tcpip_module_offset, pointer_length):
             yield endpoint
 
-        # listeners
+        # then, towards the UDP and TCP port pools
+        # first, find their addresses
+        upp_addr, tpp_addr = cls.find_port_pools(context, layer_name, net_symbol_table, tcpip_symbol_table, tcpip_module_offset, pointer_length)
 
-        ucs = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "UdpCompartmentSet").address
-        tcs = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "TcpCompartmentSet").address
-
-        ucs_offset = cls.read_pointer(context, layer_name, tcpip_vo + ucs, pointer_length)
-        tcs_offset = cls.read_pointer(context, layer_name, tcpip_vo + tcs, pointer_length)
-
-        ucs_obj = context.object(net_symbol_table + constants.BANG + "_INET_COMPARTMENT_SET", layer_name = layer_name, offset = ucs_offset)
-        upp_addr = ucs_obj.InetCompartment.dereference().ProtocolCompartment.dereference().PortPool
-
+        # create port pool objects at the detected address and parse the port bitmap
         upp_obj = context.object(net_symbol_table + constants.BANG + "_INET_PORT_POOL", layer_name = layer_name, offset = upp_addr)
         udpa_ports = cls.parse_bitmap(context, layer_name, upp_obj.PortBitMap.Buffer, upp_obj.PortBitMap.SizeOfBitMap // 8)
-
-        tcs_obj = context.object(net_symbol_table + constants.BANG + "_INET_COMPARTMENT_SET", layer_name = layer_name, offset = tcs_offset)
-        tpp_addr = tcs_obj.InetCompartment.dereference().ProtocolCompartment.dereference().PortPool
 
         tpp_obj = context.object(net_symbol_table + constants.BANG + "_INET_PORT_POOL", layer_name = layer_name, offset = tpp_addr)
         tcpl_ports = cls.parse_bitmap(context, layer_name, tpp_obj.PortBitMap.Buffer, tpp_obj.PortBitMap.SizeOfBitMap // 8)
 
+        # given the list of TCP / UDP ports, calculate the address of their respective objects and yield them.
         for port in tcpl_ports:
             if port == 0:
                 continue
@@ -265,6 +442,10 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def _generator(self, show_corrupt_results: Optional[bool] = None):
         """ Generates the network objects for use in rendering. """
+
+        # can this be checked via a PluginRequirement?
+        if not symbols.symbol_table_is_64bit(self.context, self.config['nt_symbols']):
+            raise exceptions.LayerException("This plugin currently only supports 64-bit memory images.")
 
         netscan_symbol_table = netscan.NetScan.create_netscan_symbol_table(self.context, self.config["primary"],
                                                                 self.config["nt_symbols"], self.config_path)

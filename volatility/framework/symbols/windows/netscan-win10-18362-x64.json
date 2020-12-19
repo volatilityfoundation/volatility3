@@ -51,16 +51,16 @@
     },
   "symbols": {
     "TcpCompartmentSet": {
-      "address": 2059400
+      "address": 2010312
     },
     "UdpCompartmentSet": {
-      "address": 2055504
+      "address": 2006416
     },
     "PartitionCount": {
-      "address": 2057284
+      "address": 2008196
     },
     "PartitionTable": {
-      "address": 2057288
+      "address": 2008200
     }
   },
   "user_types": {
@@ -168,13 +168,6 @@
 
                 }
             },
-            "Port": {
-                "offset": 114,
-                "type": {
-                    "kind": "base",
-                    "name": "unsigned be short"
-                }
-            },
             "Next": {
                 "offset": 120,
                 "type":{
@@ -184,15 +177,22 @@
                         "name": "_TCP_LISTENER"
                     }
                 }
+            },
+            "Port": {
+                "offset": 114,
+                "type": {
+                    "kind": "base",
+                    "name": "unsigned be short"
+                }
             }
         },
         "kind": "struct",
-        "size": 128
+        "size": 116
     },
     "_TCP_ENDPOINT": {
         "fields": {
             "Owner": {
-                "offset": 624,
+                "offset": 656,
                 "type": {
                     "kind": "pointer",
                     "subtype": {
@@ -202,7 +202,7 @@
                 }
             },
             "CreateTime": {
-                "offset": 640,
+                "offset": 672,
                 "type": {
                     "kind": "union",
                     "name": "_LARGE_INTEGER"
@@ -215,16 +215,6 @@
                     "subtype": {
                         "kind": "struct",
                         "name": "_ADDRINFO"
-                    }
-                }
-            },
-            "ListEntry": {
-                "offset": 40,
-                "type":{
-                    "kind": "pointer",
-                    "subtype": {
-                        "kind": "struct",
-                        "name": "_LIST_ENTRY"
                     }
                 }
             },
@@ -252,11 +242,14 @@
                     "name": "unsigned be short"
                 }
             },
-            "State": {
-                "offset": 108,
-                "type": {
-                    "kind": "enum",
-                    "name": "TCPStateEnum"
+            "ListEntry": {
+                "offset": 40,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_LIST_ENTRY"
+                    }
                 }
             },
             "Next": {
@@ -267,6 +260,13 @@
                         "kind": "struct",
                         "name": "_TCP_ENDPOINT"
                     }
+                }
+            },
+            "State": {
+                "offset": 108,
+                "type": {
+                    "kind": "enum",
+                    "name": "TCPStateEnum"
                 }
             }
         },
@@ -509,7 +509,7 @@
     "_INET_PORT_POOL": {
         "fields": {
             "PortAssignments": {
-                "offset": 232,
+                "offset": 224,
                 "type": {
                     "count": 256,
                     "kind": "array",
@@ -523,7 +523,7 @@
                 }
             },
             "PortBitMap": {
-                "offset": 216,
+                "offset": 208,
                 "type": {
                     "kind": "struct",
                     "name": "nt_symbols!_RTL_BITMAP"
