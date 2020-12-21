@@ -75,7 +75,7 @@ def setup(app):
                         break
                 else:
                     line_index = len(real_lines)
-                submodule_lines = real_lines[line_index:]
+                submodule_lines = [b"\n"] + real_lines[line_index:]
 
                 plugins_seen = False
                 with open(os.path.join(dir, filename), "wb") as contents:
