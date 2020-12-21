@@ -270,7 +270,7 @@ class vm_map_entry(objects.StructType):
 
         if found:
             vpager = context.object(config_prefix + constants.BANG + "vnode_pager",
-                                    layer_name = vnode_object.vol.layer_name,
+                                    layer_name = vnode_object.vol.native_layer_name,
                                     offset = vnode_object.pager)
             ret = vpager.vnode_handle
         else:
