@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import logging
 import struct
 from typing import Any, Dict, List, Optional
 
@@ -9,6 +10,8 @@ from volatility.framework import interfaces, constants, exceptions
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import physical, segmented, resources
 from volatility.framework.symbols import native
+
+vollog = logging.getLogger(__name__)
 
 
 class VmwareFormatException(exceptions.LayerException):
@@ -130,14 +133,16 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
             current_config_path = interfaces.configuration.path_join("automagic", "layer_stacker", "stack",
                                                                      current_layer_name)
 
+            vmss_success = False
             try:
                 _ = resources.ResourceAccessor().open(vmss).read(10)
                 context.config[interfaces.configuration.path_join(current_config_path, "location")] = vmss
                 context.layers.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
                 vmss_success = True
             except IOError:
-                vmss_success = False
+                pass
 
+            vmsn_success = False
             if not vmss_success:
                 try:
                     _ = resources.ResourceAccessor().open(vmsn).read(10)
@@ -145,7 +150,9 @@ class VmwareStacker(interfaces.automagic.StackerLayerInterface):
                     context.layers.add_layer(physical.FileLayer(context, current_config_path, current_layer_name))
                     vmsn_success = True
                 except IOError:
-                    vmsn_success = False
+                    pass
+
+            vollog.log(constants.LOGLEVEL_VVVV, "Metadata found: VMSS ({}) or VMSN ({})".format(vmss_success, vmsn_success))
 
             if not vmss_success and not vmsn_success:
                 return None
