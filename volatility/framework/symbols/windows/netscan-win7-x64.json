@@ -681,11 +681,8 @@
                     "count": 1,
                     "kind": "array",
                     "subtype": {
-                        "kind": "pointer",
-                        "subtype": {
-                          "kind": "struct",
-                          "name": "_PARTITION"
-                        }
+                        "kind": "struct",
+                        "name": "_PARTITION"
                     }
                 }
             }
