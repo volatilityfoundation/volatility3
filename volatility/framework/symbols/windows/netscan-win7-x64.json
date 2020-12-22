@@ -489,72 +489,6 @@
         "kind": "struct",
         "size": 48
     },
-    "_PARTITION_TABLE": {
-        "fields": {
-            "HashTable": {
-                "offset": 0,
-                "type": {
-                    "kind": "pointer",
-                    "subtype": {
-                        "kind": "base",
-                        "name": "void"
-                    }
-                }
-            },
-            "Unknown2": {
-                "offset": 8,
-                "type": {
-                    "kind": "pointer",
-                    "subtype": {
-                        "kind": "base",
-                        "name": "void"
-                    }
-                }
-            },
-            "Unknown3": {
-                "offset": 16,
-                "type": {
-                    "kind": "pointer",
-                    "subtype": {
-                        "kind": "base",
-                        "name": "void"
-                    }
-                }
-            },
-            "Unknown4": {
-                "offset": 24,
-                "type": {
-                    "kind": "pointer",
-                    "subtype": {
-                        "kind": "base",
-                        "name": "void"
-                    }
-                }
-            },
-            "Unknown5": {
-                "offset": 32,
-                "type": {
-                    "kind": "pointer",
-                    "subtype": {
-                        "kind": "base",
-                        "name": "void"
-                    }
-                }
-            },
-            "Unknown6": {
-                "offset": 40,
-                "type": {
-                    "kind": "pointer",
-                    "subtype": {
-                        "kind": "base",
-                        "name": "void"
-                    }
-                }
-            }
-        },
-        "kind": "struct",
-        "size": 128
-    },
     "_LARGE_INTEGER": {
       "fields": {
         "HighPart": {
@@ -732,6 +666,26 @@
                     "subtype": {
                       "kind": "struct",
                       "name": "nt_symbols!_RTL_DYNAMIC_HASH_TABLE"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 128
+    },
+    "_PARTITION_TABLE": {
+        "fields": {
+            "Partitions": {
+                "offset": 0,
+                "type": {
+                    "count": 1,
+                    "kind": "array",
+                    "subtype": {
+                        "kind": "pointer",
+                        "subtype": {
+                          "kind": "struct",
+                          "name": "_PARTITION"
+                        }
                     }
                 }
             }

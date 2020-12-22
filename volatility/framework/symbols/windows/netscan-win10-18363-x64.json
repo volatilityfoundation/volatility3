@@ -231,12 +231,9 @@
             },
             "ListEntry": {
                 "offset": 40,
-                "type":{
-                    "kind": "pointer",
-                    "subtype": {
-                        "kind": "struct",
-                        "name": "_LIST_ENTRY"
-                    }
+                "type": {
+                    "kind": "union",
+                    "name": "nt_symbols!_LIST_ENTRY"
                 }
             },
             "Next": {

@@ -1,4 +1,4 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
@@ -10,10 +10,10 @@ from volatility.framework import constants, exceptions, interfaces, renderers, s
 from volatility.framework.configuration import requirements
 from volatility.framework.renderers import format_hints
 from volatility.framework.symbols import intermed
+from volatility.framework.symbols.windows import pdbutil
 from volatility.framework.symbols.windows.extensions import network
-from volatility.framework.symbols.windows.pdbutil import PDBUtility
 from volatility.plugins import timeliner
-from volatility.plugins.windows import info, poolscanner, netscan, modules
+from volatility.plugins.windows import netscan, modules
 
 vollog = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.VersionRequirement(name = 'netscan', component = netscan.NetScan, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'modules', component = modules.Modules, version = (1, 0, 0)),
             requirements.BooleanRequirement(
                 name = 'include-corrupt',
                 description =
@@ -151,10 +152,10 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         truncated_port = port & 0xff
 
         # first, grab the given port's PortAssignment (`_PORT_ASSIGNMENT`)
-        inpa = port_pool.PortAssignments[list_index].dereference()
+        inpa = port_pool.PortAssignments[list_index]
 
         # then parse the port assignment list (`_PORT_ASSIGNMENT_LIST`) and grab the correct entry
-        assignment = inpa.InPaBigPoolBase.dereference().Assignments[truncated_port]
+        assignment = inpa.InPaBigPoolBase.Assignments[truncated_port]
 
         if not assignment:
             yield
@@ -258,42 +259,39 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         part_table_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "PartitionTable").address
         part_count_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "PartitionCount").address
 
-        # part_table is the actual partition table offset
-        part_table = cls.read_pointer(context, layer_name, tcpip_module_offset + part_table_symbol, pointer_length)
+        part_table_addr = context.object(net_symbol_table + constants.BANG + "pointer",
+                                    layer_name = layer_name,
+                                    offset = tcpip_module_offset + part_table_symbol)
+        # part_table is the actual partition table offset and consists out of a dynamic amount of _PARTITION objects
+        part_table = context.object(net_symbol_table + constants.BANG + "_PARTITION_TABLE",
+                                    layer_name = layer_name,
+                                    offset = part_table_addr)
         part_count = int.from_bytes(context.layers[layer_name].read(tcpip_module_offset + part_count_symbol, 1), "little")
+        part_table.Partitions.count = part_count
+        partition_size = context.symbol_space.get_type(net_symbol_table + constants.BANG + "_PARTITION").size
 
-        part_table_size = context.symbol_space.get_type(net_symbol_table + constants.BANG + "_PARTITION").size
-
-        partitions = []
-
-        # create partition objects for each partition and append to list
-        for part_idx in range(part_count):
-            current_partition = context.object(net_symbol_table + constants.BANG + "_PARTITION",
-                                               layer_name = layer_name,
-                                               offset = part_table + part_table_size * part_idx)
-
-            partitions.append(current_partition)
-
-        for partition in partitions:
+        entry_offset = context.symbol_space.get_type(obj_name).relative_child_offset("ListEntry")
+        for partition in part_table.Partitions:
             if partition.Endpoints.NumEntries > 0:
                 for endpoint_entry in cls.parse_hashtable(context,
                                                           layer_name,
                                                           partition.Endpoints.Directory,
-                                                          part_table_size,
+                                                          partition_size,
                                                           alignment,
                                                           pointer_length):
 
-                    entry_offset = context.symbol_space.get_type(obj_name).relative_child_offset("ListEntry")
                     endpoint = context.object(obj_name, layer_name = layer_name, offset = endpoint_entry - entry_offset)
                     yield endpoint
-
     @classmethod
     def create_tcpip_symbol_table(cls,
                                     context: interfaces.context.ContextInterface,
                                     config_path: str,
                                     layer_name: str,
                                     tcpip_module: interfaces.objects.ObjectInterface) -> str:
-        """Creates
+        """Creates symbol table for the current image's tcpip.sys driver.
+
+        Searches the memory section of the loaded tcpip.sys module for its PDB GUID
+        and loads the associated symbol table into the symbol space.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
@@ -305,7 +303,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             The name of the constructed and loaded symbol table
         """
         guids = list(
-            PDBUtility.pdbname_scan(
+            pdbutil.PDBUtility.pdbname_scan(
                 context,
                 layer_name,
                 context.layers[layer_name].page_size,
@@ -322,7 +320,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         vollog.debug("Found {}: {}-{}".format(guid["pdb_name"], guid["GUID"], guid["age"]))
 
-        return PDBUtility.load_windows_symbol_table(context,
+        return pdbutil.PDBUtility.load_windows_symbol_table(context,
                                                     guid["GUID"],
                                                     guid["age"],
                                                     guid["pdb_name"],
@@ -357,24 +355,32 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         if "UdpPortPool" in context.symbol_space[tcpip_symbol_table].symbols:
             # older Windows versions
             upp_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "UdpPortPool").address
-            upp_addr = cls.read_pointer(context, layer_name, tcpip_module_offset + upp_symbol, pointer_length)
+            upp_addr = context.object(net_symbol_table + constants.BANG + "pointer",
+                                    layer_name = layer_name,
+                                    offset = tcpip_module_offset + upp_symbol)
 
             tpp_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "TcpPortPool").address
-            tpp_addr = cls.read_pointer(context, layer_name, tcpip_module_offset + tpp_symbol, pointer_length)
+            tpp_addr = context.object(net_symbol_table + constants.BANG + "pointer",
+                                    layer_name = layer_name,
+                                    offset = tcpip_module_offset + tpp_symbol)
 
         elif "UdpCompartmentSet" in context.symbol_space[tcpip_symbol_table].symbols:
             # newer Windows versions since 10.14xxx
             ucs = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "UdpCompartmentSet").address
             tcs = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "TcpCompartmentSet").address
 
-            ucs_offset = cls.read_pointer(context, layer_name, tcpip_module_offset + ucs, pointer_length)
-            tcs_offset = cls.read_pointer(context, layer_name, tcpip_module_offset + tcs, pointer_length)
+            ucs_offset = context.object(net_symbol_table + constants.BANG + "pointer",
+                                    layer_name = layer_name,
+                                    offset = tcpip_module_offset + ucs)
+            tcs_offset = context.object(net_symbol_table + constants.BANG + "pointer",
+                                    layer_name = layer_name,
+                                    offset = tcpip_module_offset + tcs)
 
             ucs_obj = context.object(net_symbol_table + constants.BANG + "_INET_COMPARTMENT_SET", layer_name = layer_name, offset = ucs_offset)
-            upp_addr = ucs_obj.InetCompartment.dereference().ProtocolCompartment.dereference().PortPool
+            upp_addr = ucs_obj.InetCompartment.ProtocolCompartment.PortPool
 
             tcs_obj = context.object(net_symbol_table + constants.BANG + "_INET_COMPARTMENT_SET", layer_name = layer_name, offset = tcs_offset)
-            tpp_addr = tcs_obj.InetCompartment.dereference().ProtocolCompartment.dereference().PortPool
+            tpp_addr = tcs_obj.InetCompartment.ProtocolCompartment.PortPool
 
         else:
             # this branch should not be reached.
@@ -429,13 +435,15 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # given the list of TCP / UDP ports, calculate the address of their respective objects and yield them.
         for port in tcpl_ports:
-            if port == 0:
+            # port value can be 0, which we can skip
+            if not port:
                 continue
             for obj in cls.enumerate_structures_by_port(context, layer_name, net_symbol_table, port, tpp_obj, "tcp"):
                 yield obj
 
         for port in udpa_ports:
-            if port == 0:
+            # same as above, skip port 0
+            if not port:
                 continue
             for obj in cls.enumerate_structures_by_port(context, layer_name, net_symbol_table, port, upp_obj, "udp"):
                 yield obj
@@ -483,6 +491,8 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 elif netw_obj.get_address_family() == network.AF_INET6:
                     proto = "TCPv6"
                 else:
+                    vollog.debug("TCP Endpoint @ 0x{:2x} has unknown address family 0x{:x}".format(netw_obj.vol.offset,
+                                                                                                   netw_obj.get_address_family()))
                     proto = "TCPv?"
 
                 try:
@@ -513,19 +523,25 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def generate_timeline(self):
         for row in self._generator():
             _depth, row_data = row
+            row_dict = {}
+            row_dict["Offset"], row_dict["Proto"], row_dict["LocalAddr"], row_dict["LocalPort"], \
+            row_dict["ForeignAddr"], row_dict["ForeignPort"], row_dict["State"], \
+            row_dict["PID"], row_dict["Owner"], row_dict["Created"] = row_data
+
             # Skip network connections without creation time
-            if not isinstance(row_data[9], datetime.datetime):
+            if not isinstance(row_dict["Created"], datetime.datetime):
                 continue
             row_data = [
                 "N/A" if isinstance(i, renderers.UnreadableValue) or isinstance(i, renderers.UnparsableValue) else i
                 for i in row_data
             ]
             description = "Network connection: Process {} {} Local Address {}:{} " \
-                          "Remote Address {}:{} State {} Protocol {} ".format(row_data[7], row_data[8],
-                                                                              row_data[2], row_data[3],
-                                                                              row_data[4], row_data[5],
-                                                                              row_data[6], row_data[1])
-            yield (description, timeliner.TimeLinerType.CREATED, row_data[9])
+                          "Remote Address {}:{} State {} Protocol {} ".format(row_dict["PID"], row_dict["Owner"],
+                                                                              row_dict["LocalAddr"], row_dict["LocalPort"],
+                                                                              row_dict["ForeignAddr"], row_dict["ForeignPort"],
+                                                                              row_dict["State"], row_dict["Proto"])
+
+            yield (description, timeliner.TimeLinerType.CREATED, row_dict["Created"])
 
     def run(self):
         show_corrupt_results = self.config.get('include-corrupt', None)
