@@ -549,6 +549,10 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
         self._vol['count'] = value
         self._vol['size'] = value * self._vol['subtype'].size
 
+    def __repr__(self) -> str:
+        """Describes the object appropriately"""
+        return AggregateType.__repr__(self)
+
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
 
         @classmethod
@@ -642,6 +646,15 @@ class AggregateType(interfaces.objects.ObjectInterface):
         """Returns whether the object would contain a member called
         member_name."""
         return member_name in self.vol.members
+
+    def __repr__(self) -> str:
+        """Describes the object appropriately"""
+        extras = member_name = ''
+        if self.vol.native_layer_name != self.vol.layer_name:
+            extras += f' (Native: {self.vol.native_layer_name})'
+        if self.vol.member_name:
+            member_name = f' (.{self.vol.member_name})'
+        return f'<{self.__class__.__name__} {self.vol.type_name}{member_name}: {self.vol.layer_name} @ 0x{self.vol.offset:x} #{self.vol.size}{extras}>'
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
 
