@@ -96,23 +96,10 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         ret = []
         for idx in range(bitmap_size_in_byte-1):
             current_byte = context.layers[layer_name].read(bitmap_offset + idx, 1)[0]
-            current_offs = idx*8
-            if current_byte&1 != 0:
-                ret.append(0 + current_offs)
-            if current_byte&2 != 0:
-                ret.append(1 + current_offs)
-            if current_byte&4 != 0:
-                ret.append(2 + current_offs)
-            if current_byte&8 != 0:
-                ret.append(3 + current_offs)
-            if current_byte&16 != 0:
-                ret.append(4 + current_offs)
-            if current_byte&32 != 0:
-                ret.append(5 + current_offs)
-            if current_byte&64 != 0:
-                ret.append(6 + current_offs)
-            if current_byte&128 != 0:
-                ret.append(7 + current_offs)
+            current_offs = idx * 8
+            for bit in range(7):
+                if current_byte & (1 << bit) != 0:
+                    ret.append(bit + current_offs)
         return ret
 
     @classmethod
@@ -147,6 +134,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # invalid argument.
             yield
 
+        vollog.debug("Current Port: {}".format(port))
         # the given port serves as a shifted index into the port pool lists
         list_index = port >> 8
         truncated_port = port & 0xff
@@ -167,7 +155,6 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         if netw_inside:
             # if the value is valid, calculate the actual object address by subtracting the offset
             curr_obj = context.object(obj_name, layer_name = layer_name, offset = netw_inside - ptr_offset)
-            vollog.debug("Found {} object @ 0x{:2x}, yielding...".format(proto, curr_obj.vol.offset))
             yield curr_obj
 
             # if the same port is used on different interfaces multiple objects are created
@@ -203,7 +190,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         ht_offset: int,
                         ht_length: int,
                         alignment: int,
-                        pointer_length: int) -> list:
+                        net_symbol_table: str) -> list:
         """Parses a hashtable quick and dirty.
 
         Args:
@@ -211,19 +198,20 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             layer_name: The name of the layer on which to operate
             ht_offset: Beginning of the hash table
             ht_length: Length of the hash table
-            pointer_length: Length of this architecture's pointers
 
         Returns:
             The hash table entries which are _not_ empty
         """
+        # we are looking for entries whose values are not their own address
         for index in range(ht_length):
-            # mask pointer so we do not get confused with abbreviated virtual offsets
-            # this currently only works for 64-bit.
-            # TODO: add x86 support.
-            current_qword = (0xffff000000000000 | cls.read_pointer(context, layer_name, ht_offset + index * alignment, pointer_length))
-            if current_qword == (0xffff000000000000 | (ht_offset + index * alignment)):
+            current_addr = ht_offset + index * alignment
+            current_pointer = context.object(net_symbol_table + constants.BANG + "pointer",
+                                    layer_name = layer_name,
+                                    offset = current_addr)
+            # check if addr of pointer is equal to the value pointed to
+            if current_pointer.vol.offset == current_pointer:
                 continue
-            yield current_qword
+            yield current_pointer
 
     @classmethod
     def parse_partitions(cls,
@@ -231,8 +219,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                        layer_name: str,
                        net_symbol_table: str,
                        tcpip_symbol_table: str,
-                       tcpip_module_offset: int,
-                       pointer_length: int) -> Iterable[interfaces.objects.ObjectInterface]:
+                       tcpip_module_offset: int) -> Iterable[interfaces.objects.ObjectInterface]:
         """Parses tcpip.sys's PartitionTable containing established TCP connections.
         The amount of Partition depends on the value of the symbol `PartitionCount` and correlates with
         the maximum processor count (refer to Art of Memory Forensics, chapter 11).
@@ -254,7 +241,6 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             alignment = 8
 
         obj_name = net_symbol_table + constants.BANG + "_TCP_ENDPOINT"
-
         # part_table_symbol is the offset within tcpip.sys which contains the address of the partition table itself
         part_table_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "PartitionTable").address
         part_count_symbol = context.symbol_space.get_symbol(tcpip_symbol_table + constants.BANG + "PartitionCount").address
@@ -262,23 +248,25 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         part_table_addr = context.object(net_symbol_table + constants.BANG + "pointer",
                                     layer_name = layer_name,
                                     offset = tcpip_module_offset + part_table_symbol)
+
         # part_table is the actual partition table offset and consists out of a dynamic amount of _PARTITION objects
         part_table = context.object(net_symbol_table + constants.BANG + "_PARTITION_TABLE",
                                     layer_name = layer_name,
                                     offset = part_table_addr)
         part_count = int.from_bytes(context.layers[layer_name].read(tcpip_module_offset + part_count_symbol, 1), "little")
         part_table.Partitions.count = part_count
-        partition_size = context.symbol_space.get_type(net_symbol_table + constants.BANG + "_PARTITION").size
 
+        vollog.debug("Found TCP connection PartitionTable @ 0x{:x} (partition count: {})".format(part_table_addr, part_count))
         entry_offset = context.symbol_space.get_type(obj_name).relative_child_offset("ListEntry")
-        for partition in part_table.Partitions:
+        for ctr, partition in enumerate(part_table.Partitions):
+            vollog.debug("Parsing partition {}".format(ctr))
             if partition.Endpoints.NumEntries > 0:
                 for endpoint_entry in cls.parse_hashtable(context,
                                                           layer_name,
                                                           partition.Endpoints.Directory,
-                                                          partition_size,
+                                                          partition.Endpoints.TableSize,
                                                           alignment,
-                                                          pointer_length):
+                                                          net_symbol_table):
 
                     endpoint = context.object(obj_name, layer_name = layer_name, offset = endpoint_entry - entry_offset)
                     yield endpoint
@@ -333,8 +321,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                        layer_name: str,
                        net_symbol_table: str,
                        tcpip_symbol_table: str,
-                       tcpip_module_offset: int,
-                       pointer_length: int) -> (int, int):
+                       tcpip_module_offset: int) -> (int, int):
         """Finds the given image's port pools. Older Windows versions (presumably < Win10 build 14251) use driver
         symbols called `UdpPortPool` and `TcpPortPool` which point towards the pools.
         Newer Windows versions use `UdpCompartmentSet` and `TcpCompartmentSet`, which we first have to translate into
@@ -346,7 +333,6 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             net_symbol_table: The name of the table containing the tcpip types
             tcpip_module_offset: This memory dump's tcpip.sys image offset
             tcpip_symbol_table: The name of the table containing the tcpip driver symbols
-            pointer_length: Length of this architecture's pointers
 
         Returns:
             The tuple containing the address of the UDP and TCP port pool respectively.
@@ -387,7 +373,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             raise exceptions.SymbolError("UdpPortPool", tcpip_symbol_table,
                                          "Neither UdpPortPool nor UdpCompartmentSet found in {} table".format(tcpip_symbol_table))
 
-        vollog.debug("Found PortPools @ 0x{:x} (TCP) && 0x{:x} (UDP)".format(upp_addr, tpp_addr))
+        vollog.debug("Found PortPools @ 0x{:x} (UDP) && 0x{:x} (TCP)".format(upp_addr, tpp_addr))
         return upp_addr, tpp_addr
 
     @classmethod
@@ -416,15 +402,13 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         tcpip_module_offset = tcpip_module.DllBase
 
-        pointer_length = context.symbol_space.get_type(net_symbol_table + constants.BANG + "pointer").size
-
         # first, TCP endpoints by parsing the partition table
-        for endpoint in cls.parse_partitions(context, layer_name, net_symbol_table, tcpip_symbol_table, tcpip_module_offset, pointer_length):
+        for endpoint in cls.parse_partitions(context, layer_name, net_symbol_table, tcpip_symbol_table, tcpip_module_offset):
             yield endpoint
 
         # then, towards the UDP and TCP port pools
         # first, find their addresses
-        upp_addr, tpp_addr = cls.find_port_pools(context, layer_name, net_symbol_table, tcpip_symbol_table, tcpip_module_offset, pointer_length)
+        upp_addr, tpp_addr = cls.find_port_pools(context, layer_name, net_symbol_table, tcpip_symbol_table, tcpip_module_offset)
 
         # create port pool objects at the detected address and parse the port bitmap
         upp_obj = context.object(net_symbol_table + constants.BANG + "_INET_PORT_POOL", layer_name = layer_name, offset = upp_addr)
@@ -433,6 +417,8 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         tpp_obj = context.object(net_symbol_table + constants.BANG + "_INET_PORT_POOL", layer_name = layer_name, offset = tpp_addr)
         tcpl_ports = cls.parse_bitmap(context, layer_name, tpp_obj.PortBitMap.Buffer, tpp_obj.PortBitMap.SizeOfBitMap // 8)
 
+        vollog.debug("Found TCP Ports: {}".format(tcpl_ports))
+        vollog.debug("Found UDP Ports: {}".format(udpa_ports))
         # given the list of TCP / UDP ports, calculate the address of their respective objects and yield them.
         for port in tcpl_ports:
             # port value can be 0, which we can skip
@@ -451,10 +437,6 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def _generator(self, show_corrupt_results: Optional[bool] = None):
         """ Generates the network objects for use in rendering. """
 
-        # can this be checked via a PluginRequirement?
-        if not symbols.symbol_table_is_64bit(self.context, self.config['nt_symbols']):
-            raise exceptions.LayerException("This plugin currently only supports 64-bit memory images.")
-
         netscan_symbol_table = netscan.NetScan.create_netscan_symbol_table(self.context, self.config["primary"],
                                                                 self.config["nt_symbols"], self.config_path)
 
@@ -469,7 +451,6 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                             tcpip_module,
                                             tcpip_symbol_table):
 
-            vollog.debug("Found netw obj @ 0x{:2x} of assumed type {}".format(netw_obj.vol.offset, type(netw_obj)))
             # objects passed pool header constraints. check for additional constraints if strict flag is set.
             if not show_corrupt_results and not netw_obj.is_valid():
                 continue
