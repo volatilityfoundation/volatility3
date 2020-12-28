@@ -108,7 +108,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                        layer_name: str,
                        net_symbol_table: str,
                        port: int,
-                       port_pool: interfaces.objects.ObjectInterface,
+                       port_pool_addr: int,
                        proto="tcp") -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all UDP Endpoints and TCP Listeners by parsing UdpPortPool and TcpPortPool.
@@ -118,7 +118,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             layer_name: The name of the layer on which to operate
             net_symbol_table: The name of the table containing the tcpip types
             port: Current port as integer to lookup the associated object.
-            port_pool: Port pool object
+            port_pool_addr: Address of port pool object
             proto: Either "tcp" or "udp" to decide which types to use.
 
         Returns:
@@ -138,6 +138,11 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         # the given port serves as a shifted index into the port pool lists
         list_index = port >> 8
         truncated_port = port & 0xff
+
+        # constructing port_pool object here so callers don't have to
+        port_pool = context.object(net_symbol_table + constants.BANG + "_INET_PORT_POOL",
+                                   layer_name = layer_name,
+                                   offset = port_pool_addr)
 
         # first, grab the given port's PortAssignment (`_PORT_ASSIGNMENT`)
         inpa = port_pool.PortAssignments[list_index]
@@ -270,12 +275,14 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                     endpoint = context.object(obj_name, layer_name = layer_name, offset = endpoint_entry - entry_offset)
                     yield endpoint
+
     @classmethod
     def create_tcpip_symbol_table(cls,
                                     context: interfaces.context.ContextInterface,
                                     config_path: str,
                                     layer_name: str,
-                                    tcpip_module: interfaces.objects.ObjectInterface) -> str:
+                                    tcpip_module_offset: int,
+                                    tcpip_module_size: int) -> str:
         """Creates symbol table for the current image's tcpip.sys driver.
 
         Searches the memory section of the loaded tcpip.sys module for its PDB GUID
@@ -285,19 +292,21 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             context: The context to retrieve required elements (layers, symbol tables) from
             config_path: The config path where to find symbol files
             layer_name: The name of the layer on which to operate
-            tcpip_module: The created vol Windows module object of the given memory image
+            tcpip_module_offset: This memory dump's tcpip.sys image offset
+            tcpip_module_size: The size of `tcpip.sys` for this dump
 
         Returns:
             The name of the constructed and loaded symbol table
         """
+
         guids = list(
             pdbutil.PDBUtility.pdbname_scan(
                 context,
                 layer_name,
                 context.layers[layer_name].page_size,
                 [b"tcpip.pdb"],
-                start=tcpip_module.DllBase,
-                end=tcpip_module.DllBase + tcpip_module.SizeOfImage
+                start=tcpip_module_offset,
+                end=tcpip_module_offset + tcpip_module_size
             )
         )
 
@@ -382,7 +391,7 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                        layer_name: str,
                        nt_symbols: str,
                        net_symbol_table: str,
-                       tcpip_module: interfaces.objects.ObjectInterface,
+                       tcpip_module_offset: int,
                        tcpip_symbol_table: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all UDP Endpoints, TCP Listeners and TCP Endpoints in the primary layer that
@@ -393,14 +402,12 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             layer_name: The name of the layer on which to operate
             nt_symbols: The name of the table containing the kernel symbols
             net_symbol_table: The name of the table containing the tcpip types
-            tcpip_module: The created vol Windows module object of the given memory image
+            tcpip_module_offset: Offset of `tcpip.sys`'s PE image in memory
             tcpip_symbol_table: The name of the table containing the tcpip driver symbols
 
         Returns:
             The list of network objects from the `layer_name` layer's `PartitionTable` and `PortPools`
         """
-
-        tcpip_module_offset = tcpip_module.DllBase
 
         # first, TCP endpoints by parsing the partition table
         for endpoint in cls.parse_partitions(context, layer_name, net_symbol_table, tcpip_symbol_table, tcpip_module_offset):
@@ -424,14 +431,14 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # port value can be 0, which we can skip
             if not port:
                 continue
-            for obj in cls.enumerate_structures_by_port(context, layer_name, net_symbol_table, port, tpp_obj, "tcp"):
+            for obj in cls.enumerate_structures_by_port(context, layer_name, net_symbol_table, port, tpp_addr, "tcp"):
                 yield obj
 
         for port in udpa_ports:
             # same as above, skip port 0
             if not port:
                 continue
-            for obj in cls.enumerate_structures_by_port(context, layer_name, net_symbol_table, port, upp_obj, "udp"):
+            for obj in cls.enumerate_structures_by_port(context, layer_name, net_symbol_table, port, upp_addr, "udp"):
                 yield obj
 
     def _generator(self, show_corrupt_results: Optional[bool] = None):
@@ -442,13 +449,17 @@ class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         tcpip_module = self.get_tcpip_module(self.context, self.config["primary"], self.config["nt_symbols"])
 
-        tcpip_symbol_table = self.create_tcpip_symbol_table(self.context, self.config_path, self.config["primary"], tcpip_module)
+        tcpip_symbol_table = self.create_tcpip_symbol_table(self.context,
+                                                            self.config_path,
+                                                            self.config["primary"],
+                                                            tcpip_module.DllBase,
+                                                            tcpip_module.SizeOfImage)
 
         for netw_obj in self.list_sockets(self.context,
                                             self.config['primary'],
                                             self.config['nt_symbols'],
                                             netscan_symbol_table,
-                                            tcpip_module,
+                                            tcpip_module.DllBase,
                                             tcpip_symbol_table):
 
             # objects passed pool header constraints. check for additional constraints if strict flag is set.
