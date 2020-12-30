@@ -18,7 +18,7 @@ import types
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
-from volatility.framework import constants, exceptions, interfaces
+from volatility.framework import constants, exceptions, interfaces, caching
 
 vollog = logging.getLogger(__name__)
 
@@ -419,7 +419,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
 
     # ## Read/Write functions for mapped pages
 
-    @functools.lru_cache(maxsize = 512)
+    @caching.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of
         length size."""

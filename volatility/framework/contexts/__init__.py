@@ -12,7 +12,7 @@ import functools
 import hashlib
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
-from volatility.framework import constants, interfaces, symbols, exceptions
+from volatility.framework import constants, interfaces, symbols, exceptions, caching
 from volatility.framework.objects import templates
 
 
@@ -277,7 +277,7 @@ class SizedModule(Module):
         return self._size
 
     @property  # type: ignore # FIXME: mypy #5107
-    @functools.lru_cache()
+    @caching.lru_cache()
     def hash(self) -> str:
         """Hashes the module for equality checks.
 

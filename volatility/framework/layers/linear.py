@@ -1,7 +1,6 @@
-import functools
 from typing import List, Optional, Tuple, Iterable
 
-from volatility.framework import exceptions, interfaces
+from volatility.framework import exceptions, interfaces, caching
 
 
 class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
@@ -28,7 +27,7 @@ class LinearlyMappedLayer(interfaces.layers.TranslationLayerInterface):
     # ## Read/Write functions for mapped pages
     # Redefine read here for speed reasons (so we don't call a processing method
 
-    @functools.lru_cache(maxsize = 512)
+    @caching.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of
         length size."""
