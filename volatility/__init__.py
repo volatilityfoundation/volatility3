@@ -10,6 +10,8 @@ from typing import List, TypeVar, Callable, Any, Optional
 _T = TypeVar("_T")
 _S = TypeVar("_S")
 
+CACHING = True
+
 
 class classproperty(property):
     """Class property decorator.

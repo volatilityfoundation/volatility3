@@ -22,6 +22,11 @@ import traceback
 from typing import Dict, Type, Union, Any
 from urllib import parse, request
 
+import volatility
+
+if "--live" in sys.argv:
+    volatility.CACHING = False
+
 import volatility.plugins
 import volatility.symbols
 from volatility import framework
@@ -134,6 +139,7 @@ class CommandLine:
                             help = "Log output to a file as well as the console",
                             default = None,
                             type = str)
+        parser.add_argument("--live", help = "Disable caching of layer reads", action = 'store_true')
         parser.add_argument("-o",
                             "--output-dir",
                             help = "Directory in which to output any generated files",
