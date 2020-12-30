@@ -436,7 +436,8 @@ class CommandLine:
                 if value is not None:
                     if isinstance(requirement, requirements.URIRequirement):
                         if isinstance(value, str):
-                            if not parse.urlparse(value).scheme:
+                            scheme = parse.urlparse(value).scheme
+                            if not scheme or len(scheme) <= 1:
                                 if not os.path.exists(value):
                                     raise FileNotFoundError(
                                         "Non-existant file {} passed to URIRequirement".format(value))
