@@ -284,6 +284,7 @@ class CommandLine:
         self.output_dir = args.output_dir
 
         self.populate_config(ctx, chosen_configurables_list, args, plugin_config_path)
+        options = self.populate_renderer_option_values(renderer, args)
 
         if args.extend:
             for extension in args.extend:
@@ -314,7 +315,6 @@ class CommandLine:
 
         try:
             # Construct and run the plugin
-            options = []
             if constructed:
                 renderer(options).render(constructed.run())
         except (exceptions.VolatilityException) as excp:
@@ -589,6 +589,7 @@ class CommandLine:
                 extra_options = {
                     'help': option.description,
                     'type': option.option_type,
+                    'default': None,
                     'dest': config_name.replace('-', '_')
                 }
                 if option.option_type == bool:
@@ -596,6 +597,18 @@ class CommandLine:
                     extra_options['action'] = 'store_true'
                 renderer_parser.add_argument("--" + config_name,
                                              **extra_options)
+
+    def populate_renderer_option_values(self, renderer: Type[text_renderer.CLIRenderer], cli_options):
+        """Populates an options dictionary with the appropriate values"""
+        options = []
+        for option in renderer.get_render_options():
+            config_name = '-'.join([renderer.name, option.name]).replace('-', '_')
+            if hasattr(cli_options, config_name):
+                if getattr(cli_options, config_name) is not None:
+                    option.value = getattr(cli_options, config_name)
+                    options.append(option)
+        return options
+
 
 
 def main():
