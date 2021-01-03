@@ -48,7 +48,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         super().__init__(*args, **kwargs)
         self.timeline = {}
         self.usable_plugins = None
-        self.automagics = None
+        self.automagics = None  # type: Optional[List[interfaces.automagic.AutomagicInterface]]
 
     @classmethod
     def get_usable_plugins(cls, selected_list: List[str] = None) -> List[Type]:
@@ -176,6 +176,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         self.usable_plugins = self.usable_plugins or self.get_usable_plugins()
         self.automagics = self.automagics or automagic.available(self._context)
         plugins_to_run = []
+        requirement_configs = {}
 
         filter_list = self.config['plugin-filter']
         # Identify plugins that we can run which output datetimes
@@ -183,8 +184,21 @@ class Timeliner(interfaces.plugins.PluginInterface):
             try:
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
 
+                for requirement in plugin_class.get_requirements():
+                    if requirement.name in requirement_configs:
+                        config_req, config_value = requirement_configs[requirement.name]
+                        if requirement == config_req:
+                            self.context.config[interfaces.configuration.path_join(
+                                self.config_path, plugin_class.__name__)] = config_value
+
                 plugin = plugins.construct_plugin(self.context, automagics, plugin_class, self.config_path,
                                                   self._progress_callback, self.open)
+
+                for requirement in plugin.get_requirements():
+                    if requirement.name not in requirement_configs:
+                        config_value = plugin.config.get(requirement.name, None)
+                        if config_value:
+                            requirement_configs[requirement.name] = (requirement, config_value)
 
                 if isinstance(plugin, TimeLinerInterface):
                     if not len(filter_list) or any(
