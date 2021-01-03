@@ -324,6 +324,14 @@ class RequirementInterface(metaclass = ABCMeta):
     def __repr__(self) -> str:
         return "<" + self.__class__.__name__ + ": " + self.name + ">"
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        for name in self.__dict__:
+            if other.__dict__.get(name, None) != self.__dict__[name]:
+                return False
+        return True
+
     @property
     def name(self) -> str:
         """The name of the Requirement.
