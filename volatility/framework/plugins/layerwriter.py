@@ -82,8 +82,6 @@ class LayerWriter(plugins.PluginInterface):
             for name in self.context.layers:
                 yield 0, (name, )
         else:
-            import pdb
-            pdb.set_trace()
             # Choose the most recently added layer that isn't virtual
             if self.config['layers'] is None:
                 self.config['layers'] = []
