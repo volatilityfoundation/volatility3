@@ -22,16 +22,11 @@ import traceback
 from typing import Dict, Type, Union, Any
 from urllib import parse, request
 
-import volatility
-
-if "--live" in sys.argv:
-    volatility.CACHING = False
-
 import volatility.plugins
 import volatility.symbols
 from volatility import framework
 from volatility.cli import text_renderer, volargparse
-from volatility.framework import automagic, constants, contexts, exceptions, interfaces, plugins, configuration
+from volatility.framework import automagic, caching, constants, contexts, exceptions, interfaces, plugins, configuration
 from volatility.framework.automagic import stacker
 from volatility.framework.configuration import requirements
 
@@ -171,6 +166,9 @@ class CommandLine:
         # processed the plugin choice or had the plugin subparser added.
         known_args = [arg for arg in sys.argv if arg != '--help' and arg != '-h']
         partial_args, _ = parser.parse_known_args(known_args)
+
+        if partial_args.live:
+            caching.DISABLED = True
 
         banner_output = sys.stdout
         if renderers[partial_args.renderer].structured_output:

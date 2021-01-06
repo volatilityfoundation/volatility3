@@ -71,9 +71,6 @@ LINUX_BANNERS_PATH = os.path.join(CACHE_PATH, "linux_banners.cache")
 MAC_BANNERS_PATH = os.path.join(CACHE_PATH, "mac_banners.cache")
 """Default location to record information about available mac banners"""
 
-CACHING = True
-"""Allows the disabling of caching for reads (which vastly speeds up object accesses and layer scanning)"""
-
 BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
 
 ProgressCallback = Optional[Callable[[float, str], None]]
