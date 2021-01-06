@@ -5,7 +5,7 @@
 import time
 from typing import List, Tuple, Iterable
 
-from volatility.framework import constants, interfaces, layers
+from volatility.framework import constants, interfaces, layers, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.renderers import TreeGrid
@@ -158,6 +158,8 @@ class Info(plugins.PluginInterface):
         yield (0, ("Kernel Base", hex(self.config["primary.kernel_virtual_offset"])))
         yield (0, ("DTB", hex(self.config["primary.page_map_offset"])))
         yield (0, ("Symbols", self.config["nt_symbols.isf_url"]))
+        yield (0, ("Is64Bit", str(symbols.symbol_table_is_64bit(self.context, symbol_table))))
+        yield (0, ("IsPAE", str(self.context.layers[layer_name].metadata.get("pae", False))))
 
         for i, layer in self.get_depends(self.context, "primary"):
             yield (0, (layer.name, "{} {}".format(i, layer.__class__.__name__)))
