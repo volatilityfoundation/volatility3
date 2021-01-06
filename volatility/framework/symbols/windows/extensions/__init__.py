@@ -6,9 +6,8 @@ import collections.abc
 import datetime
 import functools
 import logging
-import struct
 import math
-from typing import Iterable, Iterator, Optional, Union, Dict, Tuple, List
+from typing import Iterable, Iterator, Optional, Union, Tuple, List
 
 from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
 from volatility.framework.layers import intel
