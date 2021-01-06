@@ -5,7 +5,7 @@
 import logging
 from typing import List, Optional, Dict
 
-from volatility.framework import constants, exceptions, renderers, interfaces
+from volatility.framework import constants, exceptions, renderers, interfaces, symbols
 from volatility.framework.configuration import requirements
 from volatility.framework.objects import utility
 from volatility.framework.renderers import format_hints
@@ -80,20 +80,29 @@ class Handles(interfaces.plugins.PluginInterface):
             object_header.GrantedAccess = handle_table_entry.GrantedAccess
         except AttributeError:
             # starting with windows 8
-            if handle_table_entry.LowValue == 0:
-                return None
+            is_64bit = symbols.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
 
-            magic = self.find_sar_value()
+            if is_64bit:
+                if handle_table_entry.LowValue == 0:
+                    return None
 
-            # is this the right thing to raise here?
-            if magic is None:
-                if has_capstone:
-                    raise AttributeError("Unable to find the SAR value for decoding handle table pointers")
-                else:
-                    raise exceptions.MissingModuleException(
-                        "capstone", "Requires capstone to find the SAR value for decoding handle table pointers")
+                magic = self.find_sar_value()
 
-            offset = self._decode_pointer(handle_table_entry.LowValue, magic)
+                # is this the right thing to raise here?
+                if magic is None:
+                    if has_capstone:
+                        raise AttributeError("Unable to find the SAR value for decoding handle table pointers")
+                    else:
+                        raise exceptions.MissingModuleException(
+                            "capstone", "Requires capstone to find the SAR value for decoding handle table pointers")
+
+                offset = self._decode_pointer(handle_table_entry.LowValue, magic)
+            else:
+                if handle_table_entry.InfoTable == 0:
+                    return None
+
+                offset = handle_table_entry.InfoTable & ~7
+
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
             object_header = self.context.object(self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER",
                                                 virtual,
