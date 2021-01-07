@@ -247,7 +247,7 @@ class IntelPAE(Intel):
     _maxphyaddr = 40
     _maxvirtaddr = 32
     _structure = [('page directory pointer', 2, False), ('page directory', 9, True), ('page table', 9, True)]
-    _direct_metadata = collections.ChainMap({'pae', True}, Intel._direct_metadata)
+    _direct_metadata = collections.ChainMap({'pae': True}, Intel._direct_metadata)
 
 
 class Intel32e(Intel):
