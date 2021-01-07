@@ -105,7 +105,7 @@
 
                 }
             },
-            "MaskedPrevObj": {
+            "Next": {
                 "offset": 112,
                 "type":{
                     "kind": "pointer",
@@ -175,7 +175,7 @@
                     "name": "unsigned be short"
                 }
             },
-            "MaskedPrevObj": {
+            "Next": {
                 "offset": 120,
                 "type":{
                     "kind": "pointer",
@@ -218,14 +218,11 @@
                     }
                 }
             },
-            "HashTableEntry": {
+            "ListEntry": {
                 "offset": 40,
-                "type":{
-                    "kind": "pointer",
-                    "subtype": {
-                        "kind": "struct",
-                        "name": "_LIST_ENTRY"
-                    }
+                "type": {
+                    "kind": "union",
+                    "name": "nt_symbols!_LIST_ENTRY"
                 }
             },
             "InetAF": {
@@ -259,7 +256,7 @@
                     "name": "TCPStateEnum"
                 }
             },
-            "MaskedPrevObj": {
+            "Next": {
                 "offset": 112,
                 "type":{
                     "kind": "pointer",
@@ -459,7 +456,7 @@
     },
     "_PORT_ASSIGNMENT_ENTRY": {
         "fields": {
-            "MaskedObjectPtr": {
+            "Entry": {
                 "offset": 8,
                 "type": {
                     "kind": "pointer",
@@ -552,6 +549,23 @@
                     "subtype": {
                       "kind": "struct",
                       "name": "nt_symbols!_RTL_DYNAMIC_HASH_TABLE"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 128
+    },
+    "_PARTITION_TABLE": {
+        "fields": {
+            "Partitions": {
+                "offset": 0,
+                "type": {
+                    "count": 1,
+                    "kind": "array",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_PARTITION"
                     }
                 }
             }

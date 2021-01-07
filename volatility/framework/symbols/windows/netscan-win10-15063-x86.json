@@ -238,6 +238,16 @@
                     "kind": "base",
                     "name": "unsigned be short"
                 }
+            },
+            "Next": {
+                "offset": 76,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_UDP_ENDPOINT"
+                    }
+                }
             }
         },
         "kind": "struct",
@@ -290,6 +300,16 @@
                 "type": {
                     "kind": "base",
                     "name": "unsigned be short"
+                }
+            },
+            "Next": {
+                "offset": 72,
+                "type":{
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_TCP_LISTENER"
+                    }
                 }
             }
         },
@@ -502,6 +522,173 @@
       },
       "kind": "union",
       "size": 8
+    },
+    "_INET_COMPARTMENT_SET": {
+        "fields": {
+            "InetCompartment": {
+                "offset": 324,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_INET_COMPARTMENT"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 384
+    },
+    "_INET_COMPARTMENT": {
+        "fields": {
+            "ProtocolCompartment": {
+                "offset": 20,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_PROTOCOL_COMPARTMENT"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 24
+    },
+    "_PROTOCOL_COMPARTMENT": {
+        "fields": {
+            "PortPool": {
+                "offset": 0,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "struct",
+                      "name": "_INET_PORT_POOL"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 16
+    },
+    "_PORT_ASSIGNMENT_ENTRY": {
+        "fields": {
+            "Entry": {
+                "offset": 4,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "base",
+                      "name": "void"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 8
+    },
+    "_PORT_ASSIGNMENT_LIST": {
+        "fields": {
+            "Assignments": {
+                "offset": 0,
+                "type": {
+                    "count": 256,
+                    "kind": "array",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_PORT_ASSIGNMENT_ENTRY"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 4096
+    },
+    "_PORT_ASSIGNMENT": {
+        "fields": {
+            "InPaBigPoolBase": {
+                "offset": 16,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "struct",
+                      "name": "_PORT_ASSIGNMENT_LIST"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 24
+    },
+    "_INET_PORT_POOL": {
+        "fields": {
+            "PortAssignments": {
+                "offset": 152,
+                "type": {
+                    "count": 256,
+                    "kind": "array",
+                    "subtype": {
+                        "kind": "pointer",
+                        "subtype": {
+                          "kind": "struct",
+                          "name": "_PORT_ASSIGNMENT"
+                        }
+                    }
+                }
+            },
+            "PortBitMap": {
+                "offset": 144,
+                "type": {
+                    "kind": "struct",
+                    "name": "nt_symbols!_RTL_BITMAP"
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 11200
+    },
+    "_PARTITION": {
+        "fields": {
+            "Endpoints" : {
+                "offset": 4,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "struct",
+                      "name": "nt_symbols!_RTL_DYNAMIC_HASH_TABLE"
+                    }
+                }
+            },
+            "UnknownHashTable" : {
+                "offset": 12,
+                "type": {
+                    "kind": "pointer",
+                    "subtype": {
+                      "kind": "struct",
+                      "name": "nt_symbols!_RTL_DYNAMIC_HASH_TABLE"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 64
+    },
+    "_PARTITION_TABLE": {
+        "fields": {
+            "Partitions": {
+                "offset": 0,
+                "type": {
+                    "count": 1,
+                    "kind": "array",
+                    "subtype": {
+                        "kind": "struct",
+                        "name": "_PARTITION"
+                    }
+                }
+            }
+        },
+        "kind": "struct",
+        "size": 64
     }
   },
   "enums": {
