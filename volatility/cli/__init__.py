@@ -188,6 +188,8 @@ class CommandLine:
             vollog.addHandler(file_logger)
             vollog.info("Logging started")
         if partial_args.verbosity < 3:
+            if partial_args.verbosity < 1:
+                sys.tracebacklimit = None
             console.setLevel(30 - (partial_args.verbosity * 10))
         else:
             console.setLevel(10 - (partial_args.verbosity - 2))
