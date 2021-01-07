@@ -18,8 +18,8 @@ from volatility.plugins.windows import netscan, modules
 vollog = logging.getLogger(__name__)
 
 
-class NetList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
-    """Scans for network objects present in a particular windows memory image."""
+class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
+    """Traverses network tracking structures present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
