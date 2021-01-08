@@ -285,7 +285,7 @@ class SqliteRenderer(QuickTextRenderer):
             if len(accumulator[1]) > 20000:
                 _db.execute("BEGIN TRANSACTION")
                 insert = "INSERT INTO " + table_name + " (id, " + \
-                     ", ".join(['"' + self._sanitize_name(i.name) + '"' for i in grid.columns]) + ") " + \
+                     ", ".join(['"' + i.name + '"' for i in grid.columns]) + ") " + \
                      " VALUES (?, " + ", ".join(["?"] * len(node.values)) + ")"
                 _db.executemany(insert, accumulator[1])
                 accumulator = [accumulator[0], []]
