@@ -94,7 +94,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             The list of indices at which a 1 was found.
         """
         ret = []
-        for idx in range(bitmap_size_in_byte-1):
+        for idx in range(bitmap_size_in_byte):
             current_byte = context.layers[layer_name].read(bitmap_offset + idx, 1)[0]
             current_offs = idx * 8
             for bit in range(8):
