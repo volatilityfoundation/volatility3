@@ -97,7 +97,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         for idx in range(bitmap_size_in_byte-1):
             current_byte = context.layers[layer_name].read(bitmap_offset + idx, 1)[0]
             current_offs = idx * 8
-            for bit in range(7):
+            for bit in range(8):
                 if current_byte & (1 << bit) != 0:
                     ret.append(bit + current_offs)
         return ret
