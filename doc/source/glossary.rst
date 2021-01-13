@@ -162,27 +162,31 @@ Template
 .. _Translation Layer:
 
 Translation Layer
-    This is a specific type of :ref:`data layer<Data Layer>`, a non-contiguous group of bytes that can be references by
-    a unique :ref:`offset<Offset>` within the layer.  In particular, translation layers translates (or :ref:`maps<Map>`)
-    requests made of it to a location within a lower layer.  This can be either linear (a one-to-one mapping between bytes)
-    or non-linear (a group of bytes :ref:`maps<Map>` to a larger or smaller group of bytes.
+    This is a type of data layer which allows accessing data from lower layers using addresses different to those
+    used by the lower layers themselves.  When accessing data in a translation layer, it translates (or :ref:`maps<Map>`)
+    addresses from its own :ref:`address space<Address Space>` to the address space of the lower layer and returns the
+    corresponding data from the lower layer.  Note that multiple addresses in the higher layer might refer to the same
+    address in the lower layer.  Conversely, some addresses in the higher layer might have no corresponding address in the
+    lower layer at all.  Translation layers most commonly handle the translation from virtual to physical addresses,
+    but can be used to translate data to and from a compressed form or translate data from a particular file format
+    into another format.
 
 .. _Type:
 
 Type
     This is a structure definition of multiple elements that expresses how data is laid out.  Basic types define how
-    the data should be interpretted in terms of a run of bits (or more commonly a collection of 8 bits at a time,
-    called bytes).  More complex types can be made up of other types combined together at specific locations known
-    as :ref:`structs<Struct>` or repeated, known as :ref:`array<Array>`.  They can even defined types at the same
-    location depending on the data itself, known as :ref:`Unions<Union>`.  Once a type has been linked to a specific
-    chunk of data, the result is referred to as an :ref:`object<object>`.
+    the data should be interpreted in terms of a run of bits (or more commonly a collection of 8 bits at a time,
+    called bytes).  New types can be constructed by combining other types at specific relative offsets, forming something
+    called a :ref:`struct<Struct>`, or by repeating the same type, known as an :ref:`array<Array>`.  They can even
+    contain other types at the same offset depending on the data itself, known as :ref:`Unions<Union>`.  Once a type
+    has been linked to a specific chunk of data, the result is referred to as an :ref:`object<object>`.
 
 U
 -
 .. _Union:
 
 Union
-    A union is a type that can have can hold multiple different subtypes, which specifically overlap.  A union is means
-    for holding two different types within the same size of data, meaning that not all types within the union will hold
-    valid data at the same time, more that depending on what the union is holding, a subset of the type will point to
-    accurate data (assumption no corruption).
+    A union is a type that can hold multiple different subtypes, whose relative offsets specifically overlap.
+    A union is a means for holding multiple different types within the same size of data, the relative offsets of the
+    types within the union specifically overlap.  This means that the data in a union object is interpreted differently
+    based on the types of the union used to access it.
