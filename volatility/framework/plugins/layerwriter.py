@@ -34,11 +34,12 @@ class LayerWriter(plugins.PluginInterface):
                                             description = 'List available layers',
                                             default = False,
                                             optional = True),
-            requirements.ListRequirement(name = 'layers',
-                                         element_type = str,
-                                         description = 'Names of layer to write',
-                                         default = None,
-                                         optional = True)
+            requirements.ListRequirement(
+                name = 'layers',
+                element_type = str,
+                description = 'Names of layers to write (defaults to the highest non-mapped layer)',
+                default = None,
+                optional = True)
         ]
 
     @classmethod
@@ -83,7 +84,7 @@ class LayerWriter(plugins.PluginInterface):
                 yield 0, (name, )
         else:
             # Choose the most recently added layer that isn't virtual
-            if self.config['layers'] is None:
+            if not self.config['layers']:
                 self.config['layers'] = []
                 for name in self.context.layers:
                     if not self.context.layers[name].metadata.get('mapped', False):
