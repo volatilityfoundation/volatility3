@@ -1051,7 +1051,7 @@ class SHARED_CACHE_MAP(objects.StructType):
                 continue
 
             vacb_obj = vacb_array[counter].dereference().cast(symbol_table_name + constants.BANG + "_VACB")
-            if vacb_obj.is_valid(shared_cache_map = self):
+            if vacb_obj.SharedCacheMap == self.vol.offset:
                 self.save_vacb(vacb_obj, vacb_list)
             else:
                 # Process the next level of the multi-level array
