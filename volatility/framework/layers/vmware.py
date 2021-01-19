@@ -48,8 +48,7 @@ class VmwareLayer(segmented.SegmentedLayer):
         if magic not in [b"\xD2\xBE\xD2\xBE"]:
             raise VmwareFormatException(self.name, "Wrong magic bytes for Vmware layer: {}".format(repr(magic)))
 
-        # TODO: Change certain structure sizes based on the version
-        # version = magic[1] & 0xf
+        version = magic[0] & 0xf
 
         group_size = struct.calcsize(self.group_structure)
 
@@ -81,12 +80,20 @@ class VmwareLayer(segmented.SegmentedLayer):
                         self._context.object("vmware!unsigned int",
                                              offset = offset + name_len + 2 + (index * index_len),
                                              layer_name = self._meta_layer))
-                data = self._context.object("vmware!unsigned int",
+                data_len = flags & 0x3f
+
+                # TODO: Read special data sizes (signalling a longer data stream) properly instead of skipping them
+                if data_len in (62, 63):
+                    data_len = 4 if version == 0 else 8
+                    offset += 2 + name_len + (indicies_len * index_len) + 2 * data_len
+                    continue
+
+                data = self._context.object("vmware!unsigned int" if data_len == 4 else "vmware!unsigned long long",
                                             layer_name = self._meta_layer,
                                             offset = offset + 2 + name_len + (indicies_len * index_len))
                 tags[(name, tuple(indicies))] = (flags, data)
                 offset += 2 + name_len + (indicies_len *
-                                          index_len) + self._context.symbol_space.get_type("vmware!unsigned int").size
+                                          index_len) + data_len
 
         if tags[("regionsCount", ())][1] == 0:
             raise VmwareFormatException(self.name, "VMware VMEM is not split into regions")
