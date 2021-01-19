@@ -3,7 +3,7 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Mac's lsmod command."""
-from volatility.framework import renderers, interfaces, contexts
+from volatility.framework import exceptions, renderers, interfaces, contexts
 from volatility.framework.configuration import requirements
 from volatility.framework.interfaces import plugins
 from volatility.framework.objects import utility
@@ -40,13 +40,41 @@ class Lsmod(plugins.PluginInterface):
         """
         kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
 
+        kernel_layer = context.layers[layer_name]
+
         kmod_ptr = kernel.object_from_symbol(symbol_name = "kmod")
 
-        # TODO - use smear-proof list walking API after dev release
-        kmod = kmod_ptr.dereference().cast("kmod_info")
-        while kmod != 0:
-            yield kmod
+        try:
+            kmod = kmod_ptr.dereference().cast("kmod_info")
+        except exceptions.InvalidAddressException:
+            return []
+
+        yield kmod
+
+        try:
             kmod = kmod.next
+        except exceptions.InvalidAddressException:
+            return []
+
+        seen = set()
+
+        while kmod != 0 and \
+              kmod not in seen and \
+              len(seen) < 1024:
+
+            kmod_obj = kmod.dereference()
+
+            if not kernel_layer.is_valid(kmod_obj.vol.offset, kmod_obj.vol.size):
+                break
+
+            seen.add(kmod)
+
+            yield kmod
+
+            try:
+                kmod = kmod.next
+            except exceptions.InvalidAddressException:
+                return
 
     def _generator(self):
         for module in self.list_modules(self.context, self.config['primary'], self.config['darwin']):
