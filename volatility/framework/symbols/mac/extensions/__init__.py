@@ -44,19 +44,26 @@ class proc(generic.GenericIntelProcess):
             return
 
         try:
-            current_map = task.map.hdr.links.next
+            current_map = task.map.hdr.links.next.dereference()
         except exceptions.InvalidAddressException:
             return
 
         seen = set()  # type: Set[int]
 
+        is_valid = current_map._context.layers[current_map.vol.layer_name].is_valid
+
         for i in range(task.map.hdr.nentries):
             if not current_map or current_map.vol.offset in seen:
                 break
 
+            if not is_valid(current_map.vol.offset, current_map.vol.size):
+                break
+
             yield current_map
+
             seen.add(current_map.vol.offset)
-            current_map = current_map.links.next
+
+            current_map = current_map.links.next.dereference()
 
     ######
     # ikelos: this breaks with multi threading on, but works with it disabled
@@ -119,8 +126,11 @@ class vnode(objects.StructType):
         if vnodeobj is None:
             return
 
-        if vname:
-            ret.append(utility.pointer_to_string(vname, 255))
+        if vname != 0:
+            try:
+                ret.append(utility.pointer_to_string(vname, 255))
+            except exceptions.InvalidAddressException:
+                pass
 
         if int(vnodeobj.v_flag) & 0x000001 != 0 and int(vnodeobj.v_mount) != 0:
             if int(vnodeobj.v_mount.mnt_vnodecovered) != 0:
