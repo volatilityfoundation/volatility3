@@ -4,7 +4,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import volatility.cli
+import volatility3.cli
 
 if __name__ == '__main__':
-    volatility.cli.main()
+    volatility3.cli.main()

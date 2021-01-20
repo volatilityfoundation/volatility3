@@ -17,7 +17,7 @@ logger = logging.getLogger("")
 logger.addHandler(console)
 logger.setLevel(logging.DEBUG)
 
-from volatility import schemas
+from volatility3 import schemas
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Validates ")

@@ -14,14 +14,14 @@ workspace.xml
 # Manually generated files
 .mypy_cache
 stubs
-volatility/symbols/linux*
-volatility/symbols/windows*
-volatility/symbols/mac*
+volatility3/symbols/linux*
+volatility3/symbols/windows*
+volatility3/symbols/mac*
 
 # Mac metadata files
 .DS_Store
 
-# Volatility's config 
+# Volatility's config
 config*.json
 
 # Pyinstaller files

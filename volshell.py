@@ -4,7 +4,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from volatility.cli import volshell
+from volatility3.cli import volshell
 
 if __name__ == '__main__':
     volshell.main()
