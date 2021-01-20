@@ -94,8 +94,8 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
     and configuration information in the context it is passed.
     """
 
-    # Be careful with inheritance around this
-    _required_framework_version = (1, 0, 0)  # type: Tuple[int, int, int]
+    # Be careful with inheritance around this (We default to requiring a version which doesn't exist, so it must be set)
+    _required_framework_version = (0, 0, 0)  # type: Tuple[int, int, int]
     """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
 
     def __init__(self,

@@ -17,7 +17,7 @@ class HiveGenerator:
     """Walks the registry HiveList linked list in a given direction and stores an invalid offset
     if it's unable to fully walk the list"""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (1, 0, 0)
 
     def __init__(self, cmhive, forward = True):
         self._cmhive = cmhive
@@ -40,7 +40,7 @@ class HiveList(interfaces.plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image."""
 
     _version = (1, 0, 0)
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

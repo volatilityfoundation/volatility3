@@ -42,7 +42,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
     """Runs all relevant plugins that provide time related information and
     orders the results by time."""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (1, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

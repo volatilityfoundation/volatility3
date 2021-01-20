@@ -17,7 +17,7 @@ class ConfigWriter(plugins.PluginInterface):
     """Runs the automagics and both prints and outputs configuration in the
     output directory."""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

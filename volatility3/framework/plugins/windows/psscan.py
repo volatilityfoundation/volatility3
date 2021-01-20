@@ -22,7 +22,7 @@ vollog = logging.getLogger(__name__)
 class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image."""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (1, 0, 0)
     _version = (1, 1, 0)
 
     @classmethod

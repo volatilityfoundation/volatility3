@@ -42,7 +42,7 @@ class VolShell(cli.CommandLine):
         determining the plugin to run and then running it."""
         sys.stdout.write("Volshell (Volatility 3 Framework) {}\n".format(constants.PACKAGE_VERSION))
 
-        framework.require_interface_version(2, 0, 0)
+        framework.require_interface_version(1, 0, 0)
 
         parser = argparse.ArgumentParser(prog = 'volshell',
                                          description = "A tool for interactivate forensic analysis of memory images")
