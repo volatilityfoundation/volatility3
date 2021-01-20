@@ -15,7 +15,7 @@ help:
 
 # Ensure we clean the autodoc files when we clean
 clean:
-	-rm source/volatility.*.rst
+	-rm source/volatility3.*.rst
 	@$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 # Catch-all target: route all unknown targets to Sphinx using the new

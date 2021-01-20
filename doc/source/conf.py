@@ -66,7 +66,7 @@ def setup(app):
             elif filename == 'volatility3.plugins.rst':
                 with open(os.path.join(dir, filename), "rb") as contents:
                     lines = contents.readlines()
-                with open(os.path.join(dir, 'volatility.framework.plugins.rst'), "rb") as contents:
+                with open(os.path.join(dir, 'volatility3.framework.plugins.rst'), "rb") as contents:
                     real_lines = contents.readlines()
 
                 # Process real_lines

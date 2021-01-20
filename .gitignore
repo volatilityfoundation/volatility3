@@ -4,7 +4,7 @@ __pycache__
 
 # Sphinx generated files
 doc/build
-doc/source/volatility.*
+doc/source/volatility3.*
 
 # Pycharm/PyDev development files
 workspace.xml
