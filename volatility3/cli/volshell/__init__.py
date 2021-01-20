@@ -33,6 +33,8 @@ class VolShell(cli.CommandLine):
     python terminal with all the volatility support calls available.
     """
 
+    CLI_NAME = "volshell"
+
     def __init__(self):
         super().__init__()
         self.output_dir = None
@@ -44,7 +46,7 @@ class VolShell(cli.CommandLine):
 
         framework.require_interface_version(1, 0, 0)
 
-        parser = argparse.ArgumentParser(prog = 'volshell',
+        parser = argparse.ArgumentParser(prog = self.CLI_NAME,
                                          description = "A tool for interactivate forensic analysis of memory images")
         parser.add_argument("-c",
                             "--config",

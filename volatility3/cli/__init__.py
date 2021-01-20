@@ -71,7 +71,7 @@ class MuteProgress(PrintedProgress):
 class CommandLine:
     """Constructs a command-line interface object for users to run plugins."""
 
-    CLI_NAME = 'volatility3'
+    CLI_NAME = 'volatility'
 
     def __init__(self):
         self.setup_logging()
