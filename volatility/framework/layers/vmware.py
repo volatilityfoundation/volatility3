@@ -36,6 +36,10 @@ class VmwareLayer(segmented.SegmentedLayer):
         """Loads up the segments from the meta_layer."""
         self._read_header()
 
+    @staticmethod
+    def _choose_type(size: int) -> str:
+        return "vmware!unsigned int" if size == 4 else "vmware!unsigned long long"
+
     def _read_header(self) -> None:
         """Checks the vmware header to make sure it's valid."""
         if "vmware" not in self._context.symbol_space:
@@ -45,11 +49,10 @@ class VmwareLayer(segmented.SegmentedLayer):
         header_size = struct.calcsize(self.header_structure)
         data = meta_layer.read(0, header_size)
         magic, unknown, groupCount = struct.unpack(self.header_structure, data)
-        if magic not in [b"\xD2\xBE\xD2\xBE"]:
+        if magic not in [b"\xD0\xBE\xD2\xBE", b"\xD1\xBA\xD1\xBA", b"\xD2\xBE\xD2\xBE", b"\xD3\xBE\xD3\xBE"]:
             raise VmwareFormatException(self.name, "Wrong magic bytes for Vmware layer: {}".format(repr(magic)))
 
         version = magic[0] & 0xf
-
         group_size = struct.calcsize(self.group_structure)
 
         groups = {}
@@ -73,27 +76,40 @@ class VmwareLayer(segmented.SegmentedLayer):
                                             layer_name = self._meta_layer,
                                             offset = offset + 2,
                                             max_length = name_len)
-                indicies_len = (flags >> 6) & 3
-                indicies = []
-                for index in range(indicies_len):
-                    indicies.append(
+                indices_len = (flags >> 6) & 3
+                indices = []
+                for index in range(indices_len):
+                    indices.append(
                         self._context.object("vmware!unsigned int",
                                              offset = offset + name_len + 2 + (index * index_len),
                                              layer_name = self._meta_layer))
                 data_len = flags & 0x3f
-
-                # TODO: Read special data sizes (signalling a longer data stream) properly instead of skipping them
-                if data_len in (62, 63):
+                
+                if data_len in [62, 63]:  # Handle special data sizes that indicate a longer data stream
                     data_len = 4 if version == 0 else 8
-                    offset += 2 + name_len + (indicies_len * index_len) + 2 * data_len
-                    continue
-
-                data = self._context.object("vmware!unsigned int" if data_len == 4 else "vmware!unsigned long long",
+                    # Read the size of the data
+                    data_size = self._context.object(self._choose_type(data_len),
                                             layer_name = self._meta_layer,
-                                            offset = offset + 2 + name_len + (indicies_len * index_len))
-                tags[(name, tuple(indicies))] = (flags, data)
-                offset += 2 + name_len + (indicies_len *
-                                          index_len) + data_len
+                                            offset = offset + 2 + name_len + (indices_len * index_len))
+                    # Read the size of the data when it would be decompressed
+                    data_mem_size = self._context.object(self._choose_type(data_len),
+                                            layer_name = self._meta_layer,
+                                            offset = offset + 2 + name_len + (indices_len * index_len) + data_len)
+                    # Skip two bytes of padding (as it seems?)
+                    # Read the actual data
+                    data = self._context.object("vmware!bytes",
+                                                layer_name = self._meta_layer,
+                                                offset = offset + 2 + name_len + (indices_len * index_len) +
+                                                         2 * data_len + 2,
+                                                length = data_size)
+                    offset += 2 + name_len + (indices_len * index_len) + 2 * data_len + 2 + data_size
+                else:  # Handle regular cases
+                    data = self._context.object(self._choose_type(data_len),
+                                                layer_name = self._meta_layer,
+                                                offset = offset + 2 + name_len + (indices_len * index_len))
+                    offset += 2 + name_len + (indices_len * index_len) + data_len
+
+                tags[(name, tuple(indices))] = (flags, data)
 
         if tags[("regionsCount", ())][1] == 0:
             raise VmwareFormatException(self.name, "VMware VMEM is not split into regions")
