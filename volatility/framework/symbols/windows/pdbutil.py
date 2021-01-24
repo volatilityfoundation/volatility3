@@ -83,6 +83,9 @@ class PDBUtility:
 
         if not isf_path:
             vollog.debug("Required symbol library path not found: {}".format(filter_string))
+            vollog.info("The symbols can be downloaded later using pdbconv.py -p {} -g {}".format(
+                pdb_name.strip('\x00'),
+                guid.upper() + str(age)))
             return None
 
         vollog.debug("Using symbol library: {}".format(filter_string))
@@ -200,7 +203,7 @@ class PDBUtility:
                         # After we've successfully written it out, record the fact so we don't clear it out
                         data_written = True
                     else:
-                        vollog.warning("Symbol file could not be found on remote server" + (" " * 100))
+                        vollog.warning("Symbol file could not be downloaded from remote server" + (" " * 100))
                 break
             except PermissionError:
                 vollog.warning("Cannot write necessary symbol file, please check permissions on {}".format(
