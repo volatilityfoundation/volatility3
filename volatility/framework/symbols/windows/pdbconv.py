@@ -935,7 +935,7 @@ class PdbRetreiver:
                 try:
                     vollog.debug("Attempting to retrieve {}".format(url + suffix))
                     result = resources.ResourceAccessor(progress_callback).open(url + suffix)
-                except error.HTTPError as excp:
+                except (error.HTTPError, error.URLError) as excp:
                     vollog.debug("Failed with {}".format(excp))
             if result:
                 break
