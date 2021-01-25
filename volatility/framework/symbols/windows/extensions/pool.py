@@ -1,9 +1,8 @@
-import functools
 import logging
 import struct
 from typing import Optional, Tuple, List, Dict, Union
 
-from volatility.framework import objects, interfaces, constants, symbols, exceptions, renderers
+from volatility.framework import objects, interfaces, constants, symbols, exceptions, renderers, caching
 from volatility.framework.renderers import conversion
 
 vollog = logging.getLogger(__name__)
@@ -165,7 +164,7 @@ class POOL_HEADER(objects.StructType):
         return None
 
     @classmethod
-    @functools.lru_cache()
+    @caching.lru_cache()
     def _calculate_optional_header_lengths(cls, context: interfaces.context.ContextInterface,
                                            symbol_table_name: str) -> Tuple[List[str], List[int]]:
         headers = []

@@ -6,7 +6,7 @@ import json
 import math
 from typing import Optional, Dict, Any, Tuple, List, Set
 
-from volatility.framework import interfaces, exceptions, constants
+from volatility.framework import interfaces, exceptions, constants, caching
 from volatility.framework.layers import segmented
 from volatility.framework.symbols import intermed
 
@@ -212,7 +212,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             return (data * 0x1000)[:output_length]
         return data
 
-    @functools.lru_cache(maxsize = 512)
+    @caching.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
         return super().read(offset, length, pad)
 

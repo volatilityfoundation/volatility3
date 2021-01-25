@@ -4,12 +4,11 @@
 
 import collections.abc
 import datetime
-import functools
 import logging
 import math
 from typing import Iterable, Iterator, Optional, Union, Tuple, List
 
-from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols
+from volatility.framework import constants, exceptions, interfaces, objects, renderers, symbols, caching
 from volatility.framework.layers import intel
 from volatility.framework.renderers import conversion
 from volatility.framework.symbols import generic
@@ -35,7 +34,7 @@ class MMVAD_SHORT(objects.StructType):
     by VadRoot.
     """
 
-    @functools.lru_cache(maxsize = None)
+    @caching.lru_cache(maxsize = None)
     def get_tag(self):
         vad_address = self.vol.offset
 
@@ -895,8 +894,8 @@ class CONTROL_AREA(objects.StructType):
                 return False
 
             # The first SubsectionBase should not be page aligned
-            #subsection = self.get_subsection()
-            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            # subsection = self.get_subsection()
+            # if subsection.SubsectionBase & self.PAGE_MASK == 0:
             #    return False
         except exceptions.InvalidAddressException:
             return False
@@ -945,7 +944,7 @@ class CONTROL_AREA(objects.StructType):
             subsection_offset = starting_sector * 0x200
 
             # Similar to the check in is_valid(), make sure the SubsectionBase is not page aligned.
-            #if subsection.SubsectionBase & self.PAGE_MASK == 0:
+            # if subsection.SubsectionBase & self.PAGE_MASK == 0:
             #    break
 
             ptecount = 0

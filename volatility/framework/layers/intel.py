@@ -3,14 +3,13 @@
 #
 
 import collections
-import functools
 import logging
 import math
 import struct
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from volatility import classproperty
-from volatility.framework import exceptions, interfaces, constants
+from volatility.framework import exceptions, interfaces, constants, caching
 from volatility.framework.configuration import requirements
 from volatility.framework.layers import linear
 
@@ -156,7 +155,7 @@ class Intel(linear.LinearlyMappedLayer):
 
         return entry, position
 
-    @functools.lru_cache(1025)
+    @caching.lru_cache(1025)
     def _get_valid_table(self, base_address: int) -> Optional[bytes]:
         """Extracts the table, validates it and returns it if it's valid."""
         table = self._context.layers.read(self._base_layer, base_address, self.page_size)
