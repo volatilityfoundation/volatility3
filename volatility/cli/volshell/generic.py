@@ -86,7 +86,9 @@ class Volshell(interfaces.plugins.PluginInterface):
 
         sys.ps1 = "({}) >>> ".format(self.current_layer)
         self.__console = code.InteractiveConsole(locals = self._construct_locals_dict())
-        if self.config['script'] is not None:
+        # Since we have to do work to add the option only once for all different modes of volshell, we can't
+        # rely on the default having been set
+        if self.config.get('script', None) is not None:
             self.run_script(location = self.config['script'])
 
         self.__console.interact(banner = banner)
