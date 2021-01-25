@@ -125,6 +125,10 @@ class CLIRenderer(interfaces.renderers.Renderer):
     name = "unnamed"
     structured_output = False
 
+    def __init__(self, safe: bool = False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._safe = safe
+
 
 class QuickTextRenderer(CLIRenderer):
     _type_renderers = {
@@ -163,14 +167,21 @@ class QuickTextRenderer(CLIRenderer):
 
         def visitor(node: interfaces.renderers.TreeNode, accumulator):
             accumulator.write("\n")
-            # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             accumulator.write("*" * max(0, node.path_depth - 1) + ("" if (node.path_depth <= 1) else " "))
+            # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             line = []
+            skip = False
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
+                if isinstance(node.values[column_index],
+                              (renderers.UnparsableValue, renderers.UnreadableValue)) and self._safe:
+                    skip = True
                 line.append(renderer(node.values[column_index]))
-            accumulator.write("{}".format("\t".join(line)))
+            if not skip:
+                accumulator.write("{}".format("\t".join(line)))
+            else:
+                accumulator.write("--- Unsafe data ---")
             accumulator.flush()
             return accumulator
 
@@ -206,8 +217,10 @@ class CSVRenderer(CLIRenderer):
         Args:
             grid: The TreeGrid object to render
         """
-        outfd = sys.stdout
+        if self._safe:
+            vollog.info("CSV does not support safe rendering, all records will be returned")
 
+        outfd = sys.stdout
         line = ['"TreeDepth"']
         for column in grid.columns:
             # Ignore the type because namedtuples don't realize they have accessible attributes
@@ -266,15 +279,22 @@ class PrettyTextRenderer(CLIRenderer):
             node: interfaces.renderers.TreeNode, accumulator: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
         ) -> List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
+            skip = False
             max_column_widths[tree_indent_column] = max(max_column_widths.get(tree_indent_column, 0), node.path_depth)
             line = {}
+            skip = False
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
+
                 data = renderer(node.values[column_index])
+                if isinstance(node.values[column_index],
+                              (renderers.UnparsableValue, renderers.UnreadableValue)) and self._safe:
+                    skip = True
                 max_column_widths[column.name] = max(max_column_widths.get(column.name, len(column.name)),
                                                      len("{}".format(data)))
                 line[column] = data
+                line['__skip'] = skip
             accumulator.append((node.path_depth, line))
             return accumulator
 
@@ -296,7 +316,10 @@ class PrettyTextRenderer(CLIRenderer):
         column_titles = [""] + [column.name for column in grid.columns]
         outfd.write(format_string.format(*column_titles))
         for (depth, line) in final_output:
-            outfd.write(format_string.format("*" * depth, *[line[column] for column in grid.columns]))
+            if line['__skip']:
+                outfd.write("{}".format("*" * depth, "--- Unsafe data ---"))
+            else:
+                outfd.write(format_string.format("*" * depth, *[line[column] for column in grid.columns]))
 
 
 class JsonRenderer(CLIRenderer):
@@ -320,6 +343,9 @@ class JsonRenderer(CLIRenderer):
         outfd.write(json.dumps(result, indent = 2, sort_keys = True))
 
     def render(self, grid: interfaces.renderers.TreeGrid):
+        if self._safe:
+            vollog.info("JSON output does not support safe rendering, all records will be returned")
+
         outfd = sys.stdout
 
         outfd.write("\n")
