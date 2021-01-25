@@ -651,10 +651,10 @@ class AggregateType(interfaces.objects.ObjectInterface):
         """Describes the object appropriately"""
         extras = member_name = ''
         if self.vol.native_layer_name != self.vol.layer_name:
-            extras += f' (Native: {self.vol.native_layer_name})'
+            extras += " (Native: {})".format(self.vol.native_layer_name)
         if self.vol.member_name:
-            member_name = f' (.{self.vol.member_name})'
-        return f'<{self.__class__.__name__} {self.vol.type_name}{member_name}: {self.vol.layer_name} @ 0x{self.vol.offset:x} #{self.vol.size}{extras}>'
+            member_name = " (.{})".format(self.vol.member_name)
+        return "<{} {}{}: {} @ 0x{:x} #{}{}>".format(self.__class__.__name__, self.vol.type_name, member_name, self.vol.layer_name, self.vol.offset, self.vol.size, extras)
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
 
