@@ -1015,8 +1015,12 @@ if __name__ == '__main__':
 
     converted_json = convertor.get_json()
     if args.output is None:
-        guid = args.guid[:-1] or converted_json['metadata']['windows']['pdb']['GUID']
-        age = args.guid[-1:] or converted_json['metadata']['windows']['pdb']['age']
+        if args.guid:
+            guid = args.guid[:-1]
+            age = args.guid[-1:]
+        else:
+            guid = converted_json['metadata']['windows']['pdb']['GUID']
+            age = converted_json['metadata']['windows']['pdb']['age']
         args.output = "{}-{}.json.xz".format(guid, age)
 
     output_url = os.path.abspath(args.output)
