@@ -7,6 +7,8 @@ import logging
 import random
 import string
 import sys
+import sqlite3
+import tempfile
 from functools import wraps
 from typing import Callable, Any, List, Tuple, Dict
 
@@ -232,6 +234,77 @@ class CSVRenderer(CLIRenderer):
             grid.visit(node = None, function = visitor, initial_accumulator = outfd)
 
         outfd.write("\n")
+
+class SqliteRenderer(QuickTextRenderer):
+
+    name = "sqlite"
+    
+
+    column_types = [(str, "TEXT"),
+                    (int, "TEXT"),
+                    (float, "TEXT"),
+                    (bytes, "BLOB")]
+
+    def _column_type(self, col_type):
+        for (t, v) in self.column_types:
+            if issubclass(col_type, t):
+                return v
+        return "TEXT"
+
+    def get_render_options(self):
+        pass
+
+    def render(self, grid: interfaces.renderers.TreeGrid, output_args) -> None:
+        """Renders each column immediately to stdout.
+
+        This does not format each line's width appropriately, it merely tab separates each field
+
+        Args:
+            grid: The TreeGrid object to render
+        """
+        # TODO: Docstrings
+        # TODO: Improve text output
+
+        _accumulator = [0,[]] 
+        table_name = output_args[0].split(".")[-1:][0]
+        _db= sqlite3.connect(output_args[1])
+        _db.text_factory = str
+
+        create = "CREATE TABLE IF NOT EXISTS " + table_name + "( id INTEGER, " + \
+                 ", ".join(['"' + i.name + '" ' + self._column_type(i.type) for i in grid.columns]) + ")"
+        _db.execute(create)
+
+        def visitor(node: interfaces.renderers.TreeNode, accumulator):
+            accumulator[0] = accumulator[0] + 1 #id
+            line = []
+            for column_index in range(len(grid.columns)):
+                column = grid.columns[column_index]
+                renderer = self._type_renderers.get(column.type, self._type_renderers['default'])
+                line.append(renderer(node.values[column_index]))
+            accumulator[1].append([accumulator[0]] + line)
+            if len(accumulator[1]) > 20000:
+                _db.execute("BEGIN TRANSACTION")
+                insert = "INSERT INTO " + table_name + " (id, " + \
+                     ", ".join(['"' + i.name + '"' for i in grid.columns]) + ") " + \
+                     " VALUES (?, " + ", ".join(["?"] * len(node.values)) + ")"
+                _db.executemany(insert, accumulator[1])
+                accumulator = [accumulator[0], []]
+                _db.execute("COMMIT TRANSACTION")
+            self._accumulator = accumulator
+            return accumulator
+
+        if not grid.populated:
+            grid.populate(visitor, _accumulator)
+        else:
+            grid.visit(node = None, function = visitor, initial_accumulator = _accumulator)
+        if len(self._accumulator[1]) > 0:
+            _db.execute("BEGIN TRANSACTION")
+            insert = "INSERT INTO " + table_name + " (id, " + \
+                     ", ".join(['"' + i.name + '"' for i in grid.columns]) + ") " + \
+                     " VALUES (?, " + ", ".join(["?"] * (len(self._accumulator[1][0])-1)) + ")"
+            _db.executemany(insert, self._accumulator[1])
+            _db.execute("COMMIT TRANSACTION")
+
 
 
 class PrettyTextRenderer(CLIRenderer):
