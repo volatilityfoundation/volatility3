@@ -2,9 +2,12 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import binascii
+import bz2
 import datetime
+import gzip
 import json
 import logging
+import lzma
 import os
 from bisect import bisect
 from typing import Tuple, Dict, Any, Optional, Union, List
@@ -971,7 +974,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
         description = "Read PDB files and convert to Volatility 3 Intermediate Symbol Format")
-    parser.add_argument("-o", "--output", metavar = "OUTPUT", help = "Filename for data output", required = True)
+    parser.add_argument("-o", "--output", metavar = "OUTPUT", help = "Filename for data output", default = None)
     file_group = parser.add_argument_group("file", description = "File-based conversion of PDB to ISF")
     file_group.add_argument("-f", "--file", metavar = "FILE", help = "PDB file to translate to ISF")
     data_group = parser.add_argument_group("data", description = "Convert based on a GUID and filename pattern")
@@ -1010,8 +1013,25 @@ if __name__ == '__main__':
 
     convertor = PdbReader(ctx, location, database_name = args.pattern, progress_callback = pg_cb)
 
-    with open(args.output, "w") as f:
-        json.dump(convertor.get_json(), f, indent = 2, sort_keys = True)
+    converted_json = convertor.get_json()
+    if args.output is None:
+        guid = args.guid[:-1] or converted_json['metadata']['windows']['pdb']['GUID']
+        age = args.guid[-1:] or converted_json['metadata']['windows']['pdb']['age']
+        args.output = "{}-{}.json.xz".format(guid, age)
+
+    output_url = os.path.abspath(args.output)
+
+    open_method = open
+    if args.output.endswith('.gz'):
+        open_method = gzip.open
+    elif args.output.endswith('.bz2'):
+        open_method = bz2.open
+    elif args.output.endswith('.xz'):
+        open_method = lzma.open
+
+    with open_method(output_url, "wb") as f:
+        json_string = json.dumps(converted_json, indent = 2, sort_keys = True)
+        f.write(bytes(json_string, 'latin-1'))
 
     if args.keep:
         print("Temporary PDB file: {}".format(filename))
