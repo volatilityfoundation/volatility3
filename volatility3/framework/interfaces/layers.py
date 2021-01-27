@@ -491,15 +491,20 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 # Setup the variables for this block
                 block_start = offset
                 block_end = offset + sublength
-                conversion = mapped_offset - offset
+
+                # Setup the necessary bits for non-linear mappings
+                # For linear we give one layer down and mapped offsets (therefore the conversion)
+                # This saves an tiny amount of time not have to redo lookups we've already done
+                # For non-linear layers, we give the layer name and the offset in the layer name
+                # so that the read/conversion occurs properly
+                conversion = mapped_offset - offset if linear else 0
+                return_name = layer_name if linear else self.name
 
                 # If this isn't contiguous, start a new chunk
                 if chunk_position < block_start:
                     yield output, chunk_position
                     output = []
                     chunk_start = chunk_position = block_start
-
-                return_name = self.name if not linear else layer_name
 
                 # Halfway through a chunk, finish the chunk, then take more
                 if chunk_position != chunk_start:
