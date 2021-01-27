@@ -477,49 +477,54 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         assumed to have no holes
         """
         for (section_start, section_length) in sections:
-            chunk_end = section_start
             output = []
 
-            # For each section, find out which bits of its exist and where they map to
+            # Hold the offsets of each chunk (including how much has been filled)
+            chunk_start = chunk_position = 0
+
+            # For each section, find out which bits of its exists and where they map to
             # This is faster than cutting the entire space into scan_chunk sized blocks and then
             # finding out what exists (particularly if most of the space isn't mapped)
             for mapped in self.mapping(section_start, section_length, ignore_errors = True):
                 offset, sublength, mapped_offset, mapped_length, layer_name = mapped
 
-                # Check if this chunk and the previous aren't next to each other,
-                if len(output) and (offset != chunk_end):
-                    # if so we can ship everything so far, because this must be a new chunk
-                    chunk_end = offset + output[-1][1]
-                    yield output, chunk_end
+                # Setup the variables for this block
+                block_start = offset
+                block_end = offset + sublength
+                conversion = mapped_offset - offset
+
+                # If this isn't contiguous, start a new chunk
+                if chunk_position < block_start:
+                    yield output, chunk_position
                     output = []
-                else:
-                    # Otherwise we're in a long run, and we can chunk it up in chunk_size blocks
-                    current_chunk_size = min(sublength, scanner.chunk_size + scanner.overlap)
+                    chunk_start = chunk_position = block_start
 
-                    # Cut it into scan_chunk + overlap sized chunks (each scan_chunk apart from each other)
-                    while current_chunk_size == scanner.chunk_size + scanner.overlap and current_chunk_size > 0:
-                        if current_chunk_size > 0:
-                            output += [(self.name if not linear else layer_name,
-                                        offset if not linear else mapped_offset, current_chunk_size)]
-                        chunk_end = offset + current_chunk_size
-                        # Ship this scan_chunk size block
-                        yield output, chunk_end
+                return_name = self.name if not linear else layer_name
+
+                # Halfway through a chunk, finish the chunk, then take more
+                if chunk_position != chunk_start:
+                    chunk_size = min(chunk_position - chunk_start, scanner.chunk_size + scanner.overlap)
+                    output += [(return_name, chunk_position + conversion, chunk_size)]
+                    chunk_start = chunk_position + chunk_size
+                    chunk_position = chunk_start
+
+                # Pack chunks, if we're enter the loop (starting a new chunk) and there's already chunk there, ship it
+                for chunk_start in range(chunk_position, block_end, scanner.chunk_size):
+                    if output:
+                        yield output, chunk_position
                         output = []
-                        offset += scanner.chunk_size
-                        mapped_offset += scanner.chunk_size
-                        sublength -= scanner.chunk_size
-                        current_chunk_size = min(sublength, scanner.chunk_size + scanner.overlap)
+                        chunk_position = chunk_start
+                    # Take from chunk_position as far as far as the block can go,
+                    # or as much left of a scanner chunk as we can
+                    chunk_size = min(block_end - chunk_position,
+                                     scanner.chunk_size + scanner.overlap - (chunk_position - chunk_start))
+                    output += [(return_name, chunk_position + conversion, chunk_size)]
+                    chunk_start = chunk_position + chunk_size
+                    chunk_position = chunk_start
 
-                    # We should now only have less than chunk_size data in it, but don't forget to ship it off too
-                    if current_chunk_size > 0:
-                        output += [(self.name if not linear else layer_name, offset if not linear else mapped_offset,
-                                    current_chunk_size)]
-
-                    # Ship anything we've accumulated
-                    chunk_end = offset + current_chunk_size
-
-            if len(output):
-                yield output, chunk_end
+            # Ship anything that might be left
+            if output:
+                yield output, chunk_position
 
 
 class LayerContainer(collections.abc.Mapping):
