@@ -21,6 +21,8 @@ class BytesScanner(layers.ScannerInterface):
         where the needle is found."""
         find_pos = data.find(self.needle)
         while find_pos >= 0:
+            # Ensure that if we're in the overlap, we don't report it
+            # It'll be returned when the next block is scanned
             if find_pos < self.chunk_size:
                 yield find_pos + data_offset
             find_pos = data.find(self.needle, find_pos + 1)

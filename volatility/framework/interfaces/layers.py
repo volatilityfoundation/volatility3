@@ -328,6 +328,9 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                 vollog.debug("Invalid address in layer {} found scanning {} at address {:x}".format(
                     layer_name, self.name, address))
 
+        if len(data) > scanner.chunk_size + scanner.overlap:
+            vollog.debug("Scan chunk too large: {}".format(hex(len(data))))
+
         progress.value = chunk_end
         return list(scanner(data, chunk_end - len(data)))
 
