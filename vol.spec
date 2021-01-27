@@ -31,15 +31,15 @@ sys.path.append(os.getcwd())
 vol_analysis = Analysis(['vol.py'],
                         pathex = [],
                         binaries = binaries,
-                        datas = collect_data_files('volatility.framework') + \
-                                collect_data_files('volatility.framework.automagic', include_py_files = True) + \
-                                collect_data_files('volatility.framework.plugins', include_py_files = True) + \
-                                collect_data_files('volatility.framework.layers', include_py_files = True) + \
-                                collect_data_files('volatility.schemas') + \
-                                collect_data_files('volatility.plugins', include_py_files = True),
-                        hiddenimports = collect_submodules('volatility.framework.automagic') + \
-                                        collect_submodules('volatility.framework.plugins') + \
-                                        collect_submodules('volatility.framework.symbols'),
+                        datas = collect_data_files('volatility3.framework') + \
+                                collect_data_files('volatility3.framework.automagic', include_py_files = True) + \
+                                collect_data_files('volatility3.framework.plugins', include_py_files = True) + \
+                                collect_data_files('volatility3.framework.layers', include_py_files = True) + \
+                                collect_data_files('volatility3.schemas') + \
+                                collect_data_files('volatility3.plugins', include_py_files = True),
+                        hiddenimports = collect_submodules('volatility3.framework.automagic') + \
+                                        collect_submodules('volatility3.framework.plugins') + \
+                                        collect_submodules('volatility3.framework.symbols'),
                         hookspath = [],
                         runtime_hooks = [],
                         excludes = [],
@@ -55,16 +55,16 @@ vol_analysis = Analysis(['vol.py'],
 # volshell_analysis = Analysis(['volshell.py'],
 #                              pathex = [],
 #                              binaries = [],
-#                              datas = collect_data_files('volatility.framework') + \
-#                                      collect_data_files('volatility.framework.automagic', include_py_files = True) + \
-#                                      collect_data_files('volatility.framework.plugins', include_py_files = True) + \
-#                                      collect_data_files('volatility.framework.layers', include_py_files = True) + \
-#                                      collect_data_files('volatility.cli', include_py_files = True) + \
-#                                      collect_data_files('volatility.schemas') + \
-#                                      collect_data_files('volatility.plugins', include_py_files = True),
-#                              hiddenimports = collect_submodules('volatility.framework.automagic') + \
-#                                              collect_submodules('volatility.framework.plugins') + \
-#                                              collect_submodules('volatility.framework.symbols'),
+#                              datas = collect_data_files('volatility3.framework') + \
+#                                      collect_data_files('volatility3.framework.automagic', include_py_files = True) + \
+#                                      collect_data_files('volatility3.framework.plugins', include_py_files = True) + \
+#                                      collect_data_files('volatility3.framework.layers', include_py_files = True) + \
+#                                      collect_data_files('volatility3.cli', include_py_files = True) + \
+#                                      collect_data_files('volatility3.schemas') + \
+#                                      collect_data_files('volatility3.plugins', include_py_files = True),
+#                              hiddenimports = collect_submodules('volatility3.framework.automagic') + \
+#                                              collect_submodules('volatility3.framework.plugins') + \
+#                                              collect_submodules('volatility3.framework.symbols'),
 #                              hookspath = [],
 #                              runtime_hooks = [],
 #                              excludes = [],
