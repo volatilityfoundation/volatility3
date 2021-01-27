@@ -44,10 +44,12 @@ class Lsmod(plugins.PluginInterface):
         kmod_ptr = kernel.object_from_symbol(symbol_name = "kmod")
 
         try:
-        kmod = kmod_ptr.dereference().cast("kmod_info")
+            kmod = kmod_ptr.dereference().cast("kmod_info")
         except exceptions.InvalidAddressException:
             return []
-            yield kmod
+
+        yield kmod
+
         try:
             kmod = kmod.next
         except exceptions.InvalidAddressException:
