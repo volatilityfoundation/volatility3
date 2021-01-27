@@ -477,39 +477,49 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         assumed to have no holes
         """
         for (section_start, section_length) in sections:
-            # For each section, split it into scan size chunks
-            for chunk_start in range(section_start, section_start + section_length, scanner.chunk_size):
-                # Shorten it, if we're at the end of the section
-                chunk_length = min(section_start + section_length - chunk_start, scanner.chunk_size + scanner.overlap)
+            chunk_end = section_start
+            output = []
 
-                # Prev offset keeps track of the end of the previous subchunk
-                prev_offset = chunk_start
-                output = []  # type: List[Tuple[str, int, int]]
+            # For each section, find out which bits of its exist and where they map to
+            # This is faster than cutting the entire space into scan_chunk sized blocks and then
+            # finding out what exists (particularly if most of the space isn't mapped)
+            for mapped in self.mapping(section_start, section_length, ignore_errors = True):
+                offset, sublength, mapped_offset, mapped_length, layer_name = mapped
 
-                # We populate the response based on subchunks that may be mapped all over the place
-                for mapped in self.mapping(chunk_start, chunk_length, ignore_errors = True):
-                    # We don't bother with the other data in case the data's been processed by a lower layer
-                    offset, sublength, mapped_offset, mapped_length, layer_name = mapped
+                # Check if this chunk and the previous aren't next to each other,
+                if len(output) and (offset != chunk_end):
+                    # if so we can ship everything so far, because this must be a new chunk
+                    chunk_end = offset + output[-1][1]
+                    yield output, chunk_end
+                    output = []
+                else:
+                    # Otherwise we're in a long run, and we can chunk it up in chunk_size blocks
+                    current_chunk_size = min(sublength, scanner.chunk_size + scanner.overlap)
 
-                    # We need to check if the offset is next to the end of the last one (contiguous)
-                    if offset != prev_offset:
-                        # Only yield if we've accumulated output
-                        if len(output):
-                            # Yield all the (joined) items so far
-                            # and the ending point of that subchunk (where we'd gotten to previously)
-                            yield output, prev_offset
+                    # Cut it into scan_chunk + overlap sized chunks (each scan_chunk apart from each other)
+                    while current_chunk_size == scanner.chunk_size + scanner.overlap and current_chunk_size > 0:
+                        if current_chunk_size > 0:
+                            output += [(self.name if not linear else layer_name,
+                                        offset if not linear else mapped_offset, current_chunk_size)]
+                        chunk_end = offset + current_chunk_size
+                        # Ship this scan_chunk size block
+                        yield output, chunk_end
                         output = []
+                        offset += scanner.chunk_size
+                        mapped_offset += scanner.chunk_size
+                        sublength -= scanner.chunk_size
+                        current_chunk_size = min(sublength, scanner.chunk_size + scanner.overlap)
 
-                    # Shift the marker up to the end of what we just received and add it to the output
-                    prev_offset = offset + sublength
+                    # We should now only have less than chunk_size data in it, but don't forget to ship it off too
+                    if current_chunk_size > 0:
+                        output += [(self.name if not linear else layer_name, offset if not linear else mapped_offset,
+                                    current_chunk_size)]
 
-                    if not linear:
-                        output += [(self.name, offset, sublength)]
-                    else:
-                        output += [(layer_name, mapped_offset, mapped_length)]
-                # If there's still output left, output it
-                if len(output):
-                    yield output, prev_offset
+                    # Ship anything we've accumulated
+                    chunk_end = offset + current_chunk_size
+
+            if len(output):
+                yield output, chunk_end
 
 
 class LayerContainer(collections.abc.Mapping):
