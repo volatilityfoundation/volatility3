@@ -2,5 +2,5 @@ prune development
 include * .*
 include doc/make.bat doc/Makefile
 recursive-include doc/source *
-recursive-include volatility *.json
-recursive-exclude doc/source volatility*.rst
+recursive-include volatility3 *.json
+recursive-exclude doc/source volatility3.*.rst
