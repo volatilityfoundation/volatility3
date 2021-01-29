@@ -160,6 +160,10 @@ class CommandLine:
                             help = "Clears out all short-term cached items",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--no-fail",
+                            help = "No fail on error",
+                            default = False,
+                            action = 'store_true')
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
