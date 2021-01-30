@@ -79,7 +79,7 @@ class ResourceAccessor(object):
         """Determines whether a URLs contents should be cached"""
         parsed_url = urllib.parse.urlparse(url)
 
-        return not parsed_url.scheme in self._non_cached_schemes()
+        return self._enable_cache and not parsed_url.scheme in self._non_cached_schemes()
 
     @staticmethod
     def _non_cached_schemes() -> List[str]:
@@ -225,7 +225,6 @@ class JarHandler(VolatilityHandler):
     Actual reference (found from https://www.w3.org/wiki/UriSchemes/jar) seemed not to return:
     http://developer.java.sun.com/developer/onlineTraining/protocolhandlers/
     """
-
     @classmethod
     def non_cached_schemes(cls) -> List[str]:
         return ['jar']

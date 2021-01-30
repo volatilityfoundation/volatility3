@@ -937,7 +937,8 @@ class PdbRetreiver:
             for suffix in [file_name, file_name[:-1] + '_']:
                 try:
                     vollog.debug("Attempting to retrieve {}".format(url + suffix))
-                    result = resources.ResourceAccessor(progress_callback).open(url + suffix)
+                    # Don't cache the PDB files since they might build up and there's little benefit
+                    result = resources.ResourceAccessor(progress_callback, enable_cache = False).open(url + suffix)
                 except (error.HTTPError, error.URLError) as excp:
                     vollog.debug("Failed with {}".format(excp))
             if result:
