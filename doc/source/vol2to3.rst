@@ -6,7 +6,7 @@ Library and Context
 
 Volatility 3 has been designed from the ground up to be a library, this means the components are independent and all
 state required to run a particular plugin at a particular time is self-contained in an object derived from
-a :py:class:`~volatility.framework.interfaces.context.ContextInterface`.
+a :py:class:`~volatility3.framework.interfaces.context.ContextInterface`.
 
 The context contains the two core components that make up Volatility, layers of data and the available symbols.
 
@@ -14,7 +14,7 @@ Symbols and Types
 -----------------
 
 Volatility 3 no longer uses profiles, it comes with an extensive library of
-:py:class:`symbol tables <volatility.framework.interfaces.symbols.SymbolTableInterface>`, and can generate new symbol
+:py:class:`symbol tables <volatility3.framework.interfaces.symbols.SymbolTableInterface>`, and can generate new symbol
 tables for most windows memory images, based on the memory image itself.  This allows symbol tables to include specific
 offsets for locations (symbol locations) based on that operating system in particular.  This means it is easier and quicker
 to identify structures within an operating system, by having known offsets for those structures provided by the official
@@ -37,11 +37,11 @@ re-read many times over for no benefit (particularly since each re-read could re
 from following page table translations).
 
 Finally, in order to provide Volatility specific information without impact on the ability for structures to have members
-with arbitrary names, all the metadata about the object (such as its layer or offset) have been moved to a read-only :py:meth:`~volatility.framework.interfaces.objects.ObjectInterface.vol`
+with arbitrary names, all the metadata about the object (such as its layer or offset) have been moved to a read-only :py:meth:`~volatility3.framework.interfaces.objects.ObjectInterface.vol`
 dictionary.
 
-Further the distinction between a :py:class:`~volatility.framework.interfaces.objects.Template` (the thing that
-constructs an object) and the :py:class:`Object <volatility.framework.interfaces.objects.ObjectInterface>` itself has
+Further the distinction between a :py:class:`~volatility3.framework.interfaces.objects.Template` (the thing that
+constructs an object) and the :py:class:`Object <volatility3.framework.interfaces.objects.ObjectInterface>` itself has
 been made more explicit.  In Volatility 2, some information (such as size) could only be determined from a constructed object,
 leading to instantiating a template on an empty buffer, just to determine the size.  In Volatility 3, templates contain
 information such as their size, which can be queried directly without constructing the object.
@@ -49,7 +49,7 @@ information such as their size, which can be queried directly without constructi
 Layer and Layer dependencies
 ----------------------------
 Address spaces in Volatility 2, are now more accurately referred to as
-:py:class:`Translation Layers <volatility.framework.interfaces.layers.TranslationLayerInterface>`, since each one typically sits
+:py:class:`Translation Layers <volatility3.framework.interfaces.layers.TranslationLayerInterface>`, since each one typically sits
 atop another and can translate addresses between the higher logical layer and the lower physical layer.  Address spaces in
 Volatility 2 were strictly limited to a stack, one on top of one other.  In Volatility 3, layers can have multiple
 "dependencies" (lower layers), which allows for the integration of features such as swap space.
@@ -65,13 +65,13 @@ included a stacker automagic to emulate the most common feature of Volatility 2,
 Searching and Scanning
 ----------------------
 Scanning is very similar to scanning in Volatility 2, a scanner object (such as a
-:py:class:`~volatility.framework.layers.scanners.BytesScanner` or :py:class:`~volatility.framework.layers.scanners.RegExScanner`) is
-primed with the data to be searched for, and the :py:meth:`~volatility.framework.interfaces.layers.DataLayerInterface.scan` method is called on the layer to be searched.
+:py:class:`~volatility3.framework.layers.scanners.BytesScanner` or :py:class:`~volatility.framework.layers.scanners.RegExScanner`) is
+primed with the data to be searched for, and the :py:meth:`~volatility3.framework.interfaces.layers.DataLayerInterface.scan` method is called on the layer to be searched.
 
 Output Rendering
 ----------------
 This is extremely similar to Volatility 2, because we were developing it for Volatility 3 when we added it to Volatility 2.
-We now require that all plugins produce output in a :py:class:`~volatility.framework.interfaces.renderers.TreeGrid` object,
+We now require that all plugins produce output in a :py:class:`~volatility3.framework.interfaces.renderers.TreeGrid` object,
 which ensure that the library can be used regardless of which interface is driving it.  An example web GUI is also available
 called Volumetric which allows all the plugins that can be run from the command line to be run from a webpage, and offers
 features such as automatic formatting and sorting of the data, which previously couldn't be provided easily from the CLI.

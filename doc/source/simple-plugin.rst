@@ -3,19 +3,19 @@ How to Write a Simple Plugin
 
 This guide will step through how to construct a simple plugin using Volatility 3.
 
-The example plugin we'll use is :py:class:`~volatility.plugins.windows.dlllist.DllList`, which features the main traits
+The example plugin we'll use is :py:class:`~volatility3.plugins.windows.dlllist.DllList`, which features the main traits
 of a normal plugin, and reuses other plugins appropriately.
 
 Inherit from PluginInterface
 ----------------------------
 
-The first step is to define a class that inherits from :py:class:`~volatility.framework.interfaces.plugins.PluginInterface`.
+The first step is to define a class that inherits from :py:class:`~volatility3.framework.interfaces.plugins.PluginInterface`.
 Volatility automatically finds all plugins defined under the various plugin directories by importing them and then
-making use of any classes that inherit from :py:class:`~volatility.framework.interfaces.plugins.PluginInterface`.
+making use of any classes that inherit from :py:class:`~volatility3.framework.interfaces.plugins.PluginInterface`.
 
 ::
 
-    from volatility.framework import interfaces
+    from volatility3.framework import interfaces
 
     class DllList(interfaces.plugins.PluginInterface):
 
@@ -56,7 +56,7 @@ to instantiate the plugin).  At the moment these requirements are fairly straigh
                                              architectures = ["Intel32", "Intel64"]),
 
 This requirement indicates that the plugin will operate on a single
-:py:class:`TranslationLayer <volatility.framework.interfaces.layers.TranslationLayerInterface>`.  The name of the
+:py:class:`TranslationLayer <volatility3.framework.interfaces.layers.TranslationLayerInterface>`.  The name of the
 loaded layer will appear in the plugin's configuration under the name ``primary``.    Requirement values can be
 accessed within the plugin through the plugin's `config` attribute (for example ``self.config['pid']``).
 
@@ -71,7 +71,7 @@ layers, for example a plugin that carries out some form of difference or statist
 
 This requirement (and the next two) are known as Complex Requirements, and user interfaces will likely not directly
 request a value for this from a user.  The value stored in the configuration tree for a
-:py:class:`~volatility.framework.configuration.requirements.TranslationLayerRequirement` is
+:py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement` is
 the string name of a layer present in the context's memory that satisfies the requirement.
 
 ::
@@ -80,14 +80,14 @@ the string name of a layer present in the context's memory that satisfies the re
                                         description = "Windows kernel symbols"),
 
 This requirement specifies the need for a particular
-:py:class:`SymbolTable <volatility.framework.interfaces.symbols.SymbolTableInterface>`
+:py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`
 to be loaded.  This gets populated by various
-:py:class:`Automagic <volatility.framework.interfaces.automagic.AutoMagicInterface>` as the nearest sibling to a particular
-:py:class:`~volatility.framework.configuration.requirements.TranslationLayerRequirement`.
-This means that if the :py:class:`~volatility.framework.configuration.requirements.TranslationLayerRequirement`
-is satisfied and the :py:class:`Automagic <volatility.framework.interfaces.automagic.AutoMagicInterface>` can determine
-the appropriate :py:class:`SymbolTable <volatility.framework.interfaces.symbols.SymbolTableInterface>`, the
-name of the :py:class:`SymbolTable <volatility.framework.interfaces.symbols.SymbolTableInterface>` will be stored in the configuration.
+:py:class:`Automagic <volatility3.framework.interfaces.automagic.AutoMagicInterface>` as the nearest sibling to a particular
+:py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement`.
+This means that if the :py:class:`~volatility3.framework.configuration.requirements.TranslationLayerRequirement`
+is satisfied and the :py:class:`Automagic <volatility3.framework.interfaces.automagic.AutoMagicInterface>` can determine
+the appropriate :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`, the
+name of the :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>` will be stored in the configuration.
 
 This requirement is also a Complex Requirement and therefore will not be requested directly from the user.
 
@@ -119,10 +119,10 @@ Define the `run` method
 
 The run method is the primary method called on a plugin.  It takes no parameters (these have been passed through the
 context's configuration tree, and the context is provided at plugin initialization time) and returns an unpopulated
-:py:class:`~volatility.framework.interfaces.renderers.TreeGrid` object.  These are typically constructed based on a
+:py:class:`~volatility3.framework.interfaces.renderers.TreeGrid` object.  These are typically constructed based on a
 generator that carries out the bulk of the plugin's processing.  The
-:py:class:`~volatility.framework.interfaces.renderers.TreeGrid` also specifies the column names and types
-that will be output as part of the :py:class:`~volatility.framework.interfaces.renderers.TreeGrid`.
+:py:class:`~volatility3.framework.interfaces.renderers.TreeGrid` also specifies the column names and types
+that will be output as part of the :py:class:`~volatility3.framework.interfaces.renderers.TreeGrid`.
 
 ::
 
@@ -143,28 +143,28 @@ that will be output as part of the :py:class:`~volatility.framework.interfaces.r
 
 In this instance, the plugin constructs a filter (using the PsList plugin's *classmethod* for creating filters).
 It checks the plugin's configuration for the ``pid`` value, and passes it in as a list if it finds it, or None if
-it does not.  The :py:func:`~volatility.plugins.windows.pslist.PsList.create_pid_filter` method accepts a list of process
+it does not.  The :py:func:`~volatility3.plugins.windows.pslist.PsList.create_pid_filter` method accepts a list of process
 identifiers that are included in the list. If the list is empty, all processes are returned.
 
 The next line specifies the columns by their name and type.  The types are simple types (int, str, bytes, float, and bool)
 but can also provide hints as to how the output should be displayed (such as a hexidecimal number, using
-:py:class:`volatility.framework.renderers.format_hints.Hex`).
+:py:class:`volatility3.framework.renderers.format_hints.Hex`).
 This indicates to user interfaces that the value should be displayed in a particular way, but does not guarantee that the value
 will be displayed that way (for example, if it doesn't make sense to do so in a particular interface).
 
 Finally, the generator is provided.  The generator accepts a list of processes, which is gathered using a different plugin,
-the :py:class:`~volatility.plugins.windows.pslist.PsList` plugin.  That plugin features a *classmethod*,
+the :py:class:`~volatility3.plugins.windows.pslist.PsList` plugin.  That plugin features a *classmethod*,
 so that other plugins can call it.  As such, it takes all the necessary parameters rather than accessing them
 from a configuration.  Since it must be portable code, it takes a context, as well as the layer name,
 symbol table and optionally a filter.  In this instance we unconditionally
 pass it the values from the configuration for the ``primary`` and ``nt_symbols`` requirements.  This will generate a list
-of :py:class:`~volatility.framework.symbols.windows.extensions.EPROCESS` objects, as provided by the :py:class:`~volatility.plugins.windows.pslist.PsList` plugin,
+of :py:class:`~volatility3.framework.symbols.windows.extensions.EPROCESS` objects, as provided by the :py:class:`~volatility.plugins.windows.pslist.PsList` plugin,
 and is not covered here but is used as an example for how to share code across plugins
 (both as the provider and the consumer of the shared code).
 
 Define the generator
 --------------------
-The :py:class:`~volatility.framework.interfaces.renderers.TreeGrid` can be populated without a generator,
+The :py:class:`~volatility3.framework.interfaces.renderers.TreeGrid` can be populated without a generator,
 but it is quite a common model to use.  This is where the main processing for this plugin lives.
 
 ::
@@ -189,10 +189,10 @@ but it is quite a common model to use.  This is where the main processing for th
                                format_hints.Hex(entry.DllBase), format_hints.Hex(entry.SizeOfImage),
                                BaseDllName, FullDllName))
 
-This iterates through the list of processes and for each one calls the :py:meth:`~volatility.framework.symbols.windows.extensions.EPROCESS.load_order_modules` method on it.  This provides
+This iterates through the list of processes and for each one calls the :py:meth:`~volatility3.framework.symbols.windows.extensions.EPROCESS.load_order_modules` method on it.  This provides
 a list of the loaded modules within the process.
 
-The plugin then defaults the ``BaseDllName`` and ``FullDllName`` variables to an :py:class:`~volatility.framework.renderers.UnreadableValue`,
+The plugin then defaults the ``BaseDllName`` and ``FullDllName`` variables to an :py:class:`~volatility3.framework.renderers.UnreadableValue`,
 which is a way of indicating to the user interface that the value couldn't be read for some reason (but that it isn't fatal).
 There are currently four different reasons a value may be unreadable:
 
@@ -204,7 +204,7 @@ There are currently four different reasons a value may be unreadable:
 This is a safety provision to ensure that the data returned by the Volatility library is accurate and describes why
 information may not be provided.
 
-The plugin then takes the process's ``BaseDllName`` value, and calls :py:meth:`~volatility.framework.symbols.windows.extensions.UNICODE_STRING.get_string` on it.  All structure attributes,
+The plugin then takes the process's ``BaseDllName`` value, and calls :py:meth:`~volatility3.framework.symbols.windows.extensions.UNICODE_STRING.get_string` on it.  All structure attributes,
 as defined by the symbols, are directly accessible and use the case-style of the symbol library it came from (in Windows,
 attributes are CamelCase), such as ``entry.BaseDllName`` in this instance.  Any attribtues not defined by the symbol but added
 by Volatility extensions cannot be properties (in case they overlap with the attributes defined in the symbol libraries)
@@ -215,16 +215,16 @@ read the data at a particular offset.  This will cause an exception to be thrown
 as a means of communicating when something exceptional happens.  It is the responsibility of the plugin developer to
 appropriately catch and handle any non-fatal exceptions and otherwise allow the exception to be thrown by the user interface.
 
-In this instance, the :py:class:`~volatility.framework.exceptions.InvalidAddressException` class is caught, which is thrown
+In this instance, the :py:class:`~volatility3.framework.exceptions.InvalidAddressException` class is caught, which is thrown
 by any layer which cannot access an offset requested of it.  Since we have already populated both values with ``UnreadableValue``
 we do not need to write code for the exception handler.
 
-Finally, we yield the record in the format required by the :py:class:`~volatility.framework.interfaces.renderers.TreeGrid`,
+Finally, we yield the record in the format required by the :py:class:`~volatility3.framework.interfaces.renderers.TreeGrid`,
 a tuple, listing the indentation level (for trees) and then the list of values for each column.
 This plugin demonstrates casting a value ``ImageFileName`` to ensure it's returned
 as a string with a specific maximum length, rather than its original type (potentially an array of characters, etc).
-This is carried out using the :py:meth:`~volatility.framework.interfaces.objects.ObjectInterface.cast` method which takes a type (either a native type, such as string or pointer, or a
-structure type defined in a :py:class:`SymbolTable <volatility.framework.interfaces.symbols.SymbolTableInterface>`
+This is carried out using the :py:meth:`~volatility3.framework.interfaces.objects.ObjectInterface.cast` method which takes a type (either a native type, such as string or pointer, or a
+structure type defined in a :py:class:`SymbolTable <volatility3.framework.interfaces.symbols.SymbolTableInterface>`
 such as ``<table>!_UNICODE``) and the parameters to that type.
 
 Since the cast value must populate a string typed column, it had to be a Python string (such as being cast to the native
