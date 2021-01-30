@@ -10,7 +10,6 @@ import logging
 import lzma
 import os
 import ssl
-import time
 import urllib.parse
 import urllib.request
 import zipfile
@@ -109,13 +108,13 @@ class ResourceAccessor(object):
             else:
                 raise excp
 
-        with contextlib.closing(fp) as fp:
-            # Cache the file locally
+        if not self.uses_cache(url):
+            # ZipExtFiles (files in zips) cannot seek, so must be cached in order to use and/or decompress
+            curfile = fp
+        else:
+            with contextlib.closing(fp) as fp:
+                # Cache the file locally
 
-            if not self.uses_cache(url):
-                # ZipExtFiles (files in zips) cannot seek, so must be cached in order to use and/or decompress
-                curfile = urllib.request.urlopen(url, context = self._context)
-            else:
                 # TODO: find a way to check if we already have this file (look at http headers?)
                 block_size = 1028 * 8
                 temp_filename = os.path.join(
@@ -144,6 +143,8 @@ class ResourceAccessor(object):
                         block = fp.read(block_size)
                     cache_file.close()
                 except FileExistsError as excp:
+                    # The file existed, meaning it's already been made or is being made
+                    # There's no way of telling which, so we just allow the file to be opened in whatever state it's at
                     pass
 
                 # Re-open the cache with a different mode
