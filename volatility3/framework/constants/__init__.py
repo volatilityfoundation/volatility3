@@ -76,6 +76,9 @@ BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
 ProgressCallback = Optional[Callable[[float, str], None]]
 """Type information for ProgressCallback objects"""
 
+URLOPEN_LOCK_TIMEOUT = 30000
+"""Number of miliseconds to wait before timing-out on file locks"""
+
 
 class Parallelism(enum.IntEnum):
     """An enumeration listing the different types of parallelism applied to
