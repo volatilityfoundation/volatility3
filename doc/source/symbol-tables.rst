@@ -12,7 +12,7 @@ Volatility will automatically decompress them on use.  It will also cache their 
 under the user's home directory, in :file:`.cache/volatility3`, along with other useful data.  The cache directory currently
 cannot be altered.
 
-Symbol table JSON files live, by default, under the :file:`volatility/symbols`, underneath an operating system directory
+Symbol table JSON files live, by default, under the :file:`volatility3/symbols`, underneath an operating system directory
 (currently one of :file:`windows`, :file:`mac` or :file:`linux`).  The symbols directory is configurable within the framework and can
 usually be set within the user interface.
 
@@ -33,7 +33,7 @@ Windows symbol tables can be manually constructed from an appropriate PDB file. 
 is built into Volatility 3, called :file:`pdbconv.py`.  It can be run from the top-level Volatility path, using the
 following command:
 
-:command:`PYTHONPATH="." python volatility/framework/symbols/windows/pdbconv.py`
+:command:`PYTHONPATH="." python volatility3/framework/symbols/windows/pdbconv.py`
 
 The :envvar:`PYTHONPATH` environment variable is not required if the Volatility library is installed in the system's library path
 or a virtual environment.

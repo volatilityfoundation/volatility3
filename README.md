@@ -77,7 +77,7 @@ The hashes to verify whether any of the symbol pack files have downloaded succes
 <https://downloads.volatilityfoundation.org/volatility3/symbols/SHA1SUMS>  
 <https://downloads.volatilityfoundation.org/volatility3/symbols/MD5SUMS>  
 
-Symbol tables zip files must be placed, as named, into the `volatility/symbols` directory (or just the symbols directory next to the executable file).
+Symbol tables zip files must be placed, as named, into the `volatility3/symbols` directory (or just the symbols directory next to the executable file).
 
 Windows symbols that cannot be found will be queried, downloaded, generated and cached.  Mac and Linux symbol tables must be manually produced by a tool such as [dwarf2json](https://github.com/volatilityfoundation/dwarf2json).
 
