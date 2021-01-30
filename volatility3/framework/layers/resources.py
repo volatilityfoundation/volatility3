@@ -142,6 +142,8 @@ class ResourceAccessor(object):
                         block = fp.read(block_size)
                     cache_file.close()
                 # Re-open the cache with a different mode
+                # Since we don't want people thinking they're able to save to the cache file,
+                # open it in read mode only and allow breakages to happen if they wanted to write
                 curfile = open(temp_filename, mode = "rb")
 
         # Determine whether the file is a particular type of file, and if so, open it as such
