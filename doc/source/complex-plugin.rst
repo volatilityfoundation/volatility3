@@ -115,7 +115,7 @@ Constructing an appropriate file, the file can be loaded into a symbol table as 
 
     table_name = intermed.IntermediateSymbolTable.create(context, config_path, 'sub_path', 'filename')
 
-This code will load a JSON file from one of the standard symbol paths (volatility/symbols and volatility/framework/symbols)
+This code will load a JSON file from one of the standard symbol paths (volatility3/symbols and volatility3/framework/symbols)
 under the additional directory sub_path, with a name matching filename.json
 (the extension should not be included in the filename).
 

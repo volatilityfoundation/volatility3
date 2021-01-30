@@ -16,7 +16,7 @@ setuptools.setup(name = "volatility3",
                  url = "https://volatilityfoundation.org/volatility/",
                  project_urls = {
                      "Bug Tracker": "https://github.com/volatilityfoundation/volatility3/issues",
-                     "Documentation": "https://volatilityfoundation.org/volatility/docs/",
+                     "Documentation": "https://volatility3.readthedocs.io/",
                      "Source Code": "https://github.com/volatilityfoundation/volatility3",
                  },
                  include_package_data = True,
