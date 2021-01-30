@@ -122,38 +122,29 @@ class ResourceAccessor(object):
                     constants.CACHE_PATH,
                     "data_" + hashlib.sha512(bytes(url, 'raw_unicode_escape')).hexdigest() + ".cache")
 
-                with open(temp_filename + '.lock', 'w'):
-                    if not os.path.exists(temp_filename):
-                        vollog.debug("Caching file at: {}".format(temp_filename))
+                # If the file doesn't exist, we're the first to write it
+                try:
+                    cache_file = open(temp_filename, "xb")
+                    vollog.debug("Caching file at: {}".format(temp_filename))
 
-                        try:
-                            content_length = fp.info().get('Content-Length', -1)
-                        except AttributeError:
-                            # If our fp doesn't have an info member, carry on gracefully
-                            content_length = -1
-                        cache_file = open(temp_filename, "wb")
+                    try:
+                        content_length = fp.info().get('Content-Length', -1)
+                    except AttributeError:
+                        # If our fp doesn't have an info member, carry on gracefully
+                        content_length = -1
 
-                        count = 0
+                    count = 0
+                    block = fp.read(block_size)
+                    while block:
+                        count += len(block)
+                        if self._progress_callback:
+                            self._progress_callback(count * 100 / max(count, int(content_length)),
+                                                    "Reading file {}".format(url))
+                        cache_file.write(block)
                         block = fp.read(block_size)
-                        while block:
-                            count += len(block)
-                            if self._progress_callback:
-                                self._progress_callback(count * 100 / max(count, int(content_length)),
-                                                        "Reading file {}".format(url))
-                            cache_file.write(block)
-                            block = fp.read(block_size)
-                        cache_file.close()
-                    else:
-                        count = 0
-                        while os.path.exists(temp_filename + '.lock'):
-                            count += 1
-                            if self._progress_callback:
-                                self._progress_callback(0, "Waiting on lock to retrieve {}".format(url))
-                            time.sleep(0.1)
-                            if count >= constants.URLOPEN_LOCK_TIMEOUT // 1000:
-                                break
-                        if not os.path.exists(temp_filename):
-                            raise error.URLError("Unable to lock the cache for {}".format(url))
+                    cache_file.close()
+                except FileExistsError as excp:
+                    pass
 
                 # Re-open the cache with a different mode
                 # Since we don't want people thinking they're able to save to the cache file,
