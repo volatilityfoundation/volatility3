@@ -6,12 +6,17 @@ import setuptools
 
 from volatility3.framework import constants
 
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
 setuptools.setup(name = "volatility3",
                  description = "Memory forensics framework",
                  version = constants.PACKAGE_VERSION,
                  license = "VSL",
                  keywords = "volatility memory forensics framework windows linux volshell",
                  author = "Volatility Foundation",
+                 long_description = long_description,
+                 long_description_content_type = "text/markdown",
                  author_email = "volatility@volatilityfoundation.org",
                  url = "https://volatilityfoundation.org/volatility/",
                  project_urls = {
