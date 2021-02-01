@@ -25,7 +25,7 @@ from versions 1.1 or 1.2:
 
 ::
 
-        volatility.framework.require_interface_version(1, 0, 0)
+        volatility3.framework.require_interface_version(1, 0, 0)
 
 Contexts can be spun up quite easily, just construct one.  It's not a singleton, so multiple contexts can be
 constructed and operate independently, but be aware of which context you're handing where and make sure to use
@@ -42,20 +42,20 @@ Determine what plugins are available
 ------------------------------------
 
 You can also interrogate the framework to see which plugins are available.  First we have to try to load all
-available plugins.  The :py:func:`~volatility.framework.import_files` method will automatically use the module
-paths for the provided module (in this case, volatility.plugins) and walk the directory (or directories) loading up
+available plugins.  The :py:func:`~volatility3.framework.import_files` method will automatically use the module
+paths for the provided module (in this case, volatility3.plugins) and walk the directory (or directories) loading up
 all python files.  Any import failures will be provided in the failures return value, unless the second parameter is
 False in which case the call will raise any exceptions encountered.  Any additional directories containing plugins
-should be added to the `__path__` attribute for the `volatility.plugins` module.  The standard paths should generally
-also be included, which can be found in `volatility.constants.PLUGINS_PATH`.
+should be added to the `__path__` attribute for the `volatility3.plugins` module.  The standard paths should generally
+also be included, which can be found in `volatility3.constants.PLUGINS_PATH`.
 
 ::
 
-        volatility.plugins.__path__ = <new_plugin_path> + constants.PLUGINS_PATH
-        failures = framework.import_files(volatility.plugins, True)
+        volatility3.plugins.__path__ = <new_plugin_path> + constants.PLUGINS_PATH
+        failures = framework.import_files(volatility3.plugins, True)
 
 Once the plugins have been imported, we can interrogate which plugins are available.  The
-:py:func:`~volatility.framework.list_plugins` call will
+:py:func:`~volatility3.framework.list_plugins` call will
 return a dictionary of plugin names and the plugin classes.
 
 ::
@@ -68,9 +68,9 @@ Determine what configuration options a plugin requires
 ------------------------------------------------------
 
 For each plugin class, we can call the classmethod `requirements` on it, which will return a list of objects that
-adhere to the :py:class:`~volatility.framework.interfaces.configuration.RequirementInterface` method.  The various
+adhere to the :py:class:`~volatility3.framework.interfaces.configuration.RequirementInterface` method.  The various
 types of Requirement are split roughly in two,
-:py:class:`~volatility.framework.interfaces.configuration.SimpleTypeRequirement` (such as integers, booleans, floats
+:py:class:`~volatility3.framework.interfaces.configuration.SimpleTypeRequirement` (such as integers, booleans, floats
 and strings) and more complex requirements (such as lists, choices, multiple requirements, translation layer
 requirements or symbol table requirements).  A requirement just specifies a type of data and a name, and must be
 combined with a configuration hierarchy to have meaning.
@@ -98,7 +98,7 @@ underneaths its own branch).  To set the hierarchy, you'll need to know where th
 For this example, we'll assume plugins' base_config_path is set as `plugins`, and that automagics are configured under
 the `automagic` tree.  We'll see later how to ensure this matches up with the plugins and automagic when they're
 constructed.  Joining configuration options should always be carried out using
-:py:func:`~volatility.framework.interfaces.configuration.path_join`
+:py:func:`~volatility3.framework.interfaces.configuration.path_join`
 in case the separator value gets changed in the future.  Configuration items can then be set as follows:
 
 ::
@@ -170,7 +170,7 @@ be called whenever a plugin produces an auxiliary file.
     constructed = plugin(context, plugin_config_path, progress_callback = progress_callback)
     constructed.set_open_method(file_handler)
 
-The file_handler must adhere to the :py:class:`~volatility.framework.interfaces.plugins.FileHandlerInterface`,
+The file_handler must adhere to the :py:class:`~volatility3.framework.interfaces.plugins.FileHandlerInterface`,
 which represents an IO[bytes] object but also contains a `preferred_filename` attribute as a hint.
 
 All of this functionality has been condensed into a framework method called `construct_plugin` which will
@@ -181,7 +181,7 @@ accepts an optional progress_callback and an optional file_consumer.
 
     constructed = plugins.construct_plugin(ctx, automagics, plugin, base_config_path, progress_callback, file_consumer)
 
-Finally the plugin can be run, and will return a :py:class:`~volatility.framework.interfaces.renderers.TreeGrid`.
+Finally the plugin can be run, and will return a :py:class:`~volatility3.framework.interfaces.renderers.TreeGrid`.
 
 ::
 
@@ -201,22 +201,22 @@ does the actual work.  This can return an exception if one occurs during the run
 
 The results can be accessed either as the results are being processed, or by visiting the nodes in the tree
 once it is fully populated.  In either case, a visitor method will be required.  The visitor method
-should accept a :py:class:`~volatility.framework.interfaces.renderers.TreeNode` and an `accumulator`.  It will
+should accept a :py:class:`~volatility3.framework.interfaces.renderers.TreeNode` and an `accumulator`.  It will
 return an updated accumulator.
 
-When provided a :py:class:`~volatility.framework.interfaces.renderers.TreeNode`, it can be accessed as a dictionary
+When provided a :py:class:`~volatility3.framework.interfaces.renderers.TreeNode`, it can be accessed as a dictionary
 based on the column names that the treegrid contains.  It should be noted that each column can contain only the
 type specified in the `column.type` field (which can be a simple type like string, integer, float, bytes or
 a more complex type, like a DateTime, a Disassembly or a descendant of
-:py:class:`~volatility.framework.interfaces.renderers.BaseAbsentValue`).  The various fields may also be wrapped in
+:py:class:`~volatility3.framework.interfaces.renderers.BaseAbsentValue`).  The various fields may also be wrapped in
 `format_hints` designed to tell the user interface how to render the data.  These hints can be things like Bin, Hex or
 HexBytes, so that fields like offsets are displayed in hex form or so that bytes are displayed in their hex form rather
-than their raw form.  Descendants of :py:class:`~volatility.framework.interfaces.renderers.BaseAbsentValue` can currently
+than their raw form.  Descendants of :py:class:`~volatility3.framework.interfaces.renderers.BaseAbsentValue` can currently
 be one of
-:py:class:`~volatility.framework.renderers.UnreadableValue`,
-:py:class:`~volatility.framework.renderers.UnparsableValue`,
-:py:class:`~volatility.framework.renderers.NotApplicableValue` or
-:py:class:`~volatility.framework.renderers.NotAvailableValue`.  These indicate that data could not be read from the
+:py:class:`~volatility3.framework.renderers.UnreadableValue`,
+:py:class:`~volatility3.framework.renderers.UnparsableValue`,
+:py:class:`~volatility3.framework.renderers.NotApplicableValue` or
+:py:class:`~volatility3.framework.renderers.NotAvailableValue`.  These indicate that data could not be read from the
 memory for some reason, could not be parsed properly, was not applicable or was not available.
 
 A simple text renderer (that returns output immediately) would appear as follows.  This doesn't use
@@ -240,5 +240,5 @@ the accumulator, but instead uses print to directly produce the output.  This is
     grid.populate(visitor, None)
 
 More complex examples of renderers can be found in the default CLI implementation, such as the
-:py:class:`~volatility.cli.text_renderer.QuickTextRenderer` or the
-:py:class:`~volatility.cli.text_renderer.PrettyTextRenderer`.
+:py:class:`~volatility3.cli.text_renderer.QuickTextRenderer` or the
+:py:class:`~volatility3.cli.text_renderer.PrettyTextRenderer`.

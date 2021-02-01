@@ -4,9 +4,9 @@
 
 import setuptools
 
-from volatility.framework import constants
+from volatility3.framework import constants
 
-setuptools.setup(name = "volatility",
+setuptools.setup(name = "volatility3",
                  description = "Memory forensics framework",
                  version = constants.PACKAGE_VERSION,
                  license = "VSL",
@@ -16,7 +16,7 @@ setuptools.setup(name = "volatility",
                  url = "https://volatilityfoundation.org/volatility/",
                  project_urls = {
                      "Bug Tracker": "https://github.com/volatilityfoundation/volatility3/issues",
-                     "Documentation": "https://volatilityfoundation.org/volatility/docs/",
+                     "Documentation": "https://volatility3.readthedocs.io/",
                      "Source Code": "https://github.com/volatilityfoundation/volatility3",
                  },
                  include_package_data = True,
@@ -27,8 +27,8 @@ setuptools.setup(name = "volatility",
                  packages = setuptools.find_packages(exclude = ["development", "development.*"]),
                  entry_points = {
                      'console_scripts': [
-                         'vol = volatility.cli:main',
-                         'volshell = volatility.cli.volshell:main',
+                         'vol = volatility3.cli:main',
+                         'volshell = volatility3.cli.volshell:main',
                      ],
                  },
                  install_requires = ["pefile"],

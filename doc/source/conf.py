@@ -21,18 +21,18 @@ import sphinx.ext.apidoc
 
 
 def setup(app):
-    volatility_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'volatility'))
+    volatility_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'volatility3'))
 
     source_dir = os.path.abspath(os.path.dirname(__file__))
     sphinx.ext.apidoc.main(argv = ['-e', '-M', '-f', '-T', '-o', source_dir, volatility_directory])
 
-    # Go through the volatility.framework.plugins files and change them to volatility.plugins
+    # Go through the volatility3.framework.plugins files and change them to volatility3.plugins
     for dir, _, files in os.walk(os.path.dirname(__file__)):
         for filename in files:
-            if filename.startswith('volatility.framework.plugins') and filename != 'volatility.framework.plugins.rst':
-                # Change all volatility.framework.plugins to volatility.plugins in the file
+            if filename.startswith('volatility3.framework.plugins') and filename != 'volatility3.framework.plugins.rst':
+                # Change all volatility3.framework.plugins to volatility3.plugins in the file
                 # Rename the file
-                new_filename = filename.replace('volatility.framework.plugins', 'volatility.plugins')
+                new_filename = filename.replace('volatility3.framework.plugins', 'volatility3.plugins')
 
                 replace_string = b"Submodules\n----------\n\n.. toctree::\n\n"
                 submodules = replace_string
@@ -48,25 +48,25 @@ def setup(app):
                 with open(os.path.join(dir, new_filename), 'wb') as newfile:
                     with open(os.path.join(dir, filename), "rb") as oldfile:
                         line = oldfile.read()
-                        correct_plugins = line.replace(b'volatility.framework.plugins', b'volatility.plugins')
+                        correct_plugins = line.replace(b'volatility3.framework.plugins', b'volatility3.plugins')
                         correct_submodules = correct_plugins.replace(replace_string, submodules)
                         newfile.write(correct_submodules)
                     os.remove(os.path.join(dir, filename))
-            elif filename == 'volatility.framework.rst':
+            elif filename == 'volatility3.framework.rst':
                 with open(os.path.join(dir, filename), "rb") as contents:
                     lines = contents.readlines()
                 plugins_seen = False
                 with open(os.path.join(dir, filename), "wb") as contents:
                     for line in lines:
-                        if b'volatility.framework.plugins' in line:
+                        if b'volatility3.framework.plugins' in line:
                             plugins_seen = True
                         if plugins_seen and line == b'':
-                            contents.write(b'   volatility.plugins')
+                            contents.write(b'   volatility3.plugins')
                         contents.write(line)
-            elif filename == 'volatility.plugins.rst':
+            elif filename == 'volatility3.plugins.rst':
                 with open(os.path.join(dir, filename), "rb") as contents:
                     lines = contents.readlines()
-                with open(os.path.join(dir, 'volatility.framework.plugins.rst'), "rb") as contents:
+                with open(os.path.join(dir, 'volatility3.framework.plugins.rst'), "rb") as contents:
                     real_lines = contents.readlines()
 
                 # Process real_lines
@@ -75,14 +75,14 @@ def setup(app):
                         break
                 else:
                     line_index = len(real_lines)
-                submodule_lines = real_lines[line_index:]
+                submodule_lines = [b"\n"] + real_lines[line_index:]
 
                 plugins_seen = False
                 with open(os.path.join(dir, filename), "wb") as contents:
                     for line in lines:
                         contents.write(line)
                     for line in submodule_lines:
-                        contents.write(line.replace(b'volatility.framework.plugins', b'volatility.plugins'))
+                        contents.write(line.replace(b'volatility3.framework.plugins', b'volatility3.plugins'))
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -90,7 +90,7 @@ def setup(app):
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../..'))
 
-from volatility.framework import constants
+from volatility3.framework import constants
 
 # -- General configuration ------------------------------------------------
 

@@ -5,7 +5,7 @@ This is the documentation for Volatility 3, the most advanced memory forensics
 framework in the world. Like previous versions of the Volatility framework,
 Volatility 3 is Open Source.
 
-:doc:`List of plugins <volatility.plugins>`
+:doc:`List of plugins <volatility3.plugins>`
 
 Here are some guidelines for using Volatility 3 effectively:
 
@@ -22,7 +22,7 @@ Python Packages
 ===============
 
 .. toctree::
-    volatility
+    volatility3
 
 Indices and tables
 ==================

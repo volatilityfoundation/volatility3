@@ -1,0 +1,42 @@
+name: build-pypi
+
+on:
+  push:
+    branches:
+      - stable
+      - develop
+      - 'release/**'
+
+  pull_request:
+    branches:
+      - stable
+      - 'release/**'
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.x
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools wheel
+
+    - name: Build PyPi packages
+      run: |
+        python setup.py sdist --formats=gztar,zip
+        python setup.py bdist_wheel
+
+    - name: Archive dist
+      uses: actions/upload-artifact@v2
+      with:
+        name: volatility3-pypi
+        path: |
+          dist/
