@@ -4,7 +4,6 @@
 import binascii
 import code
 import io
-import os
 import random
 import string
 import struct

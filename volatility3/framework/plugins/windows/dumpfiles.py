@@ -9,7 +9,6 @@ from volatility3.plugins.windows import handles
 from volatility3.plugins.windows import pslist
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
-from volatility3.framework.objects import utility
 from typing import List, Tuple, Type, Optional
 vollog = logging.getLogger(__name__)
 

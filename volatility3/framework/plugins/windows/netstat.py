@@ -4,12 +4,11 @@
 
 import logging
 import datetime
-from typing import Iterable, List, Optional, Callable
+from typing import Iterable, Optional
 
-from volatility3.framework import constants, exceptions, interfaces, renderers, symbols, layers
+from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
-from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework.symbols.windows.extensions import network
 from volatility3.plugins import timeliner

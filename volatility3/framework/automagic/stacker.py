@@ -13,7 +13,7 @@ once a layer successfully stacks on top of the existing layers, it is removed fr
 import logging
 import sys
 import traceback
-from typing import Any, List, Optional, Tuple, Type
+from typing import List, Optional, Tuple, Type
 
 from volatility3 import framework
 from volatility3.framework import interfaces, constants

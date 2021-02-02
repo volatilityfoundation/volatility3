@@ -94,10 +94,6 @@ class VmwareLayer(segmented.SegmentedLayer):
                     data_size = self._context.object(self._choose_type(data_len),
                                             layer_name = self._meta_layer,
                                             offset = offset + 2 + name_len + (indices_len * index_len))
-                    # Read the size of the data when it would be decompressed
-                    data_mem_size = self._context.object(self._choose_type(data_len),
-                                            layer_name = self._meta_layer,
-                                            offset = offset + 2 + name_len + (indices_len * index_len) + data_len)
                     # Skip two bytes of padding (as it seems?)
                     # Read the actual data
                     data = self._context.object("vmware!bytes",
