@@ -161,9 +161,16 @@ If unsatisfied is an empty list, then the plugin has been given everything it re
 Dictionary of the hierarchy paths and their associated requirements that weren't satisfied.
 
 The plugin can then be instantiated with the context (containing the plugin's configuration) and the path that the
-plugin can find its configuration at.  A progress_callback can also be provided to give users feedback whilst the
-plugin is running.  Also, should the plugin produce files, an open_method can be set on the plugin, which will
-be called whenever a plugin produces an auxiliary file.
+plugin can find its configuration at.  This configuration path only needs to be a unique value to identify where the
+configuration details can be found, similar to a registry key in Windows.
+
+A progress_callback can also be provided to give users feedback whilst the plugin is running.  A progress callback
+is a function (callable) that takes a percentage and a descriptive string.  User interfaces implementing these can
+therefore provide progress feedback to a user, as the framework will call these every so often during intensive actions,
+to update the user as to how much has been completed so far.
+
+Also, should the plugin produce files, an open_method can be set on the plugin, which will be called whenever a plugin
+produces an auxiliary file.
 
 ::
 
@@ -171,7 +178,11 @@ be called whenever a plugin produces an auxiliary file.
     constructed.set_open_method(file_handler)
 
 The file_handler must adhere to the :py:class:`~volatility3.framework.interfaces.plugins.FileHandlerInterface`,
-which represents an IO[bytes] object but also contains a `preferred_filename` attribute as a hint.
+which represents an IO[bytes] object but also contains a `preferred_filename` attribute as a hint indicating what the
+file being produced should be called.  When a plugin produces a new file, rather than opening it with the python `open`
+method, it will use the `FileHandlerInterface` and construct it with a descriptive filename, and then write bytes to it
+using the `write` method, just like other python file-like objects.  This allows web user interfaces to offer the files
+for download, whilst CLIs to write them to disk and other UIs to handle files however they need.
 
 All of this functionality has been condensed into a framework method called `construct_plugin` which will
 take and run the automagics, and instantiate the plugin on the provided `base_config_path`.  It also
