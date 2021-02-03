@@ -1,7 +1,3 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
-# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
-#
-
 import logging
 import struct
 from typing import Tuple, Optional
@@ -19,7 +15,6 @@ class WindowsCrashDumpFormatException(exceptions.LayerException):
 
 class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     """A Windows crash format TranslationLayer.
-
     This TranslationLayer supports Microsoft complete memory dump files.
     It currently does not support kernel or small memory dump files.
     """
@@ -42,7 +37,11 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self._context = context
         self._config_path = config_path
         self._page_size = 0x1000
-        self._base_layer = self.config["base_layer"]
+        try: 
+            self._base_layer = self.config["base_layer"]
+        except KeyError:
+            self._base_layer = 'base_layer'
+            self.config['base_layer']='base_layer'
 
         # Create a custom SymbolSpace
         self._crash_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
@@ -71,30 +70,33 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer."""
-        header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
-                                     offset = 0,
-                                     layer_name = self._base_layer)
+        
 
         segments = []
 
         offset = self.headerpages
-        header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
-        for x in header.PhysicalMemoryBlockBuffer.Run:
-            segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
-            # print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
-            #                  offset * 0x1000,
-            #                  x.PageCount * 0x1000))
-            offset += x.PageCount
+        if self.dump_type==0x1:
+            header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
+                                     offset = 0,
+                                     layer_name = self._base_layer)
+            offset = self.headerpages                      
+            header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
+            for x in header.PhysicalMemoryBlockBuffer.Run:
+                segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
+                # print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
+                #                  offset * 0x1000,
+                #                  x.PageCount * 0x1000))
+                offset += x.PageCount
+
 
         if len(segments) == 0:
             raise WindowsCrashDumpFormatException(self.name, "No Crash segments defined in {}".format(self._base_layer))
-
         self._segments = segments
 
     @classmethod
     def check_header(cls, base_layer: interfaces.layers.DataLayerInterface, offset: int = 0) -> Tuple[int, int]:
         # Verify the Window's crash dump file magic
-
+        
         try:
             header_data = base_layer.read(offset, cls._magic_struct.size)
         except exceptions.InvalidAddressException:
@@ -114,7 +116,6 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
 class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
     """A Windows crash format TranslationLayer.
-
     This TranslationLayer supports Microsoft complete memory dump files.
     It currently does not support kernel or small memory dump files.
     """
@@ -133,7 +134,6 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
         summary_header = self.context.object(self._crash_table_name + constants.BANG + "_SUMMARY_DUMP64",
                                              offset = 0x2000,
                                              layer_name = self._base_layer)
-
         if self.dump_type == 0x1:
             header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
                                          offset = 0,
@@ -146,7 +146,7 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
                 offset += x.PageCount
 
         elif self.dump_type == 0x05:
-            summary_header.BufferLong.count = (summary_header.BitmapSize + 31) // 32
+            summary_header.BufferLong.count = (summary_header.BitmapSize + 31) // 32 + 0x2000
             previous_bit = 0
             start_position = 0
             # We cast as an int because we don't want to carry the context around with us for infinite loop reasons
@@ -156,6 +156,7 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
                 if (bit_position % 32) == 0:
                     current_word = summary_header.BufferLong[bit_position // 32]
                 current_bit = (current_word >> (bit_position % 32)) & 1
+
                 if current_bit != previous_bit:
                     if previous_bit == 0:
                         # Start
@@ -166,11 +167,15 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
                         segments.append((start_position * 0x1000, mapped_offset, length, length))
                         mapped_offset += length
 
+
                 # Finish it off
-                if bit_position == (len(summary_header.BufferLong) * 32) - 1 and current_bit == 1:
+                if (bit_position == (len(summary_header.BufferLong) * 32) - 1 or bit_position == (len(summary_header.BufferLong) * 32) - 1 -32*0x2000) and current_bit == 1:
                     length = (bit_position - start_position) * 0x1000
                     segments.append((start_position * 0x1000, mapped_offset, length, length))
                     mapped_offset += length
+                    break
+
+
 
                 previous_bit = current_bit
         else:
@@ -179,7 +184,7 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
 
         if len(segments) == 0:
             raise WindowsCrashDumpFormatException(self.name, "No Crash segments defined in {}".format(self._base_layer))
-
+        
         self._segments = segments
 
 
@@ -200,3 +205,4 @@ class WindowsCrashDumpStacker(interfaces.automagic.StackerLayerInterface):
             except WindowsCrashDumpFormatException:
                 pass
         return None
+
