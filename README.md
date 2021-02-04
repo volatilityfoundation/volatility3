@@ -45,7 +45,7 @@ git clone https://github.com/volatilityfoundation/volatility3.git
 2. See available options:
 
     ```shell
-    python3 vol.py —h
+    python3 vol.py -h
     ```
 
 3. To get more information on a Windows memory sample and to make sure
@@ -55,10 +55,10 @@ Volatility supports that sample type, run
    Example:
 
     ```shell
-    python3 vol.py —f /home/user/samples/stuxnet.vmem windows.info
+    python3 vol.py -f /home/user/samples/stuxnet.vmem windows.info
     ```
 
-4. Run some other plugins. The `-f` or `—-single-location` is not strictly
+4. Run some other plugins. The `-f` or `--single-location` is not strictly
 required, but most plugins expect a single sample. Some also
 require/accept other options.  Run `python3 vol.py <plugin> -h`
 for more information on a particular command.
