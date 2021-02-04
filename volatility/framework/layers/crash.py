@@ -1,6 +1,11 @@
+
+  
+# This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
+# which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
+#
 import logging
 import struct
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Iterable
 
 from volatility.framework import constants, exceptions, interfaces
 from volatility.framework.layers import segmented
@@ -75,23 +80,24 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         segments = []
 
         offset = self.headerpages
-        if self.dump_type==0x1:
-            header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
-                                     offset = 0,
-                                     layer_name = self._base_layer)
-            offset = self.headerpages                      
-            header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
-            for x in header.PhysicalMemoryBlockBuffer.Run:
-                segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
+        header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
+                                 offset = 0,
+                                 layer_name = self._base_layer)
+        offset = self.headerpages                      
+        header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
+        for x in header.PhysicalMemoryBlockBuffer.Run:
+            segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
                 # print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
                 #                  offset * 0x1000,
                 #                  x.PageCount * 0x1000))
-                offset += x.PageCount
+            offset += x.PageCount
 
 
         if len(segments) == 0:
             raise WindowsCrashDumpFormatException(self.name, "No Crash segments defined in {}".format(self._base_layer))
         self._segments = segments
+
+
 
     @classmethod
     def check_header(cls, base_layer: interfaces.layers.DataLayerInterface, offset: int = 0) -> Tuple[int, int]:
@@ -146,13 +152,15 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
                 offset += x.PageCount
 
         elif self.dump_type == 0x05:
-            summary_header.BufferLong.count = (summary_header.BitmapSize + 31) // 32 + 0x2000
+            #Add 0x2000 as some bitmaps are too short by one offset
+            summary_header.BufferLong.count = (summary_header.BitmapSize + 31) // 32 + 0x2000 
             previous_bit = 0
             start_position = 0
             # We cast as an int because we don't want to carry the context around with us for infinite loop reasons
             mapped_offset = int(summary_header.HeaderSize)
             current_word = None
-            for bit_position in range(len(summary_header.BufferLong) * 32):
+            bitmap_len=len(summary_header.BufferLong) * 32
+            for bit_position in range(bitmap_len):
                 if (bit_position % 32) == 0:
                     current_word = summary_header.BufferLong[bit_position // 32]
                 current_bit = (current_word >> (bit_position % 32)) & 1
@@ -168,8 +176,8 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
                         mapped_offset += length
 
 
-                # Finish it off
-                if (bit_position == (len(summary_header.BufferLong) * 32) - 1 or bit_position == (len(summary_header.BufferLong) * 32) - 1 -32*0x2000) and current_bit == 1:
+                # Find the last segment in a file which will be at the end or two pages from the end
+                if (bit_position == bitmap_len - 1 or bit_position == bitmap_len - 1 -32*0x2000) and current_bit == 1:
                     length = (bit_position - start_position) * 0x1000
                     segments.append((start_position * 0x1000, mapped_offset, length, length))
                     mapped_offset += length

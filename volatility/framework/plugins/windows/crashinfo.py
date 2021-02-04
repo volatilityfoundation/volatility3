@@ -22,21 +22,12 @@ class Crashinfo(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]), 
             ]
         
-    def _generator(self, segments):
-        for seg in segments:
-            yield(0,(seg[0],seg[1],seg[2]))
+    def _generator(self, layer):
+        for seg in layer.mapping(0x0, layer.maximum_address, ignore_errors = True):
+            yield(0,(seg[0],seg[2],seg[1]))
 
     def run(self):
 
-        if self.config["primary.memory_layer.class"] == "volatility.framework.layers.crash.WindowsCrashDump32Layer":
-            crashdump = crash.WindowsCrashDump32Layer(self.context, self.config_path, self.config['primary'])
+        layer = self._context.layers[self.config['primary.memory_layer']]
 
-        elif self.config["primary.memory_layer.class"] == "volatility.framework.layers.crash.WindowsCrashDump64Layer":
-            crashdump = crash.WindowsCrashDump64Layer(self.context, self.config_path, self.config['primary'])
-        
-        else:
-            vollog.log(constants.LOGLEVEL_VVVV, "Error: Windows crashdump file needed")
-            return
-
-
-        return renderers.TreeGrid([("StartAddress", int),("FileOffset", int),("Length", int)],self._generator(crashdump._segments))
+        return renderers.TreeGrid([("StartAddress", int),("FileOffset", int),("Length", int)],self._generator(layer))
