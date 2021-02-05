@@ -50,11 +50,12 @@ class Memmap(interfaces.plugins.PluginInterface):
 
             file_handle = self.open("pid.{}.dmp".format(pid))
             with file_handle as file_data:
-
+                file_offset = 0
                 for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
                     offset, size, mapped_offset, mapped_size, maplayer = mapval
 
                     file_output = "Disabled"
+                    file_offset += size
                     if self.config['dump']:
                         try:
                             data = proc_layer.read(offset, size, pad = True)
@@ -66,14 +67,14 @@ class Memmap(interfaces.plugins.PluginInterface):
                                 proc_layer_name, offset, file_handle.preferred_filename))
 
                     yield (0, (format_hints.Hex(offset), format_hints.Hex(mapped_offset), format_hints.Hex(mapped_size),
-                               format_hints.Hex(offset), file_output))
+                               format_hints.Hex(file_offset), file_output))
                     offset += mapped_size
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
 
         return renderers.TreeGrid([("Virtual", format_hints.Hex), ("Physical", format_hints.Hex),
-                                   ("Size", format_hints.Hex), ("Offset", format_hints.Hex), ("File output", str)],
+                                   ("Size", format_hints.Hex), ("Offset in File", format_hints.Hex), ("File output", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
                                                                    layer_name = self.config['primary'],
