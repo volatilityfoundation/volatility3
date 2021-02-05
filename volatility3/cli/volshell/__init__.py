@@ -90,6 +90,10 @@ class VolShell(cli.CommandLine):
                             help = "Clears out all short-term cached items",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--cache-path",
+                            help = "Change the default path ({}) used to store the cache".format(constants.CACHE_PATH),
+                            default = constants.CACHE_PATH,
+                            type = str)
 
         # Volshell specific flags
         os_specific = parser.add_mutually_exclusive_group(required = False)
@@ -112,6 +116,9 @@ class VolShell(cli.CommandLine):
         if partial_args.symbol_dirs:
             volatility3.symbols.__path__ = [os.path.abspath(p)
                                             for p in partial_args.symbol_dirs.split(";")] + constants.SYMBOL_BASEPATHS
+
+        if partial_args.cache_path:
+            constants.CACHE_PATH = partial_args.cache_path
 
         vollog.info("Volatility plugins path: {}".format(volatility3.plugins.__path__))
         vollog.info("Volatility symbols path: {}".format(volatility3.symbols.__path__))
