@@ -52,6 +52,7 @@ class Intel(linear.LinearlyMappedLayer):
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
 
     @classproperty
+    @functools.lru_cache()
     def page_size(cls) -> int:
         """Page size for the intel memory layers.
 
@@ -60,16 +61,19 @@ class Intel(linear.LinearlyMappedLayer):
         return 1 << cls._page_size_in_bits
 
     @classproperty
+    @functools.lru_cache()
     def bits_per_register(cls) -> int:
         """Returns the bits_per_register to determine the range of an
         IntelTranslationLayer."""
         return cls._bits_per_register
 
     @classproperty
+    @functools.lru_cache()
     def minimum_address(cls) -> int:
         return 0
 
     @classproperty
+    @functools.lru_cache()
     def maximum_address(cls) -> int:
         return (1 << cls._maxvirtaddr) - 1
 
@@ -118,6 +122,10 @@ class Intel(linear.LinearlyMappedLayer):
         # We or with 0x1 to ensure our page_map_offset is always valid
         position = self._initial_position
         entry = self._initial_entry
+
+        if self.minimum_address > offset > self.maximum_address:
+            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
+                                                          "Entry outside virtual address range: " + hex(entry))
 
         # Run through the offset in various chunks
         for (name, size, large_page) in self._structure:
