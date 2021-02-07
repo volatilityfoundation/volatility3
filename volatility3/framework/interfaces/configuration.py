@@ -477,6 +477,11 @@ class ClassRequirement(RequirementInterface):
         super().__init__(*args, **kwargs)
         self._cls = None
 
+    def __eq__(self, other):
+        # We can just use super because it checks all member of `__dict__`
+        # This appeases LGTM and does the right thing
+        return super().__eq__(other)
+
     @property
     def cls(self) -> Type:
         """Contains the actual chosen class based on the configuration value's
@@ -524,6 +529,11 @@ class ConstructableRequirementInterface(RequirementInterface):
         super().__init__(*args, **kwargs)
         self.add_requirement(ClassRequirement("class", "Class of the constructable requirement"))
         self._current_class_requirements = set()
+
+    def __eq__(self, other):
+        # We can just use super because it checks all member of `__dict__`
+        # This appeases LGTM and does the right thing
+        return super().__eq__(other)
 
     @abstractmethod
     def construct(self, context: 'interfaces.context.ContextInterface', config_path: str) -> None:
