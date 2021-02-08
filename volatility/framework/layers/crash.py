@@ -176,7 +176,7 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
                         mapped_offset += length
 
 
-                # Find the last segment in a file which will be at the end or two pages from the end
+                # Find the last segment in a file which will be at the end or two pages from the end. We multiply by 32 as we want to offset bby words rather than bits
                 if (bit_position == bitmap_len - 1 or bit_position == bitmap_len - 1 -32*0x2000) and current_bit == 1:
                     length = (bit_position - start_position) * 0x1000
                     segments.append((start_position * 0x1000, mapped_offset, length, length))

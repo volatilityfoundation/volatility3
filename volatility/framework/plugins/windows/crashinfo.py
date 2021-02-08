@@ -23,8 +23,8 @@ class Crashinfo(interfaces.plugins.PluginInterface):
             ]
         
     def _generator(self, layer):
-        for seg in layer.mapping(0x0, layer.maximum_address, ignore_errors = True):
-            yield(0,(seg[0],seg[2],seg[1]))
+        for offset, length, mapped_offset in layer.mapping(0x0, layer.maximum_address, ignore_errors = True):
+            yield(0,(offset,length,mapped_offset))
 
     def run(self):
 
