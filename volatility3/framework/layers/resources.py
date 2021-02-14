@@ -77,7 +77,7 @@ class ResourceAccessor(object):
 
     def uses_cache(self, url: str) -> bool:
         """Determines whether a URLs contents should be cached"""
-        parsed_url = urllib.parse.urlparse(url)
+        parsed_url = urllib.parse.urlparse(url, scheme = 'file')
 
         return not parsed_url.scheme in ['file', 'jar']
 
@@ -179,7 +179,7 @@ class ResourceAccessor(object):
 
         if not IMPORTED_MAGIC:
             # Somewhat of a hack, but prevents a hard dependency on the magic module
-            parsed_url = urllib.parse.urlparse(url)
+            parsed_url = urllib.parse.urlparse(url, scheme = 'file')
             url_path = parsed_url.path
             stop = False
             while not stop:
