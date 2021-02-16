@@ -99,10 +99,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     accesses a data source and exposes it within volatility.
     """
 
-    _direct_metadata = collections.ChainMap({}, {
-        'architecture': 'Unknown',
-        'os': 'Unknown'
-    })  # type: collections.ChainMap
+    _direct_metadata = interfaces.objects.ReadOnlyMapping({'architecture': 'Unknown', 'os': 'Unknown'})
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
@@ -111,8 +108,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context, config_path)
         self._name = name
-        if metadata:
-            self._direct_metadata.update(metadata)
+        self._metadata = metadata or {}
 
     # Standard attributes
 
@@ -360,7 +356,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     def metadata(self) -> Mapping:
         """Returns a ReadOnly copy of the metadata published by this layer."""
         maps = [self.context.layers[layer_name].metadata for layer_name in self.dependencies]
-        return interfaces.objects.ReadOnlyMapping(collections.ChainMap({}, self._direct_metadata, *maps))
+        return interfaces.objects.ReadOnlyMapping(collections.ChainMap(self._metadata, self._direct_metadata, *maps))
 
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
