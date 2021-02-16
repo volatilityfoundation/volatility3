@@ -99,7 +99,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     accesses a data source and exposes it within volatility.
     """
 
-    _direct_metadata = interfaces.objects.ReadOnlyMapping({'architecture': 'Unknown', 'os': 'Unknown'})
+    _direct_metadata = {'architecture': 'Unknown', 'os': 'Unknown'}
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
