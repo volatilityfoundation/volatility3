@@ -83,5 +83,5 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
             yield (start, end - start)
 
     def run(self):
-        return renderers.TreeGrid([('Offset', format_hints.Hex), ('Pid', int), ('Rule', str), ('Component', str),
+        return renderers.TreeGrid([('Offset', format_hints.Hex), ('PID', int), ('Rule', str), ('Component', str),
                                    ('Value', bytes)], self._generator())
