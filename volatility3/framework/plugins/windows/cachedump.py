@@ -43,11 +43,11 @@ class Cachedump(interfaces.plugins.PluginInterface):
         else:
             # based on  Based on code from http://lab.mediaservice.net/code/cachedump.rb
             aes = AES.new(nlkm[16:32], AES.MODE_CBC, ch)
-            data = ""
+            data = b""
             for i in range(0, len(edata), 16):
                 buf = edata[i:i + 16]
                 if len(buf) < 16:
-                    buf += (16 - len(buf)) * "\00"
+                    buf += (16 - len(buf)) * b"\00"
                 data += aes.decrypt(buf)
         return data
 
