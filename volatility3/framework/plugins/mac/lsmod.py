@@ -3,7 +3,9 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Mac's lsmod command."""
-from volatility3.framework import renderers, interfaces, contexts
+from typing import Set
+
+from volatility3.framework import renderers, interfaces, contexts, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -55,11 +57,11 @@ class Lsmod(plugins.PluginInterface):
         except exceptions.InvalidAddressException:
             return []
 
-        seen = set()
+        seen = set()  # type: Set
 
         while kmod != 0 and \
-              kmod not in seen and \
-              len(seen) < 1024:
+                kmod not in seen and \
+                len(seen) < 1024:
 
             kmod_obj = kmod.dereference()
 

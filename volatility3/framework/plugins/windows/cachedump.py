@@ -3,12 +3,14 @@
 #
 
 from struct import unpack
+from typing import Tuple
 
 from Crypto.Cipher import ARC4, AES
 from Crypto.Hash import HMAC
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import interfaces, renderers, exceptions
 from volatility3.framework.configuration import requirements
+from volatility3.framework.layers import registry
 from volatility3.framework.symbols.windows import versions
 from volatility3.plugins.windows import hashdump, lsadump
 from volatility3.plugins.windows.registry import hivelist
@@ -31,10 +33,12 @@ class Cachedump(interfaces.plugins.PluginInterface):
             requirements.PluginRequirement(name = 'lsadump', plugin = lsadump.Lsadump, version = (1, 0, 0))
         ]
 
-    def get_nlkm(self, sechive, lsakey, is_vista_or_later):
+    @staticmethod
+    def get_nlkm(sechive: registry.RegistryHive, lsakey: bytes, is_vista_or_later: bool):
         return lsadump.Lsadump.get_secret_by_name(sechive, 'NL$KM', lsakey, is_vista_or_later)
 
-    def decrypt_hash(self, edata, nlkm, ch, xp):
+    @staticmethod
+    def decrypt_hash(edata: bytes, nlkm: bytes, ch, xp: bool):
         if xp:
             hmac_md5 = HMAC.new(nlkm, ch)
             rc4key = hmac_md5.digest()
@@ -51,16 +55,19 @@ class Cachedump(interfaces.plugins.PluginInterface):
                 data += aes.decrypt(buf)
         return data
 
-    def parse_cache_entry(self, cache_data):
+    @staticmethod
+    def parse_cache_entry(cache_data: bytes) -> Tuple[int, int, int, bytes, bytes]:
         (uname_len, domain_len) = unpack("<HH", cache_data[:4])
         if len(cache_data[60:62]) == 0:
-            return (uname_len, domain_len, 0, '', '')
+            return (uname_len, domain_len, 0, b'', b'')
         (domain_name_len, ) = unpack("<H", cache_data[60:62])
         ch = cache_data[64:80]
         enc_data = cache_data[96:]
         return (uname_len, domain_len, domain_name_len, enc_data, ch)
 
-    def parse_decrypted_cache(self, dec_data, uname_len, domain_len, domain_name_len):
+    @staticmethod
+    def parse_decrypted_cache(dec_data: bytes, uname_len: int, domain_len: int,
+                              domain_name_len: int) -> Tuple[str, str, str, bytes]:
         """Get the data from the cache and separate it into the username, domain name, and hash data"""
         uname_offset = 72
         pad = 2 * ((uname_len / 2) % 2)
@@ -68,12 +75,9 @@ class Cachedump(interfaces.plugins.PluginInterface):
         pad = 2 * ((domain_len / 2) % 2)
         domain_name_offset = int(domain_offset + domain_len + pad)
         hashh = dec_data[:0x10]
-        username = dec_data[uname_offset:uname_offset + uname_len]
-        username = username.decode('utf-16-le', 'replace')
-        domain = dec_data[domain_offset:domain_offset + domain_len]
-        domain = domain.decode('utf-16-le', 'replace')
-        domain_name = dec_data[domain_name_offset:domain_name_offset + domain_name_len]
-        domain_name = domain_name.decode('utf-16-le', 'replace')
+        username = dec_data[uname_offset:uname_offset + uname_len].decode('utf-16-le', 'replace')
+        domain = dec_data[domain_offset:domain_offset + domain_len].decode('utf-16-le', 'replace')
+        domain_name = dec_data[domain_name_offset:domain_name_offset + domain_name_len].decode('utf-16-le', 'replace')
 
         return (username, domain, domain_name, hashh)
 
@@ -116,6 +120,8 @@ class Cachedump(interfaces.plugins.PluginInterface):
     def run(self):
         offset = self.config.get('offset', None)
 
+        syshive = sechive = None
+
         for hive in hivelist.HiveList.list_hives(self.context,
                                                  self.config_path,
                                                  self.config['primary'],
@@ -126,6 +132,11 @@ class Cachedump(interfaces.plugins.PluginInterface):
                 syshive = hive
             if hive.get_name().split('\\')[-1].upper() == 'SECURITY':
                 sechive = hive
+
+        if syshive is None:
+            raise exceptions.VolatilityException('Unable to locate SYSTEM hive')
+        if sechive is None:
+            raise exceptions.VolatilityException('Unable to locate SECURITY hive')
 
         return renderers.TreeGrid([("Username", str), ("Domain", str), ("Domain name", str), ('Hashh', bytes)],
                                   self._generator(syshive, sechive))

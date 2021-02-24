@@ -48,7 +48,7 @@ def available(context: interfaces.context.ContextInterface) -> List[interfaces.a
 
 
 def choose_automagic(
-        automagics: List[interfaces.automagic.AutomagicInterface],
+        automagics: List[Type[interfaces.automagic.AutomagicInterface]],
         plugin: Type[interfaces.plugins.PluginInterface]) -> List[Type[interfaces.automagic.AutomagicInterface]]:
     """Chooses which automagics to run, maintaining the order they were handed
     in."""

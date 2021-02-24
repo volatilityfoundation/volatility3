@@ -96,6 +96,6 @@ class UnsatisfiedException(VolatilityException):
 
 class MissingModuleException(VolatilityException):
 
-    def __init__(self, module: str, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, module: str, *args) -> None:
+        super().__init__(*args)
         self.module = module

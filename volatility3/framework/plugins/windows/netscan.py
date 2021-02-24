@@ -4,7 +4,7 @@
 
 import datetime
 import logging
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Tuple, Type
 
 from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
@@ -82,7 +82,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def determine_tcpip_version(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                                nt_symbol_table: str) -> str:
+                                nt_symbol_table: str) -> Tuple[str, Type]:
         """Tries to determine which symbol filename to use for the image's tcpip driver. The logic is partially taken from the info plugin.
 
         Args:

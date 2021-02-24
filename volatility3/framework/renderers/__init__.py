@@ -9,7 +9,7 @@ or file or graphical output
 import collections
 import datetime
 import logging
-from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from volatility3.framework import interfaces
 from volatility3.framework.interfaces import renderers
@@ -48,7 +48,7 @@ class NotAvailableValue(interfaces.renderers.BaseAbsentValue):
 class TreeNode(interfaces.renderers.TreeNode):
     """Class representing a particular node in a tree grid."""
 
-    def __init__(self, path: str, treegrid: 'TreeGrid', parent: Optional['TreeNode'],
+    def __init__(self, path: str, treegrid: 'TreeGrid', parent: Optional[interfaces.renderers.TreeNode],
                  values: List[interfaces.renderers.BaseTypes]) -> None:
         if not isinstance(treegrid, TreeGrid):
             raise TypeError("Treegrid must be an instance of TreeGrid")
@@ -70,7 +70,7 @@ class TreeNode(interfaces.renderers.TreeNode):
     def _validate_values(self, values: List[interfaces.renderers.BaseTypes]) -> None:
         """A function for raising exceptions if a given set of values is
         invalid according to the column properties."""
-        if not (isinstance(values, collections.abc.Sequence) and len(values) == len(self._treegrid.columns)):
+        if not (isinstance(values, collections.Sequence) and len(values) == len(self._treegrid.columns)):
             raise TypeError(
                 "Values must be a list of objects made up of simple types and number the same as the columns")
         for index in range(len(self._treegrid.columns)):
@@ -85,10 +85,10 @@ class TreeNode(interfaces.renderers.TreeNode):
             #     tznaive = val.tzinfo is None or val.tzinfo.utcoffset(val) is None
 
     @property
-    def values(self) -> Sequence[interfaces.renderers.BaseTypes]:
+    def values(self) -> List[interfaces.renderers.BaseTypes]:
         """Returns the list of values from the particular node, based on column
         index."""
-        return self._values
+        return list(self._values)
 
     @property
     def path(self) -> str:
@@ -101,7 +101,7 @@ class TreeNode(interfaces.renderers.TreeNode):
         return self._path
 
     @property
-    def parent(self) -> Optional['TreeNode']:
+    def parent(self) -> Optional[interfaces.renderers.TreeNode]:
         """Returns the parent node of this node or None."""
         return self._parent
 
