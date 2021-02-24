@@ -39,6 +39,7 @@ setuptools.setup(name = "volatility3",
                  },
                  install_requires = ["pefile"],
                  extras_require = {
+                     'leechcorepyc': ["leechcorepyc>=2.4.0"],
                      'jsonschema': ["jsonschema>=2.3.0"],
                      'yara': ["yara-python>=3.8.0"],
                      'crypto': ["pycryptodome>=3"],
