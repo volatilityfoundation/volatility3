@@ -79,7 +79,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 layer = layer_class(context,
                                     config_path = config_path,
                                     name = new_layer_name,
-                                    metadata = {'kaslr_value': aslr_shift})
+                                    metadata = {'kaslr_value': aslr_shift, 'os': 'Linux'})
 
             if layer and dtb:
                 vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
