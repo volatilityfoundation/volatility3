@@ -160,7 +160,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([
             ('Offset', format_hints.Hex),
             ('Order', int),
-            ('Pid', int),
+            ('PID', int),
             ('Start', str),
             ('State', str),
             ('Type', str),
