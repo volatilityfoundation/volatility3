@@ -40,7 +40,7 @@ def convert_value_to_data(value: TUnion[int, float, bytes, str, bool], struct_ty
                           data_format: DataFormatInfo) -> bytes:
     """Converts a particular value to a series of bytes."""
     if not isinstance(value, struct_type):
-        raise TypeError("Written value is not of the correct type for {}".format(struct_type.__class__.__name__))
+        raise TypeError("Written value is not of the correct type for {}".format(struct_type.__name__))
 
     if struct_type == int and isinstance(value, int):
         # Doubling up on the isinstance is for mypy
@@ -621,7 +621,11 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
         return self.vol.count
 
     def write(self, value) -> None:
-        raise NotImplementedError("Writing to Arrays is not yet implemented")
+        if not isinstance(value, collections.Sequence):
+            raise TypeError("Only Sequences can be writen to arrays")
+        self.count = len(value)
+        for index in range(len(value)):
+            self[index].write(value[index])
 
 
 class AggregateType(interfaces.objects.ObjectInterface):
@@ -747,6 +751,13 @@ class AggregateType(interfaces.objects.ObjectInterface):
             if isinstance(self, agg_type):
                 agg_name = agg_type.__name__
         raise AttributeError("{} has no attribute: {}.{}".format(agg_name, self.vol.type_name, attr))
+
+    def __setattr__(self, name, value):
+        """Method for writing specific members of a structure"""
+        if name in ['_concrete_members', 'vol', '_vol'] or not self.has_member(name):
+            return super().__setattr__(name, value)
+        attr = self.__getattr__(name)
+        return attr.write(value)
 
     def __dir__(self) -> Iterable[str]:
         """Returns a complete list of members when dir is called."""
