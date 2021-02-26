@@ -160,6 +160,10 @@ class CommandLine:
                             help = "Clears out all short-term cached items",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--cache-path",
+                            help = "Change the default path ({}) used to store the cache".format(constants.CACHE_PATH),
+                            default = constants.CACHE_PATH,
+                            type = str)
         parser.add_argument("--no-fail",
                             help = "No fail on error",
                             default = False,
@@ -182,6 +186,9 @@ class CommandLine:
         if partial_args.symbol_dirs:
             volatility3.symbols.__path__ = [os.path.abspath(p)
                                             for p in partial_args.symbol_dirs.split(";")] + constants.SYMBOL_BASEPATHS
+
+        if partial_args.cache_path:
+            constants.CACHE_PATH = partial_args.cache_path
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
