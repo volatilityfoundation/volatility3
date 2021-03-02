@@ -32,7 +32,7 @@ from volatility3.framework.configuration import requirements
 
 # Make sure we log everything
 
-vollog = logging.getLogger()
+vollog = logging.getLogger(__name__)
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
 formatter = logging.Formatter('%(levelname)-8s %(name)-12s: %(message)s')
