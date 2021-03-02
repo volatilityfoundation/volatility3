@@ -72,15 +72,16 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             history_entries = []
 
-            for address, _ in proc_layer.scan(self.context,
-                                              scanners.MultiStringScanner(bang_addrs),
-                                              sections = task.get_process_memory_sections(heap_only = True)):
-                hist = self.context.object(bash_table_name + constants.BANG + "hist_entry",
-                                           offset = address - ts_offset,
-                                           layer_name = proc_layer_name)
+            if bang_addrs:
+                for address, _ in proc_layer.scan(self.context,
+                                                  scanners.MultiStringScanner(bang_addrs),
+                                                  sections = task.get_process_memory_sections(heap_only = True)):
+                    hist = self.context.object(bash_table_name + constants.BANG + "hist_entry",
+                                               offset = address - ts_offset,
+                                               layer_name = proc_layer_name)
 
-                if hist.is_valid():
-                    history_entries.append(hist)
+                    if hist.is_valid():
+                        history_entries.append(hist)
 
             for hist in sorted(history_entries, key = lambda x: x.get_time_as_integer()):
                 yield (0, (task.pid, task_name, hist.get_time_object(), hist.get_command()))
