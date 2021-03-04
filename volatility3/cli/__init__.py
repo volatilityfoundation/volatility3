@@ -218,7 +218,7 @@ class CommandLine:
 
         if partial_args.clear_cache:
             framework.clear_cache()
-            
+
         if partial_args.no_fail:
             constants.FAIL_ON_ERROR = False
 
