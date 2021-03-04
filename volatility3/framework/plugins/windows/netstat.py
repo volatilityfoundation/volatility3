@@ -4,7 +4,7 @@
 
 import logging
 import datetime
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Generator, Tuple
 
 from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
@@ -125,7 +125,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             ptr_offset = context.symbol_space.get_type(obj_name).relative_child_offset("Next")
         else:
             # invalid argument.
-            yield
+            return
 
         vollog.debug("Current Port: {}".format(port))
         # the given port serves as a shifted index into the port pool lists
@@ -144,7 +144,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         assignment = inpa.InPaBigPoolBase.Assignments[truncated_port]
 
         if not assignment:
-            yield
+            return
 
         # the value within assignment.Entry is a) masked and b) points inside of the network object
         # first decode the pointer
@@ -165,7 +165,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def get_tcpip_module(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                         nt_symbols: str) -> interfaces.objects.ObjectInterface:
+                         nt_symbols: str) -> Optional[interfaces.objects.ObjectInterface]:
         """Uses `windows.modules` to find tcpip.sys in memory.
 
         Args:
@@ -180,10 +180,11 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             if mod.BaseDllName.get_string() == "tcpip.sys":
                 vollog.debug("Found tcpip.sys image base @ 0x{:x}".format(mod.DllBase))
                 return mod
+        return None
 
     @classmethod
     def parse_hashtable(cls, context: interfaces.context.ContextInterface, layer_name: str, ht_offset: int,
-                        ht_length: int, alignment: int, net_symbol_table: str) -> list:
+                        ht_length: int, alignment: int, net_symbol_table: str) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Parses a hashtable quick and dirty.
 
         Args:
@@ -217,10 +218,9 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             layer_name: The name of the layer on which to operate
-            nt_symbols: The name of the table containing the kernel symbols
             net_symbol_table: The name of the table containing the tcpip types
-            tcpip_module: The created vol Windows module object of the given memory image
             tcpip_symbol_table: The name of the table containing the tcpip driver symbols
+            tcpip_module_offset: The offset of the tcpip module
 
         Returns:
             The list of TCP endpoint objects from the `layer_name` layer's `PartitionTable`
@@ -289,7 +289,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         if not guids:
             raise exceptions.VolatilityException("Did not find GUID of tcpip.pdb in tcpip.sys module @ 0x{:x}!".format(
-                tcpip_module.DllBase))
+                tcpip_module_offset))
 
         guid = guids[0]
 
@@ -305,7 +305,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def find_port_pools(cls, context: interfaces.context.ContextInterface, layer_name: str, net_symbol_table: str,
-                        tcpip_symbol_table: str, tcpip_module_offset: int) -> (int, int):
+                        tcpip_symbol_table: str, tcpip_module_offset: int) -> Tuple[int, int]:
         """Finds the given image's port pools. Older Windows versions (presumably < Win10 build 14251) use driver
         symbols called `UdpPortPool` and `TcpPortPool` which point towards the pools.
         Newer Windows versions use `UdpCompartmentSet` and `TcpCompartmentSet`, which we first have to translate into

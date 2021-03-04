@@ -68,7 +68,7 @@ class PDBUtility:
 
         filter_string = os.path.join(pdb_name.strip('\x00'), guid.upper() + "-" + str(age))
 
-        isf_path = False
+        isf_path = None
         # Take the first result of search for the intermediate file
         for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
             isf_path = value

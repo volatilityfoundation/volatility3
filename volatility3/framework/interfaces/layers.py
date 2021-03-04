@@ -99,7 +99,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     accesses a data source and exposes it within volatility.
     """
 
-    _direct_metadata = {'architecture': 'Unknown', 'os': 'Unknown'}
+    _direct_metadata = {'architecture': 'Unknown', 'os': 'Unknown'} # type: Mapping
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
@@ -473,7 +473,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         assumed to have no holes
         """
         for (section_start, section_length) in sections:
-            output = []
+            output = [] # type: List[Tuple[str, int, int]]
 
             # Hold the offsets of each chunk (including how much has been filled)
             chunk_start = chunk_position = 0

@@ -3,12 +3,14 @@
 #
 import logging
 from struct import unpack
+from typing import Optional
 
 from Crypto.Cipher import ARC4, DES, AES
 from Crypto.Hash import MD5, SHA256
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
+from volatility3.framework.layers import registry
 from volatility3.framework.symbols.windows import versions
 from volatility3.plugins.windows import hashdump
 from volatility3.plugins.windows.registry import hivelist
@@ -33,7 +35,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         ]
 
     @classmethod
-    def decrypt_aes(cls, secret, key):
+    def decrypt_aes(cls, secret: bytes, key: bytes) -> bytes:
         """
         Based on code from http://lab.mediaservice.net/code/cachedump.rb
         """
@@ -54,7 +56,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         return data
 
     @classmethod
-    def get_lsa_key(cls, sechive, bootkey, vista_or_later):
+    def get_lsa_key(cls, sechive: registry.RegistryHive, bootkey: bytes, vista_or_later: bool) -> Optional[bytes]:
         if not bootkey:
             return None
 
@@ -91,7 +93,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         return lsa_key
 
     @classmethod
-    def get_secret_by_name(cls, sechive, name, lsakey, is_vista_or_later):
+    def get_secret_by_name(cls, sechive: registry.RegistryHive, name: str, lsakey: bytes, is_vista_or_later: bool):
         try:
             enc_secret_key = sechive.get_key("Policy\\Secrets\\" + name + "\\CurrVal")
         except KeyError:
@@ -112,7 +114,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         return secret
 
     @classmethod
-    def decrypt_secret(cls, secret, key):
+    def decrypt_secret(cls, secret: bytes, key: bytes):
         """Python implementation of SystemFunction005.
 
         Decrypts a block of data with DES using given key.
@@ -135,7 +137,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
 
         return decrypted_data[8:8 + dec_data_len]
 
-    def _generator(self, syshive, sechive):
+    def _generator(self, syshive: registry.RegistryHive, sechive: registry.RegistryHive):
 
         vista_or_later = versions.is_vista_or_later(context = self.context, symbol_table = self.config['nt_symbols'])
 
@@ -174,6 +176,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
     def run(self):
 
         offset = self.config.get('offset', None)
+        syshive = sechive = None
 
         for hive in hivelist.HiveList.list_hives(self.context,
                                                  self.config_path,

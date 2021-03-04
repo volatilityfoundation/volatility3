@@ -9,7 +9,8 @@ from volatility3.plugins.windows import handles
 from volatility3.plugins.windows import pslist
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
-from typing import List, Tuple, Type, Optional
+from typing import List, Tuple, Type, Optional, Generator
+
 vollog = logging.getLogger(__name__)
 
 FILE_DEVICE_DISK = 0x7
@@ -91,13 +92,13 @@ class DumpFiles(interfaces.plugins.PluginInterface):
     @classmethod
     def process_file_object(cls, context: interfaces.context.ContextInterface, primary_layer_name: str,
                             open_method: Type[interfaces.plugins.FileHandlerInterface],
-                            file_obj: interfaces.objects.ObjectInterface) -> Tuple:
+                            file_obj: interfaces.objects.ObjectInterface) -> Generator[Tuple, None, None]:
         """Given a FILE_OBJECT, dump data to separate files for each of the three file caches.
 
         :param context: the context to operate upon
         :param primary_layer_name: primary/virtual layer to operate on
         :param open_method: class for constructing output files
-        :param file_object: the FILE_OBJECT
+        :param file_obj: the FILE_OBJECT
         """
 
         # Filtering by these types of devices prevents us from processing other types of devices that

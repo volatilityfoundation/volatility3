@@ -8,7 +8,7 @@ import random
 import string
 import struct
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union, Type
+from typing import Any, Dict, List, Optional, Tuple, Union, Type, Iterable
 from urllib import request, parse
 
 from volatility3.cli import text_renderer
@@ -57,7 +57,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             Return a TreeGrid but this is always empty since the point of this plugin is to run interactively
         """
 
-        self._current_layer = self.config['primary']
+        self.__current_layer = self.config['primary']
 
         # Try to enable tab completion
         try:
@@ -174,13 +174,13 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     @property
     def current_layer(self):
-        return self._current_layer
+        return self.__current_layer
 
     def change_layer(self, layer_name = None):
         """Changes the current default layer"""
         if not layer_name:
             layer_name = self.config['primary']
-        self._current_layer = layer_name
+        self.__current_layer = layer_name
         sys.ps1 = "({}) >>> ".format(self.current_layer)
 
     def display_bytes(self, offset, count = 128, layer_name = None):
@@ -336,7 +336,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             len_offset = len(hex(symbol.address))
             print(" " * (longest_offset - len_offset), hex(symbol.address), " ", symbol.name)
 
-    def run_script(self, location: str = None):
+    def run_script(self, location: str):
         """Runs a python script within the context of volshell"""
         if not parse.urlparse(location).scheme:
             location = "file:" + request.pathname2url(location)
@@ -346,7 +346,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             self.__console.runsource(fp.read(), symbol = 'exec')
         print("\nCode complete")
 
-    def load_file(self, location: str = None):
+    def load_file(self, location: str):
         """Loads a file into a Filelayer and returns the name of the layer"""
         layer_name = self.context.layers.free_layer_name()
         if not parse.urlparse(location).scheme:
@@ -399,10 +399,10 @@ class NullFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):
         interfaces.plugins.FileHandlerInterface.__init__(self, preferred_name)
         super().__init__()
 
-    def writelines(self, lines):
+    def writelines(self, lines: Iterable[bytes]):
         """Dummy method"""
         pass
 
-    def write(self, data):
+    def write(self, b: bytes):
         """Dummy method"""
-        return len(data)
+        return len(b)

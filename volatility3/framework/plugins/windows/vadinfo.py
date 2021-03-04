@@ -132,11 +132,11 @@ class VadInfo(interfaces.plugins.PluginInterface):
             vad_end = vad.get_end()
         except AttributeError:
             vollog.debug("Unable to find the starting/ending VPN member")
-            return
+            return None
 
         if maxsize > 0 and (vad_end - vad_start) > maxsize:
             vollog.debug("Skip VAD dump {0:#x}-{1:#x} due to maxsize limit".format(vad_start, vad_end))
-            return
+            return None
 
         proc_id = "Unknown"
         try:
@@ -163,7 +163,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
         except Exception as excp:
             vollog.debug("Unable to dump VAD {}: {}".format(file_name, excp))
-            return
+            return None
 
         return file_handle
 

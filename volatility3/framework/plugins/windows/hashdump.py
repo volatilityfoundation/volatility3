@@ -133,7 +133,8 @@ class Hashdump(interfaces.plugins.PluginInterface):
         return None
 
     @classmethod
-    def decrypt_single_salted_hash(cls, rid, hbootkey: bytes, enc_hash: bytes, lmntstr, salt: bytes) -> Optional[bytes]:
+    def decrypt_single_salted_hash(cls, rid, hbootkey: bytes, enc_hash: bytes, _lmntstr,
+                                   salt: bytes) -> Optional[bytes]:
         (des_k1, des_k2) = cls.sid_to_key(rid)
         des1 = DES.new(des_k1, DES.MODE_ECB)
         des2 = DES.new(des_k2, DES.MODE_ECB)
@@ -143,7 +144,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_user_hashes(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive,
-                        hbootkey: bytes) -> Tuple[bytes, bytes]:
+                        hbootkey: bytes) -> Optional[Tuple[bytes, bytes]]:
         ## Will sometimes find extra user with rid = NAMES, returns empty strings right now
         try:
             rid = int(str(user.get_name()), 16)
@@ -199,22 +200,16 @@ class Hashdump(interfaces.plugins.PluginInterface):
     @classmethod
     def sidbytes_to_key(cls, s: bytes) -> bytes:
         """Builds final DES key from the strings generated in sid_to_key"""
-        key = []
-        key.append(s[0] >> 1)
-        key.append(((s[0] & 0x01) << 6) | (s[1] >> 2))
-        key.append(((s[1] & 0x03) << 5) | (s[2] >> 3))
-        key.append(((s[2] & 0x07) << 4) | (s[3] >> 4))
-        key.append(((s[3] & 0x0F) << 3) | (s[4] >> 5))
-        key.append(((s[4] & 0x1F) << 2) | (s[5] >> 6))
-        key.append(((s[5] & 0x3F) << 1) | (s[6] >> 7))
-        key.append(s[6] & 0x7F)
+        key = [s[0] >> 1, ((s[0] & 0x01) << 6) | (s[1] >> 2), ((s[1] & 0x03) << 5) | (s[2] >> 3),
+               ((s[2] & 0x07) << 4) | (s[3] >> 4), ((s[3] & 0x0F) << 3) | (s[4] >> 5),
+               ((s[4] & 0x1F) << 2) | (s[5] >> 6), ((s[5] & 0x3F) << 1) | (s[6] >> 7), s[6] & 0x7F]
         for i in range(8):
             key[i] = (key[i] << 1)
             key[i] = cls.odd_parity[key[i]]
         return bytes(key)
 
     @classmethod
-    def decrypt_single_hash(cls, rid, hbootkey, enc_hash: bytes, lmntstr):
+    def decrypt_single_hash(cls, rid: int, hbootkey: bytes, enc_hash: bytes, lmntstr: bytes):
         (des_k1, des_k2) = cls.sid_to_key(rid)
         des1 = DES.new(des_k1, DES.MODE_ECB)
         des2 = DES.new(des_k2, DES.MODE_ECB)
@@ -225,24 +220,23 @@ class Hashdump(interfaces.plugins.PluginInterface):
         rc4 = ARC4.new(rc4_key)
         obfkey = rc4.encrypt(enc_hash)
 
-        hash = des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:])
-        return hash
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:])
 
     @classmethod
-    def get_user_name(cls, user: interfaces.objects.ObjectInterface, samhive: registry.RegistryHive) -> Optional[bytes]:
-        V = None
+    def get_user_name(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive) -> Optional[bytes]:
+        value = None
         for v in user.get_values():
             if v.get_name() == 'V':
-                V = samhive.read(v.Data + 4, v.DataLength)
-        if not V:
+                value = samhive.read(v.Data + 4, v.DataLength)
+        if not value:
             return None
 
-        name_offset = unpack("<L", V[0x0c:0x10])[0] + 0xCC
-        name_length = unpack("<L", V[0x10:0x14])[0]
-        if name_length > len(V):
+        name_offset = unpack("<L", value[0x0c:0x10])[0] + 0xCC
+        name_length = unpack("<L", value[0x10:0x14])[0]
+        if name_length > len(value):
             return None
 
-        username = V[name_offset:name_offset + name_length]
+        username = value[name_offset:name_offset + name_length]
         return username
 
     # replaces the dump_hashes method in vol2

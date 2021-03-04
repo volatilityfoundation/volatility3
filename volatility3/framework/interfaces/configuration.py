@@ -23,7 +23,7 @@ import random
 import string
 import sys
 from abc import ABCMeta, abstractmethod
-from typing import Any, ClassVar, Dict, Generator, Iterator, List, Optional, Type, Union, Tuple
+from typing import Any, ClassVar, Dict, Generator, Iterator, List, Optional, Type, Union, Tuple, Set
 
 from volatility3 import classproperty
 from volatility3.framework import constants, interfaces
@@ -186,7 +186,8 @@ class HierarchicalDict(collections.abc.Mapping):
                 element_value = self._sanitize_value(element)
                 if isinstance(element_value, list):
                     raise TypeError("Configuration list types cannot contain list types")
-                new_list.append(element_value)
+                if element_value is not None:
+                    new_list.append(element_value)
             return new_list
         elif value is None:
             return None
@@ -483,7 +484,7 @@ class ClassRequirement(RequirementInterface):
         return super().__eq__(other)
 
     @property
-    def cls(self) -> Type:
+    def cls(self) -> Optional[Type]:
         """Contains the actual chosen class based on the configuration value's
         class name."""
         return self._cls
@@ -528,7 +529,7 @@ class ConstructableRequirementInterface(RequirementInterface):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.add_requirement(ClassRequirement("class", "Class of the constructable requirement"))
-        self._current_class_requirements = set()
+        self._current_class_requirements = set()  # type: Set[Any]
 
     def __eq__(self, other):
         # We can just use super because it checks all member of `__dict__`
@@ -580,6 +581,9 @@ class ConstructableRequirementInterface(RequirementInterface):
         if not isinstance(self.requirements["class"], ClassRequirement):
             return None
         cls = self.requirements["class"].cls
+
+        if cls is None:
+            return None
 
         # These classes all have a name property
         # We could subclass this out as a NameableInterface, but it seems a little excessive

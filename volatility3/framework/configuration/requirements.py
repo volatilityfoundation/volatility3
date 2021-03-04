@@ -208,6 +208,9 @@ class LayerListRequirement(ComplexListRequirement):
         num_layers_path = interfaces.configuration.path_join(new_config_path, "number_of_elements")
         number_of_layers = context.config[num_layers_path]
 
+        if not isinstance(number_of_layers, int):
+            raise TypeError("Number of layers must be an integer")
+
         # Build all the layers that can be built
         for i in range(number_of_layers):
             layer_req = self.requirements.get(self.name + str(i), None)
@@ -363,6 +366,8 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
             raise TypeError("Class requirement is not of type ClassRequirement: {}".format(
                 repr(self.requirements["class"])))
         cls = self.requirements["class"].cls
+        if cls is None:
+            return None
         node_config = context.config.branch(config_path)
         for req in cls.get_requirements():
             if req.name in node_config.data and req.name != "class":
@@ -392,7 +397,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         super().__init__(name = name, description = description, default = default, optional = optional)
         if component is None:
             raise TypeError("Component cannot be None")
-        self._component = component
+        self._component = component # type: Type[interfaces.configuration.VersionableInterface]
         if version is None:
             raise TypeError("Version cannot be None")
         self._version = version

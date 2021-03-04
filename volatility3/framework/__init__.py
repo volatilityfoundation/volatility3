@@ -53,22 +53,22 @@ def require_interface_version(*args) -> None:
                         ".".join([str(x) for x in interface_version()[0:1]]), ".".join([str(x) for x in args[0:2]])))
 
 
-class noninheritable(object):
+class NonInheritable(object):
 
     def __init__(self, value: Any, cls: Type) -> None:
         self.default_value = value
         self.cls = cls
 
-    def __get__(self, obj: Any, type: Type = None) -> Any:
+    def __get__(self, obj: Any, get_type: Type = None) -> Any:
         if type == self.cls:
             if hasattr(self.default_value, '__get__'):
-                return self.default_value.__get__(obj, type)
+                return self.default_value.__get__(obj, get_type)
             return self.default_value
         raise AttributeError
 
 
 def hide_from_subclasses(cls: Type) -> Type:
-    cls.hidden = noninheritable(True, cls)
+    cls.hidden = NonInheritable(True, cls)
     return cls
 
 
