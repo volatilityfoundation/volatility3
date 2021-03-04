@@ -273,7 +273,8 @@ class CommandLine:
             single_location = urllib.parse.urlparse(args.file, 'file')
             if single_location.scheme == 'file' or len(single_location.scheme) == 1:
                 # Otherwise construct a URL parameter
-                single_location = urllib.parse.urlparse(urllib.parse.urljoin('file:', request.pathname2url(os.path.abspath(args.file))))
+                file_path = request.pathname2url(os.path.abspath(args.file))
+                single_location = urllib.parse.urlparse(urllib.parse.urljoin('file:', file_path))
                 if not os.path.exists(single_location.path):
                     parser.error("File does not exist: {}".format(single_location.path))
             ctx.config['automagic.LayerStacker.single_location'] = urllib.parse.urlunparse(single_location)
