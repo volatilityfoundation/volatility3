@@ -14,7 +14,7 @@ from urllib import request, parse
 from volatility3.cli import text_renderer
 from volatility3.framework import renderers, interfaces, objects, plugins, exceptions
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import intel, physical
+from volatility3.framework.layers import intel, physical, resources
 
 try:
     import capstone
