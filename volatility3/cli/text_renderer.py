@@ -10,7 +10,7 @@ import sys
 from functools import wraps
 from typing import Callable, Any, List, Tuple, Dict
 
-from volatility3.framework import interfaces, renderers
+from volatility3.framework import interfaces, renderers, constants
 from volatility3.framework.renderers import format_hints
 
 vollog = logging.getLogger(__name__)
@@ -175,7 +175,7 @@ class QuickTextRenderer(CLIRenderer):
             return accumulator
 
         if not grid.populated:
-            grid.populate(visitor, outfd)
+            grid.populate(visitor, outfd, fail_on_errors=constants.FAIL_ON_ERROR)
         else:
             grid.visit(node = None, function = visitor, initial_accumulator = outfd)
 
@@ -227,7 +227,7 @@ class CSVRenderer(CLIRenderer):
             return accumulator
 
         if not grid.populated:
-            grid.populate(visitor, outfd)
+            grid.populate(visitor, outfd, fail_on_errors=constants.FAIL_ON_ERROR)
         else:
             grid.visit(node = None, function = visitor, initial_accumulator = outfd)
 
@@ -280,7 +280,7 @@ class PrettyTextRenderer(CLIRenderer):
 
         final_output = []  # type: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
         if not grid.populated:
-            grid.populate(visitor, final_output)
+            grid.populate(visitor, final_output, fail_on_errors=constants.FAIL_ON_ERROR)
         else:
             grid.visit(node = None, function = visitor, initial_accumulator = final_output)
 
@@ -348,7 +348,7 @@ class JsonRenderer(CLIRenderer):
             return (acc_map, final_tree)
 
         if not grid.populated:
-            grid.populate(visitor, final_output)
+            grid.populate(visitor, final_output, fail_on_errors=constants.FAIL_ON_ERROR)
         else:
             grid.visit(node = None, function = visitor, initial_accumulator = final_output)
 
