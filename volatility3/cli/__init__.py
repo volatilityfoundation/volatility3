@@ -16,9 +16,11 @@ import io
 import json
 import logging
 import os
+import pathlib
 import sys
 import tempfile
 import traceback
+import urllib
 from typing import Dict, Type, Union, Any
 from urllib import parse, request
 
@@ -267,12 +269,15 @@ class CommandLine:
         # NOTE: This will *BREAK* if LayerStacker, or the automagic configuration system, changes at all
         ###
         if args.file:
-            file_name = os.path.abspath(args.file)
-            if not os.path.exists(file_name):
-                vollog.log(logging.INFO, "File does not exist: {}".format(file_name))
-            else:
-                single_location = "file:" + request.pathname2url(file_name)
-                ctx.config['automagic.LayerStacker.single_location'] = single_location
+            # We want to work in URLs, but we need to accept absolute and relative files (including on windows)
+            single_location = urllib.parse.urlparse(args.file, 'file')
+            if single_location.scheme == 'file' or len(single_location.scheme) == 1:
+                # Otherwise construct a URL parameter
+                file_path = request.pathname2url(os.path.abspath(args.file))
+                single_location = urllib.parse.urlparse(urllib.parse.urljoin('file:', file_path))
+                if not os.path.exists(single_location.path):
+                    parser.error("File does not exist: {}".format(single_location.path))
+            ctx.config['automagic.LayerStacker.single_location'] = urllib.parse.urlunparse(single_location)
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:
