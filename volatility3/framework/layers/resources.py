@@ -62,7 +62,8 @@ class ResourceAccessor(object):
 
     def __init__(self,
                  progress_callback: Optional[constants.ProgressCallback] = None,
-                 context: Optional[ssl.SSLContext] = None) -> None:
+                 context: Optional[ssl.SSLContext] = None,
+                 enable_cache: bool = True) -> None:
         """Creates a resource accessor.
 
         Note: context is an SSL context, not a volatility context
@@ -70,6 +71,7 @@ class ResourceAccessor(object):
         self._progress_callback = progress_callback
         self._context = context
         self._handlers = list(framework.class_subclasses(urllib.request.BaseHandler))
+        self._enable_cache = enable_cache
         if self.list_handlers:
             vollog.log(constants.LOGLEVEL_VVV,
                        "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
