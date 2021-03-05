@@ -9,7 +9,7 @@ import lzma
 import os
 import struct
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
-from urllib import request
+from urllib import request, parse
 
 from volatility3 import symbols
 from volatility3.framework import constants, interfaces
@@ -196,8 +196,12 @@ class PDBUtility:
                                                                    file_name = pdb_name,
                                                                    progress_callback = progress_callback)
                     if filename:
-                        tmp_files.append(filename)
-                        location = "file:" + request.pathname2url(tmp_files[-1])
+                        url = parse.urlparse(filename, scheme = 'file')
+                        if url.scheme == 'file' or len(url.scheme) == 1:
+                            tmp_files.append(filename)
+                            location = "file:" + request.pathname2url(os.path.abspath(tmp_files[-1]))
+                        else:
+                            location = filename
                         json_output = pdbconv.PdbReader(context, location, pdb_name, progress_callback).get_json()
                         of.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
                         # After we've successfully written it out, record the fact so we don't clear it out

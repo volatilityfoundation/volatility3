@@ -9,9 +9,10 @@ import json
 import logging
 import lzma
 import os
+import urllib
 from bisect import bisect
 from typing import Tuple, Dict, Any, Optional, Union, List
-from urllib import request, error
+from urllib import request, error, parse
 
 from volatility3.framework import contexts, interfaces, constants
 from volatility3.framework.layers import physical, msf, resources
@@ -937,17 +938,17 @@ class PdbRetreiver:
             for suffix in [file_name, file_name[:-1] + '_']:
                 try:
                     vollog.debug("Attempting to retrieve {}".format(url + suffix))
-                    # Don't cache the PDB files since they might build up and there's little benefit
+                    # We no longer cache it, so this is a glorified remote endpoint check
                     result = resources.ResourceAccessor(progress_callback, enable_cache = False).open(url + suffix)
                 except (error.HTTPError, error.URLError) as excp:
                     vollog.debug("Failed with {}".format(excp))
-            if result:
-                break
+                if result:
+                    break
         if progress_callback is not None:
             progress_callback(100, "Downloading {}".format(url + suffix))
         if result is None:
             return None
-        return result.name
+        return url + suffix
 
 
 if __name__ == '__main__':
@@ -1008,9 +1009,13 @@ if __name__ == '__main__':
         parser.error("No suitable filename provided or retrieved")
 
     ctx = contexts.Context()
-    if not os.path.exists(filename):
-        parser.error("File {} does not exists".format(filename))
-    location = "file:" + request.pathname2url(filename)
+    url = parse.urlparse(filename, scheme = 'file')
+    if url.scheme == 'file':
+        if not os.path.exists(filename):
+            parser.error("File {} does not exists".format(filename))
+        location = "file:" + request.pathname2url(os.path.abspath(filename))
+    else:
+        location = filename
 
     convertor = PdbReader(ctx, location, database_name = args.pattern, progress_callback = pg_cb)
 
