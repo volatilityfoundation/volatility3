@@ -56,6 +56,8 @@ def convert_value_to_data(value: TUnion[int, float, bytes, str, bool], struct_ty
             raise ValueError("Invalid float size")
         struct_format = ("<" if data_format.byteorder == 'little' else ">") + float_vals[data_format.length]
     elif struct_type in [bytes, str]:
+        if isinstance(value, str):
+            value = bytes(value, 'latin-1')
         struct_format = str(data_format.length) + "s"
     else:
         raise TypeError("Cannot construct struct format for type {}".format(type(struct_type)))
