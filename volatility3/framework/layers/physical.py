@@ -1,12 +1,15 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import logging
 import threading
 from typing import Any, Dict, IO, List, Optional, Union
 
 from volatility3.framework import exceptions, interfaces, constants
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import resources
+
+vollog = logging.getLogger(__name__)
 
 
 class BufferDataLayer(interfaces.layers.DataLayerInterface):
@@ -80,6 +83,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
+        self._write_warning = False
         self._location = self.config["location"]
         self._accessor = resources.ResourceAccessor()
         self._file_ = None  # type: Optional[IO[Any]]
@@ -157,6 +161,11 @@ class FileLayer(interfaces.layers.DataLayerInterface):
 
         This will technically allow writes beyond the extent of the file
         """
+        if not self._file.writable():
+            if not self._write_warning:
+                self._write_warning = True
+                vollog.warning("Try to write to unwritable layer: {}".format(self.name))
+            return None
         if not self.is_valid(offset, len(data)):
             invalid_address = offset
             if self.minimum_address < offset <= self.maximum_address:
