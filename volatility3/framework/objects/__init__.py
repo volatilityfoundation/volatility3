@@ -752,12 +752,16 @@ class AggregateType(interfaces.objects.ObjectInterface):
                 agg_name = agg_type.__name__
         raise AttributeError("{} has no attribute: {}.{}".format(agg_name, self.vol.type_name, attr))
 
-    def __setattr__(self, name, value):
-        """Method for writing specific members of a structure"""
-        if name in ['_concrete_members', 'vol', '_vol'] or not self.has_member(name):
-            return super().__setattr__(name, value)
-        attr = self.__getattr__(name)
-        return attr.write(value)
+    # Disable messing around with setattr until the consequences have been considered properly
+    # For example pdbutil constructs objects and then sets values for them
+    # Some don't always match the type (for example, the data read is encoded and interpretted)
+    #
+    # def __setattr__(self, name, value):
+    #     """Method for writing specific members of a structure"""
+    #     if name in ['_concrete_members', 'vol', '_vol'] or not self.has_member(name):
+    #         return super().__setattr__(name, value)
+    #     attr = self.__getattr__(name)
+    #     return attr.write(value)
 
     def __dir__(self) -> Iterable[str]:
         """Returns a complete list of members when dir is called."""
