@@ -16,7 +16,6 @@ import io
 import json
 import logging
 import os
-import pathlib
 import sys
 import tempfile
 import traceback
@@ -34,6 +33,7 @@ from volatility3.framework.configuration import requirements
 
 # Make sure we log everything
 
+rootlog = logging.getLogger()
 vollog = logging.getLogger(__name__)
 console = logging.StreamHandler()
 console.setLevel(logging.WARNING)
@@ -82,8 +82,8 @@ class CommandLine:
     @classmethod
     def setup_logging(cls):
         # Delay the setting of vollog for those that want to import volatility3.cli (issue #241)
-        vollog.setLevel(1)
-        vollog.addHandler(console)
+        rootlog.setLevel(1)
+        rootlog.addHandler(console)
 
     def run(self):
         """Executes the command line module, taking the system arguments,
@@ -194,7 +194,7 @@ class CommandLine:
             file_formatter = logging.Formatter(datefmt = '%y-%m-%d %H:%M:%S',
                                                fmt = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
             file_logger.setFormatter(file_formatter)
-            vollog.addHandler(file_logger)
+            rootlog.addHandler(file_logger)
             vollog.info("Logging started")
         if partial_args.verbosity < 3:
             if partial_args.verbosity < 1:
