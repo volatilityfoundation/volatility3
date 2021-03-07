@@ -200,17 +200,11 @@ class VolShell(cli.CommandLine):
         # NOTE: This will *BREAK* if LayerStacker, or the automagic configuration system, changes at all
         ###
         if args.file:
-            # We want to work in URLs, but we need to accept absolute and relative files (including on windows)
-            single_location = urllib.parse.urlparse(args.file, 'file')
-            if single_location.scheme == 'file' or len(single_location.scheme) == 1:
-                if len(single_location.scheme) == 1:
-                    # Mis-parsed a windows drive as a scheme, it doesn't need abspath because it features a drive letter
-                    single_location = urllib.parse.urlparse(
-                        urllib.parse.urljoin('file:', urllib.request.pathname2url(args.file)))
-                if not os.path.exists(urllib.request.url2pathname(single_location.path)):
-                    parser.error("File does not exist: {}".format(
-                        os.path.exists(urllib.request.url2pathname(single_location.path))))
-            ctx.config['automagic.LayerStacker.single_location'] = urllib.parse.urlunparse(single_location)
+            try:
+                single_location = self.location_from_file(args.file)
+                ctx.config['automagic.LayerStacker.single_location'] = single_location
+            except ValueError as excp:
+                parser.error(str(excp))
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:
