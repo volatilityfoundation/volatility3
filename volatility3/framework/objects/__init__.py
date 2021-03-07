@@ -150,11 +150,12 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             """Returns the size of the templated object."""
             return template.vol.data_format.length
 
-    def write(self, value: TUnion[int, float, bool, bytes, str]) -> None:
+    def write(self, value: TUnion[int, float, bool, bytes, str]) -> interfaces.objects.ObjectInterface:
         """Writes the object into the layer of the context at the current
         offset."""
         data = convert_value_to_data(value, self._struct_type, self._data_format)
-        return self._context.layers.write(self.vol.layer_name, self.vol.offset, data)
+        self._context.layers.write(self.vol.layer_name, self.vol.offset, data)
+        return self.cast(self.vol.type_name)
 
 
 # This must be int (and the _struct_type must be int) because bool cannot be inherited from:
