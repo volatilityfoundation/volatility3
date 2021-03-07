@@ -344,7 +344,10 @@ class CommandLine:
                 urllib.parse.urljoin('file:', urllib.request.pathname2url(os.path.abspath(filename))))
         if single_location.scheme == 'file':
             if not os.path.exists(urllib.request.url2pathname(single_location.path)):
-                raise ValueError("File does not exist: {}".format(urllib.request.url2pathname(single_location.path)))
+                filename = urllib.request.url2pathname(single_location.path)
+                if not filename:
+                    raise ValueError("File URL looks incorrect (potentially missing /)")
+                raise ValueError("File does not exist: {}".format(filename))
         return urllib.parse.urlunparse(single_location)
 
     def process_exceptions(self, excp):
