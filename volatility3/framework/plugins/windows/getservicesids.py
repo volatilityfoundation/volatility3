@@ -62,13 +62,14 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
 
     def _generator(self):
 
-        # Go all over the hives
+        # Get the system hive
         for hive in hivelist.HiveList.list_hives(context = self.context,
                                                  base_config_path = self.config_path,
                                                  layer_name = self.config['primary'],
                                                  symbol_table = self.config['nt_symbols'],
+                                                 filter_string = 'machine\\system',
                                                  hive_offsets = None):
-            # Get ConrolSet\Services.
+            # Get ControlSet\Services.
             try:
                 services = hive.get_key(r"CurrentControlSet\Services")
             except (KeyError, exceptions.InvalidAddressException):
