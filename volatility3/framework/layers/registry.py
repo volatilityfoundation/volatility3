@@ -200,11 +200,12 @@ class RegistryHive(linear.LinearlyMappedLayer):
         volatile = self._mask(offset, 31, 31) >> 31
         if offset & 0x7fffffff > self._get_hive_maxaddr(volatile):
             vollog.log(constants.LOGLEVEL_VVV,
-                       "Couldn't translate offset {}, greater than {} in {} store of {}".format(
+                       "Layer {} couldn't translate offset {}, greater than {} in {} store of {}".format(
+                               self.name,
                                hex(offset & 0x7fffffff),
                                hex(self._get_hive_maxaddr(volatile)),
                                "volative" if volatile else "non-volatile",
-                               self.name))
+                               self.get_name()))
             raise RegistryInvalidIndex(self.name, "Mapping request for value greater than maxaddr")
 
         storage = self.hive.Storage[volatile]
