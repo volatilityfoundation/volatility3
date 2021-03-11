@@ -266,7 +266,7 @@
                 }
             },
             "CreateTime": {
-                "offset": 224,
+                "offset": 64,
                 "type": {
                     "kind": "union",
                     "name": "_LARGE_INTEGER"
