@@ -972,7 +972,7 @@ class CONTROL_AREA(objects.StructType):
 
                 # If the entry is not a valid physical address then see if it is in transition.
                 elif mmpte.u.Trans.Transition == 1:
-                    physoffset = mmpte.u.Trans.PageFrameNumber << 12
+                    physoffset = (mmpte.u.Trans.PageFrameNumber &~ (0b1111 << 32)) << 12
                     yield physoffset, file_offset, self.PAGE_SIZE
 
                 # Go to the next PTE entry
