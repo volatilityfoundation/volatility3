@@ -9,7 +9,6 @@ import json
 import logging
 import lzma
 import os
-import urllib
 from bisect import bisect
 from typing import Tuple, Dict, Any, Optional, Union, List
 from urllib import request, error, parse

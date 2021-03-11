@@ -19,7 +19,6 @@ import os
 import sys
 import tempfile
 import traceback
-import urllib
 from typing import Dict, Type, Union, Any
 from urllib import parse, request
 
@@ -338,17 +337,16 @@ class CommandLine:
             The URL for the location of the file
         """
         # We want to work in URLs, but we need to accept absolute and relative files (including on windows)
-        single_location = urllib.parse.urlparse(filename, '')
+        single_location = parse.urlparse(filename, '')
         if single_location.scheme == '' or len(single_location.scheme) == 1:
-            single_location = urllib.parse.urlparse(
-                urllib.parse.urljoin('file:', urllib.request.pathname2url(os.path.abspath(filename))))
+            single_location = parse.urlparse(parse.urljoin('file:', request.pathname2url(os.path.abspath(filename))))
         if single_location.scheme == 'file':
-            if not os.path.exists(urllib.request.url2pathname(single_location.path)):
-                filename = urllib.request.url2pathname(single_location.path)
+            if not os.path.exists(request.url2pathname(single_location.path)):
+                filename = request.url2pathname(single_location.path)
                 if not filename:
                     raise ValueError("File URL looks incorrect (potentially missing /)")
                 raise ValueError("File does not exist: {}".format(filename))
-        return urllib.parse.urlunparse(single_location)
+        return parse.urlunparse(single_location)
 
     def process_exceptions(self, excp):
         """Provide useful feedback if an exception occurs during a run of a plugin."""

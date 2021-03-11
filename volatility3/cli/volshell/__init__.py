@@ -7,8 +7,6 @@ import json
 import logging
 import os
 import sys
-import urllib
-from urllib import request
 
 import volatility3.plugins
 import volatility3.symbols
