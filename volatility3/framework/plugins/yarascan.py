@@ -80,7 +80,7 @@ class YaraScan(plugins.PluginInterface):
         elif config.get('yara_file', None) is not None:
             rules = yara.compile(file = resources.ResourceAccessor().open(config['yara_file'], "rb"))
         elif config.get('yara_compiled_file', None) is not None:
-            rules = yara.load(file = resources.ResourceAccessor().open(config['yara_file'], "rb"))            
+            rules = yara.load(file = resources.ResourceAccessor().open(config['yara_compiled_file'], "rb"))            
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
         return rules
