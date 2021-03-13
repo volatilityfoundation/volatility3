@@ -277,7 +277,7 @@ class PdbReader:
         self.symbols = {}  # type: Dict[str, Any]
         self._omap_mapping = []  # type: List[Tuple[int, int]]
         self._sections = []  # type: List[interfaces.objects.ObjectInterface]
-        self.metadata = {"format": "6.1.0", "windows": {}}
+        self.metadata = {"format": "6.1.1", "windows": {}}
         self._database_name = database_name
 
     @property
@@ -481,16 +481,16 @@ class PdbReader:
             name = None
             address = None
             if sym.segment < len(self._sections):
-                if leaf_type == 0x110e:
-                    # v3 symbol (c-string)
-                    name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 2)
-                    address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
-                elif leaf_type == 0x1009:
+                if leaf_type == 0x1009:
                     # v2 symbol (pascal-string)
                     name = self.parse_string(sym.name, True, sym.length - sym.vol.size + 2)
                     address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
+                elif leaf_type == 0x110e or leaf_type == 0x1127:
+                    # v3 symbol (c-string)
+                    name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 2)
+                    address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
                 else:
-                    vollog.debug("Only v2 and v3 symbols are supported")
+                    vollog.debug("Only v2 and v3 symbols are supported: {:x}".format(leaf_type))
             if name:
                 if self._omap_mapping:
                     address = self.omap_lookup(address)
