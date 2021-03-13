@@ -277,7 +277,7 @@ class PdbReader:
         self.symbols = {}  # type: Dict[str, Any]
         self._omap_mapping = []  # type: List[Tuple[int, int]]
         self._sections = []  # type: List[interfaces.objects.ObjectInterface]
-        self.metadata = {"format": "6.1.1", "windows": {}}
+        self.metadata = {"format": "6.1.0", "windows": {}}
         self._database_name = database_name
 
     @property
