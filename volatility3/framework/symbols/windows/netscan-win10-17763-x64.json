@@ -192,7 +192,7 @@
     "_TCP_ENDPOINT": {
         "fields": {
             "Owner": {
-                "offset": 656,
+                "offset": 712,
                 "type": {
                     "kind": "pointer",
                     "subtype": {
