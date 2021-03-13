@@ -937,8 +937,8 @@ class PdbRetreiver:
             for suffix in [file_name, file_name[:-1] + '_']:
                 try:
                     vollog.debug("Attempting to retrieve {}".format(url + suffix))
-                    # We no longer cache it, so this is a glorified remote endpoint check
-                    result = resources.ResourceAccessor(progress_callback, enable_cache = False).open(url + suffix)
+                    # We have to cache this because the file is opened by a layer and we can't control whether that caches
+                    result = resources.ResourceAccessor(progress_callback).open(url + suffix)
                 except (error.HTTPError, error.URLError) as excp:
                     vollog.debug("Failed with {}".format(excp))
                 if result:
