@@ -12,7 +12,7 @@ from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from urllib import request, parse
 
 from volatility3 import symbols
-from volatility3.framework import constants, interfaces
+from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.configuration.requirements import SymbolTableRequirement
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbconv
@@ -20,8 +20,10 @@ from volatility3.framework.symbols.windows import pdbconv
 vollog = logging.getLogger(__name__)
 
 
-class PDBUtility:
+class PDBUtility(interfaces.configuration.VersionableInterface):
     """Class to handle and manage all getting symbols based on MZ header"""
+
+    _version = (1, 0, 0)
 
     @classmethod
     def symbol_table_from_offset(
@@ -278,6 +280,47 @@ class PDBUtility:
                 'signature_offset': signature_offset,
                 'mz_offset': mz_offset
             }
+
+    @classmethod
+    def symbol_table_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
+                              pdb_name: str, module_offset: int, module_size: int) -> str:
+        """Creates symbol table for a module in the specified layer_name.
+
+        Searches the memory section of the loaded module for its PDB GUID
+        and loads the associated symbol table into the symbol space.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            config_path: The config path where to find symbol files
+            layer_name: The name of the layer on which to operate
+            module_offset: This memory dump's module image offset
+            module_size: The size of the module for this dump
+
+        Returns:
+            The name of the constructed and loaded symbol table
+        """
+
+        guids = list(
+            cls.pdbname_scan(context,
+                             layer_name,
+                             context.layers[layer_name].page_size, [bytes(pdb_name, 'latin-1')],
+                             start = module_offset,
+                             end = module_offset + module_size))
+
+        if not guids:
+            raise exceptions.VolatilityException(
+                "Did not find GUID of tcpip.pdb in tcpip.sys module @ 0x{:x}!".format(module_offset))
+
+        guid = guids[0]
+
+        vollog.debug("Found {}: {}-{}".format(guid["pdb_name"], guid["GUID"], guid["age"]))
+
+        return cls.load_windows_symbol_table(context,
+                                             guid["GUID"],
+                                             guid["age"],
+                                             guid["pdb_name"],
+                                             "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
+                                             config_path = config_path)
 
 
 class PdbSignatureScanner(interfaces.layers.ScannerInterface):
