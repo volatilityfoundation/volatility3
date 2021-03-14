@@ -327,7 +327,8 @@ class CommandLine:
         except (exceptions.VolatilityException) as excp:
             self.process_exceptions(excp)
 
-    def location_from_file(self, filename: str) -> str:
+    @classmethod
+    def location_from_file(cls, filename: str) -> str:
         """Returns the URL location from a file parameter (which may be a URL)
 
         Args:

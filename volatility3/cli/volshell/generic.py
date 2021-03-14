@@ -11,7 +11,7 @@ import sys
 from typing import Any, Dict, List, Optional, Tuple, Union, Type, Iterable
 from urllib import request, parse
 
-from volatility3.cli import text_renderer
+from volatility3.cli import text_renderer, volshell
 from volatility3.framework import renderers, interfaces, objects, plugins, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import intel, physical, resources
@@ -349,8 +349,7 @@ class Volshell(interfaces.plugins.PluginInterface):
     def load_file(self, location: str):
         """Loads a file into a Filelayer and returns the name of the layer"""
         layer_name = self.context.layers.free_layer_name()
-        if not parse.urlparse(location).scheme:
-            location = "file:" + request.pathname2url(location)
+        location = volshell.VolShell.location_from_file(location)
         current_config_path = 'volshell.layers.' + layer_name
         self.context.config[interfaces.configuration.path_join(current_config_path, "location")] = location
         layer = physical.FileLayer(self.context, current_config_path, layer_name)
