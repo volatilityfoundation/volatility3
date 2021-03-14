@@ -3,6 +3,7 @@
 #
 
 import logging
+import os
 from typing import List, Optional, Tuple, Iterator
 
 from volatility3.framework import interfaces, renderers, exceptions, symbols
@@ -83,7 +84,7 @@ class BigPools(interfaces.plugins.PluginInterface):
             new_table_name = intermed.IntermediateSymbolTable.create(
                 context = context,
                 config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "bigpools"),
-                sub_path = "windows",
+                sub_path = os.path.join("windows", "bigpools"),
                 filename = big_pools_json_filename,
                 table_mapping = {'nt_symbols': symbol_table},
                 class_types = {'_POOL_TRACKER_BIG_PAGES': extensions.pool.POOL_TRACKER_BIG_PAGES})
