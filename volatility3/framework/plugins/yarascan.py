@@ -60,7 +60,9 @@ class YaraScan(plugins.PluginInterface):
             requirements.URIRequirement(name = "yara_file", description = "Yara rules (as a file)", optional = True),
             # This additional requirement is to follow suit with upstream, who feel that compiled rules could potentially be used to execute malicious code
             # As such, there's a separate option to run compiled files, as happened with yara-3.9 and later
-            requirements.URIRequirement(name = "yara_compiled_file", description = "Yara compiled rules (as a file)", optional = True),
+            requirements.URIRequirement(name = "yara_compiled_file",
+                                        description = "Yara compiled rules (as a file)",
+                                        optional = True),
             requirements.IntRequirement(name = "max_size",
                                         default = 0x40000000,
                                         description = "Set the maximum size (default is 1GB)",
@@ -82,7 +84,7 @@ class YaraScan(plugins.PluginInterface):
         elif config.get('yara_file', None) is not None:
             rules = yara.compile(file = resources.ResourceAccessor().open(config['yara_file'], "rb"))
         elif config.get('yara_compiled_file', None) is not None:
-            rules = yara.load(file = resources.ResourceAccessor().open(config['yara_compiled_file'], "rb"))            
+            rules = yara.load(file = resources.ResourceAccessor().open(config['yara_compiled_file'], "rb"))
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
         return rules
