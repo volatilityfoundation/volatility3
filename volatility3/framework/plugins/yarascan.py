@@ -58,6 +58,7 @@ class YaraScan(plugins.PluginInterface):
                                            description = "Yara rules (as a string)",
                                            optional = True),
             requirements.URIRequirement(name = "yara_file", description = "Yara rules (as a file)", optional = True),
+            requirements.URIRequirement(name = "yara_compiled_file", description = "Yara compiled rules (as a file)", optional = True),
             requirements.IntRequirement(name = "max_size",
                                         default = 0x40000000,
                                         description = "Set the maximum size (default is 1GB)",
@@ -78,6 +79,8 @@ class YaraScan(plugins.PluginInterface):
             rules = yara.compile(sources = {'n': 'rule r1 {{strings: $a = {} condition: $a}}'.format(rule)})
         elif config.get('yara_file', None) is not None:
             rules = yara.compile(file = resources.ResourceAccessor().open(config['yara_file'], "rb"))
+        elif config.get('yara_compiled_file', None) is not None:
+            rules = yara.load(file = resources.ResourceAccessor().open(config['yara_compiled_file'], "rb"))            
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
         return rules
