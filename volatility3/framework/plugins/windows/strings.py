@@ -20,7 +20,7 @@ class Strings(interfaces.plugins.PluginInterface):
     """Reads output from the strings command and indicates which process(es) each string belongs to."""
 
     _required_framework_version = (1, 0, 0)
-    strings_pattern = re.compile(rb"(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
+    strings_pattern = re.compile(rb"^(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -40,27 +40,40 @@ class Strings(interfaces.plugins.PluginInterface):
 
     def _generator(self) -> Generator[Tuple, None, None]:
         """Generates results from a strings file."""
+        string_list = {}  # type: Dict[int, List[bytes]]
+
+        # Test strings file format is accurate
+        accessor = resources.ResourceAccessor()
+        strings_fp = accessor.open(self.config['strings_file'], "rb")
+        line = strings_fp.readline()
+        count = 0
+        while line:
+            count += 1
+            try:
+                offset, string = self._parse_line(line)
+                string_list[offset] = string_list.get(offset, []) + [string]
+            except ValueError:
+                vollog.error("Line in unrecognized format: line {}".format(count))
+                return
+            line = strings_fp.readline()
+
+        # TODO: Check the strings file *before* doing the expensive computation
         revmap = self.generate_mapping(self.config['primary'])
 
-        accessor = resources.ResourceAccessor()
         strings_fp = accessor.open(self.config['strings_file'], "rb")
         strings_size = path.getsize(strings_fp.file.name)
 
-        line = strings_fp.readline()
-        last_prog = 0
-        while line:
+        last_prog = count = 0  # type: float
+        num_strings = len(string_list)
+        for offset in string_list:
+            string = b"; ".join(string_list[offset])
+            count += 1
             try:
-                offset, string = self._parse_line(line)
-                try:
-                    revmap_list = [name + ":" + hex(offset) for (name, offset) in revmap[offset >> 12]]
-                except (IndexError, KeyError):
-                    revmap_list = ["FREE MEMORY"]
-                yield (0, (str(string, 'latin-1'), format_hints.Hex(offset), ", ".join(revmap_list)))
-            except ValueError:
-                vollog.error("Strings file is in the wrong format")
-                return
-            line = strings_fp.readline()
-            prog = strings_fp.tell() / strings_size * 100
+                revmap_list = [name + ":" + hex(offset) for (name, offset) in revmap[offset >> 12]]
+            except (IndexError, KeyError):
+                revmap_list = ["FREE MEMORY"]
+            yield (0, (str(string, 'latin-1'), format_hints.Hex(offset), ", ".join(revmap_list)))
+            prog = count / num_strings * 100
             if round(prog, 1) > last_prog:
                 last_prog = round(prog, 1)
                 self._progress_callback(prog, "Matching strings in memory")
