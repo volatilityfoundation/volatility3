@@ -49,5 +49,14 @@ under the operating system directory.
 
 Linux and Mac symbol tables can be generated from a DWARF file using a tool called `dwarf2json <https://github.com/volatilityfoundation/dwarf2json>`_.  Currently a kernel
 with debugging symbols is the only suitable means for recovering all the information required by most Volatility plugins.
+To determine the string for a particular memory image, use the `banners` plugin.  Once the specific banner is known,
+try to locate that exact kernel debugging package for the operating system.
+
 Once a kernel with debugging symbols/appropriate DWARF file has been located, `dwarf2json <https://github.com/volatilityfoundation/dwarf2json>`_ will convert it into an
-appropriate JSON file.
+appropriate JSON file.  Example code for automatically creating a JSON from URLs for the kernel debugging package and
+the package containing the Systemp.map, can be found in `stock-linux-json.py <https://github.com/volatilityfoundation/volatility3/blob/develop/development/stock-linux-json.py>`.
+
+The banners available for volatility to use can be found using the `isfinfo` plugin, but this will potentially take a
+long time to run depending on the number of JSON files available.  This will list all the JSON (ISF) files that
+volatility3 is aware of, and for linux/mac systems what banner string they search for.  For volatility to use the JSON
+file, the banners must match exactly (down to the compilation date).
