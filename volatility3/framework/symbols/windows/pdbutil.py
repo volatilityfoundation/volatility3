@@ -309,7 +309,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         if not guids:
             raise exceptions.VolatilityException(
-                "Did not find GUID of tcpip.pdb in tcpip.sys module @ 0x{:x}!".format(module_offset))
+                "Did not find GUID of {} in module @ 0x{:x}!".format(pdb_name, module_offset))
 
         guid = guids[0]
 
