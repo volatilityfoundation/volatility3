@@ -198,15 +198,19 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             vers_minor_version = 18363
 
         # Win 8 SP 1 also may have different structures based on specific tcpip.sys version
+        # the following is IntelLayer specific and might need to be adapted to other architectures.
         if (nt_major_version, nt_minor_version, vers_minor_version) == (6, 3, 9600):
             vollog.debug("Requiring further version inspection due to OS version by checking tcpip.sys's FileVersion header")
             physical_layer_name = context.layers[layer_name].config.get('memory_layer', None)
-            ver = verinfo.VerInfo.find_version_info(context, physical_layer_name, "tcpip.sys")
-            if ver:
-                tcpip_mod_version = ver[3]
-                vollog.debug("Determined tcpip.sys's FileVersion: {}".format(tcpip_mod_version))
+            if physical_layer_name:
+                ver = verinfo.VerInfo.find_version_info(context, physical_layer_name, "tcpip.sys")
+                if ver:
+                    tcpip_mod_version = ver[3]
+                    vollog.debug("Determined tcpip.sys's FileVersion: {}".format(tcpip_mod_version))
+                else:
+                    vollog.debug("Could not determine tcpip.sys's FileVersion.")
             else:
-                vollog.debug("Could not determine tcpip.sys's FileVersion.")
+                vollog.debug("Unable to retrieve physical memory layer, skipping FileVersion check.")
 
         # when determining the symbol file we have to consider the following cases:
         # the determined version's symbol file is found by intermed.create -> proceed
