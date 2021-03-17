@@ -266,7 +266,9 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def create_tcpip_symbol_table(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
                                   tcpip_module_offset: int, tcpip_module_size: int) -> str:
-        """Creates symbol table for the current image's tcpip.sys driver.
+        """DEPRECATED: Use PDBUtility.symbol_table_from_pdb instead
+
+        Creates symbol table for the current image's tcpip.sys driver.
 
         Searches the memory section of the loaded tcpip.sys module for its PDB GUID
         and loads the associated symbol table into the symbol space.
@@ -281,29 +283,12 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Returns:
             The name of the constructed and loaded symbol table
         """
-
-        guids = list(
-            pdbutil.PDBUtility.pdbname_scan(context,
-                                            layer_name,
-                                            context.layers[layer_name].page_size, [b"tcpip.pdb"],
-                                            start = tcpip_module_offset,
-                                            end = tcpip_module_offset + tcpip_module_size))
-
-        if not guids:
-            raise exceptions.VolatilityException(
-                "Did not find GUID of tcpip.pdb in tcpip.sys module @ 0x{:x}!".format(tcpip_module_offset))
-
-        guid = guids[0]
-
-        vollog.debug("Found {}: {}-{}".format(guid["pdb_name"], guid["GUID"], guid["age"]))
-
-        return pdbutil.PDBUtility.load_windows_symbol_table(
-            context,
-            guid["GUID"],
-            guid["age"],
-            guid["pdb_name"],
-            "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
-            config_path = "tcpip")
+        vollog.debug(
+            "Deprecation: This plugin uses netstat.create_tcpip_symbol_table instead of PDBUtility.symbol_table_from_pdb"
+        )
+        return pdbutil.PDBUtility.symbol_table_from_pdb(context,
+                                                        interfaces.configuration.path_join(config_path, 'tcpip'),
+                                                        layer_name, "tcpip.pdb", tcpip_module_offset, tcpip_module_size)
 
     @classmethod
     def find_port_pools(cls, context: interfaces.context.ContextInterface, layer_name: str, net_symbol_table: str,
