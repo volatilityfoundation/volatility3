@@ -27,7 +27,8 @@ except ImportError:
 class VerInfo(interfaces.plugins.PluginInterface):
     """Lists version information from PE files."""
 
-    _required_framework_version = (1, 1, 0)
+    _version = (1, 0, 0)
+    _required_framework_version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
