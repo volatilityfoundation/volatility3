@@ -32,6 +32,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.VersionRequirement(name = 'netscan', component = netscan.NetScan, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'modules', component = modules.Modules, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'pdbutil', component = pdbutil.PDBUtility, version = (1, 0, 0)),
             requirements.BooleanRequirement(
                 name = 'include-corrupt',
                 description =
@@ -184,7 +185,8 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def parse_hashtable(cls, context: interfaces.context.ContextInterface, layer_name: str, ht_offset: int,
-                        ht_length: int, alignment: int, net_symbol_table: str) -> Generator[interfaces.objects.ObjectInterface, None, None]:
+                        ht_length: int, alignment: int,
+                        net_symbol_table: str) -> Generator[interfaces.objects.ObjectInterface, None, None]:
         """Parses a hashtable quick and dirty.
 
         Args:
@@ -264,7 +266,9 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def create_tcpip_symbol_table(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
                                   tcpip_module_offset: int, tcpip_module_size: int) -> str:
-        """Creates symbol table for the current image's tcpip.sys driver.
+        """DEPRECATED: Use PDBUtility.symbol_table_from_pdb instead
+
+        Creates symbol table for the current image's tcpip.sys driver.
 
         Searches the memory section of the loaded tcpip.sys module for its PDB GUID
         and loads the associated symbol table into the symbol space.
@@ -279,29 +283,12 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         Returns:
             The name of the constructed and loaded symbol table
         """
-
-        guids = list(
-            pdbutil.PDBUtility.pdbname_scan(context,
-                                            layer_name,
-                                            context.layers[layer_name].page_size, [b"tcpip.pdb"],
-                                            start = tcpip_module_offset,
-                                            end = tcpip_module_offset + tcpip_module_size))
-
-        if not guids:
-            raise exceptions.VolatilityException("Did not find GUID of tcpip.pdb in tcpip.sys module @ 0x{:x}!".format(
-                tcpip_module_offset))
-
-        guid = guids[0]
-
-        vollog.debug("Found {}: {}-{}".format(guid["pdb_name"], guid["GUID"], guid["age"]))
-
-        return pdbutil.PDBUtility.load_windows_symbol_table(
-            context,
-            guid["GUID"],
-            guid["age"],
-            guid["pdb_name"],
-            "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
-            config_path = "tcpip")
+        vollog.debug(
+            "Deprecation: This plugin uses netstat.create_tcpip_symbol_table instead of PDBUtility.symbol_table_from_pdb"
+        )
+        return pdbutil.PDBUtility.symbol_table_from_pdb(context,
+                                                        interfaces.configuration.path_join(config_path, 'tcpip'),
+                                                        layer_name, "tcpip.pdb", tcpip_module_offset, tcpip_module_size)
 
     @classmethod
     def find_port_pools(cls, context: interfaces.context.ContextInterface, layer_name: str, net_symbol_table: str,
@@ -437,8 +424,9 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         tcpip_module = self.get_tcpip_module(self.context, self.config["primary"], self.config["nt_symbols"])
 
-        tcpip_symbol_table = self.create_tcpip_symbol_table(self.context, self.config_path, self.config["primary"],
-                                                            tcpip_module.DllBase, tcpip_module.SizeOfImage)
+        tcpip_symbol_table = pdbutil.PDBUtility.symbol_table_from_pdb(
+            self.context, interfaces.configuration.path_join(self.config_path, 'tcpip'), self.config["primary"],
+            "tcpip.pdb", tcpip_module.DllBase, tcpip_module.SizeOfImage)
 
         for netw_obj in self.list_sockets(self.context, self.config['primary'], self.config['nt_symbols'],
                                           netscan_symbol_table, tcpip_module.DllBase, tcpip_symbol_table):
