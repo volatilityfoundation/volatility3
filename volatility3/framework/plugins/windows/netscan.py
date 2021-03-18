@@ -34,6 +34,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                             component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'verinfo', component = verinfo.VerInfo, version = (1, 0, 0)),
             requirements.BooleanRequirement(
                 name = 'include-corrupt',
                 description =

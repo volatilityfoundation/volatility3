@@ -12,7 +12,7 @@ from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework.symbols.windows.extensions import network
 from volatility3.plugins import timeliner
-from volatility3.plugins.windows import netscan, modules
+from volatility3.plugins.windows import netscan, modules, info, verinfo
 
 vollog = logging.getLogger(__name__)
 
@@ -31,6 +31,8 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.VersionRequirement(name = 'netscan', component = netscan.NetScan, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'modules', component = modules.Modules, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'pdbutil', component = pdbutil.PDBUtility, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
+            requirements.VersionRequirement(name = 'verinfo', component = verinfo.VerInfo, version = (1, 0, 0)),
             requirements.BooleanRequirement(
                 name = 'include-corrupt',
                 description =
