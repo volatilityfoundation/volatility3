@@ -198,10 +198,12 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             vollog.debug("Detected 18363 data structures: working with 18363 symbol table.")
             vers_minor_version = 18363
 
-        # Win 8 SP 1 also may have different structures based on specific tcpip.sys version
-        # the following is IntelLayer specific and might need to be adapted to other architectures.
-        if (nt_major_version, nt_minor_version, vers_minor_version) == (6, 3, 9600):
+        # we need to define additional version numbers (which are then found via tcpip.sys's FileVersion header) in case there is
+        # ambiguity _within_ an OS version. If such a version number (last number of the tuple) is defined for the current OS
+        # we need to inspect tcpip.sys's headers to see if we can grab the precise version
+        if [ (a,b,c,d) for a, b, c, d in version_dict if (a,b,c) == (nt_major_version, nt_minor_version, vers_minor_version) and d != 0]:
             vollog.debug("Requiring further version inspection due to OS version by checking tcpip.sys's FileVersion header")
+            # the following is IntelLayer specific and might need to be adapted to other architectures.
             physical_layer_name = context.layers[layer_name].config.get('memory_layer', None)
             if physical_layer_name:
                 ver = verinfo.VerInfo.find_version_info(context, physical_layer_name, "tcpip.sys")
