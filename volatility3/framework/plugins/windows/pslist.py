@@ -6,7 +6,7 @@ import datetime
 import logging
 from typing import Callable, Iterable, List, Type
 
-from volatility3.framework import renderers, interfaces, layers, constants
+from volatility3.framework import renderers, interfaces, layers, exceptions, constants
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
@@ -187,17 +187,22 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
             file_output = "Disabled"
-            if self.config['dump']:
-                file_handle = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc, self.open)
-                file_output = "Error outputting file"
-                if file_handle:
-                    file_handle.close()
-                    file_output = str(file_handle.preferred_filename)
 
-            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
-                       proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
-                       format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
-                       proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), file_output))
+            try:
+                if self.config['dump']:
+                    file_handle = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc, self.open)
+                    file_output = "Error outputting file"
+                    if file_handle:
+                        file_handle.close()
+                        file_output = str(file_handle.preferred_filename)
+
+                yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
+                   proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
+                   format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
+                   proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), file_output))
+
+            except exceptions.InvalidAddressException:
+                vollog.debug("Invalid process found at address: {:x}. Skipping".format(proc.vol.offset))  
 
     def generate_timeline(self):
         for row in self._generator():
