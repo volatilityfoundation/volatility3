@@ -82,6 +82,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             pe_ret = pefile.PE(data = pe_data.getvalue(), fast_load = True)
         
         except exceptions.InvalidAddressException:
+            vollog.debug("Unable to reconstruct cryptdll.dll in memory")
             pe_ret = None
 
         return pe_ret
@@ -109,7 +110,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         """
         Uses the PDB information to specifically check if the csystem for RC4HMAC
         has an initialization pointer to rc4HmacInitialize and a decryption pointer
-        for rc4HmacDecrypt.
+        to rc4HmacDecrypt.
 
         Args:
             csystem: The RC4HMAC KERB_ECRYPT instance
@@ -261,7 +262,8 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         except exceptions.VolatilityException:
             return None, None, None
 
-        array_start, count, rc4HmacInitialize, rc4HmacDecrypt = self._find_array_with_pdb_symbols(cryptdll_symbols, cryptdll_types, proc_layer_name, cryptdll_base) 
+        array_start, count, rc4HmacInitialize, rc4HmacDecrypt = \
+            self._find_array_with_pdb_symbols(cryptdll_symbols, cryptdll_types, proc_layer_name, cryptdll_base) 
        
         try: 
             array = cryptdll_types.object(object_type = "array",
@@ -271,6 +273,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                                     absolute = True)
 
         except exceptions.InvalidAddressException:
+            vollog.debug("The CSystem array is not present in memory. Stopping PDB symbols based analysis.")
             return None, None, None
 
         return array, rc4HmacInitialize, rc4HmacDecrypt
@@ -279,14 +282,14 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         """
         Returns the target address of a RIP-relative instruction.
 
-        These instructions contain the offset of a target addresss
+        These instructions contain the offset of a target address
         relative to the current instruction pointer.
         
         Args:
             inst: A capstone instruction instance
 
         Returns:
-            None or the target address of the function
+            None or the target address of the instruction
         """
         try:
             opnd = inst.operands[1]
@@ -411,6 +414,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             try:
                 function_bytes = self.context.layers[proc_layer_name].read(function_start, 0x50)
             except exceptions.InvalidAddressException:
+                vollog.debug("The CDLocateCSystem function is not present in the lsass address space. Stopping export based analysis.")
                 break
 
             array_start, count = self._analyze_cdlocatecsystem(function_bytes, function_start, proc_layer_name)
@@ -426,6 +430,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                                           absolute = True)
 
             except exceptions.InvalidAddressException:
+                vollog.debug("The CSystem array is not present in memory. Stopping export based analysis.")
                 return None, None, None
 
         return array, None, None
