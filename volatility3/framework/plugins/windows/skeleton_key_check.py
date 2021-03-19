@@ -145,7 +145,11 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         cryptdll_module = self.context.module(cryptdll_symbols, layer_name = proc_layer_name, offset = cryptdll_base)
 
         count_address = cryptdll_module.get_symbol("cCSystems").address
-        count = cryptdll_types.object(object_type = "unsigned long", offset = count_address)
+
+        try:
+            count = cryptdll_types.object(object_type = "unsigned long", offset = count_address)
+        except exceptions.InvalidAddressException:
+            count = 16
 
         array_start = cryptdll_module.get_symbol("CSystems").address + cryptdll_base
 
@@ -258,12 +262,16 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             return None, None, None
 
         array_start, count, rc4HmacInitialize, rc4HmacDecrypt = self._find_array_with_pdb_symbols(cryptdll_symbols, cryptdll_types, proc_layer_name, cryptdll_base) 
-        
-        array = cryptdll_types.object(object_type = "array",
+       
+        try: 
+            array = cryptdll_types.object(object_type = "array",
                                     offset = array_start,
                                     subtype = cryptdll_types.get_type("_KERB_ECRYPT"),
                                     count = count,
                                     absolute = True)
+
+        except exceptions.InvalidAddressException:
+            return None, None, None
 
         return array, rc4HmacInitialize, rc4HmacDecrypt
 
@@ -410,11 +418,15 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             break
 
         if array_start:
-            array = cryptdll_types.object(object_type = "array",
+            try:
+                array = cryptdll_types.object(object_type = "array",
                                           offset = array_start,
                                           subtype = cryptdll_types.get_type("_KERB_ECRYPT"),
                                           count = count,
                                           absolute = True)
+
+            except exceptions.InvalidAddressException:
+                return None, None, None
 
         return array, None, None
 
@@ -525,6 +537,9 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         found_target = False
 
         for csystem in csystems:
+            if not self.context.layers[proc_layer_name].is_valid(csystem.vol.offset, csystem.vol.size):
+                continue
+
             # filter for RC4 HMAC
             if csystem.EncryptionType != 0x17:
                 continue
