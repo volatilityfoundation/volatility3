@@ -4,6 +4,7 @@
 
 import datetime
 import logging
+import os
 from typing import Iterable, List, Optional, Tuple, Type
 
 from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
@@ -244,7 +245,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         return intermed.IntermediateSymbolTable.create(context,
                                                        config_path,
-                                                       "windows",
+                                                       os.path.join("windows", "netscan"),
                                                        symbol_filename,
                                                        class_types = class_types,
                                                        table_mapping = table_mapping)

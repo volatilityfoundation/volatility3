@@ -87,7 +87,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
         return intermed.IntermediateSymbolTable.create(context,
                                                        config_path,
-                                                       "windows",
+                                                       os.path.join("windows", "services"),
                                                        symbol_filename,
                                                        class_types = services.class_types,
                                                        native_types = native_types)
