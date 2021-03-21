@@ -4,10 +4,12 @@
 
 import io
 import logging
-from typing import Generator, List, Tuple
+import struct
+from typing import Generator, List, Tuple, Optional
 
 from volatility3.framework import exceptions, renderers, constants, interfaces
 from volatility3.framework.configuration import requirements
+from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
@@ -25,6 +27,7 @@ except ImportError:
 class VerInfo(interfaces.plugins.PluginInterface):
     """Lists version information from PE files."""
 
+    _version = (1, 0, 0)
     _required_framework_version = (1, 0, 0)
 
     @classmethod
@@ -39,7 +42,31 @@ class VerInfo(interfaces.plugins.PluginInterface):
                                                      description = 'Memory layer for the kernel',
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.BooleanRequirement(name = "extensive",
+                                            description = "Search physical layer for version information",
+                                            optional = True,
+                                            default = False),
         ]
+
+    @classmethod
+    def find_version_info(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                          filename: str) -> Optional[Tuple[int, int, int, int]]:
+        """Searches for an original filename, then tracks back to find the VS_VERSION_INFO and read the fixed
+        version information structure"""
+        premable_max_distance = 0x500
+        filename = "OriginalFilename\x00" + filename
+        iterator = context.layers[layer_name].scan(context = context,
+                                                   scanner = scanners.BytesScanner(bytes(filename, 'utf-16be')))
+        for offset in iterator:
+            data = context.layers[layer_name].read(offset - premable_max_distance, premable_max_distance)
+            vs_ver_info = b"\xbd\x04\xef\xfe"
+            verinfo_offset = data.find(vs_ver_info) + len(vs_ver_info)
+            if verinfo_offset >= 0:
+                structure = '<IHHHHHHHH'
+                struct_version, FV2, FV1, FV4, FV3, PV2, PV1, PV4, PV3 = struct.unpack(
+                    structure, data[verinfo_offset:verinfo_offset + struct.calcsize(structure)])
+                return (FV1, FV2, FV3, FV4)
+        return None
 
     @classmethod
     def get_version_information(cls, context: interfaces.context.ContextInterface, pe_table_name: str, layer_name: str,
@@ -103,6 +130,9 @@ class VerInfo(interfaces.plugins.PluginInterface):
                                                                 "pe",
                                                                 class_types = pe.class_types)
 
+        # TODO: Fix this so it works with more than just intel layers
+        physical_layer_name = self.context.layers[self.config['primary']].config.get('memory_layer', None)
+
         for mod in mods:
             try:
                 BaseDllName = mod.BaseDllName.get_string()
@@ -115,6 +145,11 @@ class VerInfo(interfaces.plugins.PluginInterface):
                                                                               session_layer_name, mod.DllBase)
             except (exceptions.InvalidAddressException, TypeError, AttributeError):
                 (major, minor, product, build) = [renderers.UnreadableValue()] * 4
+                if (not isinstance(BaseDllName, renderers.UnreadableValue) and physical_layer_name is not None
+                        and self.config['extensive']):
+                    result = self.find_version_info(self._context, physical_layer_name, BaseDllName)
+                    if result is not None:
+                        (major, minor, product, build) = result
 
             # the pid and process are not applicable for kernel modules
             yield (0, (renderers.NotApplicableValue(), renderers.NotApplicableValue(), format_hints.Hex(mod.DllBase),
