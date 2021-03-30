@@ -1,0 +1,138 @@
+{
+  "symbols": {
+  },
+  "user_types": {
+    "_SUMMARY_DUMP": {
+      "fields": {
+        "Signature": {
+          "offset": 0,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "ValidDump": {
+          "offset": 4,
+          "type": {
+            "count": 4,
+            "kind": "array",
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        },
+        "DumpOptions": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "HeaderSize": {
+          "offset": 32,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "Pages": {
+          "offset": 40,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "BitmapSize": {
+          "offset": 48,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long long"
+          }
+        },
+        "BufferLong": {
+          "offset": 56,
+          "type": {
+            "kind": "array",
+            "count": 1,
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned long"
+            }
+          }
+        },
+        "BufferChar": {
+          "offset": 56,
+          "type": {
+            "kind": "array",
+            "count": 1,
+            "subtype": {
+              "kind": "base",
+              "name": "unsigned char"
+            }
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 56
+    }
+  },
+  "enums": {
+  },
+  "base_types": {
+    "unsigned char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": false,
+      "size": 1
+    },
+    "unsigned short": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 2
+    },
+    "long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 4
+    },
+    "char": {
+      "endian": "little",
+      "kind": "char",
+      "signed": true,
+      "size": 1
+    },
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+    "long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": true,
+      "size": 8
+    },
+    "unsigned long long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 8
+    }
+  },
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "ikelos-by-hand",
+      "datetime": "2020-09-10T00:20:00"
+    },
+    "format": "6.2.0"
+  }
+}
