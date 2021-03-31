@@ -58,25 +58,25 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self.check_header(hdr_layer, hdr_offset)
 
         # Need to create a header object
-        self._header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
-                                           offset = hdr_offset,
-                                           layer_name = self._base_layer)
+        header = self.get_header()
 
         # Extract the DTB
-        self.dtb = int(self._header.DirectoryTableBase)
+        self.dtb = int(header.DirectoryTableBase)
 
-        self.dump_type = int(self._header.DumpType)
+        self.dump_type = int(header.DumpType)
 
         # Verify that it is a supported format
-        if self._header.DumpType not in self.supported_dumptypes:
-            vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(self._header.DumpType))
-            raise WindowsCrashDumpFormatException(name, "unsupported dump format 0x{:x}".format(self._header.DumpType))
+        if header.DumpType not in self.supported_dumptypes:
+            vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(header.DumpType))
+            raise WindowsCrashDumpFormatException(name, "unsupported dump format 0x{:x}".format(header.DumpType))
 
         # Then call the super, which will call load_segments (which needs the base_layer before it'll work)
         super().__init__(context, config_path, name)
 
     def get_header(self) -> interfaces.objects.ObjectInterface:
-        return self._header
+        return self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
+                                   offset=0,
+                                   layer_name=self._base_layer)
 
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer."""
