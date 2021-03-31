@@ -150,6 +150,15 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         if len(segments) == 0:
             raise WindowsCrashDumpFormatException(self.name, "No Crash segments defined in {}".format(self._base_layer))
+        else:
+            # report the segments for debugging. this is valuable for dev/troubleshooting but
+            # not important enough for a dedicated plugin.
+            for idx, (start_position, mapped_offset, length, _) in enumerate(segments):
+                vollog.log(constants.LOGLEVEL_VVVV,
+                           "Segment {}: Position {:#x} Offset {:#x} Length {:#x}".format(idx,
+                                                                                         start_position,
+                                                                                         mapped_offset,
+                                                                                         length))
 
         self._segments = segments
 
