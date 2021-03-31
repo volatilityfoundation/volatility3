@@ -78,6 +78,11 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                                    offset=0,
                                    layer_name=self._base_layer)
 
+    def get_summary_header(self) -> interfaces.objects.ObjectInterface:
+        return self.context.object(self._crash_common_table_name + constants.BANG + "_SUMMARY_DUMP",
+                                   offset=0x1000 * self.headerpages,
+                                   layer_name=self._base_layer)
+
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer."""
 
@@ -85,9 +90,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         # instead of hard coding 0x2000, use 0x1000 * self.headerpages so this works for
         # both 32- and 64-bit dumps
-        summary_header = self.context.object(self._crash_common_table_name + constants.BANG + "_SUMMARY_DUMP",
-                                             offset=0x1000 * self.headerpages,
-                                             layer_name=self._base_layer)
+        summary_header = self.get_summary_header()
         if self.dump_type == 0x1:
             header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
                                          offset=0,

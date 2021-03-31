@@ -26,6 +26,22 @@ class Crashinfo(interfaces.plugins.PluginInterface):
         header = layer.get_header()
         uptime = datetime.timedelta(microseconds=int(header.SystemUpTime) / 10)
 
+        if header.DumpType == 0x1:
+            dump_type = "Full Dump (0x1)"
+        elif header.DumpType == 0x5:
+            dump_type = "Bitmap Dump (0x5)"
+        else:
+            # this should never happen since the crash layer only accepts 0x1 and 0x5
+            dump_type = "Unknown/Unsupported ({:#x})".format(header.DumpType)
+
+        if header.DumpType == 0x5:
+            summary_header = layer.get_summary_header()
+            bitmap_header_size = format_hints.Hex(summary_header.HeaderSize)
+            bitmap_size = format_hints.Hex(summary_header.BitmapSize)
+            bitmap_pages = format_hints.Hex(summary_header.Pages)
+        else:
+            bitmap_header_size = bitmap_size = bitmap_pages = renderers.NotApplicableValue()
+
         yield(0, (utility.array_to_string(header.Signature),
                   header.MajorVersion,
                   header.MinorVersion,
@@ -36,10 +52,13 @@ class Crashinfo(interfaces.plugins.PluginInterface):
                   header.MachineImageType,
                   header.NumberProcessors,
                   format_hints.Hex(header.KdDebuggerDataBlock),
-                  header.DumpType,
+                  dump_type,
                   str(uptime),
                   utility.array_to_string(header.Comment),
                   conversion.wintime_to_datetime(header.SystemTime),
+                  bitmap_header_size,
+                  bitmap_size,
+                  bitmap_pages,
                   ))
 
     def run(self):
@@ -54,8 +73,11 @@ class Crashinfo(interfaces.plugins.PluginInterface):
                                    ("MachineImageType", int),
                                    ("NumberProcessors", int),
                                    ("KdDebuggerDataBlock", format_hints.Hex),
-                                   ("DumpType", int),
+                                   ("DumpType", str),
                                    ("SystemUpTime", str),
                                    ("Comment", str),
                                    ("SystemTime", datetime.datetime),
+                                   ("BitmapHeaderSize", format_hints.Hex),
+                                   ("BitmapSize", format_hints.Hex),
+                                   ("BitmapPages", format_hints.Hex),
                                    ], self._generator(layer))
