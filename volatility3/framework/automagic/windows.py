@@ -46,7 +46,8 @@ class DtbTest:
     back to that page's offset.
     """
 
-    def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, ptr_reference: int, mask: int) -> None:
+    def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, ptr_reference: List[int],
+                 mask: int) -> None:
         self.layer_type = layer_type
         self.ptr_struct = ptr_struct
         self.ptr_size = struct.calcsize(ptr_struct)
@@ -69,20 +70,21 @@ class DtbTest:
         Returns:
             A valid DTB within this page (and an additional parameter for data)
         """
-        value = data[page_offset + (self.ptr_reference * self.ptr_size):page_offset +
-                     ((self.ptr_reference + 1) * self.ptr_size)]
-        try:
-            ptr = self._unpack(value)
-        except struct.error:
-            return None
-        # The value *must* be present (bit 0) since it's a mapped page
-        # It's almost always writable (bit 1)
-        # It's occasionally Super, but not reliably so, haven't checked when/why not
-        # The top 3-bits are usually ignore (which in practice means 0
-        # Need to find out why the middle 3-bits are usually 6 (0110)
-        if ptr != 0 and (ptr & self.mask == data_offset + page_offset) & (ptr & 0xFF1 == 0x61):
-            dtb = (ptr & self.mask)
-            return self.second_pass(dtb, data, data_offset)
+        for ptr_reference in self.ptr_reference:
+            value = data[page_offset + (ptr_reference * self.ptr_size):page_offset +
+                         ((ptr_reference + 1) * self.ptr_size)]
+            try:
+                ptr = self._unpack(value)
+            except struct.error:
+                return None
+            # The value *must* be present (bit 0) since it's a mapped page
+            # It's almost always writable (bit 1)
+            # It's occasionally Super, but not reliably so, haven't checked when/why not
+            # The top 3-bits are usually ignore (which in practice means 0
+            # Need to find out why the middle 3-bits are usually 6 (0110)
+            if ptr != 0 and (ptr & self.mask == data_offset + page_offset) & (ptr & 0xFF1 == 0x61):
+                dtb = (ptr & self.mask)
+                return self.second_pass(dtb, data, data_offset)
         return None
 
     def second_pass(self, dtb: int, data: bytes, data_offset: int) -> Optional[Tuple[int, Any]]:
@@ -117,7 +119,7 @@ class DtbTest32bit(DtbTest):
     def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntel,
                          ptr_struct = "I",
-                         ptr_reference = 0x300,
+                         ptr_reference = [0x300],
                          mask = 0xFFFFF000)
 
 
@@ -126,7 +128,7 @@ class DtbTest64bit(DtbTest):
     def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
-                         ptr_reference = 0x1ED,
+                         ptr_reference = [0x1ED, 0x1FB],
                          mask = 0x3FFFFFFFFFF000)
 
 
@@ -135,7 +137,7 @@ class DtbTestPae(DtbTest):
     def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntelPAE,
                          ptr_struct = "Q",
-                         ptr_reference = 0x3,
+                         ptr_reference = [0x3],
                          mask = 0x3FFFFFFFFFF000)
 
     def second_pass(self, dtb: int, data: bytes, data_offset: int) -> Optional[Tuple[int, Any]]:
