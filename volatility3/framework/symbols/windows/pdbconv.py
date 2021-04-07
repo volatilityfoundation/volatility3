@@ -9,7 +9,6 @@ import json
 import logging
 import lzma
 import os
-import urllib
 from bisect import bisect
 from typing import Tuple, Dict, Any, Optional, Union, List
 from urllib import request, error, parse
@@ -999,7 +998,7 @@ if __name__ == '__main__':
     filename = None
     if args.guid is not None and args.pattern is not None:
         filename = PdbRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern, progress_callback = pg_cb)
-        if urllib.parse.urlparse(filename, 'file').scheme == 'file':
+        if parse.urlparse(filename, 'file').scheme == 'file':
             delfile = True
     elif args.file:
         filename = args.file
