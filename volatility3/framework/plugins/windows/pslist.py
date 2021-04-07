@@ -202,7 +202,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                    proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), file_output))
 
             except exceptions.InvalidAddressException:
-                vollog.debug("Invalid process found at address: {:x}. Skipping".format(proc.vol.offset))  
+                vollog.info("Invalid process found at address: {:x}. Skipping".format(proc.vol.offset))  
 
     def generate_timeline(self):
         for row in self._generator():
