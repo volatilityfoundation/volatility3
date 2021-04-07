@@ -33,16 +33,10 @@ try:
 except ImportError:
     has_capstone = False
 
-try:
-    import pefile
-    has_pefile = True
-except ImportError:
-    has_pefile = False
-
 vollog = logging.getLogger(__name__)
 
 class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
-    """Lists process memory ranges that potentially contain injected code."""
+    """ Looks for signs of Skeleton Key malware """
 
     _required_framework_version = (1, 0, 0)
 
@@ -59,15 +53,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             requirements.VersionRequirement(name = 'pdbutil', component = pdbutil.PDBUtility, version = (1, 0, 0)),
         ]
 
-    # @ikelos 
-    # these lines are copy/paste from inside of verinfo->get_version_information
-    # not sure if this is worthy of making it an API or not though
-    # basically it taskes in a pe symbol table, layer name, and base address
-    # and then kicks back a pefile instance
-    # we can either make it a common API or we can just delete this comment
-
-    # @ikelos I don't know how to specify the return value as a pefile object...
-    def _get_pefile_obj(self, pe_table_name: str, layer_name: str, base_address: int):
+    def _get_pefile_obj(self, pe_table_name: str, layer_name: str, base_address: int) -> pefile.PE:
         pe_data = io.BytesIO()
 
         try:
@@ -147,6 +133,8 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         count_address = cryptdll_module.get_symbol("cCSystems").address
 
+        # we do not want to fail just because the count is not in memory
+        # 16 was the size on samples I tested, so I chose it as the default         
         try:
             count = cryptdll_types.object(object_type = "unsigned long", offset = count_address)
         except exceptions.InvalidAddressException:
@@ -218,13 +206,12 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
             for vad in proc.get_vad_root().traverse():
                 filename = vad.get_file_name()
-                if type(filename) == renderers.NotApplicableValue or not filename.lower().endswith("cryptdll.dll"):
-                    continue
-       
-                cryptdll_base = vad.get_start()
-                cryptdll_size = vad.get_end() - cryptdll_base
+                
+                if isinstance(filename, str) and filename.lower().endswith("cryptdll.dll"):
+                    cryptdll_base = vad.get_start()
+                    cryptdll_size = vad.get_end() - cryptdll_base
 
-                break
+                    break
 
             lsass_proc = proc
             break
@@ -336,10 +323,10 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
             # cCsystems is referenced by a mov instruction
             elif inst.mnemonic == "mov":
-                if found_count == False:
+                if not found_count:
                     target_address = self._get_rip_relative_target(inst)
 
-                    # we do not want to fail just because the count is not memory
+                    # we do not want to fail just because the count is not in memory
                     # 16 was the size on samples I tested, so I chose it as the default
                     if target_address:
                         count = int.from_bytes(self.context.layers[proc_layer_name].read(target_address, 4), "little")
@@ -380,10 +367,6 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         """
         if not has_capstone:
             vollog.debug("capstone is not installed so cannot fall back to export table analysis.")
-            return None, None, None
-
-        if not has_pefile:
-            vollog.debug("pefile is not installed so cannot fall back to export table analysis.")
             return None, None, None
 
         vollog.debug("Unable to perform analysis using PDB symbols, falling back to export table analysis.")
@@ -535,7 +518,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             if csystems is not None:
                 break
 
-        if csystems == None:
+        if csystems is None:
             vollog.info("Unable to find CSystems inside of cryptdll.dll. Analysis cannot proceed.")
             return
 
