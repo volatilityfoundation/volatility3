@@ -13,7 +13,7 @@
 
 import logging, io
 
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, List
 
 from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework import interfaces, symbols, exceptions
@@ -26,6 +26,8 @@ from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import pslist, vadinfo
 
 from volatility3.framework.symbols.windows.extensions import pe
+
+import pefile
 
 try:
     import capstone
@@ -54,6 +56,17 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         ]
 
     def _get_pefile_obj(self, pe_table_name: str, layer_name: str, base_address: int) -> pefile.PE:
+        """
+        Attempts to pefile object from the bytes of the PE file
+
+        Args:
+            pe_table_name: name of the pe types table
+            layer_name: name of the lsass.exe process layer
+            base_address: base address of cryptdll.dll in lsass.exe
+
+        Returns:
+            the constructed pefile object
+        """
         pe_data = io.BytesIO()
 
         try:
@@ -108,6 +121,33 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         """ 
         return csystem.Initialize != rc4HmacInitialize or csystem.Decrypt != rc4HmacDecrypt
 
+    def _construct_ecrypt_array(self, array_start: int, count: int, \
+                                cryptdll_types: interfaces.context.ModuleInterface) -> interfaces.context.ModuleInterface:
+        """
+        Attempts to construct an array of _KERB_ECRYPT structures
+
+        Args:
+            array_start: starting virtual address of the array
+            count: how many elements are in the array
+            cryptdll_types: the reverse engineered types
+
+        Returns:
+            The instantiated array
+        """
+
+        try:
+            array = cryptdll_types.object(object_type = "array",
+                                      offset = array_start,
+                                      subtype = cryptdll_types.get_type("_KERB_ECRYPT"),
+                                      count = count,
+                                      absolute = True)
+
+        except exceptions.InvalidAddressException:
+            vollog.debug("Unable to construct cSystems array at given offset: {:x}".format(array_start))
+            array = None
+            
+        return array
+
     def _find_array_with_pdb_symbols(self, cryptdll_symbols: str, 
                                            cryptdll_types: interfaces.context.ModuleInterface, 
                                            proc_layer_name: str, 
@@ -124,12 +164,15 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         Returns:
             Tuple of:
-            array_start: Where CSystems begins
-            count: Number of array elements
+            array: The cSystems array
             rc4HmacInitialize: The runtime address of the expected initialization function
             rc4HmacDecrypt: The runtime address of the expected decryption function
         """
         cryptdll_module = self.context.module(cryptdll_symbols, layer_name = proc_layer_name, offset = cryptdll_base)
+
+        rc4HmacInitialize = cryptdll_module.get_symbol("rc4HmacInitialize").address + cryptdll_base
+
+        rc4HmacDecrypt = cryptdll_module.get_symbol("rc4HmacDecrypt").address + cryptdll_base
 
         count_address = cryptdll_module.get_symbol("cCSystems").address
 
@@ -142,11 +185,12 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         array_start = cryptdll_module.get_symbol("CSystems").address + cryptdll_base
 
-        rc4HmacInitialize = cryptdll_module.get_symbol("rc4HmacInitialize").address + cryptdll_base
+        array = self._construct_ecrypt_array(array_start, count, cryptdll_types)
+        
+        if array is None:
+            vollog.debug("The CSystem array is not present in memory. Stopping PDB based analysis.")
 
-        rc4HmacDecrypt = cryptdll_module.get_symbol("rc4HmacDecrypt").address + cryptdll_base
-
-        return array_start, count, rc4HmacInitialize, rc4HmacDecrypt
+        return array, rc4HmacInitialize, rc4HmacDecrypt
 
     def _get_cryptdll_types(self, context: interfaces.context.ContextInterface, 
                                   config, 
@@ -173,25 +217,19 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
 
         return context.module(cryptdll_symbol_table, proc_layer_name, offset = cryptdll_base)
 
-    def _find_and_parse_cryptdll(self, proc_list: Iterable) -> \
-                                Tuple[interfaces.context.ContextInterface, str, int, int]:  
+    def _find_lsass_proc(self, proc_list: Iterable) -> \
+                               Tuple[interfaces.context.ContextInterface, str]:
         """
-        Finds the base address of cryptdll.dll insode of lsass.exe
+        Walks the process list and returns the first valid lsass instances.
+        There should be only one lsass process, but malware will often use the
+        process name to try and blend in.
 
         Args:
-            proc_list: the process list filtered to just lsass.exe instances
+            proc_list: The process list generator
 
-        Returns:
-            A tuple of:
-            lsass_proc: the process object for lsass.exe
-            proc_layer_name: the name of the lsass.exe process layer
-            cryptdll_base: the base address of cryptdll.dll
-            crytpdll_size: the size of the VAD for cryptdll.dll
+        Return:
+            The process object for lsass
         """
-        lsass_proc    = None
-        proc_layer_name = None
-        cryptdll_base = None
-        cryptdll_size  = None
 
         for proc in proc_list:
             try:
@@ -202,21 +240,31 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                                                                                  excp.layer_name))
                 continue
 
-            proc_layer = self.context.layers[proc_layer_name]
+            return proc, proc_layer_name
+            
+        return None, None
 
-            for vad in proc.get_vad_root().traverse():
-                filename = vad.get_file_name()
-                
-                if isinstance(filename, str) and filename.lower().endswith("cryptdll.dll"):
-                    cryptdll_base = vad.get_start()
-                    cryptdll_size = vad.get_end() - cryptdll_base
+    def _find_cryptdll(self, lsass_proc: interfaces.context.ContextInterface) -> \
+                                Tuple[int, int]:  
+        """
+        Finds the base address of cryptdll.dll inside of lsass.exe
 
-                    break
+        Args:
+            lsass_proc: the process object for lsass.exe
 
-            lsass_proc = proc
-            break
+        Returns:
+            A tuple of:
+            cryptdll_base: the base address of cryptdll.dll
+            crytpdll_size: the size of the VAD for cryptdll.dll
+        """
+        for vad in lsass_proc.get_vad_root().traverse():
+            filename = vad.get_file_name()
+            
+            if isinstance(filename, str) and filename.lower().endswith("cryptdll.dll"):
+                base = vad.get_start()
+                return base, vad.get_end() - base
 
-        return lsass_proc, proc_layer_name, cryptdll_base, cryptdll_size
+        return None, None
 
     def _find_csystems_with_symbols(self, proc_layer_name: str, 
                                           cryptdll_types: interfaces.context.ModuleInterface, 
@@ -247,21 +295,14 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                                                                     cryptdll_base,
                                                                     cryptdll_size)
         except exceptions.VolatilityException:
+            vollog.debug("Unable to use the cryptdll PDB. Stopping PDB symbols based analysis.")
             return None, None, None
 
-        array_start, count, rc4HmacInitialize, rc4HmacDecrypt = \
+        array, rc4HmacInitialize, rc4HmacDecrypt = \
             self._find_array_with_pdb_symbols(cryptdll_symbols, cryptdll_types, proc_layer_name, cryptdll_base) 
        
-        try: 
-            array = cryptdll_types.object(object_type = "array",
-                                    offset = array_start,
-                                    subtype = cryptdll_types.get_type("_KERB_ECRYPT"),
-                                    count = count,
-                                    absolute = True)
-
-        except exceptions.InvalidAddressException:
+        if array is None:
             vollog.debug("The CSystem array is not present in memory. Stopping PDB symbols based analysis.")
-            return None, None, None
 
         return array, rc4HmacInitialize, rc4HmacDecrypt
 
@@ -292,7 +333,8 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         return inst.address + inst.size + opnd.mem.disp
 
     def _analyze_cdlocatecsystem(self, function_bytes: bytes,
-                                       function_start: int, 
+                                       function_start: int,
+                                       cryptdll_types: interfaces.context.ModuleInterface,
                                        proc_layer_name: str) -> Tuple[int, int]:
         """
         Performs static analysis on CDLocateCSystem to find the instructions that
@@ -304,9 +346,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             proc_layer_name: the name of the lsass.exe process layer
 
         Return:
-            Tuple of:
-            array_start: address of CSystem
-            count: the count from cCsystems or 16
+            The cSystems array of ecrypt instances
         """
         found_count = False
         array_start = None
@@ -344,12 +384,17 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                 # we find the count before, so we can terminate the static analysis here
                 break
 
-        return array_start, count
+        if array_start and count:
+            array = self._construct_ecrypt_array(array_start, count, cryptdll_types)
+        else:
+            array = None
+
+        return array
 
     def _find_csystems_with_export(self, proc_layer_name: str, 
                                          cryptdll_types: interfaces.context.ModuleInterface, 
                                          cryptdll_base: int, 
-                                         _) -> Tuple[int, None, None]:
+                                         _) -> interfaces.context.ModuleInterface:
         """
         Uses export table analysis to locate CDLocateCsystem
         This function references CSystems and cCsystems
@@ -360,14 +405,12 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             cryptdll_base: Base address of cryptdll.dll inside of lsass.exe
             _: unused in this source
         Returns:
-            Tuple of:
-            array_start: Where CSystems begins
-            None: this method cannot find the expected initialization address
-            None: this method cannot find the expected decryption address
+            The cSystems array
         """
+
         if not has_capstone:
             vollog.debug("capstone is not installed so cannot fall back to export table analysis.")
-            return None, None, None
+            return None
 
         vollog.debug("Unable to perform analysis using PDB symbols, falling back to export table analysis.")
 
@@ -377,15 +420,14 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                                                                 "pe",
                                                                 class_types = pe.class_types)
   
-  
+ 
         cryptdll = self._get_pefile_obj(pe_table_name, proc_layer_name, cryptdll_base)
-        if not cryptdll or not hasattr(cryptdll, 'DIRECTORY_ENTRY_EXPORT'):
-            return None, None, None
-        
-        cryptdll.parse_data_directories(directories = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]])
+        if not cryptdll:
+            return None
 
-        array_start = None
-        count = None
+        cryptdll.parse_data_directories(directories = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]])
+        if not hasattr(cryptdll, 'DIRECTORY_ENTRY_EXPORT'):
+            return None
 
         # find the location of CDLocateCSystem and then perform static analysis
         for export in cryptdll.DIRECTORY_ENTRY_EXPORT.symbols:
@@ -400,28 +442,18 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                 vollog.debug("The CDLocateCSystem function is not present in the lsass address space. Stopping export based analysis.")
                 break
 
-            array_start, count = self._analyze_cdlocatecsystem(function_bytes, function_start, proc_layer_name)
-        
-            break
-
-        if array_start:
-            try:
-                array = cryptdll_types.object(object_type = "array",
-                                          offset = array_start,
-                                          subtype = cryptdll_types.get_type("_KERB_ECRYPT"),
-                                          count = count,
-                                          absolute = True)
-
-            except exceptions.InvalidAddressException:
+            array = self._analyze_cdlocatecsystem(function_bytes, function_start, cryptdll_types, proc_layer_name)
+            if array is None:
                 vollog.debug("The CSystem array is not present in memory. Stopping export based analysis.")
-                return None, None, None
 
-        return array, None, None
+            return array
+
+        return None
 
     def _find_csystems_with_scanning(self, proc_layer_name: str, 
                                            cryptdll_types: interfaces.context.ModuleInterface, 
                                            cryptdll_base: int, 
-                                           cryptdll_size: int) -> Tuple[int, None, None]:
+                                           cryptdll_size: int) -> List[interfaces.context.ModuleInterface]:
         """
         Performs scanning to find potential RC4 HMAC csystem instances
 
@@ -433,10 +465,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             cryptdll_base: base address of cryptdll.dll inside of lsass.exe
             cryptdll_size: size of the VAD
         Returns:
-            Tuple of:
-            array_start: Where CSystems begins
-            None: this method cannot find the expected initialization address
-            None: this method cannot find the expected decryption address
+            A list of csystem instances
         """
      
         csystems = []
@@ -468,7 +497,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                (cryptdll_base < kerb.Finish < cryptdll_end):
                 csystems.append(kerb)
 
-        return csystems, None, None
+        return csystems
 
     def _generator(self, procs):
         """
@@ -484,14 +513,14 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             vollog.info("This plugin only supports 64bit Windows memory samples")
             return
 
-        lsass_proc, proc_layer_name, cryptdll_base, cryptdll_size = self._find_and_parse_cryptdll(procs)
-        
+        lsass_proc, proc_layer_name = self._find_lsass_proc(procs)
         if not lsass_proc:
-            vollog.warn("Unable to find lsass.exe process in process list. This should never happen. Analysis cannot proceed.")
+            vollog.info("Unable to find a valid lsass.exe process in the process list. This should never happen. Analysis cannot proceed.")
             return
 
+        cryptdll_base, cryptdll_size = self._find_cryptdll(lsass_proc)
         if not cryptdll_base:
-            vollog.warn("Unable to find the location of cryptdll.dll inside of lsass.exe. Analysis cannot proceed.")
+            vollog.info("Unable to find the location of cryptdll.dll inside of lsass.exe. Analysis cannot proceed.")
             return
         
         # the custom type information from binary analysis
@@ -502,21 +531,31 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                                                   cryptdll_base)
 
 
-        # attempt to locate csystem and handlers in order of 
-        # reliability and reporting accuracy
-        sources = [self._find_csystems_with_symbols,
-                   self._find_csystems_with_export,
-                   self._find_csystems_with_scanning]
+        # attempt to find the array and symbols directly from the PDB
+        csystems, rc4HmacInitialize, rc4HmacDecrypt = \
+                self._find_csystems_with_symbols(proc_layer_name,
+                                                 cryptdll_types,
+                                                 cryptdll_base,
+                                                 cryptdll_size) 
 
-        for source in sources:
-            csystems, rc4HmacInitialize, rc4HmacDecrypt = \
-                    source(proc_layer_name, 
-                           cryptdll_types,
-                           cryptdll_base,
-                           cryptdll_size)        
+        csystems = None
 
-            if csystems is not None:
-                break
+        # if we can't find cSystems through the PDB then
+        # we fall back to export analysis and scanning
+        # we keep the address of the rc4 functions from the PDB
+        # though as its our only source to get them
+        if csystems is None:
+            fallback_sources = [self._find_csystems_with_export,
+                                self._find_csystems_with_scanning]
+
+            for source in fallback_sources:
+                csystems = source(proc_layer_name, 
+                                  cryptdll_types,
+                                  cryptdll_base,
+                                  cryptdll_size)
+
+                if csystems is not None:
+                    break
 
         if csystems is None:
             vollog.info("Unable to find CSystems inside of cryptdll.dll. Analysis cannot proceed.")
