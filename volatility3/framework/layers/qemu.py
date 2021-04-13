@@ -58,12 +58,15 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         data = b''
         for i in range(base_layer.maximum_address, base_layer.minimum_address, -chunk_size):
             if i != base_layer.maximum_address:
-                data = base_layer.read(i, chunk_size) + data
+                data = base_layer.read(i, chunk_size).rstrip(b'\x00') + data
                 if b'\x00' in data:
-                    start = data.rfind(b'\x00')
-                    data = data[data.find(b'{', start):]
-                    return json.loads(data)
-        raise exceptions.LayerException(name, "Could not load JSON configuration from the end of the file")
+                    last_null_byte = data.rfind(b'\x00')
+                    start_of_json = data.find(b'{', last_null_byte)
+                    if start_of_json >= 0:
+                        data = data[start_of_json:]
+                        return json.loads(data)
+                    return dict()
+        raise exceptions.LayerException(name, "Invalid JSON configuration at the end of the file")
 
     def _get_ram_segments(self, index: int, page_size: int) -> Tuple[List[Tuple[int, int, int, int]], int]:
         """Recovers the new index and any sections of memory from a ram section"""
