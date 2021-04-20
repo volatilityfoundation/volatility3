@@ -7,6 +7,7 @@ import json
 import logging
 import lzma
 import os
+import re
 import struct
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 from urllib import request, parse
@@ -344,20 +345,16 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
         self._pdb_names = pdb_names
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[str, Any, bytes, int], None, None]:
-        sig = data.find(b"RSDS")
-        while sig >= 0:
-            null = data.find(b'\0', sig + 4 + self._RSDS_format.size)
-            if null > -1:
-                if (null - sig - self._RSDS_format.size) <= 100:
-                    name_offset = sig + 4 + self._RSDS_format.size
-                    pdb_name = data[name_offset:null]
-                    if pdb_name in self._pdb_names:
+        pattern = b'RSDS' + (b'.' * self._RSDS_format.size) + b'(' + b'|'.join(self._pdb_names) + b')\x00'
+        for match in re.finditer(pattern, data):
+            pdb_name = data[match.start(0) + 4 + self._RSDS_format.size:match.start(0) + len(match.group()) - 1]
+            print("MATCH", pdb_name)
+            if pdb_name in self._pdb_names:
+                ## this ordering is intentional due to mixed endianness in the GUID
+                (g3, g2, g1, g0, g5, g4, g7, g6, g8, g9, ga, gb, gc, gd, ge, gf, a) = \
+                    self._RSDS_format.unpack(data[match.start(0) + 4:match.start(0) + 4 + self._RSDS_format.size])
 
-                        ## this ordering is intentional due to mixed endianness in the GUID
-                        (g3, g2, g1, g0, g5, g4, g7, g6, g8, g9, ga, gb, gc, gd, ge, gf, a) = \
-                            self._RSDS_format.unpack(data[sig + 4:name_offset])
-
-                        guid = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
-                        if sig < self.chunk_size:
-                            yield (guid, a, pdb_name, data_offset + sig)
-            sig = data.find(b"RSDS", sig + 1)
+                guid = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
+                if match.start(0) < self.chunk_size:
+                    print("YIELDING", (guid, a, pdb_name, match.start(0)))
+                    yield (guid, a, pdb_name, match.start(0))
