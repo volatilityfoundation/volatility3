@@ -3,6 +3,7 @@
 #
 
 import logging
+import os
 from typing import List
 
 from volatility3.framework import interfaces, renderers, constants, symbols, exceptions
