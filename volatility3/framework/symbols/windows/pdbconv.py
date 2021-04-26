@@ -353,18 +353,21 @@ class PdbReader:
 
         ipi_list = []
 
-        type_references = self._read_info_stream(4, "IPI", ipi_list)
+        try:
+            type_references = self._read_info_stream(4, "IPI", ipi_list)
+            for name in type_references.keys():
+                # This doesn't break, because we want to use the last string/pdbname in the list
+                if name.endswith('.pdb'):
+                    self._database_name = name.split('\\')[-1]
+        except ValueError:
+            return None
 
-        for name in type_references.keys():
-            # This doesn't break, because we want to use the last string/pdbname in the list
-            if name.endswith('.pdb'):
-                self._database_name = name.split('\\')[-1]
 
     def _read_info_stream(self, stream_number, stream_name, info_list):
         vollog.debug("Reading {}".format(stream_name))
         info_layer = self._context.layers.get(self._layer_name + "_stream" + str(stream_number), None)
         if not info_layer:
-            raise ValueError("No TPI stream available")
+            raise ValueError("No {} stream available".format(stream_name))
         module = self._context.module(module_name = info_layer.pdb_symbol_table,
                                       layer_name = info_layer.name,
                                       offset = 0)
@@ -646,8 +649,8 @@ class PdbReader:
         else:
             leaf_type, name, value = self.types[index - 0x1000]
             if leaf_type in [
-                    leaf_type.LF_UNION, leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE,
-                    leaf_type.LF_STRUCTURE_ST, leaf_type.LF_INTERFACE
+                leaf_type.LF_UNION, leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE,
+                leaf_type.LF_STRUCTURE_ST, leaf_type.LF_INTERFACE
             ]:
                 if not value.properties.forward_reference:
                     result = value.size
@@ -691,8 +694,8 @@ class PdbReader:
             self._progress_callback(index * 100 / max_len, "Processing types")
             leaf_type, name, value = self.types[index]
             if leaf_type in [
-                    leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
-                    leaf_type.LF_INTERFACE
+                leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
+                leaf_type.LF_INTERFACE
             ]:
                 if not value.properties.forward_reference and name:
                     self.user_types[name] = {
@@ -726,9 +729,9 @@ class PdbReader:
         self.user_types = self.replace_forward_references(self.user_types, type_references)
 
     def consume_type(
-        self, module: interfaces.context.ModuleInterface, offset: int, length: int
+            self, module: interfaces.context.ModuleInterface, offset: int, length: int
     ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Union[
-            None, List, interfaces.objects.ObjectInterface]], int]:
+        None, List, interfaces.objects.ObjectInterface]], int]:
         """Returns a (leaf_type, name, object) Tuple for a type, and the number
         of bytes consumed."""
         leaf_type = self.context.object(module.get_enumeration("LEAF_TYPE"),
@@ -738,8 +741,8 @@ class PdbReader:
         remaining = length - consumed
 
         if leaf_type in [
-                leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
-                leaf_type.LF_INTERFACE
+            leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
+            leaf_type.LF_INTERFACE
         ]:
             structure = module.object(object_type = "LF_STRUCTURE", offset = offset + consumed)
             name_offset = structure.name.vol.offset - structure.vol.offset
@@ -953,6 +956,7 @@ class PdbRetreiver:
 if __name__ == '__main__':
     import argparse
 
+
     class PrintedProgress(object):
         """A progress handler that prints the progress value and the
         description onto the command line."""
@@ -972,6 +976,7 @@ if __name__ == '__main__':
             message_len = len(message)
             self._max_message_len = max([self._max_message_len, message_len])
             print(message, end = (' ' * (self._max_message_len - message_len)) + '\r')
+
 
     parser = argparse.ArgumentParser(
         description = "Read PDB files and convert to Volatility 3 Intermediate Symbol Format")
