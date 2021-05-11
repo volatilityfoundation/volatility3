@@ -8,6 +8,7 @@ from typing import Tuple, Optional
 from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.layers import segmented
 from volatility3.framework.symbols import intermed
+from volatility3.framework.symbols.windows.extensions import crash
 
 vollog = logging.getLogger(__name__)
 
@@ -50,7 +51,8 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         # the _SUMMARY_DUMP is shared between 32- and 64-bit
         self._crash_common_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path,
                                                                                 'windows',
-                                                                                'crash_common')
+                                                                                'crash_common',
+                                                                                class_types=crash.class_types)
 
         # Check Header
         hdr_layer = self._context.layers[self._base_layer]
@@ -88,9 +90,6 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         segments = []
 
-        # instead of hard coding 0x2000, use 0x1000 * self.headerpages so this works for
-        # both 32- and 64-bit dumps
-        summary_header = self.get_summary_header()
         if self.dump_type == 0x1:
             header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
                                          offset=0,
@@ -103,50 +102,44 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                 offset += x.PageCount
 
         elif self.dump_type == 0x05:
+            summary_header = self.get_summary_header()
+            first_bit = None  # First bit in a run
+            first_offset = 0  # File offset of first bit
+            last_bit_seen = 0  # Most recent bit processed
+            offset = summary_header.HeaderSize  # Size of file headers
+            buffer_char = summary_header.get_buffer_char()
+            buffer_long = summary_header.get_buffer_long()
 
-            ## NOTE: In the original crash64.json, _SUMMARY_DUMP.Pages was offset 48 and
-            ## _SUMMARY_DUMP.BitmapSize was offset 40. From the volatility2 vtypes, that is
-            ## backwards! The correct offsets should be:
-            ##
-            ## 'Pages' : [ 0x28, ['unsigned long long']],    -> This is 40 decimal
-            ## 'BitmapSize': [0x30, ['unsigned long long']], -> This is 48 decimal
-            ##
-            ## Most likely, some of the code that follows needs to be adjusted with those
-            ## newly refactored offsets in mind. I commented out the "+ 0x2000" below, and
-            ## this still works on Win10x64_17763_crash.dmp, but it fails on
-            ## the Win10x86_17763_crash.dmp version. 
+            for outer_index in range(0, ((summary_header.BitmapSize + 31) // 32)):
+                if buffer_long[outer_index] == 0:
+                    if first_bit is not None:
+                        last_bit = ((outer_index - 1) * 32) + 31
+                        segment_length = (last_bit - first_bit + 1) * 0x1000
+                        segments.append((first_bit * 0x1000, first_offset, segment_length, segment_length))
+                        first_bit = None
+                elif buffer_long[outer_index] == 0xFFFFFFFF:
+                    if first_bit is None:
+                        first_offset = offset
+                        first_bit = outer_index * 32
+                    offset = offset + (32 * 0x1000)
+                else:
+                    for inner_index in range(0, 32):
+                        bit_addr = outer_index * 32 + inner_index
+                        if (buffer_char[bit_addr >> 3] >> (bit_addr & 0x7)) & 1:
+                            if first_bit is None:
+                                first_offset = offset
+                                first_bit = bit_addr
+                            offset = offset + 0x1000
+                        else:
+                            if first_bit is not None:
+                                segment_length = ((bit_addr - 1) - first_bit + 1) * 0x1000
+                                segments.append((first_bit * 0x1000, first_offset, segment_length, segment_length))
+                                first_bit = None
+                last_bit_seen = (outer_index * 32) + 31
 
-            # Add 0x2000 as some bitmaps are too short by one offset
-            summary_header.BufferLong.count = (summary_header.BitmapSize + 31) // 32 # + 0x2000
-            previous_bit = 0
-            start_position = 0
-            # We cast as an int because we don't want to carry the context around with us for infinite loop reasons
-            mapped_offset = int(summary_header.HeaderSize)
-            current_word = None
-            bitmap_len = len(summary_header.BufferLong) * 32
-
-            for bit_position in range(bitmap_len):
-                if (bit_position % 32) == 0:
-                    current_word = summary_header.BufferLong[bit_position // 32]
-                current_bit = (current_word >> (bit_position % 32)) & 1
-
-                if current_bit != previous_bit:
-                    if previous_bit == 0:
-                        # Start
-                        start_position = bit_position
-                    else:
-                        # Finish
-                        length = (bit_position - start_position) * 0x1000
-                        segments.append((start_position * 0x1000, mapped_offset, length, length))
-                        mapped_offset += length
-
-                # Find the last segment in a file which will be at the end or two pages from the end. We multiply by 32 as we want to offset bby words rather than bits
-                if (bit_position == bitmap_len - 1 or bit_position == bitmap_len - 1 - 32 * 0x2000) and current_bit == 1:
-                    length = (bit_position - start_position) * 0x1000
-                    segments.append((start_position * 0x1000, mapped_offset, length, length))
-                    mapped_offset += length
-                    break
-                previous_bit = current_bit
+            if first_bit is not None:
+                segment_length = (last_bit_seen - first_bit + 1) * 0x1000
+                segments.append((first_bit * 0x1000, first_offset, segment_length, segment_length))
         else:
             vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(self.dump_type))
             raise WindowsCrashDumpFormatException(self.name, "unsupported dump format 0x{:x}".format(self.dump_type))
