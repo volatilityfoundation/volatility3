@@ -329,5 +329,11 @@ class WindowsIntelPAE(WindowsMixin, IntelPAE):
 
 class WindowsIntel32e(WindowsMixin, Intel32e):
 
+    # TODO: Fix appropriately in a future release.
+    # Currently just a temprorary workaround to deal with custom bit flag
+    # in the PFN field for pages in transition state.
+    # See https://github.com/volatilityfoundation/volatility3/pull/475
+    _maxphyaddr = 45
+    
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         return self._translate_swap(self, offset, self._bits_per_register // 2)

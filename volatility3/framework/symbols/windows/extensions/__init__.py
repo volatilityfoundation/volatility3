@@ -972,7 +972,12 @@ class CONTROL_AREA(objects.StructType):
 
                 # If the entry is not a valid physical address then see if it is in transition.
                 elif mmpte.u.Trans.Transition == 1:
-                    physoffset = mmpte.u.Trans.PageFrameNumber << 12
+                    # TODO: Fix appropriately in a future release.
+                    # Currently just a temprorary workaround to deal with custom bit flag
+                    # in the PFN field for pages in transition state.
+                    # See https://github.com/volatilityfoundation/volatility3/pull/475
+                    physoffset = (mmpte.u.Trans.PageFrameNumber & (( 1 << 33 ) - 1 ) ) << 12
+                    
                     yield physoffset, file_offset, self.PAGE_SIZE
 
                 # Go to the next PTE entry
