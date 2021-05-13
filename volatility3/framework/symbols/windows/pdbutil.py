@@ -348,7 +348,6 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
         pattern = b'RSDS' + (b'.' * self._RSDS_format.size) + b'(' + b'|'.join(self._pdb_names) + b')\x00'
         for match in re.finditer(pattern, data):
             pdb_name = data[match.start(0) + 4 + self._RSDS_format.size:match.start(0) + len(match.group()) - 1]
-            print("MATCH", pdb_name)
             if pdb_name in self._pdb_names:
                 ## this ordering is intentional due to mixed endianness in the GUID
                 (g3, g2, g1, g0, g5, g4, g7, g6, g8, g9, ga, gb, gc, gd, ge, gf, a) = \
@@ -356,5 +355,4 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
 
                 guid = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
                 if match.start(0) < self.chunk_size:
-                    print("YIELDING", (guid, a, pdb_name, match.start(0)))
                     yield (guid, a, pdb_name, match.start(0))
