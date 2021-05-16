@@ -22,6 +22,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
     """Dumps user hashes from memory"""
 
     _required_framework_version = (1, 0, 0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls):
@@ -61,10 +62,21 @@ class Hashdump(interfaces.plugins.PluginInterface):
     empty_nt = b"\x31\xd6\xcf\xe0\xd1\x6a\xe9\x31\xb7\x3c\x59\xd7\xe0\xc0\x89\xc0"
 
     @classmethod
+    def get_hive_key(cls, hive: registry.RegistryHive, key: str):
+        result = None
+        try:
+            result = hive.get_key(key)
+        except KeyError:
+            vollog.info(
+                "Unable to load the required registry key {}\\{} from this memory image".format(hive.get_name(), key))
+        return result
+
+    @classmethod
     def get_user_keys(cls, samhive: registry.RegistryHive) -> List[interfaces.objects.ObjectInterface]:
         user_key_path = "SAM\\Domains\\Account\\Users"
 
-        user_key = samhive.get_key(user_key_path)
+        user_key = cls.get_hive_key(samhive, user_key_path)
+
         if not user_key:
             return []
         return [k for k in user_key.get_subkeys() if k.Name != "Names"]
@@ -75,7 +87,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
         lsa_base = "ControlSet{0:03}".format(cs) + "\\Control\\Lsa"
         lsa_keys = ["JD", "Skew1", "GBG", "Data"]
 
-        lsa = syshive.get_key(lsa_base)
+        lsa = cls.get_hive_key(syshive, lsa_base)
 
         if not lsa:
             return None
@@ -83,9 +95,10 @@ class Hashdump(interfaces.plugins.PluginInterface):
         bootkey = ''
 
         for lk in lsa_keys:
-            key = syshive.get_key(lsa_base + '\\' + lk)
-
-            class_data = syshive.read(key.Class + 4, key.ClassLength)
+            key = cls.get_hive_key(syshive, lsa_base + '\\' + lk)
+            class_data = None
+            if key:
+                class_data = syshive.read(key.Class + 4, key.ClassLength)
 
             if class_data is None:
                 return None
@@ -102,7 +115,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
         if not bootkey:
             return None
 
-        sam_account_key = samhive.get_key(sam_account_path)
+        sam_account_key = cls.get_hive_key(samhive, sam_account_path)
         if not sam_account_key:
             return None
 
@@ -270,7 +283,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
                     rid = int(str(user.get_name()), 16)
                     yield (0, (name, rid, lmout, ntout))
         else:
-            raise ValueError("Hbootkey is not valid")
+            vollog.warning("Hbootkey is not valid")
 
     def run(self):
         offset = self.config.get('offset', None)

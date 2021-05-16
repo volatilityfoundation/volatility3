@@ -1,19 +1,21 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
+import logging
 from struct import unpack
 from typing import Tuple
 
 from Crypto.Cipher import ARC4, AES
 from Crypto.Hash import HMAC
 
-from volatility3.framework import interfaces, renderers, exceptions
+from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.layers import registry
 from volatility3.framework.symbols.windows import versions
 from volatility3.plugins.windows import hashdump, lsadump
 from volatility3.plugins.windows.registry import hivelist
+
+vollog = logging.getLogger(__name__)
 
 
 class Cachedump(interfaces.plugins.PluginInterface):
@@ -30,7 +32,8 @@ class Cachedump(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]),
             requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'lsadump', plugin = lsadump.Lsadump, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'lsadump', plugin = lsadump.Lsadump, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'hashdump', plugin = hashdump.Hashdump, version = (1, 1, 0))
         ]
 
     @staticmethod
@@ -60,7 +63,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
         (uname_len, domain_len) = unpack("<HH", cache_data[:4])
         if len(cache_data[60:62]) == 0:
             return (uname_len, domain_len, 0, b'', b'')
-        (domain_name_len, ) = unpack("<H", cache_data[60:62])
+        (domain_name_len,) = unpack("<H", cache_data[60:62])
         ch = cache_data[64:80]
         enc_data = cache_data[96:]
         return (uname_len, domain_len, domain_name_len, enc_data, ch)
@@ -84,21 +87,25 @@ class Cachedump(interfaces.plugins.PluginInterface):
     def _generator(self, syshive, sechive):
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         if not bootkey:
-            raise ValueError('Unable to find bootkey')
+            vollog.warning('Unable to find bootkey')
+            return
 
         vista_or_later = versions.is_vista_or_later(context = self.context, symbol_table = self.config['nt_symbols'])
 
         lsakey = lsadump.Lsadump.get_lsa_key(sechive, bootkey, vista_or_later)
         if not lsakey:
-            raise ValueError('Unable to find lsa key')
+            vollog.warning('Unable to find lsa key')
+            return
 
         nlkm = self.get_nlkm(sechive, lsakey, vista_or_later)
         if not nlkm:
-            raise ValueError('Unable to find nlkma key')
+            vollog.warning('Unable to find nlkma key')
+            return
 
-        cache = sechive.get_key("Cache")
+        cache = hashdump.Hashdump.get_hive_key(sechive, "Cache")
         if not cache:
-            raise ValueError('Unable to find cache key')
+            vollog.warning('Unable to find cache key')
+            return
 
         for cache_item in cache.get_values():
             if cache_item.Name == "NL$Control":
@@ -133,10 +140,12 @@ class Cachedump(interfaces.plugins.PluginInterface):
             if hive.get_name().split('\\')[-1].upper() == 'SECURITY':
                 sechive = hive
 
-        if syshive is None:
-            raise exceptions.VolatilityException('Unable to locate SYSTEM hive')
-        if sechive is None:
-            raise exceptions.VolatilityException('Unable to locate SECURITY hive')
+        if syshive is None or sechive is None:
+            if syshive is None:
+                vollog.warning('Unable to locate SYSTEM hive')
+            if sechive is None:
+                vollog.warning('Unable to locate SECURITY hive')
+            return
 
         return renderers.TreeGrid([("Username", str), ("Domain", str), ("Domain name", str), ('Hashh', bytes)],
                                   self._generator(syshive, sechive))
