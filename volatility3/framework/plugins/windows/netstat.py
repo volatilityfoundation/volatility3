@@ -2,8 +2,8 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import logging
 import datetime
+import logging
 from typing import Iterable, Optional, Generator, Tuple
 
 from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
@@ -98,12 +98,12 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def enumerate_structures_by_port(cls,
-                       context: interfaces.context.ContextInterface,
-                       layer_name: str,
-                       net_symbol_table: str,
-                       port: int,
-                       port_pool_addr: int,
-                       proto="tcp") -> \
+                                     context: interfaces.context.ContextInterface,
+                                     layer_name: str,
+                                     net_symbol_table: str,
+                                     port: int,
+                                     port_pool_addr: int,
+                                     proto = "tcp") -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all UDP Endpoints and TCP Listeners by parsing UdpPortPool and TcpPortPool.
 
@@ -354,12 +354,12 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def list_sockets(cls,
-                       context: interfaces.context.ContextInterface,
-                       layer_name: str,
-                       nt_symbols: str,
-                       net_symbol_table: str,
-                       tcpip_module_offset: int,
-                       tcpip_symbol_table: str) -> \
+                     context: interfaces.context.ContextInterface,
+                     layer_name: str,
+                     nt_symbols: str,
+                     net_symbol_table: str,
+                     tcpip_module_offset: int,
+                     tcpip_symbol_table: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all UDP Endpoints, TCP Listeners and TCP Endpoints in the primary layer that
         are in tcpip.sys's UdpPortPool, TcpPortPool and TCP Endpoint partition table, respectively.
@@ -424,9 +424,12 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         tcpip_module = self.get_tcpip_module(self.context, self.config["primary"], self.config["nt_symbols"])
 
-        tcpip_symbol_table = pdbutil.PDBUtility.symbol_table_from_pdb(
-            self.context, interfaces.configuration.path_join(self.config_path, 'tcpip'), self.config["primary"],
-            "tcpip.pdb", tcpip_module.DllBase, tcpip_module.SizeOfImage)
+        try:
+            tcpip_symbol_table = pdbutil.PDBUtility.symbol_table_from_pdb(
+                self.context, interfaces.configuration.path_join(self.config_path, 'tcpip'), self.config["primary"],
+                "tcpip.pdb", tcpip_module.DllBase, tcpip_module.SizeOfImage)
+        except exceptions.VolatilityException:
+            vollog.warning("Unable to locate symbols for the memory image's tcpip module")
 
         for netw_obj in self.list_sockets(self.context, self.config['primary'], self.config['nt_symbols'],
                                           netscan_symbol_table, tcpip_module.DllBase, tcpip_symbol_table):
@@ -494,8 +497,10 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 continue
             description = "Network connection: Process {} {} Local Address {}:{} " \
                           "Remote Address {}:{} State {} Protocol {} ".format(row_dict["PID"], row_dict["Owner"],
-                                                                              row_dict["LocalAddr"], row_dict["LocalPort"],
-                                                                              row_dict["ForeignAddr"], row_dict["ForeignPort"],
+                                                                              row_dict["LocalAddr"],
+                                                                              row_dict["LocalPort"],
+                                                                              row_dict["ForeignAddr"],
+                                                                              row_dict["ForeignPort"],
                                                                               row_dict["State"], row_dict["Proto"])
 
             yield (description, timeliner.TimeLinerType.CREATED, row_dict["Created"])
