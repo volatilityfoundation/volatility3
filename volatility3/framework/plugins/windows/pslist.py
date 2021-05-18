@@ -83,12 +83,13 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         return file_handle
 
     @classmethod
-    def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+    def create_pid_filter(cls, pid_list: List[int] = None, exclude: bool = False) -> Callable[[interfaces.objects.ObjectInterface], bool]:
         """A factory for producing filter functions that filter based on a list
         of process IDs.
 
         Args:
             pid_list: A list of process IDs that are acceptable, all other processes will be filtered out
+            exclude: Accept only tasks that are not in pid_list
 
         Returns:
             Filter function for passing to the `list_processes` method
@@ -98,17 +99,20 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
         if filter_list:
-            filter_func = lambda x: x.UniqueProcessId not in filter_list
+            if exclude:
+                filter_func = lambda x: x.UniqueProcessId in filter_list
+            else:
+                filter_func = lambda x: x.UniqueProcessId not in filter_list
         return filter_func
 
     @classmethod
-    def create_name_filter(cls, name_list: List[str] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+    def create_name_filter(cls, name_list: List[str] = None, exclude: bool = False) -> Callable[[interfaces.objects.ObjectInterface], bool]:
         """A factory for producing filter functions that filter based on a list
         of process names.
 
         Args:
             name_list: A list of process names that are acceptable, all other processes will be filtered out
-
+            exclude: Accept only tasks that are not in name_list
         Returns:
             Filter function for passing to the `list_processes` method
         """
@@ -117,7 +121,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         name_list = name_list or []
         filter_list = [x for x in name_list if x is not None]
         if filter_list:
-            filter_func = lambda x: utility.array_to_string(x.ImageFileName) not in filter_list
+            if exclude:
+                filter_func = lambda x: utility.array_to_string(x.ImageFileName) in filter_list
+            else:
+                filter_func = lambda x: utility.array_to_string(x.ImageFileName) not in filter_list
         return filter_func
 
     @classmethod
