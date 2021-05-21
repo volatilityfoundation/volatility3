@@ -62,6 +62,7 @@ class ABCKmsg(ABC):
         self.layer_name = self._config['primary']  # type: ignore
         symbol_table_name = self._config['vmlinux']  # type: ignore
         self.vmlinux = contexts.Module(context, symbol_table_name, self.layer_name, 0)  # type: ignore
+        self.long_unsigned_int_size = self.vmlinux.get_type('long unsigned int').size
 
     @classmethod
     def run_all(
@@ -288,7 +289,7 @@ class KmsgFiveTen(ABCKmsg):
 
         # Each element in the ringbuffer is "ID + data".
         # See prb_data_ring struct
-        desc_id_size = 8  # sizeof(long)
+        desc_id_size = self.long_unsigned_int_size
         text_start = begin + desc_id_size
         offset = text_data_ring.data + text_start
 
@@ -328,7 +329,7 @@ class KmsgFiveTen(ABCKmsg):
                                        count=desc_count)
 
         # See kernel/printk/printk_ringbuffer.h
-        desc_state_var_bytes_sz = 8  # sizeof(long)
+        desc_state_var_bytes_sz = self.long_unsigned_int_size
         desc_state_var_bits_sz = desc_state_var_bytes_sz * 8
         desc_flags_shift = desc_state_var_bits_sz - 2
         desc_flags_mask = 3 << desc_flags_shift
