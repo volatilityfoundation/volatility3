@@ -21,7 +21,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular windows memory image."""
 
     _required_framework_version = (1, 0, 0)
-    _version = (2, 0, 0)
+    _version = (2, 0, 1)
     PHYSICAL_DEFAULT = False
 
     @classmethod
