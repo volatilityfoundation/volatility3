@@ -3,11 +3,10 @@
 #
 """Volatility 3 framework."""
 # Check the python version to ensure it's suitable
-# We currently require 3.5.3 since 3.5.1 has no typing.Type and 3.5.2 is broken for ''/delayed encapsulated types
 import glob
 import sys
 
-required_python_version = (3, 5, 3)
+required_python_version = (3, 6, 0)
 if (sys.version_info.major != required_python_version[0] or sys.version_info.minor < required_python_version[1] or
     (sys.version_info.minor == required_python_version[1] and sys.version_info.micro < required_python_version[2])):
     raise RuntimeError(

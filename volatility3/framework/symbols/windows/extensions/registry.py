@@ -30,23 +30,9 @@ class RegValueTypes(enum.Enum):
     REG_QWORD = 11
     REG_UNKNOWN = 99999
 
-    # TODO: This _missing_() method can replace the get() method below
-    # if support for Python 3.6 is added in the future
-    # @classmethod
-    # def _missing_(cls, value):
-    #     return cls(RegValueTypes.REG_UNKNOWN)
-
     @classmethod
-    def get(cls, value):
-        """An alternative method for using this enum when the value may be
-        unknown.
-
-        This is used to support unknown value requests in Python <3.6.
-        """
-        try:
-            return cls(value)
-        except ValueError:
-            return cls(RegValueTypes.REG_UNKNOWN)
+    def _missing_(cls, value):
+        return cls(RegValueTypes.REG_UNKNOWN)
 
 
 class RegKeyFlags(enum.IntEnum):
