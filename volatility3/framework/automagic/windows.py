@@ -128,11 +128,12 @@ class DtbTest64bit(DtbTest):
     def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
-                         ptr_reference = range(0x100, 0x1FF),
+                         ptr_reference = range(0x1E0, 0x1FF),
                          mask = 0x3FFFFFFFFFF000)
 
     # As of Windows-10 RS1+, the ptr_reference is randomized:
     # https://blahcat.github.io/2020/06/15/playing_with_self_reference_pml4_entry/
+    # So far, we've only seen examples between 0x1e0 and 0x1ff
 
 
 class DtbTestPae(DtbTest):
