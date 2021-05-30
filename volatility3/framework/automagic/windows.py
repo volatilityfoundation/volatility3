@@ -58,7 +58,6 @@ class DtbTest:
         # but they can have all four entries filled, so we'd want this test off anyway
         self.num_entries = self.page_size // self.ptr_size
 
-
     def _unpack(self, value: bytes) -> int:
         return struct.unpack("<" + self.ptr_struct, value)[0]
 
@@ -76,7 +75,7 @@ class DtbTest:
         """
         for ptr_reference in self.ptr_reference:
             value = data[page_offset + (ptr_reference * self.ptr_size):page_offset +
-                         ((ptr_reference + 1) * self.ptr_size)]
+                                                                       ((ptr_reference + 1) * self.ptr_size)]
             try:
                 ptr = self._unpack(value)
             except struct.error:
@@ -179,8 +178,6 @@ class DtbTestPae(DtbTest):
         return None
 
 
-
-
 class PageMapScanner(interfaces.layers.ScannerInterface):
     """Scans through all pages using DTB tests to determine a dtb offset and
     architecture."""
@@ -194,6 +191,7 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
         self.tests = tests
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[DtbTest, int], None, None]:
+
         for test in self.tests:
             for page_offset in range(0, len(data), 0x1000):
                 result = test(data, data_offset, page_offset)
