@@ -8,6 +8,7 @@ from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints, conversion
 from volatility3.framework.objects import utility
+from volatility3.framework.layers import crash
 
 vollog = logging.getLogger(__name__)
 
@@ -63,6 +64,10 @@ class Crashinfo(interfaces.plugins.PluginInterface):
 
     def run(self):
         layer = self._context.layers[self.config['primary.memory_layer']]
+        if not isinstance(layer, crash.WindowsCrashDump32Layer):
+            vollog.error("This plugin requires a Windows crash dump")
+            raise
+
         return renderers.TreeGrid([("Signature", str),
                                    ("MajorVersion", int),
                                    ("MinorVersion", int),
