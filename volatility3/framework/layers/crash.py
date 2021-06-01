@@ -29,7 +29,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     VALIDDUMP = 0x504d5544
 
     crashdump_json = 'crash'
-    supported_dumptypes = [0x01, 0x05] # we need 0x5 for 32-bit bitmaps
+    supported_dumptypes = [0x01, 0x05]  # we need 0x5 for 32-bit bitmaps
     dump_header_name = '_DUMP_HEADER'
 
     _magic_struct = struct.Struct('<II')
@@ -49,10 +49,11 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                                                                          self.crashdump_json)
 
         # the _SUMMARY_DUMP is shared between 32- and 64-bit
-        self._crash_common_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path,
+        self._crash_common_table_name = intermed.IntermediateSymbolTable.create(context,
+                                                                                self._config_path,
                                                                                 'windows',
                                                                                 'crash_common',
-                                                                                class_types=crash.class_types)
+                                                                                class_types = crash.class_types)
 
         # Check Header
         hdr_layer = self._context.layers[self._base_layer]
@@ -77,13 +78,13 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
     def get_header(self) -> interfaces.objects.ObjectInterface:
         return self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
-                                   offset=0,
-                                   layer_name=self._base_layer)
+                                   offset = 0,
+                                   layer_name = self._base_layer)
 
     def get_summary_header(self) -> interfaces.objects.ObjectInterface:
         return self.context.object(self._crash_common_table_name + constants.BANG + "_SUMMARY_DUMP",
-                                   offset=0x1000 * self.headerpages,
-                                   layer_name=self._base_layer)
+                                   offset = 0x1000 * self.headerpages,
+                                   layer_name = self._base_layer)
 
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer."""
@@ -92,13 +93,14 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         if self.dump_type == 0x1:
             header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
-                                         offset=0,
-                                         layer_name=self._base_layer)
+                                         offset = 0,
+                                         layer_name = self._base_layer)
 
             offset = self.headerpages
             header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
             for run in header.PhysicalMemoryBlockBuffer.Run:
-                segments.append((run.BasePage * 0x1000, offset * 0x1000, run.PageCount * 0x1000, run.PageCount * 0x1000))
+                segments.append(
+                    (run.BasePage * 0x1000, offset * 0x1000, run.PageCount * 0x1000, run.PageCount * 0x1000))
                 offset += run.PageCount
 
         elif self.dump_type == 0x05:
@@ -150,18 +152,17 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             # report the segments for debugging. this is valuable for dev/troubleshooting but
             # not important enough for a dedicated plugin.
             for idx, (start_position, mapped_offset, length, _) in enumerate(segments):
-                vollog.log(constants.LOGLEVEL_VVVV,
-                           "Segment {}: Position {:#x} Offset {:#x} Length {:#x}".format(idx,
-                                                                                         start_position,
-                                                                                         mapped_offset,
-                                                                                         length))
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    "Segment {}: Position {:#x} Offset {:#x} Length {:#x}".format(idx, start_position, mapped_offset,
+                                                                                  length))
 
         self._segments = segments
 
     @classmethod
     def check_header(cls, base_layer: interfaces.layers.DataLayerInterface, offset: int = 0) -> Tuple[int, int]:
         # Verify the Window's crash dump file magic
-        
+
         try:
             header_data = base_layer.read(offset, cls._magic_struct.size)
         except exceptions.InvalidAddressException:
@@ -209,4 +210,3 @@ class WindowsCrashDumpStacker(interfaces.automagic.StackerLayerInterface):
             except WindowsCrashDumpFormatException:
                 pass
         return None
-
