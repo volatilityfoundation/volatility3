@@ -63,8 +63,14 @@ class Crashinfo(interfaces.plugins.PluginInterface):
                   ))
 
     def run(self):
-        layer = self._context.layers[self.config['primary.memory_layer']]
-        if not isinstance(layer, crash.WindowsCrashDump32Layer):
+        crash_layer = None
+        for layer_name in self._context.layers:
+            layer = self._context.layers[layer_name]
+            if isinstance(layer, crash.WindowsCrashDump32Layer):
+                crash_layer = layer
+                break
+
+        if crash_layer is None:
             vollog.error("This plugin requires a Windows crash dump")
             raise
 
@@ -85,4 +91,4 @@ class Crashinfo(interfaces.plugins.PluginInterface):
                                    ("BitmapHeaderSize", format_hints.Hex),
                                    ("BitmapSize", format_hints.Hex),
                                    ("BitmapPages", format_hints.Hex),
-                                   ], self._generator(layer))
+                                   ], self._generator(crash_layer))
