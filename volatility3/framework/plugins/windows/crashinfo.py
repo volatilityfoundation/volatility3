@@ -23,7 +23,7 @@ class Crashinfo(interfaces.plugins.PluginInterface):
                                                      architectures = ["Intel32", "Intel64"]), 
             ]
         
-    def _generator(self, layer):
+    def _generator(self, layer: crash.WindowsCrashDump32Layer):
         header = layer.get_header()
         uptime = datetime.timedelta(microseconds=int(header.SystemUpTime) / 10)
 
