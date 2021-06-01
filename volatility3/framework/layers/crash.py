@@ -97,9 +97,9 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
             offset = self.headerpages
             header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
-            for x in header.PhysicalMemoryBlockBuffer.Run:
-                segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
-                offset += x.PageCount
+            for run in header.PhysicalMemoryBlockBuffer.Run:
+                segments.append((run.BasePage * 0x1000, offset * 0x1000, run.PageCount * 0x1000, run.PageCount * 0x1000))
+                offset += run.PageCount
 
         elif self.dump_type == 0x05:
             summary_header = self.get_summary_header()
