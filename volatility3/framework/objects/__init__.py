@@ -3,6 +3,7 @@
 #
 
 import collections
+import functools
 import logging
 import struct
 from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
@@ -310,6 +311,7 @@ class Pointer(Integer):
         value = int.from_bytes(data, byteorder = endian, signed = signed)
         return value & mask
 
+    @functools.lru_cache(3)
     def dereference(self, layer_name: Optional[str] = None) -> interfaces.objects.ObjectInterface:
         """Dereferences the pointer.
 
