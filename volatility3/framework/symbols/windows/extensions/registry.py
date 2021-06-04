@@ -260,7 +260,7 @@ class CM_KEY_VALUE(objects.StructType):
             # but the length at the start could be negative so just adding 4 to jump past it
             data = layer.read(self.Data + 4, datalen)
 
-        self_type = RegValueTypes.get(self.Type)
+        self_type = RegValueTypes(self.Type)
         if self_type == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):
                 raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
