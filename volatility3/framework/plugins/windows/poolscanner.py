@@ -18,9 +18,7 @@ from volatility3.plugins.windows import handles
 vollog = logging.getLogger(__name__)
 
 
-# TODO: When python3.5 is no longer supported, make this enum.IntFlag
-# Revisit the page_type signature of PoolConstraint once using enum.IntFlag
-class PoolType(enum.IntEnum):
+class PoolType(enum.IntFlag):
     """Class to maintain the different possible PoolTypes The values must be
     integer powers of 2."""
 
@@ -37,7 +35,7 @@ class PoolConstraint:
                  tag: bytes,
                  type_name: str,
                  object_type: Optional[str] = None,
-                 page_type: Optional[int] = None,
+                 page_type: Optional[PoolType] = None,
                  size: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  index: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  alignment: Optional[int] = 1,
