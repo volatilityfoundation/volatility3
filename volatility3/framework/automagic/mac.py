@@ -6,7 +6,7 @@ import logging
 import struct
 from typing import Optional
 
-from volatility3.framework import interfaces, constants, layers
+from volatility3.framework import interfaces, constants, layers, exceptions
 from volatility3.framework.automagic import symbol_cache, symbol_finder
 from volatility3.framework.layers import intel, scanners
 from volatility3.framework.symbols import mac
@@ -79,7 +79,12 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                                               metadata = {'os': 'Mac'})
 
                 idlepml4_ptr = table.get_symbol("IdlePML4").address + kaslr_shift
-                idlepml4_str = layer.read(idlepml4_ptr, 4)
+                try:
+                    idlepml4_str = layer.read(idlepml4_ptr, 4)
+                except exceptions.InvalidAddressException:
+                    vollog.log(constants.LOGLEVEL_VVVV, f"Skipping invalid idlepml4_ptr: 0x{idlepml4_str:0x}")
+                    continue
+
                 idlepml4_addr = struct.unpack("<I", idlepml4_str)[0]
 
                 tmp_dtb = idlepml4_addr
