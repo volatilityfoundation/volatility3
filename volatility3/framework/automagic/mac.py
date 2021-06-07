@@ -82,7 +82,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 try:
                     idlepml4_str = layer.read(idlepml4_ptr, 4)
                 except exceptions.InvalidAddressException:
-                    vollog.log(constants.LOGLEVEL_VVVV, f"Skipping invalid idlepml4_ptr: 0x{idlepml4_str:0x}")
+                    vollog.log(constants.LOGLEVEL_VVVV, f"Skipping invalid idlepml4_ptr: 0x{idlepml4_ptr:0x}")
                     continue
 
                 idlepml4_addr = struct.unpack("<I", idlepml4_str)[0]
