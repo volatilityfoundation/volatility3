@@ -1,6 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import base64
 import gc
 import json
 import logging
@@ -9,9 +10,11 @@ import pickle
 import urllib
 import urllib.parse
 import urllib.request
+import zipfile
 from typing import Dict, List, Optional
 
 from volatility3.framework import constants, exceptions, interfaces
+from volatility3.framework.layers import resources
 from volatility3.framework.symbols import intermed
 
 vollog = logging.getLogger(__name__)
@@ -81,20 +84,42 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
         # We only need to be called once, so no recursion necessary
         banners = self.load_banners()
 
-        cacheables = list(intermed.IntermediateSymbolTable.file_symbol_url(self.os))
+        cacheables = self.find_new_banner_files(banners, self.os)
 
-        for banner in banners:
-            for json_file in banners[banner]:
-                if json_file in cacheables:
-                    cacheables.remove(json_file)
+        new_banners = self.read_new_banners(context, config_path, cacheables, self.symbol_name, self.os,
+                                            progress_callback)
 
-        total = len(cacheables)
+        # Add in any new banners to the existing list
+        for new_banner in new_banners:
+            banner_list = banners.get(new_banner, [])
+            banners[new_banner] = list(set(banner_list + new_banners[new_banner]))
+
+        # Do remote banners *after* the JSON loading, so that it doen't pull down all the remote JSON
+        self.remote_banners(banners, self.os)
+
+        # Rewrite the cached banners each run, since writing is faster than the banner_cache validation portion
+        self.save_banners(banners)
+
+        if progress_callback is not None:
+            progress_callback(100, "Built {} caches".format(self.os))
+
+    @classmethod
+    def read_new_banners(cls, context: interfaces.context.ContextInterface, config_path: str, new_urls: List[str],
+                         symbol_name: str, operating_system: str = None,
+                         progress_callback = None) -> Optional[Dict[bytes, List[str]]]:
+        """Reads the any new banners for the OS in question"""
+        if operating_system is None:
+            return None
+
+        banners = {}
+
+        total = len(new_urls)
         if total > 0:
             vollog.info(f"Building {self.os} caches...")
         for current in range(total):
             if progress_callback is not None:
                 progress_callback(current * 100 / total, f"Building {self.os} caches")
-            isf_url = cacheables[current]
+            isf_url = new_urls[current]
 
             isf = None
             try:
@@ -104,7 +129,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                 # We should store the banner against the filename
                 # We don't bother with the hash (it'll likely take too long to validate)
                 # but we should check at least that the banner matches on load.
-                banner = isf.get_symbol(self.symbol_name).constant_data
+                banner = isf.get_symbol(symbol_name).constant_data
                 vollog.log(constants.LOGLEVEL_VV, f"Caching banner {banner} for file {isf_url}")
 
                 bannerlist = banners.get(banner, [])
@@ -119,9 +144,31 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                 if isf:
                     del isf
                     gc.collect()
+        return banners
 
-        # Rewrite the cached banners each run, since writing is faster than the banner_cache validation portion
-        self.save_banners(banners)
+    @classmethod
+    def find_new_banner_files(cls, banners: Dict[bytes, List[str]], operating_system: str) -> List[str]:
+        """Gathers all files and remove existing banners"""
+        cacheables = list(intermed.IntermediateSymbolTable.file_symbol_url(operating_system))
+        for banner in banners:
+            for json_file in banners[banner]:
+                if json_file in cacheables:
+                    cacheables.remove(json_file)
+        return cacheables
 
-        if progress_callback is not None:
-            progress_callback(100, f"Built {self.os} caches")
+    @classmethod
+    def remote_banners(cls, banners: Dict[bytes, List[str]], operating_system = None):
+        """Adds remote URLs to the banner list"""
+        if operating_system is None:
+            return None
+
+        if not constants.OFFLINE:
+            # TODO: Only download the remote file once per amount of time
+            with resources.ResourceAccessor().open(url = constants.REMOTE_ISF_URL) as fp:
+                banner_list = json.load(fp)
+            if operating_system in banner_list:
+                for banner in banner_list[operating_system]:
+                    binary_banner = base64.b64decode(banner)
+                    file_list = banners.get(binary_banner, [])
+                    file_list = list(set(file_list + banner_list[operating_system][banner]))
+                    banners[binary_banner] = file_list
