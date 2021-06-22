@@ -41,7 +41,7 @@ class tty_check(plugins.PluginInterface):
                                                                      self.config['vmlinux'], modules)
 
         try:
-            tty_drivers = vmlinux.object_from_symbol("tty_drivers")
+            tty_drivers = vmlinux.object_from_symbol("tty_drivers").cast("list_head")
         except exceptions.SymbolError:
             tty_drivers = None
 
