@@ -216,8 +216,9 @@ class KmsgLegacy(ABCKmsg):
 
         log_first_idx = int(self.vmlinux.object_from_symbol(symbol_name='log_first_idx'))
         cur_idx = log_first_idx
-        end_idx = log_first_idx  # We don't need log_next_idx here. See below msg.len == 0
-        while True:
+        end_idx = None  # We don't need log_next_idx here. See below msg.len == 0
+        while cur_idx != end_idx:
+            end_idx = log_first_idx
             msg_offset = log_buf_ptr + cur_idx  # type: ignore
             msg = self.vmlinux.object(object_type='printk_log', offset=msg_offset)
             if msg.len == 0:
@@ -236,9 +237,6 @@ class KmsgLegacy(ABCKmsg):
                     yield facility_txt, level_txt, timestamp, caller, line
 
                 cur_idx += msg.len
-
-            if cur_idx == end_idx:
-                break
 
 
 class KmsgFiveTen(ABCKmsg):
@@ -343,8 +341,9 @@ class KmsgFiveTen(ABCKmsg):
         desc_id_mask = ~desc_flags_mask
 
         cur_id = desc_ring.tail_id.counter
-        end_id = desc_ring.head_id.counter
-        while True:
+        end_id = None
+        while cur_id != end_id:
+            end_id = desc_ring.head_id.counter
             desc = desc_arr[cur_id % desc_count]  # type: ignore
             info = info_arr[cur_id % desc_count]  # type: ignore
             desc_state = DescStateEnum((desc.state_var.counter >> desc_flags_shift) & 3)
@@ -360,8 +359,6 @@ class KmsgFiveTen(ABCKmsg):
 
             cur_id += 1
             cur_id &= desc_id_mask
-            if cur_id == end_id:
-                break
 
 
 class Kmsg(plugins.PluginInterface):
