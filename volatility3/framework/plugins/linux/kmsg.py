@@ -108,8 +108,15 @@ class ABCKmsg(ABC):
         """Walks through the specific kernel implementation."""
 
     @classmethod
+    @abstractmethod
     def symtab_checks(cls, vmlinux: interfaces.context.ModuleInterface) -> bool:
-        pass
+        """This method on each sublasss will be called to evaluate if the kernel
+        being analyzed fulfill the type & symbols requirements for the implementation.
+        The first class returning True will be instanciated and called via the
+        run() method.
+
+        :return: True is the kernel being analysed fulfill the class requirements.
+        """
 
     def get_string(self, addr: int, length: int) -> str:
         txt = self._context.layers[self.layer_name].read(addr, length)  # type: ignore
