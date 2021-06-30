@@ -732,6 +732,10 @@ class AggregateType(interfaces.objects.ObjectInterface):
 
     def __getattr__(self, attr: str) -> Any:
         """Method for accessing members of the type."""
+
+        if  attr.startswith("_") and not attr.startswith("__") and "__" in attr:
+            attr = attr[attr.find("_", 1):]  # See issue #522
+
         if attr in ['_concrete_members', 'vol']:
             raise AttributeError("Object has not been properly initialized")
         if attr in self._concrete_members:
