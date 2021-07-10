@@ -1,7 +1,6 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-
 import logging
 import struct
 from typing import Tuple, Optional
@@ -9,6 +8,7 @@ from typing import Tuple, Optional
 from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.layers import segmented
 from volatility3.framework.symbols import intermed
+from volatility3.framework.symbols.windows.extensions import crash
 
 vollog = logging.getLogger(__name__)
 
@@ -19,7 +19,6 @@ class WindowsCrashDumpFormatException(exceptions.LayerException):
 
 class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     """A Windows crash format TranslationLayer.
-
     This TranslationLayer supports Microsoft complete memory dump files.
     It currently does not support kernel or small memory dump files.
     """
@@ -30,7 +29,7 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
     VALIDDUMP = 0x504d5544
 
     crashdump_json = 'crash'
-    supported_dumptypes = [0x01]
+    supported_dumptypes = [0x01, 0x05]  # we need 0x5 for 32-bit bitmaps
     dump_header_name = '_DUMP_HEADER'
 
     _magic_struct = struct.Struct('<II')
@@ -42,20 +41,27 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
         self._context = context
         self._config_path = config_path
         self._page_size = 0x1000
+        # no try/except needed. as seen in vmware.py
         self._base_layer = self.config["base_layer"]
 
         # Create a custom SymbolSpace
         self._crash_table_name = intermed.IntermediateSymbolTable.create(context, self._config_path, 'windows',
                                                                          self.crashdump_json)
+
+        # the _SUMMARY_DUMP is shared between 32- and 64-bit
+        self._crash_common_table_name = intermed.IntermediateSymbolTable.create(context,
+                                                                                self._config_path,
+                                                                                'windows',
+                                                                                'crash_common',
+                                                                                class_types = crash.class_types)
+
         # Check Header
         hdr_layer = self._context.layers[self._base_layer]
         hdr_offset = 0
         self.check_header(hdr_layer, hdr_offset)
 
         # Need to create a header object
-        header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
-                                     offset = hdr_offset,
-                                     layer_name = self._base_layer)
+        header = self.get_header()
 
         # Extract the DTB
         self.dtb = int(header.DirectoryTableBase)
@@ -67,27 +73,89 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(header.DumpType))
             raise WindowsCrashDumpFormatException(name, "unsupported dump format 0x{:x}".format(header.DumpType))
 
+        # Then call the super, which will call load_segments (which needs the base_layer before it'll work)
         super().__init__(context, config_path, name)
+
+    def get_header(self) -> interfaces.objects.ObjectInterface:
+        return self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
+                                   offset = 0,
+                                   layer_name = self._base_layer)
+
+    def get_summary_header(self) -> interfaces.objects.ObjectInterface:
+        return self.context.object(self._crash_common_table_name + constants.BANG + "_SUMMARY_DUMP",
+                                   offset = 0x1000 * self.headerpages,
+                                   layer_name = self._base_layer)
 
     def _load_segments(self) -> None:
         """Loads up the segments from the meta_layer."""
-        header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
-                                     offset = 0,
-                                     layer_name = self._base_layer)
 
         segments = []
 
-        offset = self.headerpages
-        header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
-        for x in header.PhysicalMemoryBlockBuffer.Run:
-            segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
-            # print("Segments {:x} {:x} {:x}".format(x.BasePage * 0x1000,
-            #                  offset * 0x1000,
-            #                  x.PageCount * 0x1000))
-            offset += x.PageCount
+        if self.dump_type == 0x1:
+            header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
+                                         offset = 0,
+                                         layer_name = self._base_layer)
+
+            offset = self.headerpages
+            header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
+            for run in header.PhysicalMemoryBlockBuffer.Run:
+                segments.append(
+                    (run.BasePage * 0x1000, offset * 0x1000, run.PageCount * 0x1000, run.PageCount * 0x1000))
+                offset += run.PageCount
+
+        elif self.dump_type == 0x05:
+            summary_header = self.get_summary_header()
+            first_bit = None  # First bit in a run
+            first_offset = 0  # File offset of first bit
+            last_bit_seen = 0  # Most recent bit processed
+            offset = summary_header.HeaderSize  # Size of file headers
+            buffer_char = summary_header.get_buffer_char()
+            buffer_long = summary_header.get_buffer_long()
+
+            for outer_index in range(0, ((summary_header.BitmapSize + 31) // 32)):
+                if buffer_long[outer_index] == 0:
+                    if first_bit is not None:
+                        last_bit = ((outer_index - 1) * 32) + 31
+                        segment_length = (last_bit - first_bit + 1) * 0x1000
+                        segments.append((first_bit * 0x1000, first_offset, segment_length, segment_length))
+                        first_bit = None
+                elif buffer_long[outer_index] == 0xFFFFFFFF:
+                    if first_bit is None:
+                        first_offset = offset
+                        first_bit = outer_index * 32
+                    offset = offset + (32 * 0x1000)
+                else:
+                    for inner_index in range(0, 32):
+                        bit_addr = outer_index * 32 + inner_index
+                        if (buffer_char[bit_addr >> 3] >> (bit_addr & 0x7)) & 1:
+                            if first_bit is None:
+                                first_offset = offset
+                                first_bit = bit_addr
+                            offset = offset + 0x1000
+                        else:
+                            if first_bit is not None:
+                                segment_length = ((bit_addr - 1) - first_bit + 1) * 0x1000
+                                segments.append((first_bit * 0x1000, first_offset, segment_length, segment_length))
+                                first_bit = None
+                last_bit_seen = (outer_index * 32) + 31
+
+            if first_bit is not None:
+                segment_length = (last_bit_seen - first_bit + 1) * 0x1000
+                segments.append((first_bit * 0x1000, first_offset, segment_length, segment_length))
+        else:
+            vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(self.dump_type))
+            raise WindowsCrashDumpFormatException(self.name, "unsupported dump format 0x{:x}".format(self.dump_type))
 
         if len(segments) == 0:
             raise WindowsCrashDumpFormatException(self.name, "No Crash segments defined in {}".format(self._base_layer))
+        else:
+            # report the segments for debugging. this is valuable for dev/troubleshooting but
+            # not important enough for a dedicated plugin.
+            for idx, (start_position, mapped_offset, length, _) in enumerate(segments):
+                vollog.log(
+                    constants.LOGLEVEL_VVVV,
+                    "Segment {}: Position {:#x} Offset {:#x} Length {:#x}".format(idx, start_position, mapped_offset,
+                                                                                  length))
 
         self._segments = segments
 
@@ -114,7 +182,6 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
 class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
     """A Windows crash format TranslationLayer.
-
     This TranslationLayer supports Microsoft complete memory dump files.
     It currently does not support kernel or small memory dump files.
     """
@@ -124,63 +191,6 @@ class WindowsCrashDump64Layer(WindowsCrashDump32Layer):
     dump_header_name = '_DUMP_HEADER64'
     supported_dumptypes = [0x1, 0x05]
     headerpages = 2
-
-    def _load_segments(self) -> None:
-        """Loads up the segments from the meta_layer."""
-
-        segments = []
-
-        summary_header = self.context.object(self._crash_table_name + constants.BANG + "_SUMMARY_DUMP64",
-                                             offset = 0x2000,
-                                             layer_name = self._base_layer)
-
-        if self.dump_type == 0x1:
-            header = self.context.object(self._crash_table_name + constants.BANG + self.dump_header_name,
-                                         offset = 0,
-                                         layer_name = self._base_layer)
-
-            offset = self.headerpages
-            header.PhysicalMemoryBlockBuffer.Run.count = header.PhysicalMemoryBlockBuffer.NumberOfRuns
-            for x in header.PhysicalMemoryBlockBuffer.Run:
-                segments.append((x.BasePage * 0x1000, offset * 0x1000, x.PageCount * 0x1000, x.PageCount * 0x1000))
-                offset += x.PageCount
-
-        elif self.dump_type == 0x05:
-            summary_header.BufferLong.count = (summary_header.BitmapSize + 31) // 32
-            previous_bit = 0
-            start_position = 0
-            # We cast as an int because we don't want to carry the context around with us for infinite loop reasons
-            mapped_offset = int(summary_header.HeaderSize)
-            current_word = None
-            for bit_position in range(len(summary_header.BufferLong) * 32):
-                if (bit_position % 32) == 0:
-                    current_word = summary_header.BufferLong[bit_position // 32]
-                current_bit = (current_word >> (bit_position % 32)) & 1
-                if current_bit != previous_bit:
-                    if previous_bit == 0:
-                        # Start
-                        start_position = bit_position
-                    else:
-                        # Finish
-                        length = (bit_position - start_position) * 0x1000
-                        segments.append((start_position * 0x1000, mapped_offset, length, length))
-                        mapped_offset += length
-
-                # Finish it off
-                if bit_position == (len(summary_header.BufferLong) * 32) - 1 and current_bit == 1:
-                    length = (bit_position - start_position) * 0x1000
-                    segments.append((start_position * 0x1000, mapped_offset, length, length))
-                    mapped_offset += length
-
-                previous_bit = current_bit
-        else:
-            vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(self.dump_type))
-            raise WindowsCrashDumpFormatException(self.name, "unsupported dump format 0x{:x}".format(self.dump_type))
-
-        if len(segments) == 0:
-            raise WindowsCrashDumpFormatException(self.name, "No Crash segments defined in {}".format(self._base_layer))
-
-        self._segments = segments
 
 
 class WindowsCrashDumpStacker(interfaces.automagic.StackerLayerInterface):

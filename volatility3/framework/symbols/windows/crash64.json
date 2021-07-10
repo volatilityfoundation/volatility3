@@ -65,25 +65,25 @@
           "offset": 40,
           "type": {
             "kind": "base",
-            "name": "unsigned long"
+            "name": "unsigned long long"
           }
         },
         "MachineImageType": {
-          "offset": 44,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "NumberProcessors": {
           "offset": 48,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
+        "NumberProcessors": {
+          "offset": 52,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
         "BugCheckCode": {
-          "offset": 60,
+          "offset": 56,
           "type": {
             "kind": "base",
             "name": "unsigned long"
@@ -157,7 +157,7 @@
             "name": "unsigned long long"
           }
         },
-        "SystemUpTime": {
+        "SystemTime": {
           "offset": 4008,
           "type": {
             "kind": "base",
@@ -175,7 +175,7 @@
             }
           }
         },
-        "SystemTime": {
+        "SystemUpTime": {
           "offset": 4144,
           "type": {
             "kind": "base",
@@ -241,84 +241,6 @@
       },
       "kind": "struct",
       "size": 8192
-    },
-    "_SUMMARY_DUMP64": {
-      "fields": {
-        "Signature": {
-          "offset": 0,
-          "type": {
-            "count": 4,
-            "kind": "array",
-            "subtype": {
-              "kind": "base",
-              "name": "unsigned char"
-            }
-          }
-        },
-        "ValidDump": {
-          "offset": 4,
-          "type": {
-            "count": 4,
-            "kind": "array",
-            "subtype": {
-              "kind": "base",
-              "name": "unsigned char"
-            }
-          }
-        },
-        "DumpOptions": {
-          "offset": 8,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long"
-          }
-        },
-        "HeaderSize": {
-          "offset": 32,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long long"
-          }
-        },
-        "BitmapSize": {
-          "offset": 40,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long long"
-          }
-        },
-        "Pages": {
-          "offset": 48,
-          "type": {
-            "kind": "base",
-            "name": "unsigned long long"
-          }
-        },
-        "BufferLong": {
-          "offset": 56,
-          "type": {
-            "kind": "array",
-            "count": 1,
-            "subtype": {
-              "kind": "base",
-              "name": "unsigned long"
-            }
-          }
-        },
-        "BufferChar": {
-          "offset": 56,
-          "type": {
-            "kind": "array",
-            "count": 1,
-            "subtype": {
-              "kind": "base",
-              "name": "unsigned char"
-            }
-          }
-        }
-      },
-      "kind": "struct",
-      "size": 56
     },
     "_EXCEPTION_RECORD64": {
       "fields": {
