@@ -166,7 +166,7 @@ class POOL_HEADER(objects.StructType):
 
                 try:
                     if mem_object.is_valid():
-                        return mem_object
+                        yield mem_object
                 except (TypeError, exceptions.InvalidAddressException):
                     pass
 
