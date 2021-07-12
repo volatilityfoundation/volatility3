@@ -143,6 +143,8 @@ class ModuleInterface(metaclass = ABCMeta):
         self._context = context
         self._module_name = module_name
         self._layer_name = layer_name
+        if not isinstance(offset, int):
+            raise TypeError(f"Module offset must be an int not {type(offset)}")
         self._offset = offset
         self._native_layer_name = None
         if native_layer_name:
