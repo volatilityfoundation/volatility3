@@ -1305,14 +1305,14 @@
           }
         },
         "source_file": {
-          "offset": 0,
+          "offset": 4,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
         "line": {
-          "offset": 0,
+          "offset": 8,
           "type": {
             "kind": "base",
             "name": "unsigned long"
@@ -1354,7 +1354,7 @@
         }
       },
       "kind": "struct",
-      "size": 12
+      "size": 16
     },
     "LF_UNION": {
       "fields": {
