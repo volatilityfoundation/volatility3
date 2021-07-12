@@ -166,8 +166,11 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
             banner_location = constants.REMOTE_ISF_URL
 
         if not constants.OFFLINE:
-            rbf = RemoteBannerFormat(banner_location)
-            rbf.process(banners, operating_system)
+            try:
+                rbf = RemoteBannerFormat(banner_location)
+                rbf.process(banners, operating_system)
+            except urllib.error.URLError:
+                vollog.debug(f"Unable to download remote banner list from {banner_location}")
 
 
 class RemoteBannerFormat:
