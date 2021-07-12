@@ -123,7 +123,7 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     value_node_name = renderers.UnreadableValue()
 
                 try:
-                    value_type = RegValueTypes.get(node.Type).name
+                    value_type = RegValueTypes[node.Type].name
                 except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
                     vollog.debug(excp)
                     value_type = renderers.UnreadableValue()
@@ -137,9 +137,9 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
                         if isinstance(value_data, int):
                             value_data = format_hints.MultiTypeData(value_data, encoding = 'utf-8')
-                        elif RegValueTypes.get(node.Type) == RegValueTypes.REG_BINARY:
+                        elif RegValueTypes[node.Type] == RegValueTypes.REG_BINARY:
                             value_data = format_hints.MultiTypeData(value_data, show_hex = True)
-                        elif RegValueTypes.get(node.Type) == RegValueTypes.REG_MULTI_SZ:
+                        elif RegValueTypes[node.Type] == RegValueTypes.REG_MULTI_SZ:
                             value_data = format_hints.MultiTypeData(value_data,
                                                                     encoding = 'utf-16-le',
                                                                     split_nulls = True)

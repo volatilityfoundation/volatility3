@@ -50,7 +50,7 @@ class Certificates(interfaces.plugins.PluginInterface):
                     node_path = hive.get_key(top_key, return_list = True)
                     for (depth, is_key, last_write_time, key_path, volatility,
                          node) in printkey.PrintKey.key_iterator(hive, node_path, recurse = True):
-                        if not is_key and RegValueTypes.get(node.Type).name == "REG_BINARY":
+                        if not is_key and RegValueTypes[node.Type].name == "REG_BINARY":
                             name, certificate_data = self.parse_data(node.decode_data())
                             unique_key_offset = key_path.index(top_key) + len(top_key) + 1
                             reg_section = key_path[unique_key_offset:key_path.index("\\", unique_key_offset)]
