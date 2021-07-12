@@ -1305,14 +1305,14 @@
           }
         },
         "source_file": {
-          "offset": 0,
+          "offset": 4,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
         "line": {
-          "offset": 0,
+          "offset": 8,
           "type": {
             "kind": "base",
             "name": "unsigned long"
