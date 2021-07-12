@@ -157,18 +157,51 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
         return cacheables
 
     @classmethod
-    def remote_banners(cls, banners: Dict[bytes, List[str]], operating_system = None):
+    def remote_banners(cls, banners: Dict[bytes, List[str]], operating_system = None, banner_location = None):
         """Adds remote URLs to the banner list"""
         if operating_system is None:
             return None
 
+        if banner_location is None:
+            banner_location = constants.REMOTE_ISF_URL
+
         if not constants.OFFLINE:
-            # TODO: Only download the remote file once per amount of time
-            with resources.ResourceAccessor().open(url = constants.REMOTE_ISF_URL) as fp:
-                banner_list = json.load(fp)
-            if operating_system in banner_list:
-                for banner in banner_list[operating_system]:
-                    binary_banner = base64.b64decode(banner)
-                    file_list = banners.get(binary_banner, [])
-                    file_list = list(set(file_list + banner_list[operating_system][banner]))
+            rbf = RemoteBannerFormat(banner_location)
+            rbf.process(banners, operating_system)
+
+
+class RemoteBannerFormat:
+    def __init__(self, location: str):
+        self._location = location
+        with resources.ResourceAccessor().open(url = location) as fp:
+            self._data = json.load(fp)
+        if not self._verify():
+            raise ValueError("Unsupported version for remote banner list format")
+
+    def _verify(self) -> bool:
+        version = self._data.get('version', 0)
+        if version in [1]:
+            setattr(self, 'process', getattr(self, f'process_v{version}'))
+            return True
+        return False
+
+    def process(self, banners: Dict[bytes, List[str]], operating_system: Optional[str]):
+        raise ValueError("Banner List version not verified")
+
+    def process_v1(self, banners: Dict[bytes, List[str]], operating_system: Optional[str]):
+        if operating_system in self._data:
+            for banner in self._data[operating_system]:
+                binary_banner = base64.b64decode(banner)
+                file_list = banners.get(binary_banner, [])
+                for value in self._data[operating_system][banner]:
+                    if value not in file_list:
+                        file_list = file_list + [value]
                     banners[binary_banner] = file_list
+        if 'additional' in self._data:
+            for location in self._data['additional']:
+                try:
+                    subrbf = RemoteBannerFormat(location)
+                    subrbf.process(banners, operating_system)
+                except IOError:
+                    vollog.debug(f"Remote file not found: {location}")
+        return banners

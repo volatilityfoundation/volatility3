@@ -28,7 +28,7 @@ class BannerCacheGenerator:
 
     def run(self):
         context = contexts.Context()
-        json_output = {}
+        json_output = {'version': 1}
 
         path = self._path
         filename = '*'
