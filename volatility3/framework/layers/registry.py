@@ -66,13 +66,13 @@ class RegistryHive(linear.LinearlyMappedLayer):
             self._hive_maxaddr_non_volatile = self.hive.Storage[0].Length
             self._hive_maxaddr_volatile = self.hive.Storage[1].Length
             self._maxaddr = 0x80000000 | self._hive_maxaddr_volatile
-            vollog.log(constants.LOGLEVEL_VVV, "Setting hive {} max address to {}".format(self.name, hex(self._maxaddr)))
+            vollog.log(constants.LOGLEVEL_VVVV, f"Setting hive {self.name} max address to {hex(self._maxaddr)}")
         except exceptions.InvalidAddressException:
             self._hive_maxaddr_non_volatile = 0x7fffffff
             self._hive_maxaddr_volatile = 0x7fffffff
             self._maxaddr = 0x80000000 | self._hive_maxaddr_volatile
-            vollog.log(constants.LOGLEVEL_VVV,
-                       "Exception when setting hive {} max address, using {}".format(self.name, hex(self._maxaddr)))
+            vollog.log(constants.LOGLEVEL_VVVV,
+                       f"Exception when setting hive {self.name} max address, using {hex(self._maxaddr)}")
 
     def _get_hive_maxaddr(self, volatile):
         return self._hive_maxaddr_volatile if volatile else self._hive_maxaddr_non_volatile
