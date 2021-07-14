@@ -81,6 +81,7 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                                                  base_config_path = self.config_path,
                                                  layer_name = self.config['primary'],
                                                  symbol_table = self.config['nt_symbols'],
+                                                 filter_string = 'config\\software',
                                                  hive_offsets = None):
 
             try:

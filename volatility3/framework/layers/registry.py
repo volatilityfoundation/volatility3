@@ -66,13 +66,13 @@ class RegistryHive(linear.LinearlyMappedLayer):
             self._hive_maxaddr_non_volatile = self.hive.Storage[0].Length
             self._hive_maxaddr_volatile = self.hive.Storage[1].Length
             self._maxaddr = 0x80000000 | self._hive_maxaddr_volatile
-            vollog.log(constants.LOGLEVEL_VVV, "Setting hive max address to {}".format(hex(self._maxaddr)))
+            vollog.log(constants.LOGLEVEL_VVVV, f"Setting hive {self.name} max address to {hex(self._maxaddr)}")
         except exceptions.InvalidAddressException:
             self._hive_maxaddr_non_volatile = 0x7fffffff
             self._hive_maxaddr_volatile = 0x7fffffff
             self._maxaddr = 0x80000000 | self._hive_maxaddr_volatile
-            vollog.log(constants.LOGLEVEL_VVV,
-                       "Exception when setting hive max address, using {}".format(hex(self._maxaddr)))
+            vollog.log(constants.LOGLEVEL_VVVV,
+                       f"Exception when setting hive {self.name} max address, using {hex(self._maxaddr)}")
 
     def _get_hive_maxaddr(self, volatile):
         return self._hive_maxaddr_volatile if volatile else self._hive_maxaddr_non_volatile
@@ -199,6 +199,13 @@ class RegistryHive(linear.LinearlyMappedLayer):
         # Ignore the volatile bit when determining maxaddr validity
         volatile = self._mask(offset, 31, 31) >> 31
         if offset & 0x7fffffff > self._get_hive_maxaddr(volatile):
+            vollog.log(constants.LOGLEVEL_VVV,
+                       "Layer {} couldn't translate offset {}, greater than {} in {} store of {}".format(
+                               self.name,
+                               hex(offset & 0x7fffffff),
+                               hex(self._get_hive_maxaddr(volatile)),
+                               "volative" if volatile else "non-volatile",
+                               self.get_name()))
             raise RegistryInvalidIndex(self.name, "Mapping request for value greater than maxaddr")
 
         storage = self.hive.Storage[volatile]
