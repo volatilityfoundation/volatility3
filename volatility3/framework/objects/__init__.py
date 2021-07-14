@@ -738,7 +738,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
         if attr in self._concrete_members:
             return self._concrete_members[attr]
         if  attr.startswith("_") and not attr.startswith("__") and "__" in attr:
-            attr = attr[attr.find("_", 1):]  # See issue #522
+            attr = attr[attr.find("__", 1):]  # See issue #522
         if attr in self.vol.members:
             mask = self._context.layers[self.vol.layer_name].address_mask
             relative_offset, template = self.vol.members[attr]
