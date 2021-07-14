@@ -340,7 +340,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
 
         # Check for the self-referential pointer
         if layer is None:
-            hits = base_layer.scan(context, PageMapScanner(WintelHelper.tests))
+            hits = base_layer.scan(context, PageMapScanner(WintelHelper.tests), progress_callback = progress_callback)
             layer = None
             config_path = None
             for test, dtb in hits:
