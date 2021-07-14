@@ -732,11 +732,14 @@ class AggregateType(interfaces.objects.ObjectInterface):
 
     def __getattr__(self, attr: str) -> Any:
         """Method for accessing members of the type."""
+
         if attr in ['_concrete_members', 'vol']:
             raise AttributeError("Object has not been properly initialized")
         if attr in self._concrete_members:
             return self._concrete_members[attr]
-        elif attr in self.vol.members:
+        if  attr.startswith("_") and not attr.startswith("__") and "__" in attr:
+            attr = attr[attr.find("__", 1):]  # See issue #522
+        if attr in self.vol.members:
             mask = self._context.layers[self.vol.layer_name].address_mask
             relative_offset, template = self.vol.members[attr]
             if isinstance(template, templates.ReferenceTemplate):
