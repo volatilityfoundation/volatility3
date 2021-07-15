@@ -3,7 +3,6 @@
 #
 
 import collections
-import functools
 import logging
 import struct
 from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
@@ -292,6 +291,7 @@ class Pointer(Integer):
                  subtype: Optional[templates.ObjectTemplate] = None) -> None:
         super().__init__(context = context, object_info = object_info, type_name = type_name, data_format = data_format)
         self._vol['subtype'] = subtype
+        self._dereferenced = {}
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
@@ -311,23 +311,26 @@ class Pointer(Integer):
         value = int.from_bytes(data, byteorder = endian, signed = signed)
         return value & mask
 
-    @functools.lru_cache(3)
-    def dereference(self, layer_name: Optional[str] = None) -> interfaces.objects.ObjectInterface:
+    def dereference(self, layer_name: Optional[str] = None, new_instance = False) -> interfaces.objects.ObjectInterface:
         """Dereferences the pointer.
 
-        Layer_name is identifies the appropriate layer within the
-        context that the pointer points to. If layer_name is None, it
-        defaults to the same layer that the pointer is currently
-        instantiated in.
+        Args:
+            layer_name: identifies the appropriate layer within the context that the pointer points to.
+            new_instance: whether to return a new instance or a previously dereferenced instance (defaults to False)
+
+        If layer_name is None, it defaults to the same layer that the pointer is currently instantiated in.
         """
         layer_name = layer_name or self.vol.native_layer_name
-        mask = self._context.layers[layer_name].address_mask
-        offset = self & mask
-        return self.vol.subtype(context = self._context,
-                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
-                                                                                   offset = offset,
-                                                                                   parent = self,
-                                                                                   size = self.vol.subtype.size))
+        if self._dereferenced.get(layer_name, None) is None or new_instance:
+            mask = self._context.layers[layer_name].address_mask
+            offset = self & mask
+            self._dereferenced[layer_name] = self.vol.subtype(context = self._context,
+                                                              object_info = interfaces.objects.ObjectInformation(
+                                                                  layer_name = layer_name,
+                                                                  offset = offset,
+                                                                  parent = self,
+                                                                  size = self.vol.subtype.size))
+        return self._dereferenced[layer_name]
 
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from

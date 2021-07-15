@@ -1,0 +1,4 @@
+Lists of changes made to API in each version
+============================================
+
+1.2.1  Added new_instance flag to pointer.dereference call
