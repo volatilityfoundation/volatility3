@@ -25,16 +25,15 @@ class POOL_HEADER(objects.StructType):
         """Carve an object or data structure from a kernel pool allocation
 
         Args:
-            type_name: the data structure type name
-            native_layer_name: the name of the layer where the data originally lived
-            object_type: the object type (executive kernel objects only)
+            constraint: a PoolConstraint object used to get the pool allocation header object 
+            use_top_down: for delineating how a windows version finds the size of the object body
             kernel_symbol_table: in case objects of a different symbol table are scanned for
+            native_layer_name: the name of the layer where the data originally lived
 
         Returns:
             An object as found from a POOL_HEADER
         """
 
-        # TODO: I wasn't quite sure what to do with these values, so I just set them here for now.
         type_name = constraint.type_name
         executive = constraint.object_type is not None
 
