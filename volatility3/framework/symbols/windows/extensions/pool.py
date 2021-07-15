@@ -5,6 +5,7 @@ from typing import Optional, Tuple, List, Dict, Union
 
 from volatility3.framework import objects, interfaces, constants, symbols, exceptions, renderers
 from volatility3.framework.renderers import conversion
+from volatility3.plugins.windows.poolscanner import PoolConstraint
 
 vollog = logging.getLogger(__name__)
 
@@ -17,9 +18,8 @@ class POOL_HEADER(objects.StructType):
     """
 
     def get_object(self,
-                   type_name: str,
+                   constraint: PoolConstraint,
                    use_top_down: bool,
-                   executive: bool = False,
                    kernel_symbol_table: Optional[str] = None,
                    native_layer_name: Optional[str] = None) -> Optional[interfaces.objects.ObjectInterface]:
         """Carve an object or data structure from a kernel pool allocation
@@ -33,6 +33,10 @@ class POOL_HEADER(objects.StructType):
         Returns:
             An object as found from a POOL_HEADER
         """
+
+        # TODO: I wasn't quite sure what to do with these values, so I just set them here for now.
+        type_name = constraint.type_name
+        executive = constraint.object_type is not None
 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
         if constants.BANG in type_name:
@@ -150,6 +154,10 @@ class POOL_HEADER(objects.StructType):
             # use the bottom up approach for windows 7 and earlier
             else:
                 type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
+                if constraint.additional_structures:
+                    for additional_structure in constraint.additional_structures:
+                        type_size += self._context.symbol_space.get_type(symbol_table_name + constants.BANG + additional_structure).size
+
                 rounded_size = conversion.round(type_size, alignment, up = True)
 
                 mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
