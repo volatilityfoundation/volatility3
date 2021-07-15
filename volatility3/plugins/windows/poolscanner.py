@@ -39,7 +39,8 @@ class PoolConstraint:
                  size: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  index: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  alignment: Optional[int] = 1,
-                 skip_type_test: bool = False) -> None:
+                 skip_type_test: bool = False,
+                 additional_structures: Optional[List[str]] = None) -> None:
         self.tag = tag
         self.type_name = type_name
         self.object_type = object_type
@@ -48,6 +49,7 @@ class PoolConstraint:
         self.index = index
         self.alignment = alignment
         self.skip_type_test = skip_type_test
+        self.additional_structures = additional_structures
 
 
 class PoolHeaderScanner(interfaces.layers.ScannerInterface):
@@ -212,7 +214,8 @@ class PoolScanner(plugins.PluginInterface):
                            type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
                            object_type = "Driver",
                            size = (248, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE, 
+                           additional_structures = ["_DRIVER_EXTENSION"]),
             # drivers on windows starting with windows 8
             PoolConstraint(b'Driv',
                            type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
@@ -291,10 +294,9 @@ class PoolScanner(plugins.PluginInterface):
 
         for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = alignment):
 
-            mem_object = header.get_object(type_name = constraint.type_name,
+            mem_object = header.get_object(constraint = constraint,
                                            use_top_down = is_windows_8_or_later,
-                                           executive = constraint.object_type is not None,
-                                           native_layer_name = layer_name,
+                                           native_layer_name = 'primary',
                                            kernel_symbol_table = symbol_table)
 
             if mem_object is None:
