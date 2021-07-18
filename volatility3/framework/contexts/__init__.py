@@ -319,7 +319,7 @@ class ModuleCollection:
         included in the deduplicated version
         """
         new_modules = []
-        seen = set()  # type: Set[str]
+        seen: Set[str] = set()
         for mod in self._modules:
             if mod.hash not in seen or mod.size == 0:
                 new_modules.append(mod)
@@ -334,7 +334,7 @@ class ModuleCollection:
 
     @classmethod
     def _generate_module_dict(cls, modules: List[SizedModule]) -> Dict[str, List[SizedModule]]:
-        result = {}  # type: Dict[str, List[SizedModule]]
+        result: Dict[str, List[SizedModule]] = {}
         for module in modules:
             modlist = result.get(module.name, [])
             modlist.append(module)

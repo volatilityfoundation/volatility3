@@ -46,7 +46,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
     @classmethod
     def _do_get_path(cls, rdentry, rmnt, dentry, vfsmnt) -> str:
 
-        ret_path = []  # type: List[str]
+        ret_path: List[str] = []
 
         while dentry != rdentry or vfsmnt != rmnt:
             dname = dentry.path()

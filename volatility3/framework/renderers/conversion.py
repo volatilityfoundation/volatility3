@@ -24,7 +24,7 @@ def wintime_to_datetime(wintime: int) -> Union[interfaces.renderers.BaseAbsentVa
 
 
 def unixtime_to_datetime(unixtime: int) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
-    ret = renderers.UnparsableValue()  # type: Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]
+    ret: Union[interfaces.renderers.BaseAbsentValue, datetime.datetime] = renderers.UnparsableValue()
 
     if unixtime > 0:
         try:

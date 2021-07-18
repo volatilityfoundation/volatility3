@@ -265,18 +265,18 @@ class PdbReader:
                  database_name: Optional[str] = None,
                  progress_callback: constants.ProgressCallback = None) -> None:
         self._layer_name, self._context = self.load_pdb_layer(context, location)
-        self._dbiheader = None  # type: Optional[interfaces.objects.ObjectInterface]
+        self._dbiheader: Optional[interfaces.objects.ObjectInterface] = None
         if not progress_callback:
             progress_callback = lambda x, y: None
         self._progress_callback = progress_callback
-        self.types = [
-        ]  # type: List[Tuple[interfaces.objects.ObjectInterface, Optional[str], interfaces.objects.ObjectInterface]]
-        self.bases = {}  # type: Dict[str, Any]
-        self.user_types = {}  # type: Dict[str, Any]
-        self.enumerations = {}  # type: Dict[str, Any]
-        self.symbols = {}  # type: Dict[str, Any]
-        self._omap_mapping = []  # type: List[Tuple[int, int]]
-        self._sections = []  # type: List[interfaces.objects.ObjectInterface]
+        self.types: List[Tuple[interfaces.objects.ObjectInterface, Optional[str], interfaces.objects.ObjectInterface]] = [
+        ]
+        self.bases: Dict[str, Any] = {}
+        self.user_types: Dict[str, Any] = {}
+        self.enumerations: Dict[str, Any] = {}
+        self.symbols: Dict[str, Any] = {}
+        self._omap_mapping: List[Tuple[int, int]] = []
+        self._sections: List[interfaces.objects.ObjectInterface] = []
         self.metadata = {"format": "6.1.0", "windows": {}}
         self._database_name = database_name
 
@@ -381,7 +381,7 @@ class PdbReader:
             raise ValueError("Maximum {} index is smaller than minimum TPI index, found: {} < {} ".format(
                 stream_name, header.index_max, header.index_min))
         # Reset the state
-        info_references = {}  # type: Dict[str, int]
+        info_references: Dict[str, int] = {}
         offset = header.header_size
         # Ensure we use the same type everywhere
         length_type = "unsigned short"
@@ -586,7 +586,7 @@ class PdbReader:
         if index < 0x1000:
             base_name, base = primatives[index & 0xff]
             self.bases[base_name] = base
-            result = {"kind": "base", "name": base_name}  # type: Union[List[Dict[str, Any]], Dict[str, Any]]
+            result: Union[List[Dict[str, Any]], Dict[str, Any]] = {"kind": "base", "name": base_name}
             indirection = (index & 0xf00)
             if indirection:
                 pointer_name, pointer_base = indirections[indirection]
@@ -639,7 +639,7 @@ class PdbReader:
         """Returns the size of the structure based on the type index
         provided."""
         result = -1
-        name = ''  # type: Optional[str]
+        name: Optional[str] = ''
         if index < 0x1000:
             if (index & 0xf00):
                 _, base = indirections[index & 0xf00]
@@ -837,7 +837,7 @@ class PdbReader:
 
     def convert_fields(self, fields: int) -> Dict[Optional[str], Dict[str, Any]]:
         """Converts a field list into a list of fields."""
-        result = {}  # type: Dict[Optional[str], Dict[str, Any]]
+        result: Dict[Optional[str], Dict[str, Any]] = {}
         _, _, fields_struct = self.types[fields]
         if not isinstance(fields_struct, list):
             vollog.warning("Fields structure did not contain a list of fields")

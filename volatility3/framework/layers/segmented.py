@@ -25,9 +25,9 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
         self._base_layer = self.config["base_layer"]
-        self._segments = []  # type: List[Tuple[int, int, int, int]]
-        self._minaddr = None  # type: Optional[int]
-        self._maxaddr = None  # type: Optional[int]
+        self._segments: List[Tuple[int, int, int, int]] = []
+        self._minaddr: Optional[int] = None
+        self._maxaddr: Optional[int] = None
 
         self._load_segments()
 

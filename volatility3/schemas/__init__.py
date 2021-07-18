@@ -18,7 +18,7 @@ cached_validation_filepath = os.path.join(constants.CACHE_PATH, "valid_isf.hashc
 def load_cached_validations() -> Set[str]:
     """Loads up the list of successfully cached json objects, so we don't need
     to revalidate them."""
-    validhashes = set()  # type: Set
+    validhashes: Set = set()
     if os.path.exists(cached_validation_filepath):
         with open(cached_validation_filepath, "r") as f:
             validhashes.update(json.load(f))

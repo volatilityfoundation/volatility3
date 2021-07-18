@@ -338,7 +338,7 @@ class PoolScanner(plugins.PluginInterface):
             An Iterable of pool constraints and the pool headers associated with them
         """
         # Setup the pattern
-        constraint_lookup = {}  # type: Dict[bytes, PoolConstraint]
+        constraint_lookup: Dict[bytes, PoolConstraint] = {}
         for constraint in pool_constraints:
             if constraint.tag in constraint_lookup:
                 raise ValueError(f"Constraint tag is used for more than one constraint: {repr(constraint.tag)}")

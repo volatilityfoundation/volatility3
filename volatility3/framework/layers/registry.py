@@ -141,7 +141,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         if key.endswith("\\"):
             key = key[:-1]
         key_array = key.split('\\')
-        found_key = []  # type: List[str]
+        found_key: List[str] = []
         while key_array and node_key:
             subkeys = node_key[-1].get_subkeys()
             for subkey in subkeys:

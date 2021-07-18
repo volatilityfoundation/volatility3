@@ -40,17 +40,18 @@ class Strings(interfaces.plugins.PluginInterface):
 
     def run(self):
         return renderers.TreeGrid([("String", str), ("Physical Address", format_hints.Hex), ("Result", str)],
-                                  self._generator())
+                                  self._generator)
 
+    @property
     def _generator(self) -> Generator[Tuple, None, None]:
         """Generates results from a strings file."""
-        string_list = []  # type: List[Tuple[int,bytes]]
+        string_list: List[Tuple[int,bytes]] = []
 
         # Test strings file format is accurate
         accessor = resources.ResourceAccessor()
         strings_fp = accessor.open(self.config['strings_file'], "rb")
         line = strings_fp.readline()
-        count = 0  # type: float
+        count: float = 0
         while line:
             count += 1
             try:
@@ -66,7 +67,8 @@ class Strings(interfaces.plugins.PluginInterface):
                                        progress_callback = self._progress_callback,
                                        pid_list = self.config['pid'])
 
-        last_prog = line_count = 0  # type: float
+        last_prog: float = 0
+        line_count: float  = 0
         num_strings = len(string_list)
         for offset, string in string_list:
             line_count += 1
@@ -119,7 +121,7 @@ class Strings(interfaces.plugins.PluginInterface):
         filter = pslist.PsList.create_pid_filter(pid_list)
 
         layer = context.layers[layer_name]
-        reverse_map = dict()  # type: Dict[int, Set[Tuple[str, int]]]
+        reverse_map: Dict[int, Set[Tuple[str, int]]] = dict()
         if isinstance(layer, intel.Intel):
             # We don't care about errors, we just wanted chunks that map correctly
             for mapval in layer.mapping(0x0, layer.maximum_address, ignore_errors = True):

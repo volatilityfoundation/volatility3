@@ -278,7 +278,7 @@ class PrettyTextRenderer(CLIRenderer):
             accumulator.append((node.path_depth, line))
             return accumulator
 
-        final_output = []  # type: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]]
+        final_output: List[Tuple[int, Dict[interfaces.renderers.Column, bytes]]] = []
         if not grid.populated:
             grid.populate(visitor, final_output)
         else:
@@ -323,15 +323,15 @@ class JsonRenderer(CLIRenderer):
         outfd = sys.stdout
 
         outfd.write("\n")
-        final_output = (
-            {}, [])  # type: Tuple[Dict[str, List[interfaces.renderers.TreeNode]], List[interfaces.renderers.TreeNode]]
+        final_output: Tuple[Dict[str, List[interfaces.renderers.TreeNode]], List[interfaces.renderers.TreeNode]] = (
+            {}, [])
 
         def visitor(
             node: interfaces.renderers.TreeNode, accumulator: Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]
         ) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
             # Nodes always have a path value, giving them a path_depth of at least 1, we use max just in case
             acc_map, final_tree = accumulator
-            node_dict = {'__children': []}  # type: Dict[str, Any]
+            node_dict: Dict[str, Any] = {'__children': []}
             for column_index in range(len(grid.columns)):
                 column = grid.columns[column_index]
                 renderer = self._type_renderers.get(column.type, self._type_renderers['default'])

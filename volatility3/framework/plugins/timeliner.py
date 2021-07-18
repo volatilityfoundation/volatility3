@@ -48,7 +48,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         super().__init__(*args, **kwargs)
         self.timeline = {}
         self.usable_plugins = None
-        self.automagics = None  # type: Optional[List[interfaces.automagic.AutomagicInterface]]
+        self.automagics: Optional[List[interfaces.automagic.AutomagicInterface]] = None
 
     @classmethod
     def get_usable_plugins(cls, selected_list: List[str] = None) -> List[Type]:

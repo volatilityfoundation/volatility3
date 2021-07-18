@@ -17,15 +17,15 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
     """Symbol loader based on signature strings."""
     priority = 40
 
-    banner_config_key = "banner"  # type: str
-    banner_cache = None  # type: Optional[Type[symbol_cache.SymbolBannerCache]]
-    symbol_class = None  # type: Optional[str]
-    find_aslr = None  # type: Optional[Callable]
+    banner_config_key: str = "banner"
+    banner_cache: Optional[Type[symbol_cache.SymbolBannerCache]] = None
+    symbol_class: Optional[str] = None
+    find_aslr: Optional[Callable] = None
 
     def __init__(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
         super().__init__(context, config_path)
-        self._requirements = []  # type: List[Tuple[str, interfaces.configuration.RequirementInterface]]
-        self._banners = {}  # type: symbol_cache.BannersType
+        self._requirements: List[Tuple[str, interfaces.configuration.RequirementInterface]] = []
+        self._banners: symbol_cache.BannersType = {}
 
     @property
     def banners(self) -> symbol_cache.BannersType:

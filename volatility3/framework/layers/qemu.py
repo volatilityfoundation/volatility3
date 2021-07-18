@@ -40,7 +40,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         self._qemu_table_name = intermed.IntermediateSymbolTable.create(context, config_path, 'generic', 'qemu')
         self._configuration = None
-        self._compressed = set()  # type: Set[int]
+        self._compressed: Set[int] = set()
         self._current_segment_name = b''
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 

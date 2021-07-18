@@ -57,7 +57,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                                                         layer_name,
                                                         progress_callback = progress_callback)
 
-                layer_class = intel.Intel  # type: Type
+                layer_class: Type = intel.Intel
                 if 'init_top_pgt' in table.symbols:
                     layer_class = intel.Intel32e
                     dtb_symbol_name = 'init_top_pgt'

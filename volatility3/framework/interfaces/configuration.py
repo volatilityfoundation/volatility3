@@ -79,8 +79,8 @@ class HierarchicalDict(collections.abc.Mapping):
         if not (isinstance(separator, str) and len(separator) == 1):
             raise TypeError(f"Separator must be a one character string: {separator}")
         self._separator = separator
-        self._data = {}  # type: Dict[str, ConfigSimpleType]
-        self._subdict = {}  # type: Dict[str, 'HierarchicalDict']
+        self._data: Dict[str, ConfigSimpleType] = {}
+        self._subdict: Dict[str, 'HierarchicalDict'] = {}
         if isinstance(initial_dict, str):
             initial_dict = json.loads(initial_dict)
         if isinstance(initial_dict, dict):
@@ -320,7 +320,7 @@ class RequirementInterface(metaclass = ABCMeta):
         self._description = description or ""
         self._default = default
         self._optional = optional
-        self._requirements = {}  # type: Dict[str, RequirementInterface]
+        self._requirements: Dict[str, RequirementInterface] = {}
 
     def __repr__(self) -> str:
         return "<" + self.__class__.__name__ + ": " + self.name + ">"
@@ -438,7 +438,7 @@ class RequirementInterface(metaclass = ABCMeta):
 class SimpleTypeRequirement(RequirementInterface):
     """Class to represent a single simple type (such as a boolean, a string, an
     integer or a series of bytes)"""
-    instance_type = bool  # type: ClassVar[Type]
+    instance_type: ClassVar[Type] = bool
 
     def add_requirement(self, requirement: RequirementInterface):
         """Always raises a TypeError as instance requirements cannot have
@@ -529,7 +529,7 @@ class ConstructableRequirementInterface(RequirementInterface):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.add_requirement(ClassRequirement("class", "Class of the constructable requirement"))
-        self._current_class_requirements = set()  # type: Set[Any]
+        self._current_class_requirements: Set[Any] = set()
 
     def __eq__(self, other):
         # We can just use super because it checks all member of `__dict__`
@@ -620,7 +620,7 @@ class ConfigurableInterface(metaclass = ABCMeta):
         super().__init__()
         self._context = context
         self._config_path = config_path
-        self._config_cache = None  # type: Optional[HierarchicalDict]
+        self._config_cache: Optional[HierarchicalDict] = None
 
     @property
     def context(self) -> 'interfaces.context.ContextInterface':
@@ -729,7 +729,7 @@ class VersionableInterface:
 
     All version number should use semantic versioning
     """
-    _version = (0, 0, 0)  # type: Tuple[int, int, int]
+    _version: Tuple[int, int, int] = (0, 0, 0)
 
     @classproperty
     def version(cls) -> Tuple[int, int, int]:

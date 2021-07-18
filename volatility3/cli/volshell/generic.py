@@ -30,7 +30,7 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__current_layer = None  # type: Optional[str]
+        self.__current_layer: Optional[str] = None
         self.__console = None
 
     def random_string(self, length: int = 32) -> str:
@@ -38,7 +38,7 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        reqs = []  # type: List[interfaces.configuration.RequirementInterface]
+        reqs: List[interfaces.configuration.RequirementInterface] = []
         if cls == Volshell:
             reqs = [
                 requirements.URIRequirement(name = 'script',

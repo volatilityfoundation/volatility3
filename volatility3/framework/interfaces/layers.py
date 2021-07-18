@@ -58,8 +58,8 @@ class ScannerInterface(interfaces.configuration.VersionableInterface, metaclass 
         super().__init__()
         self.chunk_size = 0x1000000  # Default to 16Mb chunks
         self.overlap = 0x1000  # A page of overlap by default
-        self._context = None  # type: Optional[interfaces.context.ContextInterface]
-        self._layer_name = None  # type: Optional[str]
+        self._context: Optional[interfaces.context.ContextInterface] = None
+        self._layer_name: Optional[str] = None
 
     @property
     def context(self) -> Optional['interfaces.context.ContextInterface']:
@@ -99,7 +99,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     accesses a data source and exposes it within volatility.
     """
 
-    _direct_metadata = {'architecture': 'Unknown', 'os': 'Unknown'} # type: Mapping
+    _direct_metadata: Mapping = {'architecture': 'Unknown', 'os': 'Unknown'}
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
@@ -227,7 +227,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
         sections = list(self._coalesce_sections(sections))
 
         try:
-            progress = DummyProgress()  # type: ProgressValue
+            progress: ProgressValue = DummyProgress()
             scan_iterator = functools.partial(self._scan_iterator, scanner, sections)
             scan_metric = self._scan_metric(scanner, sections)
             if not scanner.thread_safe or constants.PARALLELISM == constants.Parallelism.Off:
@@ -240,7 +240,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                     yield from scan_chunk(value)
             else:
                 progress = multiprocessing.Manager().Value("Q", 0)
-                parallel_module = multiprocessing  # type: types.ModuleType
+                parallel_module: types.ModuleType = multiprocessing
                 if constants.PARALLELISM == constants.Parallelism.Threading:
                     progress = DummyProgress()
                     parallel_module = threading
@@ -266,7 +266,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     def _coalesce_sections(self, sections: Iterable[Tuple[int, int]]) -> Iterable[Tuple[int, int]]:
         """Take a list of (start, length) sections and coalesce any adjacent
         sections."""
-        result = []  # type: List[Tuple[int, int]]
+        result: List[Tuple[int, int]] = []
         position = 0
         for (start, length) in sorted(sections):
             if result and start <= position:
@@ -423,7 +423,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of
         length size."""
         current_offset = offset
-        output = b''  # type: bytes
+        output: bytes = b''
         for (layer_offset, sublength, mapped_offset, mapped_length, layer) in self.mapping(offset,
                                                                                            length,
                                                                                            ignore_errors = pad):
@@ -473,7 +473,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         assumed to have no holes
         """
         for (section_start, section_length) in sections:
-            output = [] # type: List[Tuple[str, int, int]]
+            output: List[Tuple[str, int, int]] = []
 
             # Hold the offsets of each chunk (including how much has been filled)
             chunk_start = chunk_position = 0
@@ -532,7 +532,7 @@ class LayerContainer(collections.abc.Mapping):
     """Container for multiple layers of data."""
 
     def __init__(self) -> None:
-        self._layers = {}  # type: Dict[str, DataLayerInterface]
+        self._layers: Dict[str, DataLayerInterface] = {}
 
     def read(self, layer: str, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads from a particular layer at offset for length bytes.

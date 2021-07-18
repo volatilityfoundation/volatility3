@@ -46,7 +46,7 @@ class MultiTypeData(bytes):
                  encoding: str = 'utf-16-le',
                  split_nulls: bool = False,
                  show_hex: bool = False) -> None:
-        self.converted_int = False  # type: bool
+        self.converted_int: bool = False
         if isinstance(original, int):
             self.converted_int = True
         self.encoding = encoding

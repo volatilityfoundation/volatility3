@@ -57,7 +57,7 @@ class Lsmod(plugins.PluginInterface):
         except exceptions.InvalidAddressException:
             return []
 
-        seen = set()  # type: Set
+        seen: Set = set()
 
         while kmod != 0 and \
                 kmod not in seen and \

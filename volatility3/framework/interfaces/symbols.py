@@ -96,7 +96,7 @@ class BaseSymbolTableInterface:
             table_mapping = {}
         self.table_mapping = table_mapping
         self._native_types = native_types
-        self._sort_symbols = []  # type: List[Tuple[int, str]]
+        self._sort_symbols: List[Tuple[int, str]] = []
 
         # Set any provisioned class_types
         if class_types:

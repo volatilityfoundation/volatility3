@@ -214,7 +214,7 @@ class POOL_HEADER_VISTA(POOL_HEADER):
 class POOL_TRACKER_BIG_PAGES(objects.StructType):
     """A kernel big page pool tracker."""
 
-    pool_type_lookup = {}  # type: Dict[str, str]
+    pool_type_lookup: Dict[str, str] = {}
 
     def _generate_pool_type_lookup(self):
         # Enumeration._generate_inverse_choices() raises ValueError because multiple enum names map to the same

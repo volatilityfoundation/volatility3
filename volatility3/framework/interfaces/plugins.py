@@ -95,7 +95,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
     """
 
     # Be careful with inheritance around this (We default to requiring a version which doesn't exist, so it must be set)
-    _required_framework_version = (0, 0, 0)  # type: Tuple[int, int, int]
+    _required_framework_version: Tuple[int, int, int] = (0, 0, 0)
     """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
 
     def __init__(self,
@@ -121,7 +121,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
             if requirement.name not in self.config:
                 self.config[requirement.name] = requirement.default
 
-        self._file_handler = FileHandlerInterface  # type: Type[FileHandlerInterface]
+        self._file_handler: Type[FileHandlerInterface] = FileHandlerInterface
 
         framework.require_interface_version(*self._required_framework_version)
 

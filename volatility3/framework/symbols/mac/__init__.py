@@ -160,7 +160,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                        list_next_member: str,
                        next_member: str,
                        max_elements: int = 4096) -> Iterable[interfaces.objects.ObjectInterface]:
-        seen = set()  # type: Set[int]
+        seen: Set[int] = set()
 
         try:
             current = queue.member(attr = list_head_member)

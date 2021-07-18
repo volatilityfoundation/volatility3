@@ -15,7 +15,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
     def __init__(self, name: str, native_dictionary: Dict[str, Any]) -> None:
         super().__init__(name, self)
         self._native_dictionary = copy.deepcopy(native_dictionary)
-        self._overrides = {}  # type: Dict[str, interfaces.objects.ObjectInterface]
+        self._overrides: Dict[str, interfaces.objects.ObjectInterface] = {}
         for native_type in self._native_dictionary:
             native_class, _native_struct = self._native_dictionary[native_type]
             self._overrides[native_type] = native_class
@@ -49,8 +49,8 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
             table_name, type_name = name_split
             prefix = table_name + constants.BANG
 
-        additional = {}  # type: Dict[str, Any]
-        obj = None  # type: Optional[Type[interfaces.objects.ObjectInterface]]
+        additional: Dict[str, Any] = {}
+        obj: Optional[Type[interfaces.objects.ObjectInterface]] = None
         if type_name == 'void' or type_name == 'function':
             obj = objects.Void
         elif type_name == 'array':

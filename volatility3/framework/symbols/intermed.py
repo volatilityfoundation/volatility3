@@ -282,8 +282,8 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
             raise TypeError("Native table not provided")
         nt.name = name + "_natives"
         super().__init__(context, config_path, name, nt, table_mapping = table_mapping)
-        self._overrides = {}  # type: Dict[str, Type[interfaces.objects.ObjectInterface]]
-        self._symbol_cache = {}  # type: Dict[str, interfaces.symbols.SymbolInterface]
+        self._overrides: Dict[str, Type[interfaces.objects.ObjectInterface]] = {}
+        self._symbol_cache: Dict[str, interfaces.symbols.SymbolInterface] = {}
 
     def _get_natives(self) -> Optional[interfaces.symbols.NativeTableInterface]:
         """Determines the appropriate native_types to use from the JSON

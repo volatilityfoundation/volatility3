@@ -52,7 +52,7 @@ class Psaux(plugins.PluginInterface):
 
             task_name = utility.array_to_string(task.p_comm)
 
-            args = []  # type: List[bytes]
+            args: List[bytes] = []
 
             while argc > 0:
                 try:

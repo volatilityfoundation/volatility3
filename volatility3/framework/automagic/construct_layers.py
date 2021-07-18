@@ -37,7 +37,7 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
         # Make sure we import the layers, so they can reconstructed
         framework.import_files(sys.modules['volatility3.framework.layers'])
 
-        result = []  # type: List[str]
+        result: List[str] = []
         if requirement.unsatisfied(context, config_path):
             # Having called validate at the top level tells us both that we need to dig deeper
             # but also ensures that TranslationLayerRequirements have got the correct subrequirements if their class is populated

@@ -151,12 +151,12 @@ class UserAssist(interfaces.plugins.PluginInterface):
                 countkey_last_write_time = conversion.wintime_to_datetime(countkey.LastWriteTime.QuadPart)
 
                 # output the parent Count key
-                result = (
+                result: Tuple[int, Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]] = (
                     0, (renderers.format_hints.Hex(hive.hive_offset), hive_name, countkey_path,
                         countkey_last_write_time, "Key", renderers.NotApplicableValue(), renderers.NotApplicableValue(),
                         renderers.NotApplicableValue(), renderers.NotApplicableValue(), renderers.NotApplicableValue(),
                         renderers.NotApplicableValue(), renderers.NotApplicableValue())
-                )  # type: Tuple[int, Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]]
+                )
                 yield result
 
                 # output any subkeys under Count

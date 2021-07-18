@@ -12,7 +12,7 @@ from typing import List, Optional, Sequence, Any, Union
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
 
 # HelpfulSubparserAction gives more information about the possible choices from a subparsed choice
-# HelpfulArgParser gives the list of choices when no arguments are provided to a choice option whilst still using a METAVAR
+# HelpfulArgParser gives the list of choices when no arguments are provided to a choice option whilst still using a
 
 
 class HelpfulSubparserAction(argparse._SubParsersAction):
@@ -22,7 +22,7 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # We don't want the action self-check to kick in, so we remove the choices list, the check happens in __call__
-        self.choices = None # type: ignore
+        self.choices = None
 
     def __call__(self,
                  parser: argparse.ArgumentParser,
@@ -31,7 +31,7 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
                  option_string: Optional[str] = None) -> None:
 
         parser_name = ''
-        arg_strings = []  # type: List[str]
+        arg_strings: List[str] = []
         if values is not None:
             for value in values:
                 if not parser_name:

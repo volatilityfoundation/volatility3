@@ -214,7 +214,7 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         to control how their templates respond without needing to write
         new templates for each and every potental object type.
         """
-        _methods = []  # type: List[str]
+        _methods: List[str] = []
 
         @classmethod
         @abc.abstractmethod
@@ -275,7 +275,7 @@ class Template:
         """Stores the keyword arguments for later object creation."""
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
-        empty_dict = {}  # type: Dict[str, Any]
+        empty_dict: Dict[str, Any] = {}
         self._vol = collections.ChainMap(empty_dict, arguments, {'type_name': type_name})
 
     @property

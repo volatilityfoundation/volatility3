@@ -31,15 +31,15 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 
     def __init__(self) -> None:
         super().__init__()
-        self._dict = collections.OrderedDict()  # type: Dict[str, interfaces.symbols.BaseSymbolTableInterface]
+        self._dict: Dict[str, interfaces.symbols.BaseSymbolTableInterface] = collections.OrderedDict()
         # Permanently cache all resolved symbols
-        self._resolved = {}  # type: Dict[str, interfaces.objects.Template]
-        self._resolved_symbols = {}  # type: Dict[str, interfaces.objects.Template]
+        self._resolved: Dict[str, interfaces.objects.Template] = {}
+        self._resolved_symbols: Dict[str, interfaces.objects.Template] = {}
 
     def clear_symbol_cache(self, table_name: str = None) -> None:
         """Clears the symbol cache for the specified table name. If no table
         name is specified, the caches of all symbol tables are cleared."""
-        table_list = list()  # type: List[interfaces.symbols.BaseSymbolTableInterface]
+        table_list: List[interfaces.symbols.BaseSymbolTableInterface] = list()
         if table_name is None:
             table_list = list(self._dict.values())
         else:

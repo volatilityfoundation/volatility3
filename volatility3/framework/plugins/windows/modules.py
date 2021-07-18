@@ -86,7 +86,7 @@ class Modules(interfaces.plugins.PluginInterface):
         Returns:
             A list of session layer names
         """
-        seen_ids = []  # type: List[interfaces.objects.ObjectInterface]
+        seen_ids: List[interfaces.objects.ObjectInterface] = []
         filter_func = pslist.PsList.create_pid_filter(pids or [])
 
         for proc in pslist.PsList.list_processes(context = context,

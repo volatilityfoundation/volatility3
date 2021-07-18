@@ -82,7 +82,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
             A list of tuples containing the config_path, sub_config_path and requirement identifying the unsatisfied `Requirements`
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement_root.name)
-        results = []  # type: List[Tuple[str, interfaces.configuration.RequirementInterface]]
+        results: List[Tuple[str, interfaces.configuration.RequirementInterface]] = []
         recurse = not shortcut
         if isinstance(requirement_root, requirement_type):
             if recurse or requirement_root.unsatisfied(context, config_path):
@@ -105,7 +105,7 @@ class StackerLayerInterface(metaclass = ABCMeta):
 
     stack_order = 0
     """The order in which to attempt stacking, the lower the earlier"""
-    exclusion_list = []  # type: List[str]
+    exclusion_list: List[str] = []
     """The list operating systems/first-level plugin hierarchy that should exclude this stacker"""
 
     @classmethod

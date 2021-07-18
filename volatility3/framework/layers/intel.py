@@ -39,7 +39,7 @@ class Intel(linear.LinearlyMappedLayer):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
         self._base_layer = self.config["memory_layer"]
-        self._swap_layers = []  # type: List[str]
+        self._swap_layers: List[str] = []
         self._page_map_offset = self.config["page_map_offset"]
 
         # Assign constants

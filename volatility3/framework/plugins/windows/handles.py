@@ -172,7 +172,7 @@ class Handles(interfaces.plugins.PluginInterface):
             A mapping of type indicies to type names
         """
 
-        type_map = {}  # type: Dict[int, str]
+        type_map: Dict[int, str] = {}
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)

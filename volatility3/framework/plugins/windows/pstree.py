@@ -18,9 +18,9 @@ class PsTree(interfaces.plugins.PluginInterface):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._processes = {}  # type: Dict[int, interfaces.objects.ObjectInterface]
-        self._levels = {}  # type: Dict[int, int]
-        self._children = {}  # type: Dict[int, Set[int]]
+        self._processes: Dict[int, interfaces.objects.ObjectInterface] = {}
+        self._levels: Dict[int, int] = {}
+        self._children: Dict[int, Set[int]] = {}
 
     @classmethod
     def get_requirements(cls):

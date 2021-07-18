@@ -38,7 +38,7 @@ class Renderer(metaclass = ABCMeta):
 
 
 class ColumnSortKey(metaclass = ABCMeta):
-    ascending = True  # type: bool
+    ascending: bool = True
 
     @abstractmethod
     def __call__(self, values: List[Any]) -> Any:
@@ -129,7 +129,7 @@ class TreeGrid(object, metaclass = ABCMeta):
     and to create cycles.
     """
 
-    base_types = (int, str, float, bytes, datetime.datetime, Disassembly)  # type: ClassVar[Tuple]
+    base_types: ClassVar[Tuple] = (int, str, float, bytes, datetime.datetime, Disassembly)
 
     def __init__(self, columns: ColumnsType, generator: Generator) -> None:
         """Constructs a TreeGrid object using a specific set of columns.

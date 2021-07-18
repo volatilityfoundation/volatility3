@@ -43,7 +43,7 @@ class WarningFindSpec(abc.MetaPathFinder):
                 raise Warning(warning)
 
 
-warning_find_spec = [WarningFindSpec()]  # type: List[abc.MetaPathFinder]
+warning_find_spec: List[abc.MetaPathFinder] = [WarningFindSpec()]
 sys.meta_path = warning_find_spec + sys.meta_path
 
 # We point the volatility3.plugins __path__ variable at BOTH

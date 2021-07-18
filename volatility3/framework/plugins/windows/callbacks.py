@@ -191,9 +191,9 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 continue
 
             try:
-                component = ntkrnlmp.object(
+                component: Union[interfaces.renderers.BaseAbsentValue, interfaces.objects.ObjectInterface] = ntkrnlmp.object(
                     "string", absolute = True, offset = callback.Component, max_length = 64, errors = "replace"
-                )  # type: Union[interfaces.renderers.BaseAbsentValue, interfaces.objects.ObjectInterface]
+                )
             except exceptions.InvalidAddressException:
                 component = renderers.UnreadableValue()
 

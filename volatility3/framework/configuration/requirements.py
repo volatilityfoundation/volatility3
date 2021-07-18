@@ -36,13 +36,13 @@ class BooleanRequirement(interfaces.configuration.SimpleTypeRequirement):
 
 class IntRequirement(interfaces.configuration.SimpleTypeRequirement):
     """A requirement type that contains a single integer."""
-    instance_type = int  # type: ClassVar[Type]
+    instance_type: ClassVar[Type] = int
 
 
 class StringRequirement(interfaces.configuration.SimpleTypeRequirement):
     """A requirement type that contains a single unicode string."""
     # TODO: Maybe add string length limits?
-    instance_type = str  # type: ClassVar[Type]
+    instance_type: ClassVar[Type] = str
 
 
 class URIRequirement(StringRequirement):
@@ -53,7 +53,7 @@ class URIRequirement(StringRequirement):
 
 class BytesRequirement(interfaces.configuration.SimpleTypeRequirement):
     """A requirement type that contains a byte string."""
-    instance_type = bytes  # type: ClassVar[Type]
+    instance_type: ClassVar[Type] = bytes
 
 
 class ListRequirement(interfaces.configuration.RequirementInterface):
@@ -83,9 +83,9 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
         super().__init__(*args, **kwargs)
         if not issubclass(element_type, interfaces.configuration.BasicTypes):
             raise TypeError("ListRequirements can only be populated with simple InstanceRequirements")
-        self.element_type = element_type  # type: Type
-        self.min_elements = min_elements or 0  # type: int
-        self.max_elements = max_elements  # type: Optional[int]
+        self.element_type: Type = element_type
+        self.min_elements: int = min_elements or 0
+        self.max_elements: Optional[int] = max_elements
 
     def unsatisfied(self, context: interfaces.context.ContextInterface,
                     config_path: str) -> Dict[str, interfaces.configuration.RequirementInterface]:
@@ -397,7 +397,7 @@ class VersionRequirement(interfaces.configuration.RequirementInterface):
         super().__init__(name = name, description = description, default = default, optional = optional)
         if component is None:
             raise TypeError("Component cannot be None")
-        self._component = component # type: Type[interfaces.configuration.VersionableInterface]
+        self._component: Type[interfaces.configuration.VersionableInterface] = component
         if version is None:
             raise TypeError("Version cannot be None")
         self._version = version

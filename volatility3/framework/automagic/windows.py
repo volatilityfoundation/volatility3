@@ -325,7 +325,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
             if arch not in ['Intel32', 'Intel64']:
                 return None
             # Set the layer type
-            layer_type = intel.WindowsIntel  # type: Type
+            layer_type: Type = intel.WindowsIntel
             if arch == 'Intel64':
                 layer_type = intel.WindowsIntel32e
             elif base_layer.metadata.get('pae', False):

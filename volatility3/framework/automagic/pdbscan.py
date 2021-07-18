@@ -62,7 +62,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             A list of (layer_name, scan_results)
         """
         sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        results = []  # type: List[str]
+        results: List[str] = []
         if isinstance(requirement, requirements.TranslationLayerRequirement):
             # Check for symbols in this layer
             # FIXME: optionally allow a full (slow) scan
@@ -207,13 +207,13 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         """Method for finding a suitable kernel offset based on a module
         table."""
         vollog.debug("Kernel base determination - searching layer module list structure")
-        valid_kernel = None  # type: Optional[ValidKernelType]
+        valid_kernel: Optional[ValidKernelType] = None
         # If we're here, chances are high we're in a Win10 x64 image with kernel base randomization
         physical_layer_name = self.get_physical_layer_name(context, vlayer)
         physical_layer = context.layers[physical_layer_name]
         # TODO:  On older windows, this might be \WINDOWS\system32\nt rather than \SystemRoot\system32\nt
         results = physical_layer.scan(context, scanners.BytesScanner(pattern), progress_callback = progress_callback)
-        seen = set()  # type: Set[int]
+        seen: Set[int] = set()
         # Because this will launch a scan of the virtual layer, we want to be careful
         for result in results:
             # TODO: Identify the specific structure we're finding and document this a bit better
@@ -252,7 +252,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         """Scans a virtual address."""
         # Scan a few megs of the virtual space at the location to see if they're potential kernels
 
-        valid_kernel = None  # type: Optional[ValidKernelType]
+        valid_kernel: Optional[ValidKernelType] = None
         kernel_pdb_names = [bytes(name + ".pdb", "utf-8") for name in constants.windows.KERNEL_MODULE_NAMES]
 
         virtual_layer_name = vlayer.name
@@ -295,7 +295,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         Returns:
             A dictionary of valid kernels
         """
-        valid_kernel = None  # type: Optional[ValidKernelType]
+        valid_kernel: Optional[ValidKernelType] = None
         for virtual_layer_name in potential_layers:
             vlayer = context.layers.get(virtual_layer_name, None)
             if isinstance(vlayer, layers.intel.Intel):

@@ -48,7 +48,7 @@ class proc(generic.GenericIntelProcess):
         except exceptions.InvalidAddressException:
             return
 
-        seen = set()  # type: Set[int]
+        seen: Set[int] = set()
 
         for i in range(task.map.hdr.nentries):
             if not current_map or current_map.vol.offset in seen:
