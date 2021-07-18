@@ -30,7 +30,7 @@ class Downloader:
     def download_list(self, urls: List[str]) -> Dict[str, str]:
         processed_files = {}
         for url in urls:
-            print(" - Downloading {}".format(url))
+            print(f" - Downloading {url}")
             data = requests.get(url)
             with tempfile.NamedTemporaryFile() as archivedata:
                 archivedata.write(data.content)
@@ -48,14 +48,14 @@ class Downloader:
         extracted = None
         for member in rpm.getmembers():
             if 'vmlinux' in member.name or 'System.map' in member.name:
-                print(" - Extracting {}".format(member.name))
+                print(f" - Extracting {member.name}")
                 extracted = rpm.extractfile(member)
                 break
         if not member or not extracted:
             return None
         with tempfile.NamedTemporaryFile(delete = False,
                                          prefix = 'vmlinux' if 'vmlinux' in member.name else 'System.map') as output:
-            print(" - Writing to {}".format(output.name))
+            print(f" - Writing to {output.name}")
             output.write(extracted.read())
         return output.name
 
@@ -65,14 +65,14 @@ class Downloader:
         extracted = None
         for member in deb.data.tgz().getmembers():
             if member.name.endswith('vmlinux') or 'System.map' in member.name:
-                print(" - Extracting {}".format(member.name))
+                print(f" - Extracting {member.name}")
                 extracted = deb.data.get_file(member.name)
                 break
         if not member or not extracted:
             return None
         with tempfile.NamedTemporaryFile(delete = False,
                                          prefix = 'vmlinux' if 'vmlinux' in member.name else 'System.map') as output:
-            print(" - Writing to {}".format(output.name))
+            print(f" - Writing to {output.name}")
             output.write(extracted.read())
         return output.name
 
@@ -81,7 +81,7 @@ class Downloader:
         print("Processing Files...")
         for i in named_files:
             if named_files[i] is None:
-                print("FAILURE: None encountered for {}".format(i))
+                print(f"FAILURE: None encountered for {i}")
                 return
         args = [DWARF2JSON, 'linux']
         output_filename = 'unknown-kernel.json'
@@ -91,10 +91,10 @@ class Downloader:
                 prefix = '--elf'
                 output_filename = './' + '-'.join((named_file.split('/')[-1]).split('-')[2:])[:-4] + '.json.xz'
             args += [prefix, named_files[named_file]]
-        print(" - Running {}".format(args))
+        print(f" - Running {args}")
         proc = subprocess.run(args, capture_output = True)
 
-        print(" - Writing to {}".format(output_filename))
+        print(f" - Writing to {output_filename}")
         with lzma.open(output_filename, 'w') as f:
             f.write(proc.stdout)
 

@@ -27,17 +27,17 @@ class PDBRetreiver:
         logger.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])
         for sym_url in ['http://msdl.microsoft.com/download/symbols']:
-            url = sym_url + "/{}/{}/".format(file_name, guid)
+            url = sym_url + f"/{file_name}/{guid}/"
 
             result = None
             for suffix in [file_name[:-1] + '_', file_name]:
                 try:
-                    logger.debug("Attempting to retrieve {}".format(url + suffix))
+                    logger.debug(f"Attempting to retrieve {url + suffix}")
                     result, _ = request.urlretrieve(url + suffix)
                 except request.HTTPError as excp:
-                    logger.debug("Failed with {}".format(excp))
+                    logger.debug(f"Failed with {excp}")
             if result:
-                logger.debug("Successfully written to {}".format(result))
+                logger.debug(f"Successfully written to {result}")
                 break
         return result
 
@@ -257,7 +257,7 @@ class PDBConvertor:
         if output is None:
             import pdb
             pdb.set_trace()
-            raise ValueError("Unknown size for field: {}".format(field.name))
+            raise ValueError(f"Unknown size for field: {field.name}")
         return output
 
     def _format_kind(self, kind):
@@ -355,6 +355,6 @@ if __name__ == '__main__':
         json.dump(convertor.read_pdb(), f, indent = 2, sort_keys = True)
 
     if args.keep:
-        print("Temporary PDB file: {}".format(filename))
+        print(f"Temporary PDB file: {filename}")
     elif delfile:
         os.remove(filename)
