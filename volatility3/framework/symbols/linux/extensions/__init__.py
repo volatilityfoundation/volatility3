@@ -181,7 +181,7 @@ class task_struct(generic.GenericIntelProcess):
             return None
 
         if preferred_name is None:
-            preferred_name = self.vol.layer_name + "_Process{}".format(self.pid)
+            preferred_name = self.vol.layer_name + f"_Process{self.pid}"
 
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
@@ -197,7 +197,7 @@ class task_struct(generic.GenericIntelProcess):
                 continue
             else:
                 # FIXME: Check if this actually needs to be printed out or not
-                vollog.info("adding vma: {:x} {:x} | {:x} {:x}".format(start, self.mm.brk, end, self.mm.start_brk))
+                vollog.info(f"adding vma: {start:x} {self.mm.brk:x} | {end:x} {self.mm.start_brk:x}")
 
             yield (start, end - start)
 
@@ -496,7 +496,7 @@ class vfsmount(objects.StructType):
 
     def _get_real_mnt(self):
         table_name = self.vol.type_name.split(constants.BANG)[0]
-        mount_struct = "{0}{1}mount".format(table_name, constants.BANG)
+        mount_struct = f"{table_name}{constants.BANG}mount"
         offset = self._context.symbol_space.get_type(mount_struct).relative_child_offset("mnt")
 
         return self._context.object(mount_struct, self.vol.layer_name, offset = self.vol.offset - offset)

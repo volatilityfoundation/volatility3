@@ -83,7 +83,7 @@ class HiveList(interfaces.plugins.PluginInterface):
                 maxaddr = hive.hive.Storage[0].Length
                 hive_name = self._sanitize_hive_name(hive.get_name())
 
-                file_handle = self.open('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset)))
+                file_handle = self.open(f'registry.{hive_name}.{hex(hive.hive_offset)}.hive')
                 with file_handle as file_data:
                     if hive._base_block:
                         hive_data = self.context.layers[hive.dependencies[0]].read(hive.hive.BaseBlock, 1 << 12)
@@ -143,7 +143,7 @@ class HiveList(interfaces.plugins.PluginInterface):
             try:
                 hive = registry.RegistryHive(context, reg_config_path, name = 'hive' + hex(hive_offset))
             except exceptions.InvalidAddressException:
-                vollog.warning("Couldn't create RegistryHive layer at offset {}, skipping".format(hex(hive_offset)))
+                vollog.warning(f"Couldn't create RegistryHive layer at offset {hex(hive_offset)}, skipping")
                 continue
             context.layers.add_layer(hive)
             yield hive

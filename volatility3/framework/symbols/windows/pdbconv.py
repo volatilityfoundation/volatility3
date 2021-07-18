@@ -364,19 +364,19 @@ class PdbReader:
 
 
     def _read_info_stream(self, stream_number, stream_name, info_list):
-        vollog.debug("Reading {}".format(stream_name))
+        vollog.debug(f"Reading {stream_name}")
         info_layer = self._context.layers.get(self._layer_name + "_stream" + str(stream_number), None)
         if not info_layer:
-            raise ValueError("No {} stream available".format(stream_name))
+            raise ValueError(f"No {stream_name} stream available")
         module = self._context.module(module_name = info_layer.pdb_symbol_table,
                                       layer_name = info_layer.name,
                                       offset = 0)
         header = module.object(object_type = "TPI_HEADER", offset = 0)
         # Check the header
         if not (56 <= header.header_size < 1024):
-            raise ValueError("{} Stream Header size outside normal bounds".format(stream_name))
+            raise ValueError(f"{stream_name} Stream Header size outside normal bounds")
         if header.index_min < 4096:
-            raise ValueError("Minimum {} index is 4096, found: {}".format(stream_name, header.index_min))
+            raise ValueError(f"Minimum {stream_name} index is 4096, found: {header.index_min}")
         if header.index_max < header.index_min:
             raise ValueError("Maximum {} index is smaller than minimum TPI index, found: {} < {} ".format(
                 stream_name, header.index_max, header.index_min))
@@ -396,8 +396,8 @@ class PdbReader:
             output, consumed = self.consume_type(module, offset, length)
             leaf_type, name, value = output
             for tag_type in ['unnamed', 'anonymous']:
-                if name == '<{}-tag>'.format(tag_type) or name == '__{}'.format(tag_type):
-                    name = '__{}_'.format(tag_type) + hex(len(info_list) + 0x1000)[2:]
+                if name == f'<{tag_type}-tag>' or name == f'__{tag_type}':
+                    name = f'__{tag_type}_' + hex(len(info_list) + 0x1000)[2:]
             if name:
                 info_references[name] = len(info_list)
             info_list.append((leaf_type, name, value))
@@ -493,7 +493,7 @@ class PdbReader:
                     name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 2)
                     address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
                 else:
-                    vollog.debug("Only v2 and v3 symbols are supported: {:x}".format(leaf_type))
+                    vollog.debug(f"Only v2 and v3 symbols are supported: {leaf_type:x}")
             if name:
                 if self._omap_mapping:
                     address = self.omap_lookup(address)
@@ -674,9 +674,9 @@ class PdbReader:
             elif leaf_type in [leaf_type.LF_PROCEDURE]:
                 raise ValueError("LF_PROCEDURE size could not be identified")
             else:
-                raise ValueError("Unable to determine size of leaf_type {}".format(leaf_type.lookup()))
+                raise ValueError(f"Unable to determine size of leaf_type {leaf_type.lookup()}")
         if result <= 0:
-            raise ValueError("Invalid size identified: {} ({})".format(index, name))
+            raise ValueError(f"Invalid size identified: {index} ({name})")
         return result
 
     ### TYPE HANDLING CODE
@@ -824,7 +824,7 @@ class PdbReader:
             consumed += buildinfo.arguments.vol.size
             result = leaf_type, None, buildinfo
         else:
-            raise TypeError("Unhandled leaf_type: {}".format(leaf_type))
+            raise TypeError(f"Unhandled leaf_type: {leaf_type}")
 
         return result, consumed
 
@@ -934,20 +934,20 @@ class PdbRetreiver:
         vollog.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])
         for sym_url in ['http://msdl.microsoft.com/download/symbols']:
-            url = sym_url + "/{}/{}/".format(file_name, guid)
+            url = sym_url + f"/{file_name}/{guid}/"
 
             result = None
             for suffix in [file_name, file_name[:-1] + '_']:
                 try:
-                    vollog.debug("Attempting to retrieve {}".format(url + suffix))
+                    vollog.debug(f"Attempting to retrieve {url + suffix}")
                     # We have to cache this because the file is opened by a layer and we can't control whether that caches
                     result = resources.ResourceAccessor(progress_callback).open(url + suffix)
                 except (error.HTTPError, error.URLError) as excp:
-                    vollog.debug("Failed with {}".format(excp))
+                    vollog.debug(f"Failed with {excp}")
                 if result:
                     break
         if progress_callback is not None:
-            progress_callback(100, "Downloading {}".format(url + suffix))
+            progress_callback(100, f"Downloading {url + suffix}")
         if result is None:
             return None
         return url + suffix
@@ -972,7 +972,7 @@ if __name__ == '__main__':
             Args:
                 progress: Percentage of progress of the current procedure
             """
-            message = "\rProgress: {0: 7.2f}\t\t{1:}".format(round(progress, 2), description or '')
+            message = f"\rProgress: {round(progress, 2): 7.2f}\t\t{description or ''}"
             message_len = len(message)
             self._max_message_len = max([self._max_message_len, message_len])
             print(message, end = (' ' * (self._max_message_len - message_len)) + '\r')
@@ -1017,7 +1017,7 @@ if __name__ == '__main__':
     url = parse.urlparse(filename, scheme = 'file')
     if url.scheme == 'file':
         if not os.path.exists(filename):
-            parser.error("File {} does not exists".format(filename))
+            parser.error(f"File {filename} does not exists")
         location = "file:" + request.pathname2url(os.path.abspath(filename))
     else:
         location = filename
@@ -1032,7 +1032,7 @@ if __name__ == '__main__':
         else:
             guid = converted_json['metadata']['windows']['pdb']['GUID']
             age = converted_json['metadata']['windows']['pdb']['age']
-        args.output = "{}-{}.json.xz".format(guid, age)
+        args.output = f"{guid}-{age}.json.xz"
 
     output_url = os.path.abspath(args.output)
 
@@ -1049,6 +1049,6 @@ if __name__ == '__main__':
         f.write(bytes(json_string, 'latin-1'))
 
     if args.keep:
-        print("Temporary PDB file: {}".format(filename))
+        print(f"Temporary PDB file: {filename}")
     elif delfile:
         os.remove(filename)

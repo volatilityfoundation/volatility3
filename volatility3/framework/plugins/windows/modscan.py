@@ -160,7 +160,7 @@ class ModScan(interfaces.plugins.PluginInterface):
             if self.config['dump']:
 
                 session_layer_name = self.find_session_layer(self.context, session_layers, mod.DllBase)
-                file_output = "Cannot find a viable session layer for {0:#x}".format(mod.DllBase)
+                file_output = f"Cannot find a viable session layer for {mod.DllBase:#x}"
                 if session_layer_name:
                     file_handle = dlllist.DllList.dump_pe(self.context,
                                                           pe_table_name,

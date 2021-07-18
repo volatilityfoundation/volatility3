@@ -74,7 +74,7 @@ class ResourceAccessor(object):
         self._enable_cache = enable_cache
         if self.list_handlers:
             vollog.log(constants.LOGLEVEL_VVV,
-                       "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
+                       f"Available URL handlers: {', '.join([x.__name__ for x in self._handlers])}")
             self.__class__.list_handlers = False
 
     def uses_cache(self, url: str) -> bool:
@@ -132,7 +132,7 @@ class ResourceAccessor(object):
                     "data_" + hashlib.sha512(bytes(url, 'raw_unicode_escape')).hexdigest() + ".cache")
 
                 if not os.path.exists(temp_filename):
-                    vollog.debug("Caching file at: {}".format(temp_filename))
+                    vollog.debug(f"Caching file at: {temp_filename}")
 
                     try:
                         content_length = fp.info().get('Content-Length', -1)
@@ -147,7 +147,7 @@ class ResourceAccessor(object):
                         count += len(block)
                         if self._progress_callback:
                             self._progress_callback(count * 100 / max(count, int(content_length)),
-                                                    "Reading file {}".format(url))
+                                                    f"Reading file {url}")
                         cache_file.write(block)
                         block = fp.read(block_size)
                     cache_file.close()
@@ -237,13 +237,13 @@ class JarHandler(VolatilityHandler):
         if req.type == 'jar':
             subscheme, remainder = req.full_url.split(":")[1], ":".join(req.full_url.split(":")[2:])
             if subscheme != 'file':
-                vollog.log(constants.LOGLEVEL_VVV, "Unsupported jar subscheme {}".format(subscheme))
+                vollog.log(constants.LOGLEVEL_VVV, f"Unsupported jar subscheme {subscheme}")
                 return None
 
             zipsplit = remainder.split("!")
             if len(zipsplit) != 2:
                 vollog.log(constants.LOGLEVEL_VVV,
-                           "Path did not contain exactly one fragment indicator: {}".format(remainder))
+                           f"Path did not contain exactly one fragment indicator: {remainder}")
                 return None
 
             zippath, filepath = zipsplit

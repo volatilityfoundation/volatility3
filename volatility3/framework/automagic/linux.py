@@ -41,7 +41,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             dtb = None
-            vollog.debug("Identified banner: {}".format(repr(banner)))
+            vollog.debug(f"Identified banner: {repr(banner)}")
 
             symbol_files = linux_banners.get(banner, None)
             if symbol_files:
@@ -82,7 +82,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                                     metadata = {'kaslr_value': aslr_shift, 'os': 'Linux'})
 
             if layer and dtb:
-                vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
+                vollog.debug(f"DTB was found at: 0x{dtb:0x}")
                 return layer
         vollog.debug("No suitable linux banner could be matched")
         return None

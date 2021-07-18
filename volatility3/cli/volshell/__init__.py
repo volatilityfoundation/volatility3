@@ -41,7 +41,7 @@ class VolShell(cli.CommandLine):
     def run(self):
         """Executes the command line module, taking the system arguments,
         determining the plugin to run and then running it."""
-        sys.stdout.write("Volshell (Volatility 3 Framework) {}\n".format(constants.PACKAGE_VERSION))
+        sys.stdout.write(f"Volshell (Volatility 3 Framework) {constants.PACKAGE_VERSION}\n")
 
         framework.require_interface_version(1, 0, 0)
 
@@ -90,7 +90,7 @@ class VolShell(cli.CommandLine):
                             default = False,
                             action = 'store_true')
         parser.add_argument("--cache-path",
-                            help = "Change the default path ({}) used to store the cache".format(constants.CACHE_PATH),
+                            help = f"Change the default path ({constants.CACHE_PATH}) used to store the cache",
                             default = constants.CACHE_PATH,
                             type = str)
 
@@ -119,8 +119,8 @@ class VolShell(cli.CommandLine):
         if partial_args.cache_path:
             constants.CACHE_PATH = partial_args.cache_path
 
-        vollog.info("Volatility plugins path: {}".format(volatility3.plugins.__path__))
-        vollog.info("Volatility symbols path: {}".format(volatility3.symbols.__path__))
+        vollog.info(f"Volatility plugins path: {volatility3.plugins.__path__}")
+        vollog.info(f"Volatility symbols path: {volatility3.symbols.__path__}")
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
@@ -180,7 +180,7 @@ class VolShell(cli.CommandLine):
         # Run the argparser
         args = parser.parse_args()
 
-        vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
+        vollog.log(constants.LOGLEVEL_VVV, f"Cache directory used: {constants.CACHE_PATH}")
 
         plugin = generic.Volshell
         if args.windows:
@@ -243,7 +243,7 @@ class VolShell(cli.CommandLine):
             constructed.run()
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
-            parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
+            parser.exit(1, f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
 
 
 def main():

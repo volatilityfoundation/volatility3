@@ -59,7 +59,7 @@ class TreeNode(interfaces.renderers.TreeNode):
         self._values = treegrid.RowStructure(*values)  # type: ignore
 
     def __repr__(self) -> str:
-        return "<TreeNode [{}] - {}>".format(self.path, self._values)
+        return f"<TreeNode [{self.path}] - {self._values}>"
 
     def __getitem__(self, item: Union[int, slice]) -> Any:
         return self._treegrid.children(self).__getitem__(item)
@@ -219,7 +219,7 @@ class TreeGrid(interfaces.renderers.TreeGrid):
             except Exception as excp:
                 if fail_on_errors:
                     raise
-                vollog.debug("Exception during population: {}".format(excp))
+                vollog.debug(f"Exception during population: {excp}")
                 self._populated = True
                 return excp
         self._populated = True
@@ -363,7 +363,7 @@ class ColumnSortKey(interfaces.renderers.ColumnSortKey):
                 _index = i
                 self._type = column.type
         if _index is None:
-            raise ValueError("Column not found in TreeGrid columns: {}".format(column_name))
+            raise ValueError(f"Column not found in TreeGrid columns: {column_name}")
         self._index = _index
 
     def __call__(self, values: List[Any]) -> Any:

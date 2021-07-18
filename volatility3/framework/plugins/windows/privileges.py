@@ -64,7 +64,7 @@ class Privs(interfaces.plugins.PluginInterface):
                 # Skip privileges whose bit positions cannot be
                 # translated to a privilege name
                 if not self.privilege_info.get(int(value)):
-                    vollog.log(constants.LOGLEVEL_VVV, 'Skeep invalid privilege ({}).'.format(value))
+                    vollog.log(constants.LOGLEVEL_VVV, f'Skeep invalid privilege ({value}).')
                     continue
 
                 name, desc = self.privilege_info.get(int(value))

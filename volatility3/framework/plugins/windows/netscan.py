@@ -212,12 +212,12 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 latest_version = current_versions[-1]
 
                 filename = version_dict.get(latest_version)
-                vollog.debug("Unable to find exact matching symbol file, going with latest: {}".format(filename))
+                vollog.debug(f"Unable to find exact matching symbol file, going with latest: {filename}")
             else:
                 raise NotImplementedError("This version of Windows is not supported: {}.{} {}.{}!".format(
                     nt_major_version, nt_minor_version, vers.MajorVersion, vers_minor_version))
 
-        vollog.debug("Determined symbol filename: {}".format(filename))
+        vollog.debug(f"Determined symbol filename: {filename}")
 
         return filename, class_types
 
@@ -285,13 +285,13 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         for netw_obj in self.scan(self.context, self.config['primary'], self.config['nt_symbols'],
                                   netscan_symbol_table):
 
-            vollog.debug("Found netw obj @ 0x{:2x} of assumed type {}".format(netw_obj.vol.offset, type(netw_obj)))
+            vollog.debug(f"Found netw obj @ 0x{netw_obj.vol.offset:2x} of assumed type {type(netw_obj)}")
             # objects passed pool header constraints. check for additional constraints if strict flag is set.
             if not show_corrupt_results and not netw_obj.is_valid():
                 continue
 
             if isinstance(netw_obj, network._UDP_ENDPOINT):
-                vollog.debug("Found UDP_ENDPOINT @ 0x{:2x}".format(netw_obj.vol.offset))
+                vollog.debug(f"Found UDP_ENDPOINT @ 0x{netw_obj.vol.offset:2x}")
 
                 # For UdpA, the state is always blank and the remote end is asterisks
                 for ver, laddr, _ in netw_obj.dual_stack_sockets():
@@ -301,7 +301,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                or renderers.UnreadableValue()))
 
             elif isinstance(netw_obj, network._TCP_ENDPOINT):
-                vollog.debug("Found _TCP_ENDPOINT @ 0x{:2x}".format(netw_obj.vol.offset))
+                vollog.debug(f"Found _TCP_ENDPOINT @ 0x{netw_obj.vol.offset:2x}")
                 if netw_obj.get_address_family() == network.AF_INET:
                     proto = "TCPv4"
                 elif netw_obj.get_address_family() == network.AF_INET6:
@@ -322,7 +322,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             # check for isinstance of tcp listener last, because all other objects are inherited from here
             elif isinstance(netw_obj, network._TCP_LISTENER):
-                vollog.debug("Found _TCP_LISTENER @ 0x{:2x}".format(netw_obj.vol.offset))
+                vollog.debug(f"Found _TCP_LISTENER @ 0x{netw_obj.vol.offset:2x}")
 
                 # For TcpL, the state is always listening and the remote port is zero
                 for ver, laddr, raddr in netw_obj.dual_stack_sockets():
@@ -332,7 +332,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                or renderers.UnreadableValue()))
             else:
                 # this should not happen therefore we log it.
-                vollog.debug("Found network object unsure of its type: {} of type {}".format(netw_obj, type(netw_obj)))
+                vollog.debug(f"Found network object unsure of its type: {netw_obj} of type {type(netw_obj)}")
 
     def generate_timeline(self):
         for row in self._generator():

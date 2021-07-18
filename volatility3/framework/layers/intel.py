@@ -107,7 +107,7 @@ class Intel(linear.LinearlyMappedLayer):
         # Now we're done
         if not self._page_is_valid(entry):
             raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                          "Page Fault at entry {} in page entry".format(hex(entry)))
+                                                          f"Page Fault at entry {hex(entry)} in page entry")
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
 
         return page, 1 << (position + 1), self._base_layer

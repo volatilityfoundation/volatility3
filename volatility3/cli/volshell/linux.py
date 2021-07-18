@@ -30,9 +30,9 @@ class Volshell(generic.Volshell):
                 if process_layer is not None:
                     self.change_layer(process_layer)
                     return
-                print("Layer for task ID {} could not be constructed".format(pid))
+                print(f"Layer for task ID {pid} could not be constructed")
                 return
-        print("No task with task ID {} found".format(pid))
+        print(f"No task with task ID {pid} found")
 
     def list_tasks(self):
         """Returns a list of task objects from the primary layer"""

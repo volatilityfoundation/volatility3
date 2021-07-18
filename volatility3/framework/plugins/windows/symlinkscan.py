@@ -68,7 +68,7 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
     def generate_timeline(self):
         for row in self._generator():
             _depth, row_data = row
-            description = "Symlink: {} -> {}".format(row_data[2], row_data[3])
+            description = f"Symlink: {row_data[2]} -> {row_data[3]}"
             yield (description, timeliner.TimeLinerType.CREATED, row_data[1])
 
     def run(self):

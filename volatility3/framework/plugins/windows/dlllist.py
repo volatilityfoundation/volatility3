@@ -83,7 +83,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 file_handle.seek(offset)
                 file_handle.write(data)
         except (IOError, exceptions.VolatilityException, OverflowError, ValueError) as excp:
-            vollog.debug("Unable to dump dll at offset {}: {}".format(dll_entry.DllBase, excp))
+            vollog.debug(f"Unable to dump dll at offset {dll_entry.DllBase}: {excp}")
             return None
         return file_handle
 
@@ -131,7 +131,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                entry,
                                                self.open,
                                                proc_layer_name,
-                                               prefix = "pid.{}.".format(proc_id))
+                                               prefix = f"pid.{proc_id}.")
                     file_output = "Error outputting file"
                     if file_handle:
                         file_handle.close()

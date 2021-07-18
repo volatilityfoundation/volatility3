@@ -155,7 +155,7 @@ def get_module_wrapper(method: str) -> Callable:
         if constants.BANG not in name:
             name = self._module_name + constants.BANG + name
         else:
-            raise ValueError("Cannot reference another module when calling {}".format(method))
+            raise ValueError(f"Cannot reference another module when calling {method}")
         return getattr(self._context.symbol_space, method)(name)
 
     for entry in ['__annotations__', '__doc__', '__module__', '__name__', '__qualname__']:
@@ -232,7 +232,7 @@ class Module(interfaces.context.ModuleInterface):
             offset += self._offset
 
         if symbol_val.type is None:
-            raise TypeError("Symbol {} has no associated type".format(symbol_val.name))
+            raise TypeError(f"Symbol {symbol_val.name} has no associated type")
 
         # Ensure we don't use a layer_name other than the module's, why would anyone do that?
         if 'layer_name' in kwargs:

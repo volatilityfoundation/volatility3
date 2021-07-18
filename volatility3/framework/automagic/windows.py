@@ -272,7 +272,7 @@ class WintelHelper(interfaces.automagic.AutomagicInterface):
                     physical_layer_name = requirement.requirements["memory_layer"].config_value(
                         context, sub_config_path)
                     if not isinstance(physical_layer_name, str):
-                        raise TypeError("Physical layer name is not a string: {}".format(sub_config_path))
+                        raise TypeError(f"Physical layer name is not a string: {sub_config_path}")
                     physical_layer = context.layers[physical_layer_name]
                     # Check lower layer metadata first
                     if physical_layer.metadata.get('page_map_offset', None):

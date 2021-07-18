@@ -107,5 +107,5 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
         for row in self._generator(
                 list_tasks(self.context, self.config['primary'], self.config['darwin'], filter_func = filter_func)):
             _depth, row_data = row
-            description = "{} ({}): \"{}\"".format(row_data[0], row_data[1], row_data[3])
+            description = f"{row_data[0]} ({row_data[1]}): \"{row_data[3]}\""
             yield (description, timeliner.TimeLinerType.CREATED, row_data[2])

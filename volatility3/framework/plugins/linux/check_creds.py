@@ -55,7 +55,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
             if len(pids) > 1:
                 pid_str = ""
                 for pid in pids:
-                    pid_str = pid_str + "{0:d}, ".format(pid)
+                    pid_str = pid_str + f"{pid:d}, "
                 pid_str = pid_str[:-2]
                 yield (0, [str(pid_str)])
 

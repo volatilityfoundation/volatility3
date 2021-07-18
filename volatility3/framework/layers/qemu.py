@@ -179,21 +179,21 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 index += 4
                 if section_id != current_section_id:
                     raise exceptions.LayerException(
-                        self._name, 'QEMU section footer mismatch: {} and {}'.format(current_section_id, section_id))
+                        self._name, f'QEMU section footer mismatch: {current_section_id} and {section_id}')
             elif section_byte == self.QEVM_EOF:
                 pass
             else:
-                raise exceptions.LayerException(self._name, 'QEMU unknown section encountered: {}'.format(section_byte))
+                raise exceptions.LayerException(self._name, f'QEMU unknown section encountered: {section_byte}')
 
     def extract_data(self, index, name, version_id):
         if name == 'ram':
             if version_id != 4:
-                raise exceptions.LayerException("QEMU unknown RAM version_id {}".format(version_id))
+                raise exceptions.LayerException(f"QEMU unknown RAM version_id {version_id}")
             new_segments, index = self._get_ram_segments(index, self._configuration.get('page_size', None) or 4096)
             self._segments += new_segments
         elif name == 'spapr/htab':
             if version_id != 1:
-                raise exceptions.LayerException("QEMU unknown HTAB version_id {}".format(version_id))
+                raise exceptions.LayerException(f"QEMU unknown HTAB version_id {version_id}")
             header = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
                                          offset = index,
                                          layer_name = self._base_layer)

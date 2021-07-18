@@ -67,7 +67,7 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
         if next:
             if i < len(self._segments):
                 return self._segments[i]
-        raise exceptions.InvalidAddressException(self.name, offset, "Invalid address at {:0x}".format(offset))
+        raise exceptions.InvalidAddressException(self.name, offset, f"Invalid address at {offset:0x}")
 
     def mapping(self,
                 offset: int,

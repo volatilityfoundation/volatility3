@@ -29,7 +29,7 @@ class Volshell(generic.Volshell):
                 process_layer = process.add_process_layer()
                 self.change_layer(process_layer)
                 return
-        print("No process with process ID {} found".format(pid))
+        print(f"No process with process ID {pid} found")
 
     def list_processes(self):
         """Returns a list of EPROCESS objects from the primary layer"""

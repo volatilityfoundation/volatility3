@@ -44,7 +44,7 @@ def validate(input: Dict[str, Any], use_cache: bool = True) -> bool:
     basepath = os.path.abspath(os.path.dirname(__file__))
     schema_path = os.path.join(basepath, 'schema-' + format + '.json')
     if not os.path.exists(schema_path):
-        vollog.debug("Schema for format not found: {}".format(schema_path))
+        vollog.debug(f"Schema for format not found: {schema_path}")
         return False
     with open(schema_path, 'r') as s:
         schema = json.load(s)

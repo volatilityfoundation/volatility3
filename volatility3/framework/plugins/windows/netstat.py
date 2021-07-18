@@ -128,7 +128,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # invalid argument.
             return
 
-        vollog.debug("Current Port: {}".format(port))
+        vollog.debug(f"Current Port: {port}")
         # the given port serves as a shifted index into the port pool lists
         list_index = port >> 8
         truncated_port = port & 0xff
@@ -179,7 +179,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         """
         for mod in modules.Modules.list_modules(context, layer_name, nt_symbols):
             if mod.BaseDllName.get_string() == "tcpip.sys":
-                vollog.debug("Found tcpip.sys image base @ 0x{:x}".format(mod.DllBase))
+                vollog.debug(f"Found tcpip.sys image base @ 0x{mod.DllBase:x}")
                 return mod
         return None
 
@@ -255,7 +255,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             part_table_addr, part_count))
         entry_offset = context.symbol_space.get_type(obj_name).relative_child_offset("ListEntry")
         for ctr, partition in enumerate(part_table.Partitions):
-            vollog.debug("Parsing partition {}".format(ctr))
+            vollog.debug(f"Parsing partition {ctr}")
             if partition.Endpoints.NumEntries > 0:
                 for endpoint_entry in cls.parse_hashtable(context, layer_name, partition.Endpoints.Directory,
                                                           partition.Endpoints.TableSize, alignment, net_symbol_table):
@@ -347,9 +347,9 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             # this branch should not be reached.
             raise exceptions.SymbolError(
                 "UdpPortPool", tcpip_symbol_table,
-                "Neither UdpPortPool nor UdpCompartmentSet found in {} table".format(tcpip_symbol_table))
+                f"Neither UdpPortPool nor UdpCompartmentSet found in {tcpip_symbol_table} table")
 
-        vollog.debug("Found PortPools @ 0x{:x} (UDP) && 0x{:x} (TCP)".format(upp_addr, tpp_addr))
+        vollog.debug(f"Found PortPools @ 0x{upp_addr:x} (UDP) && 0x{tpp_addr:x} (TCP)")
         return upp_addr, tpp_addr
 
     @classmethod
@@ -399,8 +399,8 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         tcpl_ports = cls.parse_bitmap(context, layer_name, tpp_obj.PortBitMap.Buffer,
                                       tpp_obj.PortBitMap.SizeOfBitMap // 8)
 
-        vollog.debug("Found TCP Ports: {}".format(tcpl_ports))
-        vollog.debug("Found UDP Ports: {}".format(udpa_ports))
+        vollog.debug(f"Found TCP Ports: {tcpl_ports}")
+        vollog.debug(f"Found UDP Ports: {udpa_ports}")
         # given the list of TCP / UDP ports, calculate the address of their respective objects and yield them.
         for port in tcpl_ports:
             # port value can be 0, which we can skip
@@ -439,7 +439,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 continue
 
             if isinstance(netw_obj, network._UDP_ENDPOINT):
-                vollog.debug("Found UDP_ENDPOINT @ 0x{:2x}".format(netw_obj.vol.offset))
+                vollog.debug(f"Found UDP_ENDPOINT @ 0x{netw_obj.vol.offset:2x}")
 
                 # For UdpA, the state is always blank and the remote end is asterisks
                 for ver, laddr, _ in netw_obj.dual_stack_sockets():
@@ -449,7 +449,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                or renderers.UnreadableValue()))
 
             elif isinstance(netw_obj, network._TCP_ENDPOINT):
-                vollog.debug("Found _TCP_ENDPOINT @ 0x{:2x}".format(netw_obj.vol.offset))
+                vollog.debug(f"Found _TCP_ENDPOINT @ 0x{netw_obj.vol.offset:2x}")
                 if netw_obj.get_address_family() == network.AF_INET:
                     proto = "TCPv4"
                 elif netw_obj.get_address_family() == network.AF_INET6:
@@ -472,7 +472,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             # check for isinstance of tcp listener last, because all other objects are inherited from here
             elif isinstance(netw_obj, network._TCP_LISTENER):
-                vollog.debug("Found _TCP_LISTENER @ 0x{:2x}".format(netw_obj.vol.offset))
+                vollog.debug(f"Found _TCP_LISTENER @ 0x{netw_obj.vol.offset:2x}")
 
                 # For TcpL, the state is always listening and the remote port is zero
                 for ver, laddr, raddr in netw_obj.dual_stack_sockets():
@@ -482,7 +482,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                or renderers.UnreadableValue()))
             else:
                 # this should not happen therefore we log it.
-                vollog.debug("Found network object unsure of its type: {} of type {}".format(netw_obj, type(netw_obj)))
+                vollog.debug(f"Found network object unsure of its type: {netw_obj} of type {type(netw_obj)}")
 
     def generate_timeline(self):
         for row in self._generator():

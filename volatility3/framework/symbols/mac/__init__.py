@@ -149,7 +149,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
                     vnode = f.f_fglob.fg_data.dereference().cast("vnode")
                     path = vnode.full_path()
                 elif ftype:
-                    path = "<{}>".format(ftype.lower())
+                    path = f"<{ftype.lower()}>"
 
                 yield f, path, fd_num
 

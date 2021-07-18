@@ -105,7 +105,7 @@ class ListRequirement(interfaces.configuration.RequirementInterface):
             context.config[config_path] = []
         if not isinstance(value, list):
             # TODO: Check this is the correct response for an error
-            raise TypeError("Unexpected config value found: {}".format(repr(value)))
+            raise TypeError(f"Unexpected config value found: {repr(value)}")
         if not (self.min_elements <= len(value)):
             vollog.log(constants.LOGLEVEL_V, "TypeError - Too few values provided to list option.")
             return {config_path: self}
@@ -264,20 +264,20 @@ class TranslationLayerRequirement(interfaces.configuration.ConstructableRequirem
         value = self.config_value(context, config_path, None)
         if isinstance(value, str):
             if value not in context.layers:
-                vollog.log(constants.LOGLEVEL_V, "IndexError - Layer not found in memory space: {}".format(value))
+                vollog.log(constants.LOGLEVEL_V, f"IndexError - Layer not found in memory space: {value}")
                 return {config_path: self}
             if self.oses and context.layers[value].metadata.get('os', None) not in self.oses:
-                vollog.log(constants.LOGLEVEL_V, "TypeError - Layer is not the required OS: {}".format(value))
+                vollog.log(constants.LOGLEVEL_V, f"TypeError - Layer is not the required OS: {value}")
                 return {config_path: self}
             if (self.architectures
                     and context.layers[value].metadata.get('architecture', None) not in self.architectures):
-                vollog.log(constants.LOGLEVEL_V, "TypeError - Layer is not the required Architecture: {}".format(value))
+                vollog.log(constants.LOGLEVEL_V, f"TypeError - Layer is not the required Architecture: {value}")
                 return {config_path: self}
             return {}
 
         if value is not None:
             vollog.log(constants.LOGLEVEL_V,
-                       "TypeError - Translation Layer Requirement only accepts string labels: {}".format(repr(value)))
+                       f"TypeError - Translation Layer Requirement only accepts string labels: {repr(value)}")
             return {config_path: self}
 
         # TODO: check that the space in the context lives up to the requirements for arch/os etc
@@ -285,7 +285,7 @@ class TranslationLayerRequirement(interfaces.configuration.ConstructableRequirem
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
         self._validate_class(context, interfaces.configuration.parent_path(config_path))
-        vollog.log(constants.LOGLEVEL_V, "IndexError - No configuration provided: {}".format(config_path))
+        vollog.log(constants.LOGLEVEL_V, f"IndexError - No configuration provided: {config_path}")
         return {config_path: self}
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:
@@ -333,7 +333,7 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         value = self.config_value(context, config_path, None)
         if not isinstance(value, str) and value is not None:
             vollog.log(constants.LOGLEVEL_V,
-                       "TypeError - SymbolTableRequirement only accepts string labels: {}".format(repr(value)))
+                       f"TypeError - SymbolTableRequirement only accepts string labels: {repr(value)}")
             return {config_path: self}
         if value and value in context.symbol_space:
             # This is an expected situation, so return rather than raise
@@ -345,7 +345,7 @@ class SymbolTableRequirement(interfaces.configuration.ConstructableRequirementIn
         ### NOTE: This validate method has side effects (the dependencies can change)!!!
 
         self._validate_class(context, interfaces.configuration.parent_path(config_path))
-        vollog.log(constants.LOGLEVEL_V, "Symbol table requirement not yet fulfilled: {}".format(config_path))
+        vollog.log(constants.LOGLEVEL_V, f"Symbol table requirement not yet fulfilled: {config_path}")
         return {config_path: self}
 
     def construct(self, context: interfaces.context.ContextInterface, config_path: str) -> None:

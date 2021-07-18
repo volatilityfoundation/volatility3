@@ -58,7 +58,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
         # Bow out quickly if the UI hasn't provided a single_location
         unsatisfied = self.unsatisfied(self.context, self.config_path)
         if unsatisfied:
-            vollog.info("Unable to run LayerStacker, unsatisfied requirement: {}".format(unsatisfied))
+            vollog.info(f"Unable to run LayerStacker, unsatisfied requirement: {unsatisfied}")
             return list(unsatisfied)
         if not self.config or not self.config.get('single_location', None):
             raise ValueError("Unable to run LayerStacker, single_location parameter not provided")
@@ -123,7 +123,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
                 # Stash the changed config items
                 self._cached = context.config.get(path, None), context.config.branch(path)
-        vollog.debug("Stacked layers: {}".format(stacked_layers))
+        vollog.debug(f"Stacked layers: {stacked_layers}")
 
     @classmethod
     def stack_layer(cls,
@@ -158,7 +158,7 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
 
         for stacker_item in stack_set:
             if not issubclass(stacker_item, interfaces.automagic.StackerLayerInterface):
-                raise TypeError("Stacker {} is not a descendent of StackerLayerInterface".format(stacker_item.__name__))
+                raise TypeError(f"Stacker {stacker_item.__name__} is not a descendent of StackerLayerInterface")
 
         while stacked:
             stacked = False
@@ -167,17 +167,17 @@ class LayerStacker(interfaces.automagic.AutomagicInterface):
             for stacker_cls in stack_set:
                 stacker = stacker_cls()
                 try:
-                    vollog.log(constants.LOGLEVEL_VV, "Attempting to stack using {}".format(stacker_cls.__name__))
+                    vollog.log(constants.LOGLEVEL_VV, f"Attempting to stack using {stacker_cls.__name__}")
                     new_layer = stacker.stack(context, initial_layer, progress_callback)
                     if new_layer:
                         context.layers.add_layer(new_layer)
                         vollog.log(constants.LOGLEVEL_VV,
-                                   "Stacked {} using {}".format(new_layer.name, stacker_cls.__name__))
+                                   f"Stacked {new_layer.name} using {stacker_cls.__name__}")
                         break
                 except Exception as excp:
                     # Stacking exceptions are likely only of interest to developers, so the lowest level of logging
                     fulltrace = traceback.TracebackException.from_exception(excp).format(chain = True)
-                    vollog.log(constants.LOGLEVEL_VVV, "Exception during stacking: {}".format(str(excp)))
+                    vollog.log(constants.LOGLEVEL_VVV, f"Exception during stacking: {str(excp)}")
                     vollog.log(constants.LOGLEVEL_VVVV, "\n".join(fulltrace))
             else:
                 stacked = False

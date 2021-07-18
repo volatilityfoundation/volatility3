@@ -43,7 +43,7 @@ if HAS_LEECHCORE:
                 try:
                     self._handle = leechcorepyc.LeechCore(self._device)
                 except TypeError:
-                    raise IOError("Unable to open LeechCore device {}".format(self._device))
+                    raise IOError(f"Unable to open LeechCore device {self._device}")
             return self._handle
 
         def fileno(self):

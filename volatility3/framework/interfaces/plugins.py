@@ -65,7 +65,7 @@ class FileHandlerInterface(io.RawIOBase):
         if exc_type is None and exc_value is None and traceback is None:
             self.close()
         else:
-            vollog.warning("File {} could not be written: {}".format(self._preferred_filename, str(exc_value)))
+            vollog.warning(f"File {self._preferred_filename} could not be written: {str(exc_value)}")
             self.close()
 
 

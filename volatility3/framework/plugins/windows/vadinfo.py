@@ -135,7 +135,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             return None
 
         if maxsize > 0 and (vad_end - vad_start) > maxsize:
-            vollog.debug("Skip VAD dump {0:#x}-{1:#x} due to maxsize limit".format(vad_start, vad_end))
+            vollog.debug(f"Skip VAD dump {vad_start:#x}-{vad_end:#x} due to maxsize limit")
             return None
 
         proc_id = "Unknown"
@@ -148,7 +148,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             return None
 
         proc_layer = context.layers[proc_layer_name]
-        file_name = "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc_id, vad_start, vad_end)
+        file_name = f"pid.{proc_id}.vad.{vad_start:#x}-{vad_end:#x}.dmp"
         try:
             file_handle = open_method(file_name)
             chunk_size = 1024 * 1024 * 10
@@ -162,7 +162,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 offset += to_read
 
         except Exception as excp:
-            vollog.debug("Unable to dump VAD {}: {}".format(file_name, excp))
+            vollog.debug(f"Unable to dump VAD {file_name}: {excp}")
             return None
 
         return file_handle

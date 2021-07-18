@@ -111,7 +111,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Validation is expensive, but we cache to store the hashes of successfully validated json objects
         if validate and not schemas.validate(json_object):
-            raise exceptions.SymbolSpaceError("File does not pass version validation: {}".format(isf_url))
+            raise exceptions.SymbolSpaceError(f"File does not pass version validation: {isf_url}")
 
         metadata = json_object.get('metadata', None)
 
@@ -123,7 +123,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             raise RuntimeError("ISF version {} is no longer supported: {}".format(metadata.get('format', "0.0.0"),
                                                                                   isf_url))
         elif self._delegate.version < constants.ISF_MINIMUM_DEPRECATED:
-            vollog.warning("ISF version {} has been deprecated: {}".format(metadata.get('format', "0.0.0"), isf_url))
+            vollog.warning(f"ISF version {metadata.get('format', '0.0.0')} has been deprecated: {isf_url}")
 
         # Inherit
         super().__init__(context,
@@ -154,7 +154,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
         supported_versions = [x for x in versions if x[0] == major and x[1] >= minor]
         if not supported_versions:
             raise ValueError(
-                "No Intermediate Format interface versions support file interface version: {}".format(version))
+                f"No Intermediate Format interface versions support file interface version: {version}")
         return versions[max(supported_versions)]
 
     symbols = _construct_delegate_function('symbols', True)
@@ -188,7 +188,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             zip_match = "/".join(os.path.split(filename))
 
         # Check user symbol directory first, then fallback to the framework's library to allow for overloading
-        vollog.log(constants.LOGLEVEL_VVVV, "Searching for symbols in {}".format(", ".join(symbols.__path__)))
+        vollog.log(constants.LOGLEVEL_VVVV, f"Searching for symbols in {', '.join(symbols.__path__)}")
         for path in symbols.__path__:
             if not os.path.isabs(path):
                 path = os.path.abspath(os.path.join(__file__, path))
@@ -300,7 +300,7 @@ class ISFormatTable(interfaces.symbols.SymbolTableInterface, metaclass = ABCMeta
                     # TODO: determine whether we should give voids a size - We don't give voids a length, whereas microsoft seemingly do
                     pass
             else:
-                vollog.debug("Choosing appropriate natives for symbol library: {}".format(nc))
+                vollog.debug(f"Choosing appropriate natives for symbol library: {nc}")
                 return native_class.natives
         return None
 
@@ -335,7 +335,7 @@ class Version1Format(ISFormatTable):
             return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise exceptions.SymbolError(name, self.name, "Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError(name, self.name, f"Unknown symbol: {name}")
         address = symbol['address'] + self.config.get('symbol_shift', 0)
         if self.config.get('symbol_mask', 0):
             address = address & self.config['symbol_mask']
@@ -362,7 +362,7 @@ class Version1Format(ISFormatTable):
 
     def set_type_class(self, name: str, clazz: Type[interfaces.objects.ObjectInterface]) -> None:
         if name not in self.types:
-            raise ValueError("Symbol type not in {} SymbolTable: {}".format(self.name, name))
+            raise ValueError(f"Symbol type not in {self.name} SymbolTable: {name}")
         self._overrides[name] = clazz
 
     def del_type_class(self, name: str) -> None:
@@ -372,7 +372,7 @@ class Version1Format(ISFormatTable):
     def _interdict_to_template(self, dictionary: Dict[str, Any]) -> interfaces.objects.Template:
         """Converts an intermediate format dict into an object template."""
         if not dictionary:
-            raise exceptions.SymbolSpaceError("Invalid intermediate dictionary: {}".format(dictionary))
+            raise exceptions.SymbolSpaceError(f"Invalid intermediate dictionary: {dictionary}")
 
         type_name = dictionary['kind']
         if type_name == 'base':
@@ -407,7 +407,7 @@ class Version1Format(ISFormatTable):
 
         # Otherwise
         if dictionary['kind'] not in objects.AggregateTypes.values():
-            raise exceptions.SymbolSpaceError("Unknown Intermediate format: {}".format(dictionary))
+            raise exceptions.SymbolSpaceError(f"Unknown Intermediate format: {dictionary}")
 
         reference_name = dictionary['name']
         if constants.BANG not in reference_name:
@@ -424,7 +424,7 @@ class Version1Format(ISFormatTable):
         parameters for an Enum."""
         lookup = self._json_object['enums'].get(name, None)
         if not lookup:
-            raise exceptions.SymbolSpaceError("Unknown enumeration: {}".format(name))
+            raise exceptions.SymbolSpaceError(f"Unknown enumeration: {name}")
         result = {"choices": copy.deepcopy(lookup['constants']), "base_type": self.natives.get_type(lookup['base'])}
         return result
 
@@ -432,11 +432,11 @@ class Version1Format(ISFormatTable):
         """Resolves an individual enumeration."""
         if constants.BANG in enum_name:
             raise exceptions.SymbolError(enum_name, self.name,
-                                         "Enumeration for a different table requested: {}".format(enum_name))
+                                         f"Enumeration for a different table requested: {enum_name}")
         if enum_name not in self._json_object['enums']:
             # Fall back to the natives table
             raise exceptions.SymbolError(enum_name, self.name,
-                                         "Enumeration not found in {} table: {}".format(self.name, enum_name))
+                                         f"Enumeration not found in {self.name} table: {enum_name}")
         curdict = self._json_object['enums'][enum_name]
         base_type = self.natives.get_type(curdict['base'])
         # The size isn't actually used, the base-type defines it.
@@ -452,7 +452,7 @@ class Version1Format(ISFormatTable):
             table_name, type_name = type_name[:index], type_name[index + 1:]
             raise exceptions.SymbolError(
                 type_name, table_name,
-                "Symbol for a different table requested: {}".format(table_name + constants.BANG + type_name))
+                f"Symbol for a different table requested: {table_name + constants.BANG + type_name}")
         if type_name not in self._json_object['user_types']:
             # Fall back to the natives table
             return self.natives.get_type(self.name + constants.BANG + type_name)
@@ -491,7 +491,7 @@ class Version2Format(Version1Format):
                     # TODO: determine whether we should give voids a size - We don't give voids a length, whereas microsoft seemingly do
                     pass
             else:
-                vollog.debug("Choosing appropriate natives for symbol library: {}".format(nc))
+                vollog.debug(f"Choosing appropriate natives for symbol library: {nc}")
                 return native_class.natives
         return None
 
@@ -502,13 +502,13 @@ class Version2Format(Version1Format):
             table_name, type_name = type_name[:index], type_name[index + 1:]
             raise exceptions.SymbolError(
                 type_name, table_name,
-                "Symbol for a different table requested: {}".format(table_name + constants.BANG + type_name))
+                f"Symbol for a different table requested: {table_name + constants.BANG + type_name}")
         if type_name not in self._json_object['user_types']:
             # Fall back to the natives table
             if type_name in self.natives.types:
                 return self.natives.get_type(self.name + constants.BANG + type_name)
             else:
-                raise exceptions.SymbolError(type_name, self.name, "Unknown symbol: {}".format(type_name))
+                raise exceptions.SymbolError(type_name, self.name, f"Unknown symbol: {type_name}")
         curdict = self._json_object['user_types'][type_name]
         members = {}
         for member_name in curdict['fields']:
@@ -536,7 +536,7 @@ class Version3Format(Version2Format):
             return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise exceptions.SymbolError(name, self.name, "Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError(name, self.name, f"Unknown symbol: {name}")
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
@@ -593,7 +593,7 @@ class Version5Format(Version4Format):
             return self._symbol_cache[name]
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
-            raise exceptions.SymbolError(name, self.name, "Unknown symbol: {}".format(name))
+            raise exceptions.SymbolError(name, self.name, f"Unknown symbol: {name}")
         symbol_type = None
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
@@ -666,7 +666,7 @@ class Version8Format(Version7Format):
             table_name, type_name = type_name[:index], type_name[index + 1:]
             raise exceptions.SymbolError(
                 type_name, table_name,
-                "Symbol for a different table requested: {}".format(table_name + constants.BANG + type_name))
+                f"Symbol for a different table requested: {table_name + constants.BANG + type_name}")
 
         type_definition = self._json_object['user_types'].get(type_name)
         if type_definition is None:

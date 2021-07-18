@@ -45,7 +45,7 @@ class NativeTable(interfaces.symbols.NativeTableInterface):
         if constants.BANG in type_name:
             name_split = type_name.split(constants.BANG)
             if len(name_split) > 2:
-                raise ValueError("SymbolName cannot contain multiple {} separators".format(constants.BANG))
+                raise ValueError(f"SymbolName cannot contain multiple {constants.BANG} separators")
             table_name, type_name = name_split
             prefix = table_name + constants.BANG
 

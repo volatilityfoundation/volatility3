@@ -95,7 +95,7 @@ class Netstat(plugins.PluginInterface):
                     continue
 
                 yield (0, (format_hints.Hex(socket.vol.offset), "UNIX", path, 0, "", 0, "",
-                           "{}/{:d}".format(task_name, pid)))
+                           f"{task_name}/{pid:d}"))
 
             elif family in [2, 30]:
                 state = socket.get_state()
@@ -107,7 +107,7 @@ class Netstat(plugins.PluginInterface):
                     (lip, lport, rip, rport) = vals
 
                     yield (0, (format_hints.Hex(socket.vol.offset), proto, lip, lport, rip, rport, state,
-                               "{}/{:d}".format(task_name, pid)))
+                               f"{task_name}/{pid:d}"))
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),

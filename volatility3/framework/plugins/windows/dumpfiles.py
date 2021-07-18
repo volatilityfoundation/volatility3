@@ -80,13 +80,13 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 filedata.write(data)
 
             if not bytes_written:
-                vollog.debug("No data is cached for the file at {0:#x}".format(file_object.vol.offset))
+                vollog.debug(f"No data is cached for the file at {file_object.vol.offset:#x}")
                 return None
             else:
-                vollog.debug("Stored {}".format(filedata.preferred_filename))
+                vollog.debug(f"Stored {filedata.preferred_filename}")
                 return filedata
         except exceptions.InvalidAddressException:
-            vollog.debug("Unable to dump file at {0:#x}".format(file_object.vol.offset))
+            vollog.debug(f"Unable to dump file at {file_object.vol.offset:#x}")
             return None
 
     @classmethod
@@ -105,7 +105,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         # use the "File" object type, such as \Device\Tcp and \Device\NamedPipe.
         if file_obj.DeviceObject.DeviceType not in [FILE_DEVICE_DISK, FILE_DEVICE_NETWORK_FILE_SYSTEM]:
             vollog.log(constants.LOGLEVEL_VVV,
-                       "The file object at {0:#x} is not a file on disk".format(file_obj.vol.offset))
+                       f"The file object at {file_obj.vol.offset:#x} is not a file on disk")
             return
 
         # Depending on the type of object (DataSection, ImageSection, SharedCacheMap) we may need to
@@ -134,7 +134,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                     dump_parameters.append((control_area, memory_layer, extension))
             except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
-                           "{0} is unavailable for file {1:#x}".format(member_name, file_obj.vol.offset))
+                           f"{member_name} is unavailable for file {file_obj.vol.offset:#x}")
 
         # The SharedCacheMap is handled differently than the caches above.
         # We carve these "pages" from the primary_layer.
@@ -145,7 +145,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 dump_parameters.append((shared_cache_map, primary_layer, "vacb"))
         except exceptions.InvalidAddressException:
             vollog.log(constants.LOGLEVEL_VVV,
-                       "SharedCacheMap is unavailable for file {0:#x}".format(file_obj.vol.offset))
+                       f"SharedCacheMap is unavailable for file {file_obj.vol.offset:#x}")
 
         for memory_object, layer, extension in dump_parameters:
             cache_name = EXTENSION_CACHE_MAP[extension]
@@ -187,7 +187,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                     object_table = proc.ObjectTable
                 except exceptions.InvalidAddressException:
                     vollog.log(constants.LOGLEVEL_VVV,
-                               "Cannot access _EPROCESS.ObjectTable at {0:#x}".format(proc.vol.offset))
+                               f"Cannot access _EPROCESS.ObjectTable at {proc.vol.offset:#x}")
                     continue
 
                 for entry in handles_plugin.handles(object_table):
@@ -200,7 +200,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                                 yield (0, result)
                     except exceptions.InvalidAddressException:
                         vollog.log(constants.LOGLEVEL_VVV,
-                                   "Cannot extract file from _OBJECT_HEADER at {0:#x}".format(entry.vol.offset))
+                                   f"Cannot extract file from _OBJECT_HEADER at {entry.vol.offset:#x}")
 
                 # Pull file objects from the VADs. This will produce DLLs and EXEs that are
                 # mapped into the process as images, but that the process doesn't have an
@@ -224,7 +224,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                             yield (0, result)
                     except exceptions.InvalidAddressException:
                         vollog.log(constants.LOGLEVEL_VVV,
-                                   "Cannot extract file from VAD at {0:#x}".format(vad.vol.offset))
+                                   f"Cannot extract file from VAD at {vad.vol.offset:#x}")
 
         elif offsets:
             # Now process any offsets explicitly requested by the user.
@@ -242,7 +242,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                     for result in self.process_file_object(self.context, self.config["primary"], self.open, file_obj):
                         yield (0, result)
                 except exceptions.InvalidAddressException:
-                    vollog.log(constants.LOGLEVEL_VVV, "Cannot extract file at {0:#x}".format(offset))
+                    vollog.log(constants.LOGLEVEL_VVV, f"Cannot extract file at {offset:#x}")
 
     def run(self):
         # a list of tuples (<int>, <bool>) where <int> is the address and <bool> is True for virtual.

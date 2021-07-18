@@ -94,7 +94,7 @@ class ReferenceTemplate(interfaces.objects.Template):
         symbol_name = type_name[-1]
         raise exceptions.SymbolError(
             symbol_name, table_name,
-            "Template contains no information about its structure: {}".format(self.vol.type_name))
+            f"Template contains no information about its structure: {self.vol.type_name}")
 
     size = property(_unresolved)  # type: ClassVar[Any]
     replace_child = _unresolved  # type: ClassVar[Any]

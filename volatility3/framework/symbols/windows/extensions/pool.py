@@ -175,7 +175,7 @@ class POOL_HEADER(objects.StructType):
                 'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
         ]:
             try:
-                type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)
+                type_name = f"{symbol_table_name}{constants.BANG}_OBJECT_HEADER_{header}"
                 header_type = context.symbol_space.get_type(type_name)
                 headers.append(header)
                 sizes.append(header_type.size)
@@ -240,7 +240,7 @@ class POOL_TRACKER_BIG_PAGES(objects.StructType):
         if hasattr(self, 'PoolType'):
             if not self.pool_type_lookup:
                 self._generate_pool_type_lookup()
-            return self.pool_type_lookup.get(self.PoolType, "Unknown choice {}".format(self.PoolType))
+            return self.pool_type_lookup.get(self.PoolType, f"Unknown choice {self.PoolType}")
         else:
             return renderers.NotApplicableValue()
 
@@ -259,7 +259,7 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
 
     def get_object_header(self) -> 'OBJECT_HEADER':
         if constants.BANG not in self.vol.type_name:
-            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
+            raise ValueError(f"Invalid symbol table name syntax (no {constants.BANG} found)")
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
         body_offset = self._context.symbol_space.get_type(symbol_table_name + constants.BANG +
                                                           "_OBJECT_HEADER").relative_child_offset("Body")
@@ -315,7 +315,7 @@ class OBJECT_HEADER(objects.StructType):
     @property
     def NameInfo(self) -> interfaces.objects.ObjectInterface:
         if constants.BANG not in self.vol.type_name:
-            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
+            raise ValueError(f"Invalid symbol table name syntax (no {constants.BANG} found)")
 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
 
@@ -329,7 +329,7 @@ class OBJECT_HEADER(objects.StructType):
             kvo = layer.config.get("kernel_virtual_offset", None)
 
             if kvo is None:
-                raise AttributeError("Could not find kernel_virtual_offset for layer: {}".format(self.vol.layer_name))
+                raise AttributeError(f"Could not find kernel_virtual_offset for layer: {self.vol.layer_name}")
 
             ntkrnlmp = self._context.module(symbol_table_name, layer_name = self.vol.layer_name, offset = kvo)
             address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address

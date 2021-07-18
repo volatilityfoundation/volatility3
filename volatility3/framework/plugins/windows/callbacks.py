@@ -90,7 +90,7 @@ class Callbacks(interfaces.plugins.PluginInterface):
             try:
                 symbol_offset = ntkrnlmp.get_symbol(symbol_name).address
             except exceptions.SymbolError:
-                vollog.debug("Cannot find {}".format(symbol_name))
+                vollog.debug(f"Cannot find {symbol_name}")
                 continue
 
             if is_vista_or_later and extended_list:

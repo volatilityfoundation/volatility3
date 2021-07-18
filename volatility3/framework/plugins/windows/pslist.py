@@ -73,12 +73,12 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = peb.ImageBaseAddress,
                                         layer_name = proc_layer_name)
-            file_handle = open_method("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
+            file_handle = open_method(f"pid.{proc.UniqueProcessId}.{peb.ImageBaseAddress:#x}.dmp")
             for offset, data in dos_header.reconstruct():
                 file_handle.seek(offset)
                 file_handle.write(data)
         except Exception as excp:
-            vollog.debug("Unable to dump PE with pid {}: {}".format(proc.UniqueProcessId, excp))
+            vollog.debug(f"Unable to dump PE with pid {proc.UniqueProcessId}: {excp}")
 
         return file_handle
 
@@ -209,12 +209,12 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                    proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), file_output))
 
             except exceptions.InvalidAddressException:
-                vollog.info("Invalid process found at address: {:x}. Skipping".format(proc.vol.offset))  
+                vollog.info(f"Invalid process found at address: {proc.vol.offset:x}. Skipping")  
 
     def generate_timeline(self):
         for row in self._generator():
             _depth, row_data = row
-            description = "Process: {} {} ({})".format(row_data[0], row_data[2], row_data[3])
+            description = f"Process: {row_data[0]} {row_data[2]} ({row_data[3]})"
             yield (description, timeliner.TimeLinerType.CREATED, row_data[8])
             yield (description, timeliner.TimeLinerType.MODIFIED, row_data[9])
 
@@ -222,7 +222,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         offsettype = "(V)" if not self.config.get('physical', self.PHYSICAL_DEFAULT) else "(P)"
 
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str),
-                                   ("Offset{0}".format(offsettype), format_hints.Hex), ("Threads", int),
+                                   (f"Offset{offsettype}", format_hints.Hex), ("Threads", int),
                                    ("Handles", int), ("SessionId", int), ("Wow64", bool),
                                    ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),
                                    ("File output", str)], self._generator())

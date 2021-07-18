@@ -77,7 +77,7 @@ T = TypeVar('T')
 def class_subclasses(cls: Type[T]) -> Generator[Type[T], None, None]:
     """Returns all the (recursive) subclasses of a given class."""
     if not inspect.isclass(cls):
-        raise TypeError("class_subclasses parameter not a valid class: {}".format(cls))
+        raise TypeError(f"class_subclasses parameter not a valid class: {cls}")
     for clazz in cls.__subclasses__():
         # The typing system is not clever enough to realize that clazz has a hidden attr after the hasattr check
         if not hasattr(clazz, 'hidden') or not clazz.hidden:  # type: ignore
@@ -92,7 +92,7 @@ def import_files(base_module, ignore_errors = False) -> List[str]:
     if not isinstance(base_module.__path__, list):
         raise TypeError("[base_module].__path__ must be a list of paths")
     vollog.log(constants.LOGLEVEL_VVVV,
-               "Importing from the following paths: {}".format(", ".join(base_module.__path__)))
+               f"Importing from the following paths: {', '.join(base_module.__path__)}")
     for path in base_module.__path__:
         for root, _, files in os.walk(path, followlinks = True):
             # TODO: Figure out how to import pycache files

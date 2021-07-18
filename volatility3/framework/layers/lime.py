@@ -45,7 +45,7 @@ class LimeLayer(segmented.SegmentedLayer):
 
             if start < maxaddr or end < start:
                 raise LimeFormatException(
-                    self.name, "Bad start/end 0x{:x}/0x{:x} at file offset 0x{:x}".format(start, end, offset))
+                    self.name, f"Bad start/end 0x{start:x}/0x{end:x} at file offset 0x{offset:x}")
 
             segment_length = end - start + 1
             segments.append((start, offset + header_size, segment_length, segment_length))
@@ -53,7 +53,7 @@ class LimeLayer(segmented.SegmentedLayer):
             offset = offset + header_size + segment_length
 
         if len(segments) == 0:
-            raise LimeFormatException(self.name, "No LiME segments defined in {}".format(self._base_layer))
+            raise LimeFormatException(self.name, f"No LiME segments defined in {self._base_layer}")
 
         self._segments = segments
 
@@ -63,13 +63,13 @@ class LimeLayer(segmented.SegmentedLayer):
             header_data = base_layer.read(offset, cls._header_struct.size)
         except exceptions.InvalidAddressException:
             raise LimeFormatException(base_layer.name,
-                                      "Offset 0x{:0x} does not exist within the base layer".format(offset))
+                                      f"Offset 0x{offset:0x} does not exist within the base layer")
         (magic, version, start, end, reserved) = cls._header_struct.unpack(header_data)
         if magic != cls.MAGIC:
-            raise LimeFormatException(base_layer.name, "Bad magic 0x{:x} at file offset 0x{:x}".format(magic, offset))
+            raise LimeFormatException(base_layer.name, f"Bad magic 0x{magic:x} at file offset 0x{offset:x}")
         if version != cls.VERSION:
             raise LimeFormatException(base_layer.name,
-                                      "Unexpected version {:d} at file offset 0x{:x}".format(version, offset))
+                                      f"Unexpected version {version:d} at file offset 0x{offset:x}")
         return start, end
 
 

@@ -73,7 +73,7 @@ class LayerWriter(plugins.PluginInterface):
             data = layer.read(i, current_chunk_size, pad = True)
             file_handle.write(data)
             if progress_callback:
-                progress_callback((i / layer.maximum_address) * 100, 'Writing layer {}'.format(layer_name))
+                progress_callback((i / layer.maximum_address) * 100, f'Writing layer {layer_name}')
         return file_handle
 
     def _generator(self):
@@ -91,7 +91,7 @@ class LayerWriter(plugins.PluginInterface):
             for name in self.config['layers']:
                 # Check the layer exists and validate the output file
                 if name not in self.context.layers:
-                    yield 0, ('Layer Name {} does not exist'.format(name), )
+                    yield 0, (f'Layer Name {name} does not exist', )
                 else:
                     output_name = self.config.get('output', ".".join([name, "raw"]))
                     try:
@@ -103,9 +103,9 @@ class LayerWriter(plugins.PluginInterface):
                                                        progress_callback = self._progress_callback)
                         file_handle.close()
                     except IOError as excp:
-                        yield 0, ('Layer cannot be written to {}: {}'.format(self.config['output_name'], excp), )
+                        yield 0, (f"Layer cannot be written to {self.config['output_name']}: {excp}", )
 
-                    yield 0, ('Layer has been written to {}'.format(output_name), )
+                    yield 0, (f'Layer has been written to {output_name}', )
 
     def _generate_layers(self):
         """List layer names from this run"""

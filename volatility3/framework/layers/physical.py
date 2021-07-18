@@ -164,7 +164,7 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         if not self._file.writable():
             if not self._write_warning:
                 self._write_warning = True
-                vollog.warning("Try to write to unwritable layer: {}".format(self.name))
+                vollog.warning(f"Try to write to unwritable layer: {self.name}")
             return None
         if not self.is_valid(offset, len(data)):
             invalid_address = offset

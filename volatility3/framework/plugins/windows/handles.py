@@ -203,7 +203,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 type_name = objt.Name.String
             except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
-                           "Cannot access _OBJECT_HEADER Name at {0:#x}".format(objt.vol.offset))
+                           f"Cannot access _OBJECT_HEADER Name at {objt.vol.offset:#x}")
                 continue
 
             type_map[i] = type_name
@@ -305,7 +305,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 object_table = proc.ObjectTable
             except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
-                           "Cannot access _EPROCESS.ObjectType at {0:#x}".format(proc.vol.offset))
+                           f"Cannot access _EPROCESS.ObjectType at {proc.vol.offset:#x}")
                 continue
 
             process_name = utility.array_to_string(proc.ImageFileName)
@@ -320,10 +320,10 @@ class Handles(interfaces.plugins.PluginInterface):
                         obj_name = item.file_name_with_device()
                     elif obj_type == "Process":
                         item = entry.Body.cast("_EPROCESS")
-                        obj_name = "{} Pid {}".format(utility.array_to_string(proc.ImageFileName), item.UniqueProcessId)
+                        obj_name = f"{utility.array_to_string(proc.ImageFileName)} Pid {item.UniqueProcessId}"
                     elif obj_type == "Thread":
                         item = entry.Body.cast("_ETHREAD")
-                        obj_name = "Tid {} Pid {}".format(item.Cid.UniqueThread, item.Cid.UniqueProcess)
+                        obj_name = f"Tid {item.Cid.UniqueThread} Pid {item.Cid.UniqueProcess}"
                     elif obj_type == "Key":
                         item = entry.Body.cast("_CM_KEY_BODY")
                         obj_name = item.get_full_key_name()
@@ -335,7 +335,7 @@ class Handles(interfaces.plugins.PluginInterface):
 
                 except (exceptions.InvalidAddressException):
                     vollog.log(constants.LOGLEVEL_VVV,
-                               "Cannot access _OBJECT_HEADER at {0:#x}".format(entry.vol.offset))
+                               f"Cannot access _OBJECT_HEADER at {entry.vol.offset:#x}")
                     continue
 
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(entry.Body.vol.offset),

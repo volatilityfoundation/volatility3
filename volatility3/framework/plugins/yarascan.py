@@ -75,12 +75,12 @@ class YaraScan(plugins.PluginInterface):
         if config.get('yara_rules', None) is not None:
             rule = config['yara_rules']
             if rule[0] not in ["{", "/"]:
-                rule = '"{}"'.format(rule)
+                rule = f'"{rule}"'
             if config.get('case', False):
                 rule += " nocase"
             if config.get('wide', False):
                 rule += " wide ascii"
-            rules = yara.compile(sources = {'n': 'rule r1 {{strings: $a = {} condition: $a}}'.format(rule)})
+            rules = yara.compile(sources = {'n': f'rule r1 {{strings: $a = {rule} condition: $a}}'})
         elif config.get('yara_file', None) is not None:
             rules = yara.compile(file = resources.ResourceAccessor().open(config['yara_file'], "rb"))
         elif config.get('yara_compiled_file', None) is not None:

@@ -70,8 +70,8 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
 
         # Verify that it is a supported format
         if header.DumpType not in self.supported_dumptypes:
-            vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(header.DumpType))
-            raise WindowsCrashDumpFormatException(name, "unsupported dump format 0x{:x}".format(header.DumpType))
+            vollog.log(constants.LOGLEVEL_VVVV, f"unsupported dump format 0x{header.DumpType:x}")
+            raise WindowsCrashDumpFormatException(name, f"unsupported dump format 0x{header.DumpType:x}")
 
         # Then call the super, which will call load_segments (which needs the base_layer before it'll work)
         super().__init__(context, config_path, name)
@@ -143,11 +143,11 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
                 segment_length = (last_bit_seen - first_bit + 1) * 0x1000
                 segments.append((first_bit * 0x1000, first_offset, segment_length, segment_length))
         else:
-            vollog.log(constants.LOGLEVEL_VVVV, "unsupported dump format 0x{:x}".format(self.dump_type))
-            raise WindowsCrashDumpFormatException(self.name, "unsupported dump format 0x{:x}".format(self.dump_type))
+            vollog.log(constants.LOGLEVEL_VVVV, f"unsupported dump format 0x{self.dump_type:x}")
+            raise WindowsCrashDumpFormatException(self.name, f"unsupported dump format 0x{self.dump_type:x}")
 
         if len(segments) == 0:
-            raise WindowsCrashDumpFormatException(self.name, "No Crash segments defined in {}".format(self._base_layer))
+            raise WindowsCrashDumpFormatException(self.name, f"No Crash segments defined in {self._base_layer}")
         else:
             # report the segments for debugging. this is valuable for dev/troubleshooting but
             # not important enough for a dedicated plugin.
@@ -167,15 +167,15 @@ class WindowsCrashDump32Layer(segmented.SegmentedLayer):
             header_data = base_layer.read(offset, cls._magic_struct.size)
         except exceptions.InvalidAddressException:
             raise WindowsCrashDumpFormatException(base_layer.name,
-                                                  "Crashdump header not found at offset {}".format(offset))
+                                                  f"Crashdump header not found at offset {offset}")
         (signature, validdump) = cls._magic_struct.unpack(header_data)
 
         if signature != cls.SIGNATURE:
             raise WindowsCrashDumpFormatException(
-                base_layer.name, "Bad signature 0x{:x} at file offset 0x{:x}".format(signature, offset))
+                base_layer.name, f"Bad signature 0x{signature:x} at file offset 0x{offset:x}")
         if validdump != cls.VALIDDUMP:
             raise WindowsCrashDumpFormatException(base_layer.name,
-                                                  "Invalid dump 0x{:x} at file offset 0x{:x}".format(validdump, offset))
+                                                  f"Invalid dump 0x{validdump:x} at file offset 0x{offset:x}")
 
         return signature, validdump
 

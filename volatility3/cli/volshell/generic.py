@@ -76,14 +76,14 @@ class Volshell(interfaces.plugins.PluginInterface):
         mode = self.__module__.split('.')[-1]
         mode = mode[0].upper() + mode[1:]
 
-        banner = """
+        banner = f"""
     Call help() to see available functions
 
-    Volshell mode: {}
-    Current Layer: {}
-        """.format(mode, self.current_layer)
+    Volshell mode: {mode}
+    Current Layer: {self.current_layer}
+        """
 
-        sys.ps1 = "({}) >>> ".format(self.current_layer)
+        sys.ps1 = f"({self.current_layer}) >>> "
         self.__console = code.InteractiveConsole(locals = self._construct_locals_dict())
         # Since we have to do work to add the option only once for all different modes of volshell, we can't
         # rely on the default having been set
@@ -105,14 +105,14 @@ class Volshell(interfaces.plugins.PluginInterface):
         for aliases, item in self.construct_locals():
             name = ", ".join(aliases)
             if item.__doc__ and callable(item):
-                print("* {}".format(name))
-                print("    {}".format(item.__doc__))
+                print(f"* {name}")
+                print(f"    {item.__doc__}")
             else:
                 variables.append(name)
 
         print("\nVariables:")
         for var in variables:
-            print("  {}".format(var))
+            print(f"  {var}")
 
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
         """Returns a dictionary listing the functions to be added to the
@@ -181,7 +181,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         if not layer_name:
             layer_name = self.config['primary']
         self.__current_layer = layer_name
-        sys.ps1 = "({}) >>> ".format(self.current_layer)
+        sys.ps1 = f"({self.current_layer}) >>> "
 
     def display_bytes(self, offset, count = 128, layer_name = None):
         """Displays byte values and ASCII characters"""
@@ -221,7 +221,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             }
             if architecture is not None:
                 for i in disasm_types[architecture].disasm(remaining_data, offset):
-                    print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))
+                    print(f"0x{i.address:x}:\t{i.mnemonic}\t{i.op_str}")
 
     def display_type(self,
                      object: Union[str, interfaces.objects.ObjectInterface, interfaces.objects.Template],
@@ -245,7 +245,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             volobject = self.context.object(volobject.vol.type_name, layer_name = self.current_layer, offset = offset)
 
         if hasattr(volobject.vol, 'size'):
-            print("{} ({} bytes)".format(volobject.vol.type_name, volobject.vol.size))
+            print(f"{volobject.vol.type_name} ({volobject.vol.size} bytes)")
         elif hasattr(volobject.vol, 'data_format'):
             data_format = volobject.vol.data_format
             print("{} ({} bytes, {} endian, {})".format(volobject.vol.type_name, data_format.length,
@@ -301,7 +301,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             constructed = plugins.construct_plugin(self.context, [], plugin, plugin_path, None, NullFileHandler)
             return constructed.run()
         except exceptions.UnsatisfiedException as excp:
-            print("Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
+            print(f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
         return None
 
     def render_treegrid(self,
@@ -340,7 +340,7 @@ class Volshell(interfaces.plugins.PluginInterface):
         """Runs a python script within the context of volshell"""
         if not parse.urlparse(location).scheme:
             location = "file:" + request.pathname2url(location)
-        print("Running code from {}\n".format(location))
+        print(f"Running code from {location}\n")
         accessor = resources.ResourceAccessor()
         with io.TextIOWrapper(accessor.open(url = location), encoding = 'utf-8') as fp:
             self.__console.runsource(fp.read(), symbol = 'exec')

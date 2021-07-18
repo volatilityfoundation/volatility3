@@ -48,7 +48,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                                                                                  excp.layer_name))
                 continue
 
-            file_handle = self.open("pid.{}.dmp".format(pid))
+            file_handle = self.open(f"pid.{pid}.dmp")
             with file_handle as file_data:
                 file_offset = 0
                 for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):

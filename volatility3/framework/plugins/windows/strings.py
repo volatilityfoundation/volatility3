@@ -57,7 +57,7 @@ class Strings(interfaces.plugins.PluginInterface):
                 offset, string = self._parse_line(line)
                 string_list.append((offset, string))
             except ValueError:
-                vollog.error("Line in unrecognized format: line {}".format(count))
+                vollog.error(f"Line in unrecognized format: line {count}")
             line = strings_fp.readline()
 
         revmap = self.generate_mapping(self.context,
@@ -150,11 +150,11 @@ class Strings(interfaces.plugins.PluginInterface):
                             mapped_offset, _, offset, mapped_size, maplayer = mapval
                             for val in range(mapped_offset, mapped_offset + mapped_size, 0x1000):
                                 cur_set = reverse_map.get(mapped_offset >> 12, set())
-                                cur_set.add(("Process {}".format(process.UniqueProcessId), offset))
+                                cur_set.add((f"Process {process.UniqueProcessId}", offset))
                                 reverse_map[mapped_offset >> 12] = cur_set
                             # FIXME: make the progress for all processes, rather than per-process
                             if progress_callback:
                                 progress_callback((offset * 100) / layer.maximum_address,
-                                                  "Creating mapping for task {}".format(process.UniqueProcessId))
+                                                  f"Creating mapping for task {process.UniqueProcessId}")
 
         return reverse_map

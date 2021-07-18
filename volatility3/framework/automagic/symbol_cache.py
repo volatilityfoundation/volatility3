@@ -90,10 +90,10 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
 
         total = len(cacheables)
         if total > 0:
-            vollog.info("Building {} caches...".format(self.os))
+            vollog.info(f"Building {self.os} caches...")
         for current in range(total):
             if progress_callback is not None:
-                progress_callback(current * 100 / total, "Building {} caches".format(self.os))
+                progress_callback(current * 100 / total, f"Building {self.os} caches")
             isf_url = cacheables[current]
 
             isf = None
@@ -105,7 +105,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                 # We don't bother with the hash (it'll likely take too long to validate)
                 # but we should check at least that the banner matches on load.
                 banner = isf.get_symbol(self.symbol_name).constant_data
-                vollog.log(constants.LOGLEVEL_VV, "Caching banner {} for file {}".format(banner, isf_url))
+                vollog.log(constants.LOGLEVEL_VV, f"Caching banner {banner} for file {isf_url}")
 
                 bannerlist = banners.get(banner, [])
                 bannerlist.append(isf_url)
@@ -113,7 +113,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
             except exceptions.SymbolError:
                 pass
             except json.JSONDecodeError:
-                vollog.log(constants.LOGLEVEL_VV, "Caching file {} failed due to JSON error".format(isf_url))
+                vollog.log(constants.LOGLEVEL_VV, f"Caching file {isf_url} failed due to JSON error")
             finally:
                 # Get rid of the loaded file, in case it sits in memory
                 if isf:
@@ -124,4 +124,4 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
         self.save_banners(banners)
 
         if progress_callback is not None:
-            progress_callback(100, "Built {} caches".format(self.os))
+            progress_callback(100, f"Built {self.os} caches")

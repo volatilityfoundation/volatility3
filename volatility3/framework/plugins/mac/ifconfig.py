@@ -45,7 +45,7 @@ class Ifconfig(plugins.PluginInterface):
             for ifaddr in mac.MacUtilities.walk_tailq(ifnet.if_addrhead, "ifa_link"):
                 ip = ifaddr.ifa_addr.get_address()
 
-                yield (0, ("{0}{1}".format(name, unit), ip, mac_addr, prom))
+                yield (0, (f"{name}{unit}", ip, mac_addr, prom))
 
     def run(self):
         return renderers.TreeGrid([("Interface", str), ("IP Address", str), ("Mac Address", str),

@@ -34,7 +34,7 @@ class Crashinfo(interfaces.plugins.PluginInterface):
             dump_type = "Bitmap Dump (0x5)"
         else:
             # this should never happen since the crash layer only accepts 0x1 and 0x5
-            dump_type = "Unknown/Unsupported ({:#x})".format(header.DumpType)
+            dump_type = f"Unknown/Unsupported ({header.DumpType:#x})"
 
         if header.DumpType == 0x5:
             summary_header = layer.get_summary_header()

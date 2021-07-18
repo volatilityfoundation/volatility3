@@ -113,9 +113,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
         for plugin in runable_plugins:
             plugin_name = plugin.__class__.__name__
             self._progress_callback((runable_plugins.index(plugin) * 100) // len(runable_plugins),
-                                    "Running plugin {}...".format(plugin_name))
+                                    f"Running plugin {plugin_name}...")
             try:
-                vollog.log(logging.INFO, "Running {}".format(plugin_name))
+                vollog.log(logging.INFO, f"Running {plugin_name}")
                 for (item, timestamp_type, timestamp) in plugin.generate_timeline():
                     times = self.timeline.get((plugin_name, item), {})
                     if times.get(timestamp_type, None) is not None:
@@ -131,7 +131,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                         times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())
                     ]))
             except Exception:
-                vollog.log(logging.INFO, "Exception occurred running plugin: {}".format(plugin_name))
+                vollog.log(logging.INFO, f"Exception occurred running plugin: {plugin_name}")
                 vollog.log(logging.DEBUG, traceback.format_exc())
         for data_item in sorted(data, key = self._sort_function):
             yield data_item
@@ -206,7 +206,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                         plugins_to_run.append(plugin)
             except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue
-                vollog.debug("Unable to satisfy {}: {}".format(plugin_class.__name__, excp.unsatisfied))
+                vollog.debug(f"Unable to satisfy {plugin_class.__name__}: {excp.unsatisfied}")
                 continue
 
         if self.config.get('record-config', False):

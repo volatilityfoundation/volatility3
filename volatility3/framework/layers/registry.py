@@ -48,7 +48,7 @@ class RegistryHive(linear.LinearlyMappedLayer):
         # TODO: Check the checksum
         if self.hive.Signature != 0xbee0bee0:
             raise RegistryFormatException(
-                self.name, "Registry hive at {} does not have a valid signature".format(self._hive_offset))
+                self.name, f"Registry hive at {self._hive_offset} does not have a valid signature")
 
         # Win10 17063 introduced the Registry process to map most hives.  Check
         # if it exists and update RegistryHive._base_layer

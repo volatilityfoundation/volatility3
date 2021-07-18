@@ -31,7 +31,7 @@ class SymbolInterface:
         """
         self._name = name
         if constants.BANG in self._name:
-            raise ValueError("Symbol names cannot contain the symbol differentiator ({})".format(constants.BANG))
+            raise ValueError(f"Symbol names cannot contain the symbol differentiator ({constants.BANG})")
 
         # Scope can be added at a later date
         self._location = None

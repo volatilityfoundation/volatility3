@@ -68,7 +68,7 @@ class PsList(interfaces.plugins.PluginInterface):
             list_tasks = cls.list_tasks_pid_hash_table
         else:
             raise ValueError("Impossible method choice chosen")
-        vollog.debug("Using method {}".format(method))
+        vollog.debug(f"Using method {method}")
 
         return list_tasks
 

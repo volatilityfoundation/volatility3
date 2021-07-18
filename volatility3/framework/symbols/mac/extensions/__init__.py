@@ -32,7 +32,7 @@ class proc(generic.GenericIntelProcess):
             return None
 
         if preferred_name is None:
-            preferred_name = self.vol.layer_name + "_Process{}".format(self.p_pid)
+            preferred_name = self.vol.layer_name + f"_Process{self.p_pid}"
 
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
@@ -478,7 +478,7 @@ class sockaddr_dl(objects.StructType):
 
             e = e.cast("unsigned char")
 
-            ret = ret + "{:02X}:".format(e)
+            ret = ret + f"{e:02X}:"
 
         if ret and ret[-1] == ":":
             ret = ret[:-1]

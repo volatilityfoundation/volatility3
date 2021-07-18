@@ -162,7 +162,7 @@ class Info(plugins.PluginInterface):
         yield (0, ("IsPAE", str(self.context.layers[layer_name].metadata.get("pae", False))))
 
         for i, layer in self.get_depends(self.context, "primary"):
-            yield (0, (layer.name, "{} {}".format(i, layer.__class__.__name__)))
+            yield (0, (layer.name, f"{i} {layer.__class__.__name__}"))
 
         if kdbg.Header.OwnerTag == 0x4742444B:
 
@@ -173,7 +173,7 @@ class Info(plugins.PluginInterface):
         vers = self.get_version_structure(self.context, layer_name, symbol_table)
 
         yield (0, ("KdVersionBlock", hex(vers.vol.offset)))
-        yield (0, ("Major/Minor", "{0}.{1}".format(vers.MajorVersion, vers.MinorVersion)))
+        yield (0, ("Major/Minor", f"{vers.MajorVersion}.{vers.MinorVersion}"))
         yield (0, ("MachineType", str(vers.MachineType)))
 
         ntkrnlmp = self.get_kernel_module(self.context, layer_name, symbol_table)

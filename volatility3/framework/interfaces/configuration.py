@@ -77,7 +77,7 @@ class HierarchicalDict(collections.abc.Mapping):
             separator: A custom hierarchy separator (defaults to CONFIG_SEPARATOR)
         """
         if not (isinstance(separator, str) and len(separator) == 1):
-            raise TypeError("Separator must be a one character string: {}".format(separator))
+            raise TypeError(f"Separator must be a one character string: {separator}")
         self._separator = separator
         self._data = {}  # type: Dict[str, ConfigSimpleType]
         self._subdict = {}  # type: Dict[str, 'HierarchicalDict']
@@ -88,7 +88,7 @@ class HierarchicalDict(collections.abc.Mapping):
                 self[k] = v
         elif initial_dict is not None:
             raise TypeError(
-                "Initial_dict must be a dictionary or JSON string containing a dictionary: {}".format(initial_dict))
+                f"Initial_dict must be a dictionary or JSON string containing a dictionary: {initial_dict}")
 
     def __eq__(self, other):
         """Define equality between HierarchicalDicts"""
@@ -315,7 +315,7 @@ class RequirementInterface(metaclass = ABCMeta):
         """
         super().__init__()
         if CONFIG_SEPARATOR in name:
-            raise ValueError("Name cannot contain the config-hierarchy divider ({})".format(CONFIG_SEPARATOR))
+            raise ValueError(f"Name cannot contain the config-hierarchy divider ({CONFIG_SEPARATOR})")
         self._name = name
         self._description = description or ""
         self._default = default

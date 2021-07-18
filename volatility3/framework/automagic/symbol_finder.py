@@ -33,7 +33,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
         requested."""
         if not self._banners:
             if not self.banner_cache:
-                raise RuntimeError("Cache has not been properly defined for {}".format(self.__class__.__name__))
+                raise RuntimeError(f"Cache has not been properly defined for {self.__class__.__name__}")
             self._banners = self.banner_cache.load_banners()
         return self._banners
 
@@ -98,11 +98,11 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
             banner_list = layer.scan(context = context, scanner = mss, progress_callback = progress_callback)
 
         for _, banner in banner_list:
-            vollog.debug("Identified banner: {}".format(repr(banner)))
+            vollog.debug(f"Identified banner: {repr(banner)}")
             symbol_files = self.banners.get(banner, None)
             if symbol_files:
                 isf_path = symbol_files[0]
-                vollog.debug("Using symbol library: {}".format(symbol_files[0]))
+                vollog.debug(f"Using symbol library: {symbol_files[0]}")
                 clazz = self.symbol_class
                 # Set the discovered options
                 path_join = interfaces.configuration.path_join
@@ -134,7 +134,7 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                 break
             else:
                 if symbol_files:
-                    vollog.debug("Symbol library path not found: {}".format(symbol_files[0]))
+                    vollog.debug(f"Symbol library path not found: {symbol_files[0]}")
                     # print("Kernel", banner, hex(banner_offset))
         else:
             vollog.debug("No existing banners found")

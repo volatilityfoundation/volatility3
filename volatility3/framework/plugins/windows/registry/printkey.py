@@ -176,11 +176,11 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     yield (x - len(node_path), y)
             except (exceptions.InvalidAddressException, KeyError, RegistryFormatException) as excp:
                 if isinstance(excp, KeyError):
-                    vollog.debug("Key '{}' not found in Hive at offset {}.".format(key, hex(hive.hive_offset)))
+                    vollog.debug(f"Key '{key}' not found in Hive at offset {hex(hive.hive_offset)}.")
                 elif isinstance(excp, RegistryFormatException):
                     vollog.debug(excp)
                 elif isinstance(excp, exceptions.InvalidAddressException):
-                    vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
+                    vollog.debug(f"Invalid address identified in Hive: {hex(excp.invalid_address)}")
                 result = (0, (renderers.UnreadableValue(), format_hints.Hex(hive.hive_offset), "Key",
                               '?\\' + (key or ''), renderers.UnreadableValue(), renderers.UnreadableValue(),
                               renderers.UnreadableValue()))

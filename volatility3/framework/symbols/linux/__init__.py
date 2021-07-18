@@ -83,7 +83,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                 except exceptions.InvalidAddressException:
                     ino = 0
 
-                ret_val = ret_val[:-1] + ":[{0}]".format(ino)
+                ret_val = ret_val[:-1] + f":[{ino}]"
             else:
                 ret_val = ret_val.replace("/", "")
 
@@ -132,12 +132,12 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
                 pre_name = cls._get_path_file(task, filp)
 
             else:
-                pre_name = "<unsupported d_op symbol: {0}>".format(sym)
+                pre_name = f"<unsupported d_op symbol: {sym}>"
 
-            ret = "{0}:[{1:d}]".format(pre_name, dentry.d_inode.i_ino)
+            ret = f"{pre_name}:[{dentry.d_inode.i_ino:d}]"
 
         else:
-            ret = "<invalid d_dname pointer> {0:x}".format(sym_addr)
+            ret = f"<invalid d_dname pointer> {sym_addr:x}"
 
         return ret
 

@@ -127,7 +127,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             kvo_path = interfaces.configuration.path_join(context.layers[virtual_layer].config_path,
                                                           'kernel_virtual_offset')
             context.config[kvo_path] = kvo
-            vollog.debug("Setting kernel_virtual_offset to {}".format(hex(kvo)))
+            vollog.debug(f"Setting kernel_virtual_offset to {hex(kvo)}")
 
     def get_physical_layer_name(self, context, vlayer):
         return context.config.get(interfaces.configuration.path_join(vlayer.config_path, 'memory_layer'), None)
@@ -166,7 +166,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                     vollog.debug("Potential kernel_virtual_offset did not map to expected location: {}".format(
                         hex(kvo)))
             except exceptions.InvalidAddressException:
-                vollog.debug("Potential kernel_virtual_offset caused a page fault: {}".format(hex(kvo)))
+                vollog.debug(f"Potential kernel_virtual_offset caused a page fault: {hex(kvo)}")
 
         vollog.debug("Kernel base determination - testing fixed base address")
         return self._method_layer_pdb_scan(context, vlayer, test_physical_kernel, True, progress_callback)

@@ -117,7 +117,7 @@ class IsfInfo(plugins.PluginInterface):
                         windows_info = os.path.splitext(os.path.basename(entry))[0]
                     valid = check_valid(data)
                 except (UnicodeDecodeError, json.decoder.JSONDecodeError):
-                    vollog.warning("Invalid ISF: {}".format(entry))
+                    vollog.warning(f"Invalid ISF: {entry}")
             yield (0, (entry, valid, num_bases, num_types, num_symbols, num_enums, windows_info, linux_banner,
                        mac_banner))
 

@@ -66,10 +66,10 @@ class CmdLine(interfaces.plugins.PluginInterface):
                 result_text = self.get_cmdline(self.context, self.config["nt_symbols"], proc)
 
             except exceptions.SwappedInvalidAddressException as exp:
-                result_text = "Required memory at {0:#x} is inaccessible (swapped)".format(exp.invalid_address)
+                result_text = f"Required memory at {exp.invalid_address:#x} is inaccessible (swapped)"
 
             except exceptions.PagedInvalidAddressException as exp:
-                result_text = "Required memory at {0:#x} is not valid (process exited?)".format(exp.invalid_address)
+                result_text = f"Required memory at {exp.invalid_address:#x} is not valid (process exited?)"
 
             except exceptions.InvalidAddressException as exp:
                 result_text = "Process {}: Required memory at {:#x} is not valid (incomplete layer {}?)".format(

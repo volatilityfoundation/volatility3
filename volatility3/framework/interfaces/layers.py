@@ -236,7 +236,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                 for value in scan_iterator():
                     if progress_callback:
                         progress_callback(scan_metric(progress.value),
-                                          "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
+                                          f"Scanning {self.name} using {scanner.__class__.__name__}")
                     yield from scan_chunk(value)
             else:
                 progress = multiprocessing.Manager().Value("Q", 0)
@@ -251,7 +251,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                         if progress_callback:
                             # Run the progress_callback
                             progress_callback(scan_metric(progress.value),
-                                              "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
+                                              f"Scanning {self.name} using {scanner.__class__.__name__}")
                         # Ensures we don't burn CPU cycles going round in a ready waiting loop
                         # without delaying the user too long between progress updates/results
                         result.wait(0.1)
@@ -259,7 +259,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                         yield from result_value
         except Exception as e:
             # We don't care the kind of exception, so catch and report on everything, yielding nothing further
-            vollog.debug("Scan Failure: {}".format(str(e)))
+            vollog.debug(f"Scan Failure: {str(e)}")
             vollog.log(constants.LOGLEVEL_VVV,
                        "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
 
@@ -325,7 +325,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                     layer_name, self.name, address))
 
         if len(data) > scanner.chunk_size + scanner.overlap:
-            vollog.debug("Scan chunk too large: {}".format(hex(len(data))))
+            vollog.debug(f"Scan chunk too large: {hex(len(data))}")
 
         progress.value = chunk_end
         return list(scanner(data, chunk_end - len(data)))
@@ -429,7 +429,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                                                                                            ignore_errors = pad):
             if not pad and layer_offset > current_offset:
                 raise exceptions.InvalidAddressException(
-                    self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
+                    self.name, current_offset, f"Layer {self.name} cannot map offset: {current_offset}")
             elif layer_offset > current_offset:
                 output += b"\x00" * (layer_offset - current_offset)
                 current_offset = layer_offset
@@ -452,7 +452,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         for (layer_offset, sublength, mapped_offset, mapped_length, layer) in self.mapping(offset, length):
             if layer_offset > current_offset:
                 raise exceptions.InvalidAddressException(
-                    self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
+                    self.name, current_offset, f"Layer {self.name} cannot map offset: {current_offset}")
 
             value_chunk = value[layer_offset - offset:layer_offset - offset + sublength]
             new_data = self._encode_data(layer, mapped_offset, layer_offset, value_chunk)
@@ -566,12 +566,12 @@ class LayerContainer(collections.abc.Mapping):
             layer: the layer to add to the list of layers (based on layer.name)
         """
         if layer.name in self._layers:
-            raise exceptions.LayerException(layer.name, "Layer already exists: {}".format(layer.name))
+            raise exceptions.LayerException(layer.name, f"Layer already exists: {layer.name}")
         if isinstance(layer, TranslationLayerInterface):
             missing_list = [sublayer for sublayer in layer.dependencies if sublayer not in self._layers]
             if missing_list:
                 raise exceptions.LayerException(
-                    layer.name, "Layer {} has unmet dependencies: {}".format(layer.name, ", ".join(missing_list)))
+                    layer.name, f"Layer {layer.name} has unmet dependencies: {', '.join(missing_list)}")
         self._layers[layer.name] = layer
 
     def del_layer(self, name: str) -> None:
@@ -587,7 +587,7 @@ class LayerContainer(collections.abc.Mapping):
             if depend_list:
                 raise exceptions.LayerException(
                     self._layers[layer].name,
-                    "Layer {} is depended upon: {}".format(self._layers[layer].name, ", ".join(depend_list)))
+                    f"Layer {self._layers[layer].name} is depended upon: {', '.join(depend_list)}")
         self._layers[name].destroy()
         del self._layers[name]
 
@@ -604,9 +604,9 @@ class LayerContainer(collections.abc.Mapping):
         if prefix not in self:
             return prefix
         count = 1
-        while "{}_{}".format(prefix, count) in self:
+        while f"{prefix}_{count}" in self:
             count += 1
-        return "{}_{}".format(prefix, count)
+        return f"{prefix}_{count}"
 
     def __getitem__(self, name: str) -> DataLayerInterface:
         """Returns the layer of specified name."""

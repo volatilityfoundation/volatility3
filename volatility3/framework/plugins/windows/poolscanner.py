@@ -141,7 +141,7 @@ class PoolScanner(plugins.PluginInterface):
                 try:
                     name = mem_object.FileName.String
                 except exceptions.InvalidAddressException:
-                    vollog.log(constants.LOGLEVEL_VVV, "Skipping file at {0:#x}".format(mem_object.vol.offset))
+                    vollog.log(constants.LOGLEVEL_VVV, f"Skipping file at {mem_object.vol.offset:#x}")
                     continue
             else:
                 name = renderers.NotApplicableValue()
@@ -298,7 +298,7 @@ class PoolScanner(plugins.PluginInterface):
                                            kernel_symbol_table = symbol_table)
 
             if mem_object is None:
-                vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
+                vollog.log(constants.LOGLEVEL_VVV, f"Cannot create an instance of {constraint.type_name}")
                 continue
 
             if constraint.object_type is not None and not constraint.skip_type_test:
@@ -307,7 +307,7 @@ class PoolScanner(plugins.PluginInterface):
                         continue
                 except exceptions.InvalidAddressException:
                     vollog.log(constants.LOGLEVEL_VVV,
-                               "Cannot test instance type check for {}".format(constraint.type_name))
+                               f"Cannot test instance type check for {constraint.type_name}")
                     continue
 
             yield constraint, mem_object, header
@@ -341,7 +341,7 @@ class PoolScanner(plugins.PluginInterface):
         constraint_lookup = {}  # type: Dict[bytes, PoolConstraint]
         for constraint in pool_constraints:
             if constraint.tag in constraint_lookup:
-                raise ValueError("Constraint tag is used for more than one constraint: {}".format(repr(constraint.tag)))
+                raise ValueError(f"Constraint tag is used for more than one constraint: {repr(constraint.tag)}")
             constraint_lookup[constraint.tag] = constraint
 
         pool_header_table_name = cls.get_pool_header_table(context, symbol_table)

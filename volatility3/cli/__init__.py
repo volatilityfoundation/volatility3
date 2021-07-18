@@ -56,7 +56,7 @@ class PrintedProgress(object):
         Args:
             progress: Percentage of progress of the current procedure
         """
-        message = "\rProgress: {0: 7.2f}\t\t{1:}".format(round(progress, 2), description or '')
+        message = f"\rProgress: {round(progress, 2): 7.2f}\t\t{description or ''}"
         message_len = len(message)
         self._max_message_len = max([self._max_message_len, message_len])
         sys.stderr.write(message + (' ' * (self._max_message_len - message_len)) + '\r')
@@ -144,7 +144,7 @@ class CommandLine:
         parser.add_argument("-r",
                             "--renderer",
                             metavar = 'RENDERER',
-                            help = "Determines how to render the output ({})".format(", ".join(list(renderers))),
+                            help = f"Determines how to render the output ({', '.join(list(renderers))})",
                             default = "quick",
                             choices = list(renderers))
         parser.add_argument("-f",
@@ -162,7 +162,7 @@ class CommandLine:
                             default = False,
                             action = 'store_true')
         parser.add_argument("--cache-path",
-                            help = "Change the default path ({}) used to store the cache".format(constants.CACHE_PATH),
+                            help = f"Change the default path ({constants.CACHE_PATH}) used to store the cache",
                             default = constants.CACHE_PATH,
                             type = str)
 
@@ -174,7 +174,7 @@ class CommandLine:
         banner_output = sys.stdout
         if renderers[partial_args.renderer].structured_output:
             banner_output = sys.stderr
-        banner_output.write("Volatility 3 Framework {}\n".format(constants.PACKAGE_VERSION))
+        banner_output.write(f"Volatility 3 Framework {constants.PACKAGE_VERSION}\n")
 
         if partial_args.plugin_dirs:
             volatility3.plugins.__path__ = [os.path.abspath(p)
@@ -202,8 +202,8 @@ class CommandLine:
         else:
             console.setLevel(10 - (partial_args.verbosity - 2))
 
-        vollog.info("Volatility plugins path: {}".format(volatility3.plugins.__path__))
-        vollog.info("Volatility symbols path: {}".format(volatility3.symbols.__path__))
+        vollog.info(f"Volatility plugins path: {volatility3.plugins.__path__}")
+        vollog.info(f"Volatility symbols path: {volatility3.symbols.__path__}")
 
         # Set the PARALLELISM
         if partial_args.parallelism == 'processes':
@@ -256,7 +256,7 @@ class CommandLine:
         if args.plugin is None:
             parser.error("Please select a plugin to run")
 
-        vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
+        vollog.log(constants.LOGLEVEL_VVV, f"Cache directory used: {constants.CACHE_PATH}")
 
         plugin = plugin_list[args.plugin]
         chosen_configurables_list[args.plugin] = plugin
@@ -289,7 +289,7 @@ class CommandLine:
             ctx.config['automagic.LayerStacker.stackers'] = stacker.choose_os_stackers(plugin)
         self.output_dir = args.output_dir
         if not os.path.exists(self.output_dir):
-            parser.error("The output directory specified does not exist: {}".format(self.output_dir))
+            parser.error(f"The output directory specified does not exist: {self.output_dir}")
 
         self.populate_config(ctx, chosen_configurables_list, args, plugin_config_path)
 
@@ -318,7 +318,7 @@ class CommandLine:
                     json.dump(dict(constructed.build_configuration()), f, sort_keys = True, indent = 2)
         except exceptions.UnsatisfiedException as excp:
             self.process_unsatisfied_exceptions(excp)
-            parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
+            parser.exit(1, f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
 
         try:
             # Construct and run the plugin
@@ -346,7 +346,7 @@ class CommandLine:
                 filename = request.url2pathname(single_location.path)
                 if not filename:
                     raise ValueError("File URL looks incorrect (potentially missing /)")
-                raise ValueError("File does not exist: {}".format(filename))
+                raise ValueError(f"File does not exist: {filename}")
         return parse.urlunparse(single_location)
 
     def process_exceptions(self, excp):
@@ -363,20 +363,20 @@ class CommandLine:
         if isinstance(excp, exceptions.InvalidAddressException):
             general = "Volatility was unable to read a requested page:"
             if isinstance(excp, exceptions.SwappedInvalidAddressException):
-                detail = "Swap error {} in layer {} ({})".format(hex(excp.invalid_address), excp.layer_name, excp)
+                detail = f"Swap error {hex(excp.invalid_address)} in layer {excp.layer_name} ({excp})"
                 caused_by = [
                     "No suitable swap file having been provided (locate and provide the correct swap file)",
                     "An intentionally invalid page (operating system protection)"
                 ]
             elif isinstance(excp, exceptions.PagedInvalidAddressException):
-                detail = "Page error {} in layer {} ({})".format(hex(excp.invalid_address), excp.layer_name, excp)
+                detail = f"Page error {hex(excp.invalid_address)} in layer {excp.layer_name} ({excp})"
                 caused_by = [
                     "Memory smear during acquisition (try re-acquiring if possible)",
                     "An intentionally invalid page lookup (operating system protection)",
                     "A bug in the plugin/volatility3 (re-run with -vvv and file a bug)"
                 ]
             else:
-                detail = "{} in layer {} ({})".format(hex(excp.invalid_address), excp.layer_name, excp)
+                detail = f"{hex(excp.invalid_address)} in layer {excp.layer_name} ({excp})"
                 caused_by = [
                     "The base memory file being incomplete (try re-acquiring if possible)",
                     "Memory smear during acquisition (try re-acquiring if possible)",
@@ -385,7 +385,7 @@ class CommandLine:
                 ]
         elif isinstance(excp, exceptions.SymbolError):
             general = "Volatility experienced a symbol-related issue:"
-            detail = "{}{}{}: {}".format(excp.table_name, constants.BANG, excp.symbol_name, excp)
+            detail = f"{excp.table_name}{constants.BANG}{excp.symbol_name}: {excp}"
             caused_by = [
                 "An invalid symbol table",
                 "A plugin requesting a bad symbol",
@@ -393,32 +393,32 @@ class CommandLine:
             ]
         elif isinstance(excp, exceptions.SymbolSpaceError):
             general = "Volatility experienced an issue related to a symbol table:"
-            detail = "{}".format(excp)
+            detail = f"{excp}"
             caused_by = [
                 "An invalid symbol table", "A plugin requesting a bad symbol",
                 "A plugin requesting a symbol from the wrong table"
             ]
         elif isinstance(excp, exceptions.LayerException):
-            general = "Volatility experienced a layer-related issue: {}".format(excp.layer_name)
-            detail = "{}".format(excp)
+            general = f"Volatility experienced a layer-related issue: {excp.layer_name}"
+            detail = f"{excp}"
             caused_by = ["A faulty layer implementation (re-run with -vvv and file a bug)"]
         elif isinstance(excp, exceptions.MissingModuleException):
-            general = "Volatility could not import a necessary module: {}".format(excp.module)
-            detail = "{}".format(excp)
+            general = f"Volatility could not import a necessary module: {excp.module}"
+            detail = f"{excp}"
             caused_by = ["A required python module is not installed (install the module and re-run)"]
         else:
             general = "Volatilty encountered an unexpected situation."
             detail = ""
             caused_by = [
-                "Please re-run using with -vvv and file a bug with the output", "at {}".format(constants.BUG_URL)
+                "Please re-run using with -vvv and file a bug with the output", f"at {constants.BUG_URL}"
             ]
 
         # Code that actually renders the exception
         output = sys.stderr
-        output.write(general + "\n")
-        output.write(detail + "\n\n")
+        output.write(f"{general}\n")
+        output.write(f"{detail}\n\n")
         for cause in caused_by:
-            output.write("\t* " + cause + "\n")
+            output.write(f"	* {cause}\n")
         output.write("\nNo further results will be produced\n")
         sys.exit(1)
 
@@ -434,7 +434,7 @@ class CommandLine:
             symbols_failed = symbols_failed or isinstance(excp.unsatisfied[config_path],
                                                           configuration.requirements.SymbolTableRequirement)
 
-            print("Unsatisfied requirement {}: {}".format(config_path, excp.unsatisfied[config_path].description))
+            print(f"Unsatisfied requirement {config_path}: {excp.unsatisfied[config_path].description}")
 
         if symbols_failed:
             print("\nA symbol table requirement was not fulfilled.  Please verify that:\n"
@@ -471,8 +471,8 @@ class CommandLine:
                             if not scheme or len(scheme) <= 1:
                                 if not os.path.exists(value):
                                     raise FileNotFoundError(
-                                        "Non-existant file {} passed to URIRequirement".format(value))
-                                value = "file://" + request.pathname2url(os.path.abspath(value))
+                                        f"Non-existant file {value} passed to URIRequirement")
+                                value = f"file://{request.pathname2url(os.path.abspath(value))}"
                     if isinstance(requirement, requirements.ListRequirement):
                         if not isinstance(value, list):
                             raise TypeError("Configuration for ListRequirement was not a list: {}".format(
@@ -499,11 +499,11 @@ class CommandLine:
 
                 pref_name_array = self.preferred_filename.split('.')
                 filename, extension = os.path.join(output_dir, '.'.join(pref_name_array[:-1])), pref_name_array[-1]
-                output_filename = "{}.{}".format(filename, extension)
+                output_filename = f"{filename}.{extension}"
 
                 counter = 1
                 while os.path.exists(output_filename):
-                    output_filename = "{}-{}.{}".format(filename, counter, extension)
+                    output_filename = f"{filename}-{counter}.{extension}"
                     counter += 1
                 return output_filename
 
@@ -525,7 +525,7 @@ class CommandLine:
                 with open(output_filename, "wb") as current_file:
                     current_file.write(self.read())
                     self._committed = True
-                    vollog.log(logging.INFO, "Saved stored plugin file: {}".format(output_filename))
+                    vollog.log(logging.INFO, f"Saved stored plugin file: {output_filename}")
 
                 super().close()
 
@@ -578,7 +578,7 @@ class CommandLine:
             configurable: The plugin object to pull the requirements from
         """
         if not issubclass(configurable, interfaces.configuration.ConfigurableInterface):
-            raise TypeError("Expected ConfigurableInterface type, not: {}".format(type(configurable)))
+            raise TypeError(f"Expected ConfigurableInterface type, not: {type(configurable)}")
 
         # Construct an argparse group
 

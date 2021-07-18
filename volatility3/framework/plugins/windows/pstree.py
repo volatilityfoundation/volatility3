@@ -90,7 +90,7 @@ class PsTree(interfaces.plugins.PluginInterface):
         offsettype = "(V)" if not self.config.get('physical', pslist.PsList.PHYSICAL_DEFAULT) else "(P)"
 
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str),
-                                   ("Offset{0}".format(offsettype), format_hints.Hex), ("Threads", int),
+                                   (f"Offset{offsettype}", format_hints.Hex), ("Threads", int),
                                    ("Handles", int), ("SessionId", int), ("Wow64", bool),
                                    ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime)],
                                   self._generator())

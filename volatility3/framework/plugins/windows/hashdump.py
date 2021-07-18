@@ -68,7 +68,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
             result = hive.get_key(key)
         except KeyError:
             vollog.info(
-                "Unable to load the required registry key {}\\{} from this memory image".format(hive.get_name(), key))
+                f"Unable to load the required registry key {hive.get_name()}\\{key} from this memory image")
         return result
 
     @classmethod
@@ -84,7 +84,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
     @classmethod
     def get_bootkey(cls, syshive: registry.RegistryHive) -> Optional[bytes]:
         cs = 1
-        lsa_base = "ControlSet{0:03}".format(cs) + "\\Control\\Lsa"
+        lsa_base = f"ControlSet{cs:03}" + "\\Control\\Lsa"
         lsa_keys = ["JD", "Skew1", "GBG", "Data"]
 
         lsa = cls.get_hive_key(syshive, lsa_base)

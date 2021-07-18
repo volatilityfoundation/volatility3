@@ -72,7 +72,7 @@ def choose_automagic(
         vollog.info("No plugin category detected")
         return automagics
 
-    vollog.info("Detected a {} category plugin".format(plugin_category))
+    vollog.info(f"Detected a {plugin_category} category plugin")
     output = []
     for amagic in automagics:
         if amagic.__class__.__name__ in automagic_categories[plugin_category]:
@@ -127,7 +127,7 @@ def run(automagics: List[interfaces.automagic.AutomagicInterface],
 
     for automagic in automagics:
         try:
-            vollog.info("Running automagic: {}".format(automagic.__class__.__name__))
+            vollog.info(f"Running automagic: {automagic.__class__.__name__}")
             automagic(context, config_path, requirement, progress_callback)
         except Exception as excp:
             exceptions.append(traceback.TracebackException.from_exception(excp))

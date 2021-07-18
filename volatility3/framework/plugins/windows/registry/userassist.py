@@ -227,7 +227,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
                 yield from self.list_userassist(hive)
                 continue
             except exceptions.PagedInvalidAddressException as excp:
-                vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
+                vollog.debug(f"Invalid address identified in Hive: {hex(excp.invalid_address)}")
             except exceptions.InvalidAddressException as excp:
                 vollog.debug("Invalid address identified in lower layer {}: {}".format(
                     excp.layer_name, excp.invalid_address))

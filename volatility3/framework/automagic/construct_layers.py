@@ -48,12 +48,12 @@ class ConstructionMagic(interfaces.automagic.AutomagicInterface):
                     self(context, subreq_config_path, subreq, optional = optional or subreq.optional)
                 except Exception as e:
                     # We don't really care if this fails, it tends to mean the configuration isn't complete for that item
-                    vollog.log(constants.LOGLEVEL_VVVV, "Construction Exception occurred: {}".format(e))
+                    vollog.log(constants.LOGLEVEL_VVVV, f"Construction Exception occurred: {e}")
                 invalid = subreq.unsatisfied(context, subreq_config_path)
                 # We want to traverse optional paths, so don't check until we've tried to validate
                 # We also don't want to emit a debug message when a parent is optional, hence the optional parameter
                 if invalid and not (optional or subreq.optional):
-                    vollog.log(constants.LOGLEVEL_V, "Failed on requirement: {}".format(subreq_config_path))
+                    vollog.log(constants.LOGLEVEL_V, f"Failed on requirement: {subreq_config_path}")
                     result.append(interfaces.configuration.path_join(subreq_config_path, subreq.name))
             if result:
                 return result

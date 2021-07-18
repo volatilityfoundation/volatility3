@@ -42,7 +42,7 @@ class ConfigWriter(plugins.PluginInterface):
             with self.open(filename) as file_data:
                 file_data.write(bytes(json.dumps(config, sort_keys = True, indent = 2), 'raw_unicode_escape'))
         except Exception as excp:
-            vollog.warning("Unable to JSON encode configuration: {}".format(excp))
+            vollog.warning(f"Unable to JSON encode configuration: {excp}")
 
         for k, v in config.items():
             yield (0, (k, json.dumps(v)))

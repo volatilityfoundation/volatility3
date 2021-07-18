@@ -46,10 +46,10 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         matched_parsers = [name for name in self._name_parser_map if parser_name in name]
 
         if len(matched_parsers) < 1:
-            msg = 'invalid choice {} (choose from {})'.format(parser_name, ', '.join(self._name_parser_map))
+            msg = f"invalid choice {parser_name} (choose from {', '.join(self._name_parser_map)})"
             raise argparse.ArgumentError(self, msg)
         if len(matched_parsers) > 1:
-            msg = 'plugin {} matches multiple plugins ({})'.format(parser_name, ', '.join(matched_parsers))
+            msg = f"plugin {parser_name} matches multiple plugins ({', '.join(matched_parsers)})"
             raise argparse.ArgumentError(self, msg)
         parser = self._name_parser_map[matched_parsers[0]]
         setattr(namespace, 'plugin', matched_parsers[0])
@@ -88,7 +88,7 @@ class HelpfulArgParser(argparse.ArgumentParser):
             if msg is None:
                 msg = gettext.ngettext('expected %s argument', 'expected %s arguments', action.nargs) % action.nargs
             if action.choices:
-                msg = "{} (from: {})".format(msg, ", ".join(action.choices))
+                msg = f"{msg} (from: {', '.join(action.choices)})"
             raise argparse.ArgumentError(action, msg)
 
         # return the number of arguments matched
