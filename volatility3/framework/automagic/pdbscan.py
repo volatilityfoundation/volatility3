@@ -138,6 +138,10 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                          progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
 
         def test_virtual_kernel(physical_layer_name, virtual_layer_name, kernel):
+            # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
+            if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
+                # Rule out kernels that couldn't find a suitable MZ header
+                return None
             return (virtual_layer_name, kernel['mz_offset'], kernel)
 
         vollog.debug("Kernel base determination - slow scan virtual layer")
