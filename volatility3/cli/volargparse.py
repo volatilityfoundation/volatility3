@@ -31,7 +31,7 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
                  option_string: Optional[str] = None) -> None:
 
         parser_name = ''
-        arg_strings: List[str] = []
+        arg_strings = []  # type: List[str]
         if values is not None:
             for value in values:
                 if not parser_name:

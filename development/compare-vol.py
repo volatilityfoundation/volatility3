@@ -63,8 +63,8 @@ class VolatilityTest:
             f.write(completed.stdout)
         if completed.stderr:
             with open(
-                    os.path.join(self.output_directory, '{}_{}_{}_stderr'.format(self.short_name, plugin.name,
-                                                                                 image_hash)), "wb") as f:
+                    os.path.join(self.output_directory, f'{self.short_name}_{plugin.name}_{image_hash}_stderr'),
+                    "wb") as f:
                 f.write(completed.stderr)
         return [total_time]
 

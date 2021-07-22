@@ -53,7 +53,7 @@ class DtbTest:
         self.ptr_size = struct.calcsize(ptr_struct)
         self.ptr_reference = ptr_reference
         self.mask = mask
-        self.page_size = layer_type.page_size  # type: int
+        self.page_size: int = layer_type.page_size
 
     def _unpack(self, value: bytes) -> int:
         return struct.unpack("<" + self.ptr_struct, value)[0]

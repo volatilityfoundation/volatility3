@@ -116,7 +116,7 @@ class PDBConvertor:
         self._filename = filename
         logger.info("Parsing PDB...")
         self._pdb = pdbparse.parse(filename)
-        self._seen_ctypes = set([])  # type: Set[str]
+        self._seen_ctypes: Set[str] = set([])
 
     def lookup_ctype(self, ctype: str) -> str:
         self._seen_ctypes.add(ctype)
@@ -169,7 +169,7 @@ class PDBConvertor:
     def read_enums(self) -> Dict:
         """Reads the Enumerations from the PDB file"""
         logger.info("Reading enums...")
-        output = {}  # type: Dict[str, Any]
+        output: Dict[str, Any] = {}
         stream = self._pdb.STREAM_TPI
         for type_index in stream.types:
             user_type = stream.types[type_index]
@@ -231,7 +231,7 @@ class PDBConvertor:
 
     def _format_usertype(self, usertype, kind) -> Dict:
         """Produces a single usertype"""
-        fields = {}  # type: Dict[str, Dict[str, Any]]
+        fields: Dict[str, Dict[str, Any]] = {}
         [fields.update(self._format_field(s)) for s in usertype.fieldlist.substructs]
         return {usertype.name: {'fields': fields, 'kind': kind, 'size': usertype.size}}
 
