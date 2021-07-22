@@ -18,7 +18,7 @@ the Volatility Software License (VSL). See the [LICENSE](LICENSE.txt) file for m
 
 ## Requirements
 
-- Python 3.5.3 or later. <https://www.python.org>
+- Python 3.6.0 or later. <https://www.python.org>
 - Pefile 2017.8.1 or later. <https://pypi.org/project/pefile/>
 
 ## Optional Dependencies
