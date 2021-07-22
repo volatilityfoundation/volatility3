@@ -5,7 +5,7 @@
 import logging
 from typing import List
 
-from volatility3.framework import interfaces, renderers, contexts, symbols
+from volatility3.framework import interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import linux
@@ -17,32 +17,28 @@ vollog = logging.getLogger(__name__)
 class Check_idt(interfaces.plugins.PluginInterface):
     """ Checks if the IDT has been altered """
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
+            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (2, 0, 0)),
+            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0))
         ]
 
     def _generator(self):
-        vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
+        vmlinux = self.context.modules[self.config['vmlinux']]
 
-        modules = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['vmlinux'])
+        modules = lsmod.Lsmod.list_modules(self.context, vmlinux.name)
 
-        handlers = linux.LinuxUtilities.generate_kernel_handler_info(self.context, self.config['primary'],
-                                                                     self.config['vmlinux'], modules)
+        handlers = linux.LinuxUtilities.generate_kernel_handler_info(self.context, vmlinux.name, modules)
 
-        is_32bit = not symbols.symbol_table_is_64bit(self.context, self.config["vmlinux"])
+        is_32bit = not symbols.symbol_table_is_64bit(self.context, vmlinux.symbol_table_name)
 
         idt_table_size = 256
 
-        address_mask = self.context.layers[self.config['primary']].address_mask
+        address_mask = self.context.layers[vmlinux.layer_name].address_mask
 
         # hw handlers + system call
         check_idxs = list(range(0, 20)) + [128]
@@ -65,7 +61,8 @@ class Check_idt(interfaces.plugins.PluginInterface):
         table = vmlinux.object(object_type = 'array',
                                offset = addrs.vol.offset,
                                subtype = vmlinux.get_type(idt_type),
-                               count = idt_table_size)
+                               count = idt_table_size,
+                               absolute = True)
 
         for i in check_idxs:
             ent = table[i]
@@ -88,7 +85,7 @@ class Check_idt(interfaces.plugins.PluginInterface):
 
                 idt_addr = idt_addr & address_mask
 
-            module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(self.context, handlers, idt_addr)
+            module_name, symbol_name = linux.LinuxUtilities.lookup_module_address(vmlinux, handlers, idt_addr)
 
             yield (0, [format_hints.Hex(i), format_hints.Hex(idt_addr), module_name, symbol_name])
 

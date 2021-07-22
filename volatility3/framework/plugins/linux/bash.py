@@ -21,16 +21,13 @@ from volatility3.plugins.linux import pslist
 class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Recovers bash command history from memory."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process IDs to include (all other processes are excluded)",
@@ -38,7 +35,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     def _generator(self, tasks):
-        is_32bit = not symbols.symbol_table_is_64bit(self.context, self.config["vmlinux"])
+        is_32bit = not symbols.symbol_table_is_64bit(self.context, self.config["vmlinux.symbol_table_name"])
         if is_32bit:
             pack_format = "I"
             bash_json_file = "bash32"
@@ -93,7 +90,6 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                    ("Command", str)],
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
-                                                               self.config['primary'],
                                                                self.config['vmlinux'],
                                                                filter_func = filter_func)))
 
@@ -102,7 +98,6 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         for row in self._generator(
                 pslist.PsList.list_tasks(self.context,
-                                         self.config['primary'],
                                          self.config['vmlinux'],
                                          filter_func = filter_func)):
             _depth, row_data = row
