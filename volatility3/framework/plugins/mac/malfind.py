@@ -2,7 +2,6 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from volatility3.framework import constants
 from volatility3.framework import interfaces
 from volatility3.framework import renderers
 from volatility3.framework.configuration import requirements
@@ -14,16 +13,14 @@ from volatility3.plugins.mac import pslist
 class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -41,13 +38,13 @@ class Malfind(interfaces.plugins.PluginInterface):
         proc_layer = self.context.layers[proc_layer_name]
 
         for vma in task.get_map_iter():
-            if not vma.is_suspicious(self.context, self.config['darwin']):
+            if not vma.is_suspicious(self.context, self.context.modules[self.config['darwin']].symbol_table_name):
                 data = proc_layer.read(vma.links.start, 64, pad = True)
                 yield vma, data
 
     def _generator(self, tasks):
         # determine if we're on a 32 or 64 bit kernel
-        if self.context.symbol_space.get_type(self.config["darwin"] + constants.BANG + "pointer").size == 4:
+        if self.context.modules[self.config['darwin']].get_type("pointer").size == 4:
             is_32bit_arch = True
         else:
             is_32bit_arch = False
@@ -75,6 +72,5 @@ class Malfind(interfaces.plugins.PluginInterface):
                                    ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(
                                       list_tasks(self.context,
-                                                 self.config['primary'],
                                                  self.config['darwin'],
                                                  filter_func = filter_func)))

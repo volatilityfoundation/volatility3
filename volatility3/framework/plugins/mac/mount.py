@@ -3,7 +3,7 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Mac's mount command."""
-from volatility3.framework import renderers, interfaces, contexts
+from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -14,22 +14,20 @@ class Mount(plugins.PluginInterface):
     """A module containing a collection of plugins that produce data typically
     foundin Mac's mount command"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols")
         ]
 
     @classmethod
-    def list_mounts(cls, context: interfaces.context.ContextInterface, layer_name: str, darwin_symbols: str):
+    def list_mounts(cls, context: interfaces.context.ContextInterface, kernel_module_name: str):
         """Lists all the mount structures in the primary layer.
 
         Args:
@@ -40,7 +38,7 @@ class Mount(plugins.PluginInterface):
         Returns:
             A list of mount structures from the `layer_name` layer
         """
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        kernel = context.modules[kernel_module_name]
 
         list_head = kernel.object_from_symbol(symbol_name = "mountlist")
 
@@ -48,7 +46,7 @@ class Mount(plugins.PluginInterface):
             yield mount
 
     def _generator(self):
-        for mount in self.list_mounts(self.context, self.config['primary'], self.config['darwin']):
+        for mount in self.list_mounts(self.context, self.config['darwin']):
             vfs = mount.mnt_vfsstat
             device_name = utility.array_to_string(vfs.f_mntonname)
             mount_point = utility.array_to_string(vfs.f_mntfromname)

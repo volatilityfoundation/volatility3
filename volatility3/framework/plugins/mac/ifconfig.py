@@ -1,7 +1,7 @@
 # This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from volatility3.framework import exceptions, renderers, contexts
+from volatility3.framework import exceptions, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -11,20 +11,17 @@ from volatility3.framework.symbols import mac
 class Ifconfig(plugins.PluginInterface):
     """Lists loaded kernel modules"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
+            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS'),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0))
         ]
 
     def _generator(self):
-        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
+        kernel = self.context.modules[self.config['darwin']]
 
         try:
             list_head = kernel.object_from_symbol(symbol_name = "ifnet_head")

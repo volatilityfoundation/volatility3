@@ -14,16 +14,14 @@ from volatility3.plugins.mac import pslist
 class Psaux(plugins.PluginInterface):
     """Recovers program command line arguments."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -98,6 +96,5 @@ class Psaux(plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Argc", int), ("Arguments", str)],
                                   self._generator(
                                       list_tasks(self.context,
-                                                 self.config['primary'],
                                                  self.config['darwin'],
                                                  filter_func = filter_func)))

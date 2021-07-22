@@ -6,7 +6,7 @@ import logging
 from typing import List
 
 from volatility3.framework import exceptions, interfaces
-from volatility3.framework import renderers, contexts
+from volatility3.framework import renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.renderers import format_hints
@@ -19,25 +19,22 @@ vollog = logging.getLogger(__name__)
 class Check_trap_table(plugins.PluginInterface):
     """Check mach trap table for hooks."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0)),
+            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS'),
+            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
         ]
 
     def _generator(self):
-        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
+        kernel = self.context.modules[self.config['darwin']]
 
-        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['darwin'])
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['darwin'])
 
-        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
+        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, kernel.layer_name, kernel, mods)
 
         table = kernel.object_from_symbol(symbol_name = "mach_trap_table")
 
@@ -50,7 +47,8 @@ class Check_trap_table(plugins.PluginInterface):
             if not call_addr or call_addr == 0:
                 continue
 
-            module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, call_addr)
+            module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, call_addr,
+                                                                              self.config['darwin'])
 
             yield (0, (format_hints.Hex(table.vol.offset), "TrapTable", i, format_hints.Hex(call_addr), module_name,
                        symbol_name))
