@@ -21,11 +21,13 @@ from volatility3.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
-windows_automagic = ['ConstructionMagic', 'LayerStacker', 'WintelHelper', 'KernelPDBScanner', 'WinSwapLayers']
+windows_automagic = [
+    'ConstructionMagic', 'LayerStacker', 'WintelHelper', 'KernelPDBScanner', 'WinSwapLayers', 'KernelModule'
+]
 
-linux_automagic = ['ConstructionMagic', 'LayerStacker', 'LinuxBannerCache', 'LinuxSymbolFinder']
+linux_automagic = ['ConstructionMagic', 'LayerStacker', 'LinuxBannerCache', 'LinuxSymbolFinder', 'KernelModule']
 
-mac_automagic = ['ConstructionMagic', 'LayerStacker', 'MacBannerCache', 'MacSymbolFinder']
+mac_automagic = ['ConstructionMagic', 'LayerStacker', 'MacBannerCache', 'MacSymbolFinder', 'KernelModule']
 
 
 def available(context: interfaces.context.ContextInterface) -> List[interfaces.automagic.AutomagicInterface]:

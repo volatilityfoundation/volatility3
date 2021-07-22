@@ -105,7 +105,8 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 new_layer = intel.Intel32e(context,
                                            config_path = config_path,
                                            name = new_layer_name,
-                                           metadata = {'kaslr_value': kaslr_shift})
+                                           metadata = {'os': 'mac'})
+                new_layer.config['kernel_virtual_offset'] = kaslr_shift
 
             if new_layer and dtb:
                 vollog.debug(f"DTB was found at: 0x{dtb:0x}")
