@@ -25,7 +25,7 @@ import sys
 from abc import ABCMeta, abstractmethod
 from typing import Any, ClassVar, Dict, Generator, Iterator, List, Optional, Type, Union, Tuple, Set
 
-from volatility3 import classproperty
+from volatility3 import classproperty, framework
 from volatility3.framework import constants, interfaces
 
 CONFIG_SEPARATOR = "."
@@ -730,6 +730,11 @@ class VersionableInterface:
     All version number should use semantic versioning
     """
     _version: Tuple[int, int, int] = (0, 0, 0)
+    _required_framework_version: Tuple[int, int, int] = (0, 0, 0)
+
+    def __init__(self, *args, **kwargs):
+        framework.require_interface_version(*self._required_framework_version)
+        super().__init__(*args, **kwargs)
 
     @classproperty
     def version(cls) -> Tuple[int, int, int]:

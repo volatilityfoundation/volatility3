@@ -3,11 +3,11 @@
 #
 from typing import List, Tuple, Iterator
 
-from volatility3.framework import exceptions, constants, interfaces, objects, contexts
+from volatility3 import framework
+from volatility3.framework import exceptions, constants, interfaces, objects
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.linux import extensions
-from volatility3.framework.objects import utility
 
 
 class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
@@ -40,7 +40,10 @@ class LinuxKernelIntermedSymbols(intermed.IntermediateSymbolTable):
 class LinuxUtilities(interfaces.configuration.VersionableInterface):
     """Class with multiple useful linux functions."""
 
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
+    _required_framework_version = (1, 2, 0)
+
+    framework.require_interface_version(*_required_framework_version)
 
     # based on __d_path from the Linux kernel
     @classmethod
@@ -114,7 +117,13 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         if len(symbol_table_arr) == 2:
             symbol_table = symbol_table_arr[0]
 
-        symbs = list(context.symbol_space.get_symbols_by_location(sym_addr, table_name = symbol_table))
+        for module_name in context.modules.get_modules_by_symbol_tables(symbol_table):
+            kernel_module = context.modules[module_name]
+            break
+        else:
+            raise ValueError(f"No module using the symbol table {symbol_table}")
+
+        symbs = list(kernel_module.get_symbols_by_absolute_location(sym_addr))
 
         if len(symbs) == 1:
             sym = symbs[0].split(constants.BANG)[1]
@@ -207,15 +216,15 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
 
     @classmethod
     def generate_kernel_handler_info(
-            cls, context: interfaces.context.ContextInterface, layer_name: str, kernel_name: str,
+            cls, context: interfaces.context.ContextInterface, kernel_module_name: str,
             mods_list: Iterator[interfaces.objects.ObjectInterface]) -> List[Tuple[str, int, int]]:
         """
         A helper function that gets the beginning and end address of the kernel module
         """
 
-        kernel = contexts.Module(context, kernel_name, layer_name, 0)
+        kernel = context.modules[kernel_module_name]
 
-        mask = context.layers[layer_name].address_mask
+        mask = context.layers[kernel.layer_name].address_mask
 
         start_addr = kernel.object_from_symbol("_text")
         start_addr = start_addr.vol.offset & mask
@@ -224,10 +233,11 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
         end_addr = end_addr.vol.offset & mask
 
         return [(constants.linux.KERNEL_NAME, start_addr, end_addr)] + \
-               LinuxUtilities.mask_mods_list(context, layer_name, mods_list)
+               LinuxUtilities.mask_mods_list(context, kernel.layer_name, mods_list)
 
     @classmethod
-    def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: List[Tuple[str, int, int]],
+    def lookup_module_address(cls, kernel_module: interfaces.context.ModuleInterface,
+                              handlers: List[Tuple[str, int, int]],
                               target_address: int):
         """
         Searches between the start and end address of the kernel module using target_address.
@@ -241,7 +251,7 @@ class LinuxUtilities(interfaces.configuration.VersionableInterface):
             if start <= target_address <= end:
                 mod_name = name
                 if name == constants.linux.KERNEL_NAME:
-                    symbols = list(context.symbol_space.get_symbols_by_location(target_address))
+                    symbols = list(kernel_module.get_symbols_by_absolute_location(target_address))
 
                     if len(symbols):
                         symbol_name = symbols[0].split(constants.BANG)[1] if constants.BANG in symbols[0] else \

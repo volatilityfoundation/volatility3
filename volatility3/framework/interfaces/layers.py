@@ -54,6 +54,8 @@ class ScannerInterface(interfaces.configuration.VersionableInterface, metaclass 
     """
     thread_safe = False
 
+    _required_framework_version = (1, 0, 0)
+
     def __init__(self) -> None:
         super().__init__()
         self.chunk_size = 0x1000000  # Default to 16Mb chunks

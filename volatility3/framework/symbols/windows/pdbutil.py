@@ -25,6 +25,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
     """Class to handle and manage all getting symbols based on MZ header"""
 
     _version = (1, 0, 0)
+    _required_framework_version = (1, 0, 0)
 
     @classmethod
     def symbol_table_from_offset(
