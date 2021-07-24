@@ -695,7 +695,7 @@ class PdbReader:
             leaf_type, name, value = self.types[index]
             if leaf_type in [
                 leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
-                leaf_type.LF_INTERFACE
+                leaf_type.LF_INTERFACE, leaf_type.LF_CLASS_VS19, leaf_type.LF_STRUCTURE_VS19
             ]:
                 if not value.properties.forward_reference and name:
                     self.user_types[name] = {
