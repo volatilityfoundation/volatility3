@@ -363,6 +363,7 @@ class PdbReader:
         except ValueError:
             return None
 
+
     def _read_info_stream(self, stream_number, stream_name, info_list):
         vollog.debug(f"Reading {stream_name}")
         info_layer = self._context.layers.get(self._layer_name + "_stream" + str(stream_number), None)
@@ -656,7 +657,7 @@ class PdbReader:
                     result = value.size
             elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
                 result = value.size
-            elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_ENUM, leaf_type.LF_ARGLIST]:
+            elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_ENUM, leaf_type.LF_ARGLIST, leaf_type.LF_NESTTYPE]:
                 result = self.get_size_from_index(value.subtype_index)
             elif leaf_type in [leaf_type.LF_MEMBER]:
                 result = self.get_size_from_index(value.field_type)
@@ -755,7 +756,12 @@ class PdbReader:
         'LF_BITFIELD': ('LF_BITFIELD', False, None),
         'LF_UDT_SRC_LINE': ('LF_UDT_SRC_LINE', False, None),
         'LF_UDT_MOD_SRC_LINE': ('LF_UDT_MOD_SRC_LINE', False, None),
-        'LF_BUILDINFO': ('LF_BUILDINFO', False, None)
+        'LF_BUILDINFO': ('LF_BUILDINFO', False, None),
+        'LF_NESTTYPE': ('LF_NESTTYPE', True, None),
+        'LF_BCLASS': ('LF_BCLASS', False, None),
+        'LF_METHOD': ('LF_METHOD', True, None),
+        'LF_METHODLIST': ('LF_METHODLIST', False, None),
+        'LF_MFUNCTION': ('LF_MFUNCTION', False, None),
     }
 
     def consume_type(
@@ -829,6 +835,12 @@ class PdbReader:
             return result
         for field in fields_struct:
             _, name, member = field
+            skip = False
+            for skip_type in ['LF_NESTTYPE', 'LF_METHOD', 'LF_BCLASS']:
+                if member.vol.type_name.endswith(skip_type):
+                    skip = True
+            if skip:
+                continue
             result[name] = {"offset": member.offset, "type": self.get_type_from_index(member.field_type)}
         return result
 
@@ -852,9 +864,9 @@ class PdbReader:
                 if element_type > 0x1000:
                     _, name, toplevel_type = self.types[element_type - 0x1000]
                     # If there's no name, the original size is probably fine as long as we're not indirect (LF_MODIFIER)
-                    if not name and isinstance(
-                            toplevel_type,
-                            interfaces.objects.ObjectInterface) and toplevel_type.vol.type_name.endswith('LF_MODIFIER'):
+                    if not name and isinstance(toplevel_type, interfaces.objects.ObjectInterface) and \
+                            (toplevel_type.vol.type_name.endswith('LF_MODIFIER') or
+                             toplevel_type.vol.type_name.endswith('LF_NESTTYPE')):
                         # We have check they don't point to a forward reference, so we go round again with the subtype
                         element_type = toplevel_type.subtype_index
                         loop = True
