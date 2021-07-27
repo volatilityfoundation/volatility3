@@ -75,6 +75,10 @@ class Netstat(plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     continue
 
+                if not context.layers[task.vol.native_layer_name].is_valid(socket.vol.offset,
+                                                                                 socket.vol.size):
+                    continue
+
                 yield task_name, pid, socket
 
     def _generator(self):
