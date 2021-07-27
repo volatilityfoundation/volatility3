@@ -44,20 +44,22 @@ class List_Files(plugins.PluginInterface):
         return v_name
 
     @classmethod
-    def _get_parent(cls, vnode):
-        parent = None
-
+    def _get_parent(cls, context, vnode):
         # root entries do not have parents
         # and parents of normal files can be smeared
         try:
-            parent = vnode.v_parent
+            parent = vnode.v_parent.dereference()
         except exceptions.InvalidAddressException:
-            pass
+            return None
+
+        if parent and not context.layers[vnode.vol.native_layer_name].is_valid(parent.vol.offset,
+                                                                               parent.vol.size):
+            return None
 
         return parent
 
     @classmethod
-    def _add_vnode(cls, vnode, loop_vnodes):
+    def _add_vnode(cls, context, vnode, loop_vnodes):
         """
         Adds the given vnode to loop_vnodes.
 
@@ -65,7 +67,11 @@ class List_Files(plugins.PluginInterface):
         and holds its name, parent address, and object
         """
 
-        key = vnode
+        if not context.layers[vnode.vol.native_layer_name].is_valid(vnode.vol.offset,
+                                                                    vnode.vol.size):
+            return False
+
+        key = vnode.vol.offset
         added = False
 
         if not key in loop_vnodes:
@@ -74,9 +80,9 @@ class List_Files(plugins.PluginInterface):
             if v_name is None:
                 return added
 
-            parent = cls._get_parent(vnode)
+            parent = cls._get_parent(context, vnode)
             if parent:
-                parent_val = parent
+                parent_val = parent.vol.offset
             else:
                 parent_val = None
 
@@ -87,29 +93,40 @@ class List_Files(plugins.PluginInterface):
         return added
 
     @classmethod
-    def _walk_vnode(cls, vnode, loop_vnodes):
+    def _walk_vnode(cls, context, vnode, loop_vnodes):
         """
         Iterates over the list of vnodes associated with the given one.
         Also traverses the parent chain for the vnode and adds each one.
         """
-        while vnode:
-            if not cls._add_vnode(vnode, loop_vnodes):
-                break
+        added = False
 
-            parent = cls._get_parent(vnode)
-            while parent:
-                cls._walk_vnode(parent, loop_vnodes)
-                parent = cls._get_parent(parent)
+        while vnode:
+            if vnode in loop_vnodes:
+                return added
+
+            if not cls._add_vnode(context, vnode, loop_vnodes):
+                break
+ 
+            added = True
+
+            parent = cls._get_parent(context, vnode)
+            while parent and not parent in loop_vnodes:
+                if not cls._walk_vnode(context, parent, loop_vnodes):
+                    break
+
+                parent = cls._get_parent(context, parent)
 
             try:
-                vnode = vnode.v_mntvnodes.tqe_next
+                vnode = vnode.v_mntvnodes.tqe_next.dereference()
             except exceptions.InvalidAddressException:
                 break
 
+        return added
+
     @classmethod
-    def _walk_vnodelist(cls, list_head, loop_vnodes):
+    def _walk_vnodelist(cls, context, list_head, loop_vnodes):
         for vnode in mac.MacUtilities.walk_tailq(list_head, "v_mntvnodes"):
-            cls._walk_vnode(vnode, loop_vnodes)
+            cls._walk_vnode(context, vnode, loop_vnodes)
 
     @classmethod
     def _walk_mounts(cls,
@@ -123,24 +140,32 @@ class List_Files(plugins.PluginInterface):
         # iterate each vnode source from each mount
         list_mounts = mount.Mount.list_mounts(context, layer_name, darwin_symbols)
         for mnt in list_mounts:
-            cls._walk_vnodelist(mnt.mnt_vnodelist, loop_vnodes)
-            cls._walk_vnodelist(mnt.mnt_workerqueue, loop_vnodes)
-            cls._walk_vnodelist(mnt.mnt_newvnodes, loop_vnodes)
-
-            cls._walk_vnode(mnt.mnt_vnodecovered, loop_vnodes)
-            cls._walk_vnode(mnt.mnt_realrootvp, loop_vnodes)
-            cls._walk_vnode(mnt.mnt_devvp, loop_vnodes)
+            cls._walk_vnodelist(context, mnt.mnt_vnodelist, loop_vnodes)
+            cls._walk_vnodelist(context, mnt.mnt_workerqueue, loop_vnodes)
+            cls._walk_vnodelist(context, mnt.mnt_newvnodes, loop_vnodes)
+            cls._walk_vnode(context, mnt.mnt_vnodecovered, loop_vnodes)
+            cls._walk_vnode(context, mnt.mnt_realrootvp, loop_vnodes)
+            cls._walk_vnode(context, mnt.mnt_devvp, loop_vnodes)
 
         return loop_vnodes
 
     @classmethod
     def _build_path(cls, vnodes, vnode_name, parent_offset):
         path = [vnode_name]
+        seen_offsets = set()
 
         while parent_offset in vnodes:
             parent_name, parent_offset, _ = vnodes[parent_offset]
             if parent_offset is None:
                 parent_offset = 0
+
+            # circular references from smear
+            elif parent_offset in seen_offsets:
+                path = []
+                break
+
+            else:
+                seen_offsets.add(parent_offset)
 
             path.insert(0, parent_name)
 
@@ -171,7 +196,7 @@ class List_Files(plugins.PluginInterface):
     def _generator(self):
         for vnode, full_path in self.list_files(self.context, self.config['primary'], self.config['darwin']):
 
-            yield (0, (format_hints.Hex(vnode), full_path))
+            yield (0, (format_hints.Hex(vnode.vol.offset), full_path))
 
     def run(self):
         return renderers.TreeGrid([("Address", format_hints.Hex), ("File Path", str)], self._generator())
