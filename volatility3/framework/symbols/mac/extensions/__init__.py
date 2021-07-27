@@ -131,7 +131,10 @@ class vnode(objects.StructType):
             return
 
         if vname:
-            ret.append(utility.pointer_to_string(vname, 255))
+            try:
+                ret.append(utility.pointer_to_string(vname, 255))
+            except exceptions.InvalidAddressException:
+                return
 
         if int(vnodeobj.v_flag) & 0x000001 != 0 and int(vnodeobj.v_mount) != 0:
             if int(vnodeobj.v_mount.mnt_vnodecovered) != 0:
