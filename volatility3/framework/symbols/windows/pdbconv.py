@@ -770,7 +770,8 @@ class PdbReader:
         consumed = leaf_type.vol.base_type.size
         remaining = length - consumed
 
-        type_handler, has_name, value_attribute = self.type_handlers.get(leaf_type.lookup(), 'LF_UNKNOWN')
+        type_handler, has_name, value_attribute = self.type_handlers.get(leaf_type.lookup(),
+                                                                         ('LF_UNKNOWN', False, None))
 
         if type_handler in ['LF_FIELDLIST']:
             sub_length = remaining
