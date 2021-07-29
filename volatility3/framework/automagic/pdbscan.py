@@ -124,10 +124,11 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         if valid_kernel:
             # Set the virtual offset under the TranslationLayer it applies to
             virtual_layer, kvo, kernel = valid_kernel
-            kvo_path = interfaces.configuration.path_join(context.layers[virtual_layer].config_path,
-                                                          'kernel_virtual_offset')
-            context.config[kvo_path] = kvo
-            vollog.debug(f"Setting kernel_virtual_offset to {hex(kvo)}")
+            if kvo is not None:
+                kvo_path = interfaces.configuration.path_join(context.layers[virtual_layer].config_path,
+                                                              'kernel_virtual_offset')
+                context.config[kvo_path] = kvo
+                vollog.debug(f"Setting kernel_virtual_offset to {hex(kvo)}")
 
     def get_physical_layer_name(self, context, vlayer):
         return context.config.get(interfaces.configuration.path_join(vlayer.config_path, 'memory_layer'), None)
