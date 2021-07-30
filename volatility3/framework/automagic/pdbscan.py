@@ -56,7 +56,6 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
             context: The context in which the `requirement` lives
             config_path: The path within the `context` for the `requirement`'s configuration variables
             requirement: The root of the requirement tree to search for :class:~`volatility3.framework.interfaces.layers.TranslationLayerRequirement` objects to scan
-            progress_callback: Means of providing the user with feedback during long processes
 
         Returns:
             A list of (layer_name, scan_results)
@@ -90,6 +89,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
         Args:
             context: Context on which to operate
             valid_kernel: A list of offsets where valid kernels have been found
+            progress_callback: Means of providing the user with feedback during long processes
         """
         for sub_config_path, requirement in self._symbol_requirements:
             # TODO: Potentially think about multiple symbol requirements in both the same and different levels of the requirement tree
@@ -138,7 +138,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                          vlayer: layers.intel.Intel,
                          progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
 
-        def test_virtual_kernel(physical_layer_name, virtual_layer_name, kernel):
+        def test_virtual_kernel(physical_layer_name, virtual_layer_name: str, kernel: Dict[str, Any]) -> Optional[ValidKernelType]:
             # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
             if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
                 # Rule out kernels that couldn't find a suitable MZ header
@@ -153,7 +153,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
                              vlayer: layers.intel.Intel,
                              progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
 
-        def test_physical_kernel(physical_layer_name, virtual_layer_name, kernel):
+        def test_physical_kernel(physical_layer_name:str , virtual_layer_name: str, kernel: Dict[str, Any]) -> Optional[ValidKernelType]:
             # It seems the kernel is loaded at a fixed mapping (presumably because the memory manager hasn't started yet)
             if kernel['mz_offset'] is None or not isinstance(kernel['mz_offset'], int):
                 # Rule out kernels that couldn't find a suitable MZ header
@@ -239,14 +239,14 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
     def method_module_offset(self,
                              context: interfaces.context.ContextInterface,
                              vlayer: layers.intel.Intel,
-                             progress_callback: constants.ProgressCallback = None) -> ValidKernelType:
+                             progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
         return self._method_offset(context, vlayer, b"\\SystemRoot\\system32\\nt",
                                    -16 - int(vlayer.bits_per_register / 8), progress_callback)
 
     def method_kdbg_offset(self,
                            context: interfaces.context.ContextInterface,
                            vlayer: layers.intel.Intel,
-                           progress_callback: constants.ProgressCallback = None) -> ValidKernelType:
+                           progress_callback: constants.ProgressCallback = None) -> Optional[ValidKernelType]:
         return self._method_offset(context, vlayer, b"KDBG", 8, progress_callback)
 
     def check_kernel_offset(self,
@@ -294,7 +294,7 @@ class KernelPDBScanner(interfaces.automagic.AutomagicInterface):
 
         Args:
             context: Context on which to operate
-            potential_kernels: Dictionary containing `GUID`, `age`, `pdb_name` and `mz_offset` keys
+            potential_layers: List of layer names that the kernel might live at
             progress_callback: Function taking a percentage and optional description to be called during expensive computations to indicate progress
 
         Returns:
