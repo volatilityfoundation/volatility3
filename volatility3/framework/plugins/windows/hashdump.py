@@ -134,7 +134,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
             rc4_key = md5.digest()
 
             rc4 = ARC4.new(rc4_key)
-            hbootkey = rc4.encrypt(sam_data[0x80:0xA0])
+            hbootkey = rc4.encrypt(sam_data[0x80:0xA0]) # lgtm [py/weak-cryptographic-algorithm]
             return hbootkey
         elif revision == 3:
             # AES encrypted
@@ -153,7 +153,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
         des2 = DES.new(des_k2, DES.MODE_ECB)
         cipher = AES.new(hbootkey[:16], AES.MODE_CBC, salt)
         obfkey = cipher.decrypt(enc_hash)
-        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:16])
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:16]) # lgtm [py/weak-cryptographic-algorithm]
 
     @classmethod
     def get_user_hashes(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive,
@@ -231,9 +231,9 @@ class Hashdump(interfaces.plugins.PluginInterface):
         md5.update(hbootkey[:0x10] + pack("<L", rid) + lmntstr)
         rc4_key = md5.digest()
         rc4 = ARC4.new(rc4_key)
-        obfkey = rc4.encrypt(enc_hash)
+        obfkey = rc4.encrypt(enc_hash) # lgtm [py/weak-cryptographic-algorithm]
 
-        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:])
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:]) # lgtm [py/weak-cryptographic-algorithm]
 
     @classmethod
     def get_user_name(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive) -> Optional[bytes]:

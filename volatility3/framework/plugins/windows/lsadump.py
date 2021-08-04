@@ -86,7 +86,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             rc4key = md5.digest()
 
             rc4 = ARC4.new(rc4key)
-            lsa_key = rc4.decrypt(obf_lsa_key[12:60])
+            lsa_key = rc4.decrypt(obf_lsa_key[12:60]) # lgtm [py/weak-cryptographic-algorithm]
             lsa_key = lsa_key[0x10:0x20]
         else:
             lsa_key = cls.decrypt_aes(obf_lsa_key, bootkey)
@@ -127,7 +127,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             des_key = hashdump.Hashdump.sidbytes_to_key(block_key)
             des = DES.new(des_key, DES.MODE_ECB)
             enc_block = enc_block + b"\x00" * int(abs(8 - len(enc_block)) % 8)
-            decrypted_data += des.decrypt(enc_block)
+            decrypted_data += des.decrypt(enc_block) # lgtm [py/weak-cryptographic-algorithm]
             j += 7
             if len(key[j:j + 7]) < 7:
                 j = len(key[j:j + 7])
