@@ -1,6 +1,7 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import contextlib
 import logging
 from typing import List
 
@@ -48,7 +49,11 @@ class Memmap(interfaces.plugins.PluginInterface):
                                                                                  excp.layer_name))
                 continue
 
-            file_handle = self.open(f"pid.{pid}.dmp")
+            if self.config['dump']:
+                file_handle = self.open(f"pid.{pid}.dmp")
+            else:
+                # Ensure the file isn't actually created if not needed
+                file_handle = contextlib.ExitStack()
             with file_handle as file_data:
                 file_offset = 0
                 for mapval in proc_layer.mapping(0x0, proc_layer.maximum_address, ignore_errors = True):
