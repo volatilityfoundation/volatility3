@@ -10,7 +10,6 @@ import pickle
 import urllib
 import urllib.parse
 import urllib.request
-import zipfile
 from typing import Dict, List, Optional
 
 from volatility3.framework import constants, exceptions, interfaces
@@ -165,7 +164,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
         if banner_location is None:
             banner_location = constants.REMOTE_ISF_URL
 
-        if not constants.OFFLINE:
+        if not constants.OFFLINE and banner_location is not None:
             try:
                 rbf = RemoteBannerFormat(banner_location)
                 rbf.process(banners, operating_system)

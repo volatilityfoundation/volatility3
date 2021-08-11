@@ -98,5 +98,5 @@ ISF_MINIMUM_DEPRECATED = (3, 9, 9)
 OFFLINE = False
 """Whether to go online to retrieve missing/necessary JSON files"""
 
-REMOTE_ISF_URL = 'http://localhost:8000/banners.json'
+REMOTE_ISF_URL = None  # 'http://localhost:8000/banners.json'
 """Remote URL to query for a list of ISF addresses"""
