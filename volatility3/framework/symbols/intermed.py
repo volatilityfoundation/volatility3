@@ -13,13 +13,14 @@ import zipfile
 from abc import ABCMeta
 from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Tuple, Mapping
 
-from volatility3.framework.layers import resources
 from volatility3 import schemas, symbols
 from volatility3.framework import class_subclasses, constants, exceptions, interfaces, objects
 from volatility3.framework.configuration import requirements
+from volatility3.framework.layers import resources
 from volatility3.framework.symbols import native, metadata
 
 vollog = logging.getLogger(__name__)
+
 
 # ## TODO
 #
@@ -47,7 +48,6 @@ vollog = logging.getLogger(__name__)
 
 
 def _construct_delegate_function(name: str, is_property: bool = False) -> Any:
-
     def _delegate_function(self, *args, **kwargs):
         if is_property:
             return getattr(self._delegate, name)
@@ -82,9 +82,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                  native_types: interfaces.symbols.NativeTableInterface = None,
                  table_mapping: Optional[Dict[str, str]] = None,
                  validate: bool = True,
-                 class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None,
-                 symbol_shift: int = 0,
-                 symbol_mask: int = 0) -> None:
+                 class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None) -> None:
         """Instantiates a SymbolTable based on an IntermediateSymbolFormat JSON file.  This is validated against the
         appropriate schema.  The validation can be disabled by passing validate = False, but this should almost never be
         done.
@@ -98,8 +96,6 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             table_mapping: A dictionary linking names referenced in the file with symbol tables in the context
             validate: Determines whether the ISF file will be validated against the appropriate schema
             class_types: A dictionary of type names and classes that override StructType when they are instantiated
-            symbol_shift: An offset by which to alter all returned symbols for this table
-            symbol_mask: An address mask used for all returned symbol offsets from this table (a mask of 0 disables masking)
         """
         # Check there are no obvious errors
         # Open the file and test the version
@@ -135,13 +131,6 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Since we've been created with parameters, ensure our config is populated likewise
         self.config['isf_url'] = isf_url
-
-        if symbol_shift:
-            vollog.warning(
-                "Symbol_shift support has been deprecated and will be removed in the next major release of Volatility 3"
-            )
-        self.config['symbol_shift'] = symbol_shift
-        self.config['symbol_mask'] = symbol_mask
 
     @staticmethod
     def _closest_version(version: str, versions: Dict[Tuple[int, int, int], Type['ISFormatTable']]) \
@@ -225,9 +214,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                filename: str,
                native_types: Optional[interfaces.symbols.NativeTableInterface] = None,
                table_mapping: Optional[Dict[str, str]] = None,
-               class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None,
-               symbol_shift: int = 0,
-               symbol_mask: int = 0) -> str:
+               class_types: Optional[Mapping[str, Type[interfaces.objects.ObjectInterface]]] = None) -> str:
         """Takes a context and loads an intermediate symbol table based on a
         filename.
 
@@ -238,8 +225,6 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
             filename: Basename of the file to find under the sub_path
             native_types: Set of native types, defaults to native types read from the intermediate symbol format file
             table_mapping: a dictionary of table names mentioned within the ISF file, and the tables within the context which they map to
-            symbol_shift: An offset by which to alter all returned symbols for this table
-            symbol_mask: An address mask used for all returned symbol offsets from this table (a mask of 0 disables masking)
 
         Returns:
              the name of the added symbol table
@@ -254,9 +239,7 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
                     isf_url = urls[0],
                     native_types = native_types,
                     table_mapping = table_mapping,
-                    class_types = class_types,
-                    symbol_shift = symbol_shift,
-                    symbol_mask = symbol_mask)
+                    class_types = class_types)
         context.symbol_space.append(table)
         return table_name
 
@@ -341,10 +324,7 @@ class Version1Format(ISFormatTable):
         symbol = self._json_object['symbols'].get(name, None)
         if not symbol:
             raise exceptions.SymbolError(name, self.name, f"Unknown symbol: {name}")
-        address = symbol['address'] + self.config.get('symbol_shift', 0)
-        if self.config.get('symbol_mask', 0):
-            address = address & self.config['symbol_mask']
-        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = address)
+        self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name, address = symbol['address'])
         return self._symbol_cache[name]
 
     @property
@@ -546,12 +526,8 @@ class Version3Format(Version2Format):
         if 'type' in symbol:
             symbol_type = self._interdict_to_template(symbol['type'])
 
-        # Mask the addresses if necessary
-        address = symbol['address'] + self.config.get('symbol_shift', 0)
-        if self.config.get('symbol_mask', 0):
-            address = address & self.config['symbol_mask']
         self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
-                                                                      address = address,
+                                                                      address = symbol['address'],
                                                                       type = symbol_type)
         return self._symbol_cache[name]
 
@@ -606,12 +582,8 @@ class Version5Format(Version4Format):
         if 'constant_data' in symbol:
             symbol_constant_data = base64.b64decode(symbol.get('constant_data'))
 
-        # Mask the addresses if necessary
-        address = symbol['address'] + self.config.get('symbol_shift', 0)
-        if self.config.get('symbol_mask', 0):
-            address = address & self.config['symbol_mask']
         self._symbol_cache[name] = interfaces.symbols.SymbolInterface(name = name,
-                                                                      address = address,
+                                                                      address = symbol['address'],
                                                                       type = symbol_type,
                                                                       constant_data = symbol_constant_data)
         return self._symbol_cache[name]

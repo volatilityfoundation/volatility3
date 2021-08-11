@@ -28,8 +28,8 @@ def find_sid_re(sid_string, sid_re_list) -> Union[str, interfaces.renderers.Base
 class GetSIDs(interfaces.plugins.PluginInterface):
     """Print the SIDs owning each process"""
 
-    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,7 +54,7 @@ class GetSIDs(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,

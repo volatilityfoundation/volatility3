@@ -21,14 +21,14 @@ vollog = logging.getLogger(__name__)
 class Cachedump(interfaces.plugins.PluginInterface):
     """Dumps lsa secrets from memory"""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'lsadump', plugin = lsadump.Lsadump, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'hashdump', plugin = hashdump.Hashdump, version = (1, 1, 0))
@@ -44,7 +44,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
             hmac_md5 = HMAC.new(nlkm, ch)
             rc4key = hmac_md5.digest()
             rc4 = ARC4.new(rc4key)
-            data = rc4.encrypt(edata)  # lgtm [py/weak-cryptographic-algorithm]
+            data = rc4.encrypt(edata) # lgtm [py/weak-cryptographic-algorithm]
         else:
             # based on  Based on code from http://lab.mediaservice.net/code/cachedump.rb
             aes = AES.new(nlkm[16:32], AES.MODE_CBC, ch)
@@ -129,7 +129,6 @@ class Cachedump(interfaces.plugins.PluginInterface):
         offset = self.config.get('offset', None)
 
         syshive = sechive = None
-
         kernel = self.context.modules[self.config['kernel']]
 
         for hive in hivelist.HiveList.list_hives(self.context,

@@ -38,11 +38,6 @@ class KernelModule(interfaces.automagic.AutomagicInterface):
                 offset_config_path = interfaces.configuration.path_join(new_config_path, 'offset')
                 offset = context.config[layer_kvo_config_path]
                 context.config[offset_config_path] = offset
-            elif isinstance(requirement.requirements[req], configuration.requirements.SymbolTableRequirement):
-                symbol_shift_config_path = interfaces.configuration.path_join(new_config_path,
-                                                                              req,
-                                                                              'symbol_shift')
-                context.config[symbol_shift_config_path] = 0
 
         # Now construct the module based on the sub-requirements
         requirement.construct(context, config_path)

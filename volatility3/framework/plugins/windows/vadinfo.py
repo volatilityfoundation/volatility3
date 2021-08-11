@@ -33,7 +33,7 @@ winnt_protections = {
 class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (2, 0, 0)
     MAXSIZE_DEFAULT = 0
 
@@ -45,7 +45,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                               architectures = ["Intel32", "Intel64"]),
+                                                         architectures = ["Intel32", "Intel64"]),
                 # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
                 requirements.IntRequirement(name = 'address',
                                             description = "Process virtual memory address to include " \
@@ -166,7 +166,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
         return file_handle
 
     def _generator(self, procs):
-
         kernel = self.context.modules[self.config['kernel']]
 
         def passthrough(_: interfaces.objects.ObjectInterface) -> bool:
@@ -201,7 +200,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
                            format_hints.Hex(vad.get_parent()), vad.get_file_name(), file_output))
 
     def run(self):
-
         kernel = self.context.modules[self.config['kernel']]
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))

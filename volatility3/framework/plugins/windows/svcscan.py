@@ -21,7 +21,7 @@ vollog = logging.getLogger(__name__)
 class SvcScan(interfaces.plugins.PluginInterface):
     """Scans for windows services."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
@@ -29,7 +29,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'vadyarascan', plugin = vadyarascan.VadYaraScan, version = (1, 0, 0))

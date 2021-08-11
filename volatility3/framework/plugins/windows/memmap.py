@@ -16,14 +16,14 @@ vollog = logging.getLogger(__name__)
 class Memmap(interfaces.plugins.PluginInterface):
     """Prints the memory map"""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
@@ -33,6 +33,7 @@ class Memmap(interfaces.plugins.PluginInterface):
                                             default = False,
                                             optional = True)
         ]
+
 
     def _generator(self, procs):
         for proc in procs:

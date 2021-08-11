@@ -54,7 +54,7 @@ class ScannerInterface(interfaces.configuration.VersionableInterface, metaclass 
     """
     thread_safe = False
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self) -> None:
         super().__init__()

@@ -19,14 +19,14 @@ vollog = logging.getLogger(__name__)
 class PrintKey(interfaces.plugins.PluginInterface):
     """Lists the registry keys under a hive or specific key value."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
             requirements.StringRequirement(name = 'key',
@@ -41,10 +41,10 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     @classmethod
     def key_iterator(
-            cls,
-            hive: RegistryHive,
-            node_path: Sequence[objects.StructType] = None,
-            recurse: bool = False
+        cls,
+        hive: RegistryHive,
+        node_path: Sequence[objects.StructType] = None,
+        recurse: bool = False
     ) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
         """Walks through a set of nodes from a given node (last one in
         node_path). Avoids loops by not traversing into nodes already present

@@ -14,7 +14,7 @@ from volatility3.plugins.mac import pslist
 class Kevents(interfaces.plugins.PluginInterface):
     """ Lists event handlers registered by processes """
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     event_types = {

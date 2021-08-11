@@ -11,7 +11,7 @@ from volatility3.framework.symbols import mac
 class Ifconfig(plugins.PluginInterface):
     """Lists loaded kernel modules"""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):

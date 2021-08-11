@@ -17,7 +17,7 @@ from volatility3.plugins.linux import pslist
 class Elfs(plugins.PluginInterface):
     """Lists all memory mapped ELF files for all processes."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

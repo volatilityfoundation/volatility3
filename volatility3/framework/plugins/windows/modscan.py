@@ -17,14 +17,14 @@ vollog = logging.getLogger(__name__)
 class ModScan(interfaces.plugins.PluginInterface):
     """Scans for modules present in a particular windows memory image."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'poolerscanner',
                                             component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),

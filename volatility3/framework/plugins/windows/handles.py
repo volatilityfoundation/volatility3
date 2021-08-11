@@ -24,7 +24,7 @@ except ImportError:
 class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     def __init__(self, *args, **kwargs):
@@ -39,7 +39,7 @@ class Handles(interfaces.plugins.PluginInterface):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process IDs to include (all other processes are excluded)",
@@ -293,7 +293,6 @@ class Handles(interfaces.plugins.PluginInterface):
             yield handle_table_entry
 
     def _generator(self, procs):
-
         kernel = self.context.modules[self.config['kernel']]
 
         type_map = self.get_type_map(context = self.context,
