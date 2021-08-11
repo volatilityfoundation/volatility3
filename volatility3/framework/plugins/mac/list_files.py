@@ -18,16 +18,14 @@ vollog = logging.getLogger(__name__)
 class List_Files(plugins.PluginInterface):
     """Lists all open file descriptors for all processes."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Kernel Address Space',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
-            requirements.PluginRequirement(name = 'mount', plugin = mount.Mount, version = (1, 0, 0)),
+            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'mount', plugin = mount.Mount, version = (2, 0, 0)),
         ]
 
     @classmethod
@@ -114,14 +112,13 @@ class List_Files(plugins.PluginInterface):
     @classmethod
     def _walk_mounts(cls,
                      context: interfaces.context.ContextInterface,
-                     layer_name: str,
-                     darwin_symbols: str) -> \
+                     kernel_module_name: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
 
         loop_vnodes = {}
 
         # iterate each vnode source from each mount
-        list_mounts = mount.Mount.list_mounts(context, layer_name, darwin_symbols)
+        list_mounts = mount.Mount.list_mounts(context, kernel_module_name)
         for mnt in list_mounts:
             cls._walk_vnodelist(mnt.mnt_vnodelist, loop_vnodes)
             cls._walk_vnodelist(mnt.mnt_workerqueue, loop_vnodes)
@@ -157,11 +154,10 @@ class List_Files(plugins.PluginInterface):
     @classmethod
     def list_files(cls,
                    context: interfaces.context.ContextInterface,
-                   layer_name: str,
-                   darwin_symbols: str) -> \
+                   kernel_module_name: str) -> \
             Iterable[interfaces.objects.ObjectInterface]:
 
-        vnodes = cls._walk_mounts(context, layer_name, darwin_symbols)
+        vnodes = cls._walk_mounts(context, kernel_module_name)
 
         for voff, (vnode_name, parent_offset, vnode) in vnodes.items():
             full_path = cls._build_path(vnodes, vnode_name, parent_offset)
@@ -169,7 +165,7 @@ class List_Files(plugins.PluginInterface):
             yield vnode, full_path
 
     def _generator(self):
-        for vnode, full_path in self.list_files(self.context, self.config['primary'], self.config['darwin']):
+        for vnode, full_path in self.list_files(self.context, self.config['darwin']):
 
             yield (0, (format_hints.Hex(vnode), full_path))
 

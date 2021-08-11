@@ -135,6 +135,11 @@ class IntermediateSymbolTable(interfaces.symbols.SymbolTableInterface):
 
         # Since we've been created with parameters, ensure our config is populated likewise
         self.config['isf_url'] = isf_url
+
+        if symbol_shift:
+            vollog.warning(
+                "Symbol_shift support has been deprecated and will be removed in the next major release of Volatility 3"
+            )
         self.config['symbol_shift'] = symbol_shift
         self.config['symbol_mask'] = symbol_mask
 

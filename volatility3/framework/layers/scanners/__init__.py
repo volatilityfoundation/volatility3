@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import re
-from typing import Generator, List, Tuple, Dict, Union, Optional
+from typing import Generator, List, Tuple, Dict, Optional
 
 from volatility3.framework.interfaces import layers
 from volatility3.framework.layers.scanners import multiregexp
@@ -10,6 +10,8 @@ from volatility3.framework.layers.scanners import multiregexp
 
 class BytesScanner(layers.ScannerInterface):
     thread_safe = True
+
+    _required_framework_version = (1, 0, 0)
 
     def __init__(self, needle: bytes) -> None:
         super().__init__()
@@ -30,6 +32,8 @@ class BytesScanner(layers.ScannerInterface):
 class RegExScanner(layers.ScannerInterface):
     thread_safe = True
 
+    _required_framework_version = (1, 0, 0)
+
     def __init__(self, pattern: bytes, flags: int = 0) -> None:
         super().__init__()
         self.regex = re.compile(pattern, flags)
@@ -43,8 +47,11 @@ class RegExScanner(layers.ScannerInterface):
             if offset < self.chunk_size:
                 yield offset + data_offset
 
+
 class MultiStringScanner(layers.ScannerInterface):
     thread_safe = True
+
+    _required_framework_version = (1, 0, 0)
 
     def __init__(self, patterns: List[bytes]) -> None:
         super().__init__()

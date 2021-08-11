@@ -10,10 +10,13 @@ without them interfering eith each other.
 """
 import functools
 import hashlib
-from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
+import logging
+from typing import Callable, Iterable, List, Optional, Set, Tuple, Union
 
 from volatility3.framework import constants, interfaces, symbols, exceptions
 from volatility3.framework.objects import templates
+
+vollog = logging.getLogger(__name__)
 
 
 class Context(interfaces.context.ContextInterface):
@@ -33,6 +36,7 @@ class Context(interfaces.context.ContextInterface):
         """Initializes the context."""
         super().__init__()
         self._symbol_space = symbols.SymbolSpace()
+        self._module_space = ModuleCollection()
         self._memory = interfaces.layers.LayerContainer()
         self._config = interfaces.configuration.HierarchicalDict()
 
@@ -49,6 +53,11 @@ class Context(interfaces.context.ContextInterface):
         if not isinstance(value, interfaces.configuration.HierarchicalDict):
             raise TypeError("Config must be of type HierarchicalDict")
         self._config = value
+
+    @property
+    def modules(self) -> interfaces.context.ModuleContainer:
+        """A container for modules loaded in this context"""
+        return self._module_space
 
     @property
     def symbol_space(self) -> interfaces.symbols.SymbolSpaceInterface:
@@ -153,7 +162,9 @@ def get_module_wrapper(method: str) -> Callable:
 
     def wrapper(self, name: str) -> Callable:
         if constants.BANG not in name:
-            name = self._module_name + constants.BANG + name
+            name = self.symbol_table_name + constants.BANG + name
+        elif name.startswith(self.symbol_table_name + constants.BANG):
+            pass
         else:
             raise ValueError(f"Cannot reference another module when calling {method}")
         return getattr(self._context.symbol_space, method)(name)
@@ -245,6 +256,20 @@ class Module(interfaces.context.ModuleInterface):
                                     native_layer_name = native_layer_name or self._native_layer_name,
                                     **kwargs)
 
+    def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
+        """Returns the symbols within this module that live at the specified
+        absolute offset provided."""
+        if size < 0:
+            raise ValueError("Size must be strictly non-negative")
+        return list(
+            self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset,
+                                                               size = size,
+                                                               table_name = self.symbol_table_name))
+
+    @property
+    def symbols(self):
+        return self.context.symbol_space[self.symbol_table_name].symbols
+
     get_symbol = get_module_wrapper('get_symbol')
     get_type = get_module_wrapper('get_type')
     get_enumeration = get_module_wrapper('get_enumeration')
@@ -294,22 +319,17 @@ class SizedModule(Module):
     def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
         """Returns the symbols within this module that live at the specified
         absolute offset provided."""
-        if size < 0:
-            raise ValueError("Size must be strictly non-negative")
         if offset > self._offset + self.size:
             return []
-        return list(
-            self._context.symbol_space.get_symbols_by_location(offset = offset - self._offset,
-                                                               size = size,
-                                                               table_name = self.symbol_table_name))
+        return super().get_symbols_by_absolute_location(offset, size)
 
 
-class ModuleCollection:
+class ModuleCollection(interfaces.context.ModuleContainer):
     """Class to contain a collection of SizedModules and reason about their
     contents."""
 
-    def __init__(self, modules: List[SizedModule]) -> None:
-        self._modules = modules
+    def __init__(self, modules: Optional[List[interfaces.context.ModuleInterface]] = None) -> None:
+        super().__init__(modules)
 
     def deduplicate(self) -> 'ModuleCollection':
         """Returns a new deduplicated ModuleCollection featuring no repeated
@@ -327,19 +347,12 @@ class ModuleCollection:
         return ModuleCollection(new_modules)
 
     @property
-    def modules(self) -> Dict[str, List[SizedModule]]:
+    def modules(self) -> 'ModuleCollection':
         """A name indexed dictionary of modules using that name in this
         collection."""
-        return self._generate_module_dict(self._modules)
-
-    @classmethod
-    def _generate_module_dict(cls, modules: List[SizedModule]) -> Dict[str, List[SizedModule]]:
-        result: Dict[str, List[SizedModule]] = {}
-        for module in modules:
-            modlist = result.get(module.name, [])
-            modlist.append(module)
-            result[module.name] = modlist
-        return result
+        vollog.warning(
+            "This method has been deprecated in favour of the ModuleCollection acting as a dictionary itself")
+        return self
 
     def get_module_symbols_by_absolute_location(self, offset: int, size: int = 0) -> Iterable[Tuple[str, List[str]]]:
         """Returns a tuple of (module_name, list_of_symbol_names) for each
@@ -348,5 +361,17 @@ class ModuleCollection:
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
         for module in self._modules:
-            if (offset <= module.offset + module.size) and (offset + size >= module.offset):
-                yield (module.name, module.get_symbols_by_absolute_location(offset, size))
+            if isinstance(module, SizedModule):
+                if (offset <= module.offset + module.size) and (offset + size >= module.offset):
+                    yield (module.name, module.get_symbols_by_absolute_location(offset, size))
+
+
+class ConfigurableModule(Module, interfaces.configuration.ConfigurableInterface):
+
+    def __init__(self, context: interfaces.context.ContextInterface, config_path: str, name: str) -> None:
+        interfaces.configuration.ConfigurableInterface.__init__(self, context, config_path)
+        layer_name = self.config['layer_name']
+        offset = self.config['offset']
+        symbol_table_name = self.config['symbol_table_name']
+        interfaces.configuration.ConfigurableInterface.__init__(self, context, config_path)
+        Module.__init__(self, context, name, layer_name, offset, symbol_table_name, layer_name)

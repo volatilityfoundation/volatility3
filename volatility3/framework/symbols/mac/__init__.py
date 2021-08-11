@@ -35,8 +35,10 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
     Version History:
     1.1.0 -> added walk_list_head API
     1.2.0 -> added walk_slist API
+    1.3.0 -> add parameter to lookup_module_address to pass kernel module name
     """
-    _version = (1, 2, 0)
+    _version = (1, 3, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,
@@ -77,15 +79,20 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
 
     @classmethod
     def lookup_module_address(cls, context: interfaces.context.ContextInterface, handlers: Iterator[Any],
-                              target_address):
+                              target_address, kernel_module_name: str = None):
         mod_name = "UNKNOWN"
         symbol_name = "N/A"
+
+        module_shift = 0
+        if kernel_module_name:
+            module = context.modules[kernel_module_name]
+            module_shift = module.offset
 
         for name, start, end in handlers:
             if start <= target_address <= end:
                 mod_name = name
                 if name == "__kernel__":
-                    symbols = list(context.symbol_space.get_symbols_by_location(target_address))
+                    symbols = list(context.symbol_space.get_symbols_by_location(target_address - module_shift))
 
                     if len(symbols) > 0:
                         symbol_name = str(symbols[0].split(constants.BANG)[1]) if constants.BANG in symbols[0] else \

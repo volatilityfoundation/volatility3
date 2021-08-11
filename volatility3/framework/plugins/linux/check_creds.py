@@ -4,7 +4,7 @@
 
 import logging
 
-from volatility3.framework import interfaces, renderers, constants
+from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
 from volatility3.plugins.linux import pslist
 
@@ -14,22 +14,19 @@ vollog = logging.getLogger(__name__)
 class Check_creds(interfaces.plugins.PluginInterface):
     """Checks if any processes are sharing credential structures"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0))
+            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0))
         ]
 
     def _generator(self):
-        # vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
+        vmlinux = self.context.modules[self.config['vmlinux']]
 
-        type_task = self.context.symbol_space.get_type(self.config['vmlinux'] + constants.BANG + "task_struct")
+        type_task = vmlinux.get_type("task_struct")
 
         if not type_task.has_member("cred"):
             raise TypeError(
@@ -40,7 +37,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
 
         creds = {}
 
-        tasks = pslist.PsList.list_tasks(self.context, self.config['primary'], self.config['vmlinux'])
+        tasks = pslist.PsList.list_tasks(self.context, vmlinux.name)
 
         for task in tasks:
 

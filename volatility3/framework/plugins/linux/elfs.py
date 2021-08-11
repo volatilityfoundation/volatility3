@@ -17,16 +17,13 @@ from volatility3.plugins.linux import pslist
 class Elfs(plugins.PluginInterface):
     """Lists all memory mapped ELF files for all processes."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -59,6 +56,5 @@ class Elfs(plugins.PluginInterface):
                                    ("End", format_hints.Hex), ("File Path", str)],
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
-                                                               self.config['primary'],
                                                                self.config['vmlinux'],
                                                                filter_func = filter_func)))

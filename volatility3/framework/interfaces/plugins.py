@@ -14,7 +14,6 @@ import os
 from abc import ABCMeta, abstractmethod
 from typing import List, Tuple, Type
 
-from volatility3 import framework
 from volatility3.framework import exceptions, constants, interfaces
 
 vollog = logging.getLogger(__name__)
@@ -122,8 +121,6 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
                 self.config[requirement.name] = requirement.default
 
         self._file_handler: Type[FileHandlerInterface] = FileHandlerInterface
-
-        framework.require_interface_version(*self._required_framework_version)
 
     @property
     def open(self):

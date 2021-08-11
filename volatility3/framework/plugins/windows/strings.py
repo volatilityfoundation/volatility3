@@ -40,9 +40,8 @@ class Strings(interfaces.plugins.PluginInterface):
 
     def run(self):
         return renderers.TreeGrid([("String", str), ("Physical Address", format_hints.Hex), ("Result", str)],
-                                  self._generator)
+                                  self._generator())
 
-    @property
     def _generator(self) -> Generator[Tuple, None, None]:
         """Generates results from a strings file."""
         string_list: List[Tuple[int,bytes]] = []
