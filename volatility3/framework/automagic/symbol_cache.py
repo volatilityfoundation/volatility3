@@ -10,6 +10,7 @@ import pickle
 import urllib
 import urllib.parse
 import urllib.request
+import zipfile
 from typing import Dict, List, Optional
 
 from volatility3.framework import constants, exceptions, interfaces
@@ -53,13 +54,13 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
                             path, str(banner or b'', 'latin-1')))
                     banners[banner].remove(path)
                 # This is probably excessive, but it's here if we need it
-                # if url.scheme == 'jar':
-                #     zip_file, zip_path = url.path.split("!")
-                #     zip_file = urllib.parse.urlparse(zip_file).path
-                #     if ((not os.path.exists(zip_file)) or (zip_path not in zipfile.ZipFile(zip_file).namelist())):
-                #         vollog.log(constants.LOGLEVEL_VV,
-                #                    "Removing cached path {} for banner {}: file does not exist".format(path, banner))
-                #         banners[banner].remove(path)
+                if url.scheme == 'jar':
+                    zip_file, zip_path = url.path.split("!")
+                    zip_file = urllib.parse.urlparse(zip_file).path
+                    if ((not os.path.exists(zip_file)) or (zip_path not in zipfile.ZipFile(zip_file).namelist())):
+                        vollog.log(constants.LOGLEVEL_VV,
+                                   "Removing cached path {} for banner {}: file does not exist".format(path, banner))
+                        banners[banner].remove(path)
 
             if not banners[banner]:
                 remove_banners.append(banner)
@@ -100,7 +101,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
         self.save_banners(banners)
 
         if progress_callback is not None:
-            progress_callback(100, "Built {} caches".format(self.os))
+            progress_callback(100, f"Built {self.os} caches")
 
     @classmethod
     def read_new_banners(cls, context: interfaces.context.ContextInterface, config_path: str, new_urls: List[str],
@@ -114,10 +115,10 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
 
         total = len(new_urls)
         if total > 0:
-            vollog.info(f"Building {self.os} caches...")
+            vollog.info(f"Building {operating_system} caches...")
         for current in range(total):
             if progress_callback is not None:
-                progress_callback(current * 100 / total, f"Building {self.os} caches")
+                progress_callback(current * 100 / total, f"Building {operating_system} caches")
             isf_url = new_urls[current]
 
             isf = None
