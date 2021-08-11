@@ -12,8 +12,4 @@ When an API feature or function is removed or changed, the major version is bump
 * Added ModuleRequirement
 * Added get\_symbols\_by\_absolute\_location
 
-* Remove support for symbol\_shift and symbol\_mask from symbol tables
-  Symbols should be the data values from the JSON, and if they need modifying,
-  a module wrappr, or similar, should be used
-
 
