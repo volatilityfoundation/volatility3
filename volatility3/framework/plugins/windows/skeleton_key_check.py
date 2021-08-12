@@ -13,7 +13,7 @@
 
 import logging, io
 
-from typing import Iterable, Tuple, List
+from typing import Iterable, Tuple, List, Optional
 
 from volatility3.framework.symbols.windows import pdbutil
 from volatility3.framework import interfaces, symbols, exceptions
@@ -170,9 +170,9 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         """
         cryptdll_module = self.context.module(cryptdll_symbols, layer_name = proc_layer_name, offset = cryptdll_base)
 
-        rc4HmacInitialize = cryptdll_module.get_symbol("rc4HmacInitialize").address + cryptdll_base
+        rc4HmacInitialize = cryptdll_module.get_absolute_symbol_address("rc4HmacInitialize")
 
-        rc4HmacDecrypt = cryptdll_module.get_symbol("rc4HmacDecrypt").address + cryptdll_base
+        rc4HmacDecrypt = cryptdll_module.get_absolute_symbol_address("rc4HmacDecrypt")
 
         count_address = cryptdll_module.get_symbol("cCSystems").address
 
@@ -183,7 +183,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
         except exceptions.InvalidAddressException:
             count = 16
 
-        array_start = cryptdll_module.get_symbol("CSystems").address + cryptdll_base
+        array_start = cryptdll_module.get_absolute_symbol_address("CSystems")
 
         array = self._construct_ecrypt_array(array_start, count, cryptdll_types)
         
@@ -235,12 +235,13 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             try:
                 proc_id = proc.UniqueProcessId
                 proc_layer_name = proc.add_process_layer()
+
+                return proc, proc_layer_name
+
             except exceptions.InvalidAddressException as excp:
                 vollog.debug("Process {}: invalid address {} in layer {}".format(proc_id, excp.invalid_address,
                                                                                  excp.layer_name))
-                continue
 
-            return proc, proc_layer_name
             
         return None, None
 
@@ -335,7 +336,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
     def _analyze_cdlocatecsystem(self, function_bytes: bytes,
                                        function_start: int,
                                        cryptdll_types: interfaces.context.ModuleInterface,
-                                       proc_layer_name: str) -> Tuple[int, int]:
+                                       proc_layer_name: str) -> Optional[interfaces.objects.ObjectInterface]:
         """
         Performs static analysis on CDLocateCSystem to find the instructions that
         reference CSystems as well as cCsystems
@@ -394,7 +395,7 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
     def _find_csystems_with_export(self, proc_layer_name: str, 
                                          cryptdll_types: interfaces.context.ModuleInterface, 
                                          cryptdll_base: int, 
-                                         _) -> interfaces.context.ModuleInterface:
+                                         _) -> Optional[interfaces.objects.ObjectInterface]:
         """
         Uses export table analysis to locate CDLocateCsystem
         This function references CSystems and cCsystems
