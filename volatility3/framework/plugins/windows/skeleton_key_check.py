@@ -562,8 +562,6 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
             vollog.info("Unable to find CSystems inside of cryptdll.dll. Analysis cannot proceed.")
             return
 
-        found_target = False
-
         for csystem in csystems:
             if not self.context.layers[proc_layer_name].is_valid(csystem.vol.offset, csystem.vol.size):
                 continue
