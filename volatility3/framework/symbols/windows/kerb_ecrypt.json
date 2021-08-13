@@ -77,7 +77,7 @@
           } 
       },
       "kind": "struct",
-      "size": 256 
+      "size": 128
     }
   },
   "base_types": {
