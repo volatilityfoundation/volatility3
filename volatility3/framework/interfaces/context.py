@@ -163,8 +163,28 @@ class ModuleInterface(metaclass = ABCMeta):
         self._module_name = module_name
         self._layer_name = layer_name
         self._offset = offset
+        # TODO: Figure out about storing/requesting the native_layer_name for a module in the configuration
+        # The current module requirement does not ask for nor act upon this information
         self._native_layer_name = native_layer_name or layer_name
         self._symbol_table_name = symbol_table_name or self._module_name
+
+    def build_configuration(self) -> 'configuration.HierarchicalDict':
+        """Builds the configuration dictionary for this specific Module"""
+
+        config = super().build_configuration()
+
+        config['offset'] = self.config['offset']
+        subconfigs = {'symbol_table_name': self.context.symbol_space[self.symbol_table_name].build_configuration(),
+                      'layer_name': self.context.layers[self.layer_name].build_configuration()}
+
+        if self.layer_name != self._native_layer_name:
+            subconfigs['native_layer_name'] = self.context.layers[self._native_layer_name].build_configuration()
+
+        for subconfig in subconfigs:
+            for req in subconfigs[subconfig]:
+                config[interfaces.configuration.path_join(subconfig, req)] = subconfigs[subconfig][req]
+
+        return config
 
     @property
     def name(self) -> str:
