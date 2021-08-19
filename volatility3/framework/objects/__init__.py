@@ -3,7 +3,6 @@
 #
 
 import collections
-import functools
 import logging
 import struct
 from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
@@ -292,6 +291,7 @@ class Pointer(Integer):
                  subtype: Optional[templates.ObjectTemplate] = None) -> None:
         super().__init__(context = context, object_info = object_info, type_name = type_name, data_format = data_format)
         self._vol['subtype'] = subtype
+        self._cache = None
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
@@ -311,7 +311,6 @@ class Pointer(Integer):
         value = int.from_bytes(data, byteorder = endian, signed = signed)
         return value & mask
 
-    @functools.lru_cache(3)
     def dereference(self, layer_name: Optional[str] = None) -> interfaces.objects.ObjectInterface:
         """Dereferences the pointer.
 
@@ -320,14 +319,19 @@ class Pointer(Integer):
         defaults to the same layer that the pointer is currently
         instantiated in.
         """
-        layer_name = layer_name or self.vol.native_layer_name
-        mask = self._context.layers[layer_name].address_mask
-        offset = self & mask
-        return self.vol.subtype(context = self._context,
-                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
-                                                                                   offset = offset,
-                                                                                   parent = self,
-                                                                                   size = self.vol.subtype.size))
+        # Do our own caching because lru_cache doesn't seem to memoize correctly across multiple uses
+        # Cache clearing should be done by a cast (we can add a specific method to reset a pointer,
+        # but hopefully it's not necessary)
+        if self._cache is None:
+            layer_name = layer_name or self.vol.native_layer_name
+            mask = self._context.layers[layer_name].address_mask
+            offset = self & mask
+            self._cache = self.vol.subtype(context = self._context,
+                                           object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
+                                                                                              offset = offset,
+                                                                                              parent = self,
+                                                                                              size = self.vol.subtype.size))
+        return self._cache
 
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from
@@ -338,7 +342,7 @@ class Pointer(Integer):
     def __getattr__(self, attr: str) -> Any:
         """Convenience function to access unknown attributes by getting them
         from the subtype object."""
-        if attr in ['vol', '_vol']:
+        if attr in ['vol', '_vol', '_cache']:
             raise AttributeError("Pointer not initialized before use")
         return getattr(self.dereference(), attr)
 
@@ -737,7 +741,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
             raise AttributeError("Object has not been properly initialized")
         if attr in self._concrete_members:
             return self._concrete_members[attr]
-        if  attr.startswith("_") and not attr.startswith("__") and "__" in attr:
+        if attr.startswith("_") and not attr.startswith("__") and "__" in attr:
             attr = attr[attr.find("__", 1):]  # See issue #522
         if attr in self.vol.members:
             mask = self._context.layers[self.vol.layer_name].address_mask
