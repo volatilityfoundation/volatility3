@@ -26,6 +26,8 @@ class YaraScanner(interfaces.layers.ScannerInterface):
     # yara.Rules isn't exposed, so we can't type this properly
     def __init__(self, rules) -> None:
         super().__init__()
+        if rules is None:
+            raise ValueError("No rules provided to YaraScanner")
         self._rules = rules
 
     def __call__(self, data: bytes, data_offset: int) -> Iterable[Tuple[int, str, str, bytes]]:
