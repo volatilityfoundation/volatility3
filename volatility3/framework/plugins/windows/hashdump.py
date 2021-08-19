@@ -21,16 +21,14 @@ vollog = logging.getLogger(__name__)
 class Hashdump(interfaces.plugins.PluginInterface):
     """Dumps user hashes from memory"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
 
@@ -134,7 +132,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
             rc4_key = md5.digest()
 
             rc4 = ARC4.new(rc4_key)
-            hbootkey = rc4.encrypt(sam_data[0x80:0xA0]) # lgtm [py/weak-cryptographic-algorithm]
+            hbootkey = rc4.encrypt(sam_data[0x80:0xA0])  # lgtm [py/weak-cryptographic-algorithm]
             return hbootkey
         elif revision == 3:
             # AES encrypted
@@ -153,7 +151,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
         des2 = DES.new(des_k2, DES.MODE_ECB)
         cipher = AES.new(hbootkey[:16], AES.MODE_CBC, salt)
         obfkey = cipher.decrypt(enc_hash)
-        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:16]) # lgtm [py/weak-cryptographic-algorithm]
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:16])  # lgtm [py/weak-cryptographic-algorithm]
 
     @classmethod
     def get_user_hashes(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive,
@@ -231,9 +229,9 @@ class Hashdump(interfaces.plugins.PluginInterface):
         md5.update(hbootkey[:0x10] + pack("<L", rid) + lmntstr)
         rc4_key = md5.digest()
         rc4 = ARC4.new(rc4_key)
-        obfkey = rc4.encrypt(enc_hash) # lgtm [py/weak-cryptographic-algorithm]
+        obfkey = rc4.encrypt(enc_hash)  # lgtm [py/weak-cryptographic-algorithm]
 
-        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:]) # lgtm [py/weak-cryptographic-algorithm]
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:])  # lgtm [py/weak-cryptographic-algorithm]
 
     @classmethod
     def get_user_name(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive) -> Optional[bytes]:
@@ -289,10 +287,12 @@ class Hashdump(interfaces.plugins.PluginInterface):
         offset = self.config.get('offset', None)
         syshive = None
         samhive = None
+        kernel = self.context.modules[self.config['kernel']]
+
         for hive in hivelist.HiveList.list_hives(self.context,
                                                  self.config_path,
-                                                 self.config['primary'],
-                                                 self.config['nt_symbols'],
+                                                 kernel.layer_name,
+                                                 kernel.symbol_table_name,
                                                  hive_offsets = None if offset is None else [offset]):
 
             if hive.get_name().split('\\')[-1].upper() == 'SYSTEM':

@@ -20,16 +20,14 @@ vollog = logging.getLogger(__name__)
 class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Traverses network tracking structures present in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'netscan', component = netscan.NetScan, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'modules', component = modules.Modules, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'pdbutil', component = pdbutil.PDBUtility, version = (1, 0, 0)),
@@ -419,19 +417,23 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def _generator(self, show_corrupt_results: Optional[bool] = None):
         """ Generates the network objects for use in rendering. """
 
-        netscan_symbol_table = netscan.NetScan.create_netscan_symbol_table(self.context, self.config["primary"],
-                                                                           self.config["nt_symbols"], self.config_path)
+        kernel = self.context.modules[self.config['kernel']]
 
-        tcpip_module = self.get_tcpip_module(self.context, self.config["primary"], self.config["nt_symbols"])
+        netscan_symbol_table = netscan.NetScan.create_netscan_symbol_table(self.context,
+                                                                           kernel.layer_name,
+                                                                           kernel.symbol_table_name,
+                                                                           self.config_path)
+
+        tcpip_module = self.get_tcpip_module(self.context, kernel.layer_name, kernel.symbol_table_name)
 
         try:
             tcpip_symbol_table = pdbutil.PDBUtility.symbol_table_from_pdb(
-                self.context, interfaces.configuration.path_join(self.config_path, 'tcpip'), self.config["primary"],
-                "tcpip.pdb", tcpip_module.DllBase, tcpip_module.SizeOfImage)
+                self.context, interfaces.configuration.path_join(self.config_path, 'tcpip'),
+                kernel.layer_name, "tcpip.pdb", tcpip_module.DllBase, tcpip_module.SizeOfImage)
         except exceptions.VolatilityException:
             vollog.warning("Unable to locate symbols for the memory image's tcpip module")
 
-        for netw_obj in self.list_sockets(self.context, self.config['primary'], self.config['nt_symbols'],
+        for netw_obj in self.list_sockets(self.context, kernel.layer_name, kernel.symbol_table_name,
                                           netscan_symbol_table, tcpip_module.DllBase, tcpip_symbol_table):
 
             # objects passed pool header constraints. check for additional constraints if strict flag is set.

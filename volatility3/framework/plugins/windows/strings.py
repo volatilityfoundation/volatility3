@@ -18,18 +18,16 @@ vollog = logging.getLogger(__name__)
 class Strings(interfaces.plugins.PluginInterface):
     """Reads output from the strings command and indicates which process(es) each string belongs to."""
 
-    _version = (1, 0, 0)
+    _version = (1, 2, 0)
     _required_framework_version = (1, 0, 0)
     strings_pattern = re.compile(rb"^(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process ID to include (all other processes are excluded)",
@@ -44,7 +42,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
     def _generator(self) -> Generator[Tuple, None, None]:
         """Generates results from a strings file."""
-        string_list: List[Tuple[int,bytes]] = []
+        string_list: List[Tuple[int, bytes]] = []
 
         # Test strings file format is accurate
         accessor = resources.ResourceAccessor()
@@ -60,14 +58,16 @@ class Strings(interfaces.plugins.PluginInterface):
                 vollog.error(f"Line in unrecognized format: line {count}")
             line = strings_fp.readline()
 
+        kernel = self.context.modules[self.config['kernel']]
+
         revmap = self.generate_mapping(self.context,
-                                       self.config['primary'],
-                                       self.config['nt_symbols'],
+                                       kernel.layer_name,
+                                       kernel.symbol_table_name,
                                        progress_callback = self._progress_callback,
                                        pid_list = self.config['pid'])
 
         last_prog: float = 0
-        line_count: float  = 0
+        line_count: float = 0
         num_strings = len(string_list)
         for offset, string in string_list:
             line_count += 1

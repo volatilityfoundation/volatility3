@@ -22,16 +22,14 @@ vollog = logging.getLogger(__name__)
 class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -144,26 +142,29 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         return (nt_major_version, nt_minor_version, build)
 
     def _generator(self):
+        kernel = self.context.modules[self.config['kernel']]
+
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
         for proc in self.scan_processes(self.context,
-                                        self.config['primary'],
-                                        self.config['nt_symbols'],
+                                        kernel.layer_name,
+                                        kernel.symbol_table_name,
                                         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))):
 
             file_output = "Disabled"
             if self.config['dump']:
                 # windows 10 objects (maybe others in the future) are already in virtual memory
-                if proc.vol.layer_name == self.config['primary']:
+                if proc.vol.layer_name == kernel.layer_name:
                     vproc = proc
                 else:
-                    vproc = self.virtual_process_from_physical(self.context, self.config['primary'],
-                                                               self.config['nt_symbols'], proc)
+                    vproc = self.virtual_process_from_physical(self.context, kernel.layer_name,
+                                                               kernel.symbol_table_name, proc)
 
-                file_handle = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name, vproc,
+                file_handle = pslist.PsList.process_dump(self.context, kernel.symbol_table_name,
+                                                         pe_table_name, vproc,
                                                          self.open)
                 file_output = "Error outputting file"
                 if file_handle:

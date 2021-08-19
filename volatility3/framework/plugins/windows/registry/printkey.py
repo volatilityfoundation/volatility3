@@ -19,16 +19,14 @@ vollog = logging.getLogger(__name__)
 class PrintKey(interfaces.plugins.PluginInterface):
     """Lists the registry keys under a hive or specific key value."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
             requirements.StringRequirement(name = 'key',
@@ -43,10 +41,10 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     @classmethod
     def key_iterator(
-        cls,
-        hive: RegistryHive,
-        node_path: Sequence[objects.StructType] = None,
-        recurse: bool = False
+            cls,
+            hive: RegistryHive,
+            node_path: Sequence[objects.StructType] = None,
+            recurse: bool = False
     ) -> Iterable[Tuple[int, bool, datetime.datetime, str, bool, interfaces.objects.ObjectInterface]]:
         """Walks through a set of nodes from a given node (last one in
         node_path). Avoids loops by not traversing into nodes already present
@@ -188,12 +186,13 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     def run(self):
         offset = self.config.get('offset', None)
+        kernel = self.context.modules[self.config['kernel']]
 
         return TreeGrid(columns = [('Last Write Time', datetime.datetime), ('Hive Offset', format_hints.Hex),
                                    ('Type', str), ('Key', str), ('Name', str), ('Data', format_hints.MultiTypeData),
                                    ('Volatile', bool)],
-                        generator = self._registry_walker(self.config['primary'],
-                                                          self.config['nt_symbols'],
+                        generator = self._registry_walker(kernel.layer_name,
+                                                          kernel.symbol_table_name,
                                                           hive_offsets = None if offset is None else [offset],
                                                           key = self.config.get('key', None),
                                                           recurse = self.config.get('recurse', None)))

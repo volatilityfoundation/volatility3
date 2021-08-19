@@ -22,25 +22,23 @@ MAJOR_FUNCTIONS = [
 class DriverIrp(interfaces.plugins.PluginInterface):
     """List IRPs for drivers in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'ssdt', plugin = ssdt.SSDT, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'driverscan', plugin = driverscan.DriverScan, version = (1, 0, 0)),
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
         ]
 
     def _generator(self):
+        kernel = self.context.modules[self.config['kernel']]
 
-        collection = ssdt.SSDT.build_module_collection(self.context, self.config['primary'], self.config['nt_symbols'])
+        collection = ssdt.SSDT.build_module_collection(self.context, kernel.layer_name, kernel.symbol_table_name)
 
-        for driver in driverscan.DriverScan.scan_drivers(self.context, self.config['primary'],
-                                                         self.config['nt_symbols']):
+        for driver in driverscan.DriverScan.scan_drivers(self.context, kernel.layer_name, kernel.symbol_table_name):
 
             try:
                 driver_name = driver.get_driver_name()

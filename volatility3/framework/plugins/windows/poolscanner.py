@@ -112,25 +112,25 @@ class PoolHeaderScanner(interfaces.layers.ScannerInterface):
 class PoolScanner(plugins.PluginInterface):
     """A generic pool scanner plugin."""
 
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
-    _required_framework_version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'handles', plugin = handles.Handles, version = (1, 0, 0)),
         ]
 
     def _generator(self):
 
-        symbol_table = self.config["nt_symbols"]
+        kernel = self.context.modules[self.config['kernel']]
+
+        symbol_table = kernel.symbol_table_name
         constraints = self.builtin_constraints(symbol_table)
 
-        for constraint, mem_object, header in self.generate_pool_scan(self.context, self.config["primary"],
+        for constraint, mem_object, header in self.generate_pool_scan(self.context, kernel.layer_name,
                                                                       symbol_table, constraints):
             # generate some type-specific info for sanity checking
             if constraint.object_type == "Process":

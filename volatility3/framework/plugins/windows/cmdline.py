@@ -15,17 +15,15 @@ vollog = logging.getLogger(__name__)
 class CmdLine(interfaces.plugins.PluginInterface):
     """Lists process command line arguments."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
@@ -57,13 +55,15 @@ class CmdLine(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs):
 
+        kernel = self.context.modules[self.config['kernel']]
+
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
             proc_id = "Unknown"
 
             try:
                 proc_id = proc.UniqueProcessId
-                result_text = self.get_cmdline(self.context, self.config["nt_symbols"], proc)
+                result_text = self.get_cmdline(self.context, kernel.symbol_table_name, proc)
 
             except exceptions.SwappedInvalidAddressException as exp:
                 result_text = f"Required memory at {exp.invalid_address:#x} is inaccessible (swapped)"
@@ -78,11 +78,14 @@ class CmdLine(interfaces.plugins.PluginInterface):
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):
+
+        kernel = self.context.modules[self.config['kernel']]
+
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Args", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   layer_name = kernel.layer_name,
+                                                                   symbol_table = kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

@@ -33,7 +33,7 @@ winnt_protections = {
 class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (2, 0, 0)
     MAXSIZE_DEFAULT = 0
 
@@ -44,10 +44,8 @@ class VadInfo(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Memory layer for the kernel',
-                                                         architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+        return [requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                               architectures = ["Intel32", "Intel64"]),
                 # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
                 requirements.IntRequirement(name = 'address',
                                             description = "Process virtual memory address to include " \
@@ -169,6 +167,8 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs):
 
+        kernel = self.context.modules[self.config['kernel']]
+
         def passthrough(_: interfaces.objects.ObjectInterface) -> bool:
             return False
 
@@ -196,11 +196,13 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.vol.offset),
                            format_hints.Hex(vad.get_start()), format_hints.Hex(vad.get_end()), vad.get_tag(),
                            vad.get_protection(
-                               self.protect_values(self.context, self.config['primary'], self.config['nt_symbols']),
+                               self.protect_values(self.context, kernel.layer_name, kernel.symbol_table_name),
                                winnt_protections), vad.get_commit_charge(), vad.get_private_memory(),
                            format_hints.Hex(vad.get_parent()), vad.get_file_name(), file_output))
 
     def run(self):
+
+        kernel = self.context.modules[self.config['kernel']]
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
@@ -210,6 +212,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                    ("Parent", format_hints.Hex), ("File", str), ("File output", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   layer_name = kernel.layer_name,
+                                                                   symbol_table = kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

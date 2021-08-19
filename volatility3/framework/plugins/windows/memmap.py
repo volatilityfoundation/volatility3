@@ -16,16 +16,14 @@ vollog = logging.getLogger(__name__)
 class Memmap(interfaces.plugins.PluginInterface):
     """Prints the memory map"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.BooleanRequirement(name = 'coalesce', description = 'Clump output where possible',
                                             default = False, optional = True),
@@ -108,12 +106,13 @@ class Memmap(interfaces.plugins.PluginInterface):
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter([self.config.get('pid', None)])
+        kernel = self.context.modules[self.config['kernel']]
 
         return renderers.TreeGrid([("Virtual", format_hints.Hex), ("Physical", format_hints.Hex),
                                    ("Size", format_hints.Hex), ("Offset in File", format_hints.Hex),
                                    ("File output", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   layer_name = kernel.layer_name,
+                                                                   symbol_table = kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

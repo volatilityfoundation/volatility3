@@ -19,16 +19,14 @@ vollog = logging.getLogger(__name__)
 class Callbacks(interfaces.plugins.PluginInterface):
     """Lists kernel callbacks and notification routines."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'ssdt', plugin = ssdt.SSDT, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'svcscan', plugin = svcscan.SvcScan, version = (1, 0, 0))
         ]
@@ -191,7 +189,8 @@ class Callbacks(interfaces.plugins.PluginInterface):
                 continue
 
             try:
-                component: Union[interfaces.renderers.BaseAbsentValue, interfaces.objects.ObjectInterface] = ntkrnlmp.object(
+                component: Union[
+                    interfaces.renderers.BaseAbsentValue, interfaces.objects.ObjectInterface] = ntkrnlmp.object(
                     "string", absolute = True, offset = callback.Component, max_length = 64, errors = "replace"
                 )
             except exceptions.InvalidAddressException:
@@ -244,17 +243,20 @@ class Callbacks(interfaces.plugins.PluginInterface):
 
     def _generator(self):
 
-        callback_table_name = self.create_callback_table(self.context, self.config["nt_symbols"], self.config_path)
+        kernel = self.context.modules[self.config['kernel']]
 
-        collection = ssdt.SSDT.build_module_collection(self.context, self.config['primary'], self.config['nt_symbols'])
+        callback_table_name = self.create_callback_table(self.context, kernel.symbol_table_name,
+                                                         self.config_path)
+
+        collection = ssdt.SSDT.build_module_collection(self.context, kernel.layer_name, kernel.symbol_table_name)
 
         callback_methods = (self.list_notify_routines, self.list_bugcheck_callbacks,
                             self.list_bugcheck_reason_callbacks, self.list_registry_callbacks)
 
         for callback_method in callback_methods:
             for callback_type, callback_address, callback_detail in callback_method(self.context,
-                                                                                    self.config['primary'],
-                                                                                    self.config['nt_symbols'],
+                                                                                    kernel.layer_name,
+                                                                                    kernel.symbol_table_name,
                                                                                     callback_table_name):
 
                 if callback_detail is None:

@@ -21,16 +21,14 @@ vollog = logging.getLogger(__name__)
 class Cachedump(interfaces.plugins.PluginInterface):
     """Dumps lsa secrets from memory"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'lsadump', plugin = lsadump.Lsadump, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'hashdump', plugin = hashdump.Hashdump, version = (1, 1, 0))
@@ -46,7 +44,7 @@ class Cachedump(interfaces.plugins.PluginInterface):
             hmac_md5 = HMAC.new(nlkm, ch)
             rc4key = hmac_md5.digest()
             rc4 = ARC4.new(rc4key)
-            data = rc4.encrypt(edata) # lgtm [py/weak-cryptographic-algorithm]
+            data = rc4.encrypt(edata)  # lgtm [py/weak-cryptographic-algorithm]
         else:
             # based on  Based on code from http://lab.mediaservice.net/code/cachedump.rb
             aes = AES.new(nlkm[16:32], AES.MODE_CBC, ch)
@@ -90,7 +88,10 @@ class Cachedump(interfaces.plugins.PluginInterface):
             vollog.warning('Unable to find bootkey')
             return
 
-        vista_or_later = versions.is_vista_or_later(context = self.context, symbol_table = self.config['nt_symbols'])
+        kernel = self.context.modules[self.config['kernel']]
+
+        vista_or_later = versions.is_vista_or_later(context = self.context,
+                                                    symbol_table = kernel.symbol_table_name)
 
         lsakey = lsadump.Lsadump.get_lsa_key(sechive, bootkey, vista_or_later)
         if not lsakey:
@@ -129,10 +130,12 @@ class Cachedump(interfaces.plugins.PluginInterface):
 
         syshive = sechive = None
 
+        kernel = self.context.modules[self.config['kernel']]
+
         for hive in hivelist.HiveList.list_hives(self.context,
                                                  self.config_path,
-                                                 self.config['primary'],
-                                                 self.config['nt_symbols'],
+                                                 kernel.layer_name,
+                                                 kernel.symbol_table_name,
                                                  hive_offsets = None if offset is None else [offset]):
 
             if hive.get_name().split('\\')[-1].upper() == 'SYSTEM':
@@ -147,5 +150,5 @@ class Cachedump(interfaces.plugins.PluginInterface):
                 vollog.warning('Unable to locate SECURITY hive')
             return
 
-        return renderers.TreeGrid([("Username", str), ("Domain", str), ("Domain name", str), ('Hashh', bytes)],
+        return renderers.TreeGrid([("Username", str), ("Domain", str), ("Domain name", str), ('Hash', bytes)],
                                   self._generator(syshive, sechive))

@@ -39,16 +39,14 @@ class HiveGenerator:
 class HiveList(interfaces.plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image."""
 
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
-    _required_framework_version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.StringRequirement(name = 'filter',
                                            description = "String to filter hive names returned",
                                            optional = True,
@@ -66,9 +64,11 @@ class HiveList(interfaces.plugins.PluginInterface):
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
         chunk_size = 0x500000
 
+        kernel = self.context.modules[self.config['kernel']]
+
         for hive_object in self.list_hive_objects(context = self.context,
-                                                  layer_name = self.config["primary"],
-                                                  symbol_table = self.config["nt_symbols"],
+                                                  layer_name = kernel.layer_name,
+                                                  symbol_table = kernel.symbol_table_name,
                                                   filter_string = self.config.get('filter', None)):
 
             file_output = "Disabled"
@@ -77,8 +77,8 @@ class HiveList(interfaces.plugins.PluginInterface):
                 hive = next(
                     self.list_hives(self.context,
                                     self.config_path,
-                                    layer_name = self.config["primary"],
-                                    symbol_table = self.config["nt_symbols"],
+                                    layer_name = kernel.layer_name,
+                                    symbol_table = kernel.symbol_table_name,
                                     hive_offsets = [hive_object.vol.offset]))
                 maxaddr = hive.hive.Storage[0].Length
                 hive_name = self._sanitize_hive_name(hive.get_name())
