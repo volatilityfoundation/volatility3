@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import datetime
-from typing import Dict, Set
+from typing import Dict, Set, Tuple
 
 from volatility3.framework import objects, interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -18,7 +18,7 @@ class PsTree(interfaces.plugins.PluginInterface):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._processes: Dict[int, interfaces.objects.ObjectInterface] = {}
+        self._processes: Dict[int, Tuple[interfaces.objects.ObjectInterface, int]] = {}
         self._levels: Dict[int, int] = {}
         self._children: Dict[int, Set[int]] = {}
 
@@ -45,12 +45,12 @@ class PsTree(interfaces.plugins.PluginInterface):
         seen = set([])
         seen.add(pid)
         level = 0
-        proc = self._processes.get(pid, None)
+        proc, _ = self._processes.get(pid, None)
         while proc is not None and proc.InheritedFromUniqueProcessId not in seen:
             child_list = self._children.get(proc.InheritedFromUniqueProcessId, set([]))
             child_list.add(proc.UniqueProcessId)
             self._children[proc.InheritedFromUniqueProcessId] = child_list
-            proc = self._processes.get(proc.InheritedFromUniqueProcessId, None)
+            proc, _ = self._processes.get(proc.InheritedFromUniqueProcessId, (None, None))
             level += 1
         self._levels[pid] = level
 
@@ -65,14 +65,14 @@ class PsTree(interfaces.plugins.PluginInterface):
                 memory = self.context.layers[layer_name]
                 (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
-            self._processes[proc.UniqueProcessId] = proc
+            self._processes[proc.UniqueProcessId] = proc, offset
 
         # Build the child/level maps
         for pid in self._processes:
             self.find_level(pid)
 
         def yield_processes(pid):
-            proc = self._processes[pid]
+            proc, offset = self._processes[pid]
             row = (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                    proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
                    format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
