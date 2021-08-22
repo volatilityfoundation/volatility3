@@ -17,16 +17,14 @@ vollog = logging.getLogger(__name__)
 class VadYaraScan(interfaces.plugins.PluginInterface):
     """Scans all the Virtual Address Descriptor memory maps using yara."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = "Memory layer for the kernel",
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.BooleanRequirement(name = "wide",
                                             description = "Match wide (unicode) strings",
                                             default = False,
@@ -55,13 +53,15 @@ class VadYaraScan(interfaces.plugins.PluginInterface):
 
     def _generator(self):
 
+        kernel = self.context.modules[self.config['kernel']]
+
         rules = yarascan.YaraScan.process_yara_options(dict(self.config))
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for task in pslist.PsList.list_processes(context = self.context,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols'],
+                                                 layer_name = kernel.layer_name,
+                                                 symbol_table = kernel.symbol_table_name,
                                                  filter_func = filter_func):
             layer_name = task.add_process_layer()
             layer = self.context.layers[layer_name]

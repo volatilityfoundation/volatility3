@@ -28,8 +28,8 @@ def find_sid_re(sid_string, sid_re_list) -> Union[str, interfaces.renderers.Base
 class GetSIDs(interfaces.plugins.PluginInterface):
     """Print the SIDs owning each process"""
 
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
-    _required_framework_version = (1, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,10 +53,8 @@ class GetSIDs(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -75,12 +73,13 @@ class GetSIDs(interfaces.plugins.PluginInterface):
 
         key = "Microsoft\\Windows NT\\CurrentVersion\\ProfileList"
         val = "ProfileImagePath"
+        kernel = self.context.modules[self.config['kernel']]
 
         sids = {}
         for hive in hivelist.HiveList.list_hives(context = self.context,
                                                  base_config_path = self.config_path,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols'],
+                                                 layer_name = kernel.layer_name,
+                                                 symbol_table = kernel.symbol_table_name,
                                                  filter_string = 'config\\software',
                                                  hive_offsets = None):
 
@@ -154,10 +153,11 @@ class GetSIDs(interfaces.plugins.PluginInterface):
     def run(self):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        kernel = self.context.modules[self.config['kernel']]
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("SID", str), ("Name", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   layer_name = kernel.layer_name,
+                                                                   symbol_table = kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

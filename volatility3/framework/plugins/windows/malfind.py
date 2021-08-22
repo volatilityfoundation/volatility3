@@ -17,16 +17,14 @@ vollog = logging.getLogger(__name__)
 class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process IDs to include (all other processes are excluded)",
@@ -105,8 +103,8 @@ class Malfind(interfaces.plugins.PluginInterface):
                 continue
 
             if (vad.get_private_memory() == 1
-                    and vad.get_tag() == "VadS") or (vad.get_private_memory() == 0
-                                                     and protection_string != "PAGE_EXECUTE_WRITECOPY"):
+                and vad.get_tag() == "VadS") or (vad.get_private_memory() == 0
+                                                 and protection_string != "PAGE_EXECUTE_WRITECOPY"):
                 if cls.is_vad_empty(proc_layer, vad):
                     continue
 
@@ -115,13 +113,14 @@ class Malfind(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs):
         # determine if we're on a 32 or 64 bit kernel
-        is_32bit_arch = not symbols.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
+        kernel = self.context.modules[self.config['kernel']]
+
+        is_32bit_arch = not symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name)
 
         for proc in procs:
             process_name = utility.array_to_string(proc.ImageFileName)
 
-            for vad, data in self.list_injections(self.context, self.config["primary"], self.config["nt_symbols"],
-                                                  proc):
+            for vad, data in self.list_injections(self.context, kernel.layer_name, kernel.symbol_table_name, proc):
 
                 # if we're on a 64 bit kernel, we may still need 32 bit disasm due to wow64
                 if is_32bit_arch or proc.get_is_wow64():
@@ -145,13 +144,14 @@ class Malfind(interfaces.plugins.PluginInterface):
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.get_start()),
                            format_hints.Hex(vad.get_end()), vad.get_tag(),
                            vad.get_protection(
-                               vadinfo.VadInfo.protect_values(self.context, self.config["primary"],
-                                                              self.config["nt_symbols"]),
+                               vadinfo.VadInfo.protect_values(self.context, kernel.layer_name,
+                                                              kernel.symbol_table_name),
                                vadinfo.winnt_protections), vad.get_commit_charge(), vad.get_private_memory(),
                            file_output, format_hints.HexBytes(data), disasm))
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        kernel = self.context.modules[self.config['kernel']]
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start VPN", format_hints.Hex),
                                    ("End VPN", format_hints.Hex), ("Tag", str), ("Protection", str),
@@ -159,6 +159,6 @@ class Malfind(interfaces.plugins.PluginInterface):
                                    ("Hexdump", format_hints.HexBytes), ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   layer_name = kernel.layer_name,
+                                                                   symbol_table = kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

@@ -24,7 +24,7 @@ except ImportError:
 class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
 
     def __init__(self, *args, **kwargs):
@@ -38,10 +38,8 @@ class Handles(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process IDs to include (all other processes are excluded)",
@@ -69,7 +67,9 @@ class Handles(interfaces.plugins.PluginInterface):
         process' handle table, determine where the corresponding object's
         _OBJECT_HEADER can be found."""
 
-        virtual = self.config["primary"]
+        kernel = self.context.modules[self.config['kernel']]
+
+        virtual = kernel.layer_name
 
         try:
             # before windows 7
@@ -80,7 +80,7 @@ class Handles(interfaces.plugins.PluginInterface):
             object_header.GrantedAccess = handle_table_entry.GrantedAccess
         except AttributeError:
             # starting with windows 8
-            is_64bit = symbols.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
+            is_64bit = symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name)
 
             if is_64bit:
                 if handle_table_entry.LowValue == 0:
@@ -104,8 +104,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 offset = handle_table_entry.InfoTable & ~7
 
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
-            object_header = self.context.object(self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER",
-                                                virtual,
+            object_header = self.context.object(kernel.symbol_table_name + constants.BANG + "_OBJECT_HEADER", virtual,
                                                 offset = offset)
             object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
 
@@ -124,10 +123,11 @@ class Handles(interfaces.plugins.PluginInterface):
 
             if not has_capstone:
                 return None
+            kernel = self.context.modules[self.config['kernel']]
 
-            virtual_layer_name = self.config['primary']
+            virtual_layer_name = kernel.layer_name
             kvo = self.context.layers[virtual_layer_name].config['kernel_virtual_offset']
-            ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual_layer_name, offset = kvo)
+            ntkrnlmp = self.context.module(kernel.symbol_table_name, layer_name = virtual_layer_name, offset = kvo)
 
             try:
                 func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
@@ -227,10 +227,12 @@ class Handles(interfaces.plugins.PluginInterface):
         """Parse a process' handle table and yield valid handle table entries,
         going as deep into the table "levels" as necessary."""
 
-        virtual = self.config["primary"]
+        kernel = self.context.modules[self.config['kernel']]
+
+        virtual = kernel.layer_name
         kvo = self.context.layers[virtual].config['kernel_virtual_offset']
 
-        ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual, offset = kvo)
+        ntkrnlmp = self.context.module(kernel.symbol_table_name, layer_name = virtual, offset = kvo)
 
         if level > 0:
             subtype = ntkrnlmp.get_type("pointer")
@@ -292,13 +294,15 @@ class Handles(interfaces.plugins.PluginInterface):
 
     def _generator(self, procs):
 
+        kernel = self.context.modules[self.config['kernel']]
+
         type_map = self.get_type_map(context = self.context,
-                                     layer_name = self.config["primary"],
-                                     symbol_table = self.config["nt_symbols"])
+                                     layer_name = kernel.layer_name,
+                                     symbol_table = kernel.symbol_table_name)
 
         cookie = self.find_cookie(context = self.context,
-                                  layer_name = self.config["primary"],
-                                  symbol_table = self.config["nt_symbols"])
+                                  layer_name = kernel.layer_name,
+                                  symbol_table = kernel.symbol_table_name)
 
         for proc in procs:
             try:
@@ -345,12 +349,13 @@ class Handles(interfaces.plugins.PluginInterface):
     def run(self):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        kernel = self.context.modules[self.config['kernel']]
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Offset", format_hints.Hex),
                                    ("HandleValue", format_hints.Hex), ("Type", str),
                                    ("GrantedAccess", format_hints.Hex), ("Name", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(self.context,
-                                                                   self.config['primary'],
-                                                                   self.config['nt_symbols'],
+                                                                   kernel.layer_name,
+                                                                   kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

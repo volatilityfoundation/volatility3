@@ -27,21 +27,19 @@ except ImportError:
 class VerInfo(interfaces.plugins.PluginInterface):
     """Lists version information from PE files."""
 
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
-    _required_framework_version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (2, 0, 0)),
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.BooleanRequirement(name = "extensive",
                                             description = "Search physical layer for version information",
                                             optional = True,
@@ -123,6 +121,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
             mods: <generator> of modules
             session_layers: <generator> of layers in the session to be checked
         """
+        kernel = self.context.modules[self.config['kernel']]
 
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
                                                                 self.config_path,
@@ -131,7 +130,7 @@ class VerInfo(interfaces.plugins.PluginInterface):
                                                                 class_types = pe.class_types)
 
         # TODO: Fix this so it works with more than just intel layers
-        physical_layer_name = self.context.layers[self.config['primary']].config.get('memory_layer', None)
+        physical_layer_name = self.context.layers[kernel.layer_name].config.get('memory_layer', None)
 
         for mod in mods:
             try:
@@ -191,13 +190,14 @@ class VerInfo(interfaces.plugins.PluginInterface):
                            build))
 
     def run(self):
-        procs = pslist.PsList.list_processes(self.context, self.config["primary"], self.config["nt_symbols"])
+        kernel = self.context.modules[self.config['kernel']]
 
-        mods = modules.Modules.list_modules(self.context, self.config["primary"], self.config["nt_symbols"])
+        procs = pslist.PsList.list_processes(self.context, kernel.layer_name, kernel.symbol_table_name)
+
+        mods = modules.Modules.list_modules(self.context, kernel.layer_name, kernel.symbol_table_name)
 
         # populate the session layers for kernel modules
-        session_layers = modules.Modules.get_session_layers(self.context, self.config['primary'],
-                                                            self.config['nt_symbols'])
+        session_layers = modules.Modules.get_session_layers(self.context, kernel.layer_name, kernel.symbol_table_name)
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex), ("Name", str),
                                    ("Major", int), ("Minor", int), ("Product", int), ("Build", int)],

@@ -80,7 +80,8 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         return file_handle
 
     @classmethod
-    def create_pid_filter(cls, pid_list: List[int] = None, exclude: bool = False) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+    def create_pid_filter(cls, pid_list: List[int] = None, exclude: bool = False) -> Callable[
+        [interfaces.objects.ObjectInterface], bool]:
         """A factory for producing filter functions that filter based on a list
         of process IDs.
 
@@ -103,7 +104,8 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         return filter_func
 
     @classmethod
-    def create_name_filter(cls, name_list: List[str] = None, exclude: bool = False) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+    def create_name_filter(cls, name_list: List[str] = None, exclude: bool = False) -> Callable[
+        [interfaces.objects.ObjectInterface], bool]:
         """A factory for producing filter functions that filter based on a list
         of process names.
 
@@ -170,19 +172,21 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield proc
 
     def _generator(self):
+        kernel = self.context.modules[self.config['kernel']]
+
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
 
-        memory = self.context.layers[self.config['kernel.layer_name']]
+        memory = self.context.layers[kernel.layer_name]
         if not isinstance(memory, layers.intel.Intel):
             raise TypeError("Primary layer is not an intel layer")
 
         for proc in self.list_processes(self.context,
-                                        self.config['kernel.layer_name'],
-                                        self.config['kernel.symbol_table_name'],
+                                        kernel.layer_name,
+                                        kernel.symbol_table_name,
                                         filter_func = self.create_pid_filter(self.config.get('pid', None))):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
@@ -194,7 +198,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             try:
                 if self.config['dump']:
-                    file_handle = self.process_dump(self.context, self.config['kernel.symbol_table_name'],
+                    file_handle = self.process_dump(self.context, kernel.symbol_table_name,
                                                     pe_table_name, proc, self.open)
                     file_output = "Error outputting file"
                     if file_handle:
@@ -202,12 +206,13 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         file_output = str(file_handle.preferred_filename)
 
                 yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
-                   proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
-                   format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
-                   proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), file_output))
+                           proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
+                                                   errors = 'replace'),
+                           format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
+                           proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), file_output))
 
             except exceptions.InvalidAddressException:
-                vollog.info(f"Invalid process found at address: {proc.vol.offset:x}. Skipping")  
+                vollog.info(f"Invalid process found at address: {proc.vol.offset:x}. Skipping")
 
     def generate_timeline(self):
         for row in self._generator():

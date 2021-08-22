@@ -4,12 +4,13 @@
 
 import logging
 import ntpath
+from typing import List, Tuple, Type, Optional, Generator
+
 from volatility3.framework import interfaces, renderers, exceptions, constants
-from volatility3.plugins.windows import handles
-from volatility3.plugins.windows import pslist
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
-from typing import List, Tuple, Type, Optional, Generator
+from volatility3.plugins.windows import handles
+from volatility3.plugins.windows import pslist
 
 vollog = logging.getLogger(__name__)
 
@@ -25,17 +26,15 @@ EXTENSION_CACHE_MAP = {
 class DumpFiles(interfaces.plugins.PluginInterface):
     """Dumps cached file contents from Windows memory samples."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
                                         optional = True),
@@ -167,6 +166,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                 file_output)
 
     def _generator(self, procs: List, offsets: List):
+        kernel = self.context.modules[self.config['kernel']]
 
         if procs:
             # The handles plugin doesn't expose any staticmethod/classmethod, and it also requires stashing
@@ -175,11 +175,11 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             # results instead of just dealing with them as direct objects here.
             handles_plugin = handles.Handles(context = self.context, config_path = self._config_path)
             type_map = handles_plugin.get_type_map(context = self.context,
-                                                   layer_name = self.config["primary"],
-                                                   symbol_table = self.config["nt_symbols"])
+                                                   layer_name = kernel.layer_name,
+                                                   symbol_table = kernel.symbol_table_name)
             cookie = handles_plugin.find_cookie(context = self.context,
-                                                layer_name = self.config["primary"],
-                                                symbol_table = self.config["nt_symbols"])
+                                                layer_name = kernel.layer_name,
+                                                symbol_table = kernel.symbol_table_name)
 
             for proc in procs:
 
@@ -195,7 +195,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                         obj_type = entry.get_object_type(type_map, cookie)
                         if obj_type == "File":
                             file_obj = entry.Body.cast("_FILE_OBJECT")
-                            for result in self.process_file_object(self.context, self.config["primary"], self.open,
+                            for result in self.process_file_object(self.context, kernel.layer_name, self.open,
                                                                    file_obj):
                                 yield (0, result)
                     except exceptions.InvalidAddressException:
@@ -219,7 +219,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
                         if not file_obj.is_valid():
                             continue
 
-                        for result in self.process_file_object(self.context, self.config["primary"], self.open,
+                        for result in self.process_file_object(self.context, kernel.layer_name, self.open,
                                                                file_obj):
                             yield (0, result)
                     except exceptions.InvalidAddressException:
@@ -230,16 +230,17 @@ class DumpFiles(interfaces.plugins.PluginInterface):
             # Now process any offsets explicitly requested by the user.
             for offset, is_virtual in offsets:
                 try:
-                    layer_name = self.config["primary"]
+                    layer_name = kernel.layer_name
                     # switch to a memory layer if the user provided --physaddr instead of --virtaddr
                     if not is_virtual:
                         layer_name = self.context.layers[layer_name].config["memory_layer"]
 
-                    file_obj = self.context.object(self.config["nt_symbols"] + constants.BANG + "_FILE_OBJECT",
-                                                   layer_name = layer_name,
-                                                   native_layer_name = self.config["primary"],
-                                                   offset = offset)
-                    for result in self.process_file_object(self.context, self.config["primary"], self.open, file_obj):
+                    file_obj = self.context.object(
+                        kernel.symbol_table_name + constants.BANG + "_FILE_OBJECT",
+                        layer_name = layer_name,
+                        native_layer_name = kernel.layer_name,
+                        offset = offset)
+                    for result in self.process_file_object(self.context, kernel.layer_name, self.open, file_obj):
                         yield (0, result)
                 except exceptions.InvalidAddressException:
                     vollog.log(constants.LOGLEVEL_VVV, f"Cannot extract file at {offset:#x}")
@@ -250,6 +251,8 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         # a list of processes matching the pid filter. all files for these process(es) will be dumped.
         procs = []
 
+        kernel = self.context.modules[self.config['kernel']]
+
         if self.config.get("virtaddr", None) is not None:
             offsets.append((self.config["virtaddr"], True))
         elif self.config.get("physaddr", None) is not None:
@@ -257,8 +260,8 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         else:
             filter_func = pslist.PsList.create_pid_filter([self.config.get("pid", None)])
             procs = pslist.PsList.list_processes(self.context,
-                                                 self.config["primary"],
-                                                 self.config["nt_symbols"],
+                                                 kernel.layer_name,
+                                                 kernel.symbol_table_name,
                                                  filter_func = filter_func)
 
         return renderers.TreeGrid([("Cache", str), ("FileObject", format_hints.Hex), ("FileName", str),

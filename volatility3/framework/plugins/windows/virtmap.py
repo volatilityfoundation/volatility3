@@ -16,16 +16,14 @@ vollog = logging.getLogger(__name__)
 class VirtMap(interfaces.plugins.PluginInterface):
     """Lists virtual mapped sections."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"])
         ]
 
     def _generator(self, map):
@@ -112,8 +110,10 @@ class VirtMap(interfaces.plugins.PluginInterface):
                     yield value
 
     def run(self):
-        layer = self.context.layers[self.config['primary']]
-        module = self.context.module(self.config['nt_symbols'],
+        kernel = self.context.modules[self.config['kernel']]
+
+        layer = self.context.layers[kernel.layer_name]
+        module = self.context.module(kernel.symbol_table_name,
                                      layer_name = layer.name,
                                      offset = layer.config['kernel_virtual_offset'])
 

@@ -14,7 +14,7 @@ class PsTree(interfaces.plugins.PluginInterface):
     """Plugin for listing processes in a tree based on their parent process
     ID."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -25,10 +25,8 @@ class PsTree(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.BooleanRequirement(name = 'physical',
                                             description = 'Display physical offsets instead of virtual',
                                             default = pslist.PsList.PHYSICAL_DEFAULT,
@@ -56,12 +54,15 @@ class PsTree(interfaces.plugins.PluginInterface):
 
     def _generator(self):
         """Generates the Tree of processes."""
-        for proc in pslist.PsList.list_processes(self.context, self.config['primary'], self.config['nt_symbols']):
+        kernel = self.context.modules[self.config['kernel']]
+
+        for proc in pslist.PsList.list_processes(self.context, kernel.layer_name,
+                                                 kernel.symbol_table_name):
 
             if not self.config.get('physical', pslist.PsList.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
             else:
-                layer_name = self.config['primary']
+                layer_name = kernel.layer_name
                 memory = self.context.layers[layer_name]
                 (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 

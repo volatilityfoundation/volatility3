@@ -19,16 +19,14 @@ vollog = logging.getLogger(__name__)
 class Modules(interfaces.plugins.PluginInterface):
     """Lists the loaded kernel modules."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (1, 2, 0)
     _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (2, 0, 0)),
             requirements.BooleanRequirement(name = 'dump',
@@ -38,13 +36,14 @@ class Modules(interfaces.plugins.PluginInterface):
         ]
 
     def _generator(self):
+        kernel = self.context.modules[self.config['kernel']]
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
 
-        for mod in self.list_modules(self.context, self.config['primary'], self.config['nt_symbols']):
+        for mod in self.list_modules(self.context, kernel.layer_name, kernel.symbol_table_name):
 
             try:
                 BaseDllName = mod.BaseDllName.get_string()
