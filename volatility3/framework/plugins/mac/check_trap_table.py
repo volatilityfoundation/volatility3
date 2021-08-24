@@ -24,7 +24,8 @@ class Check_trap_table(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS'),
+            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
         ]
