@@ -93,8 +93,10 @@ class SymbolFinder(interfaces.automagic.AutomagicInterface):
                                      'raw_unicode_escape'))]  # type: Iterable[Any]
         else:
             # Swap to the physical layer for scanning
+            # Only traverse down a layer if it's an intel layer
             # TODO: Fix this so it works for layers other than just Intel
-            layer = context.layers[layer.config['memory_layer']]
+            if isinstance(layer, layers.intel.Intel):
+                layer = context.layers[layer.config['memory_layer']]
             banner_list = layer.scan(context = context, scanner = mss, progress_callback = progress_callback)
 
         for _, banner in banner_list:
