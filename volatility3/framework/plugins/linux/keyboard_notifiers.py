@@ -21,13 +21,14 @@ class Keyboard_notifiers(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (2, 0, 0))
         ]
 
     def _generator(self):
-        vmlinux = self.context.modules[self.config['vmlinux']]
+        vmlinux = self.context.modules[self.config['kernel']]
 
         modules = lsmod.Lsmod.list_modules(self.context, vmlinux.name)
 

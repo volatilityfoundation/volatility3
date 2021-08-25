@@ -30,7 +30,8 @@ class Check_syscall(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
         ]
 
     def _get_table_size_next_symbol(self, table_addr, ptr_sz, vmlinux):
@@ -101,7 +102,8 @@ class Check_syscall(plugins.PluginInterface):
             # if we can't find the disassemble function then bail and rely on a different method
             return 0
 
-        data = self.context.layers.read(self.config['vmlinux.layer_name'], func_addr, 6)
+        vmlinux = self.context.modules[self.config['kernel']]
+        data = self.context.layers.read(vmlinux.layer_name, func_addr, 6)
 
         for (address, size, mnemonic, op_str) in md.disasm_lite(data, func_addr):
             if mnemonic == 'CMP':
@@ -126,7 +128,7 @@ class Check_syscall(plugins.PluginInterface):
 
     # TODO - add finding and parsing unistd.h once cached file enumeration is added
     def _generator(self):
-        vmlinux = self.context.modules[self.config['vmlinux']]
+        vmlinux = self.context.modules[self.config['kernel']]
 
         ptr_sz = vmlinux.get_type("pointer").size
         if ptr_sz == 4:

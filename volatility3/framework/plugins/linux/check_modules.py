@@ -23,7 +23,8 @@ class Check_modules(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0))
         ]
 
@@ -60,11 +61,11 @@ class Check_modules(plugins.PluginInterface):
         return ret
 
     def _generator(self):
-        kset_modules = self.get_kset_modules(self.context, self.config['vmlinux'])
+        kset_modules = self.get_kset_modules(self.context, self.config['kernel'])
 
         lsmod_modules = set(
             str(utility.array_to_string(modules.name))
-            for modules in lsmod.Lsmod.list_modules(self.context, self.config['vmlinux']))
+            for modules in lsmod.Lsmod.list_modules(self.context, self.config['kernel']))
 
         for mod_name in set(kset_modules.keys()).difference(lsmod_modules):
             yield (0, (format_hints.Hex(kset_modules[mod_name]), str(mod_name)))

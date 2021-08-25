@@ -25,7 +25,8 @@ class Lsmod(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
         ]
 
     @classmethod
@@ -54,7 +55,7 @@ class Lsmod(plugins.PluginInterface):
 
     def _generator(self):
         try:
-            for module in self.list_modules(self.context, self.config['vmlinux']):
+            for module in self.list_modules(self.context, self.config['kernel']):
 
                 mod_size = module.get_init_size() + module.get_core_size()
 

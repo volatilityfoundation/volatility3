@@ -2,16 +2,14 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import logging
-from typing import List, Iterator, Tuple, Generator
-
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import List, Iterator, Tuple, Generator
 
 from volatility3.framework import renderers, interfaces, constants, contexts, class_subclasses
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
-
 
 vollog = logging.getLogger(__name__)
 
@@ -53,14 +51,15 @@ class ABCKmsg(ABC):
     )
 
     def __init__(
-        self,
-        context: interfaces.context.ContextInterface,
-        config: interfaces.configuration.HierarchicalDict
+            self,
+            context: interfaces.context.ContextInterface,
+            config: interfaces.configuration.HierarchicalDict
     ):
         self._context = context
         self._config = config
-        self.layer_name = self._config['primary']  # type: ignore
-        symbol_table_name = self._config['vmlinux']  # type: ignore
+        vmlinux = context.modules[self._config['kernel']]
+        self.layer_name = kernel.layer_name  # type: ignore
+        symbol_table_name = vmlinux.symbol_table_name  # type: ignore
         self.vmlinux = contexts.Module(context, symbol_table_name, self.layer_name, 0)  # type: ignore
         self.long_unsigned_int_size = self.vmlinux.get_type('long unsigned int').size
 
@@ -80,20 +79,17 @@ class ABCKmsg(ABC):
         Yields:
             kmsg records
         """
-
-        symbol_table_name = config['vmlinux']  # type: ignore
-        layer_name = config['primary']  # type: ignore
-        vmlinux = contexts.Module(context, symbol_table_name, layer_name, 0)  # type: ignore
+        vmlinux = context.modules[config['kernel']]
 
         kmsg_inst = None  # type: ignore
         for subclass in class_subclasses(cls):
-            if not subclass.symtab_checks(vmlinux=vmlinux):
+            if not subclass.symtab_checks(vmlinux = vmlinux):
                 vollog.log(constants.LOGLEVEL_VVVV,
                            "Kmsg implementation '%s' doesn't match this memory dump", subclass.__name__)
                 continue
 
             vollog.log(constants.LOGLEVEL_VVVV, "Kmsg implementation '%s' matches!", subclass.__name__)
-            kmsg_inst = subclass(context=context, config=config)
+            kmsg_inst = subclass(context = context, config = config)
             # More than one class could be executed for an specific kernel
             # version i.e. Netfilter Ingress hooks
             # We expect just one implementation to be executed for an specific kernel
@@ -120,7 +116,7 @@ class ABCKmsg(ABC):
 
     def get_string(self, addr: int, length: int) -> str:
         txt = self._context.layers[self.layer_name].read(addr, length)  # type: ignore
-        return txt.decode(encoding='utf8', errors='replace')
+        return txt.decode(encoding = 'utf8', errors = 'replace')
 
     def nsec_to_sec_str(self, nsec: int) -> str:
         # See kernel/printk/printk.c:print_time()
@@ -172,6 +168,7 @@ class ABCKmsg(ABC):
             vollog.debug(f"Facility {facility} unknown")
             return str(facility)
 
+
 class KmsgLegacy(ABCKmsg):
     """Linux kernels prior to v5.10, the ringbuffer is initially kept in
     __log_buf, and log_buf is a pointer to the former. __log_buf is declared as
@@ -185,6 +182,7 @@ class KmsgLegacy(ABCKmsg):
     consequently to the new buffer.
     In that case, the original static buffer in __log_buf is unused.
     """
+
     @classmethod
     def symtab_checks(cls, vmlinux) -> bool:
         return vmlinux.has_type('printk_log')
@@ -207,20 +205,20 @@ class KmsgLegacy(ABCKmsg):
             yield " " + chunk.decode()
 
     def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
-        log_buf_ptr = self.vmlinux.object_from_symbol(symbol_name='log_buf')
+        log_buf_ptr = self.vmlinux.object_from_symbol(symbol_name = 'log_buf')
         if log_buf_ptr == 0:
             # This is weird, let's fallback to check the static ringbuffer.
-            log_buf_ptr = self.vmlinux.object_from_symbol(symbol_name='__log_buf').vol.offset
+            log_buf_ptr = self.vmlinux.object_from_symbol(symbol_name = '__log_buf').vol.offset
             if log_buf_ptr == 0:
                 raise ValueError("Log buffer is not available")
 
-        log_first_idx = int(self.vmlinux.object_from_symbol(symbol_name='log_first_idx'))
+        log_first_idx = int(self.vmlinux.object_from_symbol(symbol_name = 'log_first_idx'))
         cur_idx = log_first_idx
         end_idx = None  # We don't need log_next_idx here. See below msg.len == 0
         while cur_idx != end_idx:
             end_idx = log_first_idx
             msg_offset = log_buf_ptr + cur_idx  # type: ignore
-            msg = self.vmlinux.object(object_type='printk_log', offset=msg_offset)
+            msg = self.vmlinux.object(object_type = 'printk_log', offset = msg_offset)
             if msg.len == 0:
                 # As per kernel/printk/printk.c:
                 # A length == 0 for the next message indicates a wrap-around to
@@ -273,6 +271,7 @@ class KmsgFiveTen(ABCKmsg):
     See printk.c and printk_ringbuffer.c in kernel/printk/ folder for more
     details.
     """
+
     @classmethod
     def symtab_checks(cls, vmlinux) -> bool:
         return vmlinux.has_symbol('prb')
@@ -318,20 +317,20 @@ class KmsgFiveTen(ABCKmsg):
 
     def run(self) -> Iterator[Tuple[str, str, str, str, str]]:
         # static struct printk_ringbuffer *prb = &printk_rb_static;
-        ringbuffers = self.vmlinux.object_from_symbol(symbol_name='prb').dereference()
+        ringbuffers = self.vmlinux.object_from_symbol(symbol_name = 'prb').dereference()
 
         desc_ring = ringbuffers.desc_ring
         text_data_ring = ringbuffers.text_data_ring
 
         desc_count = 1 << desc_ring.count_bits
-        desc_arr = self.vmlinux.object(object_type="array",
-                                       offset=desc_ring.descs,
-                                       subtype=self.vmlinux.get_type("prb_desc"),
-                                       count=desc_count)
-        info_arr = self.vmlinux.object(object_type="array",
-                                       offset=desc_ring.infos,
-                                       subtype=self.vmlinux.get_type("printk_info"),
-                                       count=desc_count)
+        desc_arr = self.vmlinux.object(object_type = "array",
+                                       offset = desc_ring.descs,
+                                       subtype = self.vmlinux.get_type("prb_desc"),
+                                       count = desc_count)
+        info_arr = self.vmlinux.object(object_type = "array",
+                                       offset = desc_ring.infos,
+                                       subtype = self.vmlinux.get_type("printk_info"),
+                                       count = desc_count)
 
         # See kernel/printk/printk_ringbuffer.h
         desc_state_var_bytes_sz = self.long_unsigned_int_size
@@ -371,15 +370,12 @@ class Kmsg(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name='primary',
-                                                     description="Memory layer for the kernel",
-                                                     architectures=['Intel32', 'Intel64']),
-            requirements.SymbolTableRequirement(name='vmlinux',
-                                                description="Linux kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ['Intel32', 'Intel64']),
         ]
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[str, str, str, str, str]]]:
-        for values in ABCKmsg.run_all(context=self.context, config=self.config):
+        for values in ABCKmsg.run_all(context = self.context, config = self.config):
             yield (0, values)
 
     def run(self):

@@ -23,7 +23,8 @@ class Check_afinfo(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
         ]
 
     # returns whether the symbol is found within the kernel (system.map) or not
@@ -61,7 +62,7 @@ class Check_afinfo(plugins.PluginInterface):
 
     def _generator(self):
 
-        vmlinux = self.context.modules[self.config['vmlinux']]
+        vmlinux = self.context.modules[self.config['kernel']]
 
         op_members = vmlinux.get_type('file_operations').members
         seq_members = vmlinux.get_type('seq_operations').members

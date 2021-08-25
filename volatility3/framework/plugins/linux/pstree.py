@@ -34,8 +34,8 @@ class PsTree(pslist.PsList):
 
     def _generator(self):
         """Generates the."""
-        for proc in self.list_tasks(self.context, self.config['vmlinux.layer_name'],
-                                    self.config['vmlinux.symbol_table_name']):
+        vmlinux = self.context.modules[self.config['kernel']]
+        for proc in self.list_tasks(self.context, vmlinux.layer_name, vmlinux.symbol_table_name):
             self._processes[proc.pid] = proc
 
         # Build the child/level maps
