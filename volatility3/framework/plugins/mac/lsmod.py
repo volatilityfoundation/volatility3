@@ -22,7 +22,7 @@ class Lsmod(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
         ]
 
@@ -76,7 +76,7 @@ class Lsmod(plugins.PluginInterface):
                 return
 
     def _generator(self):
-        for module in self.list_modules(self.context, self.config['darwin']):
+        for module in self.list_modules(self.context, self.config['kernel']):
 
             mod_name = utility.array_to_string(module.name)
             mod_size = module.size

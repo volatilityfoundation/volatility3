@@ -18,7 +18,7 @@ class Kauth_listeners(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 1, 0)),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0)),
@@ -31,13 +31,13 @@ class Kauth_listeners(interfaces.plugins.PluginInterface):
         """
         Enumerates the listeners for each kauth scope
         """
-        kernel = self.context.modules[self.config['darwin']]
+        kernel = self.context.modules[self.config['kernel']]
 
-        mods = lsmod.Lsmod.list_modules(self.context, self.config['darwin'])
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['kernel'])
 
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, kernel.layer_name, kernel, mods)
 
-        for scope in kauth_scopes.Kauth_scopes.list_kauth_scopes(self.context, self.config['darwin']):
+        for scope in kauth_scopes.Kauth_scopes.list_kauth_scopes(self.context, self.config['kernel']):
 
             scope_name = utility.pointer_to_string(scope.ks_identifier, 128)
 
@@ -47,7 +47,7 @@ class Kauth_listeners(interfaces.plugins.PluginInterface):
                     continue
 
                 module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, callback,
-                                                                                  self.config['darwin'])
+                                                                                  self.config['kernel'])
 
                 yield (0, (scope_name, format_hints.Hex(listener.kll_idata), format_hints.Hex(callback), module_name,
                            symbol_name))

@@ -21,7 +21,7 @@ class Lsof(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
@@ -32,11 +32,12 @@ class Lsof(plugins.PluginInterface):
         ]
 
     def _generator(self, tasks):
+        darwin = self.context.modules[self.config['kernel']]
         for task in tasks:
             pid = task.p_pid
 
-            for _, filepath, fd in mac.MacUtilities.files_descriptors_for_process(self.context, self.config[
-                'darwin.symbol_table_name'],
+            for _, filepath, fd in mac.MacUtilities.files_descriptors_for_process(self.context,
+                                                                                  darwin.symbol_table_name,
                                                                                   task):
                 if filepath and len(filepath) > 0:
                     yield (0, (pid, fd, filepath))
@@ -48,5 +49,5 @@ class Lsof(plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("File Descriptor", int), ("File Path", str)],
                                   self._generator(
                                       list_tasks(self.context,
-                                                 self.config['darwin'],
+                                                 self.config['kernel'],
                                                  filter_func = filter_func)))

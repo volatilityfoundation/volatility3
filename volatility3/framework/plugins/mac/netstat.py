@@ -24,7 +24,7 @@ class Netstat(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
@@ -74,7 +74,7 @@ class Netstat(plugins.PluginInterface):
                     continue
 
                 if not context.layers[task.vol.native_layer_name].is_valid(socket.vol.offset,
-                                                                                 socket.vol.size):
+                                                                           socket.vol.size):
                     continue
 
                 yield task_name, pid, socket
@@ -83,7 +83,7 @@ class Netstat(plugins.PluginInterface):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for task_name, pid, socket in self.list_sockets(self.context,
-                                                        self.config['darwin'],
+                                                        self.config['kernel'],
                                                         filter_func = filter_func):
 
             family = socket.get_family()

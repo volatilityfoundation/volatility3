@@ -25,7 +25,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -35,7 +35,8 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     def _generator(self, tasks):
-        is_32bit = not symbols.symbol_table_is_64bit(self.context, self.config["darwin.symbol_table_name"])
+        darwin = self.context.modules[self.config['kernel']]
+        is_32bit = not symbols.symbol_table_is_64bit(self.context, darwin.symbol_table_name)
         if is_32bit:
             pack_format = "I"
             bash_json_file = "bash32"
@@ -65,7 +66,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             for address in proc_layer.scan(self.context,
                                            scanners.BytesScanner(b"#"),
                                            sections = task.get_process_memory_sections(self.context,
-                                                                                       self.config['darwin'],
+                                                                                       self.config['kernel'],
                                                                                        rw_no_file = True)):
                 bang_addrs.append(struct.pack(pack_format, address))
 
@@ -74,7 +75,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             for address, _ in proc_layer.scan(self.context,
                                               scanners.MultiStringScanner(bang_addrs),
                                               sections = task.get_process_memory_sections(self.context,
-                                                                                          self.config['darwin'],
+                                                                                          self.config['kernel'],
                                                                                           rw_no_file = True)):
                 hist = self.context.object(bash_table_name + constants.BANG + "hist_entry",
                                            offset = address - ts_offset,
@@ -94,7 +95,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                    ("Command", str)],
                                   self._generator(
                                       list_tasks(self.context,
-                                                 self.config['darwin'],
+                                                 self.config['kernel'],
                                                  filter_func = filter_func)))
 
     def generate_timeline(self):
@@ -103,7 +104,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         for row in self._generator(
                 list_tasks(self.context,
-                           self.config['darwin'],
+                           self.config['kernel'],
                            filter_func = filter_func)):
             _depth, row_data = row
             description = f"{row_data[0]} ({row_data[1]}): \"{row_data[3]}\""

@@ -24,16 +24,16 @@ class Check_trap_table(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
         ]
 
     def _generator(self):
-        kernel = self.context.modules[self.config['darwin']]
+        kernel = self.context.modules[self.config['kernel']]
 
-        mods = lsmod.Lsmod.list_modules(self.context, self.config['darwin'])
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['kernel'])
 
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, kernel.layer_name, kernel, mods)
 
@@ -49,7 +49,7 @@ class Check_trap_table(plugins.PluginInterface):
                 continue
 
             module_name, symbol_name = mac.MacUtilities.lookup_module_address(self.context, handlers, call_addr,
-                                                                              self.config['darwin'])
+                                                                              self.config['kernel'])
 
             yield (0, (format_hints.Hex(table.vol.offset), "TrapTable", i, format_hints.Hex(call_addr), module_name,
                        symbol_name))

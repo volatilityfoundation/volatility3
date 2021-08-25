@@ -20,7 +20,7 @@ class VFSevents(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
         ]
 
@@ -30,7 +30,7 @@ class VFSevents(interfaces.plugins.PluginInterface):
         Also lists which event(s) a process is registered for
         """
 
-        kernel = self.context.modules[self.config['darwin']]
+        kernel = self.context.modules[self.config['kernel']]
 
         watcher_table = kernel.object_from_symbol("watcher_table")
 
