@@ -196,6 +196,38 @@ class Intel(linear.LinearlyMappedLayer):
         This allows translation layers to provide maps of contiguous
         regions in one layer
         """
+        stashed_offset = stashed_mapped_offset = stashed_size = stashed_mapped_size = stashed_map_layer = None
+        for offset, size, mapped_offset, mapped_size, map_layer in self._mapping(offset, length, ignore_errors):
+            if stashed_offset is None or (stashed_offset + stashed_size != offset) or (
+                    stashed_mapped_offset + stashed_mapped_size != mapped_offset) or (stashed_map_layer != map_layer):
+                # The block isn't contiguous
+                if stashed_offset is not None:
+                    yield stashed_offset, stashed_size, stashed_mapped_offset, stashed_mapped_size, stashed_map_layer
+                # Update all the stashed values after output
+                stashed_offset = offset
+                stashed_mapped_offset = mapped_offset
+                stashed_size = size
+                stashed_mapped_size = mapped_size
+                stashed_map_layer = map_layer
+            else:
+                # Part of an existing block
+                stashed_size += size
+                stashed_mapped_size += mapped_size
+        # Yield whatever's left
+        if (stashed_offset is not None and stashed_mapped_offset is not None and stashed_size is not None
+                and stashed_mapped_size is not None and stashed_map_layer is not None):
+            yield stashed_offset, stashed_size, stashed_mapped_offset, stashed_mapped_size, stashed_map_layer
+
+    def _mapping(self,
+                 offset: int,
+                 length: int,
+                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+        """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
+        mappings.
+
+        This allows translation layers to provide maps of contiguous
+        regions in one layer
+        """
         if length == 0:
             try:
                 mapped_offset, _, layer_name = self._translate(offset)
@@ -328,12 +360,11 @@ class WindowsIntelPAE(WindowsMixin, IntelPAE):
 
 
 class WindowsIntel32e(WindowsMixin, Intel32e):
-
     # TODO: Fix appropriately in a future release.
     # Currently just a temprorary workaround to deal with custom bit flag
     # in the PFN field for pages in transition state.
     # See https://github.com/volatilityfoundation/volatility3/pull/475
     _maxphyaddr = 45
-    
+
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         return self._translate_swap(self, offset, self._bits_per_register // 2)
