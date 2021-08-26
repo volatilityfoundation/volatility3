@@ -291,7 +291,7 @@ class Pointer(Integer):
                  subtype: Optional[templates.ObjectTemplate] = None) -> None:
         super().__init__(context = context, object_info = object_info, type_name = type_name, data_format = data_format)
         self._vol['subtype'] = subtype
-        self._cache = None
+        self._cache: Dict[str, interfaces.objects.ObjectInterface] = {}
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
@@ -322,16 +322,19 @@ class Pointer(Integer):
         # Do our own caching because lru_cache doesn't seem to memoize correctly across multiple uses
         # Cache clearing should be done by a cast (we can add a specific method to reset a pointer,
         # but hopefully it's not necessary)
-        if self._cache is None:
+        if layer_name is None:
+            layer_name = self.vol.layer_name
+        if self._cache.get(layer_name, None) is None:
             layer_name = layer_name or self.vol.native_layer_name
             mask = self._context.layers[layer_name].address_mask
             offset = self & mask
-            self._cache = self.vol.subtype(context = self._context,
-                                           object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
-                                                                                              offset = offset,
-                                                                                              parent = self,
-                                                                                              size = self.vol.subtype.size))
-        return self._cache
+            self._cache[layer_name] = self.vol.subtype(context = self._context,
+                                                       object_info = interfaces.objects.ObjectInformation(
+                                                           layer_name = layer_name,
+                                                           offset = offset,
+                                                           parent = self,
+                                                           size = self.vol.subtype.size))
+        return self._cache[layer_name]
 
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from
