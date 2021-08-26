@@ -124,8 +124,7 @@ class DtbTest32bit(DtbTest):
         super().__init__(layer_type = layers.intel.WindowsIntel,
                          ptr_struct = "I",
                          ptr_reference = [0x300],
-                         mask = 0xFFFFF000,
-                         num_entries = 1024)
+                         mask = 0xFFFFF000)
 
 
 class DtbTest64bit(DtbTest):
@@ -134,8 +133,7 @@ class DtbTest64bit(DtbTest):
         super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
                          ptr_reference = range(0x1ff, 0x100, -1),
-                         mask = 0x3FFFFFFFFFF000,
-                         num_entries = 512)
+                         mask = 0x3FFFFFFFFFF000)
 
     # As of Windows-10 RS1+, the ptr_reference is randomized:
     # https://blahcat.github.io/2020/06/15/playing_with_self_reference_pml4_entry/
