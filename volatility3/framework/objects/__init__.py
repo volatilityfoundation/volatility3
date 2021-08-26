@@ -323,7 +323,7 @@ class Pointer(Integer):
         # Cache clearing should be done by a cast (we can add a specific method to reset a pointer,
         # but hopefully it's not necessary)
         if layer_name is None:
-            layer_name = self.vol.layer_name
+            layer_name = self.vol.native_layer_name
         if self._cache.get(layer_name, None) is None:
             layer_name = layer_name or self.vol.native_layer_name
             mask = self._context.layers[layer_name].address_mask
