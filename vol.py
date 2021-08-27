@@ -4,11 +4,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import sys
 import volatility3.cli
-
-sys.stdin.reconfigure(encoding='utf-8')
-sys.stdout.reconfigure(encoding='utf-8')
 
 if __name__ == '__main__':
     volatility3.cli.main()
