@@ -24,7 +24,8 @@ class Lsof(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -34,7 +35,7 @@ class Lsof(plugins.PluginInterface):
         ]
 
     def _generator(self, tasks):
-        vmlinux = self.context.modules[self.config['vmlinux']]
+        vmlinux = self.context.modules[self.config['kernel']]
 
         symbol_table = None
         for task in tasks:
@@ -56,5 +57,5 @@ class Lsof(plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("FD", int), ("Path", str)],
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
-                                                               self.config['vmlinux'],
+                                                               self.config['kernel'],
                                                                filter_func = filter_func)))

@@ -23,7 +23,7 @@ class List_Files(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'mount', plugin = mount.Mount, version = (2, 0, 0)),
         ]
@@ -165,7 +165,7 @@ class List_Files(plugins.PluginInterface):
             yield vnode, full_path
 
     def _generator(self):
-        for vnode, full_path in self.list_files(self.context, self.config['darwin']):
+        for vnode, full_path in self.list_files(self.context, self.config['kernel']):
 
             yield (0, (format_hints.Hex(vnode), full_path))
 

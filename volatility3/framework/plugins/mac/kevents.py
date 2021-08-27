@@ -48,7 +48,7 @@ class Kevents(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 2, 0)),
@@ -148,7 +148,7 @@ class Kevents(interfaces.plugins.PluginInterface):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for task_name, pid, kn in self.list_kernel_events(self.context,
-                                                          self.config['darwin'],
+                                                          self.config['kernel'],
                                                           filter_func = filter_func):
 
             filter_index = kn.kn_kevent.filter * -1

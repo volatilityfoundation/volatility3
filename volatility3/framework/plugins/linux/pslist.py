@@ -18,7 +18,8 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -49,7 +50,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
     def _generator(self):
         for task in self.list_tasks(self.context,
-                                    self.config['vmlinux'],
+                                    self.config['kernel'],
                                     filter_func = self.create_pid_filter(self.config.get('pid', None))):
             pid = task.pid
             ppid = 0

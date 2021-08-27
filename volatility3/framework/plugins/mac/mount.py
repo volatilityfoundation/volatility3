@@ -21,7 +21,7 @@ class Mount(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
         ]
@@ -46,7 +46,7 @@ class Mount(plugins.PluginInterface):
             yield mount
 
     def _generator(self):
-        for mount in self.list_mounts(self.context, self.config['darwin']):
+        for mount in self.list_mounts(self.context, self.config['kernel']):
             vfs = mount.mnt_vfsstat
             device_name = utility.array_to_string(vfs.f_mntonname)
             mount_point = utility.array_to_string(vfs.f_mntfromname)

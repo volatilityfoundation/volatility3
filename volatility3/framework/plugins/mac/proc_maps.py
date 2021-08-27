@@ -17,7 +17,7 @@ class Maps(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -32,7 +32,7 @@ class Maps(interfaces.plugins.PluginInterface):
             process_pid = task.p_pid
 
             for vma in task.get_map_iter():
-                path = vma.get_path(self.context, self.context.modules[self.config['darwin']].symbol_table_name)
+                path = vma.get_path(self.context, self.context.modules[self.config['kernel']].symbol_table_name)
                 if path == "":
                     path = vma.get_special_path()
 
@@ -47,5 +47,5 @@ class Maps(interfaces.plugins.PluginInterface):
                                    ("End", format_hints.Hex), ("Protection", str), ("Map Name", str)],
                                   self._generator(
                                       list_tasks(self.context,
-                                                 self.config['darwin'],
+                                                 self.config['kernel'],
                                                  filter_func = filter_func)))

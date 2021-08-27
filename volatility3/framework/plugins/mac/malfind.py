@@ -18,7 +18,7 @@ class Malfind(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -38,13 +38,13 @@ class Malfind(interfaces.plugins.PluginInterface):
         proc_layer = self.context.layers[proc_layer_name]
 
         for vma in task.get_map_iter():
-            if not vma.is_suspicious(self.context, self.context.modules[self.config['darwin']].symbol_table_name):
+            if not vma.is_suspicious(self.context, self.context.modules[self.config['kernel']].symbol_table_name):
                 data = proc_layer.read(vma.links.start, 64, pad = True)
                 yield vma, data
 
     def _generator(self, tasks):
         # determine if we're on a 32 or 64 bit kernel
-        if self.context.modules[self.config['darwin']].get_type("pointer").size == 4:
+        if self.context.modules[self.config['kernel']].get_type("pointer").size == 4:
             is_32bit_arch = True
         else:
             is_32bit_arch = False
@@ -72,5 +72,5 @@ class Malfind(interfaces.plugins.PluginInterface):
                                    ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(
                                       list_tasks(self.context,
-                                                 self.config['darwin'],
+                                                 self.config['kernel'],
                                                  filter_func = filter_func)))

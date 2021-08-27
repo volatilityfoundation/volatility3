@@ -23,7 +23,7 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 1, 0)),
             requirements.ChoiceRequirement(name = 'pslist_method',
@@ -89,7 +89,7 @@ class PsList(interfaces.plugins.PluginInterface):
         list_tasks = self.get_list_tasks(self.config.get('pslist_method', self.pslist_methods[0]))
 
         for task in list_tasks(self.context,
-                               self.config['darwin'],
+                               self.config['kernel'],
                                filter_func = self.create_pid_filter(self.config.get('pid', None))):
             pid = task.p_pid
             ppid = task.p_ppid

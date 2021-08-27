@@ -24,7 +24,7 @@ class PsTree(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.ModuleRequirement(name = 'darwin', description = 'Kernel module for the OS',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
                                            architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0))
         ]
@@ -48,7 +48,7 @@ class PsTree(plugins.PluginInterface):
         """Generates the tree list of processes"""
         list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
 
-        for proc in list_tasks(self.context, self.config['darwin']):
+        for proc in list_tasks(self.context, self.config['kernel']):
             self._processes[proc.p_pid] = proc
 
         # Build the child/level maps

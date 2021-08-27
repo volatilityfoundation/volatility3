@@ -20,7 +20,8 @@ class Malfind(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.ModuleRequirement(name = 'vmlinux', architectures = ["Intel32", "Intel64"]),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
@@ -45,8 +46,8 @@ class Malfind(interfaces.plugins.PluginInterface):
 
     def _generator(self, tasks):
         # determine if we're on a 32 or 64 bit kernel
-        if self.context.symbol_space.get_type(
-                self.config["vmlinux.symbol_table_name"] + constants.BANG + "pointer").size == 4:
+        vmlinux = self.context.modules[self.config['kernel']]
+        if self.context.symbol_space.get_type(vmlinux.symbol_table_name + constants.BANG + "pointer").size == 4:
             is_32bit_arch = True
         else:
             is_32bit_arch = False
