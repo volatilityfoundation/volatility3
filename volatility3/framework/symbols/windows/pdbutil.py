@@ -170,9 +170,9 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
 
         pdb_name = debug_entry.PdbFileName.decode("utf-8").strip('\x00')
         age = debug_entry.Age
-        guid = "{:x}{:x}{:x}{}".format(debug_entry.Signature_Data1, debug_entry.Signature_Data2,
-                                       debug_entry.Signature_Data3,
-                                       binascii.hexlify(debug_entry.Signature_Data4).decode('utf-8'))
+        guid = "{:08x}{:04x}{:04x}{}".format(debug_entry.Signature_Data1, debug_entry.Signature_Data2,
+                                             debug_entry.Signature_Data3,
+                                             binascii.hexlify(debug_entry.Signature_Data4).decode('utf-8'))
         return guid, age, pdb_name
 
     @classmethod
