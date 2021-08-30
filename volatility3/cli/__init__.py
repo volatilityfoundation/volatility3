@@ -165,6 +165,10 @@ class CommandLine:
                             help = f"Change the default path ({constants.CACHE_PATH}) used to store the cache",
                             default = constants.CACHE_PATH,
                             type = str)
+        parser.add_argument("--no-fail",
+                            help = "No fail on error",
+                            default = False,
+                            action = 'store_true')
 
         # We have to filter out help, otherwise parse_known_args will trigger the help message before having
         # processed the plugin choice or had the plugin subparser added.
@@ -215,6 +219,9 @@ class CommandLine:
 
         if partial_args.clear_cache:
             framework.clear_cache()
+
+        if partial_args.no_fail:
+            constants.FAIL_ON_ERROR = False
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
