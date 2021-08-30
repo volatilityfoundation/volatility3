@@ -17,7 +17,7 @@ from typing import Optional, Any, IO, List
 from urllib import error
 
 from volatility3 import framework
-from volatility3.framework import constants
+from volatility3.framework import constants, exceptions
 
 try:
     import magic
@@ -33,6 +33,7 @@ except ImportError:
     pass
 
 vollog = logging.getLogger(__name__)
+
 
 # TODO: Type-annotating the ResourceAccessor.open method is difficult because HTTPResponse is not actually an IO[Any] type
 #   fix this
@@ -117,6 +118,9 @@ class ResourceAccessor(object):
                     raise excp
             else:
                 raise excp
+        except exceptions.OfflineException:
+            vollog.info(f"Not accessing {url} in offline mode")
+            raise
 
         with contextlib.closing(fp) as fp:
             # Cache the file locally
@@ -227,6 +231,7 @@ class JarHandler(VolatilityHandler):
     Actual reference (found from https://www.w3.org/wiki/UriSchemes/jar) seemed not to return:
     http://developer.java.sun.com/developer/onlineTraining/protocolhandlers/
     """
+
     @classmethod
     def non_cached_schemes(cls) -> List[str]:
         return ['jar']
@@ -248,4 +253,12 @@ class JarHandler(VolatilityHandler):
 
             zippath, filepath = zipsplit
             return zipfile.ZipFile(zippath).open(filepath)
+        return None
+
+
+class OfflineHandler(VolatilityHandler):
+    @staticmethod
+    def default_open(req: urllib.request.Request) -> Optional[Any]:
+        if constants.OFFLINE and req.type in ['http', 'https']:
+            raise exceptions.OfflineException(req.full_url)
         return None

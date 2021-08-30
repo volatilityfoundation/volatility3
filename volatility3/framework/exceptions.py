@@ -99,3 +99,14 @@ class MissingModuleException(VolatilityException):
     def __init__(self, module: str, *args) -> None:
         super().__init__(*args)
         self.module = module
+
+
+class OfflineException(VolatilityException):
+    """Throw when a remote resource is requested but Volatility is in offline mode"""
+
+    def __init__(self, url: str, *args) -> None:
+        super().__init__(*args)
+        self._url = url
+
+    def __str__(self):
+        return f'Volatility 3 is offline: unable to access {self._url}'
