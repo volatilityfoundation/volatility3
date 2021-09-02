@@ -385,7 +385,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
             hits = context.layers[layer_name].scan(context,
                                                    PageMapScanner(
                                                        [DtbSelfRef64bit(), DtbSelfRefPae(), DtbSelfRef32bit()]),
-                                                   sections = [(0x1a0000, 0x550000)],
+                                                   sections = [(0x1a0000, 0x550000), (0x30000, 0x10000)],
                                                    progress_callback = progress_callback)
             # Flatten the generator
             hits = list(hits)
