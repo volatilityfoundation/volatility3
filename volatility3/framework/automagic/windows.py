@@ -87,6 +87,15 @@ class DtbSelfRef64bit(DtbSelfReferential):
                          valid_range = range(0x100, 0x1ff))
 
 
+class DtbSelfRef64bitOldWindows(DtbSelfReferential):
+
+    def __init__(self) -> None:
+        super().__init__(layer_type = layers.intel.WindowsIntel32e,
+                         ptr_struct = "Q",
+                         mask = 0x3FFFFFFFFFF000,
+                         valid_range = [0x1ed])
+
+
 class DtbSelfRefPae(DtbSelfReferential):
 
     def __init__(self) -> None:
@@ -170,20 +179,26 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                 config_path, "page_map_offset")] = base_layer.metadata['page_map_offset']
             layer = layer_type(context, config_path = config_path, name = new_layer_name, metadata = {'os': 'Windows'})
 
+        test_sets = [("Detecting Self-referential pointer for recent windows",
+                      [DtbSelfRefPae(), DtbSelfRef64bit()], [(0x1a0000, 0x100000), (0x650000, 0x50000)]),
+                     ("Older windows fixed location self-referential pointers",
+                      [DtbSelfRefPae(), DtbSelfRef32bit(), DtbSelfRef64bitOldWindows()], [(0x30000, 0x1000000)])
+                     ]
+
         # Self Referential finder
-        if layer is None:
-            vollog.debug("Self-referential pointer not in well-known location, moving to recent windows heuristic")
-            # There is a very high chance that the DTB will live in this narrow segment, assuming we couldn't find it previously
+        for description, tests, sections in test_sets:
+            vollog.debug(description)
+            # There is a very high chance that the DTB will live in these very narrow segments, assuming we couldn't find them previously
             hits = context.layers[layer_name].scan(context,
-                                                   PageMapScanner(
-                                                       [DtbSelfRef64bit(), DtbSelfRefPae(), DtbSelfRef32bit()]),
-                                                   sections = [(0x180000, 0x580000), (0x30000, 0x10000)],
+                                                   PageMapScanner(tests),
+                                                   sections = sections,
                                                    progress_callback = progress_callback)
             # Flatten the generator
             hits = list(hits)
             if hits:
                 # TODO: Decide which to use if there are multiple options
                 test, page_map_offset = hits[0]
+                vollog.debug(f"{test.__class__.__name__} test succeeded at {hex(page_map_offset)}")
                 new_layer_name = context.layers.free_layer_name("IntelLayer")
                 config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
                 context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
@@ -193,6 +208,8 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                                         config_path = config_path,
                                         name = new_layer_name,
                                         metadata = {'os': 'Windows'})
+                break
+
         if layer is not None and config_path:
             vollog.debug("DTB was found at: 0x{:0x}".format(context.config[interfaces.configuration.path_join(
                 config_path, "page_map_offset")]))
