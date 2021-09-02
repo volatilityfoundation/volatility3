@@ -132,7 +132,7 @@ class DtbTest64bit(DtbTest):
     def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
-                         ptr_reference = range(0x1ff, 0x100, -1),
+                         ptr_reference = range(0x1ff, 0x1e0, -1),
                          mask = 0x3FFFFFFFFFF000)
 
     # As of Windows-10 RS1+, the ptr_reference is randomized:
