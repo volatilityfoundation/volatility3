@@ -59,6 +59,10 @@ class DtbSelfReferential:
             ptr_data = page[ref:ref + self.ptr_size]
             if len(ptr_data) == self.ptr_size:
                 ptr, = struct.unpack(self.ptr_struct, ptr_data)
+                # For both PAE and Intel-32e, bit 7 is reserved (more are reserved in PAE), so if that's ever set,
+                # we can move on
+                if ptr & 0x10:
+                    return None
                 if ((ptr & self.mask) == (data_offset + page_offset)) and (data_offset + page_offset > 0):
                     ref_pages.add(ref)
         # The DTB is extremely unlikely to refer back to itself. so the number of reference should always be exactly 1
@@ -190,7 +194,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
             vollog.debug(description)
             # There is a very high chance that the DTB will live in these very narrow segments, assuming we couldn't find them previously
             hits = context.layers[layer_name].scan(context,
-                                                   PageMapScanner(tests),
+                                                   PageMapScanner(tests = tests),
                                                    sections = sections,
                                                    progress_callback = progress_callback)
             # Flatten the generator
