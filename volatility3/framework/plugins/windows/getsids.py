@@ -96,9 +96,9 @@ class GetSIDs(interfaces.plugins.PluginInterface):
                             value_data = node.decode_data()
                             if isinstance(value_data, int):
                                 value_data = format_hints.MultiTypeData(value_data, encoding = 'utf-8')
-                            elif registry.RegValueTypes[node.Type] == registry.RegValueTypes.REG_BINARY:
+                            elif registry.RegValueTypes(node.Type) == registry.RegValueTypes.REG_BINARY:
                                 value_data = format_hints.MultiTypeData(value_data, show_hex = True)
-                            elif registry.RegValueTypes[node.Type] == registry.RegValueTypes.REG_MULTI_SZ:
+                            elif registry.RegValueTypes(node.Type) == registry.RegValueTypes.REG_MULTI_SZ:
                                 value_data = format_hints.MultiTypeData(value_data,
                                                                         encoding = 'utf-16-le',
                                                                         split_nulls = True)
