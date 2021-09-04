@@ -74,5 +74,5 @@ class Malfind(interfaces.plugins.PluginInterface):
                                    ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
-                                                               self.config['vmlinux'],
+                                                               self.config['kernel'],
                                                                filter_func = filter_func)))
