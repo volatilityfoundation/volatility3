@@ -35,8 +35,6 @@ class Lsof(plugins.PluginInterface):
         ]
 
     def _generator(self, tasks):
-        vmlinux = self.context.modules[self.config['kernel']]
-
         symbol_table = None
         for task in tasks:
             if symbol_table is None:
