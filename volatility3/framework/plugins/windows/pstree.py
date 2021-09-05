@@ -2,6 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import datetime
+import logging
 from typing import Dict, Set, Tuple
 
 from volatility3.framework import objects, interfaces, renderers
@@ -9,6 +10,7 @@ from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.plugins.windows import pslist
 
+vollog = logging.getLogger(__name__)
 
 class PsTree(interfaces.plugins.PluginInterface):
     """Plugin for listing processes in a tree based on their parent process
@@ -48,6 +50,7 @@ class PsTree(interfaces.plugins.PluginInterface):
             child_list = self._children.get(proc.InheritedFromUniqueProcessId, set([]))
             child_list.add(proc.UniqueProcessId)
             self._children[proc.InheritedFromUniqueProcessId] = child_list
+            seen.add(proc.InheritedFromUniqueProcessId)
             proc, _ = self._processes.get(proc.InheritedFromUniqueProcessId, (None, None))
             level += 1
         self._levels[pid] = level
@@ -58,7 +61,6 @@ class PsTree(interfaces.plugins.PluginInterface):
 
         for proc in pslist.PsList.list_processes(self.context, kernel.layer_name,
                                                  kernel.symbol_table_name):
-
             if not self.config.get('physical', pslist.PsList.PHYSICAL_DEFAULT):
                 offset = proc.vol.offset
             else:
@@ -72,7 +74,12 @@ class PsTree(interfaces.plugins.PluginInterface):
         for pid in self._processes:
             self.find_level(pid)
 
+        process_pids = set([])
         def yield_processes(pid):
+            if pid in process_pids:
+                vollog.debug(f"Pid cycle: already processed pid {pid}")
+                return
+            process_pids.add(pid)
             proc, offset = self._processes[pid]
             row = (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                    proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
