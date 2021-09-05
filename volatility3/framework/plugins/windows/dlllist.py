@@ -137,11 +137,21 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         file_handle.close()
                         file_output = file_handle.preferred_filename
 
+                try:
+                    dllbase = format_hints.Hex(entry.DllBase)
+                except exceptions.InvalidAddressException:
+                    dllbase = renderers.NotAvailableValue()
+
+                try:
+                    size_of_image = format_hints.Hex(entry.SizeOfImage)
+                except exceptions.InvalidAddressException:
+                    size_of_image = renderers.NotAvailableValue()
+
                 yield (0, (proc.UniqueProcessId,
                            proc.ImageFileName.cast("string",
                                                    max_length = proc.ImageFileName.vol.count,
-                                                   errors = 'replace'), format_hints.Hex(entry.DllBase),
-                           format_hints.Hex(entry.SizeOfImage), BaseDllName, FullDllName, DllLoadTime, file_output))
+                                                   errors = 'replace'), dllbase, size_of_image, BaseDllName,
+                           FullDllName, DllLoadTime, file_output))
 
     def generate_timeline(self):
         kernel = self.context.modules[self.config['kernel']]
