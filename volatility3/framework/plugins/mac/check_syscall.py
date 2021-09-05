@@ -39,11 +39,6 @@ class Check_syscall(plugins.PluginInterface):
         nsysent = kernel.object_from_symbol(symbol_name = "nsysent")
         table = kernel.object_from_symbol(symbol_name = "sysent")
 
-        # smear help
-        num_ents = min(nsysent, table.count)
-        if num_ents > 1024:
-            num_ents = 1024
-
         for (i, ent) in enumerate(table):
             try:
                 call_addr = ent.sy_call.dereference().vol.offset
