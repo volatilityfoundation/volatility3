@@ -36,7 +36,6 @@ class Check_syscall(plugins.PluginInterface):
 
         handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, kernel.layer_name, kernel, mods)
 
-        nsysent = kernel.object_from_symbol(symbol_name = "nsysent")
         table = kernel.object_from_symbol(symbol_name = "sysent")
 
         for (i, ent) in enumerate(table):
