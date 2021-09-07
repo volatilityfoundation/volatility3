@@ -184,7 +184,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
             layer = layer_type(context, config_path = config_path, name = new_layer_name, metadata = {'os': 'Windows'})
 
         test_sets = [("Detecting Self-referential pointer for recent windows",
-                      [DtbSelfRefPae(), DtbSelfRef64bit()], [(0x1a0000, 0x100000), (0x650000, 0x50000)]),
+                      [DtbSelfRefPae(), DtbSelfRef64bit()], [(0x1a0000, 0x100000), (0x650000, 0xa0000)]),
                      ("Older windows fixed location self-referential pointers",
                       [DtbSelfRefPae(), DtbSelfRef32bit(), DtbSelfRef64bitOldWindows()], [(0x30000, 0x1000000)])
                      ]
