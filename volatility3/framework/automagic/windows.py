@@ -42,29 +42,33 @@ class DtbSelfReferential:
     index within the page."""
 
     def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, mask: int,
-                 valid_range: Iterable[int]) -> None:
+                 valid_range: Iterable[int], reserved_bits: int) -> None:
         self.layer_type = layer_type
         self.ptr_struct = ptr_struct
         self.ptr_size = struct.calcsize(ptr_struct)
         self.mask = mask
         self.page_size: int = layer_type.page_size
         self.valid_range = valid_range
+        self.reserved_bits = 0
 
     def __call__(self, data: bytes, data_offset: int, page_offset: int) -> Optional[Tuple[int, int]]:
         page = data[page_offset:page_offset + self.page_size]
         if not page:
             return None
         ref_pages = set()
+
         for ref in range(0, self.page_size, self.ptr_size):
             ptr_data = page[ref:ref + self.ptr_size]
-            if len(ptr_data) == self.ptr_size:
-                ptr, = struct.unpack(self.ptr_struct, ptr_data)
-                # For both PAE and Intel-32e, bit 7 is reserved (more are reserved in PAE), so if that's ever set,
-                # we can move on
-                if ptr & 0x10:
-                    return None
-                if ((ptr & self.mask) == (data_offset + page_offset)) and (data_offset + page_offset > 0):
+            ptr, = struct.unpack(self.ptr_struct, ptr_data)
+            # For both Intel-32e, bit 7 is reserved (more are reserved in PAE), so if that's ever set,
+            # we can move on
+            if ptr & self.reserved_bits:
+                return None
+            if ((ptr & self.mask) == (data_offset + page_offset)) and (data_offset + page_offset > 0):
+                # Pointer must be valid
+                if (ptr & 0x01):
                     ref_pages.add(ref)
+
         # The DTB is extremely unlikely to refer back to itself. so the number of reference should always be exactly 1
         if len(ref_pages) == 1:
             ref_page = ref_pages.pop()
@@ -79,7 +83,8 @@ class DtbSelfRef32bit(DtbSelfReferential):
         super().__init__(layer_type = layers.intel.WindowsIntel,
                          ptr_struct = "I",
                          mask = 0xFFFFF000,
-                         valid_range = [0x300])
+                         valid_range = [0x300],
+                         reserved_bits = 0x80)
 
 
 class DtbSelfRef64bit(DtbSelfReferential):
@@ -88,7 +93,8 @@ class DtbSelfRef64bit(DtbSelfReferential):
         super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
                          mask = 0x3FFFFFFFFFF000,
-                         valid_range = range(0x100, 0x1ff))
+                         valid_range = range(0x100, 0x1ff),
+                         reserved_bits = 0x80)
 
 
 class DtbSelfRef64bitOldWindows(DtbSelfReferential):
@@ -97,7 +103,8 @@ class DtbSelfRef64bitOldWindows(DtbSelfReferential):
         super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
                          mask = 0x3FFFFFFFFFF000,
-                         valid_range = [0x1ed])
+                         valid_range = [0x1ed],
+                         reserved_bits = 0x80)
 
 
 class DtbSelfRefPae(DtbSelfReferential):
@@ -106,7 +113,8 @@ class DtbSelfRefPae(DtbSelfReferential):
         super().__init__(layer_type = layers.intel.WindowsIntelPAE,
                          ptr_struct = "Q",
                          valid_range = [0x3],
-                         mask = 0x3FFFFFFFFFF000)
+                         mask = 0x3FFFFFFFFFF000,
+                         reserved_bits = 0x0)
 
     def __call__(self, *args, **kwargs):
         dtb = super().__call__(*args, **kwargs)
@@ -184,7 +192,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
             layer = layer_type(context, config_path = config_path, name = new_layer_name, metadata = {'os': 'Windows'})
 
         test_sets = [("Detecting Self-referential pointer for recent windows",
-                      [DtbSelfRefPae(), DtbSelfRef64bit()], [(0x1a0000, 0x100000), (0x650000, 0xa0000)]),
+                      [DtbSelfRefPae(), DtbSelfRef64bit()], [(0x150000, 0x150000), (0x650000, 0xa0000)]),
                      ("Older windows fixed location self-referential pointers",
                       [DtbSelfRefPae(), DtbSelfRef32bit(), DtbSelfRef64bitOldWindows()], [(0x30000, 0x1000000)])
                      ]
