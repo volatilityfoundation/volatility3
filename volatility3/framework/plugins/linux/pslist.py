@@ -78,6 +78,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
         init_task = vmlinux.object_from_symbol(symbol_name = "init_task")
 
+        # Note that the init_task itself is not yielded, since "ps" also never shows it.
         for task in init_task.tasks:
             if not filter_func(task):
                 yield task
