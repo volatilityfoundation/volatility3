@@ -49,7 +49,7 @@ class DtbSelfReferential:
         self.mask = mask
         self.page_size: int = layer_type.page_size
         self.valid_range = valid_range
-        self.reserved_bits = 0
+        self.reserved_bits = reserved_bits
 
     def __call__(self, data: bytes, data_offset: int, page_offset: int) -> Optional[Tuple[int, int]]:
         page = data[page_offset:page_offset + self.page_size]
