@@ -206,7 +206,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                                                    sections = sections,
                                                    progress_callback = progress_callback)
             # Flatten the generator
-            hits = sorted(list(hits), key = lambda x: tests.index(x[0]))
+            hits = list(hits)
             if hits:
                 # TODO: Decide which to use if there are multiple options
                 test, page_map_offset = hits[0]
