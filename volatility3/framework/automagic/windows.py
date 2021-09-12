@@ -137,8 +137,8 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
             self.tests = tests
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[DtbSelfReferential, int], None, None]:
-        for test in self.tests:
-            for page_offset in range(0, len(data), 0x1000):
+        for page_offset in range(0, len(data), 0x1000):
+            for test in self.tests:
                 result = test(data, data_offset, page_offset)
                 if result is not None:
                     yield (test, result[0])
@@ -147,6 +147,13 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
 class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 40
     exclusion_list = ['mac', 'linux']
+
+    # Group these by region so we only run over the data once
+    test_sets = [("Detecting Self-referential pointer for recent windows",
+                  [DtbSelfRef64bit()], [(0x150000, 0x150000), (0x650000, 0xa0000)]),
+                 ("Older windows fixed location self-referential pointers",
+                  [DtbSelfRefPae(), DtbSelfRef32bit(), DtbSelfRef64bitOldWindows()], [(0x30000, 0x1000000)])
+                 ]
 
     @classmethod
     def stack(cls,
@@ -191,14 +198,8 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                 config_path, "page_map_offset")] = base_layer.metadata['page_map_offset']
             layer = layer_type(context, config_path = config_path, name = new_layer_name, metadata = {'os': 'Windows'})
 
-        test_sets = [("Detecting Self-referential pointer for recent windows",
-                      [DtbSelfRefPae(), DtbSelfRef64bit()], [(0x150000, 0x150000), (0x650000, 0xa0000)]),
-                     ("Older windows fixed location self-referential pointers",
-                      [DtbSelfRefPae(), DtbSelfRef32bit(), DtbSelfRef64bitOldWindows()], [(0x30000, 0x1000000)])
-                     ]
-
         # Self Referential finder
-        for description, tests, sections in test_sets:
+        for description, tests, sections in cls.test_sets:
             vollog.debug(description)
             # There is a very high chance that the DTB will live in these very narrow segments, assuming we couldn't find them previously
             hits = context.layers[layer_name].scan(context,
