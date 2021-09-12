@@ -205,8 +205,13 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                                                    PageMapScanner(tests = tests),
                                                    sections = sections,
                                                    progress_callback = progress_callback)
+
             # Flatten the generator
-            hits = list(hits)
+            def sort_by_tests(x):
+                return tests.index(x[0]), x[1]
+
+            hits = sorted(list(hits), key = sort_by_tests)
+
             if hits:
                 # TODO: Decide which to use if there are multiple options
                 test, page_map_offset = hits[0]
