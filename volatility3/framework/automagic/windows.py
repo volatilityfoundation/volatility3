@@ -62,7 +62,7 @@ class DtbSelfReferential:
             ptr, = struct.unpack(self.ptr_struct, ptr_data)
             # For both Intel-32e, bit 7 is reserved (more are reserved in PAE), so if that's ever set,
             # we can move on
-            if ptr & self.reserved_bits:
+            if (ptr & self.reserved_bits) and (ptr & 0x01):
                 return None
             if ((ptr & self.mask) == (data_offset + page_offset)) and (data_offset + page_offset > 0):
                 # Pointer must be valid
