@@ -84,7 +84,7 @@ class DtbSelfRef32bit(DtbSelfReferential):
                          ptr_struct = "I",
                          mask = 0xFFFFF000,
                          valid_range = [0x300],
-                         reserved_bits = 0x80)
+                         reserved_bits = 0x0)
 
 
 class DtbSelfRef64bit(DtbSelfReferential):
