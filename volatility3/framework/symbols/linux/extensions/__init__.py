@@ -403,7 +403,19 @@ class list_head(objects.StructType, collections.abc.Iterable):
                 forward: bool = True,
                 sentinel: bool = True,
                 layer: Optional[str] = None) -> Iterator[interfaces.objects.ObjectInterface]:
-        """Returns an iterator of the entries in the list."""
+        """Returns an iterator of the entries in the list.
+
+        Args:
+                symbol_type: Type of the list elements
+                member: Name of the list_head member in the list elements
+                forward: Set false to go backwards
+                sentinel: Whether self is a "sentinel node", meaning it is not embedded in a member of the list
+                Sentinel nodes are NOT yielded. See https://en.wikipedia.org/wiki/Sentinel_node for further reference
+                layer: Name of layer to read from
+        Yields:
+            Objects of the type specified via the "symbol_type" argument.
+
+        """
         layer = layer or self.vol.layer_name
 
         relative_offset = self._context.symbol_space.get_type(symbol_type).relative_child_offset(member)
