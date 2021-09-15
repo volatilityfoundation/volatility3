@@ -28,7 +28,7 @@ The self-referential indices for older versions of windows are listed below:
 """
 import logging
 import struct
-from typing import Any, Generator, List, Optional, Tuple, Type
+from typing import Generator, List, Optional, Tuple, Type, Iterable
 
 from volatility3.framework import interfaces, layers, constants
 from volatility3.framework.configuration import requirements
@@ -37,162 +37,43 @@ from volatility3.framework.layers import intel
 vollog = logging.getLogger(__name__)
 
 
-class DtbTest:
-    """This class generically contains the tests for a page based on a set of
-    class parameters.
-
-    When constructed it contains all the information necessary to
-    extract a specific index from a page and determine whether it points
-    back to that page's offset.
-    """
-
-    def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, ptr_reference: List[int],
-                 mask: int) -> None:
-        self.layer_type = layer_type
-        self.ptr_struct = ptr_struct
-        self.ptr_size = struct.calcsize(ptr_struct)
-        self.ptr_reference = ptr_reference
-        self.mask = mask
-        self.page_size: int = layer_type.page_size
-
-    def _unpack(self, value: bytes) -> int:
-        return struct.unpack("<" + self.ptr_struct, value)[0]
-
-    def __call__(self, data: bytes, data_offset: int, page_offset: int) -> Optional[Tuple[int, Any]]:
-        """Tests a specific page in a chunk of data to see if it contains a
-        self-referential pointer.
-
-        Args:
-            data: The chunk of data that contains the page to be scanned
-            data_offset: Where, within the layer, the chunk of data lives
-            page_offset: Where, within the data, the page to be scanned starts
-
-        Returns:
-            A valid DTB within this page (and an additional parameter for data)
-        """
-        for ptr_reference in self.ptr_reference:
-            value = data[page_offset + (ptr_reference * self.ptr_size):page_offset +
-                         ((ptr_reference + 1) * self.ptr_size)]
-            try:
-                ptr = self._unpack(value)
-            except struct.error:
-                return None
-            # The value *must* be present (bit 0) since it's a mapped page
-            # It's almost always writable (bit 1)
-            # It's occasionally Super, but not reliably so, haven't checked when/why not
-            # The top 3-bits are usually ignore (which in practice means 0
-            # Need to find out why the middle 3-bits are usually 6 (0110)
-            if ptr != 0 and (ptr & self.mask == data_offset + page_offset) & (ptr & 0xFF1 == 0x61):
-                dtb = (ptr & self.mask)
-                return self.second_pass(dtb, data, data_offset)
-        return None
-
-    def second_pass(self, dtb: int, data: bytes, data_offset: int) -> Optional[Tuple[int, Any]]:
-        """Re-reads over the whole page to validate other records based on the
-        number of pages marked user vs super.
-
-        Args:
-            dtb: The identified dtb that needs validating
-            data: The chunk of data that contains the dtb to be validated
-            data_offset: Where, within the layer, the chunk of data lives
-
-        Returns:
-            A valid DTB within this page
-        """
-        page = data[dtb - data_offset:dtb - data_offset + self.page_size]
-        usr_count, sup_count = 0, 0
-        for i in range(0, self.page_size, self.ptr_size):
-            val = self._unpack(page[i:i + self.ptr_size])
-            if val & 0x1:
-                sup_count += 0 if (val & 0x4) else 1
-                usr_count += 1 if (val & 0x4) else 0
-        # print(hex(dtb), usr_count, sup_count, usr_count + sup_count)
-        # We sometimes find bogus DTBs at 0x16000 with a very low sup_count and 0 usr_count
-        # I have a winxpsp2-x64 image with identical usr/sup counts at 0x16000 and 0x24c00 as well as the actual 0x3c3000
-        if usr_count or sup_count > 5:
-            return dtb, None
-        return None
-
-
-class DtbTest32bit(DtbTest):
-
-    def __init__(self) -> None:
-        super().__init__(layer_type = layers.intel.WindowsIntel,
-                         ptr_struct = "I",
-                         ptr_reference = [0x300],
-                         mask = 0xFFFFF000)
-
-
-class DtbTest64bit(DtbTest):
-
-    def __init__(self) -> None:
-        super().__init__(layer_type = layers.intel.WindowsIntel32e,
-                         ptr_struct = "Q",
-                         ptr_reference = range(0x1E0, 0x1FF),
-                         mask = 0x3FFFFFFFFFF000)
-
-    # As of Windows-10 RS1+, the ptr_reference is randomized:
-    # https://blahcat.github.io/2020/06/15/playing_with_self_reference_pml4_entry/
-    # So far, we've only seen examples between 0x1e0 and 0x1ff
-
-
-class DtbTestPae(DtbTest):
-
-    def __init__(self) -> None:
-        super().__init__(layer_type = layers.intel.WindowsIntelPAE,
-                         ptr_struct = "Q",
-                         ptr_reference = [0x3],
-                         mask = 0x3FFFFFFFFFF000)
-
-    def second_pass(self, dtb: int, data: bytes, data_offset: int) -> Optional[Tuple[int, Any]]:
-        """PAE top level directory tables contains four entries and the self-
-        referential pointer occurs in the second level of tables (so as not to
-        use up a full quarter of the space).  This is very high in the space,
-        and occurs in the fourht (last quarter) second-level table.  The
-        second-level tables appear always to come sequentially directly after
-        the real dtb.  The value for the real DTB is therefore four page
-        earlier (and the fourth entry should point back to the `dtb` parameter
-        this function was originally passed.
-
-        Args:
-            dtb: The identified self-referential pointer that needs validating
-            data: The chunk of data that contains the dtb to be validated
-            data_offset: Where, within the layer, the chunk of data lives
-
-        Returns:
-            Returns the actual DTB of the PAE space
-        """
-        dtb -= 0x4000
-        # If we're not in something that the overlap would pick up
-        if dtb - data_offset >= 0:
-            pointers = data[dtb - data_offset + (3 * self.ptr_size):dtb - data_offset + (4 * self.ptr_size)]
-            val = self._unpack(pointers)
-            if (val & self.mask == dtb + 0x4000) and (val & 0xFFF == 0x001):
-                return dtb, None
-        return None
-
-
-class DtbSelfReferential(DtbTest):
+class DtbSelfReferential:
     """A generic DTB test which looks for a self-referential pointer at *any*
     index within the page."""
 
-    def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, ptr_reference: int, mask: int) -> None:
-        super().__init__(layer_type = layer_type, ptr_struct = ptr_struct, ptr_reference = ptr_reference, mask = mask)
+    def __init__(self, layer_type: Type[layers.intel.Intel], ptr_struct: str, mask: int,
+                 valid_range: Iterable[int], reserved_bits: int) -> None:
+        self.layer_type = layer_type
+        self.ptr_struct = ptr_struct
+        self.ptr_size = struct.calcsize(ptr_struct)
+        self.mask = mask
+        self.page_size: int = layer_type.page_size
+        self.valid_range = valid_range
+        self.reserved_bits = reserved_bits
 
     def __call__(self, data: bytes, data_offset: int, page_offset: int) -> Optional[Tuple[int, int]]:
         page = data[page_offset:page_offset + self.page_size]
         if not page:
             return None
         ref_pages = set()
+
         for ref in range(0, self.page_size, self.ptr_size):
             ptr_data = page[ref:ref + self.ptr_size]
-            if len(ptr_data) == self.ptr_size:
-                ptr, = struct.unpack(self.ptr_struct, ptr_data)
-                if ((ptr & self.mask) == (data_offset + page_offset)) and (data_offset + page_offset > 0):
+            ptr, = struct.unpack(self.ptr_struct, ptr_data)
+            # For both Intel-32e, bit 7 is reserved (more are reserved in PAE), so if that's ever set,
+            # we can move on
+            if (ptr & self.reserved_bits) and (ptr & 0x01):
+                return None
+            if ((ptr & self.mask) == (data_offset + page_offset)) and (data_offset + page_offset > 0):
+                # Pointer must be valid
+                if (ptr & 0x01):
                     ref_pages.add(ref)
+
         # The DTB is extremely unlikely to refer back to itself. so the number of reference should always be exactly 1
         if len(ref_pages) == 1:
-            return (data_offset + page_offset), ref_pages.pop()
+            ref_page = ref_pages.pop()
+            if (ref_page // self.ptr_size) in self.valid_range:
+                return (data_offset + page_offset), ref_page
         return None
 
 
@@ -201,8 +82,9 @@ class DtbSelfRef32bit(DtbSelfReferential):
     def __init__(self):
         super().__init__(layer_type = layers.intel.WindowsIntel,
                          ptr_struct = "I",
-                         ptr_reference = 0x300,
-                         mask = 0xFFFFF000)
+                         mask = 0xFFFFF000,
+                         valid_range = [0x300],
+                         reserved_bits = 0x0)
 
 
 class DtbSelfRef64bit(DtbSelfReferential):
@@ -210,8 +92,35 @@ class DtbSelfRef64bit(DtbSelfReferential):
     def __init__(self) -> None:
         super().__init__(layer_type = layers.intel.WindowsIntel32e,
                          ptr_struct = "Q",
-                         ptr_reference = 0x1ED,
-                         mask = 0x3FFFFFFFFFF000)
+                         mask = 0x3FFFFFFFFFF000,
+                         valid_range = range(0x100, 0x1ff),
+                         reserved_bits = 0x80)
+
+
+class DtbSelfRef64bitOldWindows(DtbSelfReferential):
+
+    def __init__(self) -> None:
+        super().__init__(layer_type = layers.intel.WindowsIntel32e,
+                         ptr_struct = "Q",
+                         mask = 0x3FFFFFFFFFF000,
+                         valid_range = [0x1ed],
+                         reserved_bits = 0x80)
+
+
+class DtbSelfRefPae(DtbSelfReferential):
+
+    def __init__(self) -> None:
+        super().__init__(layer_type = layers.intel.WindowsIntelPAE,
+                         ptr_struct = "Q",
+                         valid_range = [0x3],
+                         mask = 0x3FFFFFFFFFF000,
+                         reserved_bits = 0x0)
+
+    def __call__(self, *args, **kwargs):
+        dtb = super().__call__(*args, **kwargs)
+        if dtb:
+            return dtb[0] - 0x4000, dtb[1]
+        return dtb
 
 
 class PageMapScanner(interfaces.layers.ScannerInterface):
@@ -219,81 +128,32 @@ class PageMapScanner(interfaces.layers.ScannerInterface):
     architecture."""
     overlap = 0x4000
     thread_safe = True
-    tests = [DtbTest64bit(), DtbTest32bit(), DtbTestPae()]
+    tests = [DtbSelfRef64bit(), DtbSelfRefPae(), DtbSelfRef32bit()]
     """The default tests to run when searching for DTBs"""
 
-    def __init__(self, tests: List[DtbTest]) -> None:
+    def __init__(self, tests: Optional[List[DtbSelfReferential]]) -> None:
         super().__init__()
-        self.tests = tests
+        if tests:
+            self.tests = tests
 
-    def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[DtbTest, int], None, None]:
-        for test in self.tests:
-            for page_offset in range(0, len(data), 0x1000):
+    def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[DtbSelfReferential, int], None, None]:
+        for page_offset in range(0, len(data), 0x1000):
+            for test in self.tests:
                 result = test(data, data_offset, page_offset)
                 if result is not None:
                     yield (test, result[0])
 
 
-class WintelHelper(interfaces.automagic.AutomagicInterface):
-    """Windows DTB finder based on self-referential pointers.
-
-    This class adheres to the :class:`~volatility3.framework.interfaces.automagic.AutomagicInterface` interface
-    and both determines the directory table base of an intel layer if one hasn't been specified, and constructs
-    the intel layer if necessary (for example when reconstructing a pre-existing configuration).
-
-    It will scan for existing TranslationLayers that do not have a DTB  using the :class:`PageMapScanner`
-    """
-    priority = 20
-    tests = [DtbTest64bit(), DtbTest32bit(), DtbTestPae()]
-
-    def __call__(self,
-                 context: interfaces.context.ContextInterface,
-                 config_path: str,
-                 requirement: interfaces.configuration.RequirementInterface,
-                 progress_callback: constants.ProgressCallback = None) -> None:
-        useful = []
-        sub_config_path = interfaces.configuration.path_join(config_path, requirement.name)
-        if (isinstance(requirement, requirements.TranslationLayerRequirement)
-                and requirement.requirements.get("class", False) and requirement.unsatisfied(context, config_path)):
-            class_req = requirement.requirements["class"]
-
-            for test in self.tests:
-                if (test.layer_type.__module__ + "." + test.layer_type.__name__ == class_req.config_value(
-                        context, sub_config_path)):
-                    useful.append(test)
-
-            # Determine if a class has been chosen
-            # Once an appropriate class has been chosen, attempt to determine the page_map_offset value
-            if ("memory_layer" in requirement.requirements
-                    and not requirement.requirements["memory_layer"].unsatisfied(context, sub_config_path)):
-                # Only bother getting the DTB if we don't already have one
-                page_map_offset_path = interfaces.configuration.path_join(sub_config_path, "page_map_offset")
-                if not context.config.get(page_map_offset_path, None):
-                    physical_layer_name = requirement.requirements["memory_layer"].config_value(
-                        context, sub_config_path)
-                    if not isinstance(physical_layer_name, str):
-                        raise TypeError(f"Physical layer name is not a string: {sub_config_path}")
-                    physical_layer = context.layers[physical_layer_name]
-                    # Check lower layer metadata first
-                    if physical_layer.metadata.get('page_map_offset', None):
-                        context.config[page_map_offset_path] = physical_layer.metadata['page_map_offset']
-                    else:
-                        hits = physical_layer.scan(context, PageMapScanner(useful), progress_callback)
-                        for test, dtb in hits:
-                            context.config[page_map_offset_path] = dtb
-                            break
-                        else:
-                            return None
-                if isinstance(requirement, interfaces.configuration.ConstructableRequirementInterface):
-                    requirement.construct(context, config_path)
-        else:
-            for subreq in requirement.requirements.values():
-                self(context, sub_config_path, subreq)
-
-
 class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
     stack_order = 40
     exclusion_list = ['mac', 'linux']
+
+    # Group these by region so we only run over the data once
+    test_sets = [("Detecting Self-referential pointer for recent windows",
+                  [DtbSelfRef64bit()], [(0x150000, 0x150000), (0x650000, 0xa0000)]),
+                 ("Older windows fixed location self-referential pointers",
+                  [DtbSelfRefPae(), DtbSelfRef32bit(), DtbSelfRef64bitOldWindows()], [(0x30000, 0x1000000)])
+                 ]
 
     @classmethod
     def stack(cls,
@@ -338,44 +198,36 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                 config_path, "page_map_offset")] = base_layer.metadata['page_map_offset']
             layer = layer_type(context, config_path = config_path, name = new_layer_name, metadata = {'os': 'Windows'})
 
-        # Check for the self-referential pointer
-        if layer is None:
-            hits = base_layer.scan(context, PageMapScanner(WintelHelper.tests), progress_callback = progress_callback)
-            layer = None
-            config_path = None
-            for test, dtb in hits:
+        # Self Referential finder
+        for description, tests, sections in cls.test_sets:
+            vollog.debug(description)
+            # There is a very high chance that the DTB will live in these very narrow segments, assuming we couldn't find them previously
+            hits = context.layers[layer_name].scan(context,
+                                                   PageMapScanner(tests = tests),
+                                                   sections = sections,
+                                                   progress_callback = progress_callback)
+
+            # Flatten the generator
+            def sort_by_tests(x):
+                return tests.index(x[0]), x[1]
+
+            hits = sorted(list(hits), key = sort_by_tests)
+
+            if hits:
+                # TODO: Decide which to use if there are multiple options
+                test, page_map_offset = hits[0]
+                vollog.debug(f"{test.__class__.__name__} test succeeded at {hex(page_map_offset)}")
                 new_layer_name = context.layers.free_layer_name("IntelLayer")
                 config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
                 context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
-                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = dtb
+                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
+                # TODO: Need to determine the layer type (chances are high it's x64, hence this default)
                 layer = test.layer_type(context,
                                         config_path = config_path,
                                         name = new_layer_name,
                                         metadata = {'os': 'Windows'})
                 break
 
-        # Fall back to a heuristic for finding the Windows DTB
-        if layer is None:
-            vollog.debug("Self-referential pointer not in well-known location, moving to recent windows heuristic")
-            # There is a very high chance that the DTB will live in this narrow segment, assuming we couldn't find it previously
-            hits = context.layers[layer_name].scan(context,
-                                                   PageMapScanner([DtbSelfRef64bit()]),
-                                                   sections = [(0x1a0000, 0x50000)],
-                                                   progress_callback = progress_callback)
-            # Flatten the generator
-            hits = list(hits)
-            if hits:
-                # TODO: Decide which to use if there are multiple options
-                test, page_map_offset = hits[0]
-                new_layer_name = context.layers.free_layer_name("IntelLayer")
-                config_path = interfaces.configuration.path_join("IntelHelper", new_layer_name)
-                context.config[interfaces.configuration.path_join(config_path, "memory_layer")] = layer_name
-                context.config[interfaces.configuration.path_join(config_path, "page_map_offset")] = page_map_offset
-                # TODO: Need to determine the layer type (chances are high it's x64, hence this default)
-                layer = layers.intel.WindowsIntel32e(context,
-                                                     config_path = config_path,
-                                                     name = new_layer_name,
-                                                     metadata = {'os': 'Windows'})
         if layer is not None and config_path:
             vollog.debug("DTB was found at: 0x{:0x}".format(context.config[interfaces.configuration.path_join(
                 config_path, "page_map_offset")]))
