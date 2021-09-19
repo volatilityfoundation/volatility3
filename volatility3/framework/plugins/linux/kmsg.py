@@ -58,7 +58,7 @@ class ABCKmsg(ABC):
         self._context = context
         self._config = config
         vmlinux = context.modules[self._config['kernel']]
-        self.layer_name = kernel.layer_name  # type: ignore
+        self.layer_name = vmlinux.layer_name  # type: ignore
         symbol_table_name = vmlinux.symbol_table_name  # type: ignore
         self.vmlinux = contexts.Module(context, symbol_table_name, self.layer_name, 0)  # type: ignore
         self.long_unsigned_int_size = self.vmlinux.get_type('long unsigned int').size
