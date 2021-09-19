@@ -60,12 +60,12 @@ class SSDT(plugins.PluginInterface):
             if module_name in constants.windows.KERNEL_MODULE_NAMES:
                 symbol_table_name = symbol_table
 
-            context_module = contexts.SizedModule(context,
-                                                  module_name,
-                                                  layer_name,
-                                                  mod.DllBase,
-                                                  mod.SizeOfImage,
-                                                  symbol_table_name = symbol_table_name)
+            context_module = contexts.SizedModule.create(context = context,
+                                                         module_name = module_name,
+                                                         layer_name = layer_name,
+                                                         offset = mod.DllBase,
+                                                         size = mod.SizeOfImage,
+                                                         symbol_table_name = symbol_table_name)
 
             context_modules.append(context_module)
 
