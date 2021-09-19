@@ -360,7 +360,8 @@ class ModuleCollection(interfaces.context.ModuleContainer):
         provided."""
         if size < 0:
             raise ValueError("Size must be strictly non-negative")
-        for module in self._modules:
+        for module_name in self._modules:
+            module = self._modules[module_name]
             if isinstance(module, SizedModule):
                 if (offset <= module.offset + module.size) and (offset + size >= module.offset):
                     yield (module.name, module.get_symbols_by_absolute_location(offset, size))
