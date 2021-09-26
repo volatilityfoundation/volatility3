@@ -441,7 +441,8 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
                 unprocessed_data = self._context.layers.read(layer, mapped_offset, mapped_length, pad)
                 processed_data = self._decode_data(unprocessed_data, mapped_offset, layer_offset, sublength)
                 if len(processed_data) != sublength:
-                    raise ValueError("ProcessedData length does not match expected length of chunk")
+                    raise ValueError(
+                        f"ProcessedData length {len(processed_data)} does not match expected length of chunk {sublength}")
                 output += processed_data
                 current_offset += sublength
         return output + (b"\x00" * (length - len(output)))

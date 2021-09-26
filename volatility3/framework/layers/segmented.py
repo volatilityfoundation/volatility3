@@ -35,7 +35,7 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
     def _load_segments(self) -> None:
         """Populates the _segments variable.
 
-        Segments must be (address, mapped address, length) and must be
+        Segments must be (address, mapped address, length, mapped_length) and must be
         sorted by address when this method exits
         """
 
@@ -85,7 +85,6 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
                 if current_offset > logical_offset:
                     difference = current_offset - logical_offset
                     logical_offset += difference
-                    mapped_offset += difference
                     size -= difference
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
@@ -103,7 +102,7 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
                     return
             # Crop it to the amount we need left
             chunk_size = min(size, length + offset - logical_offset)
-            yield logical_offset, chunk_size, mapped_offset, chunk_size, self._base_layer
+            yield logical_offset, chunk_size, mapped_offset, mapped_size, self._base_layer
             current_offset += chunk_size
             # Terminate if we've gone (or reached) our required limit
             if current_offset >= offset + length:
