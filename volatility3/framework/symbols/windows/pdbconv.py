@@ -988,6 +988,8 @@ if __name__ == '__main__':
     filename = None
     if args.guid is not None and args.pattern is not None:
         filename = PdbRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern, progress_callback = pg_cb)
+        if filename is None:
+            parser.error("PDB file could not be retrieved from the internet")
         if parse.urlparse(filename, 'file').scheme == 'file':
             delfile = True
     elif args.file:
