@@ -1,6 +1,7 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import bisect
 import functools
 import json
 import math
@@ -211,9 +212,18 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         return index
 
     def _decode_data(self, data: bytes, mapped_offset: int, offset: int, output_length: int) -> bytes:
-        if mapped_offset in self._compressed:
-            return (data * 0x1000)[:output_length]
-        return data
+        """Takes the full segment from the base_layer that the data occurs in, checks whether it's compressed
+        (by locating it in the segment list and verifying if that address is compressed), then reading/expanding the
+        data, and finally cutting it to the right size.  Offset may be the address requested rather than the location
+        of the starting data.  It is the responsibility of the layer to turn the provided data chunk into the right
+        portion of data necessary.
+        """
+        start_offset, _, start_mapped_offset, _ = self._segments[
+            bisect.bisect_right(self._segments, (offset, 0xffffffffffffff,)) - 1]
+        if start_mapped_offset in self._compressed:
+            data = (data * 0x1000)
+        result = data[offset - start_offset:output_length + offset - start_offset]
+        return result
 
     @functools.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
