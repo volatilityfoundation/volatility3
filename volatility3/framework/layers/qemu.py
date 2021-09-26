@@ -1,7 +1,6 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import bisect
 import functools
 import json
 import math
@@ -212,11 +211,9 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         return index
 
     def _decode_data(self, data: bytes, mapped_offset: int, offset: int, output_length: int) -> bytes:
-        start_offset, _, _, _ = self._segments[bisect.bisect_right(self._segments, (offset, 0xffffffffffffff,)) - 1]
-        if offset in self._compressed:
-            data = (data * 0x1000)
-        result = data[offset - start_offset:output_length + offset - start_offset]
-        return result
+        if mapped_offset in self._compressed:
+            return (data * 0x1000)[:output_length]
+        return data
 
     @functools.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:
