@@ -6,7 +6,7 @@ import setuptools
 
 from volatility3.framework import constants
 
-with open("README.md", "r", encoding="utf-8") as fh:
+with open("README.md", "r", encoding = "utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(name = "volatility3",
@@ -45,4 +45,5 @@ setuptools.setup(name = "volatility3",
                      'crypto': ["pycryptodome>=3"],
                      'disasm': ["capstone;platform_system=='Linux'", "capstone-windows;platform_system=='Windows'"],
                      'doc': ["sphinx>=1.8.2", "sphinx_autodoc_typehints>=1.4.0", "sphinx-rtd-theme>=0.4.3"],
+                     'avml': ["snappy==0.6.0"],
                  })

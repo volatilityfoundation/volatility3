@@ -2,6 +2,7 @@
 
 The user of the file doesn't have to worry about the compression,
 but random access is not allowed."""
+import logging
 import struct
 from typing import Tuple, List, Optional
 
@@ -38,6 +39,7 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
             raise exceptions.LayerException("File not completely in AVML format")
         if not HAS_SNAPPY:
             vollog.warning('AVML file detected, but snappy python library not installed')
+            raise exceptions.LayerException("AVML format dependencies not satisfied (snappy)")
 
     def _load_segments(self) -> None:
         base_layer = self.context.layers[self._base_layer]
