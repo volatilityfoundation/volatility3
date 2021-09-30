@@ -540,8 +540,6 @@ class Skeleton_Key_Check(interfaces.plugins.PluginInterface):
                                              cryptdll_base,
                                              cryptdll_size)
 
-        csystems = None
-
         # if we can't find cSystems through the PDB then
         # we fall back to export analysis and scanning
         # we keep the address of the rc4 functions from the PDB
