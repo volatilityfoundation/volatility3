@@ -121,7 +121,7 @@ class PoolScanner(plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'handles', plugin = handles.Handles, version = (1, 0, 0)),
         ]
 
