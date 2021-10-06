@@ -88,7 +88,7 @@ class CommandLine:
         """Executes the command line module, taking the system arguments,
         determining the plugin to run and then running it."""
 
-        volatility3.framework.require_interface_version(1, 0, 0)
+        volatility3.framework.require_interface_version(2, 0, 0)
 
         renderers = dict([(x.name.lower(), x) for x in framework.class_subclasses(text_renderer.CLIRenderer)])
 

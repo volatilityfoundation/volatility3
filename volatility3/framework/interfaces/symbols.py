@@ -8,7 +8,6 @@ from abc import abstractmethod, ABC
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Mapping
 
 from volatility3.framework import constants, exceptions, interfaces
-from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import configuration, objects
 from volatility3.framework.interfaces.configuration import RequirementInterface
 
@@ -302,12 +301,7 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
 
     @classmethod
     def get_requirements(cls) -> List[RequirementInterface]:
-        return super().get_requirements() + [
-            requirements.IntRequirement(
-                name = 'symbol_shift', description = 'Symbol Shift', optional = True, default = 0),
-            requirements.IntRequirement(
-                name = 'symbol_mask', description = 'Address mask for symbols', optional = True, default = 0),
-        ]
+        return super().get_requirements()
 
 
 class NativeTableInterface(BaseSymbolTableInterface):

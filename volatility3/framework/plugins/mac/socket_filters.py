@@ -19,7 +19,7 @@ vollog = logging.getLogger(__name__)
 class Socket_filters(plugins.PluginInterface):
     """Enumerates kernel socket filters."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:

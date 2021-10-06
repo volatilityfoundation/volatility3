@@ -15,7 +15,7 @@ vollog = logging.getLogger(__name__)
 class CmdLine(interfaces.plugins.PluginInterface):
     """Lists process command line arguments."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
@@ -23,7 +23,7 @@ class CmdLine(interfaces.plugins.PluginInterface):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
@@ -54,7 +54,6 @@ class CmdLine(interfaces.plugins.PluginInterface):
         return result_text
 
     def _generator(self, procs):
-
         kernel = self.context.modules[self.config['kernel']]
 
         for proc in procs:
@@ -78,9 +77,7 @@ class CmdLine(interfaces.plugins.PluginInterface):
             yield (0, (proc.UniqueProcessId, process_name, result_text))
 
     def run(self):
-
         kernel = self.context.modules[self.config['kernel']]
-
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Args", str)],

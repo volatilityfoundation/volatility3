@@ -17,7 +17,7 @@ class HiveGenerator:
     """Walks the registry HiveList linked list in a given direction and stores an invalid offset
     if it's unable to fully walk the list"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, cmhive, forward = True):
         self._cmhive = cmhive
@@ -39,14 +39,14 @@ class HiveGenerator:
 class HiveList(interfaces.plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image."""
 
-    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.StringRequirement(name = 'filter',
                                            description = "String to filter hive names returned",
                                            optional = True,
@@ -63,7 +63,6 @@ class HiveList(interfaces.plugins.PluginInterface):
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
         chunk_size = 0x500000
-
         kernel = self.context.modules[self.config['kernel']]
 
         for hive_object in self.list_hive_objects(context = self.context,

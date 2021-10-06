@@ -38,7 +38,7 @@ class MacUtilities(interfaces.configuration.VersionableInterface):
     1.3.0 -> add parameter to lookup_module_address to pass kernel module name
     """
     _version = (1, 3, 0)
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def mask_mods_list(cls, context: interfaces.context.ContextInterface, layer_name: str,

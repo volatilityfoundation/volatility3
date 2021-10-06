@@ -363,7 +363,7 @@ class KmsgFiveTen(ABCKmsg):
 class Kmsg(plugins.PluginInterface):
     """Kernel log buffer reader"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     _version = (1, 0, 0)
 

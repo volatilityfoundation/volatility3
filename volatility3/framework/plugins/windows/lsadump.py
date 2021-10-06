@@ -21,14 +21,14 @@ vollog = logging.getLogger(__name__)
 class Lsadump(interfaces.plugins.PluginInterface):
     """Dumps lsa secrets from memory"""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'hashdump', component = hashdump.Hashdump, version = (1, 1, 0)),
             requirements.VersionRequirement(name = 'hivelist', component = hivelist.HiveList, version = (1, 0, 0))
         ]
@@ -84,7 +84,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             rc4key = md5.digest()
 
             rc4 = ARC4.new(rc4key)
-            lsa_key = rc4.decrypt(obf_lsa_key[12:60])  # lgtm [py/weak-cryptographic-algorithm]
+            lsa_key = rc4.decrypt(obf_lsa_key[12:60]) # lgtm [py/weak-cryptographic-algorithm]
             lsa_key = lsa_key[0x10:0x20]
         else:
             lsa_key = cls.decrypt_aes(obf_lsa_key, bootkey)
@@ -125,7 +125,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             des_key = hashdump.Hashdump.sidbytes_to_key(block_key)
             des = DES.new(des_key, DES.MODE_ECB)
             enc_block = enc_block + b"\x00" * int(abs(8 - len(enc_block)) % 8)
-            decrypted_data += des.decrypt(enc_block)  # lgtm [py/weak-cryptographic-algorithm]
+            decrypted_data += des.decrypt(enc_block) # lgtm [py/weak-cryptographic-algorithm]
             j += 7
             if len(key[j:j + 7]) < 7:
                 j = len(key[j:j + 7])

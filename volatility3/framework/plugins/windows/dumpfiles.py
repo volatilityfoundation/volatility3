@@ -5,7 +5,6 @@
 import logging
 import ntpath
 from typing import List, Tuple, Type, Optional, Generator
-
 from volatility3.framework import interfaces, renderers, exceptions, constants
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
@@ -26,7 +25,7 @@ EXTENSION_CACHE_MAP = {
 class DumpFiles(interfaces.plugins.PluginInterface):
     """Dumps cached file contents from Windows memory samples."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
@@ -34,7 +33,7 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.IntRequirement(name = 'pid',
                                         description = "Process ID to include (all other processes are excluded)",
                                         optional = True),
@@ -237,9 +236,9 @@ class DumpFiles(interfaces.plugins.PluginInterface):
 
                     file_obj = self.context.object(
                         kernel.symbol_table_name + constants.BANG + "_FILE_OBJECT",
-                        layer_name = layer_name,
+                                                   layer_name = layer_name,
                         native_layer_name = kernel.layer_name,
-                        offset = offset)
+                                                   offset = offset)
                     for result in self.process_file_object(self.context, kernel.layer_name, self.open, file_obj):
                         yield (0, result)
                 except exceptions.InvalidAddressException:
@@ -250,7 +249,6 @@ class DumpFiles(interfaces.plugins.PluginInterface):
         offsets = []
         # a list of processes matching the pid filter. all files for these process(es) will be dumped.
         procs = []
-
         kernel = self.context.modules[self.config['kernel']]
 
         if self.config.get("virtaddr", None) is not None:

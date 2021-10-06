@@ -23,7 +23,7 @@ vollog = logging.getLogger(__name__)
 class UserAssist(interfaces.plugins.PluginInterface):
     """Print userassist registry keys and information."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,7 +38,7 @@ class UserAssist(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
@@ -217,7 +217,6 @@ class UserAssist(interfaces.plugins.PluginInterface):
         hive_offsets = None
         if self.config.get('offset', None) is not None:
             hive_offsets = [self.config.get('offset', None)]
-
         kernel = self.context.modules[self.config['kernel']]
 
         # get all the user hive offsets or use the one specified

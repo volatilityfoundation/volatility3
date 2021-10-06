@@ -22,7 +22,7 @@ vollog = logging.getLogger(__name__)
 class IsfInfo(plugins.PluginInterface):
     """Determines information about the currently available ISF files, or a specific one"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod

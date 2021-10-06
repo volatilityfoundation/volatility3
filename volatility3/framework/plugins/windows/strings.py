@@ -19,7 +19,7 @@ class Strings(interfaces.plugins.PluginInterface):
     """Reads output from the strings command and indicates which process(es) each string belongs to."""
 
     _version = (1, 2, 0)
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     strings_pattern = re.compile(rb"^(?:\W*)([0-9]+)(?:\W*)(\w[\w\W]+)\n?")
 
     @classmethod
@@ -42,7 +42,7 @@ class Strings(interfaces.plugins.PluginInterface):
 
     def _generator(self) -> Generator[Tuple, None, None]:
         """Generates results from a strings file."""
-        string_list: List[Tuple[int, bytes]] = []
+        string_list: List[Tuple[int,bytes]] = []
 
         # Test strings file format is accurate
         accessor = resources.ResourceAccessor()
@@ -57,7 +57,6 @@ class Strings(interfaces.plugins.PluginInterface):
             except ValueError:
                 vollog.error(f"Line in unrecognized format: line {count}")
             line = strings_fp.readline()
-
         kernel = self.context.modules[self.config['kernel']]
 
         revmap = self.generate_mapping(self.context,
@@ -67,7 +66,7 @@ class Strings(interfaces.plugins.PluginInterface):
                                        pid_list = self.config['pid'])
 
         last_prog: float = 0
-        line_count: float = 0
+        line_count: float  = 0
         num_strings = len(string_list)
         for offset, string in string_list:
             line_count += 1

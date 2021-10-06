@@ -30,8 +30,8 @@ def createservicesid(svc) -> str:
 class GetServiceSIDs(interfaces.plugins.PluginInterface):
     """Lists process token sids."""
 
-    _required_framework_version = (1, 2, 0)
     _version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,11 +54,12 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
             requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
-                                           architectures = ["Intel32", "Intel64"]),
+                                                     architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
 
     def _generator(self):
+
         kernel = self.context.modules[self.config['kernel']]
         # Get the system hive
         for hive in hivelist.HiveList.list_hives(context = self.context,

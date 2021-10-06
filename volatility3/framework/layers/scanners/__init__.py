@@ -11,7 +11,7 @@ from volatility3.framework.layers.scanners import multiregexp
 class BytesScanner(layers.ScannerInterface):
     thread_safe = True
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, needle: bytes) -> None:
         super().__init__()
@@ -32,7 +32,7 @@ class BytesScanner(layers.ScannerInterface):
 class RegExScanner(layers.ScannerInterface):
     thread_safe = True
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, pattern: bytes, flags: int = 0) -> None:
         super().__init__()
@@ -51,7 +51,7 @@ class RegExScanner(layers.ScannerInterface):
 class MultiStringScanner(layers.ScannerInterface):
     thread_safe = True
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, patterns: List[bytes]) -> None:
         super().__init__()

@@ -16,7 +16,7 @@ vollog = logging.getLogger(__name__)
 class PsList(interfaces.plugins.PluginInterface):
     """Lists the processes present in a particular mac memory image."""
 
-    _required_framework_version = (1, 2, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (3, 0, 0)
     pslist_methods = ['tasks', 'allproc', 'process_group', 'sessions', 'pid_hash_table']
 
