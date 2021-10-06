@@ -5,6 +5,7 @@ from typing import Optional, Tuple, List, Dict, Union
 
 from volatility3.framework import objects, interfaces, constants, symbols, exceptions, renderers
 from volatility3.framework.renderers import conversion
+from volatility3.plugins.windows.poolscanner import PoolConstraint
 
 vollog = logging.getLogger(__name__)
 
@@ -17,22 +18,24 @@ class POOL_HEADER(objects.StructType):
     """
 
     def get_object(self,
-                   type_name: str,
+                   constraint: PoolConstraint,
                    use_top_down: bool,
-                   executive: bool = False,
                    kernel_symbol_table: Optional[str] = None,
                    native_layer_name: Optional[str] = None) -> Optional[interfaces.objects.ObjectInterface]:
         """Carve an object or data structure from a kernel pool allocation
 
         Args:
-            type_name: the data structure type name
-            native_layer_name: the name of the layer where the data originally lived
-            object_type: the object type (executive kernel objects only)
+            constraint: a PoolConstraint object used to get the pool allocation header object 
+            use_top_down: for delineating how a windows version finds the size of the object body
             kernel_symbol_table: in case objects of a different symbol table are scanned for
+            native_layer_name: the name of the layer where the data originally lived
 
         Returns:
             An object as found from a POOL_HEADER
         """
+
+        type_name = constraint.type_name
+        executive = constraint.object_type is not None
 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
         if constants.BANG in type_name:
@@ -150,6 +153,10 @@ class POOL_HEADER(objects.StructType):
             # use the bottom up approach for windows 7 and earlier
             else:
                 type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
+                if constraint.additional_structures:
+                    for additional_structure in constraint.additional_structures:
+                        type_size += self._context.symbol_space.get_type(symbol_table_name + constants.BANG + additional_structure).size
+
                 rounded_size = conversion.round(type_size, alignment, up = True)
 
                 mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
