@@ -296,7 +296,7 @@ class PoolScanner(plugins.PluginInterface):
 
             mem_objects = header.get_object(constraint = constraint,
                                            use_top_down = is_windows_8_or_later,
-                                           native_layer_name = 'primary',
+                                           native_layer_name = layer_name,
                                            kernel_symbol_table = symbol_table)
 
             for mem_object in mem_objects:
