@@ -18,13 +18,24 @@ the Volatility Software License (VSL). See the [LICENSE](LICENSE.txt) file for m
 
 ## Requirements
 
-- Python 3.6.0 or later. <https://www.python.org>
-- Pefile 2017.8.1 or later. <https://pypi.org/project/pefile/>
+Volatility 3 requires Python 3.6.0 or later. To install the most minimal set of dependencies (some plugins will not work) use a command such as:
 
-## Optional Dependencies
+```shell
+pip3 install requirements-minimal.txt
+```
 
-- yara-python 3.8.0 or later. <https://github.com/VirusTotal/yara-python>
-- capstone 3.0.0 or later. <https://www.capstone-engine.org/download.html>
+Alternately, the minimal packages can be installed automatically when Volatility 3 is installed. However, as noted in the Quick Start section below, Volatility 3 does not *need* to be installed prior to using it.
+
+```shell
+python3 setup.py build 
+python3 setup.py install
+```
+
+To enable the full range of Volatility 3 functionality, use a command like the one below. For partial functionality, comment out any unnecessary packages in [requirements.txt](requirements.txt) prior to running the command.
+
+```shell
+pip3 install requirements.txt
+```
 
 ## Downloading Volatility
 
