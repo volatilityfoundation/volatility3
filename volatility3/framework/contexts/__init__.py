@@ -188,9 +188,10 @@ class Module(interfaces.context.ModuleInterface):
                **kwargs) -> 'Module':
         pathjoin = interfaces.configuration.path_join
         # Check if config_path is None
+        free_module_name = context.modules.free_module_name(module_name)
         config_path = kwargs.get('config_path', None)
         if config_path is None:
-            config_path = pathjoin('temporary', 'modules')
+            config_path = pathjoin('temporary', 'modules', free_module_name)
         # Populate the configuration
         context.config[pathjoin(config_path, 'layer_name')] = layer_name
         context.config[pathjoin(config_path, 'offset')] = offset
@@ -200,7 +201,7 @@ class Module(interfaces.context.ModuleInterface):
         for arg in kwargs:
             context.config[pathjoin(config_path, arg)] = kwargs.get(arg, None)
         # Construct the object
-        return_val = cls(context, config_path, context.modules.free_module_name(module_name))
+        return_val = cls(context, config_path, free_module_name)
         context.add_module(return_val)
         context.config[config_path] = return_val.name
         # Add the module to the context modules collection
