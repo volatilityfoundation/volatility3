@@ -4,10 +4,11 @@
 """Symbols provide structural information about a set of bytes."""
 import bisect
 import collections.abc
-from abc import abstractmethod, ABC
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Mapping
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type
 
 from volatility3.framework import constants, exceptions, interfaces
+from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import configuration, objects
 from volatility3.framework.interfaces.configuration import RequirementInterface
 
@@ -301,7 +302,10 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
 
     @classmethod
     def get_requirements(cls) -> List[RequirementInterface]:
-        return super().get_requirements()
+        return super().get_requirements() + [
+            requirements.IntRequirement(name = 'symbol_mask', description = 'Address mask for symbols', optional = True,
+                                        default = 0),
+            ]
 
 
 class NativeTableInterface(BaseSymbolTableInterface):
