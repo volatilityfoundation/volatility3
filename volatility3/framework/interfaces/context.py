@@ -136,7 +136,7 @@ class ContextInterface(metaclass = ABCMeta):
         """
 
 
-class ModuleInterface(metaclass = ABCMeta):
+class ModuleInterface(interfaces.configuration.ConfigurableInterface):
     """Maintains state concerning a particular loaded module in memory.
 
     This object is OS-independent.
@@ -144,31 +144,35 @@ class ModuleInterface(metaclass = ABCMeta):
 
     def __init__(self,
                  context: ContextInterface,
-                 module_name: str,
-                 layer_name: str,
-                 offset: int,
-                 symbol_table_name: Optional[str] = None,
-                 native_layer_name: Optional[str] = None) -> None:
+                 config_path: str,
+                 name: str) -> None:
         """Constructs a new os-independent module.
 
         Args:
             context: The context within which this module will exist
+            config_path: The path within the context's configuration tree
             name: The name of the module
-            layer_name: The layer within the context in which the module exists
-            offset: The offset at which the module exists in the layer
-            symbol_table_name: The name of an associated symbol table
-            native_layer_name: The default native layer for objects constructed by the module
         """
-        self._context = context
-        self._module_name = module_name
-        self._layer_name = layer_name
-        self._offset = offset
-        # TODO: Figure out about storing/requesting the native_layer_name for a module in the configuration
-        # The current module requirement does not ask for nor act upon this information
-        self._native_layer_name = native_layer_name or layer_name
-        self._symbol_table_name = symbol_table_name or self._module_name
+        super().__init__(context, config_path)
+        self._module_name = name
 
-    def build_configuration(self) -> 'configuration.HierarchicalDict':
+    @property
+    def _layer_name(self) -> str:
+        return self.config['layer_name']
+
+    @property
+    def _offset(self) -> int:
+        return self.config['offset']
+
+    @property
+    def _native_layer_name(self) -> str:
+        return self.config.get('native_layer_name', self._layer_name)
+
+    @property
+    def _symbol_table_name(self) -> str:
+        return self.config.get('symbol_table_name', self._module_name)
+
+    def build_configuration(self) -> 'interfaces.configuration.HierarchicalDict':
         """Builds the configuration dictionary for this specific Module"""
 
         config = super().build_configuration()
@@ -318,6 +322,10 @@ class ModuleContainer(collections.abc.Mapping):
 
     def __iter__(self):
         return iter(self._modules)
+
+    def free_module_name(self, prefix: str = "module") -> str:
+        """Returns an unused table name to ensure no collision occurs when
+        inserting a symbol table."""
 
     def get_modules_by_symbol_tables(self, symbol_table: str) -> Iterable[str]:
         """Returns the modules which use the specified symbol table name"""

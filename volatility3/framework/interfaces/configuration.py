@@ -192,7 +192,7 @@ class HierarchicalDict(collections.abc.Mapping):
         elif value is None:
             return None
         else:
-            raise TypeError("Invalid type stored in configuration")
+            raise TypeError(f"Invalid type stored in configuration: {type(value)}")
 
     def __delitem__(self, key: str) -> None:
         """Deletes an item from the hierarchical dict."""
