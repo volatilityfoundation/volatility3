@@ -9,6 +9,16 @@ from volatility3.framework import constants
 with open("README.md", "r", encoding = "utf-8") as fh:
     long_description = fh.read()
 
+def get_install_requires():
+    requirements = []
+    with open("requirements-minimal.txt", "r", encoding="utf-8") as fh:
+        for line in fh.readlines():
+            stripped_line = line.strip()
+            if stripped_line == "" or stripped_line.startswith("#"):
+                continue
+            requirements.append(stripped_line)
+    return requirements
+
 setuptools.setup(name = "volatility3",
                  description = "Memory forensics framework",
                  version = constants.PACKAGE_VERSION,
@@ -24,7 +34,7 @@ setuptools.setup(name = "volatility3",
                      "Documentation": "https://volatility3.readthedocs.io/",
                      "Source Code": "https://github.com/volatilityfoundation/volatility3",
                  },
-                 python_requires = '>=3.5.3',
+                 python_requires = '>=3.6.0',
                  include_package_data = True,
                  exclude_package_data = {
                      '': ['development', 'development.*'],
@@ -37,13 +47,4 @@ setuptools.setup(name = "volatility3",
                          'volshell = volatility3.cli.volshell:main',
                      ],
                  },
-                 install_requires = ["pefile"],
-                 extras_require = {
-                     'leechcorepyc': ["leechcorepyc>=2.4.0"],
-                     'jsonschema': ["jsonschema>=2.3.0"],
-                     'yara': ["yara-python>=3.8.0"],
-                     'crypto': ["pycryptodome>=3"],
-                     'disasm': ["capstone;platform_system=='Linux'", "capstone-windows;platform_system=='Windows'"],
-                     'doc': ["sphinx>=1.8.2", "sphinx_autodoc_typehints>=1.4.0", "sphinx-rtd-theme>=0.4.3"],
-                     'avml': ["python-snappy==0.6.0"],
-                 })
+                 install_requires = get_install_requires())
