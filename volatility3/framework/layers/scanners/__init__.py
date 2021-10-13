@@ -34,7 +34,7 @@ class RegExScanner(layers.ScannerInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    def __init__(self, pattern: bytes, flags: int = 0) -> None:
+    def __init__(self, pattern: bytes, flags: int = re.DOTALL) -> None:
         super().__init__()
         self.regex = re.compile(pattern, flags)
 
