@@ -30,6 +30,11 @@ class BytesScanner(layers.ScannerInterface):
 
 
 class RegExScanner(layers.ScannerInterface):
+    """A scanner that can be provided with a bytes-object regular expression pattern
+    The scanner will scqn all blocks for the regular expression and report the absolute offset of any finds
+
+    The default flags include DOTALL, since the searches are through binary data and the newline character should
+    have no specific significance in such searches"""
     thread_safe = True
 
     _required_framework_version = (2, 0, 0)
