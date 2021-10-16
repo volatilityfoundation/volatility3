@@ -216,8 +216,9 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                 """Determines a pointer from a page_table"""
                 max_ptr = 0
                 for index in range(0, len(page_table), ptr_size):
-                    max_ptr = max(max_ptr,
-                                  struct.unpack(test.ptr_struct, page_table[index:index + ptr_size])[0] & test.mask)
+                    pointer = struct.unpack(test.ptr_struct, page_table[index:index + ptr_size])[0]
+                    if pointer & 0x1:
+                        max_ptr = max(max_ptr, pointer & test.mask)
                 return max_ptr
 
             hits = sorted(list(hits), key = sort_by_tests)
