@@ -132,6 +132,11 @@ class Intel(linear.LinearlyMappedLayer):
             print(self._structure_position_table)
         return self._structure_position_table[position]
 
+    def _handle_page_fault(self, name, offset, invalid_bits, entry, description):
+        """Handles page faults"""
+        raise exceptions.PagedInvalidAddressException(self.name, offset, invalid_bits, entry,
+                                                      "Page Fault at entry " + hex(entry) + " in table " + name)
+
     def _translate_entry(self, offset: int, position: int, entry: int) -> Tuple[int, int]:
         """Translates a specific offset based on paging tables.
 
@@ -141,8 +146,8 @@ class Intel(linear.LinearlyMappedLayer):
 
         # Check we're present
         if not entry & 0x1:
-            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                          "Page Fault at entry " + hex(entry) + " in table " + name)
+            return self._handle_page_fault(self.name, offset, position + 1, entry,
+                                           "Page Fault at entry " + hex(entry) + " in table " + name)
         # Check if we're a large page
         if large_page and (entry & (1 << 7)):
             # We're a large page, the rest is finished below
@@ -317,6 +322,7 @@ class Intel32e(Intel):
 
 
 class WindowsMixin(Intel):
+    _swap_bit_offset = 32
 
     @staticmethod
     def _page_is_valid(entry: int) -> bool:
@@ -331,66 +337,57 @@ class WindowsMixin(Intel):
         """
         return bool((entry & 1) or ((entry & 1 << 11) and not entry & 1 << 10))
 
+    def _handle_page_fault(self, layer_name, offset, invalid_bits, entry, description):
+        tbit = bool(entry & (1 << 11))
+        pbit = bool(entry & (1 << 10))
+        unknown_bit = bool(entry & (1 << 7))
+        n = (entry >> 1) & 0xF
+        vbit = bool(entry & 1)
+        # Handle transition page
+        if tbit and not pbit:
+            position = invalid_bits - 1
+            name, size, _ = self._find_structure_index(position)
+            index = self._mask(offset, position, position + size) >> (position + size)
 
-    def _translate_windows(self, layer: Intel, offset: int, bit_offset: int) -> Tuple[int, int, str]:
-        try:
-            return super()._translate(offset)
-        except exceptions.PagedInvalidAddressException as excp:
-            entry = excp.entry
-            tbit = bool(entry & (1 << 11))
-            pbit = bool(entry & (1 << 10))
-            unknown_bit = bool(entry & (1 << 7))
-            n = (entry >> 1) & 0xF
-            vbit = bool(entry & 1)
-            # Handle transition page
-            if tbit and not pbit:
-                position = excp.invalid_bits - 1
-                name, size, _ = self._find_structure_index(position)
-                index = self._mask(offset, position, position + size) >> (position + size)
+            # Grab the base address of the table we'll be getting the next entry from
+            base_address = self._mask(entry, self._maxphyaddr - 1, size + self._index_shift)
 
-                # Grab the base address of the table we'll be getting the next entry from
-                base_address = self._mask(entry, self._maxphyaddr - 1, size + self._index_shift)
+            table = self._get_valid_table(base_address)
+            if table is None:
+                raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
+                                                              "Page Fault at entry " + hex(
+                                                                  entry) + " in table " + name)
 
-                table = self._get_valid_table(base_address)
-                if table is None:
-                    raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                                  "Page Fault at entry " + hex(
-                                                                      entry) + " in table " + name)
+            # Read the data for the next entry
+            entry_data = table[(index << self._index_shift):(index << self._index_shift) + self._entry_size]
+            super()._translate_entry(offset, invalid_bits, entry)
 
-                # Read the data for the next entry
-                entry_data = table[(index << self._index_shift):(index << self._index_shift) + self._entry_size]
-                super()._translate_entry(offset, excp.invalid_bits, entry)
+        # Handle Swap failure
+        if (not tbit and not pbit and not vbit and unknown_bit) and ((entry >> self._swap_bit_offset) != 0):
+            swap_offset = entry >> self._swap_bit_offset << invalid_bits
 
-            # Handle Swap failure
-            if (not tbit and not pbit and not vbit and unknown_bit) and ((entry >> bit_offset) != 0):
-                swap_offset = entry >> bit_offset << excp.invalid_bits
-
-                if layer.config.get('swap_layers', False):
-                    swap_layer_name = layer.config.get(
-                        interfaces.configuration.path_join('swap_layers', 'swap_layers' + str(n)), None)
-                    if swap_layer_name:
-                        return swap_offset, 1 << excp.invalid_bits, swap_layer_name
-                raise exceptions.SwappedInvalidAddressException(layer_name = excp.layer_name,
-                                                                invalid_address = excp.invalid_address,
-                                                                invalid_bits = excp.invalid_bits,
-                                                                entry = excp.entry,
-                                                                swap_offset = swap_offset)
-            raise
+            if self.config.get('swap_layers', False):
+                swap_layer_name = self.config.get(
+                    interfaces.configuration.path_join('swap_layers', 'swap_layers' + str(n)), None)
+                if swap_layer_name:
+                    return swap_offset, 1 << invalid_bits, swap_layer_name
+            raise exceptions.SwappedInvalidAddressException(layer_name = layer_name,
+                                                            invalid_address = offset,
+                                                            invalid_bits = invalid_bits,
+                                                            entry = entry,
+                                                            swap_offset = swap_offset)
+        raise super()._handle_page_fault(layer_name, offset, invalid_bits, entry, description)
 
 
 ### These must be full separate classes so that JSON configs re-create them properly
 
 
 class WindowsIntel(WindowsMixin, Intel):
-
-    def _translate(self, offset):
-        return self._translate_windows(self, offset, self._page_size_in_bits)
+    pass
 
 
 class WindowsIntelPAE(WindowsMixin, IntelPAE):
-
-    def _translate(self, offset: int) -> Tuple[int, int, str]:
-        return self._translate_windows(self, offset, self._bits_per_register)
+    pass
 
 
 class WindowsIntel32e(WindowsMixin, Intel32e):
@@ -399,6 +396,3 @@ class WindowsIntel32e(WindowsMixin, Intel32e):
     # in the PFN field for pages in transition state.
     # See https://github.com/volatilityfoundation/volatility3/pull/475
     _maxphyaddr = 45
-
-    def _translate(self, offset: int) -> Tuple[int, int, str]:
-        return self._translate_windows(self, offset, self._bits_per_register // 2)
