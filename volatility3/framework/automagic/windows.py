@@ -219,7 +219,7 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                     pointer = struct.unpack(test.ptr_struct, page_table[index:index + ptr_size])[0]
                     # Make sure the pointer is valid, ignore large pages which would require more calculation
                     if pointer & 0x1 and not pointer & 0x80:
-                        max_ptr = max(max_ptr, pointer % test.layer_type.maximum_address)
+                        max_ptr = max(max_ptr, (pointer ^ (pointer & 0xfff)) % test.layer_type.maximum_address)
                 return max_ptr
 
             hits = sorted(list(hits), key = sort_by_tests)
@@ -245,6 +245,8 @@ class WindowsIntelStacker(interfaces.automagic.StackerLayerInterface):
                 else:
                     vollog.debug(
                         f"Max pointer for hit with test {test.__class__.__name__} not met: {hex(max_pointer)} > {hex(base_layer.maximum_address)}")
+            if layer is not None and config_path:
+                break
 
         if layer is not None and config_path:
             vollog.debug("DTB was found at: 0x{:0x}".format(context.config[interfaces.configuration.path_join(
