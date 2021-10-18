@@ -18,7 +18,7 @@ class Bin(int):
 
 class Hex(int):
     """A class to indicate that the integer value should be represented as a
-    hexidecimal value."""
+    hexadecimal value."""
 
 
 class HexBytes(bytes):

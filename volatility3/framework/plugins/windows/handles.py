@@ -169,7 +169,7 @@ class Handles(interfaces.plugins.PluginInterface):
             symbol_table: The name of the table containing the kernel symbols
 
         Returns:
-            A mapping of type indicies to type names
+            A mapping of type indices to type names
         """
 
         type_map: Dict[int, str] = {}

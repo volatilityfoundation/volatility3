@@ -74,7 +74,7 @@ class NetStat(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     @classmethod
     def parse_bitmap(cls, context: interfaces.context.ContextInterface, layer_name: str, bitmap_offset: int,
                      bitmap_size_in_byte: int) -> list:
-        """Parses a given bitmap and looks for each occurence of a 1.
+        """Parses a given bitmap and looks for each occurrence of a 1.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from

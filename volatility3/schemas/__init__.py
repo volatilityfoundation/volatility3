@@ -53,7 +53,7 @@ def validate(input: Dict[str, Any], use_cache: bool = True) -> bool:
 
 def create_json_hash(input: Dict[str, Any], schema: Dict[str, Any]) -> str:
     """Constructs the hash of the input and schema to create a unique
-    indentifier for a particular JSON file."""
+    identifier for a particular JSON file."""
     return hashlib.sha1(bytes(json.dumps((input, schema), sort_keys = True), 'utf-8')).hexdigest()
 
 

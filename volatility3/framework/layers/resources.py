@@ -56,7 +56,7 @@ def cascadeCloseFile(new_fp: IO[bytes], original_fp: IO[bytes]) -> IO[bytes]:
 
 
 class ResourceAccessor(object):
-    """Object for openning URLs as files (downloading locally first if
+    """Object for opening URLs as files (downloading locally first if
     necessary)"""
 
     list_handlers = True

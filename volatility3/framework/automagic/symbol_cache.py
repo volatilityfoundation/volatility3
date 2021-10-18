@@ -94,7 +94,7 @@ class SymbolBannerCache(interfaces.automagic.AutomagicInterface):
             banner_list = banners.get(new_banner, [])
             banners[new_banner] = list(set(banner_list + new_banners[new_banner]))
 
-        # Do remote banners *after* the JSON loading, so that it doen't pull down all the remote JSON
+        # Do remote banners *after* the JSON loading, so that it doesn't pull down all the remote JSON
         self.remote_banners(banners, self.os)
 
         # Rewrite the cached banners each run, since writing is faster than the banner_cache validation portion

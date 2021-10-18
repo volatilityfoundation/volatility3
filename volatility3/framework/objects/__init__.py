@@ -111,7 +111,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         """Creates the appropriate class and returns it so that the native type
         is inherited.
 
-        The only reason the kwargs is added, is so that the inherriting types can override __init__
+        The only reason the kwargs is added, is so that the inheriting types can override __init__
         without needing to override __new__
 
         We also sneak in new_value, so that we don't have to do expensive (read: impossible) context reads
@@ -128,7 +128,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         return result
 
     def __getnewargs_ex__(self):
-        """Make sure that when pickling, all appropiate parameters for new are
+        """Make sure that when pickling, all appropriate parameters for new are
         provided."""
         kwargs = {}
         for k, v in self._vol.maps[-1].items():
@@ -205,7 +205,7 @@ class Bytes(PrimitiveObject, bytes):
         is inherritted.
 
         The only reason the kwargs is added, is so that the
-        inherriting types can override __init__ without needing to
+        inheriting types can override __init__ without needing to
         override __new__
         """
         return cls._struct_type.__new__(
@@ -255,7 +255,7 @@ class String(PrimitiveObject, str):
         is inherited.
 
         The only reason the kwargs is added, is so that the
-        inherriting types can override __init__ without needing to
+        inheriting types can override __init__ without needing to
         override __new__
         """
         params = {}
@@ -634,7 +634,7 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
 
     def write(self, value) -> None:
         if not isinstance(value, collections.Sequence):
-            raise TypeError("Only Sequences can be writen to arrays")
+            raise TypeError("Only Sequences can be written to arrays")
         self.count = len(value)
         for index in range(len(value)):
             self[index].write(value[index])
@@ -769,7 +769,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
 
     # Disable messing around with setattr until the consequences have been considered properly
     # For example pdbutil constructs objects and then sets values for them
-    # Some don't always match the type (for example, the data read is encoded and interpretted)
+    # Some don't always match the type (for example, the data read is encoded and interpreted)
     #
     # def __setattr__(self, name, value):
     #     """Method for writing specific members of a structure"""

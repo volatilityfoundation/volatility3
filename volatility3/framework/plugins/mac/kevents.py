@@ -98,7 +98,7 @@ class Kevents(interfaces.plugins.PluginInterface):
         """
         Enumerates event filters per task.
         Uses smear-safe APIs throughout as these data structures
-        see a signifcant amount of smear
+        see a significant amount of smear
         """
         fdp = task.p_fd
 

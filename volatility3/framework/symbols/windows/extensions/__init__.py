@@ -973,7 +973,7 @@ class CONTROL_AREA(objects.StructType):
                 # If the entry is not a valid physical address then see if it is in transition.
                 elif mmpte.u.Trans.Transition == 1:
                     # TODO: Fix appropriately in a future release.
-                    # Currently just a temprorary workaround to deal with custom bit flag
+                    # Currently just a temporary workaround to deal with custom bit flag
                     # in the PFN field for pages in transition state.
                     # See https://github.com/volatilityfoundation/volatility3/pull/475
                     physoffset = (mmpte.u.Trans.PageFrameNumber & (( 1 << 33 ) - 1 ) ) << 12
@@ -1102,7 +1102,7 @@ class SHARED_CACHE_MAP(objects.StructType):
             if vacb_obj.SharedCacheMap == self.vol.offset:
                 self.save_vacb(vacb_obj, vacb_list)
 
-        # If the file is larger than 1 MB, a seperate VACB index array needs to be allocated.
+        # If the file is larger than 1 MB, a separate VACB index array needs to be allocated.
         # This is based on how many 256 KB blocks would be required for the size of the file.
         # This newly allocated VACB index array is found through the Vacbs member of SHARED_CACHE_MAP.
         vacb_obj = self.Vacbs

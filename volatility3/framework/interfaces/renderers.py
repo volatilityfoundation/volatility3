@@ -215,6 +215,6 @@ class TreeGrid(object, metaclass = ABCMeta):
         Args:
             node: The initial node to be visited
             function: The visitor to apply to the nodes under the initial node
-            initial_accumulator: An accumulator that allows data to be transfered between one visitor call to the next
+            initial_accumulator: An accumulator that allows data to be transferred between one visitor call to the next
             sort_key: Information about the sort order of columns in order to determine the ordering of results
         """

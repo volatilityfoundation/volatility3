@@ -147,7 +147,7 @@ it does not.  The :py:func:`~volatility3.plugins.windows.pslist.PsList.create_pi
 identifiers that are included in the list. If the list is empty, all processes are returned.
 
 The next line specifies the columns by their name and type.  The types are simple types (int, str, bytes, float, and bool)
-but can also provide hints as to how the output should be displayed (such as a hexidecimal number, using
+but can also provide hints as to how the output should be displayed (such as a hexadecimal number, using
 :py:class:`volatility3.framework.renderers.format_hints.Hex`).
 This indicates to user interfaces that the value should be displayed in a particular way, but does not guarantee that the value
 will be displayed that way (for example, if it doesn't make sense to do so in a particular interface).

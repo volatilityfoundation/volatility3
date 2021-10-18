@@ -26,7 +26,7 @@ class AutomagicInterface(interfaces.configuration.ConfigurableInterface, metacla
     Args:
         context: The context in which to store configuration data that the automagic might populate
         config_path: Configuration path where the configurable's data under the context's config lives
-        configurable: The top level configurable whose requirements may need statisfying
+        configurable: The top level configurable whose requirements may need satisfying
         progress_callback: An optional function accepting a percentage and optional description to indicate
             progress during long calculations
 

@@ -24,7 +24,7 @@ Object Model changes
 --------------------
 
 The object model has changed as well, objects now inherit directly from their Python counterparts, meaning an integer
-object is actually a Python integer (and has all the associated methods, and can be used whereever a normal int could).
+object is actually a Python integer (and has all the associated methods, and can be used wherever a normal int could).
 In Volatility 2, a complex proxy object was constructed which tried to emulate all the methods of the host object, but
 ultimately it was a different type and could not be used in the same places (critically, it could make the ordering of
 operations important, since a + b might not work, but b + a might work fine).

@@ -116,7 +116,7 @@ Options
 
 **<plugin>**
     The name of the plugin to execute (these are usually categorized by
-    the operating system, such as `windows.pslist.PsList`).  Any subtring
+    the operating system, such as `windows.pslist.PsList`).  Any substring
     that uniquely matches the desired plugin name can be used.  As such
     `hivescan` would match `windows.registry.hivescan.HiveScan`, but
     `pslist` is ambiguous because it could match `windows.pslist` or
