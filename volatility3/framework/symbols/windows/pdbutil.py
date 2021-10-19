@@ -68,7 +68,7 @@ class PDBUtility(interfaces.configuration.VersionableInterface):
                                   symbol_table_class: str,
                                   config_path: str = 'pdbutility',
                                   progress_callback: constants.ProgressCallback = None):
-        """Loads (downlading if necessary) a windows symbol table"""
+        """Loads (downloading if necessary) a windows symbol table"""
 
         filter_string = os.path.join(pdb_name.strip('\x00'), guid.upper() + "-" + str(age))
 

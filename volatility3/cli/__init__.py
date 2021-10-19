@@ -478,7 +478,7 @@ class CommandLine:
                             if not scheme or len(scheme) <= 1:
                                 if not os.path.exists(value):
                                     raise FileNotFoundError(
-                                        f"Non-existant file {value} passed to URIRequirement")
+                                        f"Non-existent file {value} passed to URIRequirement")
                                 value = f"file://{request.pathname2url(os.path.abspath(value))}"
                     if isinstance(requirement, requirements.ListRequirement):
                         if not isinstance(value, list):

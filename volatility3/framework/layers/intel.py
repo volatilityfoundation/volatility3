@@ -361,7 +361,7 @@ class WindowsIntelPAE(WindowsMixin, IntelPAE):
 
 class WindowsIntel32e(WindowsMixin, Intel32e):
     # TODO: Fix appropriately in a future release.
-    # Currently just a temprorary workaround to deal with custom bit flag
+    # Currently just a temporary workaround to deal with custom bit flag
     # in the PFN field for pages in transition state.
     # See https://github.com/volatilityfoundation/volatility3/pull/475
     _maxphyaddr = 45

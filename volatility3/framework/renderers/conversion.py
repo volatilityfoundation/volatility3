@@ -96,7 +96,7 @@ def convert_network_four_tuple(family, four_tuple):
     dest port)
 
     into their string equivalents. IP addresses are expected as a tuple
-    of unsigned shorts Ports are converted to proper endianess as well
+    of unsigned shorts Ports are converted to proper endianness as well
     """
 
     if family == socket.AF_INET:
