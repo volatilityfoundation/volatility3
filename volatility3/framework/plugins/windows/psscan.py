@@ -6,7 +6,7 @@ import datetime
 import logging
 from typing import Iterable, Callable, Tuple
 
-from volatility3.framework import renderers, interfaces
+from volatility3.framework import renderers, interfaces, layers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
@@ -24,6 +24,7 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     _required_framework_version = (2, 0, 0)
     _version = (1, 1, 0)
+    PHYSICAL_DEFAULT = False
 
     @classmethod
     def get_requirements(cls):
@@ -39,6 +40,10 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             requirements.BooleanRequirement(name = 'dump',
                                             description = "Extract listed processes",
                                             default = False,
+                                            optional = True),
+            requirements.BooleanRequirement(name = 'physical', 
+                                            description = "Display physical offset instead of virtual",
+                                            default = cls.PHYSICAL_DEFAULT,
                                             optional = True)
         ]
 
@@ -148,6 +153,11 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
+        memory = self.context.layers[kernel.layer_name]
+        
+        if not isinstance(memory, layers.intel.Intel):
+            raise TypeError("Primary layer is not an intel layer")
+
         for proc in self.scan_processes(self.context,
                                         kernel.layer_name,
                                         kernel.symbol_table_name,
@@ -169,11 +179,22 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 if file_handle:
                     file_output = file_handle.preferred_filename
 
-            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
+            if not self.config.get('physical', self.PHYSICAL_DEFAULT):
+                offset = proc.vol.offset
+            else:
+                (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
+
+            try:
+
+                yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
-                                               errors = 'replace'), format_hints.Hex(proc.vol.offset),
+                                               errors = 'replace'), format_hints.Hex(offset),
                        proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(), proc.get_is_wow64(),
                        proc.get_create_time(), proc.get_exit_time(), file_output))
+            
+            except exceptions.InvalidAddressException:
+                vollog.info(f"Invalid process found at address: {proc.vol.offset:x}. Skipping")
+
 
     def generate_timeline(self):
         for row in self._generator():
@@ -183,7 +204,8 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             yield (description, timeliner.TimeLinerType.MODIFIED, row_data[9])
 
     def run(self):
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str), ("Offset", format_hints.Hex),
+        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str), ("Offset" + 
+                                    "(V)" if (not self.config["physical"]) else "(P)", format_hints.Hex),
                                    ("Threads", int), ("Handles", int), ("SessionId", int), ("Wow64", bool),
                                    ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),
                                    ("File output", str)], self._generator())
