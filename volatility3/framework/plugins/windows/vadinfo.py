@@ -35,7 +35,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
     _version = (2, 0, 0)
-    MAXSIZE_DEFAULT = 100 * 1024 * 1024 * 1024  # 100 Gb
+    MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
