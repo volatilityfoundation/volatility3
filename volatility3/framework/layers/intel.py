@@ -134,7 +134,7 @@ class Intel(linear.LinearlyMappedLayer):
                 raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
                                                               "Page Fault at entry " + hex(entry) + " in table " + name)
             # Check if we're a large page
-            if large_page and (entry & (1 << 7)):
+            if large_page and (entry & 1) and (entry & (1 << 7)):
                 # We're a large page, the rest is finished below
                 # If we want to implement PSE-36, it would need to be done here
                 break
