@@ -135,6 +135,9 @@ class Intel(linear.LinearlyMappedLayer):
                                                               "Page Fault at entry " + hex(entry) + " in table " + name)
             # Check if we're a large page
             if large_page and (entry & (1 << 7)):
+                # Mask off the PAT bit
+                if entry & (1 << 12):
+                    entry -= (1 << 12)
                 # We're a large page, the rest is finished below
                 # If we want to implement PSE-36, it would need to be done here
                 break
