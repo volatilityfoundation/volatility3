@@ -3,6 +3,7 @@
 #
 
 import collections
+import collections.abc
 import logging
 import struct
 from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
@@ -633,7 +634,7 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
         return self.vol.count
 
     def write(self, value) -> None:
-        if not isinstance(value, collections.Sequence):
+        if not isinstance(value, collections.abc.Sequence):
             raise TypeError("Only Sequences can be written to arrays")
         self.count = len(value)
         for index in range(len(value)):
