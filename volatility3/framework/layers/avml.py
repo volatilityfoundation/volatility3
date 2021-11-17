@@ -93,7 +93,7 @@ class AVMLLayer(segmented.NonLinearlySegmentedLayer):
                 elif frame_type in [0x00, 0x01]:
                     # CRC + (Un)compressed data
                     mapped_start = offset + frame_header_len
-                    frame_crc = data[mapped_start: mapped_start + crc_len]
+                    # frame_crc = data[mapped_start: mapped_start + crc_len]
                     frame_data = data[mapped_start + crc_len: mapped_start + frame_size]
                     if frame_type == 0x00:
                         # Compressed data
