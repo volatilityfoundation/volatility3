@@ -189,6 +189,9 @@ class FileLayer(interfaces.layers.DataLayerInterface):
         """Closes the file handle."""
         self._file.close()
 
+    def __del__(self) -> None:
+        self.destroy()
+
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [requirements.StringRequirement(name = 'location', optional = False)]
