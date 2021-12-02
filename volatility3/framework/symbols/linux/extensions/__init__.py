@@ -108,7 +108,7 @@ class module(generic.GenericIntelProcess):
                                                                  "linux",
                                                                  "elf",
                                                                  native_types = None,
-                                                                 class_types = extensions.elf.class_types)
+                                                                 class_types = elf.class_types)
 
         syms = self._context.object(
             self.get_symbol_table().name + constants.BANG + "array",
