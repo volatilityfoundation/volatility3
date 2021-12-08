@@ -1,7 +1,6 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-import bisect
 import functools
 import json
 import math
@@ -218,9 +217,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         of the starting data.  It is the responsibility of the layer to turn the provided data chunk into the right
         portion of data necessary.
         """
-        start_offset, _, start_mapped_offset, _ = self._segments[
-            bisect.bisect_right(self._segments, (offset, 0xffffffffffffff,)) - 1]
-        if start_mapped_offset in self._compressed:
+        start_offset = offset ^ (offset & 0xfff)
+        if start_offset in self._compressed:
             data = (data * 0x1000)
         result = data[offset - start_offset:output_length + offset - start_offset]
         return result
