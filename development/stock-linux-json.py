@@ -87,7 +87,7 @@ class Downloader:
         output_filename = 'unknown-kernel.json'
         for named_file in named_files:
             prefix = '--system-map'
-            if not 'System' in named_files[named_file]:
+            if 'System' not in named_files[named_file]:
                 prefix = '--elf'
                 output_filename = './' + '-'.join((named_file.split('/')[-1]).split('-')[2:])[:-4] + '.json.xz'
             args += [prefix, named_files[named_file]]

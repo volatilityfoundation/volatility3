@@ -44,7 +44,7 @@ class Check_creds(interfaces.plugins.PluginInterface):
 
             cred_addr = task.cred.dereference().vol.offset
 
-            if not cred_addr in creds:
+            if cred_addr not in creds:
                 creds[cred_addr] = []
 
             creds[cred_addr].append(task.pid)

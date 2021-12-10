@@ -82,7 +82,7 @@ class ResourceAccessor(object):
         """Determines whether a URLs contents should be cached"""
         parsed_url = urllib.parse.urlparse(url)
 
-        return self._enable_cache and not parsed_url.scheme in self._non_cached_schemes()
+        return self._enable_cache and parsed_url.scheme not in self._non_cached_schemes()
 
     @staticmethod
     def _non_cached_schemes() -> List[str]:
