@@ -84,7 +84,7 @@ class MMVAD_SHORT(objects.StructType):
 
         if tag in ["VadS", "VadF"]:
             target = "_MMVAD_SHORT"
-        elif tag != None and tag.startswith("Vad"):
+        elif tag is not None and tag.startswith("Vad"):
             target = "_MMVAD"
         elif depth == 0:
             # the root node at depth 0 is allowed to not have a tag
@@ -651,7 +651,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         except AttributeError:
             return False
 
-        return value != 0 and value != None
+        if value:
+            return True
+
+        return False
 
     def get_vad_root(self):
 

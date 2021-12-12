@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import sys
+import glob
 
 import volatility3.plugins
 import volatility3.symbols

@@ -72,7 +72,7 @@ class List_Files(plugins.PluginInterface):
         key = vnode.vol.offset
         added = False
 
-        if not key in loop_vnodes:
+        if key not in loop_vnodes:
             # We can't do anything with a no-name vnode
             v_name = cls._vnode_name(vnode)
             if v_name is None:
@@ -108,7 +108,7 @@ class List_Files(plugins.PluginInterface):
             added = True
 
             parent = cls._get_parent(context, vnode)
-            while parent and not parent in loop_vnodes:
+            while parent and parent not in loop_vnodes:
                 if not cls._walk_vnode(context, parent, loop_vnodes):
                     break
 
