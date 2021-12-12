@@ -651,7 +651,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         except AttributeError:
             return False
 
-        return not not value
+        if value:
+            return True
+
+        return False
 
     def get_vad_root(self):
 
