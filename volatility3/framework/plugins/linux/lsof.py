@@ -60,7 +60,12 @@ class Lsof(plugins.PluginInterface):
             for fd_fields in fd_generator:
                 yield pid, task_comm, task, fd_fields
 
-    def _generator(self, fds_generator):
+    def _generator(self, pids, symbol_table):
+        filter_func = pslist.PsList.create_pid_filter(pids)
+        fds_generator = self.list_fds(self.context,
+                                      symbol_table,
+                                      filter_func=filter_func)
+
         for pid, task_comm, _task, fd_fields in fds_generator:
             fd_num, _filp, full_path = fd_fields
 
@@ -68,10 +73,8 @@ class Lsof(plugins.PluginInterface):
             yield (0, fields)
 
     def run(self):
-        filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
-        fds_generator = self.list_fds(self.context,
-                                      self.config['kernel'],
-                                      filter_func=filter_func)
+        pids = self.config.get('pid', None)
+        symbol_table = self.config['kernel']
 
         tree_grid_args = [("PID", int), ("Process", str), ("FD", int), ("Path", str)]
-        return renderers.TreeGrid(tree_grid_args, self._generator(fds_generator))
+        return renderers.TreeGrid(tree_grid_args, self._generator(pids, symbol_table))
