@@ -6,7 +6,7 @@
 import logging
 from typing import Callable
 
-from volatility3.framework import renderers, interfaces, exceptions, constants
+from volatility3.framework import renderers, interfaces, exceptions, constants, objects
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -40,7 +40,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             "AF_BLUETOOTH": self._bluetooth_sock,
         }
 
-    def _build_network_devices_map(self, netns_id):
+    def _build_network_devices_map(self, netns_id: int):
         netdevices_map = {}
         nethead = self._vmlinux.object_from_symbol(symbol_name="net_namespace_list")
         net_symname = self._vmlinux.symbol_table_name + constants.BANG + "net"
@@ -53,7 +53,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 netdevices_map[net_dev.ifindex] = dev_name
         return netdevices_map
 
-    def process_sock(self, sock):
+    def process_sock(self, sock: objects.StructType):
         family = sock.family
         extended = {}
         sock_handler = self._sock_family_handlers.get(family)
@@ -76,7 +76,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         return sock, sock_stat, extended
 
-    def _unix_sock(self, sock, extended):
+    def _unix_sock(self, sock: objects.StructType, extended: dict):
         unix_sock = sock.cast("unix_sock")
         state = unix_sock.state
         saddr = unix_sock.name
@@ -93,7 +93,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return unix_sock, sock_stat
 
-    def _inet_sock(self, sock, extended):
+    def _inet_sock(self, sock: objects.StructType, extended: dict):
         inet_sock = sock.cast("inet_sock")
         saddr = inet_sock.src_addr
         sport = inet_sock.src_port
@@ -109,7 +109,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return inet_sock, sock_stat
 
-    def _netlink_sock(self, sock, extended):
+    def _netlink_sock(self, sock: objects.StructType, extended: dict):
         netlink_sock = sock.cast("netlink_sock")
 
         saddr_list = []
@@ -138,7 +138,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return netlink_sock, sock_stat
 
-    def _vsock_sock(self, sock, extended):
+    def _vsock_sock(self, sock: objects.StructType, extended: dict):
         vsock_sock = sock.cast("vsock_sock")
         saddr = vsock_sock.local_addr.svm_cid
         sport = vsock_sock.local_addr.svm_port
@@ -151,7 +151,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return vsock_sock, sock_stat
 
-    def _packet_sock(self, sock, extended):
+    def _packet_sock(self, sock: objects.StructType, extended: dict):
         packet_sock = sock.cast("packet_sock")
         ifindex = packet_sock.ifindex
         dev_name = self._netdevices.get(ifindex, "") if ifindex > 0 else "ANY"
@@ -170,7 +170,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return packet_sock, sock_stat
 
-    def _update_extended_socket_bpf(self, sock_filter, extended):
+    def _update_extended_socket_bpf(self, sock_filter: objects.Pointer, extended: dict):
         if not sock_filter:
             return
 
@@ -193,7 +193,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 if bpfprog_name:
                     extended["bpf_filter_name"] = bpfprog_name
 
-    def _xdp_sock(self, sock, extended):
+    def _xdp_sock(self, sock: objects.StructType, extended: dict):
         xdp_sock = sock.cast("xdp_sock")
         device = xdp_sock.dev
         if not device:
@@ -222,7 +222,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return xdp_sock, sock_stat
 
-    def _bluetooth_sock(self, sock, extended):
+    def _bluetooth_sock(self, sock: objects.StructType, extended: dict):
         bt_sock = sock.cast("bt_sock")
 
         def bt_addr(addr):
