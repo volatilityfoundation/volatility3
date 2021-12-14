@@ -76,7 +76,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         return sock, sock_stat, extended
 
-    def _unix_sock(self, sock, _extended):
+    def _unix_sock(self, sock, extended):
         unix_sock = sock.cast("unix_sock")
         state = unix_sock.state
         saddr = unix_sock.name
@@ -93,7 +93,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return unix_sock, sock_stat
 
-    def _inet_sock(self, sock, _extended):
+    def _inet_sock(self, sock, extended):
         inet_sock = sock.cast("inet_sock")
         saddr = inet_sock.src_addr
         sport = inet_sock.src_port
@@ -109,7 +109,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return inet_sock, sock_stat
 
-    def _netlink_sock(self, sock, _extended):
+    def _netlink_sock(self, sock, extended):
         netlink_sock = sock.cast("netlink_sock")
 
         saddr_list = []
@@ -138,7 +138,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return netlink_sock, sock_stat
 
-    def _vsock_sock(self, sock, _extended):
+    def _vsock_sock(self, sock, extended):
         vsock_sock = sock.cast("vsock_sock")
         saddr = vsock_sock.local_addr.svm_cid
         sport = vsock_sock.local_addr.svm_port
@@ -193,7 +193,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 if bpfprog_name:
                     extended["bpf_filter_name"] = bpfprog_name
 
-    def _xdp_sock(self, sock, _extended):
+    def _xdp_sock(self, sock, extended):
         xdp_sock = sock.cast("xdp_sock")
         device = xdp_sock.dev
         if not device:
@@ -223,7 +223,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return xdp_sock, sock_stat
 
-    def _bluetooth_sock(self, sock, _extended):
+    def _bluetooth_sock(self, sock, extended):
         bt_sock = sock.cast("bt_sock")
 
         def bt_addr(addr):
