@@ -189,7 +189,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             bpfprog_aux = bpfprog.aux
             if bpfprog_aux:
                 extended["bpf_filter_id"] = str(bpfprog_aux.id)
-                bpfprog_name = utility.array_to_string(bpfprog.aux.name)
+                bpfprog_name = utility.array_to_string(bpfprog_aux.name)
                 if bpfprog_name:
                     extended["bpf_filter_name"] = bpfprog_name
 
@@ -287,7 +287,7 @@ class Sockstat(plugins.PluginInterface):
                      vmlinux_module_name: str,
                      filter_func: Callable[[int], bool] = lambda _: False):
         """
-        Returns every single socket descriptors
+        Returns every single socket descriptor
         """
         vmlinux = context.modules[vmlinux_module_name]
 
