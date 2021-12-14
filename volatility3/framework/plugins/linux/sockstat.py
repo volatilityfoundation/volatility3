@@ -16,7 +16,12 @@ from volatility3.plugins.linux import lsof
 
 vollog = logging.getLogger(__name__)
 
-class SockHandlers(object):
+class SockHandlers(interfaces.configuration.VersionableInterface):
+
+    _required_framework_version = (2, 0, 0)
+
+    _version = (1, 0, 0)
+
     def __init__(self, vmlinux, task):
         self._vmlinux = vmlinux
         self._task = task
@@ -259,6 +264,7 @@ class Sockstat(plugins.PluginInterface):
         return [
             requirements.ModuleRequirement(name="kernel", description="Linux kernel",
                                            architectures=["Intel32", "Intel64"]),
+            requirements.VersionRequirement(name="SockHandlers", component=SockHandlers, version=(1, 0, 0)),
             requirements.PluginRequirement(name="lsof", plugin=lsof.Lsof, version=(1, 1, 0)),
             requirements.VersionRequirement(name="linuxutils", component=linux.LinuxUtilities, version=(2, 0, 0)),
             requirements.BooleanRequirement(name="unix",
