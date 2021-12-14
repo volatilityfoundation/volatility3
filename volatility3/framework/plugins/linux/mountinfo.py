@@ -14,14 +14,14 @@ from volatility3.plugins.linux import pslist
 
 vollog = logging.getLogger(__name__)
 
-MountInfoData = namedtuple("MountInfoData", ("mnt_id", "parent_id", "st_dev", "mnt_root_path", "path_root", 
+MountInfoData = namedtuple("MountInfoData", ("mnt_id", "parent_id", "st_dev", "mnt_root_path", "path_root",
                                              "mnt_opts", "fields", "mnt_type", "devname", "sb_opts"))
 
 class MountInfo(plugins.PluginInterface):
     """Lists mount points in processes mount namespaces"""
 
     _required_framework_version = (2, 0, 0)
-    
+
     _version = (2, 0, 0)
 
     @classmethod
@@ -86,7 +86,7 @@ class MountInfo(plugins.PluginInterface):
         return path
 
     @classmethod
-    def get_mountinfo(cls, mnt, task) -> Union[None, Tuple[int, int, str, str, str, List[str], 
+    def get_mountinfo(cls, mnt, task) -> Union[None, Tuple[int, int, str, str, str, List[str],
                                                            List[str], str, str, List[str]]]:
         """Extract various information about a mount point.
         It mimics the Linux kernel show_mountinfo function.
@@ -136,7 +136,7 @@ class MountInfo(plugins.PluginInterface):
         sb_opts.append(superblock.get_flags_access())
         sb_opts.extend(superblock.get_flags_opts())
 
-        return MountInfoData(mnt_id, parent_id, st_dev, mnt_root_path, path_root, mnt_opts, fields, 
+        return MountInfoData(mnt_id, parent_id, st_dev, mnt_root_path, path_root, mnt_opts, fields,
                              mnt_type, devname, sb_opts)
 
     def _get_mnt_namespace_mountpoints(self, mnt_namespace):
@@ -147,13 +147,13 @@ class MountInfo(plugins.PluginInterface):
 
         for mount in mnt_namespace.list.to_list(mnt_type, "mnt_list"):
             yield mount
-            
+
     def _get_tasks_mountpoints(self, pids: Iterable[int]):
         self._vmlinux = self.context.modules[self.config['kernel']]
-               
+
         pid_filter = pslist.PsList.create_pid_filter(pids)
         tasks = pslist.PsList.list_tasks(self.context, self.config['kernel'], filter_func=pid_filter)
-        
+
         seen_namespaces = set()
         for task in tasks:
             if not (task and task.fs and task.fs.root and task.nsproxy and task.nsproxy.mnt_ns):
@@ -162,13 +162,13 @@ class MountInfo(plugins.PluginInterface):
 
             mnt_namespace = task.nsproxy.mnt_ns
             mount_ns_id = mnt_namespace.get_inode()
-            
+
             if self._show_mountpoints_per_namespace:
                 if mount_ns_id in seen_namespaces:
                     continue
                 else:
                     seen_namespaces.add(mount_ns_id)
-            
+
             for mount in self._get_mnt_namespace_mountpoints(mnt_namespace):
                 yield task, mount, mount_ns_id
 
@@ -186,34 +186,34 @@ class MountInfo(plugins.PluginInterface):
                 all_opts.update(mnt_info.sb_opts)
                 all_opts_str = ",".join(all_opts)
 
-                extra_fields_values = [mnt_info.devname, mnt_info.path_root, mnt_info.mnt_type, all_opts_str]    
+                extra_fields_values = [mnt_info.devname, mnt_info.path_root, mnt_info.mnt_type, all_opts_str]
             else:
                 mnt_opts_str = ",".join(mnt_info.mnt_opts)
                 fields_str = " ".join(mnt_info.fields)
                 sb_opts_str = ",".join(mnt_info.sb_opts)
 
-                extra_fields_values = [mnt_info.mnt_id, mnt_info.parent_id, mnt_info.st_dev, mnt_info.mnt_root_path, 
-                                       mnt_info.path_root, mnt_opts_str, fields_str,  mnt_info.mnt_type, 
+                extra_fields_values = [mnt_info.mnt_id, mnt_info.parent_id, mnt_info.st_dev, mnt_info.mnt_root_path,
+                                       mnt_info.path_root, mnt_opts_str, fields_str, mnt_info.mnt_type,
                                        mnt_info.devname, sb_opts_str]
-            
+
             fields_values = [mnt_ns_id]
             if not self._show_mountpoints_per_namespace:
                 fields_values.append(task.pid)
             fields_values.extend(extra_fields_values)
-            
+
             yield (0, fields_values)
 
     def run(self):
         if self.config.get('all-processes') and self.config.get('pids'):
             raise ValueError("Unable to use --all-processes and specified a pid")
-        
+
         # When no arguments are specified, it displays the mountpoints per namespace
         self._show_mountpoints_per_namespace = not any([self.config.get('pids'), self.config.get('all-processes')])
 
         columns = [("MNT_NS_ID", int)]
         if not self._show_mountpoints_per_namespace:
             columns.append(("PID", int))
-        
+
         if self.config.get('mount-format'):
             extra_columns = [("DEVNAME", str), ("PATH", str), ("FSTYPE", str), ("MNT_OPTS", str)]
         else:
@@ -221,7 +221,7 @@ class MountInfo(plugins.PluginInterface):
             extra_columns = [("MOUNT ID", int), ("PARENT_ID", int), ("MAJOR:MINOR", str), ("ROOT", str),
                              ("MOUNT_POINT", str), ("MOUNT_OPTIONS", str), ("FIELDS", str), ("FSTYPE", str),
                              ("MOUNT_SRC", str), ("SB_OPTIONS", str)]
-            
+
         columns.extend(extra_columns)
 
         return renderers.TreeGrid(columns, self._generator())
