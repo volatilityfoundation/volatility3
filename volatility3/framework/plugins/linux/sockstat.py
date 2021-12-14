@@ -183,8 +183,8 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         if not bpfprog:
             return
 
-        BPF_PROG_TYPE_UNSPEC = 0
-        if bpfprog.type > BPF_PROG_TYPE_UNSPEC:
+        # BPF_PROG_TYPE_UNSPEC = 0
+        if bpfprog.type > 0:
             extended["bpf_filter_type"] = "eBPF"
             bpfprog_aux = bpfprog.aux
             if bpfprog_aux:
