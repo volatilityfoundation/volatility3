@@ -748,7 +748,8 @@ class netlink_sock(objects.StructType):
     def state(self):
         # Netlink is a datagram-oriented service. We can only have
         # SOCK_RAW or SOCK_DGRAM socket types.
-        # NOTE: We are overridden the netlink_sock.state member here
+        # NOTE: We are overriding the netlink_sock.state member here
+
         return "UNCONNECTED"
 
 
