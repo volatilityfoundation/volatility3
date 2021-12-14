@@ -63,9 +63,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 return *sock_fields, extended
             except exceptions.SymbolError as e:
                 # Cannot finds the *_sock type in the symbols
-                vollog.warning("Error processing socket family '%s': %s", family, e)
+                vollog.log(constants.LOGLEVEL_V, "Error processing socket family '%s': %s", family, e)
         else:
-            vollog.warning("Unsupported family '%s'", family)
+            vollog.log(constants.LOGLEVEL_V, "Unsupported family '%s'", family)
 
         # Even if the sock family is not supported, or the required types
         # are not present in the symbols, we can still show some general
@@ -245,7 +245,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             saddr_tag = f"[{src_addr}]:{channel}"
             daddr_tag = f"{dst_addr}"
         else:
-            vollog.warning("Unsupported bluetooth protocol '%s'", bt_sock.protocol)
+            vollog.log(constants.LOGLEVEL_V, "Unsupported bluetooth protocol '%s'", bt_sock.protocol)
 
         state = bt_sock.state
         sock_stat = saddr_tag, daddr_tag, state
