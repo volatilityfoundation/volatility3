@@ -333,14 +333,13 @@ class Sockstat(plugins.PluginInterface):
             netns_id = net.proc_inum if net.has_member("proc_inum") else net.ns.inum
             yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
 
-    def _generator(self):
-        pids = self.config.get('pids')
+    def _generator(self, pids, netns_arg, symbol_table):
         filter_func = lsof.pslist.PsList.create_pid_filter(pids)
+        socket_generator = self.list_sockets(self.context, symbol_table, filter_func=filter_func)
 
         tasks_per_sock = {}
-        socket_generator = self.list_sockets(self.context, self.config['kernel'], filter_func=filter_func)
         for task, netns, fd_num, family, sock_type, protocol, sock_fields in socket_generator:
-            if self.config['netns'] and self.config['netns'] != netns:
+            if netns_arg and netns_arg != netns:
                 continue
 
             sock, sock_stat, extended = sock_fields
@@ -367,6 +366,10 @@ class Sockstat(plugins.PluginInterface):
             yield (0, fields)
 
     def run(self):
+        pids = self.config.get('pids')
+        netns = self.config['netns']
+        symbol_table = self.config['kernel']
+
         tree_grid_args = [("NetNS", int),
                           ("Family", str),
                           ("Type", str),
@@ -376,4 +379,4 @@ class Sockstat(plugins.PluginInterface):
                           ("State", str),
                           ("Tasks", str)]
 
-        return renderers.TreeGrid(tree_grid_args, self._generator())
+        return renderers.TreeGrid(tree_grid_args, self._generator(pids, netns, symbol_table))
