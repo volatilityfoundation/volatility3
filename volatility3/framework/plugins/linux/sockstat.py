@@ -49,7 +49,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             for net_dev in net.dev_base_head.to_list(net_device_symname, "dev_list"):
                 if net.get_inode() != netns_id:
                     continue
-                dev_name = str(utility.array_to_string(net_dev.name))
+                dev_name = utility.array_to_string(net_dev.name)
                 netdevices_map[net_dev.ifindex] = dev_name
         return netdevices_map
 
@@ -189,7 +189,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             bpfprog_aux = bpfprog.aux
             if bpfprog_aux:
                 extended["bpf_filter_id"] = str(bpfprog_aux.id)
-                bpfprog_name = str(utility.array_to_string(bpfprog.aux.name))
+                bpfprog_name = utility.array_to_string(bpfprog.aux.name)
                 if bpfprog_name:
                     extended["bpf_filter_name"] = bpfprog_name
 
@@ -199,8 +199,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         if not device:
             return
 
-        dev_name = utility.array_to_string(device.name)
-        saddr_tag = f"{dev_name}"
+        saddr_tag = utility.array_to_string(device.name)
 
         bpfprog = device.xdp_prog
         if not bpfprog:
