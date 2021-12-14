@@ -158,11 +158,11 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         if sock.has_member("sk_filter"):
             sock_filter = sock.sk_filter
-            self.__update_extra_socket_bpf(sock_filter, extended)
+            self._update_extended_socket_bpf(sock_filter, extended)
 
         if sock.has_member("sk_reuseport_cb"):
             sock_reuseport_cb = sock.sk_reuseport_cb
-            self.__update_extra_socket_bpf(sock_reuseport_cb, extended)
+            self._update_extended_socket_bpf(sock_reuseport_cb, extended)
 
         saddr_tag = f"{dev_name}"
         daddr_tag = ""
@@ -170,7 +170,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return packet_sock, sock_stat
 
-    def __update_extra_socket_bpf(self, sock_filter, extended):
+    def _update_extended_socket_bpf(self, sock_filter, extended):
         if not sock_filter:
             return
 
