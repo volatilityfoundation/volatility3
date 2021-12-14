@@ -766,7 +766,6 @@ class packet_sock(objects.StructType):
     @property
     def state(self):
         # Packet socket types are either SOCK_RAW or SOCK_DGRAM.
-        # NOTE: We are overriding netlink_sock.state here
         return "UNCONNECTED"
 
 
