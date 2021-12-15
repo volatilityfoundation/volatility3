@@ -555,12 +555,12 @@ class mount(objects.StructType):
     MNT_UNBINDABLE = 0x2000
 
     MNT_FLAGS = {
-        MNT_NOSUID:     "nosuid",
-        MNT_NODEV:      "nodev",
-        MNT_NOEXEC:     "noexec",
-        MNT_NOATIME:    "noatime",
+        MNT_NOSUID: "nosuid",
+        MNT_NODEV: "nodev",
+        MNT_NOEXEC: "noexec",
+        MNT_NOATIME: "noatime",
         MNT_NODIRATIME: "nodiratime",
-        MNT_RELATIME:   "relatime",
+        MNT_RELATIME: "relatime",
     }
 
     def get_mnt_sb(self):
@@ -703,3 +703,13 @@ class mnt_namespace(objects.StructType):
             return self.ns.inum
         else:
             raise AttributeError("Unable to find mnt_namespace inode")
+
+    def get_mount_points(self):
+        table_name = self.vol.type_name.split(constants.BANG)[0]
+        mnt_type = table_name + constants.BANG + "mount"
+        if not self._context.symbol_space.has_type(mnt_type):
+            # Old kernels ~ 2.6
+            mnt_type = table_name + constants.BANG + "vfsmount"
+
+        for mount in self.list.to_list(mnt_type, "mnt_list"):
+            yield mount
