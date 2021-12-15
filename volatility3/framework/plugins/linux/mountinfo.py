@@ -20,7 +20,7 @@ MountInfoData = namedtuple("MountInfoData", ("mnt_id", "parent_id", "st_dev", "m
 class MountInfo(plugins.PluginInterface):
     """Lists mount points on processes mount namespaces"""
 
-    _required_framework_version = (2, 0, 0)
+    _required_framework_version = (2, 1, 0)
 
     _version = (1, 0, 0)
 
