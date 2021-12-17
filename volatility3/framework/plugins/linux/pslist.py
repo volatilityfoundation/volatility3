@@ -59,7 +59,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
     @staticmethod
     def task_is_kernel_thread(task: interfaces.objects.ObjectInterface) -> bool:
-        return (task.flags & constants.PF_KTHREAD) != 0
+        return (task.flags & constants.linux.PF_KTHREAD) != 0
 
     @staticmethod
     def task_is_thread_group_leader(task: interfaces.objects.ObjectInterface) -> bool:
