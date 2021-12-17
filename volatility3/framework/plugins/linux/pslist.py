@@ -1,11 +1,12 @@
-# This file is Copyright 2019 Volatility Foundation and licensed under the Volatility Software License 1.0
+# This file is Copyright 2021 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
-from typing import Callable, Iterable, List, Any
+from typing import Callable, Iterable, List, Any, Tuple
 
-from volatility3.framework import renderers, interfaces
+from volatility3.framework import renderers, interfaces, constants
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
+from volatility3.framework.symbols import linux
 
 
 class PsList(interfaces.plugins.PluginInterface):
@@ -13,7 +14,7 @@ class PsList(interfaces.plugins.PluginInterface):
 
     _required_framework_version = (2, 0, 0)
 
-    _version = (2, 0, 0)
+    _version = (2, 1, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -23,7 +24,15 @@ class PsList(interfaces.plugins.PluginInterface):
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
-                                         optional = True)
+                                         optional = True),
+            requirements.BooleanRequirement(name="threads",
+                                            description="Include user threads",
+                                            optional=True,
+                                            default=False),
+            requirements.BooleanRequirement(name="decorate_comm",
+                                            description="Show `user threads` comm in curly brackets, and `kernel threads` comm in square brackets",
+                                            optional=True,
+                                            default=False),
         ]
 
     @classmethod
@@ -48,31 +57,88 @@ class PsList(interfaces.plugins.PluginInterface):
         else:
             return lambda _: False
 
-    def _generator(self):
+    @staticmethod
+    def task_is_kernel_thread(task: interfaces.objects.ObjectInterface) -> bool:
+        return (task.flags & constants.PF_KTHREAD) != 0
+
+    @staticmethod
+    def task_is_thread_group_leader(task: interfaces.objects.ObjectInterface) -> bool:
+        return task.tgid == task.pid
+
+    @staticmethod
+    def task_is_user_thread(task: interfaces.objects.ObjectInterface) -> bool:
+        return task.tgid != task.pid
+
+    def _get_task_fields(
+            self,
+            task: interfaces.objects.ObjectInterface,
+            decorate_comm: bool = False) -> Tuple[int, int, int, str]:
+        """Extract the fields needed for the final output
+
+        Args:
+            task: A task object from where to get the fields.
+            decorate_comm: If True, it decorates the comm string of
+                            - User threads: in curly brackets,
+                            - Kernel threads: in square brackets
+                           Defaults to False.
+        Returns:
+            A tuple with the fields to show in the plugin output.
+        """
+        pid = task.tgid
+        tid = task.pid
+        ppid = task.parent.tgid if task.parent else 0
+        name = utility.array_to_string(task.comm)
+        if decorate_comm:
+            if self.task_is_kernel_thread(task):
+                name = f"[{name}]"
+            elif self.task_is_user_thread(task):
+                name = f"{{{name}}}"
+
+        task_fields = (pid, tid, ppid, name)
+        return task_fields
+
+    def _generator(
+            self,
+            pid_filter: Callable[[Any], bool],
+            include_threads: bool = False,
+            decorate_comm: bool = False):
+        """Generates the tasks list.
+
+        Args:
+            pid_filter: A function which takes a process object and returns True if the process should be ignored/filtered
+            include_threads: If True, the output will also show the user threads
+                             If False, only the thread group leaders will be shown
+                             Defaults to False.
+            decorate_comm: If True, it decorates the comm string of
+                            - User threads: in curly brackets,
+                            - Kernel threads: in square brackets
+                           Defaults to False.
+        Yields:
+            Each rows
+        """
         for task in self.list_tasks(self.context,
                                     self.config['kernel'],
-                                    filter_func = self.create_pid_filter(self.config.get('pid', None))):
-            pid = task.pid
-            ppid = 0
-            if task.parent:
-                ppid = task.parent.pid
-            name = utility.array_to_string(task.comm)
-            yield (0, (pid, ppid, name))
+                                    pid_filter,
+                                    include_threads):
+            row = self._get_task_fields(task, decorate_comm)
+            yield (0, row)
 
     @classmethod
     def list_tasks(
             cls,
             context: interfaces.context.ContextInterface,
             vmlinux_module_name: str,
-            filter_func: Callable[[int], bool] = lambda _: False) -> Iterable[interfaces.objects.ObjectInterface]:
+            filter_func: Callable[[int], bool] = lambda _: False,
+            include_threads: bool = False) -> Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer.
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
             vmlinux_module_name: The name of the kernel module on which to operate
-
+            filter_func: A function which takes a process object and returns True if the process should be ignored/filtered
+            include_threads: If True, it will also return user threads.
         Yields:
-            Process objects
+            Task objects
         """
         vmlinux = context.modules[vmlinux_module_name]
 
@@ -80,8 +146,29 @@ class PsList(interfaces.plugins.PluginInterface):
 
         # Note that the init_task itself is not yielded, since "ps" also never shows it.
         for task in init_task.tasks:
-            if not filter_func(task):
-                yield task
+            if filter_func(task):
+                continue
+
+            task_threads = []
+            current_task = None
+            next_task = task.thread_group.next
+            while current_task is None or current_task.vol.offset != task.vol.offset:
+                current_task = linux.LinuxUtilities.container_of(next_task, "task_struct", "thread_group", vmlinux)
+                if cls.task_is_thread_group_leader(current_task):
+                    # Making sure the first task yielded is the Task Group Leader
+                    yield current_task
+                elif include_threads:
+                    task_threads.append(current_task)
+                next_task = current_task.thread_group.next
+
+            # yield the other task threads
+            yield from task_threads
 
     def run(self):
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("COMM", str)], self._generator())
+        pids = self.config.get('pid')
+        include_threads = self.config.get('threads')
+        decorate_comm = self.config.get('decorate_comm')
+        filter_func = self.create_pid_filter(pids)
+
+        columns = [("PID", int), ("TID", int), ("PPID", int), ("COMM", str)]
+        return renderers.TreeGrid(columns, self._generator(filter_func, include_threads, decorate_comm))
