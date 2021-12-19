@@ -182,6 +182,17 @@ class QuickTextRenderer(CLIRenderer):
         outfd.write("\n")
 
 
+class NoneRenderer(CLIRenderer):
+    """Outputs no results"""
+    name = "none"
+
+    def get_render_options(self):
+        pass
+
+    def render(self, grid: interfaces.renderers.TreeGrid) -> None:
+        if not grid.populated:
+            grid.populate(lambda x, y: True, True)
+
 class CSVRenderer(CLIRenderer):
     _type_renderers = {
         format_hints.Bin: quoted_optional(lambda x: f"0b{x:b}"),
