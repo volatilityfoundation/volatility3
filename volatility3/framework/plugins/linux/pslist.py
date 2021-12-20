@@ -3,7 +3,7 @@
 #
 from typing import Callable, Iterable, List, Any, Tuple
 
-from volatility3.framework import renderers, interfaces, constants
+from volatility3.framework import renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import linux
@@ -57,18 +57,6 @@ class PsList(interfaces.plugins.PluginInterface):
         else:
             return lambda _: False
 
-    @staticmethod
-    def task_is_kernel_thread(task: interfaces.objects.ObjectInterface) -> bool:
-        return (task.flags & constants.linux.PF_KTHREAD) != 0
-
-    @staticmethod
-    def task_is_thread_group_leader(task: interfaces.objects.ObjectInterface) -> bool:
-        return task.tgid == task.pid
-
-    @staticmethod
-    def task_is_user_thread(task: interfaces.objects.ObjectInterface) -> bool:
-        return task.tgid != task.pid
-
     def _get_task_fields(
             self,
             task: interfaces.objects.ObjectInterface,
@@ -89,9 +77,9 @@ class PsList(interfaces.plugins.PluginInterface):
         ppid = task.parent.tgid if task.parent else 0
         name = utility.array_to_string(task.comm)
         if decorate_comm:
-            if self.task_is_kernel_thread(task):
+            if task.is_kernel_thread:
                 name = f"[{name}]"
-            elif self.task_is_user_thread(task):
+            elif task.is_user_thread:
                 name = f"{{{name}}}"
 
         task_fields = (pid, tid, ppid, name)
@@ -154,7 +142,7 @@ class PsList(interfaces.plugins.PluginInterface):
             next_task = task.thread_group.next
             while current_task is None or current_task.vol.offset != task.vol.offset:
                 current_task = linux.LinuxUtilities.container_of(next_task, "task_struct", "thread_group", vmlinux)
-                if cls.task_is_thread_group_leader(current_task):
+                if current_task.is_thread_group_leader:
                     # Making sure the first task yielded is the Task Group Leader
                     yield current_task
                 elif include_threads:

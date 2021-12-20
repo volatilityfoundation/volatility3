@@ -201,6 +201,33 @@ class task_struct(generic.GenericIntelProcess):
 
             yield (start, end - start)
 
+    @property
+    def is_kernel_thread(self) -> bool:
+        """Checks if this task is a kernel thread.
+
+        Returns:
+            bool: True, if this task is a kernel thread. Otherwise, False.
+        """
+        return (self.flags & constants.linux.PF_KTHREAD) != 0
+
+    @property
+    def is_thread_group_leader(self) -> bool:
+        """Checks if this task is a thread group leader.
+
+        Returns:
+            bool: True, if this task is a thread group leader. Otherwise, False.
+        """
+        return self.tgid == self.pid
+
+    @property
+    def is_user_thread(self) -> bool:
+        """Checks if this task is a user thread.
+
+        Returns:
+            bool: True, if this task is a user thread. Otherwise, False.
+        """
+        return not self.is_kernel_thread and self.tgid != self.pid
+
 
 class fs_struct(objects.StructType):
 
