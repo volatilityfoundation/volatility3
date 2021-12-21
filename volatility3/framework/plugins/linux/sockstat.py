@@ -416,8 +416,7 @@ class Sockstat(plugins.PluginInterface):
             socket_alloc = linux.LinuxUtilities.container_of(d_inode, "socket_alloc", "vfs_inode", vmlinux)
             socket = socket_alloc.socket
 
-            vfs_inode = socket_alloc.vfs_inode
-            if not (socket and vfs_inode):
+            if not (socket and socket.sk):
                 continue
 
             sock = socket.sk.dereference()
