@@ -4,7 +4,7 @@
 # Author: Gustavo Moreira
 
 import logging
-from typing import Callable
+from typing import Callable, Tuple, List, Dict
 
 from volatility3.framework import renderers, interfaces, exceptions, constants, objects
 from volatility3.framework.configuration import requirements
@@ -17,6 +17,7 @@ from volatility3.plugins.linux import lsof
 vollog = logging.getLogger(__name__)
 
 class SockHandlers(interfaces.configuration.VersionableInterface):
+    """Handles several socket families extracting the sockets information."""
 
     _required_framework_version = (2, 0, 0)
 
@@ -40,7 +41,17 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             "AF_BLUETOOTH": self._bluetooth_sock,
         }
 
-    def _build_network_devices_map(self, netns_id: int):
+    def _build_network_devices_map(self, netns_id: int) -> Dict:
+        """Given a namespace ID it returns a dictionary mapping each network
+        interface index (ifindex) to its network interface name:
+
+        Args:
+            netns_id: The network namespace ID
+
+        Returns:
+            netdevices_map: Mapping network interface index (ifindex) to network
+                            interface name
+        """
         netdevices_map = {}
         nethead = self._vmlinux.object_from_symbol(symbol_name="net_namespace_list")
         net_symname = self._vmlinux.symbol_table_name + constants.BANG + "net"
@@ -53,7 +64,17 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 netdevices_map[net_dev.ifindex] = dev_name
         return netdevices_map
 
-    def process_sock(self, sock: objects.StructType):
+    def process_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str], Dict]:
+        """Takes a kernel generic `sock` object and processes it with its respective socket family
+
+        Args:
+            sock: Kernel generic `sock` object
+
+        Returns a tuple with:
+            sock: The respective kernel's *_sock object for that socket family
+            sock_stat: A tuple with the source, destination and state strings.
+            extended: A dictionary with key/value extended information.
+        """
         family = sock.family
         extended = {}
         sock_handler = self._sock_family_handlers.get(family)
@@ -95,7 +116,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
             extended["filter_type"] = "reuseport_filter"
             self._extract_socket_filter_info(sock_reuseport_cb, extended)
 
-    def _extract_socket_filter_info(self, sock_filter: objects.Pointer, extended: dict):
+    def _extract_socket_filter_info(self, sock_filter: objects.Pointer, extended: dict) -> None:
         extended["bpf_filter_type"] = "cBPF"
 
         if not sock_filter.has_member("prog") or not sock_filter.prog:
@@ -113,7 +134,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
                 if bpfprog_name:
                     extended["bpf_filter_name"] = bpfprog_name
 
-    def _unix_sock(self, sock: objects.StructType):
+    def _unix_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+        """Handles the AF_UNIX socket family
+
+        Args:
+            sock: Kernel generic `sock` object
+
+        Returns:
+            unix_sock: The kernel's `unix_sock` object
+            sock_stat: A tuple with the source, destination and state strings.
+        """
         unix_sock = sock.cast("unix_sock")
         state = unix_sock.state
         saddr = unix_sock.name
@@ -130,7 +160,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return unix_sock, sock_stat
 
-    def _inet_sock(self, sock: objects.StructType):
+    def _inet_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+        """Handles the AF_INET/6 socket families
+
+        Args:
+            sock: Kernel generic `sock` object
+
+        Returns:
+            inet_sock: The kernel's `inet_sock` object
+            sock_stat: A tuple with the source, destination and state strings.
+        """
         inet_sock = sock.cast("inet_sock")
         saddr = inet_sock.src_addr
         sport = inet_sock.src_port
@@ -146,7 +185,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return inet_sock, sock_stat
 
-    def _netlink_sock(self, sock: objects.StructType):
+    def _netlink_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+        """Handles the AF_NETLINK socket family
+
+        Args:
+            sock: Kernel generic `sock` object
+
+        Returns:
+            netlink_sock: The kernel's `netlink_sock` object
+            sock_stat: A tuple with the source, destination and state strings.
+        """
         netlink_sock = sock.cast("netlink_sock")
 
         saddr_list = []
@@ -175,7 +223,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return netlink_sock, sock_stat
 
-    def _vsock_sock(self, sock: objects.StructType):
+    def _vsock_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+        """Handles the AF_VSOCK socket family
+
+        Args:
+            sock: Kernel generic `sock` object
+
+        Returns:
+            vsock_sock: The kernel `vsock_sock` object
+            sock_stat: A tuple with the source, destination and state strings.
+        """
         vsock_sock = sock.cast("vsock_sock")
         saddr = vsock_sock.local_addr.svm_cid
         sport = vsock_sock.local_addr.svm_port
@@ -188,7 +245,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return vsock_sock, sock_stat
 
-    def _packet_sock(self, sock: objects.StructType):
+    def _packet_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+        """Handles the AF_PACKET socket family
+
+        Args:
+            sock: Kernel generic `sock` object
+
+        Returns:
+            packet_sock: The kernel's `packet_sock` object
+            sock_stat: A tuple with the source, destination and state strings.
+        """
         packet_sock = sock.cast("packet_sock")
         ifindex = packet_sock.ifindex
         dev_name = self._netdevices.get(ifindex, "") if ifindex > 0 else "ANY"
@@ -199,7 +265,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return packet_sock, sock_stat
 
-    def _xdp_sock(self, sock: objects.StructType):
+    def _xdp_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+        """Handles the AF_XDP socket family
+
+        Args:
+            sock: Kernel generic `sock` object
+
+        Returns:
+            xdp_sock: The kernel's `xdp_sock` object
+            sock_stat: A tuple with the source, destination and state strings.
+        """
         xdp_sock = sock.cast("xdp_sock")
         device = xdp_sock.dev
         if not device:
@@ -228,7 +303,16 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return xdp_sock, sock_stat
 
-    def _bluetooth_sock(self, sock: objects.StructType):
+    def _bluetooth_sock(self, sock: objects.StructType) -> Tuple[objects.StructType, Tuple[str, str, str]]:
+        """Handles the AF_BLUETOOTH socket family
+
+        Args:
+            sock: Kernel generic `sock` object
+
+        Returns:
+            bt_sock: The kernel's `bt_sock` object
+            sock_stat: A tuple with the source, destination and state strings.
+        """
         bt_sock = sock.cast("bt_sock")
 
         def bt_addr(addr):
@@ -290,12 +374,26 @@ class Sockstat(plugins.PluginInterface):
     @classmethod
     def list_sockets(cls,
                      context: interfaces.context.ContextInterface,
-                     vmlinux_module_name: str,
+                     symbol_table: str,
                      filter_func: Callable[[int], bool] = lambda _: False):
+        """Returns every single socket descriptor
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            symbol_table: The name of the kernel module on which to operate
+            filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
+
+        Yields:
+            task: Kernel's task object
+            netns_id: Network namespace ID
+            fd_num: File descriptor number
+            family: Socket family string (AF_UNIX, AF_INET, etc)
+            sock_type: Socket type string (STREAM, DGRAM, etc)
+            protocol: Protocol string (UDP, TCP, etc)
+            sock_fields: A tuple with the *_sock object, the sock stats and the
+                         extended info dictionary
         """
-        Returns every single socket descriptor
-        """
-        vmlinux = context.modules[vmlinux_module_name]
+        vmlinux = context.modules[symbol_table]
 
         sfop_addr = vmlinux.object_from_symbol("socket_file_ops").vol.offset
         dfop_addr = vmlinux.object_from_symbol("sockfs_dentry_operations").vol.offset
@@ -339,13 +437,31 @@ class Sockstat(plugins.PluginInterface):
             netns_id = net.get_inode()
             yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
 
-    def _generator(self, pids, netns_arg, symbol_table):
+    def _generator(self, pids: List[int], netns_id_arg: int, symbol_table: str):
+        """Enumerate tasks sockets. Each row represents a kernel socket.
+
+        Args:
+            pids: List of PIDs to filter. If a empty list or
+            netns_id_arg: If a network namespace ID is set, it will only show this namespace.
+            symbol_table: The name of the kernel module on which to operate
+
+        Yields:
+            netns_id: Network namespace ID
+            family: Socket family string (AF_UNIX, AF_INET, etc)
+            sock_type: Socket type string (STREAM, DGRAM, etc)
+            protocol: Protocol string (UDP, TCP, etc)
+            source: Source address string
+            destination: Destination address string
+            state: State strings (LISTEN, CONNECTED, etc)
+            tasks: String with a list of tasks and FDs using a socket. It can also have
+                   exteded information such as socket filters, bpf info, etc.
+        """
         filter_func = lsof.pslist.PsList.create_pid_filter(pids)
         socket_generator = self.list_sockets(self.context, symbol_table, filter_func=filter_func)
 
         tasks_per_sock = {}
-        for task, netns, fd_num, family, sock_type, protocol, sock_fields in socket_generator:
-            if netns_arg and netns_arg != netns:
+        for task, netns_id, fd_num, family, sock_type, protocol, sock_fields in socket_generator:
+            if netns_id_arg and netns_id_arg != netns_id:
                 continue
 
             sock, sock_stat, extended = sock_fields
@@ -356,8 +472,10 @@ class Sockstat(plugins.PluginInterface):
                 extended_str = ",".join(f"{k}={v}" for k, v in extended.items())
                 task_info = f"{task_info},{extended_str}"
 
-            fields = netns, family, sock_type, protocol, *sock_stat
+            fields = netns_id, family, sock_type, protocol, *sock_stat
 
+            # Each row represents a kernel socket, so let's group the task FDs
+            # by socket using the socket address
             sock_addr = sock.vol.offset
             tasks_per_sock.setdefault(sock_addr, {})
             tasks_per_sock[sock_addr].setdefault('tasks', [])
@@ -373,7 +491,7 @@ class Sockstat(plugins.PluginInterface):
 
     def run(self):
         pids = self.config.get('pids')
-        netns = self.config['netns']
+        netns_id = self.config['netns']
         symbol_table = self.config['kernel']
 
         tree_grid_args = [("NetNS", int),
@@ -385,4 +503,4 @@ class Sockstat(plugins.PluginInterface):
                           ("State", str),
                           ("Tasks", str)]
 
-        return renderers.TreeGrid(tree_grid_args, self._generator(pids, netns, symbol_table))
+        return renderers.TreeGrid(tree_grid_args, self._generator(pids, netns_id, symbol_table))
