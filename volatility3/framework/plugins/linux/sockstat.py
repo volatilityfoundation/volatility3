@@ -336,7 +336,7 @@ class Sockstat(plugins.PluginInterface):
             protocol = child_sock.protocol if hasattr(child_sock, "protocol") else ""
 
             net = task.nsproxy.net_ns
-            netns_id = net.proc_inum if net.has_member("proc_inum") else net.ns.inum
+            netns_id = net.get_inode()
             yield task, netns_id, fd_num, family, sock_type, protocol, sock_fields
 
     def _generator(self, pids, netns_arg, symbol_table):
