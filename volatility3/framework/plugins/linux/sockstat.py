@@ -59,7 +59,9 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_handler = self._sock_family_handlers.get(family)
         if sock_handler:
             try:
-                sock_fields = sock_handler(sock, extended)
+                sock_fields = sock_handler(sock)
+                self._update_extended_socket_filters_info(sock, extended)
+
                 return *sock_fields, extended
             except exceptions.SymbolError as e:
                 # Cannot finds the *_sock type in the symbols
@@ -76,7 +78,42 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
 
         return sock, sock_stat, extended
 
-    def _unix_sock(self, sock: objects.StructType, extended: dict):
+    def _update_extended_socket_filters_info(self, sock: objects.Pointer, extended: dict) -> None:
+        """Get infomation from the socket and reuseport filters
+
+        Args:
+            sock: The kernel sock (sk) struct
+            extended: Dictionary to store extended information
+        """
+        if sock.has_member("sk_filter") and sock.sk_filter:
+            sock_filter = sock.sk_filter
+            extended["filter_type"] = "socket_filter"
+            self._extract_socket_filter_info(sock_filter, extended)
+
+        if sock.has_member("sk_reuseport_cb") and sock.sk_reuseport_cb:
+            sock_reuseport_cb = sock.sk_reuseport_cb
+            extended["filter_type"] = "reuseport_filter"
+            self._extract_socket_filter_info(sock_reuseport_cb, extended)
+
+    def _extract_socket_filter_info(self, sock_filter: objects.Pointer, extended: dict):
+        extended["bpf_filter_type"] = "cBPF"
+
+        if not sock_filter.has_member("prog") or not sock_filter.prog:
+            return
+
+        bpfprog = sock_filter.prog
+
+        # BPF_PROG_TYPE_UNSPEC = 0
+        if bpfprog.type > 0:
+            extended["bpf_filter_type"] = "eBPF"
+            bpfprog_aux = bpfprog.aux
+            if bpfprog_aux:
+                extended["bpf_filter_id"] = str(bpfprog_aux.id)
+                bpfprog_name = utility.array_to_string(bpfprog_aux.name)
+                if bpfprog_name:
+                    extended["bpf_filter_name"] = bpfprog_name
+
+    def _unix_sock(self, sock: objects.StructType):
         unix_sock = sock.cast("unix_sock")
         state = unix_sock.state
         saddr = unix_sock.name
@@ -93,7 +130,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return unix_sock, sock_stat
 
-    def _inet_sock(self, sock: objects.StructType, extended: dict):
+    def _inet_sock(self, sock: objects.StructType):
         inet_sock = sock.cast("inet_sock")
         saddr = inet_sock.src_addr
         sport = inet_sock.src_port
@@ -109,7 +146,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return inet_sock, sock_stat
 
-    def _netlink_sock(self, sock: objects.StructType, extended: dict):
+    def _netlink_sock(self, sock: objects.StructType):
         netlink_sock = sock.cast("netlink_sock")
 
         saddr_list = []
@@ -138,7 +175,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return netlink_sock, sock_stat
 
-    def _vsock_sock(self, sock: objects.StructType, extended: dict):
+    def _vsock_sock(self, sock: objects.StructType):
         vsock_sock = sock.cast("vsock_sock")
         saddr = vsock_sock.local_addr.svm_cid
         sport = vsock_sock.local_addr.svm_port
@@ -151,18 +188,10 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return vsock_sock, sock_stat
 
-    def _packet_sock(self, sock: objects.StructType, extended: dict):
+    def _packet_sock(self, sock: objects.StructType):
         packet_sock = sock.cast("packet_sock")
         ifindex = packet_sock.ifindex
         dev_name = self._netdevices.get(ifindex, "") if ifindex > 0 else "ANY"
-
-        if sock.has_member("sk_filter"):
-            sock_filter = sock.sk_filter
-            self._update_extended_socket_bpf(sock_filter, extended)
-
-        if sock.has_member("sk_reuseport_cb"):
-            sock_reuseport_cb = sock.sk_reuseport_cb
-            self._update_extended_socket_bpf(sock_reuseport_cb, extended)
 
         saddr_tag = f"{dev_name}"
         daddr_tag = ""
@@ -170,30 +199,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return packet_sock, sock_stat
 
-    def _update_extended_socket_bpf(self, sock_filter: objects.Pointer, extended: dict):
-        if not sock_filter:
-            return
-
-        extended["bpf_filter_type"] = "cBPF"
-
-        if not sock_filter.has_member("prog"):
-            return
-
-        bpfprog = sock_filter.prog
-        if not bpfprog:
-            return
-
-        # BPF_PROG_TYPE_UNSPEC = 0
-        if bpfprog.type > 0:
-            extended["bpf_filter_type"] = "eBPF"
-            bpfprog_aux = bpfprog.aux
-            if bpfprog_aux:
-                extended["bpf_filter_id"] = str(bpfprog_aux.id)
-                bpfprog_name = utility.array_to_string(bpfprog_aux.name)
-                if bpfprog_name:
-                    extended["bpf_filter_name"] = bpfprog_name
-
-    def _xdp_sock(self, sock: objects.StructType, extended: dict):
+    def _xdp_sock(self, sock: objects.StructType):
         xdp_sock = sock.cast("xdp_sock")
         device = xdp_sock.dev
         if not device:
@@ -222,7 +228,7 @@ class SockHandlers(interfaces.configuration.VersionableInterface):
         sock_stat = saddr_tag, daddr_tag, state
         return xdp_sock, sock_stat
 
-    def _bluetooth_sock(self, sock: objects.StructType, extended: dict):
+    def _bluetooth_sock(self, sock: objects.StructType):
         bt_sock = sock.cast("bt_sock")
 
         def bt_addr(addr):
