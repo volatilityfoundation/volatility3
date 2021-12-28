@@ -4,20 +4,28 @@
 """A module containing a collection of plugins that produce data typically
 found in Linux's /proc file system."""
 
-from typing import List
+import logging
+from typing import List, Type
 
-from volatility3.framework import renderers, interfaces
+from volatility3.framework import renderers, interfaces, constants
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
+from volatility3.framework.symbols import intermed
 from volatility3.plugins.linux import pslist
+
+from volatility3.framework.symbols.linux.extensions import elf
+
+vollog = logging.getLogger(__name__)
 
 
 class Elfs(plugins.PluginInterface):
     """Lists all memory mapped ELF files for all processes."""
 
     _required_framework_version = (2, 0, 0)
+
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -28,10 +36,94 @@ class Elfs(plugins.PluginInterface):
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
-                                         optional = True)
+                                         optional = True),
+            requirements.BooleanRequirement(name = 'dump',
+                                            description = "Extract listed processes",
+                                            default = False,
+                                            optional = True)
         ]
 
+    @classmethod
+    def elf_dump(
+            cls, context: interfaces.context.ContextInterface,
+            layer_name: str,
+            elf_table_name: str,
+            vma: interfaces.objects.ObjectInterface,
+            task: interfaces.objects.ObjectInterface,
+            open_method: Type[interfaces.plugins.FileHandlerInterface]) -> interfaces.plugins.FileHandlerInterface:
+        """Extracts an ELF as a FileHandlerInterface
+
+        Args:
+            context: the context to operate upon
+            layer_name: The name of the layer on which to operate
+            elf_table_name: the name for the symbol table containing the symbols for ELF-files
+            vma: virtual memory allocation of ELF
+            task: the task object whose memory should be output
+            open_method: class to provide context manager for opening the file
+
+        Returns:
+            An open FileHandlerInterface object containing the complete data for the task or None in the case of failure
+        """
+
+        proc_layer = context.layers[layer_name]
+        file_handle = None
+
+        try:
+            elf = context.object(elf_table_name + constants.BANG + "Elf",
+                                        offset = vma.vm_start,
+                                        layer_name = layer_name)
+            path = vma.get_name(context, task)
+
+            if not elf.is_valid():
+                return None
+
+            sections = {}
+            # TODO: Apply more effort to reconstruct ELF, e.g.: https://github.com/enbarberis/core2ELF64 ?
+            for phdr in elf.get_program_headers():
+                if phdr.p_type != 1:  # PT_LOAD = 1
+                    continue
+
+                start = phdr.p_vaddr
+                size = phdr.p_memsz
+                end = start + size
+
+                # Use complete memory pages for dumping
+                # If start isn't a multiple of 4096, stick to the highest multiple < start
+                # If end isn't a multiple of 4096, stick to the lowest multiple > end
+                if start % 4096:
+                    start = start & ~0xfff
+
+                if end % 4096:
+                    end = (end & ~0xfff) + 4096
+
+                real_size = end - start
+
+                if real_size < 0 or real_size > 100000000:
+                    continue
+
+                sections[start] = real_size
+
+            elf_data = b''
+            for section_start in sorted(sections.keys()):
+                read_size = sections[section_start]
+
+                buf = proc_layer.read(vma.vm_start + section_start, read_size, pad=True)
+                elf_data = elf_data + buf
+
+            file_handle = open_method(f"pid.{task.pid}.{utility.array_to_string(task.comm)}.{path.replace('/', '_')}."
+                                      f"{vma.vm_start:#x}.dmp")
+            file_handle.write(elf_data)
+        except Exception as excp:
+            vollog.debug(f"Unable to dump ELF with pid {task.pid}: {excp}")
+
+        return file_handle
+
     def _generator(self, tasks):
+        elf_table_name = intermed.IntermediateSymbolTable.create(self.context,
+                                                                 self.config_path,
+                                                                 "linux",
+                                                                 "elf",
+                                                                 class_types=elf.class_types)
         for task in tasks:
             proc_layer_name = task.add_process_layer()
             if not proc_layer_name:
@@ -48,13 +140,22 @@ class Elfs(plugins.PluginInterface):
 
                 path = vma.get_name(self.context, task)
 
-                yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), path))
+                file_output = 'Disabled'
+                if self.config['dump']:
+                    file_handle = self.elf_dump(self.context, proc_layer_name, elf_table_name, vma, task, self.open)
+                    file_output = "Error outputting file"
+                    if file_handle:
+                        file_handle.close()
+                        file_output = str(file_handle.preferred_filename)
+
+                yield (0, (task.pid, name, format_hints.Hex(vma.vm_start), format_hints.Hex(vma.vm_end), path,
+                           file_output))
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Start", format_hints.Hex),
-                                   ("End", format_hints.Hex), ("File Path", str)],
+                                   ("End", format_hints.Hex), ("File Path", str), ("File output", str)],
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
                                                                self.config['kernel'],
