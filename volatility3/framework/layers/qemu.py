@@ -54,7 +54,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
 
     def _read_configuration(self, base_layer: interfaces.layers.DataLayerInterface, name: str) -> Any:
         """Reads the JSON configuration from the end of the file"""
-        chunk_size = 0x4096
+        chunk_size = 4096
         data = b''
         for i in range(base_layer.maximum_address, base_layer.minimum_address, -chunk_size):
             if i != base_layer.maximum_address:
@@ -65,6 +65,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                     if start_of_json >= 0:
                         data = data[start_of_json:]
                         return json.loads(data)
+                    # No JSON configuration found at the end of the file, return empty dict
                     return dict()
         raise exceptions.LayerException(name, "Invalid JSON configuration at the end of the file")
 
@@ -79,9 +80,11 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             addr = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
                                        offset = index,
                                        layer_name = self._base_layer)
+            # Flags are stored in the n least significant bits, where n equals the bit-length of pagesize
             flags = addr & (page_size - 1)
-            page_size_bits = int(math.log(page_size, 2))
-            addr = (addr >> page_size_bits) << page_size_bits
+            # addr equals the highest multiple of pagesize <= offset
+            # (We assume that page_size is a power of 2)
+            addr = addr ^ (addr & (page_size - 1))
             index += 8
 
             if flags & self.SEGMENT_FLAG_MEM_SIZE:
@@ -126,6 +129,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             self._configuration = self._read_configuration(base_layer, self.name)
         section_byte = -1
         index = 8
+        section_info = dict()
         current_section_id = -1
         version_id = -1
         name = None
@@ -162,6 +166,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                                                  offset = index,
                                                  layer_name = self._base_layer)
                 index += 4
+                # Store section info for handling QEVM_SECTION_PARTs later on
+                section_info[current_section_id] = {'name': name, 'version_id': version_id}
                 # Read additional data
                 index = self.extract_data(index, name, version_id)
             elif section_byte == self.QEVM_SECTION_PART or section_byte == self.QEVM_SECTION_END:
@@ -171,7 +177,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 current_section_id = section_id
                 index += 4
                 # Read additional data
-                index = self.extract_data(index, name, version_id)
+                index = self.extract_data(index, section_info[current_section_id]['name'],
+                                          section_info[current_section_id]['version_id'])
             elif section_byte == self.QEVM_SECTION_FOOTER:
                 section_id = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
                                                  offset = index,
@@ -189,7 +196,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         if name == 'ram':
             if version_id != 4:
                 raise exceptions.LayerException(f"QEMU unknown RAM version_id {version_id}")
-            new_segments, index = self._get_ram_segments(index, self._configuration.get('page_size', None) or 4096)
+            new_segments, index = self._get_ram_segments(index, self._configuration.get('page_size', 4096))
             self._segments += new_segments
         elif name == 'spapr/htab':
             if version_id != 1:
@@ -208,6 +215,13 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                                                layer_name = self._base_layer)
                     htab_index, htab_n_valid, htab_n_invalid = htab
                     index += 8 + (htab_n_valid * self.HASH_PTE_SIZE_64)
+        elif name == 'dirty-bitmap':
+            index += 1
+        elif name == 'pbs-state':
+            section_len = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
+                                              offset = index,
+                                              layer_name = self._base_layer)
+            index += 8 + section_len
         return index
 
     def _decode_data(self, data: bytes, mapped_offset: int, offset: int, output_length: int) -> bytes:
@@ -217,9 +231,12 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         of the starting data.  It is the responsibility of the layer to turn the provided data chunk into the right
         portion of data necessary.
         """
-        start_offset = offset ^ (offset & 0xfff)
+        page_size = self._configuration.get('page_size', 4096)
+        # start_offset equals the highest multiple of pagesize <= offset
+        # (We assume that page_size is a power of 2)
+        start_offset = offset ^ (offset & (page_size - 1))
         if start_offset in self._compressed:
-            data = (data * 0x1000)
+            data = (data * page_size)
         result = data[offset - start_offset:output_length + offset - start_offset]
         return result
 
