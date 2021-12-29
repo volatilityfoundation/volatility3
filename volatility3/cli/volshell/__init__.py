@@ -138,8 +138,7 @@ class VolShell(cli.CommandLine):
             console.setLevel(10 - (partial_args.verbosity - 2))
 
         if partial_args.clear_cache:
-            for cache_filename in glob.glob(os.path.join(constants.CACHE_PATH, '*.cache')):
-                os.unlink(cache_filename)
+            framework.clear_cache()
 
         # Do the initialization
         ctx = contexts.Context()  # Construct a blank context
