@@ -62,6 +62,10 @@ automagic processes are clearly defined and can be enabled or disabled as necess
 included a stacker automagic to emulate the most common feature of Volatility 2, automatically stacking address spaces
 (now translation layers) on top of each other.
 
+By default the automagic chosen to be run are determined based on the plugin requested, so that linux plugins get linux
+specific automagic and windows plugins get windows specific automagic.  This should reduce unnecessarily searching for
+linux kernels in a windows image, for example.  At the moment this is not user configurableS.
+
 Searching and Scanning
 ----------------------
 Scanning is very similar to scanning in Volatility 2, a scanner object (such as a
