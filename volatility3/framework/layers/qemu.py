@@ -3,13 +3,15 @@
 #
 import functools
 import json
-import math
+import logging
+import re
 from typing import Optional, Dict, Any, Tuple, List, Set
 
 from volatility3.framework import interfaces, exceptions, constants
-from volatility3.framework.layers import segmented
+from volatility3.framework.layers import segmented, scanners
 from volatility3.framework.symbols import intermed
 
+vollog = logging.getLogger(__name__)
 
 class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
     """A Qemu suspend-to-disk translation layer."""
@@ -40,6 +42,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         self._qemu_table_name = intermed.IntermediateSymbolTable.create(context, config_path, 'generic', 'qemu')
         self._configuration = None
+        self._architecture = None
+        self._PCI_hole = None
         self._compressed: Set[int] = set()
         self._current_segment_name = b''
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
@@ -69,6 +73,117 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                     return dict()
         raise exceptions.LayerException(name, "Invalid JSON configuration at the end of the file")
 
+    @staticmethod
+    def _get_pci_hole(architecture: Optional[Tuple[str, Optional[str]]], ram_size: int) -> \
+            Optional[Tuple[int, int]]:
+        """Returns the location and size of the PCI-hole for the given architecture and RAM size.
+
+        Args:
+            architecture: (Optionally) A tuple of strings containing the name (in lowercase) and (optionally) the
+                version of the used QEMU target architecture
+            ram_size: Size of the RAM in bytes
+
+        Returns:
+            (Optionally) A tuple containing the start and size of the PCI hole
+        """
+
+        # See https://qemu.readthedocs.io/en/latest/devel/memory.html for more info
+        #
+        # At least the following values could occur for devices using > 3-4 GB RAM:
+        # +--------------------------------+--------------------------------+------------+-------------+
+        # | Architecture                   | Reference Code                 | Hole Start | Hole End    |
+        # +--------------------------------+--------------------------------+------------+-------------+
+        # | PC i440FX + PIIX "New Default" | qemu/hw/i386/pc_piix.c:98      | 0xc0000000 | 0x100000000 |
+        # | PC i440FX + PIIX "Old Default" | qemu/hw/i386/pc_piix.c:98      | 0xe0000000 | 0x100000000 |
+        # | PC Q35 + ICH9                  | qemu/hw/i386/pc_q35.c:141      | 0x80000000 | 0x100000000 |
+        # | MicroVM                        | qemu/hw/i386/microvm.c:291     | 0xc0000000 | 0x100000000 |
+        # | Xen                            | qemu/hw/i386/xen/xen-hvm.c:248 | 0xf0000000 | 0x100000000 |
+        # +--------------------------------+--------------------------------+------------+-------------+
+        #
+        # MicroVM and Xen haven't been implemented yet
+        #
+        # For now, we assume that the parameter max-ram-below-4g is not set, since this parameter influences the size
+        # and location of the memory gap. Deviating hole sizes could eventually be detected for Linux by e.g. scanning
+        # for dmesg entries with a regex like rb'\[mem (0x[0-9a-f]{4,10})-0x[0-9a-f]{4,10}\] available for PCI devices'
+
+        end = 0x100000000
+
+        if architecture:
+            if architecture[0] == 'i440fx':
+                if architecture[1] and architecture[1] < '2.0':
+                    start = 0xe0000000
+                else:
+                    start = 0xc0000000
+            elif architecture[0] == 'q35':
+                if ram_size >= 0xb0000000:
+                    start = 0x80000000
+                else:
+                    vollog.log(constants.LOGLEVEL_VV, f"No PCI-hole present in this memory layout "
+                                                      f"(Q35 + RAM size < 0xb0000000)")
+                    return None
+            else:
+                vollog.warning(f"Default location of PCI-hole not known for target architecture {architecture[0]}")
+                return None
+
+            vollog.log(constants.LOGLEVEL_VV, f"PCI-hole for detected target architecture is usually located at "
+                                              f"0x{start:x}, using this location")
+            return start, end - start
+        else:
+            vollog.warning("Could not determine target architecture, the possible presence of a PCI-hole is not taken "
+                           "into account")
+            return None
+
+    def _determine_architecture(self, base_layer: interfaces.layers.DataLayerInterface) -> \
+            Optional[Tuple[str, Optional[str]]]:
+        """Tries to determine the QEMU target architecture being used
+
+        Args:
+            base_layer: Layer to operate on
+
+        Returns:
+            (Optionally) A tuple of strings containing the name (in lowercase) and (optionally) the version of the used
+                QEMU target architecture
+        """
+        # MicroVM and Xen haven't been implemented yet
+
+        # First try to find a string containing both architecture and version
+        architecture_pattern = rb'pc-(i440fx|q35)-([0-9]{1,2}.[0-9]{1,2}(?:.[0-9]{1,2})?)'
+        res = scanners.RegExScanner(architecture_pattern)
+        for offset in base_layer.scan(context = self.context, scanner = res):
+            line = base_layer.read(offset, 64)
+            regex_results = re.search(architecture_pattern, line)
+            architecture = regex_results.groups()[0].decode()
+            version = regex_results.groups()[1].decode()
+            vollog.log(constants.LOGLEVEL_VV, f"Detected QEMU target architecture to be {architecture}-{version}")
+            return architecture, version
+
+        # If that does not work, look in configuration JSON for devices specific to a certain architecture
+        architecture = None
+        for device in self._configuration.get('devices', []):
+            device_name = device.get('vmsd_name', '').lower()
+            if 'i440fx' in device_name or 'piix' in device_name:
+                architecture = 'i440fx'
+                break
+            elif 'ich9' in device_name:
+                architecture = 'q35'
+                break
+        if architecture:
+            vollog.log(constants.LOGLEVEL_VV, f"Detected QEMU target architecture to be {architecture}")
+            return architecture, None
+
+        # Still haven't found architecture, switch to fallback-method
+        architecture_pattern = rb'Standard PC \((i440FX|Q35)'
+        res = scanners.RegExScanner(architecture_pattern)
+        for offset in base_layer.scan(context = self.context, scanner = res):
+            line = base_layer.read(offset, 64)
+            regex_results = re.search(architecture_pattern, line)
+            architecture = regex_results.groups()[0].decode().lower()
+            vollog.log(constants.LOGLEVEL_VV, f"Detected QEMU target architecture to be {architecture}")
+            return architecture, None
+
+        vollog.warning("Could not determine QEMU target architecture!")
+        return None
+
     def _get_ram_segments(self, index: int, page_size: int) -> Tuple[List[Tuple[int, int, int, int]], int]:
         """Recovers the new index and any sections of memory from a ram section"""
         done = None
@@ -87,15 +202,21 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
             addr = addr ^ (addr & (page_size - 1))
             index += 8
 
+            # Skip PCI-hole
+            if self._PCI_hole and addr >= self._PCI_hole[0]:
+                addr += self._PCI_hole[1]
+
             if flags & self.SEGMENT_FLAG_MEM_SIZE:
                 namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                offset = index,
                                                layer_name = self._base_layer)
                 while namelen != 0:
-                    # if base_layer.read(index + 1, namelen) == b'pc.ram':
-                    #     total_size = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
-                    #                                       offset = index + 1 + namelen,
-                    #                                       layer_name = self._base_layer)
+                    name = base_layer.read(index + 1, namelen)
+                    total_size = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned long long',
+                                                      offset = index + 1 + namelen,
+                                                      layer_name = self._base_layer)
+                    if name == b'pc.ram':
+                        self._PCI_hole = self._get_pci_hole(architecture = self._architecture, ram_size = total_size)
                     index += 1 + namelen + 8
                     namelen = self._context.object(self._qemu_table_name + constants.BANG + 'unsigned char',
                                                    offset = index,
@@ -127,6 +248,8 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         self._check_header(base_layer, self.name)
         if not self._configuration:
             self._configuration = self._read_configuration(base_layer, self.name)
+        if not self._architecture:
+            self._architecture = self._determine_architecture(base_layer)
         section_byte = -1
         index = 8
         section_info = dict()
