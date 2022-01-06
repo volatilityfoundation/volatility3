@@ -5,13 +5,13 @@
 import logging
 
 from struct import unpack
-from typing import Iterable
+from typing import Dict
 
-from volatility3.framework import constants, renderers, interfaces, exceptions
+from volatility3.framework import constants, renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework.exceptions import PagedInvalidAddressException
+from volatility3.framework.objects import utility
 from volatility3.framework.renderers import conversion, format_hints
-from volatility3.framework.symbols import intermed
 from volatility3.plugins import yarascan
 
 vollog = logging.getLogger(__name__)
@@ -109,8 +109,17 @@ class MFTScan(interfaces.plugins.PluginInterface):
 
     # https://docs.python.org/3/library/struct.html
     @classmethod
-    def unpack_data(self, mft_record, offset, data_type):
-        """Helper to unpack values from the raw mft_record"""
+    def unpack_data(self, mft_record: bytes, offset: int, data_type: str) -> bytes:
+        """Helper to unpack values from the raw mft_record
+        
+        Args:
+            mft_record: 1024 bytes starting from header value as returned by layer read
+            offset: how far in to the record to read
+            data_type: what is the data type to unpack
+
+        Returns:
+            bytes: the unpacked data
+        """
 
         if data_type == 'unsigned long':
             return unpack('<L', mft_record[offset:offset+4])[0]
@@ -124,14 +133,29 @@ class MFTScan(interfaces.plugins.PluginInterface):
             return unpack('<I', mft_record[offset:offset+4])[0]
 
     @classmethod
-    def human_date(self, datetime_object):
-        """Converts a windows epoch to a date time string with a fixed format"""
+    def human_date(self, datetime_object: int) -> str:
+        """Converts a windows epoch to a date time string with a fixed format
+        
+        Args:
+            datetime_object: windows epoch time
+
+        Returns:
+            str: strftime of the windows epoch in UTC
+
+        """
         dtg = conversion.wintime_to_datetime(datetime_object)
         return dtg.strftime('%Y-%m-%d %H:%M:%S %z')
 
     @classmethod
-    def parse_mft_record(self, mft_record):
-        """Takes an MFT Record and attempts to parse, MFT, SI and FN attributes"""
+    def parse_mft_record(self, mft_record: bytes) -> Dict:
+        """Takes an MFT Record and attempts to parse, MFT, SI and FN attributes
+        
+        Args:
+            mft_record: 1024 bytes starting from header value as returned by layer read
+
+        Returns:
+            Dict: a Dictionary that contains the Parse MFT Record
+        """
         # https://github.com/Invoke-IR/ForensicPosters
 
         flags = self.unpack_data(mft_record, 22, 'unsigned short')
@@ -202,10 +226,11 @@ class MFTScan(interfaces.plugins.PluginInterface):
 
                     # Unicode and partially corruprted records can break us here. 
                     file_name = mft_record[attr_data+66:attr_data+66+(2*name_len)]
-                    try:
-                        file_name = file_name.replace(b'\x00', b'').decode()
-                    except:
-                        file_name = str(file_name.replace(b'\x00', b''))
+                    file_name = utility.array_to_string(file_name)
+                    #try:
+                    #  #  file_name = file_name.replace(b'\x00', b'').decode()
+                    #except:
+                    #    file_name = str(file_name.replace(b'\x00', b''))
 
                     flags = self.unpack_data(mft_record, attr_data+56, 'unsigned short')
                     permissions = VERBOSE_STANDARD_INFO_FLAGS.get(flags, 'Unknown')
@@ -234,6 +259,7 @@ class MFTScan(interfaces.plugins.PluginInterface):
         layer = self.context.layers[self.config['primary']]
         for offset, rule_name, name, value in layer.scan(context = self.context, scanner = yarascan.YaraScanner(rules = rules)):
 
+            # For each matching rule try to read 1024 bytes (size of an MFT record) at the offset.
             try:
                 mft_record = layer.read(offset, 1024, False)
                 mft_entry = self.parse_mft_record(mft_record)
