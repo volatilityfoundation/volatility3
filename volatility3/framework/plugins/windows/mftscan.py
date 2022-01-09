@@ -192,7 +192,6 @@ class MFTScan(interfaces.plugins.PluginInterface):
                     flags = self.unpack_data(mft_record, attr_data+32, 'unsigned short')
                     permissions = VERBOSE_STANDARD_INFO_FLAGS.get(flags, 'Unknown')
 
-
                     mft_entry['attributes']['SI'] = {
                          "creation_time": conversion.wintime_to_datetime(creation_time_win),
                          "modified_time": conversion.wintime_to_datetime(modified_time_win),
@@ -296,7 +295,7 @@ class MFTScan(interfaces.plugins.PluginInterface):
                         link_count,
                         permissions,
                         'FileName',
-                        entry.get('file_name',''),
+                        entry.get('file_name',renderers.NotAvailableValue()),
                         entry.get('creation_time', renderers.NotAvailableValue()),
                         entry.get('modified_time', renderers.NotAvailableValue()),
                         entry.get('updated_time', renderers.NotAvailableValue()),
