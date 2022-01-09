@@ -14,11 +14,11 @@ from volatility3.framework.renderers import conversion, format_hints
 from volatility3.framework.symbols.windows.extensions.mft import AttributeTypes, NameSpace, PermissionFlags, MFTFlags
 from volatility3.framework.symbols.windows.mft import MFTIntermedSymbols
 
-from volatility3.plugins import yarascan
+from volatility3.plugins import timeliner, yarascan
 
 vollog = logging.getLogger(__name__)
 
-class MFTScan(interfaces.plugins.PluginInterface):
+class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for MFT FILE objects present in a particular windows memory image."""
 
     _required_framework_version = (2, 0, 0)
@@ -121,6 +121,18 @@ class MFTScan(interfaces.plugins.PluginInterface):
             except exceptions.PagedInvalidAddressException:
                 pass
 
+    def generate_timeline(self):
+        for row in self._generator():
+            if row[-1] != 'N/A':
+                filename = row[-1]
+                created = f'File {row[-1]} Created'
+                updated = f'File {row[-1]} Updated'
+                modified = f'File {row[-1]} Modified'
+                accessed = f'File {row[-1]} Accessed'
+                yield (f'File {filename} created', timeliner.TimeLinerType.CREATED, row[7])
+                yield (f'File {filename} modified', timeliner.TimeLinerType.MODIFIED, row[8])
+                yield (f'File {filename} updated', timeliner.TimeLinerType.CHANGED, row[9])
+                yield (f'File {filename} accessed', timeliner.TimeLinerType.ACCESSED, row[10])
 
     def run(self):
         return renderers.TreeGrid([
