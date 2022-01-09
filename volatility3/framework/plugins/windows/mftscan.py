@@ -2,14 +2,15 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
+import datetime
 import logging
+import struct
 
-from struct import unpack
 from typing import Dict
 
 from volatility3.framework import constants, renderers, interfaces
 from volatility3.framework.configuration import requirements
-from volatility3.framework.exceptions import PagedInvalidAddressException
+from volatility3.framework import exceptions
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import conversion, format_hints
 from volatility3.plugins import yarascan
@@ -122,29 +123,15 @@ class MFTScan(interfaces.plugins.PluginInterface):
         """
 
         if data_type == 'unsigned long':
-            return unpack('<L', mft_record[offset:offset+4])[0]
+            return struct.unpack('<L', mft_record[offset:offset+4])[0]
         elif data_type == 'unsigned short':
-            return unpack('<H', mft_record[offset:offset+2])[0]
+            return struct.unpack('<H', mft_record[offset:offset+2])[0]
         elif data_type == 'unsigned long long':
-            return unpack('<Q', mft_record[offset:offset+8])[0]
+            return struct.unpack('<Q', mft_record[offset:offset+8])[0]
         elif data_type == 'unsigned char':
-            return unpack('<B', mft_record[offset:offset+1])[0]
+            return struct.unpack('<B', mft_record[offset:offset+1])[0]
         elif data_type == 'int':
-            return unpack('<I', mft_record[offset:offset+4])[0]
-
-    @classmethod
-    def human_date(self, datetime_object: int) -> str:
-        """Converts a windows epoch to a date time string with a fixed format
-        
-        Args:
-            datetime_object: windows epoch time
-
-        Returns:
-            str: strftime of the windows epoch in UTC
-
-        """
-        dtg = conversion.wintime_to_datetime(datetime_object)
-        return dtg.strftime('%Y-%m-%d %H:%M:%S %z')
+            return struct.unpack('<I', mft_record[offset:offset+4])[0]
 
     @classmethod
     def parse_mft_record(self, mft_record: bytes) -> Dict:
@@ -207,10 +194,10 @@ class MFTScan(interfaces.plugins.PluginInterface):
 
 
                     mft_entry['attributes']['SI'] = {
-                         "creation_time": self.human_date(creation_time_win),
-                         "modified_time": self.human_date(modified_time_win),
-                         "updated_time": self.human_date(altered_time_win),
-                         "accessed_time":  self.human_date(access_time_win),
+                         "creation_time": conversion.wintime_to_datetime(creation_time_win),
+                         "modified_time": conversion.wintime_to_datetime(modified_time_win),
+                         "updated_time": conversion.wintime_to_datetime(altered_time_win),
+                         "accessed_time":  conversion.wintime_to_datetime(access_time_win),
                          "flags": permissions
                          }
 
@@ -226,21 +213,21 @@ class MFTScan(interfaces.plugins.PluginInterface):
 
                     # Unicode and partially corruprted records can break us here. 
                     file_name = mft_record[attr_data+66:attr_data+66+(2*name_len)]
-                    file_name = utility.array_to_string(file_name)
-                    #try:
-                    #  #  file_name = file_name.replace(b'\x00', b'').decode()
-                    #except:
-                    #    file_name = str(file_name.replace(b'\x00', b''))
+                    #file_name = utility.array_to_string(file_name)
+                    try:
+                       file_name = file_name.replace(b'\x00', b'').decode()
+                    except:
+                        file_name = str(file_name.replace(b'\x00', b''))
 
                     flags = self.unpack_data(mft_record, attr_data+56, 'unsigned short')
                     permissions = VERBOSE_STANDARD_INFO_FLAGS.get(flags, 'Unknown')
 
                     mft_entry['attributes']['FN'].append(
                         {
-                            "creation_time": self.human_date(creation_time_win),
-                            "modified_time": self.human_date(modified_time_win),
-                            "updated_time": self.human_date(altered_time_win),
-                            "accessed_time":  self.human_date(access_time_win),
+                            "creation_time": conversion.wintime_to_datetime(creation_time_win),
+                            "modified_time": conversion.wintime_to_datetime(modified_time_win),
+                            "updated_time": conversion.wintime_to_datetime(altered_time_win),
+                            "accessed_time":  conversion.wintime_to_datetime(access_time_win),
                             "allocated_size": self.unpack_data(mft_record, attr_data+40,  'unsigned long long'),
                             "real_size": self.unpack_data(mft_record, attr_data+48,  'unsigned long long'),
                             "flags": permissions,
@@ -263,11 +250,11 @@ class MFTScan(interfaces.plugins.PluginInterface):
             try:
                 mft_record = layer.read(offset, 1024, False)
                 mft_entry = self.parse_mft_record(mft_record)
-            except PagedInvalidAddressException:
+            except exceptions.PagedInvalidAddressException:
                 mft_entry = None
-            except Exception as err:
-                vollog.error(err)
-                mft_entry = None
+            #except Exception as err:
+            #    vollog.error(err)
+            #    mft_entry = None
 
             if mft_entry:
                 vollog.debug(mft_entry)
@@ -276,15 +263,15 @@ class MFTScan(interfaces.plugins.PluginInterface):
                 si = mft_entry['attributes']['SI']
                 fn = mft_entry['attributes']['FN']
 
-                signature = mft_entry.get('signature', 0)
-                record_number = mft_entry.get('record_number', 0)
-                link_count = mft_entry.get('link_count', 0)
-                permissions = mft_entry.get('flags', '')
+                signature = mft_entry.get('signature', renderers.NotAvailableValue())
+                record_number = mft_entry.get('record_number', renderers.NotAvailableValue())
+                link_count = mft_entry.get('link_count', renderers.NotAvailableValue())
+                permissions = mft_entry.get('flags', renderers.NotAvailableValue())
                 
-                si_creation_time = si.get('creation_time', '')
-                si_modified_time = si.get('modified_time', '')
-                si_updated_time = si.get('updated_time', '')
-                si_accessed_time = si.get('accessed_time', '')
+                si_creation_time = si.get('creation_time', renderers.NotAvailableValue())
+                si_modified_time = si.get('modified_time', renderers.NotAvailableValue())
+                si_updated_time = si.get('updated_time', renderers.NotAvailableValue())
+                si_accessed_time = si.get('accessed_time', renderers.NotAvailableValue())
 
                 yield 0, (
                     format_hints.Hex(offset),
@@ -293,7 +280,7 @@ class MFTScan(interfaces.plugins.PluginInterface):
                     link_count,
                     permissions,
                     'Standard Information',
-                    'N/A',
+                    renderers.NotApplicableValue(),
                     si_creation_time,
                     si_modified_time,
                     si_updated_time,
@@ -302,18 +289,18 @@ class MFTScan(interfaces.plugins.PluginInterface):
                 for entry in fn:
                     # As this is variable and may or may not exist
                     # And could have 0-6 entries lets do it per row.  
-                    yield 0, (
+                    yield 1, (
                         format_hints.Hex(offset),
                         signature,
                         record_number,
                         link_count,
                         permissions,
                         'FileName',
-                        entry.get('file_name', ''),
-                        entry.get('creation_time', ''),
-                        entry.get('modified_time', ''),
-                        entry.get('updated_time', ''),
-                        entry.get('accessed_time', ''))
+                        entry.get('file_name',''),
+                        entry.get('creation_time', renderers.NotAvailableValue()),
+                        entry.get('modified_time', renderers.NotAvailableValue()),
+                        entry.get('updated_time', renderers.NotAvailableValue()),
+                        entry.get('accessed_time', renderers.NotAvailableValue()))
 
     def run(self):
         return renderers.TreeGrid([
@@ -324,8 +311,8 @@ class MFTScan(interfaces.plugins.PluginInterface):
                 ('Permissions', str),
                 ('Attribute Type', str),
                 ('Filename', str),
-                ('Created', str),
-                ('Modified', str),
-                ('Updated', str),
-                ('Accessed', str)
+                ('Created', datetime.datetime),
+                ('Modified', datetime.datetime),
+                ('Updated', datetime.datetime),
+                ('Accessed', datetime.datetime)
             ],self._generator())
