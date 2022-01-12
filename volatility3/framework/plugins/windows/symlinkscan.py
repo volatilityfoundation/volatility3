@@ -15,15 +15,13 @@ from volatility3.plugins.windows import poolscanner
 class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for links present in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
         ]
 
     @classmethod
@@ -51,7 +49,9 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
             yield mem_object
 
     def _generator(self):
-        for link in self.scan_symlinks(self.context, self.config['primary'], self.config['nt_symbols']):
+        kernel = self.context.modules[self.config['kernel']]
+
+        for link in self.scan_symlinks(self.context, kernel.layer_name, kernel.symbol_table_name):
 
             try:
                 from_name = link.get_link_name()
@@ -68,7 +68,7 @@ class SymlinkScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterfa
     def generate_timeline(self):
         for row in self._generator():
             _depth, row_data = row
-            description = "Symlink: {} -> {}".format(row_data[2], row_data[3])
+            description = f"Symlink: {row_data[2]} -> {row_data[3]}"
             yield (description, timeliner.TimeLinerType.CREATED, row_data[1])
 
     def run(self):

@@ -10,7 +10,7 @@ class MultiRegexp(object):
     """Algorithm for multi-string matching."""
 
     def __init__(self) -> None:
-        self._pattern_strings = []  # type: List[bytes]
+        self._pattern_strings: List[bytes] = []
         self._regex = re.compile(b'')
 
     def add_pattern(self, pattern: bytes) -> None:

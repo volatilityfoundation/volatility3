@@ -19,17 +19,15 @@ vollog = logging.getLogger(__name__)
 class Lsof(plugins.PluginInterface):
     """Lists all memory maps for all processes."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
-            requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (1, 0, 0)),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.VersionRequirement(name = 'linuxutils', component = linux.LinuxUtilities, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -57,6 +55,5 @@ class Lsof(plugins.PluginInterface):
         return renderers.TreeGrid([("PID", int), ("Process", str), ("FD", int), ("Path", str)],
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
-                                                               self.config['primary'],
-                                                               self.config['vmlinux'],
+                                                               self.config['kernel'],
                                                                filter_func = filter_func)))

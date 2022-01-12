@@ -17,16 +17,14 @@ vollog = logging.getLogger(__name__)
 class ModScan(interfaces.plugins.PluginInterface):
     """Scans for modules present in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.VersionRequirement(name = 'poolerscanner',
                                             component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),
@@ -81,7 +79,7 @@ class ModScan(interfaces.plugins.PluginInterface):
         Returns:
             A list of session layer names
         """
-        seen_ids = []  # type: List[interfaces.objects.ObjectInterface]
+        seen_ids: List[interfaces.objects.ObjectInterface] = []
         filter_func = pslist.PsList.create_pid_filter(pids or [])
 
         for proc in pslist.PsList.list_processes(context = context,
@@ -137,14 +135,16 @@ class ModScan(interfaces.plugins.PluginInterface):
         return None
 
     def _generator(self):
-        session_layers = list(self.get_session_layers(self.context, self.config['primary'], self.config['nt_symbols']))
+        kernel = self.context.modules[self.config['kernel']]
+
+        session_layers = list(self.get_session_layers(self.context, kernel.layer_name, kernel.symbol_table_name))
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
 
-        for mod in self.scan_modules(self.context, self.config['primary'], self.config['nt_symbols']):
+        for mod in self.scan_modules(self.context, kernel.layer_name, kernel.symbol_table_name):
 
             try:
                 BaseDllName = mod.BaseDllName.get_string()
@@ -160,7 +160,7 @@ class ModScan(interfaces.plugins.PluginInterface):
             if self.config['dump']:
 
                 session_layer_name = self.find_session_layer(self.context, session_layers, mod.DllBase)
-                file_output = "Cannot find a viable session layer for {0:#x}".format(mod.DllBase)
+                file_output = f"Cannot find a viable session layer for {mod.DllBase:#x}"
                 if session_layer_name:
                     file_handle = dlllist.DllList.dump_pe(self.context,
                                                           pe_table_name,

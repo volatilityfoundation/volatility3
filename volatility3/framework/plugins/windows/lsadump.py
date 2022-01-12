@@ -3,12 +3,14 @@
 #
 import logging
 from struct import unpack
+from typing import Optional
 
 from Crypto.Cipher import ARC4, DES, AES
 from Crypto.Hash import MD5, SHA256
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
+from volatility3.framework.layers import registry
 from volatility3.framework.symbols.windows import versions
 from volatility3.plugins.windows import hashdump
 from volatility3.plugins.windows.registry import hivelist
@@ -19,21 +21,20 @@ vollog = logging.getLogger(__name__)
 class Lsadump(interfaces.plugins.PluginInterface):
     """Dumps lsa secrets from memory"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
-            requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
+            requirements.VersionRequirement(name = 'hashdump', component = hashdump.Hashdump, version = (1, 1, 0)),
+            requirements.VersionRequirement(name = 'hivelist', component = hivelist.HiveList, version = (1, 0, 0))
         ]
 
     @classmethod
-    def decrypt_aes(cls, secret, key):
+    def decrypt_aes(cls, secret: bytes, key: bytes) -> bytes:
         """
         Based on code from http://lab.mediaservice.net/code/cachedump.rb
         """
@@ -54,7 +55,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         return data
 
     @classmethod
-    def get_lsa_key(cls, sechive, bootkey, vista_or_later):
+    def get_lsa_key(cls, sechive: registry.RegistryHive, bootkey: bytes, vista_or_later: bool) -> Optional[bytes]:
         if not bootkey:
             return None
 
@@ -63,7 +64,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
         else:
             policy_key = 'PolSecretEncryptionKey'
 
-        enc_reg_key = sechive.get_key("Policy\\" + policy_key)
+        enc_reg_key = hashdump.Hashdump.get_hive_key(sechive, "Policy\\" + policy_key)
         if not enc_reg_key:
             return None
         enc_reg_value = next(enc_reg_key.get_values())
@@ -83,7 +84,7 @@ class Lsadump(interfaces.plugins.PluginInterface):
             rc4key = md5.digest()
 
             rc4 = ARC4.new(rc4key)
-            lsa_key = rc4.decrypt(obf_lsa_key[12:60])
+            lsa_key = rc4.decrypt(obf_lsa_key[12:60]) # lgtm [py/weak-cryptographic-algorithm]
             lsa_key = lsa_key[0x10:0x20]
         else:
             lsa_key = cls.decrypt_aes(obf_lsa_key, bootkey)
@@ -91,28 +92,26 @@ class Lsadump(interfaces.plugins.PluginInterface):
         return lsa_key
 
     @classmethod
-    def get_secret_by_name(cls, sechive, name, lsakey, is_vista_or_later):
-        try:
-            enc_secret_key = sechive.get_key("Policy\\Secrets\\" + name + "\\CurrVal")
-        except KeyError:
-            raise ValueError("Unable to read cache from memory")
+    def get_secret_by_name(cls, sechive: registry.RegistryHive, name: str, lsakey: bytes, is_vista_or_later: bool):
+        enc_secret_key = hashdump.Hashdump.get_hive_key(sechive, "Policy\\Secrets\\" + name + "\\CurrVal")
 
-        enc_secret_value = next(enc_secret_key.get_values())
-        if not enc_secret_value:
-            return None
+        secret = None
+        if enc_secret_key:
+            enc_secret_value = next(enc_secret_key.get_values())
+            if enc_secret_value:
 
-        enc_secret = sechive.read(enc_secret_value.Data + 4, enc_secret_value.DataLength)
-        if not enc_secret:
-            return None
+                enc_secret = sechive.read(enc_secret_value.Data + 4, enc_secret_value.DataLength)
+                if enc_secret:
 
-        if not is_vista_or_later:
-            secret = cls.decrypt_secret(enc_secret[0xC:], lsakey)
-        else:
-            secret = cls.decrypt_aes(enc_secret, lsakey)
+                    if not is_vista_or_later:
+                        secret = cls.decrypt_secret(enc_secret[0xC:], lsakey)
+                    else:
+                        secret = cls.decrypt_aes(enc_secret, lsakey)
+
         return secret
 
     @classmethod
-    def decrypt_secret(cls, secret, key):
+    def decrypt_secret(cls, secret: bytes, key: bytes):
         """Python implementation of SystemFunction005.
 
         Decrypts a block of data with DES using given key.
@@ -126,34 +125,42 @@ class Lsadump(interfaces.plugins.PluginInterface):
             des_key = hashdump.Hashdump.sidbytes_to_key(block_key)
             des = DES.new(des_key, DES.MODE_ECB)
             enc_block = enc_block + b"\x00" * int(abs(8 - len(enc_block)) % 8)
-            decrypted_data += des.decrypt(enc_block)
+            decrypted_data += des.decrypt(enc_block) # lgtm [py/weak-cryptographic-algorithm]
             j += 7
             if len(key[j:j + 7]) < 7:
                 j = len(key[j:j + 7])
 
-        (dec_data_len, ) = unpack("<L", decrypted_data[:4])
+        (dec_data_len,) = unpack("<L", decrypted_data[:4])
 
         return decrypted_data[8:8 + dec_data_len]
 
-    def _generator(self, syshive, sechive):
+    def _generator(self, syshive: registry.RegistryHive, sechive: registry.RegistryHive):
 
-        vista_or_later = versions.is_vista_or_later(context = self.context, symbol_table = self.config['nt_symbols'])
+        kernel = self.context.modules[self.config['kernel']]
+
+        vista_or_later = versions.is_vista_or_later(context = self.context,
+                                                    symbol_table = kernel.symbol_table_name)
 
         bootkey = hashdump.Hashdump.get_bootkey(syshive)
         lsakey = self.get_lsa_key(sechive, bootkey, vista_or_later)
         if not bootkey:
-            raise ValueError('Unable to find bootkey')
+            vollog.warning("Unable to find bootkey")
+            return
 
         if not lsakey:
-            raise ValueError('Unable to find lsa key')
+            vollog.warning("Unable to find lsa key")
+            return
 
-        secrets_key = sechive.get_key('Policy\\Secrets')
+        secrets_key = hashdump.Hashdump.get_hive_key(sechive, 'Policy\\Secrets')
         if not secrets_key:
-            raise ValueError('Unable to find secrets key')
+            vollog.warning("Unable to find secrets key")
+            return
 
         for key in secrets_key.get_subkeys():
 
-            sec_val_key = sechive.get_key('Policy\\Secrets\\' + key.get_key_path().split('\\')[3] + '\\CurrVal')
+            sec_val_key = hashdump.Hashdump.get_hive_key(sechive,
+                                                         'Policy\\Secrets\\' + key.get_key_path().split('\\')[
+                                                             3] + '\\CurrVal')
             if not sec_val_key:
                 continue
 
@@ -174,11 +181,13 @@ class Lsadump(interfaces.plugins.PluginInterface):
     def run(self):
 
         offset = self.config.get('offset', None)
+        syshive = sechive = None
+        kernel = self.context.modules[self.config['kernel']]
 
         for hive in hivelist.HiveList.list_hives(self.context,
                                                  self.config_path,
-                                                 self.config['primary'],
-                                                 self.config['nt_symbols'],
+                                                 kernel.layer_name,
+                                                 kernel.symbol_table_name,
                                                  hive_offsets = None if offset is None else [offset]):
 
             if hive.get_name().split('\\')[-1].upper() == 'SYSTEM':

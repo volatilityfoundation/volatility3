@@ -19,16 +19,14 @@ vollog = logging.getLogger(__name__)
 class Netstat(plugins.PluginInterface):
     """Lists all network connections for all processes."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Kernel Address Space',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac Kernel"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
@@ -39,8 +37,7 @@ class Netstat(plugins.PluginInterface):
     @classmethod
     def list_sockets(cls,
                      context: interfaces.context.ContextInterface,
-                     layer_name: str,
-                     darwin_symbols: str,
+                     kernel_module_name: str,
                      filter_func: Callable[[int], bool] = lambda _: False) -> \
             Iterable[Tuple[interfaces.objects.ObjectInterface,
                            interfaces.objects.ObjectInterface,
@@ -56,12 +53,13 @@ class Netstat(plugins.PluginInterface):
         """
         # This is hardcoded, since a change in the default method would change the expected results
         list_tasks = pslist.PsList.get_list_tasks(pslist.PsList.pslist_methods[0])
-        for task in list_tasks(context, layer_name, darwin_symbols, filter_func):
+        for task in list_tasks(context, kernel_module_name, filter_func):
 
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
 
-            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(context, darwin_symbols, task):
+            for filp, _, _ in mac.MacUtilities.files_descriptors_for_process(context, context.modules[
+                kernel_module_name].symbol_table_name, task):
                 try:
                     ftype = filp.f_fglob.get_fg_type()
                 except exceptions.InvalidAddressException:
@@ -75,14 +73,17 @@ class Netstat(plugins.PluginInterface):
                 except exceptions.InvalidAddressException:
                     continue
 
+                if not context.layers[task.vol.native_layer_name].is_valid(socket.vol.offset,
+                                                                           socket.vol.size):
+                    continue
+
                 yield task_name, pid, socket
 
     def _generator(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for task_name, pid, socket in self.list_sockets(self.context,
-                                                        self.config['primary'],
-                                                        self.config['darwin'],
+                                                        self.config['kernel'],
                                                         filter_func = filter_func):
 
             family = socket.get_family()
@@ -95,7 +96,7 @@ class Netstat(plugins.PluginInterface):
                     continue
 
                 yield (0, (format_hints.Hex(socket.vol.offset), "UNIX", path, 0, "", 0, "",
-                           "{}/{:d}".format(task_name, pid)))
+                           f"{task_name}/{pid:d}"))
 
             elif family in [2, 30]:
                 state = socket.get_state()
@@ -107,7 +108,7 @@ class Netstat(plugins.PluginInterface):
                     (lip, lport, rip, rport) = vals
 
                     yield (0, (format_hints.Hex(socket.vol.offset), proto, lip, lport, rip, rport, state,
-                               "{}/{:d}".format(task_name, pid)))
+                               f"{task_name}/{pid:d}"))
 
     def run(self):
         return renderers.TreeGrid([("Offset", format_hints.Hex), ("Proto", str), ("Local IP", str), ("Local Port", int),

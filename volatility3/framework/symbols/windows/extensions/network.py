@@ -164,7 +164,7 @@ class _TCP_LISTENER(objects.StructType):
                 return False
 
         except exceptions.InvalidAddressException:
-            vollog.debug("netw obj 0x{:x} invalid due to invalid address access".format(self.vol.offset))
+            vollog.debug(f"netw obj 0x{self.vol.offset:x} invalid due to invalid address access")
             return False
         return True
 
@@ -200,21 +200,21 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
     def is_valid(self):
 
         if self.State not in self.State.choices.values():
-            vollog.debug("invalid due to invalid tcp state {}".format(self.State))
+            vollog.debug(f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid tcp state {self.State}")
             return False
 
         try:
             if self.get_address_family() not in (AF_INET, AF_INET6):
-                vollog.debug("invalid due to invalid address_family {}".format(self.get_address_family()))
+                vollog.debug(f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid address_family {self.get_address_family()}")
                 return False
 
             if not self.get_local_address() and (not self.get_owner() or self.get_owner().UniqueProcessId == 0
                                                  or self.get_owner().UniqueProcessId > 65535):
-                vollog.debug("invalid due to invalid owner data")
+                vollog.debug(f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid owner data")
                 return False
 
         except exceptions.InvalidAddressException:
-            vollog.debug("invalid due to invalid address access")
+            vollog.debug(f"{type(self)} 0x{self.vol.offset:x} invalid due to invalid address access")
             return False
 
         return True

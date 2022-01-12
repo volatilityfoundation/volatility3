@@ -65,7 +65,7 @@ class ObjectTemplate(interfaces.objects.Template):
 
         Returns: an object adhereing to the :class:`~volatility3.framework.interfaces.objects.ObjectInterface`
         """
-        arguments = {}  # type: Dict[str, Any]
+        arguments: Dict[str, Any] = {}
         for arg in self.vol:
             if arg != 'object_class':
                 arguments[arg] = self.vol[arg]
@@ -94,12 +94,12 @@ class ReferenceTemplate(interfaces.objects.Template):
         symbol_name = type_name[-1]
         raise exceptions.SymbolError(
             symbol_name, table_name,
-            "Template contains no information about its structure: {}".format(self.vol.type_name))
+            f"Template contains no information about its structure: {self.vol.type_name}")
 
-    size = property(_unresolved)  # type: ClassVar[Any]
-    replace_child = _unresolved  # type: ClassVar[Any]
-    relative_child_offset = _unresolved  # type: ClassVar[Any]
-    has_member = _unresolved  # type: ClassVar[Any]
+    size: ClassVar[Any] = property(_unresolved)
+    replace_child: ClassVar[Any] = _unresolved
+    relative_child_offset: ClassVar[Any] = _unresolved
+    has_member: ClassVar[Any] = _unresolved
 
     def __call__(self, context: interfaces.context.ContextInterface, object_info: interfaces.objects.ObjectInformation):
         template = context.symbol_space.get_type(self.vol.type_name)

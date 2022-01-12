@@ -2,7 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-from volatility3.framework import renderers, interfaces, exceptions, contexts
+from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 
@@ -10,7 +10,7 @@ from volatility3.framework.objects import utility
 class VFSevents(interfaces.plugins.PluginInterface):
     """ Lists processes that are filtering file system events """
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     event_types = [
         "CREATE_FILE", "DELETE", "STAT_CHANGED", "RENAME", "CONTENT_MODIFIED", "EXCHANGE", "FINDER_INFO_CHANGED",
@@ -20,10 +20,8 @@ class VFSevents(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
         ]
 
     def _generator(self):
@@ -32,7 +30,7 @@ class VFSevents(interfaces.plugins.PluginInterface):
         Also lists which event(s) a process is registered for
         """
 
-        kernel = contexts.Module(self.context, self.config['darwin'], self.config['primary'], 0)
+        kernel = self.context.modules[self.config['kernel']]
 
         watcher_table = kernel.object_from_symbol("watcher_table")
 
@@ -48,6 +46,7 @@ class VFSevents(interfaces.plugins.PluginInterface):
             try:
                 event_array = kernel.object(object_type = "array",
                                             offset = watcher.event_list,
+                                            absolute = True,
                                             count = 13,
                                             subtype = kernel.get_type("unsigned char"))
 

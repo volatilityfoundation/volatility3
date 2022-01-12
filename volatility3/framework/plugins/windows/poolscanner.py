@@ -18,9 +18,7 @@ from volatility3.plugins.windows import handles
 vollog = logging.getLogger(__name__)
 
 
-# TODO: When python3.5 is no longer supported, make this enum.IntFlag
-# Revisit the page_type signature of PoolConstraint once using enum.IntFlag
-class PoolType(enum.IntEnum):
+class PoolType(enum.IntFlag):
     """Class to maintain the different possible PoolTypes The values must be
     integer powers of 2."""
 
@@ -37,11 +35,12 @@ class PoolConstraint:
                  tag: bytes,
                  type_name: str,
                  object_type: Optional[str] = None,
-                 page_type: Optional[int] = None,
+                 page_type: Optional[PoolType] = None,
                  size: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  index: Optional[Tuple[Optional[int], Optional[int]]] = None,
                  alignment: Optional[int] = 1,
-                 skip_type_test: bool = False) -> None:
+                 skip_type_test: bool = False,
+                 additional_structures: Optional[List[str]] = None) -> None:
         self.tag = tag
         self.type_name = type_name
         self.object_type = object_type
@@ -50,6 +49,7 @@ class PoolConstraint:
         self.index = index
         self.alignment = alignment
         self.skip_type_test = skip_type_test
+        self.additional_structures = additional_structures
 
 
 class PoolHeaderScanner(interfaces.layers.ScannerInterface):
@@ -115,24 +115,24 @@ class PoolScanner(plugins.PluginInterface):
     """A generic pool scanner plugin."""
 
     _version = (1, 0, 0)
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'handles', plugin = handles.Handles, version = (1, 0, 0)),
         ]
 
     def _generator(self):
 
-        symbol_table = self.config["nt_symbols"]
+        kernel = self.context.modules[self.config['kernel']]
+
+        symbol_table = kernel.symbol_table_name
         constraints = self.builtin_constraints(symbol_table)
 
-        for constraint, mem_object, header in self.generate_pool_scan(self.context, self.config["primary"],
+        for constraint, mem_object, header in self.generate_pool_scan(self.context, kernel.layer_name,
                                                                       symbol_table, constraints):
             # generate some type-specific info for sanity checking
             if constraint.object_type == "Process":
@@ -143,7 +143,7 @@ class PoolScanner(plugins.PluginInterface):
                 try:
                     name = mem_object.FileName.String
                 except exceptions.InvalidAddressException:
-                    vollog.log(constants.LOGLEVEL_VVV, "Skipping file at {0:#x}".format(mem_object.vol.offset))
+                    vollog.log(constants.LOGLEVEL_VVV, f"Skipping file at {mem_object.vol.offset:#x}")
                     continue
             else:
                 name = renderers.NotApplicableValue()
@@ -214,7 +214,8 @@ class PoolScanner(plugins.PluginInterface):
                            type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
                            object_type = "Driver",
                            size = (248, None),
-                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE),
+                           page_type = PoolType.PAGED | PoolType.NONPAGED | PoolType.FREE, 
+                           additional_structures = ["_DRIVER_EXTENSION"]),
             # drivers on windows starting with windows 8
             PoolConstraint(b'Driv',
                            type_name = symbol_table + constants.BANG + "_DRIVER_OBJECT",
@@ -293,26 +294,26 @@ class PoolScanner(plugins.PluginInterface):
 
         for constraint, header in cls.pool_scan(context, scan_layer, symbol_table, constraints, alignment = alignment):
 
-            mem_object = header.get_object(type_name = constraint.type_name,
+            mem_objects = header.get_object(constraint = constraint,
                                            use_top_down = is_windows_8_or_later,
-                                           executive = constraint.object_type is not None,
-                                           native_layer_name = 'primary',
+                                           native_layer_name = layer_name,
                                            kernel_symbol_table = symbol_table)
 
-            if mem_object is None:
-                vollog.log(constants.LOGLEVEL_VVV, "Cannot create an instance of {}".format(constraint.type_name))
-                continue
-
-            if constraint.object_type is not None and not constraint.skip_type_test:
-                try:
-                    if mem_object.get_object_header().get_object_type(type_map, cookie) != constraint.object_type:
-                        continue
-                except exceptions.InvalidAddressException:
-                    vollog.log(constants.LOGLEVEL_VVV,
-                               "Cannot test instance type check for {}".format(constraint.type_name))
+            for mem_object in mem_objects:
+                if mem_object is None:
+                    vollog.log(constants.LOGLEVEL_VVV, f"Cannot create an instance of {constraint.type_name}")
                     continue
 
-            yield constraint, mem_object, header
+                if constraint.object_type is not None and not constraint.skip_type_test:
+                    try:
+                        if mem_object.get_object_header().get_object_type(type_map, cookie) != constraint.object_type:
+                            continue
+                    except exceptions.InvalidAddressException:
+                        vollog.log(constants.LOGLEVEL_VVV,
+                                   f"Cannot test instance type check for {constraint.type_name}")
+                        continue
+
+                yield constraint, mem_object, header
 
     @classmethod
     def pool_scan(cls,
@@ -340,10 +341,10 @@ class PoolScanner(plugins.PluginInterface):
             An Iterable of pool constraints and the pool headers associated with them
         """
         # Setup the pattern
-        constraint_lookup = {}  # type: Dict[bytes, PoolConstraint]
+        constraint_lookup: Dict[bytes, PoolConstraint] = {}
         for constraint in pool_constraints:
             if constraint.tag in constraint_lookup:
-                raise ValueError("Constraint tag is used for more than one constraint: {}".format(repr(constraint.tag)))
+                raise ValueError(f"Constraint tag is used for more than one constraint: {repr(constraint.tag)}")
             constraint_lookup[constraint.tag] = constraint
 
         pool_header_table_name = cls.get_pool_header_table(context, symbol_table)

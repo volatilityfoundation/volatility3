@@ -20,16 +20,14 @@ from volatility3.plugins.mac import pslist
 class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Recovers bash command history from memory."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -37,7 +35,8 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
         ]
 
     def _generator(self, tasks):
-        is_32bit = not symbols.symbol_table_is_64bit(self.context, self.config["darwin"])
+        darwin = self.context.modules[self.config['kernel']]
+        is_32bit = not symbols.symbol_table_is_64bit(self.context, darwin.symbol_table_name)
         if is_32bit:
             pack_format = "I"
             bash_json_file = "bash32"
@@ -67,7 +66,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             for address in proc_layer.scan(self.context,
                                            scanners.BytesScanner(b"#"),
                                            sections = task.get_process_memory_sections(self.context,
-                                                                                       self.config['darwin'],
+                                                                                       self.config['kernel'],
                                                                                        rw_no_file = True)):
                 bang_addrs.append(struct.pack(pack_format, address))
 
@@ -76,7 +75,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
             for address, _ in proc_layer.scan(self.context,
                                               scanners.MultiStringScanner(bang_addrs),
                                               sections = task.get_process_memory_sections(self.context,
-                                                                                          self.config['darwin'],
+                                                                                          self.config['kernel'],
                                                                                           rw_no_file = True)):
                 hist = self.context.object(bash_table_name + constants.BANG + "hist_entry",
                                            offset = address - ts_offset,
@@ -96,8 +95,7 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
                                    ("Command", str)],
                                   self._generator(
                                       list_tasks(self.context,
-                                                 self.config['primary'],
-                                                 self.config['darwin'],
+                                                 self.config['kernel'],
                                                  filter_func = filter_func)))
 
     def generate_timeline(self):
@@ -105,7 +103,9 @@ class Bash(plugins.PluginInterface, timeliner.TimeLinerInterface):
         list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
 
         for row in self._generator(
-                list_tasks(self.context, self.config['primary'], self.config['darwin'], filter_func = filter_func)):
+                list_tasks(self.context,
+                           self.config['kernel'],
+                           filter_func = filter_func)):
             _depth, row_data = row
-            description = "{} ({}): \"{}\"".format(row_data[0], row_data[1], row_data[3])
+            description = f"{row_data[0]} ({row_data[1]}): \"{row_data[3]}\""
             yield (description, timeliner.TimeLinerType.CREATED, row_data[2])

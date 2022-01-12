@@ -54,12 +54,14 @@ class ScannerInterface(interfaces.configuration.VersionableInterface, metaclass 
     """
     thread_safe = False
 
+    _required_framework_version = (2, 0, 0)
+
     def __init__(self) -> None:
         super().__init__()
         self.chunk_size = 0x1000000  # Default to 16Mb chunks
         self.overlap = 0x1000  # A page of overlap by default
-        self._context = None  # type: Optional[interfaces.context.ContextInterface]
-        self._layer_name = None  # type: Optional[str]
+        self._context: Optional[interfaces.context.ContextInterface] = None
+        self._layer_name: Optional[str] = None
 
     @property
     def context(self) -> Optional['interfaces.context.ContextInterface']:
@@ -99,10 +101,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     accesses a data source and exposes it within volatility.
     """
 
-    _direct_metadata = collections.ChainMap({}, {
-        'architecture': 'Unknown',
-        'os': 'Unknown'
-    })  # type: collections.ChainMap
+    _direct_metadata: Mapping = {'architecture': 'Unknown', 'os': 'Unknown'}
 
     def __init__(self,
                  context: 'interfaces.context.ContextInterface',
@@ -111,8 +110,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context, config_path)
         self._name = name
-        if metadata:
-            self._direct_metadata.update(metadata)
+        self._metadata = metadata or {}
 
     # Standard attributes
 
@@ -231,7 +229,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
         sections = list(self._coalesce_sections(sections))
 
         try:
-            progress = DummyProgress()  # type: ProgressValue
+            progress: ProgressValue = DummyProgress()
             scan_iterator = functools.partial(self._scan_iterator, scanner, sections)
             scan_metric = self._scan_metric(scanner, sections)
             if not scanner.thread_safe or constants.PARALLELISM == constants.Parallelism.Off:
@@ -240,11 +238,11 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                 for value in scan_iterator():
                     if progress_callback:
                         progress_callback(scan_metric(progress.value),
-                                          "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
+                                          f"Scanning {self.name} using {scanner.__class__.__name__}")
                     yield from scan_chunk(value)
             else:
                 progress = multiprocessing.Manager().Value("Q", 0)
-                parallel_module = multiprocessing  # type: types.ModuleType
+                parallel_module: types.ModuleType = multiprocessing
                 if constants.PARALLELISM == constants.Parallelism.Threading:
                     progress = DummyProgress()
                     parallel_module = threading
@@ -255,7 +253,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                         if progress_callback:
                             # Run the progress_callback
                             progress_callback(scan_metric(progress.value),
-                                              "Scanning {} using {}".format(self.name, scanner.__class__.__name__))
+                                              f"Scanning {self.name} using {scanner.__class__.__name__}")
                         # Ensures we don't burn CPU cycles going round in a ready waiting loop
                         # without delaying the user too long between progress updates/results
                         result.wait(0.1)
@@ -263,14 +261,14 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                         yield from result_value
         except Exception as e:
             # We don't care the kind of exception, so catch and report on everything, yielding nothing further
-            vollog.debug("Scan Failure: {}".format(str(e)))
+            vollog.debug(f"Scan Failure: {str(e)}")
             vollog.log(constants.LOGLEVEL_VVV,
                        "\n".join(traceback.TracebackException.from_exception(e).format(chain = True)))
 
     def _coalesce_sections(self, sections: Iterable[Tuple[int, int]]) -> Iterable[Tuple[int, int]]:
         """Take a list of (start, length) sections and coalesce any adjacent
         sections."""
-        result = []  # type: List[Tuple[int, int]]
+        result: List[Tuple[int, int]] = []
         position = 0
         for (start, length) in sorted(sections):
             if result and start <= position:
@@ -328,6 +326,9 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
                 vollog.debug("Invalid address in layer {} found scanning {} at address {:x}".format(
                     layer_name, self.name, address))
 
+        if len(data) > scanner.chunk_size + scanner.overlap:
+            vollog.debug(f"Scan chunk too large: {hex(len(data))}")
+
         progress.value = chunk_end
         return list(scanner(data, chunk_end - len(data)))
 
@@ -357,7 +358,7 @@ class DataLayerInterface(interfaces.configuration.ConfigurableInterface, metacla
     def metadata(self) -> Mapping:
         """Returns a ReadOnly copy of the metadata published by this layer."""
         maps = [self.context.layers[layer_name].metadata for layer_name in self.dependencies]
-        return interfaces.objects.ReadOnlyMapping(collections.ChainMap({}, self._direct_metadata, *maps))
+        return interfaces.objects.ReadOnlyMapping(collections.ChainMap(self._metadata, self._direct_metadata, *maps))
 
 
 class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
@@ -424,13 +425,13 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         """Reads an offset for length bytes and returns 'bytes' (not 'str') of
         length size."""
         current_offset = offset
-        output = b''  # type: bytes
+        output: bytes = b''
         for (layer_offset, sublength, mapped_offset, mapped_length, layer) in self.mapping(offset,
                                                                                            length,
                                                                                            ignore_errors = pad):
             if not pad and layer_offset > current_offset:
                 raise exceptions.InvalidAddressException(
-                    self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
+                    self.name, current_offset, f"Layer {self.name} cannot map offset: {current_offset}")
             elif layer_offset > current_offset:
                 output += b"\x00" * (layer_offset - current_offset)
                 current_offset = layer_offset
@@ -453,7 +454,7 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         for (layer_offset, sublength, mapped_offset, mapped_length, layer) in self.mapping(offset, length):
             if layer_offset > current_offset:
                 raise exceptions.InvalidAddressException(
-                    self.name, current_offset, "Layer {} cannot map offset: {}".format(self.name, current_offset))
+                    self.name, current_offset, f"Layer {self.name} cannot map offset: {current_offset}")
 
             value_chunk = value[layer_offset - offset:layer_offset - offset + sublength]
             new_data = self._encode_data(layer, mapped_offset, layer_offset, value_chunk)
@@ -474,46 +475,66 @@ class TranslationLayerInterface(DataLayerInterface, metaclass = ABCMeta):
         assumed to have no holes
         """
         for (section_start, section_length) in sections:
-            # For each section, split it into scan size chunks
-            for chunk_start in range(section_start, section_start + section_length, scanner.chunk_size):
-                # Shorten it, if we're at the end of the section
-                chunk_length = min(section_start + section_length - chunk_start, scanner.chunk_size + scanner.overlap)
+            output: List[Tuple[str, int, int]] = []
 
-                # Prev offset keeps track of the end of the previous subchunk
-                prev_offset = chunk_start
-                output = []  # type: List[Tuple[str, int, int]]
+            # Hold the offsets of each chunk (including how much has been filled)
+            chunk_start = chunk_position = 0
 
-                # We populate the response based on subchunks that may be mapped all over the place
-                for mapped in self.mapping(chunk_start, chunk_length, ignore_errors = True):
-                    # We don't bother with the other data in case the data's been processed by a lower layer
-                    offset, sublength, mapped_offset, mapped_length, layer_name = mapped
+            # For each section, find out which bits of its exists and where they map to
+            # This is faster than cutting the entire space into scan_chunk sized blocks and then
+            # finding out what exists (particularly if most of the space isn't mapped)
+            for mapped in self.mapping(section_start, section_length, ignore_errors = True):
+                offset, sublength, mapped_offset, mapped_length, layer_name = mapped
 
-                    # We need to check if the offset is next to the end of the last one (contiguous)
-                    if offset != prev_offset:
-                        # Only yield if we've accumulated output
-                        if len(output):
-                            # Yield all the (joined) items so far
-                            # and the ending point of that subchunk (where we'd gotten to previously)
-                            yield output, prev_offset
+                # Setup the variables for this block
+                block_start = offset
+                block_end = offset + sublength
+
+                # Setup the necessary bits for non-linear mappings
+                # For linear we give one layer down and mapped offsets (therefore the conversion)
+                # This saves an tiny amount of time not have to redo lookups we've already done
+                # For non-linear layers, we give the layer name and the offset in the layer name
+                # so that the read/conversion occurs properly
+                conversion = mapped_offset - offset if linear else 0
+                return_name = layer_name if linear else self.name
+
+                # If this isn't contiguous, start a new chunk
+                if chunk_position < block_start:
+                    yield output, chunk_position
+                    output = []
+                    chunk_start = chunk_position = block_start
+
+                # Halfway through a chunk, finish the chunk, then take more
+                if chunk_position != chunk_start:
+                    chunk_size = min(chunk_position - chunk_start, scanner.chunk_size + scanner.overlap)
+                    output += [(return_name, chunk_position + conversion, chunk_size)]
+                    chunk_start = chunk_position + chunk_size
+                    chunk_position = chunk_start
+
+                # Pack chunks, if we're enter the loop (starting a new chunk) and there's already chunk there, ship it
+                for chunk_start in range(chunk_position, block_end, scanner.chunk_size):
+                    if output:
+                        yield output, chunk_position
                         output = []
+                        chunk_position = chunk_start
+                    # Take from chunk_position as far as far as the block can go,
+                    # or as much left of a scanner chunk as we can
+                    chunk_size = min(block_end - chunk_position,
+                                     scanner.chunk_size + scanner.overlap - (chunk_position - chunk_start))
+                    output += [(return_name, chunk_position + conversion, chunk_size)]
+                    chunk_start = chunk_position + chunk_size
+                    chunk_position = chunk_start
 
-                    # Shift the marker up to the end of what we just received and add it to the output
-                    prev_offset = offset + sublength
-
-                    if not linear:
-                        output += [(self.name, offset, sublength)]
-                    else:
-                        output += [(layer_name, mapped_offset, mapped_length)]
-                # If there's still output left, output it
-                if len(output):
-                    yield output, prev_offset
+            # Ship anything that might be left
+            if output:
+                yield output, chunk_position
 
 
 class LayerContainer(collections.abc.Mapping):
     """Container for multiple layers of data."""
 
     def __init__(self) -> None:
-        self._layers = {}  # type: Dict[str, DataLayerInterface]
+        self._layers: Dict[str, DataLayerInterface] = {}
 
     def read(self, layer: str, offset: int, length: int, pad: bool = False) -> bytes:
         """Reads from a particular layer at offset for length bytes.
@@ -547,12 +568,12 @@ class LayerContainer(collections.abc.Mapping):
             layer: the layer to add to the list of layers (based on layer.name)
         """
         if layer.name in self._layers:
-            raise exceptions.LayerException(layer.name, "Layer already exists: {}".format(layer.name))
+            raise exceptions.LayerException(layer.name, f"Layer already exists: {layer.name}")
         if isinstance(layer, TranslationLayerInterface):
             missing_list = [sublayer for sublayer in layer.dependencies if sublayer not in self._layers]
             if missing_list:
                 raise exceptions.LayerException(
-                    layer.name, "Layer {} has unmet dependencies: {}".format(layer.name, ", ".join(missing_list)))
+                    layer.name, f"Layer {layer.name} has unmet dependencies: {', '.join(missing_list)}")
         self._layers[layer.name] = layer
 
     def del_layer(self, name: str) -> None:
@@ -568,7 +589,7 @@ class LayerContainer(collections.abc.Mapping):
             if depend_list:
                 raise exceptions.LayerException(
                     self._layers[layer].name,
-                    "Layer {} is depended upon: {}".format(self._layers[layer].name, ", ".join(depend_list)))
+                    f"Layer {self._layers[layer].name} is depended upon: {', '.join(depend_list)}")
         self._layers[name].destroy()
         del self._layers[name]
 
@@ -585,9 +606,9 @@ class LayerContainer(collections.abc.Mapping):
         if prefix not in self:
             return prefix
         count = 1
-        while "{}_{}".format(prefix, count) in self:
+        while f"{prefix}_{count}" in self:
             count += 1
-        return "{}_{}".format(prefix, count)
+        return f"{prefix}_{count}"
 
     def __getitem__(self, name: str) -> DataLayerInterface:
         """Returns the layer of specified name."""

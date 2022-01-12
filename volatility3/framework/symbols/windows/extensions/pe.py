@@ -22,7 +22,7 @@ class IMAGE_DOS_HEADER(objects.StructType):
         """
 
         if self.e_magic != 0x5a4d:
-            raise ValueError("e_magic {0:04X} is not a valid DOS signature.".format(self.e_magic))
+            raise ValueError(f"e_magic {self.e_magic:04X} is not a valid DOS signature.")
 
         layer_name = self.vol.layer_name
         symbol_table_name = self.get_symbol_table_name()
@@ -32,7 +32,7 @@ class IMAGE_DOS_HEADER(objects.StructType):
                                          offset = self.vol.offset + self.e_lfanew)
 
         if nt_header.Signature != 0x4550:
-            raise ValueError("NT header signature {0:04X} is not a valid".format(nt_header.Signature))
+            raise ValueError(f"NT header signature {nt_header.Signature:04X} is not a valid")
 
         # this checks if we need a PE32+ header
         if nt_header.FileHeader.Machine == 34404:
@@ -110,7 +110,7 @@ class IMAGE_DOS_HEADER(objects.StructType):
 
         # no legitimate PE is going to be larger than this
         if size_of_image > (1024 * 1024 * 100):
-            raise ValueError("The claimed SizeOfImage is too large: {}".format(size_of_image))
+            raise ValueError(f"The claimed SizeOfImage is too large: {size_of_image}")
 
         read_layer = self._context.layers[layer_name]
 
@@ -127,13 +127,13 @@ class IMAGE_DOS_HEADER(objects.StructType):
         for sect in nt_header.get_sections():
 
             if sect.VirtualAddress > size_of_image:
-                raise ValueError("Section VirtualAddress is too large: {}".format(sect.VirtualAddress))
+                raise ValueError(f"Section VirtualAddress is too large: {sect.VirtualAddress}")
 
             if sect.Misc.VirtualSize > size_of_image:
-                raise ValueError("Section VirtualSize is too large: {}".format(sect.Misc.VirtualSize))
+                raise ValueError(f"Section VirtualSize is too large: {sect.Misc.VirtualSize}")
 
             if sect.SizeOfRawData > size_of_image:
-                raise ValueError("Section SizeOfRawData is too large: {}".format(sect.SizeOfRawData))
+                raise ValueError(f"Section SizeOfRawData is too large: {sect.SizeOfRawData}")
 
             if sect is not None:
                 # It doesn't matter if this is too big, because it'll get overwritten by the later layers

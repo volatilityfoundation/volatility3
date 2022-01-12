@@ -30,23 +30,9 @@ class RegValueTypes(enum.Enum):
     REG_QWORD = 11
     REG_UNKNOWN = 99999
 
-    # TODO: This _missing_() method can replace the get() method below
-    # if support for Python 3.6 is added in the future
-    # @classmethod
-    # def _missing_(cls, value):
-    #     return cls(RegValueTypes.REG_UNKNOWN)
-
     @classmethod
-    def get(cls, value):
-        """An alternative method for using this enum when the value may be
-        unknown.
-
-        This is used to support unknown value requests in Python <3.6.
-        """
-        try:
-            return cls(value)
-        except ValueError:
-            return cls(RegValueTypes.REG_UNKNOWN)
+    def _missing_(cls, value):
+        return cls(RegValueTypes.REG_UNKNOWN)
 
 
 class RegKeyFlags(enum.IntEnum):
@@ -180,13 +166,13 @@ class CM_KEY_NODE(objects.StructType):
             for subnode_offset in node.List[::listjump]:
                 if (subnode_offset & 0x7fffffff) > hive.maximum_address:
                     vollog.log(constants.LOGLEVEL_VVV,
-                               "Node found with address outside the valid Hive size: {}".format(hex(subnode_offset)))
+                               f"Node found with address outside the valid Hive size: {hex(subnode_offset)}")
                 else:
                     try:
                         subnode = hive.get_node(subnode_offset)
                     except (exceptions.InvalidAddressException, RegistryFormatException):
                         vollog.log(constants.LOGLEVEL_VVV,
-                                   "Failed to get node at {}, skipping".format(hex(subnode_offset)))
+                                   f"Failed to get node at {hex(subnode_offset)}, skipping")
                         continue
                     yield from self._get_subkeys_recursive(hive, subnode)
 
@@ -204,12 +190,12 @@ class CM_KEY_NODE(objects.StructType):
                     try:
                         node = hive.get_node(v)
                     except (RegistryInvalidIndex, RegistryFormatException) as excp:
-                        vollog.debug("Invalid address {}".format(excp))
+                        vollog.debug(f"Invalid address {excp}")
                         continue
                     if node.vol.type_name.endswith(constants.BANG + '_CM_KEY_VALUE'):
                         yield node
         except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
-            vollog.debug("Invalid address in get_values iteration: {}".format(excp))
+            vollog.debug(f"Invalid address in get_values iteration: {excp}")
             return
 
     def get_name(self) -> interfaces.objects.ObjectInterface:
@@ -254,7 +240,7 @@ class CM_KEY_VALUE(objects.StructType):
             # Remove the high bit
             datalen = datalen & 0x7fffffff
             if (0 > datalen or datalen > 4):
-                raise ValueError("Unable to read inline registry value with excessive length: {}".format(datalen))
+                raise ValueError(f"Unable to read inline registry value with excessive length: {datalen}")
             else:
                 data = layer.read(self.Data.vol.offset, datalen)
         elif layer.hive.Version == 5 and datalen > 0x4000:
@@ -274,18 +260,18 @@ class CM_KEY_VALUE(objects.StructType):
             # but the length at the start could be negative so just adding 4 to jump past it
             data = layer.read(self.Data + 4, datalen)
 
-        self_type = RegValueTypes.get(self.Type)
+        self_type = RegValueTypes(self.Type)
         if self_type == RegValueTypes.REG_DWORD:
             if len(data) != struct.calcsize("<L"):
-                raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
+                raise ValueError(f"Size of data does not match the type of registry value {self.get_name()}")
             return struct.unpack("<L", data)[0]
         if self_type == RegValueTypes.REG_DWORD_BIG_ENDIAN:
             if len(data) != struct.calcsize(">L"):
-                raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
+                raise ValueError(f"Size of data does not match the type of registry value {self.get_name()}")
             return struct.unpack(">L", data)[0]
         if self_type == RegValueTypes.REG_QWORD:
             if len(data) != struct.calcsize("<Q"):
-                raise ValueError("Size of data does not match the type of registry value {}".format(self.get_name()))
+                raise ValueError(f"Size of data does not match the type of registry value {self.get_name()}")
             return struct.unpack("<Q", data)[0]
         if self_type in [
                 RegValueTypes.REG_SZ, RegValueTypes.REG_EXPAND_SZ, RegValueTypes.REG_LINK, RegValueTypes.REG_MULTI_SZ,
@@ -297,5 +283,5 @@ class CM_KEY_VALUE(objects.StructType):
             return b''
 
         # Fall back if it's something weird
-        vollog.debug("Unknown registry value type encountered: {}".format(self.Type))
+        vollog.debug(f"Unknown registry value type encountered: {self.Type}")
         return data

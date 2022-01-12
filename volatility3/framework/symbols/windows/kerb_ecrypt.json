@@ -1,0 +1,97 @@
+{
+  "metadata": {
+    "producer": {
+      "version": "0.0.1",
+      "name": "acase-by-hand-from-mimikatz",
+      "datetime": "2021-03-01T14:30:00.000000"
+    },
+    "format": "6.2.0"
+  },
+  "symbols": {
+  },
+  "enums": {
+  }, 
+  "user_types": {
+    "_KERB_ECRYPT": {
+      "fields": {
+        "EncryptionType": {
+          "offset": 0,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "BlockSize": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "KeySize": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+            }
+          },
+        "Initialize": {
+          "offset": 40,
+          "type": {
+                "kind": "pointer",
+                "subtype": {
+                    "kind": "base",
+                    "name": "void"
+                } 
+            }
+          },
+        "Encrypt": {
+          "offset": 48,
+          "type": {
+                "kind": "pointer",
+                "subtype": {
+                    "kind": "base",
+                    "name": "void"
+                } 
+            }
+          },
+         "Decrypt": {
+          "offset": 56,
+          "type": {
+                "kind": "pointer",
+                "subtype": {
+                    "kind": "base",
+                    "name": "void"
+             } 
+            }
+          },
+        "Finish": {
+          "offset": 64,
+          "type": {
+                "kind": "pointer",
+                "subtype": {
+                    "kind": "base",
+                    "name": "void"
+                } 
+            }
+          } 
+      },
+      "kind": "struct",
+      "size": 128
+    }
+  },
+  "base_types": {
+    "unsigned long": {
+      "endian": "little",
+      "kind": "int",
+      "signed": false,
+      "size": 4
+    },
+   "pointer": {
+        "kind": "int",
+        "size": 8,
+        "signed": false,
+        "endian": "little"
+    }
+  }
+}

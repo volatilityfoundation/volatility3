@@ -5,7 +5,7 @@ import logging
 from typing import List
 
 from volatility3.framework import exceptions, interfaces
-from volatility3.framework import renderers, contexts
+from volatility3.framework import renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -19,25 +19,23 @@ vollog = logging.getLogger(__name__)
 class Socket_filters(plugins.PluginInterface):
     """Enumerates kernel socket filters."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 0, 0)),
-            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (1, 0, 0))
+            requirements.PluginRequirement(name = 'lsmod', plugin = lsmod.Lsmod, version = (2, 0, 0))
         ]
 
     def _generator(self):
-        kernel = contexts.Module(self._context, self.config['darwin'], self.config['primary'], 0)
+        kernel = self.context.modules[self.config['kernel']]
 
-        mods = lsmod.Lsmod.list_modules(self.context, self.config['primary'], self.config['darwin'])
+        mods = lsmod.Lsmod.list_modules(self.context, self.config['kernel'])
 
-        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, self.config['primary'], kernel, mods)
+        handlers = mac.MacUtilities.generate_kernel_handler_info(self.context, kernel.layer_name, kernel, mods)
 
         members_to_check = [
             "sf_unregistered", "sf_attach", "sf_detach", "sf_notify", "sf_getpeername", "sf_getsockname", "sf_data_in",

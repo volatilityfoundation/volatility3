@@ -38,10 +38,12 @@ BANG = "!"
 """Constant used to delimit table names from type names when referring to a symbol"""
 
 # We use the SemVer 2.0.0 versioning scheme
-VERSION_MAJOR = 1  # Number of releases of the library with a breaking change
+VERSION_MAJOR = 2  # Number of releases of the library with a breaking change
 VERSION_MINOR = 0  # Number of changes that only add to the interface
-VERSION_PATCH = 1  # Number of changes that do not change the interface
+VERSION_PATCH = 0  # Number of changes that do not change the interface
 VERSION_SUFFIX = ""
+
+# TODO: At version 2.0.0, remove the symbol_shift feature
 
 PACKAGE_VERSION = ".".join([str(x) for x in [VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH]]) + VERSION_SUFFIX
 """The canonical version of the volatility3 package"""
@@ -92,3 +94,8 @@ ISF_MINIMUM_SUPPORTED = (2, 0, 0)
 """The minimum supported version of the Intermediate Symbol Format"""
 ISF_MINIMUM_DEPRECATED = (3, 9, 9)
 """The highest version of the ISF that's deprecated (usually higher than supported)"""
+OFFLINE = False
+"""Whether to go online to retrieve missing/necessary JSON files"""
+
+REMOTE_ISF_URL = None  # 'http://localhost:8000/banners.json'
+"""Remote URL to query for a list of ISF addresses"""

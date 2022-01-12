@@ -46,7 +46,7 @@ class VolatilityTest:
         self.create_prerequisites(plugin, image, image_hash)
 
         # Volatility 2 Test
-        print("[*] Testing {} {} with image {}".format(self.short_name, plugin.name, image.filepath))
+        print(f"[*] Testing {self.short_name} {plugin.name} with image {image.filepath}")
         os.chdir(self.path)
         cmd = self.plugin_cmd(plugin, image)
         start_time = time.perf_counter()
@@ -56,15 +56,15 @@ class VolatilityTest:
             completed = excp
         end_time = time.perf_counter()
         total_time = end_time - start_time
-        print("    Tested  {} {} with image {}: {}".format(self.short_name, plugin.name, image.filepath, total_time))
+        print(f"    Tested  {self.short_name} {plugin.name} with image {image.filepath}: {total_time}")
         with open(
-                os.path.join(self.output_directory, '{}_{}_{}_stdout'.format(self.short_name, plugin.name, image_hash)),
+                os.path.join(self.output_directory, f'{self.short_name}_{plugin.name}_{image_hash}_stdout'),
                 "wb") as f:
             f.write(completed.stdout)
         if completed.stderr:
             with open(
-                    os.path.join(self.output_directory, '{}_{}_{}_stderr'.format(self.short_name, plugin.name,
-                                                                                 image_hash)), "wb") as f:
+                    os.path.join(self.output_directory, f'{self.short_name}_{plugin.name}_{image_hash}_stderr'),
+                    "wb") as f:
                 f.write(completed.stderr)
         return [total_time]
 
@@ -91,15 +91,15 @@ class Volatility2Test(VolatilityTest):
     def create_prerequisites(self, plugin: VolatilityPlugin, image: VolatilityImage, image_hash):
         # Volatility 2 image info
         if not image.vol2_profile:
-            print("[*] Testing {} imageinfo with image {}".format(self.short_name, image.filepath))
+            print(f"[*] Testing {self.short_name} imageinfo with image {image.filepath}")
             os.chdir(self.path)
             cmd = ["python2", "-u", "vol.py", "-f", image.filepath, "imageinfo"]
             start_time = time.perf_counter()
             vol2_completed = subprocess.run(cmd, cwd = self.path, capture_output = True)
             end_time = time.perf_counter()
             image.vol2_imageinfo_time = end_time - start_time
-            print("    Tested  volatility2 imageinfo with image {}: {}".format(image.filepath, end_time - start_time))
-            with open(os.path.join(self.output_directory, 'vol2_imageinfo_{}_stdout'.format(image_hash)), "wb") as f:
+            print(f"    Tested  volatility2 imageinfo with image {image.filepath}: {end_time - start_time}")
+            with open(os.path.join(self.output_directory, f'vol2_imageinfo_{image_hash}_stdout'), "wb") as f:
                 f.write(vol2_completed.stdout)
             image.vol2_profile = re.search(b"Suggested Profile\(s\) : ([^,]+)", vol2_completed.stdout)[1]
 

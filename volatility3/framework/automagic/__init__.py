@@ -21,11 +21,13 @@ from volatility3.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
 
-windows_automagic = ['ConstructionMagic', 'LayerStacker', 'WintelHelper', 'KernelPDBScanner', 'WinSwapLayers']
+windows_automagic = [
+    'ConstructionMagic', 'LayerStacker', 'KernelPDBScanner', 'WinSwapLayers', 'KernelModule'
+]
 
-linux_automagic = ['ConstructionMagic', 'LayerStacker', 'LinuxBannerCache', 'LinuxSymbolFinder']
+linux_automagic = ['ConstructionMagic', 'LayerStacker', 'LinuxBannerCache', 'LinuxSymbolFinder', 'KernelModule']
 
-mac_automagic = ['ConstructionMagic', 'LayerStacker', 'MacBannerCache', 'MacSymbolFinder']
+mac_automagic = ['ConstructionMagic', 'LayerStacker', 'MacBannerCache', 'MacSymbolFinder', 'KernelModule']
 
 
 def available(context: interfaces.context.ContextInterface) -> List[interfaces.automagic.AutomagicInterface]:
@@ -44,11 +46,11 @@ def available(context: interfaces.context.ContextInterface) -> List[interfaces.a
         clazz(context, interfaces.configuration.path_join(config_path, clazz.__name__))
         for clazz in class_subclasses(interfaces.automagic.AutomagicInterface)
     ],
-                  key = lambda x: x.priority)
+        key = lambda x: x.priority)
 
 
 def choose_automagic(
-        automagics: List[interfaces.automagic.AutomagicInterface],
+        automagics: List[Type[interfaces.automagic.AutomagicInterface]],
         plugin: Type[interfaces.plugins.PluginInterface]) -> List[Type[interfaces.automagic.AutomagicInterface]]:
     """Chooses which automagics to run, maintaining the order they were handed
     in."""
@@ -72,7 +74,7 @@ def choose_automagic(
         vollog.info("No plugin category detected")
         return automagics
 
-    vollog.info("Detected a {} category plugin".format(plugin_category))
+    vollog.info(f"Detected a {plugin_category} category plugin")
     output = []
     for amagic in automagics:
         if amagic.__class__.__name__ in automagic_categories[plugin_category]:
@@ -127,7 +129,7 @@ def run(automagics: List[interfaces.automagic.AutomagicInterface],
 
     for automagic in automagics:
         try:
-            vollog.info("Running automagic: {}".format(automagic.__class__.__name__))
+            vollog.info(f"Running automagic: {automagic.__class__.__name__}")
             automagic(context, config_path, requirement, progress_callback)
         except Exception as excp:
             exceptions.append(traceback.TracebackException.from_exception(excp))

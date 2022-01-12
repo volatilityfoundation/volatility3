@@ -4,7 +4,7 @@
 
 from typing import Iterable, Callable, Tuple
 
-from volatility3.framework import renderers, interfaces, exceptions, contexts
+from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import mac
@@ -14,7 +14,8 @@ from volatility3.plugins.mac import pslist
 class Kevents(interfaces.plugins.PluginInterface):
     """ Lists event handlers registered by processes """
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
+    _version = (1, 0, 0)
 
     event_types = {
         1: "EVFILT_READ",
@@ -47,11 +48,9 @@ class Kevents(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 2, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
@@ -99,7 +98,7 @@ class Kevents(interfaces.plugins.PluginInterface):
         """
         Enumerates event filters per task.
         Uses smear-safe APIs throughout as these data structures
-        see a signifcant amount of smear
+        see a significant amount of smear
         """
         fdp = task.p_fd
 
@@ -120,8 +119,7 @@ class Kevents(interfaces.plugins.PluginInterface):
     @classmethod
     def list_kernel_events(cls,
                            context: interfaces.context.ContextInterface,
-                           layer_name: str,
-                           darwin_symbols: str,
+                           kernel_module_name: str,
                            filter_func: Callable[[int], bool] = lambda _: False) -> \
             Iterable[Tuple[interfaces.objects.ObjectInterface,
                            interfaces.objects.ObjectInterface,
@@ -135,11 +133,11 @@ class Kevents(interfaces.plugins.PluginInterface):
                 2) The process ID of the process that registered the filter
                 3) The object of the associated kernel event filter
         """
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        kernel = context.modules[kernel_module_name]
 
         list_tasks = pslist.PsList.get_list_tasks(pslist.PsList.pslist_methods[0])
 
-        for task in list_tasks(context, layer_name, darwin_symbols, filter_func):
+        for task in list_tasks(context, kernel_module_name, filter_func):
             task_name = utility.array_to_string(task.p_comm)
             pid = task.p_pid
 
@@ -150,8 +148,7 @@ class Kevents(interfaces.plugins.PluginInterface):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
         for task_name, pid, kn in self.list_kernel_events(self.context,
-                                                          self.config['primary'],
-                                                          self.config['darwin'],
+                                                          self.config['kernel'],
                                                           filter_func = filter_func):
 
             filter_index = kn.kn_kevent.filter * -1

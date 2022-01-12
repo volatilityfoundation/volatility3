@@ -13,11 +13,11 @@ import ssl
 import urllib.parse
 import urllib.request
 import zipfile
-from typing import Optional, Any, IO
+from typing import Optional, Any, IO, List
 from urllib import error
 
 from volatility3 import framework
-from volatility3.framework import constants
+from volatility3.framework import constants, exceptions
 
 try:
     import magic
@@ -33,6 +33,7 @@ except ImportError:
     pass
 
 vollog = logging.getLogger(__name__)
+
 
 # TODO: Type-annotating the ResourceAccessor.open method is difficult because HTTPResponse is not actually an IO[Any] type
 #   fix this
@@ -55,14 +56,15 @@ def cascadeCloseFile(new_fp: IO[bytes], original_fp: IO[bytes]) -> IO[bytes]:
 
 
 class ResourceAccessor(object):
-    """Object for openning URLs as files (downloading locally first if
+    """Object for opening URLs as files (downloading locally first if
     necessary)"""
 
     list_handlers = True
 
     def __init__(self,
                  progress_callback: Optional[constants.ProgressCallback] = None,
-                 context: Optional[ssl.SSLContext] = None) -> None:
+                 context: Optional[ssl.SSLContext] = None,
+                 enable_cache: bool = True) -> None:
         """Creates a resource accessor.
 
         Note: context is an SSL context, not a volatility context
@@ -70,16 +72,25 @@ class ResourceAccessor(object):
         self._progress_callback = progress_callback
         self._context = context
         self._handlers = list(framework.class_subclasses(urllib.request.BaseHandler))
+        self._enable_cache = enable_cache
         if self.list_handlers:
             vollog.log(constants.LOGLEVEL_VVV,
-                       "Available URL handlers: {}".format(", ".join([x.__name__ for x in self._handlers])))
+                       f"Available URL handlers: {', '.join([x.__name__ for x in self._handlers])}")
             self.__class__.list_handlers = False
 
     def uses_cache(self, url: str) -> bool:
         """Determines whether a URLs contents should be cached"""
         parsed_url = urllib.parse.urlparse(url)
 
-        return not parsed_url.scheme in ['file', 'jar']
+        return self._enable_cache and not parsed_url.scheme in self._non_cached_schemes()
+
+    @staticmethod
+    def _non_cached_schemes() -> List[str]:
+        """Returns the list of schemes not to be cached"""
+        result = ['file']
+        for clazz in framework.class_subclasses(VolatilityHandler):
+            result += clazz.non_cached_schemes()
+        return result
 
     # Current urllib.request.urlopen returns Any, so we do the same
     def open(self, url: str, mode: str = "rb") -> Any:
@@ -107,6 +118,9 @@ class ResourceAccessor(object):
                     raise excp
             else:
                 raise excp
+        except exceptions.OfflineException:
+            vollog.info(f"Not accessing {url} in offline mode")
+            raise
 
         with contextlib.closing(fp) as fp:
             # Cache the file locally
@@ -122,7 +136,7 @@ class ResourceAccessor(object):
                     "data_" + hashlib.sha512(bytes(url, 'raw_unicode_escape')).hexdigest() + ".cache")
 
                 if not os.path.exists(temp_filename):
-                    vollog.debug("Caching file at: {}".format(temp_filename))
+                    vollog.debug(f"Caching file at: {temp_filename}")
 
                     try:
                         content_length = fp.info().get('Content-Length', -1)
@@ -137,11 +151,13 @@ class ResourceAccessor(object):
                         count += len(block)
                         if self._progress_callback:
                             self._progress_callback(count * 100 / max(count, int(content_length)),
-                                                    "Reading file {}".format(url))
+                                                    f"Reading file {url}")
                         cache_file.write(block)
                         block = fp.read(block_size)
                     cache_file.close()
                 # Re-open the cache with a different mode
+                # Since we don't want people thinking they're able to save to the cache file,
+                # open it in read mode only and allow breakages to happen if they wanted to write
                 curfile = open(temp_filename, mode = "rb")
 
         # Determine whether the file is a particular type of file, and if so, open it as such
@@ -199,7 +215,14 @@ class ResourceAccessor(object):
         return curfile
 
 
-class JarHandler(urllib.request.BaseHandler):
+class VolatilityHandler(urllib.request.BaseHandler):
+
+    @classmethod
+    def non_cached_schemes(cls) -> List[str]:
+        return []
+
+
+class JarHandler(VolatilityHandler):
     """Handles the jar scheme for URIs.
 
     Reference used for the schema syntax:
@@ -209,21 +232,33 @@ class JarHandler(urllib.request.BaseHandler):
     http://developer.java.sun.com/developer/onlineTraining/protocolhandlers/
     """
 
+    @classmethod
+    def non_cached_schemes(cls) -> List[str]:
+        return ['jar']
+
     @staticmethod
     def default_open(req: urllib.request.Request) -> Optional[Any]:
         """Handles the request if it's the jar scheme."""
         if req.type == 'jar':
             subscheme, remainder = req.full_url.split(":")[1], ":".join(req.full_url.split(":")[2:])
             if subscheme != 'file':
-                vollog.log(constants.LOGLEVEL_VVV, "Unsupported jar subscheme {}".format(subscheme))
+                vollog.log(constants.LOGLEVEL_VVV, f"Unsupported jar subscheme {subscheme}")
                 return None
 
             zipsplit = remainder.split("!")
             if len(zipsplit) != 2:
                 vollog.log(constants.LOGLEVEL_VVV,
-                           "Path did not contain exactly one fragment indicator: {}".format(remainder))
+                           f"Path did not contain exactly one fragment indicator: {remainder}")
                 return None
 
             zippath, filepath = zipsplit
             return zipfile.ZipFile(zippath).open(filepath)
+        return None
+
+
+class OfflineHandler(VolatilityHandler):
+    @staticmethod
+    def default_open(req: urllib.request.Request) -> Optional[Any]:
+        if constants.OFFLINE and req.type in ['http', 'https']:
+            raise exceptions.OfflineException(req.full_url)
         return None

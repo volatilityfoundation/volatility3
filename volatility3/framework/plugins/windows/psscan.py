@@ -6,7 +6,7 @@ import datetime
 import logging
 from typing import Iterable, Callable, Tuple
 
-from volatility3.framework import renderers, interfaces
+from volatility3.framework import renderers, interfaces, layers, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
@@ -22,16 +22,14 @@ vollog = logging.getLogger(__name__)
 class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for processes present in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -40,6 +38,10 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                          optional = True),
             requirements.BooleanRequirement(name = 'dump',
                                             description = "Extract listed processes",
+                                            default = False,
+                                            optional = True),
+            requirements.BooleanRequirement(name = 'physical', 
+                                            description = "Display physical offset instead of virtual",
                                             default = False,
                                             optional = True)
         ]
@@ -144,46 +146,62 @@ class PsScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         return (nt_major_version, nt_minor_version, build)
 
     def _generator(self):
+        kernel = self.context.modules[self.config['kernel']]
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
+        memory = self.context.layers[kernel.layer_name] 
+        if not isinstance(memory, layers.intel.Intel):
+            raise TypeError("Primary layer is not an intel layer")
+
         for proc in self.scan_processes(self.context,
-                                        self.config['primary'],
-                                        self.config['nt_symbols'],
+                                        kernel.layer_name,
+                                        kernel.symbol_table_name,
                                         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))):
 
             file_output = "Disabled"
             if self.config['dump']:
                 # windows 10 objects (maybe others in the future) are already in virtual memory
-                if proc.vol.layer_name == self.config['primary']:
+                if proc.vol.layer_name == kernel.layer_name:
                     vproc = proc
                 else:
-                    vproc = self.virtual_process_from_physical(self.context, self.config['primary'],
-                                                               self.config['nt_symbols'], proc)
+                    vproc = self.virtual_process_from_physical(self.context, kernel.layer_name,
+                                                               kernel.symbol_table_name, proc)
 
-                file_handle = pslist.PsList.process_dump(self.context, self.config['nt_symbols'], pe_table_name, vproc,
+                file_handle = pslist.PsList.process_dump(self.context, kernel.symbol_table_name,
+                                                         pe_table_name, vproc,
                                                          self.open)
                 file_output = "Error outputting file"
                 if file_handle:
                     file_output = file_handle.preferred_filename
 
-            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
+            if not self.config['physical']:
+                offset = proc.vol.offset
+            else:
+                (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
+
+            try:
+                yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
                        proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
-                                               errors = 'replace'), format_hints.Hex(proc.vol.offset),
+                                               errors = 'replace'), format_hints.Hex(offset),
                        proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(), proc.get_is_wow64(),
                        proc.get_create_time(), proc.get_exit_time(), file_output))
+            except exceptions.InvalidAddressException:
+                vollog.info(f"Invalid process found at address: {proc.vol.offset:x}. Skipping")
 
     def generate_timeline(self):
         for row in self._generator():
             _depth, row_data = row
-            description = "Process: {} {} ({})".format(row_data[0], row_data[2], row_data[3])
+            description = f"Process: {row_data[0]} {row_data[2]} ({row_data[3]})"
             yield (description, timeliner.TimeLinerType.CREATED, row_data[8])
             yield (description, timeliner.TimeLinerType.MODIFIED, row_data[9])
 
     def run(self):
-        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str), ("Offset", format_hints.Hex),
-                                   ("Threads", int), ("Handles", int), ("SessionId", int), ("Wow64", bool),
+        offsettype = "(V)" if not self.config['physical'] else "(P)"
+        return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str), 
+                                   (f"Offset{offsettype}", format_hints.Hex), ("Threads", int), 
+                                   ("Handles", int), ("SessionId", int), ("Wow64", bool),
                                    ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),
                                    ("File output", str)], self._generator())

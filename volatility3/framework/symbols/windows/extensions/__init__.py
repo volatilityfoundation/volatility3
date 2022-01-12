@@ -94,7 +94,7 @@ class MMVAD_SHORT(objects.StructType):
             # any node other than the root that doesn't have a recognized tag
             # is just garbage and we skip the node entirely
             vollog.log(constants.LOGLEVEL_VVV,
-                       "Skipping VAD at {} depth {} with tag {}".format(self.vol.offset, depth, tag))
+                       f"Skipping VAD at {self.vol.offset} depth {depth} with tag {tag}")
             return
 
         if target:
@@ -105,13 +105,13 @@ class MMVAD_SHORT(objects.StructType):
             for vad_node in self.get_left_child().dereference().traverse(visited, depth + 1):
                 yield vad_node
         except exceptions.InvalidAddressException as excp:
-            vollog.log(constants.LOGLEVEL_VVV, "Invalid address on LeftChild: {0:#x}".format(excp.invalid_address))
+            vollog.log(constants.LOGLEVEL_VVV, f"Invalid address on LeftChild: {excp.invalid_address:#x}")
 
         try:
             for vad_node in self.get_right_child().dereference().traverse(visited, depth + 1):
                 yield vad_node
         except exceptions.InvalidAddressException as excp:
-            vollog.log(constants.LOGLEVEL_VVV, "Invalid address on RightChild: {0:#x}".format(excp.invalid_address))
+            vollog.log(constants.LOGLEVEL_VVV, f"Invalid address on RightChild: {excp.invalid_address:#x}")
 
     def get_right_child(self):
         """Get the right child member."""
@@ -329,7 +329,7 @@ class EX_FAST_REF(objects.StructType):
     def dereference(self) -> interfaces.objects.ObjectInterface:
 
         if constants.BANG not in self.vol.type_name:
-            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
+            raise ValueError(f"Invalid symbol table name syntax (no {constants.BANG} found)")
 
         # the mask value is different on 32 and 64 bits
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
@@ -388,13 +388,13 @@ class FILE_OBJECT(objects.StructType, pool.ExecutiveObject):
             self.FileName.Buffer)
 
     def file_name_with_device(self) -> Union[str, interfaces.renderers.BaseAbsentValue]:
-        name = renderers.UnreadableValue()  # type: Union[str, interfaces.renderers.BaseAbsentValue]
+        name: Union[str, interfaces.renderers.BaseAbsentValue] = renderers.UnreadableValue()
 
         # this pointer needs to be checked against native_layer_name because the object may
         # be instantiated from a primary (virtual) layer or a memory (physical) layer.
         if self._context.layers[self.vol.native_layer_name].is_valid(self.DeviceObject):
             try:
-                name = "\\Device\\{}".format(self.DeviceObject.get_device_name())
+                name = f"\\Device\\{self.DeviceObject.get_device_name()}"
             except ValueError:
                 pass
 
@@ -449,7 +449,7 @@ class ETHREAD(objects.StructType):
         stringCrossThreadFlags = ''
         for flag in dictCrossThreadFlags:
             if flags & 2 ** dictCrossThreadFlags[flag]:
-                stringCrossThreadFlags += '{} '.format(flag)
+                stringCrossThreadFlags += f'{flag} '
 
         return stringCrossThreadFlags[:-1] if stringCrossThreadFlags else stringCrossThreadFlags
 
@@ -526,7 +526,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
             raise TypeError("Parent layer is not a translation layer, unable to construct process layer")
 
         # Presumably for 64-bit systems, the DTB is defined as an array, rather than an unsigned long long
-        dtb = 0  # type: int
+        dtb: int = 0
         if isinstance(self.Pcb.DirectoryTableBase, objects.Array):
             dtb = self.Pcb.DirectoryTableBase.cast("unsigned long long")
         else:
@@ -534,7 +534,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         dtb = dtb & ((1 << parent_layer.bits_per_register) - 1)
 
         if preferred_name is None:
-            preferred_name = self.vol.layer_name + "_Process{}".format(self.UniqueProcessId)
+            preferred_name = self.vol.layer_name + f"_Process{self.UniqueProcessId}"
 
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
@@ -542,7 +542,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
     def get_peb(self) -> interfaces.objects.ObjectInterface:
         """Constructs a PEB object"""
         if constants.BANG not in self.vol.type_name:
-            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
+            raise ValueError(f"Invalid symbol table name syntax (no {constants.BANG} found)")
 
         # add_process_layer can raise InvalidAddressException.
         # if that happens, we let the exception propagate upwards
@@ -551,10 +551,10 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         proc_layer = self._context.layers[proc_layer_name]
         if not proc_layer.is_valid(self.Peb):
             raise exceptions.InvalidAddressException(proc_layer_name, self.Peb,
-                                                     "Invalid address at {:0x}".format(self.Peb))
+                                                     f"Invalid address at {self.Peb:0x}")
 
         sym_table = self.vol.type_name.split(constants.BANG)[0]
-        peb = self._context.object("{}{}_PEB".format(sym_table, constants.BANG),
+        peb = self._context.object(f"{sym_table}{constants.BANG}_PEB",
                                    layer_name = proc_layer_name,
                                    offset = self.Peb)
         return peb
@@ -565,7 +565,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InLoadOrderModuleList.to_list(
-                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table_name(), constants.BANG),
+                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
                     "InLoadOrderLinks"):
                 yield entry
         except exceptions.InvalidAddressException:
@@ -577,7 +577,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InInitializationOrderModuleList.to_list(
-                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table_name(), constants.BANG),
+                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
                     "InInitializationOrderLinks"):
                 yield entry
         except exceptions.InvalidAddressException:
@@ -589,7 +589,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
         try:
             peb = self.get_peb()
             for entry in peb.Ldr.InMemoryOrderModuleList.to_list(
-                    "{}{}_LDR_DATA_TABLE_ENTRY".format(self.get_symbol_table_name(), constants.BANG),
+                    f"{self.get_symbol_table_name()}{constants.BANG}_LDR_DATA_TABLE_ENTRY",
                     "InMemoryOrderLinks"):
                 yield entry
         except exceptions.InvalidAddressException:
@@ -603,7 +603,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         except exceptions.InvalidAddressException:
             vollog.log(constants.LOGLEVEL_VVV,
-                       "Cannot access _EPROCESS.ObjectTable.HandleCount at {0:#x}".format(self.vol.offset))
+                       f"Cannot access _EPROCESS.ObjectTable.HandleCount at {self.vol.offset:#x}")
 
         return renderers.UnreadableValue()
 
@@ -626,7 +626,7 @@ class EPROCESS(generic.GenericIntelProcess, pool.ExecutiveObject):
 
         except exceptions.InvalidAddressException:
             vollog.log(constants.LOGLEVEL_VVV,
-                       "Cannot access _EPROCESS.Session.SessionId at {0:#x}".format(self.vol.offset))
+                       f"Cannot access _EPROCESS.Session.SessionId at {self.vol.offset:#x}")
 
         return renderers.UnreadableValue()
 
@@ -972,7 +972,12 @@ class CONTROL_AREA(objects.StructType):
 
                 # If the entry is not a valid physical address then see if it is in transition.
                 elif mmpte.u.Trans.Transition == 1:
-                    physoffset = mmpte.u.Trans.PageFrameNumber << 12
+                    # TODO: Fix appropriately in a future release.
+                    # Currently just a temporary workaround to deal with custom bit flag
+                    # in the PFN field for pages in transition state.
+                    # See https://github.com/volatilityfoundation/volatility3/pull/475
+                    physoffset = (mmpte.u.Trans.PageFrameNumber & (( 1 << 33 ) - 1 ) ) << 12
+                    
                     yield physoffset, file_offset, self.PAGE_SIZE
 
                 # Go to the next PTE entry
@@ -1097,7 +1102,7 @@ class SHARED_CACHE_MAP(objects.StructType):
             if vacb_obj.SharedCacheMap == self.vol.offset:
                 self.save_vacb(vacb_obj, vacb_list)
 
-        # If the file is larger than 1 MB, a seperate VACB index array needs to be allocated.
+        # If the file is larger than 1 MB, a separate VACB index array needs to be allocated.
         # This is based on how many 256 KB blocks would be required for the size of the file.
         # This newly allocated VACB index array is found through the Vacbs member of SHARED_CACHE_MAP.
         vacb_obj = self.Vacbs

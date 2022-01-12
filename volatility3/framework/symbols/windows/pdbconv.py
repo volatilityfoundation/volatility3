@@ -2,20 +2,23 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 import binascii
+import bz2
 import datetime
+import gzip
 import json
 import logging
+import lzma
 import os
 from bisect import bisect
 from typing import Tuple, Dict, Any, Optional, Union, List
-from urllib import request, error
+from urllib import request, error, parse
 
 from volatility3.framework import contexts, interfaces, constants
 from volatility3.framework.layers import physical, msf, resources
 
 vollog = logging.getLogger(__name__)
 
-primatives = {
+primitives = {
     0x03: ("void", {
         "endian": "little",
         "kind": "void",
@@ -262,18 +265,19 @@ class PdbReader:
                  database_name: Optional[str] = None,
                  progress_callback: constants.ProgressCallback = None) -> None:
         self._layer_name, self._context = self.load_pdb_layer(context, location)
-        self._dbiheader = None  # type: Optional[interfaces.objects.ObjectInterface]
+        self._dbiheader: Optional[interfaces.objects.ObjectInterface] = None
         if not progress_callback:
             progress_callback = lambda x, y: None
         self._progress_callback = progress_callback
-        self.types = [
-        ]  # type: List[Tuple[interfaces.objects.ObjectInterface, Optional[str], interfaces.objects.ObjectInterface]]
-        self.bases = {}  # type: Dict[str, Any]
-        self.user_types = {}  # type: Dict[str, Any]
-        self.enumerations = {}  # type: Dict[str, Any]
-        self.symbols = {}  # type: Dict[str, Any]
-        self._omap_mapping = []  # type: List[Tuple[int, int]]
-        self._sections = []  # type: List[interfaces.objects.ObjectInterface]
+        self.types: List[
+            Tuple[interfaces.objects.ObjectInterface, Optional[str], interfaces.objects.ObjectInterface]] = [
+        ]
+        self.bases: Dict[str, Any] = {}
+        self.user_types: Dict[str, Any] = {}
+        self.enumerations: Dict[str, Any] = {}
+        self.symbols: Dict[str, Any] = {}
+        self._omap_mapping: List[Tuple[int, int]] = []
+        self._sections: List[interfaces.objects.ObjectInterface] = []
         self.metadata = {"format": "6.1.0", "windows": {}}
         self._database_name = database_name
 
@@ -350,32 +354,34 @@ class PdbReader:
 
         ipi_list = []
 
-        type_references = self._read_info_stream(4, "IPI", ipi_list)
-
-        for name in type_references.keys():
-            # This doesn't break, because we want to use the last string/pdbname in the list
-            if name.endswith('.pdb'):
-                self._database_name = name.split('\\')[-1]
+        try:
+            type_references = self._read_info_stream(4, "IPI", ipi_list)
+            for name in type_references.keys():
+                # This doesn't break, because we want to use the last string/pdbname in the list
+                if name.endswith('.pdb'):
+                    self._database_name = name.split('\\')[-1]
+        except ValueError:
+            return None
 
     def _read_info_stream(self, stream_number, stream_name, info_list):
-        vollog.debug("Reading {}".format(stream_name))
+        vollog.debug(f"Reading {stream_name}")
         info_layer = self._context.layers.get(self._layer_name + "_stream" + str(stream_number), None)
         if not info_layer:
-            raise ValueError("No TPI stream available")
+            raise ValueError(f"No {stream_name} stream available")
         module = self._context.module(module_name = info_layer.pdb_symbol_table,
                                       layer_name = info_layer.name,
                                       offset = 0)
         header = module.object(object_type = "TPI_HEADER", offset = 0)
         # Check the header
         if not (56 <= header.header_size < 1024):
-            raise ValueError("{} Stream Header size outside normal bounds".format(stream_name))
+            raise ValueError(f"{stream_name} Stream Header size outside normal bounds")
         if header.index_min < 4096:
-            raise ValueError("Minimum {} index is 4096, found: {}".format(stream_name, header.index_min))
+            raise ValueError(f"Minimum {stream_name} index is 4096, found: {header.index_min}")
         if header.index_max < header.index_min:
             raise ValueError("Maximum {} index is smaller than minimum TPI index, found: {} < {} ".format(
                 stream_name, header.index_max, header.index_min))
         # Reset the state
-        info_references = {}  # type: Dict[str, int]
+        info_references: Dict[str, int] = {}
         offset = header.header_size
         # Ensure we use the same type everywhere
         length_type = "unsigned short"
@@ -390,8 +396,8 @@ class PdbReader:
             output, consumed = self.consume_type(module, offset, length)
             leaf_type, name, value = output
             for tag_type in ['unnamed', 'anonymous']:
-                if name == '<{}-tag>'.format(tag_type) or name == '__{}'.format(tag_type):
-                    name = '__{}_'.format(tag_type) + hex(len(info_list) + 0x1000)[2:]
+                if name == f'<{tag_type}-tag>' or name == f'__{tag_type}':
+                    name = f'__{tag_type}_' + hex(len(info_list) + 0x1000)[2:]
             if name:
                 info_references[name] = len(info_list)
             info_list.append((leaf_type, name, value))
@@ -478,16 +484,16 @@ class PdbReader:
             name = None
             address = None
             if sym.segment < len(self._sections):
-                if leaf_type == 0x110e:
-                    # v3 symbol (c-string)
-                    name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 2)
-                    address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
-                elif leaf_type == 0x1009:
+                if leaf_type == 0x1009:
                     # v2 symbol (pascal-string)
                     name = self.parse_string(sym.name, True, sym.length - sym.vol.size + 2)
                     address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
+                elif leaf_type == 0x110e or leaf_type == 0x1127:
+                    # v3 symbol (c-string)
+                    name = self.parse_string(sym.name, False, sym.length - sym.vol.size + 2)
+                    address = self._sections[sym.segment - 1].VirtualAddress + sym.offset
                 else:
-                    vollog.debug("Only v2 and v3 symbols are supported")
+                    vollog.debug(f"Only v2 and v3 symbols are supported: {leaf_type:x}")
             if name:
                 if self._omap_mapping:
                     address = self.omap_lookup(address)
@@ -578,9 +584,9 @@ class PdbReader:
     def get_type_from_index(self, index: int) -> Union[List[Any], Dict[str, Any]]:
         """Takes a type index and returns appropriate dictionary."""
         if index < 0x1000:
-            base_name, base = primatives[index & 0xff]
+            base_name, base = primitives[index & 0xff]
             self.bases[base_name] = base
-            result = {"kind": "base", "name": base_name}  # type: Union[List[Dict[str, Any]], Dict[str, Any]]
+            result: Union[List[Dict[str, Any]], Dict[str, Any]] = {"kind": "base", "name": base_name}
             indirection = (index & 0xf00)
             if indirection:
                 pointer_name, pointer_base = indirections[indirection]
@@ -633,18 +639,18 @@ class PdbReader:
         """Returns the size of the structure based on the type index
         provided."""
         result = -1
-        name = ''  # type: Optional[str]
+        name: Optional[str] = ''
         if index < 0x1000:
             if (index & 0xf00):
                 _, base = indirections[index & 0xf00]
             else:
-                _, base = primatives[index & 0xff]
+                _, base = primitives[index & 0xff]
             result = base['size']
         else:
             leaf_type, name, value = self.types[index - 0x1000]
             if leaf_type in [
-                    leaf_type.LF_UNION, leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE,
-                    leaf_type.LF_STRUCTURE_ST, leaf_type.LF_INTERFACE
+                leaf_type.LF_UNION, leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE,
+                leaf_type.LF_STRUCTURE_ST, leaf_type.LF_INTERFACE, leaf_type.LF_CLASS_VS19, leaf_type.LF_STRUCTURE_VS19
             ]:
                 if not value.properties.forward_reference:
                     result = value.size
@@ -668,9 +674,9 @@ class PdbReader:
             elif leaf_type in [leaf_type.LF_PROCEDURE]:
                 raise ValueError("LF_PROCEDURE size could not be identified")
             else:
-                raise ValueError("Unable to determine size of leaf_type {}".format(leaf_type.lookup()))
+                raise ValueError(f"Unable to determine size of leaf_type {leaf_type.lookup()}")
         if result <= 0:
-            raise ValueError("Invalid size identified: {} ({})".format(index, name))
+            raise ValueError(f"Invalid size identified: {index} ({name})")
         return result
 
     ### TYPE HANDLING CODE
@@ -688,8 +694,8 @@ class PdbReader:
             self._progress_callback(index * 100 / max_len, "Processing types")
             leaf_type, name, value = self.types[index]
             if leaf_type in [
-                    leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
-                    leaf_type.LF_INTERFACE
+                leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
+                leaf_type.LF_INTERFACE, leaf_type.LF_CLASS_VS19, leaf_type.LF_STRUCTURE_VS19
             ]:
                 if not value.properties.forward_reference and name:
                     self.user_types[name] = {
@@ -722,10 +728,40 @@ class PdbReader:
         # Re-run through for ForwardSizeReferences
         self.user_types = self.replace_forward_references(self.user_types, type_references)
 
+    type_handlers = {
+        # Leaf_type: ('Structure', has_name, value_attribute)
+        'LF_CLASS': ('LF_STRUCTURE', True, 'size'),
+        'LF_CLASS_ST': ('LF_STRUCTURE', True, 'size'),
+        'LF_STRUCTURE': ('LF_STRUCTURE', True, 'size'),
+        'LF_STRUCTURE_ST': ('LF_STRUCTURE', True, 'size'),
+        'LF_INTERFACE': ('LF_STRUCTURE', True, 'size'),
+        'LF_CLASS_VS19': ('LF_STRUCTURE_VS19', True, 'size'),
+        'LF_STRUCTURE_VS19': ('LF_STRUCTURE_VS19', True, 'size'),
+        'LF_MEMBER': ('LF_MEMBER', True, 'offset'),
+        'LF_MEMBER_ST': ('LF_MEMBER', True, 'offset'),
+        'LF_ARRAY': ('LF_ARRAY', True, 'size'),
+        'LF_ARRAY_ST': ('LF_ARRAY', True, 'size'),
+        'LF_STRIDED_ARRAY': ('LF_ARRAY', True, 'size'),
+        'LF_ENUMERATE': ('LF_ENUMERATE', True, 'value'),
+        'LF_ARGLIST': ('LF_ENUM', True, None),
+        'LF_ENUM': ('LF_ENUM', True, None),
+        'LF_UNION': ('LF_UNION', True, None),
+        'LF_STRING_ID': ('LF_STRING_ID', True, None),
+        'LF_FUNC_ID': ('LF_FUNC_ID', True, None),
+        'LF_MODIFIER': ('LF_MODIFIER', False, None),
+        'LF_POINTER': ('LF_POINTER', False, None),
+        'LF_PROCEDURE': ('LF_PROCEDURE', False, None),
+        'LF_FIELDLIST': ('LF_FIELDLIST', False, None),
+        'LF_BITFIELD': ('LF_BITFIELD', False, None),
+        'LF_UDT_SRC_LINE': ('LF_UDT_SRC_LINE', False, None),
+        'LF_UDT_MOD_SRC_LINE': ('LF_UDT_MOD_SRC_LINE', False, None),
+        'LF_BUILDINFO': ('LF_BUILDINFO', False, None)
+    }
+
     def consume_type(
-        self, module: interfaces.context.ModuleInterface, offset: int, length: int
+            self, module: interfaces.context.ModuleInterface, offset: int, length: int
     ) -> Tuple[Tuple[Optional[interfaces.objects.ObjectInterface], Optional[str], Union[
-            None, List, interfaces.objects.ObjectInterface]], int]:
+        None, List, interfaces.objects.ObjectInterface]], int]:
         """Returns a (leaf_type, name, object) Tuple for a type, and the number
         of bytes consumed."""
         leaf_type = self.context.object(module.get_enumeration("LEAF_TYPE"),
@@ -734,61 +770,10 @@ class PdbReader:
         consumed = leaf_type.vol.base_type.size
         remaining = length - consumed
 
-        if leaf_type in [
-                leaf_type.LF_CLASS, leaf_type.LF_CLASS_ST, leaf_type.LF_STRUCTURE, leaf_type.LF_STRUCTURE_ST,
-                leaf_type.LF_INTERFACE
-        ]:
-            structure = module.object(object_type = "LF_STRUCTURE", offset = offset + consumed)
-            name_offset = structure.name.vol.offset - structure.vol.offset
-            name, value, excess = self.determine_extended_value(leaf_type, structure.size, module,
-                                                                remaining - name_offset)
-            structure.size = value
-            structure.name = name
-            consumed += remaining
-            result = leaf_type, name, structure
-        elif leaf_type in [leaf_type.LF_MEMBER, leaf_type.LF_MEMBER_ST]:
-            member = module.object(object_type = "LF_MEMBER", offset = offset + consumed)
-            name_offset = member.name.vol.offset - member.vol.offset
-            name, value, excess = self.determine_extended_value(leaf_type, member.offset, module,
-                                                                remaining - name_offset)
-            member.offset = value
-            member.name = name
-            result = leaf_type, name, member
-            consumed += member.vol.size + len(name) + 1 + excess
-        elif leaf_type in [leaf_type.LF_ARRAY, leaf_type.LF_ARRAY_ST, leaf_type.LF_STRIDED_ARRAY]:
-            array = module.object(object_type = "LF_ARRAY", offset = offset + consumed)
-            name_offset = array.name.vol.offset - array.vol.offset
-            name, value, excess = self.determine_extended_value(leaf_type, array.size, module, remaining - name_offset)
-            array.size = value
-            array.name = name
-            result = leaf_type, name, array
-            consumed += remaining
-        elif leaf_type in [leaf_type.LF_ENUMERATE]:
-            enum = module.object(object_type = 'LF_ENUMERATE', offset = offset + consumed)
-            name_offset = enum.name.vol.offset - enum.vol.offset
-            name, value, excess = self.determine_extended_value(leaf_type, enum.value, module, remaining - name_offset)
-            enum.value = value
-            enum.name = name
-            result = leaf_type, name, enum
-            consumed += enum.vol.size + len(name) + 1 + excess
-        elif leaf_type in [leaf_type.LF_ARGLIST, leaf_type.LF_ENUM]:
-            enum = module.object(object_type = "LF_ENUM", offset = offset + consumed)
-            name_offset = enum.name.vol.offset - enum.vol.offset
-            name = self.parse_string(enum.name, leaf_type < leaf_type.LF_ST_MAX, size = remaining - name_offset)
-            enum.name = name
-            result = leaf_type, name, enum
-            consumed += remaining
-        elif leaf_type in [leaf_type.LF_UNION]:
-            union = module.object(object_type = "LF_UNION", offset = offset + consumed)
-            name_offset = union.name.vol.offset - union.vol.offset
-            name = self.parse_string(union.name, leaf_type < leaf_type.LF_ST_MAX, size = remaining - name_offset)
-            result = leaf_type, name, union
-            consumed += remaining
-        elif leaf_type in [leaf_type.LF_MODIFIER, leaf_type.LF_POINTER, leaf_type.LF_PROCEDURE]:
-            obj = module.object(object_type = leaf_type.lookup(), offset = offset + consumed)
-            result = leaf_type, None, obj
-            consumed += remaining
-        elif leaf_type in [leaf_type.LF_FIELDLIST]:
+        type_handler, has_name, value_attribute = self.type_handlers.get(leaf_type.lookup(),
+                                                                         ('LF_UNKNOWN', False, None))
+
+        if type_handler in ['LF_FIELDLIST']:
             sub_length = remaining
             sub_offset = offset + consumed
             fields = []
@@ -800,25 +785,31 @@ class PdbReader:
                 consumed += sub_consumed
                 fields.append(subfield)
             result = leaf_type, None, fields
-        elif leaf_type in [leaf_type.LF_BITFIELD]:
-            bitfield = module.object(object_type = "LF_BITFIELD", offset = offset + consumed)
-            result = leaf_type, None, bitfield
-            consumed += remaining
-        elif leaf_type in [leaf_type.LF_STRING_ID, leaf_type.LF_FUNC_ID]:
-            string_id = module.object(object_type = leaf_type.lookup(), offset = offset + consumed)
-            name_offset = string_id.name.vol.offset - string_id.vol.offset
-            name = self.parse_string(string_id.name, leaf_type < leaf_type.LF_ST_MAX, size = remaining - name_offset)
-            result = leaf_type, name, string_id
-        elif leaf_type in [leaf_type.LF_UDT_SRC_LINE, leaf_type.LF_UDT_MOD_SRC_LINE]:
-            src_line = module.object(object_type = leaf_type.lookup(), offset = offset + consumed)
-            result = leaf_type, None, src_line
-        elif leaf_type in [leaf_type.LF_BUILDINFO]:
-            buildinfo = module.object(object_type = leaf_type.lookup(), offset = offset + consumed)
-            buildinfo.arguments.count = buildinfo.count
-            consumed += buildinfo.arguments.vol.size
-            result = leaf_type, None, buildinfo
+        elif type_handler in ['LF_BUILDINFO']:
+            parsed_obj = module.object(object_type = type_handler, offset = offset + consumed)
+            parsed_obj.arguments.count = parsed_obj.count
+            consumed += parsed_obj.arguments.vol.size
+            result = leaf_type, None, parsed_obj
+        elif type_handler in self.type_handlers:
+            parsed_obj = module.object(object_type = type_handler, offset = offset + consumed)
+            current_consumed = remaining
+            if has_name:
+                name_offset = parsed_obj.name.vol.offset - parsed_obj.vol.offset
+                if value_attribute:
+                    name, value, excess = self.determine_extended_value(leaf_type, getattr(parsed_obj, value_attribute),
+                                                                        module, remaining - name_offset)
+                    setattr(parsed_obj, value_attribute, value)
+                    current_consumed = parsed_obj.vol.size + len(name) + 1 + excess
+                else:
+                    name = self.parse_string(parsed_obj.name, leaf_type < leaf_type.LF_ST_MAX,
+                                             size = remaining - name_offset)
+                parsed_obj.name = name
+            else:
+                name = None
+            result = leaf_type, name, parsed_obj
+            consumed += current_consumed
         else:
-            raise TypeError("Unhandled leaf_type: {}".format(leaf_type))
+            raise TypeError(f"Unhandled leaf_type: {leaf_type}")
 
         return result, consumed
 
@@ -831,7 +822,7 @@ class PdbReader:
 
     def convert_fields(self, fields: int) -> Dict[Optional[str], Dict[str, Any]]:
         """Converts a field list into a list of fields."""
-        result = {}  # type: Dict[Optional[str], Dict[str, Any]]
+        result: Dict[Optional[str], Dict[str, Any]] = {}
         _, _, fields_struct = self.types[fields]
         if not isinstance(fields_struct, list):
             vollog.warning("Fields structure did not contain a list of fields")
@@ -928,26 +919,28 @@ class PdbRetreiver:
         vollog.info("Download PDB file...")
         file_name = ".".join(file_name.split(".")[:-1] + ['pdb'])
         for sym_url in ['http://msdl.microsoft.com/download/symbols']:
-            url = sym_url + "/{}/{}/".format(file_name, guid)
+            url = sym_url + f"/{file_name}/{guid}/"
 
             result = None
             for suffix in [file_name, file_name[:-1] + '_']:
                 try:
-                    vollog.debug("Attempting to retrieve {}".format(url + suffix))
+                    vollog.debug(f"Attempting to retrieve {url + suffix}")
+                    # We have to cache this because the file is opened by a layer and we can't control whether that caches
                     result = resources.ResourceAccessor(progress_callback).open(url + suffix)
-                except error.HTTPError as excp:
-                    vollog.debug("Failed with {}".format(excp))
-            if result:
-                break
+                except (error.HTTPError, error.URLError) as excp:
+                    vollog.debug(f"Failed with {excp}")
+                if result:
+                    break
         if progress_callback is not None:
-            progress_callback(100, "Downloading {}".format(url + suffix))
+            progress_callback(100, f"Downloading {url + suffix}")
         if result is None:
             return None
-        return result.name
+        return url + suffix
 
 
 if __name__ == '__main__':
     import argparse
+
 
     class PrintedProgress(object):
         """A progress handler that prints the progress value and the
@@ -964,14 +957,15 @@ if __name__ == '__main__':
             Args:
                 progress: Percentage of progress of the current procedure
             """
-            message = "\rProgress: {0: 7.2f}\t\t{1:}".format(round(progress, 2), description or '')
+            message = f"\rProgress: {round(progress, 2): 7.2f}\t\t{description or ''}"
             message_len = len(message)
             self._max_message_len = max([self._max_message_len, message_len])
             print(message, end = (' ' * (self._max_message_len - message_len)) + '\r')
 
+
     parser = argparse.ArgumentParser(
         description = "Read PDB files and convert to Volatility 3 Intermediate Symbol Format")
-    parser.add_argument("-o", "--output", metavar = "OUTPUT", help = "Filename for data output", required = True)
+    parser.add_argument("-o", "--output", metavar = "OUTPUT", help = "Filename for data output", default = None)
     file_group = parser.add_argument_group("file", description = "File-based conversion of PDB to ISF")
     file_group.add_argument("-f", "--file", metavar = "FILE", help = "PDB file to translate to ISF")
     data_group = parser.add_argument_group("data", description = "Convert based on a GUID and filename pattern")
@@ -994,7 +988,10 @@ if __name__ == '__main__':
     filename = None
     if args.guid is not None and args.pattern is not None:
         filename = PdbRetreiver().retreive_pdb(guid = args.guid, file_name = args.pattern, progress_callback = pg_cb)
-        delfile = True
+        if filename is None:
+            parser.error("PDB file could not be retrieved from the internet")
+        if parse.urlparse(filename, 'file').scheme == 'file':
+            delfile = True
     elif args.file:
         filename = args.file
     else:
@@ -1004,16 +1001,41 @@ if __name__ == '__main__':
         parser.error("No suitable filename provided or retrieved")
 
     ctx = contexts.Context()
-    if not os.path.exists(filename):
-        parser.error("File {} does not exists".format(filename))
-    location = "file:" + request.pathname2url(filename)
+    url = parse.urlparse(filename, scheme = 'file')
+    if url.scheme == 'file':
+        if not os.path.exists(filename):
+            parser.error(f"File {filename} does not exists")
+        location = "file:" + request.pathname2url(os.path.abspath(filename))
+    else:
+        location = filename
 
     convertor = PdbReader(ctx, location, database_name = args.pattern, progress_callback = pg_cb)
 
-    with open(args.output, "w") as f:
-        json.dump(convertor.get_json(), f, indent = 2, sort_keys = True)
+    converted_json = convertor.get_json()
+    if args.output is None:
+        if args.guid:
+            guid = args.guid[:-1]
+            age = args.guid[-1:]
+        else:
+            guid = converted_json['metadata']['windows']['pdb']['GUID']
+            age = converted_json['metadata']['windows']['pdb']['age']
+        args.output = f"{guid}-{age}.json.xz"
+
+    output_url = os.path.abspath(args.output)
+
+    open_method = open
+    if args.output.endswith('.gz'):
+        open_method = gzip.open
+    elif args.output.endswith('.bz2'):
+        open_method = bz2.open
+    elif args.output.endswith('.xz'):
+        open_method = lzma.open
+
+    with open_method(output_url, "wb") as f:
+        json_string = json.dumps(converted_json, indent = 2, sort_keys = True)
+        f.write(bytes(json_string, 'latin-1'))
 
     if args.keep:
-        print("Temporary PDB file: {}".format(filename))
+        print(f"Temporary PDB file: {filename}")
     elif delfile:
         os.remove(filename)

@@ -5,6 +5,7 @@ from typing import Optional, Tuple, List, Dict, Union
 
 from volatility3.framework import objects, interfaces, constants, symbols, exceptions, renderers
 from volatility3.framework.renderers import conversion
+from volatility3.plugins.windows.poolscanner import PoolConstraint
 
 vollog = logging.getLogger(__name__)
 
@@ -17,22 +18,24 @@ class POOL_HEADER(objects.StructType):
     """
 
     def get_object(self,
-                   type_name: str,
+                   constraint: PoolConstraint,
                    use_top_down: bool,
-                   executive: bool = False,
                    kernel_symbol_table: Optional[str] = None,
                    native_layer_name: Optional[str] = None) -> Optional[interfaces.objects.ObjectInterface]:
         """Carve an object or data structure from a kernel pool allocation
 
         Args:
-            type_name: the data structure type name
-            native_layer_name: the name of the layer where the data originally lived
-            object_type: the object type (executive kernel objects only)
+            constraint: a PoolConstraint object used to get the pool allocation header object 
+            use_top_down: for delineating how a windows version finds the size of the object body
             kernel_symbol_table: in case objects of a different symbol table are scanned for
+            native_layer_name: the name of the layer where the data originally lived
 
         Returns:
             An object as found from a POOL_HEADER
         """
+
+        type_name = constraint.type_name
+        executive = constraint.object_type is not None
 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
         if constants.BANG in type_name:
@@ -56,7 +59,7 @@ class POOL_HEADER(objects.StructType):
                                               layer_name = self.vol.layer_name,
                                               offset = self.vol.offset + pool_header_size,
                                               native_layer_name = native_layer_name)
-            return mem_object
+            yield mem_object
 
         # otherwise we have an executive object in the pool
         else:
@@ -142,7 +145,7 @@ class POOL_HEADER(objects.StructType):
                                                           native_layer_name = native_layer_name)
 
                         if mem_object.is_valid():
-                            return mem_object
+                            yield mem_object
 
                     except (TypeError, exceptions.InvalidAddressException):
                         pass
@@ -150,6 +153,10 @@ class POOL_HEADER(objects.StructType):
             # use the bottom up approach for windows 7 and earlier
             else:
                 type_size = self._context.symbol_space.get_type(symbol_table_name + constants.BANG + type_name).size
+                if constraint.additional_structures:
+                    for additional_structure in constraint.additional_structures:
+                        type_size += self._context.symbol_space.get_type(symbol_table_name + constants.BANG + additional_structure).size
+
                 rounded_size = conversion.round(type_size, alignment, up = True)
 
                 mem_object = self._context.object(symbol_table_name + constants.BANG + type_name,
@@ -159,10 +166,9 @@ class POOL_HEADER(objects.StructType):
 
                 try:
                     if mem_object.is_valid():
-                        return mem_object
+                        yield mem_object
                 except (TypeError, exceptions.InvalidAddressException):
-                    return None
-        return None
+                    pass
 
     @classmethod
     @functools.lru_cache()
@@ -175,7 +181,7 @@ class POOL_HEADER(objects.StructType):
                 'HANDLE_REVOCATION_INFO', 'PADDING_INFO'
         ]:
             try:
-                type_name = "{}{}_OBJECT_HEADER_{}".format(symbol_table_name, constants.BANG, header)
+                type_name = f"{symbol_table_name}{constants.BANG}_OBJECT_HEADER_{header}"
                 header_type = context.symbol_space.get_type(type_name)
                 headers.append(header)
                 sizes.append(header_type.size)
@@ -214,7 +220,7 @@ class POOL_HEADER_VISTA(POOL_HEADER):
 class POOL_TRACKER_BIG_PAGES(objects.StructType):
     """A kernel big page pool tracker."""
 
-    pool_type_lookup = {}  # type: Dict[str, str]
+    pool_type_lookup: Dict[str, str] = {}
 
     def _generate_pool_type_lookup(self):
         # Enumeration._generate_inverse_choices() raises ValueError because multiple enum names map to the same
@@ -240,7 +246,7 @@ class POOL_TRACKER_BIG_PAGES(objects.StructType):
         if hasattr(self, 'PoolType'):
             if not self.pool_type_lookup:
                 self._generate_pool_type_lookup()
-            return self.pool_type_lookup.get(self.PoolType, "Unknown choice {}".format(self.PoolType))
+            return self.pool_type_lookup.get(self.PoolType, f"Unknown choice {self.PoolType}")
         else:
             return renderers.NotApplicableValue()
 
@@ -259,7 +265,7 @@ class ExecutiveObject(interfaces.objects.ObjectInterface):
 
     def get_object_header(self) -> 'OBJECT_HEADER':
         if constants.BANG not in self.vol.type_name:
-            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
+            raise ValueError(f"Invalid symbol table name syntax (no {constants.BANG} found)")
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
         body_offset = self._context.symbol_space.get_type(symbol_table_name + constants.BANG +
                                                           "_OBJECT_HEADER").relative_child_offset("Body")
@@ -315,7 +321,7 @@ class OBJECT_HEADER(objects.StructType):
     @property
     def NameInfo(self) -> interfaces.objects.ObjectInterface:
         if constants.BANG not in self.vol.type_name:
-            raise ValueError("Invalid symbol table name syntax (no {} found)".format(constants.BANG))
+            raise ValueError(f"Invalid symbol table name syntax (no {constants.BANG} found)")
 
         symbol_table_name = self.vol.type_name.split(constants.BANG)[0]
 
@@ -329,7 +335,7 @@ class OBJECT_HEADER(objects.StructType):
             kvo = layer.config.get("kernel_virtual_offset", None)
 
             if kvo is None:
-                raise AttributeError("Could not find kernel_virtual_offset for layer: {}".format(self.vol.layer_name))
+                raise AttributeError(f"Could not find kernel_virtual_offset for layer: {self.vol.layer_name}")
 
             ntkrnlmp = self._context.module(symbol_table_name, layer_name = self.vol.layer_name, offset = kvo)
             address = ntkrnlmp.get_symbol("ObpInfoMaskToOffset").address

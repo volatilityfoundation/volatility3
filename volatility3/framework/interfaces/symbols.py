@@ -4,8 +4,8 @@
 """Symbols provide structural information about a set of bytes."""
 import bisect
 import collections.abc
-from abc import abstractmethod, ABC
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Mapping
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Type
 
 from volatility3.framework import constants, exceptions, interfaces
 from volatility3.framework.configuration import requirements
@@ -31,7 +31,7 @@ class SymbolInterface:
         """
         self._name = name
         if constants.BANG in self._name:
-            raise ValueError("Symbol names cannot contain the symbol differentiator ({})".format(constants.BANG))
+            raise ValueError(f"Symbol names cannot contain the symbol differentiator ({constants.BANG})")
 
         # Scope can be added at a later date
         self._location = None
@@ -96,7 +96,7 @@ class BaseSymbolTableInterface:
             table_mapping = {}
         self.table_mapping = table_mapping
         self._native_types = native_types
-        self._sort_symbols = []  # type: List[Tuple[int, str]]
+        self._sort_symbols: List[Tuple[int, str]] = []
 
         # Set any provisioned class_types
         if class_types:
@@ -303,10 +303,9 @@ class SymbolTableInterface(BaseSymbolTableInterface, configuration.ConfigurableI
     @classmethod
     def get_requirements(cls) -> List[RequirementInterface]:
         return super().get_requirements() + [
-            requirements.IntRequirement(name = 'symbol_shift', description = 'Symbol Shift', optional = False),
-            requirements.IntRequirement(
-                name = 'symbol_mask', description = 'Address mask for symbols', optional = True, default = 0),
-        ]
+            requirements.IntRequirement(name = 'symbol_mask', description = 'Address mask for symbols', optional = True,
+                                        default = 0),
+            ]
 
 
 class NativeTableInterface(BaseSymbolTableInterface):

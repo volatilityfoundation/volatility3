@@ -3,6 +3,7 @@
 #
 
 import logging
+import os
 from typing import List
 
 from volatility3.framework import interfaces, renderers, constants, symbols, exceptions
@@ -20,17 +21,15 @@ vollog = logging.getLogger(__name__)
 class SvcScan(interfaces.plugins.PluginInterface):
     """Scans for windows services."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
             requirements.PluginRequirement(name = 'vadyarascan', plugin = vadyarascan.VadYaraScan, version = (1, 0, 0))
@@ -87,21 +86,24 @@ class SvcScan(interfaces.plugins.PluginInterface):
 
         return intermed.IntermediateSymbolTable.create(context,
                                                        config_path,
-                                                       "windows",
+                                                       os.path.join("windows", "services"),
                                                        symbol_filename,
                                                        class_types = services.class_types,
                                                        native_types = native_types)
 
     def _generator(self):
+        kernel = self.context.modules[self.config['kernel']]
 
-        service_table_name = self.create_service_table(self.context, self.config["nt_symbols"], self.config_path)
+        service_table_name = self.create_service_table(self.context, kernel.symbol_table_name,
+                                                       self.config_path)
 
         relative_tag_offset = self.context.symbol_space.get_type(service_table_name + constants.BANG +
                                                                  "_SERVICE_RECORD").relative_child_offset("Tag")
 
         filter_func = pslist.PsList.create_name_filter(["services.exe"])
 
-        is_vista_or_later = versions.is_vista_or_later(context = self.context, symbol_table = self.config["nt_symbols"])
+        is_vista_or_later = versions.is_vista_or_later(context = self.context,
+                                                       symbol_table = kernel.symbol_table_name)
 
         if is_vista_or_later:
             service_tag = b"serH"
@@ -111,8 +113,8 @@ class SvcScan(interfaces.plugins.PluginInterface):
         seen = []
 
         for task in pslist.PsList.list_processes(context = self.context,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols'],
+                                                 layer_name = kernel.layer_name,
+                                                 symbol_table = kernel.symbol_table_name,
                                                  filter_func = filter_func):
 
             proc_id = "Unknown"
@@ -160,7 +162,7 @@ class SvcScan(interfaces.plugins.PluginInterface):
         return renderers.TreeGrid([
             ('Offset', format_hints.Hex),
             ('Order', int),
-            ('Pid', int),
+            ('PID', int),
             ('Start', str),
             ('State', str),
             ('Type', str),

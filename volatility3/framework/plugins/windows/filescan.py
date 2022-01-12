@@ -13,15 +13,13 @@ from volatility3.plugins.windows import poolscanner
 class FileScan(interfaces.plugins.PluginInterface):
     """Scans for file objects present in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'poolscanner', plugin = poolscanner.PoolScanner, version = (1, 0, 0)),
         ]
 
@@ -50,7 +48,9 @@ class FileScan(interfaces.plugins.PluginInterface):
             yield mem_object
 
     def _generator(self):
-        for fileobj in self.scan_files(self.context, self.config['primary'], self.config['nt_symbols']):
+        kernel = self.context.modules[self.config['kernel']]
+
+        for fileobj in self.scan_files(self.context, kernel.layer_name, kernel.symbol_table_name):
 
             try:
                 file_name = fileobj.FileName.String

@@ -6,7 +6,7 @@ import datetime
 import logging
 from typing import Callable, Iterable, List, Type
 
-from volatility3.framework import renderers, interfaces, layers, constants
+from volatility3.framework import renderers, interfaces, layers, exceptions, constants
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import format_hints
@@ -20,17 +20,15 @@ vollog = logging.getLogger(__name__)
 class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the processes present in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (2, 0, 0)
     PHYSICAL_DEFAULT = False
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.BooleanRequirement(name = 'physical',
                                             description = 'Display physical offsets instead of virtual',
                                             default = cls.PHYSICAL_DEFAULT,
@@ -73,22 +71,24 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
             dos_header = context.object(pe_table_name + constants.BANG + "_IMAGE_DOS_HEADER",
                                         offset = peb.ImageBaseAddress,
                                         layer_name = proc_layer_name)
-            file_handle = open_method("pid.{0}.{1:#x}.dmp".format(proc.UniqueProcessId, peb.ImageBaseAddress))
+            file_handle = open_method(f"pid.{proc.UniqueProcessId}.{peb.ImageBaseAddress:#x}.dmp")
             for offset, data in dos_header.reconstruct():
                 file_handle.seek(offset)
                 file_handle.write(data)
         except Exception as excp:
-            vollog.debug("Unable to dump PE with pid {}: {}".format(proc.UniqueProcessId, excp))
+            vollog.debug(f"Unable to dump PE with pid {proc.UniqueProcessId}: {excp}")
 
         return file_handle
 
     @classmethod
-    def create_pid_filter(cls, pid_list: List[int] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+    def create_pid_filter(cls, pid_list: List[int] = None, exclude: bool = False) -> Callable[
+        [interfaces.objects.ObjectInterface], bool]:
         """A factory for producing filter functions that filter based on a list
         of process IDs.
 
         Args:
             pid_list: A list of process IDs that are acceptable, all other processes will be filtered out
+            exclude: Accept only tasks that are not in pid_list
 
         Returns:
             Filter function for passing to the `list_processes` method
@@ -98,17 +98,21 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         pid_list = pid_list or []
         filter_list = [x for x in pid_list if x is not None]
         if filter_list:
-            filter_func = lambda x: x.UniqueProcessId not in filter_list
+            if exclude:
+                filter_func = lambda x: x.UniqueProcessId in filter_list
+            else:
+                filter_func = lambda x: x.UniqueProcessId not in filter_list
         return filter_func
 
     @classmethod
-    def create_name_filter(cls, name_list: List[str] = None) -> Callable[[interfaces.objects.ObjectInterface], bool]:
+    def create_name_filter(cls, name_list: List[str] = None, exclude: bool = False) -> Callable[
+        [interfaces.objects.ObjectInterface], bool]:
         """A factory for producing filter functions that filter based on a list
         of process names.
 
         Args:
             name_list: A list of process names that are acceptable, all other processes will be filtered out
-
+            exclude: Accept only tasks that are not in name_list
         Returns:
             Filter function for passing to the `list_processes` method
         """
@@ -117,7 +121,10 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         name_list = name_list or []
         filter_list = [x for x in name_list if x is not None]
         if filter_list:
-            filter_func = lambda x: utility.array_to_string(x.ImageFileName) not in filter_list
+            if exclude:
+                filter_func = lambda x: utility.array_to_string(x.ImageFileName) in filter_list
+            else:
+                filter_func = lambda x: utility.array_to_string(x.ImageFileName) not in filter_list
         return filter_func
 
     @classmethod
@@ -166,19 +173,21 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 yield proc
 
     def _generator(self):
+        kernel = self.context.modules[self.config['kernel']]
+
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
 
-        memory = self.context.layers[self.config['primary']]
+        memory = self.context.layers[kernel.layer_name]
         if not isinstance(memory, layers.intel.Intel):
             raise TypeError("Primary layer is not an intel layer")
 
         for proc in self.list_processes(self.context,
-                                        self.config['primary'],
-                                        self.config['nt_symbols'],
+                                        kernel.layer_name,
+                                        kernel.symbol_table_name,
                                         filter_func = self.create_pid_filter(self.config.get('pid', None))):
 
             if not self.config.get('physical', self.PHYSICAL_DEFAULT):
@@ -187,22 +196,29 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (_, _, offset, _, _) = list(memory.mapping(offset = proc.vol.offset, length = 0))[0]
 
             file_output = "Disabled"
-            if self.config['dump']:
-                file_handle = self.process_dump(self.context, self.config['nt_symbols'], pe_table_name, proc, self.open)
-                file_output = "Error outputting file"
-                if file_handle:
-                    file_handle.close()
-                    file_output = str(file_handle.preferred_filename)
 
-            yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
-                       proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count, errors = 'replace'),
-                       format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
-                       proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), file_output))
+            try:
+                if self.config['dump']:
+                    file_handle = self.process_dump(self.context, kernel.symbol_table_name,
+                                                    pe_table_name, proc, self.open)
+                    file_output = "Error outputting file"
+                    if file_handle:
+                        file_handle.close()
+                        file_output = str(file_handle.preferred_filename)
+
+                yield (0, (proc.UniqueProcessId, proc.InheritedFromUniqueProcessId,
+                           proc.ImageFileName.cast("string", max_length = proc.ImageFileName.vol.count,
+                                                   errors = 'replace'),
+                           format_hints.Hex(offset), proc.ActiveThreads, proc.get_handle_count(), proc.get_session_id(),
+                           proc.get_is_wow64(), proc.get_create_time(), proc.get_exit_time(), file_output))
+
+            except exceptions.InvalidAddressException:
+                vollog.info(f"Invalid process found at address: {proc.vol.offset:x}. Skipping")
 
     def generate_timeline(self):
         for row in self._generator():
             _depth, row_data = row
-            description = "Process: {} {} ({})".format(row_data[0], row_data[2], row_data[3])
+            description = f"Process: {row_data[0]} {row_data[2]} ({row_data[3]})"
             yield (description, timeliner.TimeLinerType.CREATED, row_data[8])
             yield (description, timeliner.TimeLinerType.MODIFIED, row_data[9])
 
@@ -210,7 +226,7 @@ class PsList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         offsettype = "(V)" if not self.config.get('physical', self.PHYSICAL_DEFAULT) else "(P)"
 
         return renderers.TreeGrid([("PID", int), ("PPID", int), ("ImageFileName", str),
-                                   ("Offset{0}".format(offsettype), format_hints.Hex), ("Threads", int),
+                                   (f"Offset{offsettype}", format_hints.Hex), ("Threads", int),
                                    ("Handles", int), ("SessionId", int), ("Wow64", bool),
                                    ("CreateTime", datetime.datetime), ("ExitTime", datetime.datetime),
                                    ("File output", str)], self._generator())

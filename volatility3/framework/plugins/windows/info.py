@@ -16,16 +16,14 @@ from volatility3.framework.symbols.windows import extensions
 class Info(plugins.PluginInterface):
     """Show OS & kernel details of the memory sample being analyzed."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols")
         ]
 
     @classmethod
@@ -150,19 +148,23 @@ class Info(plugins.PluginInterface):
 
     def _generator(self):
 
-        layer_name = self.config['primary']
-        symbol_table = self.config['nt_symbols']
+        kernel = self.context.modules[self.config['kernel']]
+
+        layer_name = kernel.layer_name
+        symbol_table = kernel.symbol_table_name
+        layer = self.context.layers[layer_name]
+        table = self.context.symbol_space[symbol_table]
 
         kdbg = self.get_kdbg_structure(self.context, self.config_path, layer_name, symbol_table)
 
-        yield (0, ("Kernel Base", hex(self.config["primary.kernel_virtual_offset"])))
-        yield (0, ("DTB", hex(self.config["primary.page_map_offset"])))
-        yield (0, ("Symbols", self.config["nt_symbols.isf_url"]))
+        yield (0, ("Kernel Base", hex(layer.config["kernel_virtual_offset"])))
+        yield (0, ("DTB", hex(layer.config["page_map_offset"])))
+        yield (0, ("Symbols", table.config["isf_url"]))
         yield (0, ("Is64Bit", str(symbols.symbol_table_is_64bit(self.context, symbol_table))))
         yield (0, ("IsPAE", str(self.context.layers[layer_name].metadata.get("pae", False))))
 
-        for i, layer in self.get_depends(self.context, "primary"):
-            yield (0, (layer.name, "{} {}".format(i, layer.__class__.__name__)))
+        for i, layer in self.get_depends(self.context, layer_name):
+            yield (0, (layer.name, f"{i} {layer.__class__.__name__}"))
 
         if kdbg.Header.OwnerTag == 0x4742444B:
 
@@ -173,7 +175,7 @@ class Info(plugins.PluginInterface):
         vers = self.get_version_structure(self.context, layer_name, symbol_table)
 
         yield (0, ("KdVersionBlock", hex(vers.vol.offset)))
-        yield (0, ("Major/Minor", "{0}.{1}".format(vers.MajorVersion, vers.MinorVersion)))
+        yield (0, ("Major/Minor", f"{vers.MajorVersion}.{vers.MinorVersion}"))
         yield (0, ("MachineType", str(vers.MachineType)))
 
         ntkrnlmp = self.get_kernel_module(self.context, layer_name, symbol_table)

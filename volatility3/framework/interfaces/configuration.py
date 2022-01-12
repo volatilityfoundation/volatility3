@@ -23,9 +23,9 @@ import random
 import string
 import sys
 from abc import ABCMeta, abstractmethod
-from typing import Any, ClassVar, Dict, Generator, Iterator, List, Optional, Type, Union, Tuple
+from typing import Any, ClassVar, Dict, Generator, Iterator, List, Optional, Type, Union, Tuple, Set
 
-from volatility3 import classproperty
+from volatility3 import classproperty, framework
 from volatility3.framework import constants, interfaces
 
 CONFIG_SEPARATOR = "."
@@ -77,10 +77,10 @@ class HierarchicalDict(collections.abc.Mapping):
             separator: A custom hierarchy separator (defaults to CONFIG_SEPARATOR)
         """
         if not (isinstance(separator, str) and len(separator) == 1):
-            raise TypeError("Separator must be a one character string: {}".format(separator))
+            raise TypeError(f"Separator must be a one character string: {separator}")
         self._separator = separator
-        self._data = {}  # type: Dict[str, ConfigSimpleType]
-        self._subdict = {}  # type: Dict[str, 'HierarchicalDict']
+        self._data: Dict[str, ConfigSimpleType] = {}
+        self._subdict: Dict[str, 'HierarchicalDict'] = {}
         if isinstance(initial_dict, str):
             initial_dict = json.loads(initial_dict)
         if isinstance(initial_dict, dict):
@@ -88,7 +88,7 @@ class HierarchicalDict(collections.abc.Mapping):
                 self[k] = v
         elif initial_dict is not None:
             raise TypeError(
-                "Initial_dict must be a dictionary or JSON string containing a dictionary: {}".format(initial_dict))
+                f"Initial_dict must be a dictionary or JSON string containing a dictionary: {initial_dict}")
 
     def __eq__(self, other):
         """Define equality between HierarchicalDicts"""
@@ -186,12 +186,13 @@ class HierarchicalDict(collections.abc.Mapping):
                 element_value = self._sanitize_value(element)
                 if isinstance(element_value, list):
                     raise TypeError("Configuration list types cannot contain list types")
-                new_list.append(element_value)
+                if element_value is not None:
+                    new_list.append(element_value)
             return new_list
         elif value is None:
             return None
         else:
-            raise TypeError("Invalid type stored in configuration")
+            raise TypeError(f"Invalid type stored in configuration: {type(value)}")
 
     def __delitem__(self, key: str) -> None:
         """Deletes an item from the hierarchical dict."""
@@ -314,15 +315,23 @@ class RequirementInterface(metaclass = ABCMeta):
         """
         super().__init__()
         if CONFIG_SEPARATOR in name:
-            raise ValueError("Name cannot contain the config-hierarchy divider ({})".format(CONFIG_SEPARATOR))
+            raise ValueError(f"Name cannot contain the config-hierarchy divider ({CONFIG_SEPARATOR})")
         self._name = name
         self._description = description or ""
         self._default = default
         self._optional = optional
-        self._requirements = {}  # type: Dict[str, RequirementInterface]
+        self._requirements: Dict[str, RequirementInterface] = {}
 
     def __repr__(self) -> str:
         return "<" + self.__class__.__name__ + ": " + self.name + ">"
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        for name in self.__dict__:
+            if other.__dict__.get(name, None) != self.__dict__[name]:
+                return False
+        return True
 
     @property
     def name(self) -> str:
@@ -429,7 +438,7 @@ class RequirementInterface(metaclass = ABCMeta):
 class SimpleTypeRequirement(RequirementInterface):
     """Class to represent a single simple type (such as a boolean, a string, an
     integer or a series of bytes)"""
-    instance_type = bool  # type: ClassVar[Type]
+    instance_type: ClassVar[Type] = bool
 
     def add_requirement(self, requirement: RequirementInterface):
         """Always raises a TypeError as instance requirements cannot have
@@ -469,8 +478,13 @@ class ClassRequirement(RequirementInterface):
         super().__init__(*args, **kwargs)
         self._cls = None
 
+    def __eq__(self, other):
+        # We can just use super because it checks all member of `__dict__`
+        # This appeases LGTM and does the right thing
+        return super().__eq__(other)
+
     @property
-    def cls(self) -> Type:
+    def cls(self) -> Optional[Type]:
         """Contains the actual chosen class based on the configuration value's
         class name."""
         return self._cls
@@ -515,7 +529,12 @@ class ConstructableRequirementInterface(RequirementInterface):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.add_requirement(ClassRequirement("class", "Class of the constructable requirement"))
-        self._current_class_requirements = set()
+        self._current_class_requirements: Set[Any] = set()
+
+    def __eq__(self, other):
+        # We can just use super because it checks all member of `__dict__`
+        # This appeases LGTM and does the right thing
+        return super().__eq__(other)
 
     @abstractmethod
     def construct(self, context: 'interfaces.context.ContextInterface', config_path: str) -> None:
@@ -563,6 +582,9 @@ class ConstructableRequirementInterface(RequirementInterface):
             return None
         cls = self.requirements["class"].cls
 
+        if cls is None:
+            return None
+
         # These classes all have a name property
         # We could subclass this out as a NameableInterface, but it seems a little excessive
         # FIXME: We can't test this, because importing the other interfaces causes all kinds of import loops
@@ -598,7 +620,7 @@ class ConfigurableInterface(metaclass = ABCMeta):
         super().__init__()
         self._context = context
         self._config_path = config_path
-        self._config_cache = None  # type: Optional[HierarchicalDict]
+        self._config_cache: Optional[HierarchicalDict] = None
 
     @property
     def context(self) -> 'interfaces.context.ContextInterface':
@@ -707,7 +729,12 @@ class VersionableInterface:
 
     All version number should use semantic versioning
     """
-    _version = (0, 0, 0)  # type: Tuple[int, int, int]
+    _version: Tuple[int, int, int] = (0, 0, 0)
+    _required_framework_version: Tuple[int, int, int] = (0, 0, 0)
+
+    def __init__(self, *args, **kwargs):
+        framework.require_interface_version(*self._required_framework_version)
+        super().__init__(*args, **kwargs)
 
     @classproperty
     def version(cls) -> Tuple[int, int, int]:

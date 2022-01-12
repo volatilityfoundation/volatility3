@@ -45,7 +45,7 @@ class elf(objects.StructType):
         elif ei_class == 2:
             self._type_prefix = "Elf64_"
         else:
-            raise ValueError("Unsupported ei_class value {}".format(ei_class))
+            raise ValueError(f"Unsupported ei_class value {ei_class}")
 
         # Construct the full header
         self._hdr = self._context.object(symbol_table_name + constants.BANG + self._type_prefix + "Ehdr",

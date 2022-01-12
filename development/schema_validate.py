@@ -35,7 +35,7 @@ if __name__ == '__main__':
     for filename in args.filenames:
         try:
             if os.path.exists(filename):
-                print("[?] Validating file: {}".format(filename))
+                print(f"[?] Validating file: {filename}")
                 with open(filename, 'r') as t:
                     test = json.load(t)
 
@@ -45,14 +45,14 @@ if __name__ == '__main__':
                     result = schemas.validate(test, False)
 
                 if result:
-                    print("[+] Validation successful: {}".format(filename))
+                    print(f"[+] Validation successful: {filename}")
                 else:
-                    print("[-] Validation failed: {}".format(filename))
+                    print(f"[-] Validation failed: {filename}")
                     failures.append(filename)
             else:
-                print("[x] File not found: {}".format(filename))
+                print(f"[x] File not found: {filename}")
         except Exception as e:
             failures.append(filename)
-            print("[x] Exception occurred: {} ({})".format(filename, repr(e)))
+            print(f"[x] Exception occurred: {filename} ({repr(e)})")
 
     print("Failures", failures)

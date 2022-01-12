@@ -22,7 +22,7 @@ vollog = logging.getLogger(__name__)
 class IsfInfo(plugins.PluginInterface):
     """Determines information about the currently available ISF files, or a specific one"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
@@ -117,7 +117,7 @@ class IsfInfo(plugins.PluginInterface):
                         windows_info = os.path.splitext(os.path.basename(entry))[0]
                     valid = check_valid(data)
                 except (UnicodeDecodeError, json.decoder.JSONDecodeError):
-                    vollog.warning("Invalid ISF: {}".format(entry))
+                    vollog.warning(f"Invalid ISF: {entry}")
             yield (0, (entry, valid, num_bases, num_types, num_symbols, num_enums, windows_info, linux_banner,
                        mac_banner))
 

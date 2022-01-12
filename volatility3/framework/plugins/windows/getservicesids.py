@@ -31,7 +31,7 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
     """Lists process token sids."""
 
     _version = (1, 0, 0)
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,22 +53,22 @@ class GetServiceSIDs(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
 
     def _generator(self):
 
-        # Go all over the hives
+        kernel = self.context.modules[self.config['kernel']]
+        # Get the system hive
         for hive in hivelist.HiveList.list_hives(context = self.context,
                                                  base_config_path = self.config_path,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols'],
+                                                 layer_name = kernel.layer_name,
+                                                 symbol_table = kernel.symbol_table_name,
+                                                 filter_string = 'machine\\system',
                                                  hive_offsets = None):
-            # Get ConrolSet\Services.
+            # Get ControlSet\Services.
             try:
                 services = hive.get_key(r"CurrentControlSet\Services")
             except (KeyError, exceptions.InvalidAddressException):

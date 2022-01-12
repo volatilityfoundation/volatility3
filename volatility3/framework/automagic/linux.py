@@ -14,7 +14,7 @@ vollog = logging.getLogger(__name__)
 
 
 class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
-    stack_order = 45
+    stack_order = 35
     exclusion_list = ['mac', 'windows']
 
     @classmethod
@@ -41,7 +41,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
         mss = scanners.MultiStringScanner([x for x in linux_banners if x is not None])
         for _, banner in layer.scan(context = context, scanner = mss, progress_callback = progress_callback):
             dtb = None
-            vollog.debug("Identified banner: {}".format(repr(banner)))
+            vollog.debug(f"Identified banner: {repr(banner)}")
 
             symbol_files = linux_banners.get(banner, None)
             if symbol_files:
@@ -57,7 +57,7 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                                                         layer_name,
                                                         progress_callback = progress_callback)
 
-                layer_class = intel.Intel  # type: Type
+                layer_class: Type = intel.Intel
                 if 'init_top_pgt' in table.symbols:
                     layer_class = intel.Intel32e
                     dtb_symbol_name = 'init_top_pgt'
@@ -79,10 +79,11 @@ class LinuxIntelStacker(interfaces.automagic.StackerLayerInterface):
                 layer = layer_class(context,
                                     config_path = config_path,
                                     name = new_layer_name,
-                                    metadata = {'kaslr_value': aslr_shift})
+                                    metadata = {'os': 'Linux'})
+                layer.config['kernel_virtual_offset'] = aslr_shift
 
             if layer and dtb:
-                vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
+                vollog.debug(f"DTB was found at: 0x{dtb:0x}")
                 return layer
         vollog.debug("No suitable linux banner could be matched")
         return None

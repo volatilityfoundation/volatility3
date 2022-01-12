@@ -108,7 +108,7 @@ class module(generic.GenericIntelProcess):
                                                                  "linux",
                                                                  "elf",
                                                                  native_types = None,
-                                                                 class_types = extensions.elf.class_types)
+                                                                 class_types = elf.class_types)
 
         syms = self._context.object(
             self.get_symbol_table().name + constants.BANG + "array",
@@ -181,7 +181,7 @@ class task_struct(generic.GenericIntelProcess):
             return None
 
         if preferred_name is None:
-            preferred_name = self.vol.layer_name + "_Process{}".format(self.pid)
+            preferred_name = self.vol.layer_name + f"_Process{self.pid}"
 
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
@@ -197,7 +197,7 @@ class task_struct(generic.GenericIntelProcess):
                 continue
             else:
                 # FIXME: Check if this actually needs to be printed out or not
-                vollog.info("adding vma: {:x} {:x} | {:x} {:x}".format(start, self.mm.brk, end, self.mm.start_brk))
+                vollog.info(f"adding vma: {start:x} {self.mm.brk:x} | {end:x} {self.mm.start_brk:x}")
 
             yield (start, end - start)
 
@@ -403,7 +403,19 @@ class list_head(objects.StructType, collections.abc.Iterable):
                 forward: bool = True,
                 sentinel: bool = True,
                 layer: Optional[str] = None) -> Iterator[interfaces.objects.ObjectInterface]:
-        """Returns an iterator of the entries in the list."""
+        """Returns an iterator of the entries in the list.
+
+        Args:
+                symbol_type: Type of the list elements
+                member: Name of the list_head member in the list elements
+                forward: Set false to go backwards
+                sentinel: Whether self is a "sentinel node", meaning it is not embedded in a member of the list
+                Sentinel nodes are NOT yielded. See https://en.wikipedia.org/wiki/Sentinel_node for further reference
+                layer: Name of layer to read from
+        Yields:
+            Objects of the type specified via the "symbol_type" argument.
+
+        """
         layer = layer or self.vol.layer_name
 
         relative_offset = self._context.symbol_space.get_type(symbol_type).relative_child_offset(member)
@@ -496,7 +508,7 @@ class vfsmount(objects.StructType):
 
     def _get_real_mnt(self):
         table_name = self.vol.type_name.split(constants.BANG)[0]
-        mount_struct = "{0}{1}mount".format(table_name, constants.BANG)
+        mount_struct = f"{table_name}{constants.BANG}mount"
         offset = self._context.symbol_space.get_type(mount_struct).relative_child_offset("mnt")
 
         return self._context.object(mount_struct, self.vol.layer_name, offset = self.vol.offset - offset)

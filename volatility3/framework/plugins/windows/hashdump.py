@@ -21,15 +21,14 @@ vollog = logging.getLogger(__name__)
 class Hashdump(interfaces.plugins.PluginInterface):
     """Dumps user hashes from memory"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
+    _version = (1, 1, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
 
@@ -61,10 +60,21 @@ class Hashdump(interfaces.plugins.PluginInterface):
     empty_nt = b"\x31\xd6\xcf\xe0\xd1\x6a\xe9\x31\xb7\x3c\x59\xd7\xe0\xc0\x89\xc0"
 
     @classmethod
+    def get_hive_key(cls, hive: registry.RegistryHive, key: str):
+        result = None
+        try:
+            result = hive.get_key(key)
+        except KeyError:
+            vollog.info(
+                f"Unable to load the required registry key {hive.get_name()}\\{key} from this memory image")
+        return result
+
+    @classmethod
     def get_user_keys(cls, samhive: registry.RegistryHive) -> List[interfaces.objects.ObjectInterface]:
         user_key_path = "SAM\\Domains\\Account\\Users"
 
-        user_key = samhive.get_key(user_key_path)
+        user_key = cls.get_hive_key(samhive, user_key_path)
+
         if not user_key:
             return []
         return [k for k in user_key.get_subkeys() if k.Name != "Names"]
@@ -72,10 +82,10 @@ class Hashdump(interfaces.plugins.PluginInterface):
     @classmethod
     def get_bootkey(cls, syshive: registry.RegistryHive) -> Optional[bytes]:
         cs = 1
-        lsa_base = "ControlSet{0:03}".format(cs) + "\\Control\\Lsa"
+        lsa_base = f"ControlSet{cs:03}" + "\\Control\\Lsa"
         lsa_keys = ["JD", "Skew1", "GBG", "Data"]
 
-        lsa = syshive.get_key(lsa_base)
+        lsa = cls.get_hive_key(syshive, lsa_base)
 
         if not lsa:
             return None
@@ -83,9 +93,10 @@ class Hashdump(interfaces.plugins.PluginInterface):
         bootkey = ''
 
         for lk in lsa_keys:
-            key = syshive.get_key(lsa_base + '\\' + lk)
-
-            class_data = syshive.read(key.Class + 4, key.ClassLength)
+            key = cls.get_hive_key(syshive, lsa_base + '\\' + lk)
+            class_data = None
+            if key:
+                class_data = syshive.read(key.Class + 4, key.ClassLength)
 
             if class_data is None:
                 return None
@@ -102,7 +113,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
         if not bootkey:
             return None
 
-        sam_account_key = samhive.get_key(sam_account_path)
+        sam_account_key = cls.get_hive_key(samhive, sam_account_path)
         if not sam_account_key:
             return None
 
@@ -121,7 +132,7 @@ class Hashdump(interfaces.plugins.PluginInterface):
             rc4_key = md5.digest()
 
             rc4 = ARC4.new(rc4_key)
-            hbootkey = rc4.encrypt(sam_data[0x80:0xA0])
+            hbootkey = rc4.encrypt(sam_data[0x80:0xA0]) # lgtm [py/weak-cryptographic-algorithm]
             return hbootkey
         elif revision == 3:
             # AES encrypted
@@ -133,17 +144,18 @@ class Hashdump(interfaces.plugins.PluginInterface):
         return None
 
     @classmethod
-    def decrypt_single_salted_hash(cls, rid, hbootkey: bytes, enc_hash: bytes, lmntstr, salt: bytes) -> Optional[bytes]:
+    def decrypt_single_salted_hash(cls, rid, hbootkey: bytes, enc_hash: bytes, _lmntstr,
+                                   salt: bytes) -> Optional[bytes]:
         (des_k1, des_k2) = cls.sid_to_key(rid)
         des1 = DES.new(des_k1, DES.MODE_ECB)
         des2 = DES.new(des_k2, DES.MODE_ECB)
         cipher = AES.new(hbootkey[:16], AES.MODE_CBC, salt)
         obfkey = cipher.decrypt(enc_hash)
-        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:16])
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:16]) # lgtm [py/weak-cryptographic-algorithm]
 
     @classmethod
     def get_user_hashes(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive,
-                        hbootkey: bytes) -> Tuple[bytes, bytes]:
+                        hbootkey: bytes) -> Optional[Tuple[bytes, bytes]]:
         ## Will sometimes find extra user with rid = NAMES, returns empty strings right now
         try:
             rid = int(str(user.get_name()), 16)
@@ -199,22 +211,16 @@ class Hashdump(interfaces.plugins.PluginInterface):
     @classmethod
     def sidbytes_to_key(cls, s: bytes) -> bytes:
         """Builds final DES key from the strings generated in sid_to_key"""
-        key = []
-        key.append(s[0] >> 1)
-        key.append(((s[0] & 0x01) << 6) | (s[1] >> 2))
-        key.append(((s[1] & 0x03) << 5) | (s[2] >> 3))
-        key.append(((s[2] & 0x07) << 4) | (s[3] >> 4))
-        key.append(((s[3] & 0x0F) << 3) | (s[4] >> 5))
-        key.append(((s[4] & 0x1F) << 2) | (s[5] >> 6))
-        key.append(((s[5] & 0x3F) << 1) | (s[6] >> 7))
-        key.append(s[6] & 0x7F)
+        key = [s[0] >> 1, ((s[0] & 0x01) << 6) | (s[1] >> 2), ((s[1] & 0x03) << 5) | (s[2] >> 3),
+               ((s[2] & 0x07) << 4) | (s[3] >> 4), ((s[3] & 0x0F) << 3) | (s[4] >> 5),
+               ((s[4] & 0x1F) << 2) | (s[5] >> 6), ((s[5] & 0x3F) << 1) | (s[6] >> 7), s[6] & 0x7F]
         for i in range(8):
             key[i] = (key[i] << 1)
             key[i] = cls.odd_parity[key[i]]
         return bytes(key)
 
     @classmethod
-    def decrypt_single_hash(cls, rid, hbootkey, enc_hash: bytes, lmntstr):
+    def decrypt_single_hash(cls, rid: int, hbootkey: bytes, enc_hash: bytes, lmntstr: bytes):
         (des_k1, des_k2) = cls.sid_to_key(rid)
         des1 = DES.new(des_k1, DES.MODE_ECB)
         des2 = DES.new(des_k2, DES.MODE_ECB)
@@ -223,26 +229,25 @@ class Hashdump(interfaces.plugins.PluginInterface):
         md5.update(hbootkey[:0x10] + pack("<L", rid) + lmntstr)
         rc4_key = md5.digest()
         rc4 = ARC4.new(rc4_key)
-        obfkey = rc4.encrypt(enc_hash)
+        obfkey = rc4.encrypt(enc_hash) # lgtm [py/weak-cryptographic-algorithm]
 
-        hash = des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:])
-        return hash
+        return des1.decrypt(obfkey[:8]) + des2.decrypt(obfkey[8:]) # lgtm [py/weak-cryptographic-algorithm]
 
     @classmethod
-    def get_user_name(cls, user: interfaces.objects.ObjectInterface, samhive: registry.RegistryHive) -> Optional[bytes]:
-        V = None
+    def get_user_name(cls, user: registry.CM_KEY_NODE, samhive: registry.RegistryHive) -> Optional[bytes]:
+        value = None
         for v in user.get_values():
             if v.get_name() == 'V':
-                V = samhive.read(v.Data + 4, v.DataLength)
-        if not V:
+                value = samhive.read(v.Data + 4, v.DataLength)
+        if not value:
             return None
 
-        name_offset = unpack("<L", V[0x0c:0x10])[0] + 0xCC
-        name_length = unpack("<L", V[0x10:0x14])[0]
-        if name_length > len(V):
+        name_offset = unpack("<L", value[0x0c:0x10])[0] + 0xCC
+        name_length = unpack("<L", value[0x10:0x14])[0]
+        if name_length > len(value):
             return None
 
-        username = V[name_offset:name_offset + name_length]
+        username = value[name_offset:name_offset + name_length]
         return username
 
     # replaces the dump_hashes method in vol2
@@ -276,16 +281,17 @@ class Hashdump(interfaces.plugins.PluginInterface):
                     rid = int(str(user.get_name()), 16)
                     yield (0, (name, rid, lmout, ntout))
         else:
-            raise ValueError("Hbootkey is not valid")
+            vollog.warning("Hbootkey is not valid")
 
     def run(self):
         offset = self.config.get('offset', None)
         syshive = None
         samhive = None
+        kernel = self.context.modules[self.config['kernel']]
         for hive in hivelist.HiveList.list_hives(self.context,
                                                  self.config_path,
-                                                 self.config['primary'],
-                                                 self.config['nt_symbols'],
+                                                 kernel.layer_name,
+                                                 kernel.symbol_table_name,
                                                  hive_offsets = None if offset is None else [offset]):
 
             if hive.get_name().split('\\')[-1].upper() == 'SYSTEM':

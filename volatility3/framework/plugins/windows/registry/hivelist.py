@@ -17,7 +17,7 @@ class HiveGenerator:
     """Walks the registry HiveList linked list in a given direction and stores an invalid offset
     if it's unable to fully walk the list"""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, cmhive, forward = True):
         self._cmhive = cmhive
@@ -40,15 +40,13 @@ class HiveList(interfaces.plugins.PluginInterface):
     """Lists the registry hives present in a particular memory image."""
 
     _version = (1, 0, 0)
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.StringRequirement(name = 'filter',
                                            description = "String to filter hive names returned",
                                            optional = True,
@@ -65,10 +63,11 @@ class HiveList(interfaces.plugins.PluginInterface):
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, str]]]:
         chunk_size = 0x500000
+        kernel = self.context.modules[self.config['kernel']]
 
         for hive_object in self.list_hive_objects(context = self.context,
-                                                  layer_name = self.config["primary"],
-                                                  symbol_table = self.config["nt_symbols"],
+                                                  layer_name = kernel.layer_name,
+                                                  symbol_table = kernel.symbol_table_name,
                                                   filter_string = self.config.get('filter', None)):
 
             file_output = "Disabled"
@@ -77,13 +76,13 @@ class HiveList(interfaces.plugins.PluginInterface):
                 hive = next(
                     self.list_hives(self.context,
                                     self.config_path,
-                                    layer_name = self.config["primary"],
-                                    symbol_table = self.config["nt_symbols"],
+                                    layer_name = kernel.layer_name,
+                                    symbol_table = kernel.symbol_table_name,
                                     hive_offsets = [hive_object.vol.offset]))
                 maxaddr = hive.hive.Storage[0].Length
                 hive_name = self._sanitize_hive_name(hive.get_name())
 
-                file_handle = self.open('registry.{}.{}.hive'.format(hive_name, hex(hive.hive_offset)))
+                file_handle = self.open(f'registry.{hive_name}.{hex(hive.hive_offset)}.hive')
                 with file_handle as file_data:
                     if hive._base_block:
                         hive_data = self.context.layers[hive.dependencies[0]].read(hive.hive.BaseBlock, 1 << 12)
@@ -143,7 +142,7 @@ class HiveList(interfaces.plugins.PluginInterface):
             try:
                 hive = registry.RegistryHive(context, reg_config_path, name = 'hive' + hex(hive_offset))
             except exceptions.InvalidAddressException:
-                vollog.warning("Couldn't create RegistryHive layer at offset {}, skipping".format(hex(hive_offset)))
+                vollog.warning(f"Couldn't create RegistryHive layer at offset {hex(hive_offset)}, skipping")
                 continue
             context.layers.add_layer(hive)
             yield hive

@@ -33,9 +33,9 @@ winnt_protections = {
 class VadInfo(interfaces.plugins.PluginInterface):
     """Lists process memory ranges."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (2, 0, 0)
-    MAXSIZE_DEFAULT = 0
+    MAXSIZE_DEFAULT = 1024 * 1024 * 1024  # 1 Gb
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,10 +44,8 @@ class VadInfo(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
-        return [requirements.TranslationLayerRequirement(name = 'primary',
-                                                         description = 'Memory layer for the kernel',
+        return [requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                          architectures = ["Intel32", "Intel64"]),
-                requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
                 # TODO: Convert this to a ListRequirement so that people can filter on sets of ranges
                 requirements.IntRequirement(name = 'address',
                                             description = "Process virtual memory address to include " \
@@ -132,11 +130,11 @@ class VadInfo(interfaces.plugins.PluginInterface):
             vad_end = vad.get_end()
         except AttributeError:
             vollog.debug("Unable to find the starting/ending VPN member")
-            return
+            return None
 
         if maxsize > 0 and (vad_end - vad_start) > maxsize:
-            vollog.debug("Skip VAD dump {0:#x}-{1:#x} due to maxsize limit".format(vad_start, vad_end))
-            return
+            vollog.debug(f"Skip VAD dump {vad_start:#x}-{vad_end:#x} due to maxsize limit")
+            return None
 
         proc_id = "Unknown"
         try:
@@ -148,7 +146,7 @@ class VadInfo(interfaces.plugins.PluginInterface):
             return None
 
         proc_layer = context.layers[proc_layer_name]
-        file_name = "pid.{0}.vad.{1:#x}-{2:#x}.dmp".format(proc_id, vad_start, vad_end)
+        file_name = f"pid.{proc_id}.vad.{vad_start:#x}-{vad_end:#x}.dmp"
         try:
             file_handle = open_method(file_name)
             chunk_size = 1024 * 1024 * 10
@@ -162,12 +160,13 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 offset += to_read
 
         except Exception as excp:
-            vollog.debug("Unable to dump VAD {}: {}".format(file_name, excp))
-            return
+            vollog.debug(f"Unable to dump VAD {file_name}: {excp}")
+            return None
 
         return file_handle
 
     def _generator(self, procs):
+        kernel = self.context.modules[self.config['kernel']]
 
         def passthrough(_: interfaces.objects.ObjectInterface) -> bool:
             return False
@@ -196,11 +195,12 @@ class VadInfo(interfaces.plugins.PluginInterface):
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(vad.vol.offset),
                            format_hints.Hex(vad.get_start()), format_hints.Hex(vad.get_end()), vad.get_tag(),
                            vad.get_protection(
-                               self.protect_values(self.context, self.config['primary'], self.config['nt_symbols']),
+                               self.protect_values(self.context, kernel.layer_name, kernel.symbol_table_name),
                                winnt_protections), vad.get_commit_charge(), vad.get_private_memory(),
                            format_hints.Hex(vad.get_parent()), vad.get_file_name(), file_output))
 
     def run(self):
+        kernel = self.context.modules[self.config['kernel']]
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
 
@@ -210,6 +210,6 @@ class VadInfo(interfaces.plugins.PluginInterface):
                                    ("Parent", format_hints.Hex), ("File", str), ("File output", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   layer_name = kernel.layer_name,
+                                                                   symbol_table = kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

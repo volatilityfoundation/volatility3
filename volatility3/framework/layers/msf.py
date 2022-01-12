@@ -34,7 +34,7 @@ class PdbMultiStreamFormat(linear.LinearlyMappedLayer):
         if response is None:
             raise PDBFormatException(name, "Could not find a suitable header")
         self._version, self._header = response
-        self._streams = {}  # type: Dict[int, str]
+        self._streams: Dict[int, str] = {}
 
     @property
     def pdb_symbol_table(self) -> str:
@@ -224,7 +224,7 @@ class PdbMSFStream(linear.LinearlyMappedLayer):
     def _pdb_layer(self) -> PdbMultiStreamFormat:
         if self._base_layer not in self._context.layers:
             raise PDBFormatException(self._base_layer,
-                                     "No PdbMultiStreamFormat layer found: {}".format(self._base_layer))
+                                     f"No PdbMultiStreamFormat layer found: {self._base_layer}")
         result = self._context.layers[self._base_layer]
         if isinstance(result, PdbMultiStreamFormat):
             return result

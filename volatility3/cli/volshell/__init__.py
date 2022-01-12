@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import sys
-from urllib import request
 
 import volatility3.plugins
 import volatility3.symbols
@@ -42,9 +41,9 @@ class VolShell(cli.CommandLine):
     def run(self):
         """Executes the command line module, taking the system arguments,
         determining the plugin to run and then running it."""
-        sys.stdout.write("Volshell (Volatility 3 Framework) {}\n".format(constants.PACKAGE_VERSION))
+        sys.stdout.write(f"Volshell (Volatility 3 Framework) {constants.PACKAGE_VERSION}\n")
 
-        framework.require_interface_version(1, 0, 0)
+        framework.require_interface_version(2, 0, 0)
 
         parser = argparse.ArgumentParser(prog = self.CLI_NAME,
                                          description = "A tool for interactivate forensic analysis of memory images")
@@ -90,6 +89,10 @@ class VolShell(cli.CommandLine):
                             help = "Clears out all short-term cached items",
                             default = False,
                             action = 'store_true')
+        parser.add_argument("--cache-path",
+                            help = f"Change the default path ({constants.CACHE_PATH}) used to store the cache",
+                            default = constants.CACHE_PATH,
+                            type = str)
 
         # Volshell specific flags
         os_specific = parser.add_mutually_exclusive_group(required = False)
@@ -113,8 +116,11 @@ class VolShell(cli.CommandLine):
             volatility3.symbols.__path__ = [os.path.abspath(p)
                                             for p in partial_args.symbol_dirs.split(";")] + constants.SYMBOL_BASEPATHS
 
-        vollog.info("Volatility plugins path: {}".format(volatility3.plugins.__path__))
-        vollog.info("Volatility symbols path: {}".format(volatility3.symbols.__path__))
+        if partial_args.cache_path:
+            constants.CACHE_PATH = partial_args.cache_path
+
+        vollog.info(f"Volatility plugins path: {volatility3.plugins.__path__}")
+        vollog.info(f"Volatility symbols path: {volatility3.symbols.__path__}")
 
         if partial_args.log:
             file_logger = logging.FileHandler(partial_args.log)
@@ -174,7 +180,7 @@ class VolShell(cli.CommandLine):
         # Run the argparser
         args = parser.parse_args()
 
-        vollog.log(constants.LOGLEVEL_VVV, "Cache directory used: {}".format(constants.CACHE_PATH))
+        vollog.log(constants.LOGLEVEL_VVV, f"Cache directory used: {constants.CACHE_PATH}")
 
         plugin = generic.Volshell
         if args.windows:
@@ -192,12 +198,11 @@ class VolShell(cli.CommandLine):
         # NOTE: This will *BREAK* if LayerStacker, or the automagic configuration system, changes at all
         ###
         if args.file:
-            file_name = os.path.abspath(args.file)
-            if not os.path.exists(file_name):
-                vollog.log(logging.INFO, "File does not exist: {}".format(file_name))
-            else:
-                single_location = "file:" + request.pathname2url(file_name)
+            try:
+                single_location = self.location_from_file(args.file)
                 ctx.config['automagic.LayerStacker.single_location'] = single_location
+            except ValueError as excp:
+                parser.error(str(excp))
 
         # UI fills in the config, here we load it from the config file and do it before we process the CL parameters
         if args.config:
@@ -238,7 +243,7 @@ class VolShell(cli.CommandLine):
             constructed.run()
         except exceptions.VolatilityException as excp:
             self.process_exceptions(excp)
-            parser.exit(1, "Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
+            parser.exit(1, f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
 
 
 def main():

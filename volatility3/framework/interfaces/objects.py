@@ -31,7 +31,7 @@ class ReadOnlyMapping(collections.abc.Mapping):
             return super().__getattribute__(attr)
         if attr in self._dict:
             return self._dict[attr]
-        raise AttributeError("Object has no attribute: {}.{}".format(self.__class__.__name__, attr))
+        raise AttributeError(f"Object has no attribute: {self.__class__.__name__}.{attr}")
 
     def __getitem__(self, name: str) -> Any:
         """Returns the item requested."""
@@ -141,10 +141,10 @@ class ObjectInterface(metaclass = abc.ABCMeta):
             KeyError: If the table_name is not valid within the object's context
         """
         if constants.BANG not in self.vol.type_name:
-            raise ValueError("Unable to determine table for symbol: {}".format(self.vol.type_name))
+            raise ValueError(f"Unable to determine table for symbol: {self.vol.type_name}")
         table_name = self.vol.type_name[:self.vol.type_name.index(constants.BANG)]
         if table_name not in self._context.symbol_space:
-            raise KeyError("Symbol table not found in context's symbol_space for symbol: {}".format(self.vol.type_name))
+            raise KeyError(f"Symbol table not found in context's symbol_space for symbol: {self.vol.type_name}")
         return table_name
 
     def cast(self, new_type_name: str, **additional) -> 'ObjectInterface':
@@ -212,9 +212,9 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         takes a template since the templates may contain the necessary
         data about the yet-to-be-constructed object.  It allows objects
         to control how their templates respond without needing to write
-        new templates for each and every potental object type.
+        new templates for each and every potential object type.
         """
-        _methods = []  # type: List[str]
+        _methods: List[str] = []
 
         @classmethod
         @abc.abstractmethod
@@ -231,14 +231,14 @@ class ObjectInterface(metaclass = abc.ABCMeta):
         @abc.abstractmethod
         def replace_child(cls, template: 'Template', old_child: 'Template', new_child: 'Template') -> None:
             """Substitutes the old_child for the new_child."""
-            raise KeyError("Template does not contain any children to replace: {}".format(template.vol.type_name))
+            raise KeyError(f"Template does not contain any children to replace: {template.vol.type_name}")
 
         @classmethod
         @abc.abstractmethod
         def relative_child_offset(cls, template: 'Template', child: str) -> int:
             """Returns the relative offset from the head of the parent data to
             the child member."""
-            raise KeyError("Template does not contain any children: {}".format(template.vol.type_name))
+            raise KeyError(f"Template does not contain any children: {template.vol.type_name}")
 
         @classmethod
         @abc.abstractmethod
@@ -275,7 +275,7 @@ class Template:
         """Stores the keyword arguments for later object creation."""
         # Allow the updating of template arguments whilst still in template form
         super().__init__()
-        empty_dict = {}  # type: Dict[str, Any]
+        empty_dict: Dict[str, Any] = {}
         self._vol = collections.ChainMap(empty_dict, arguments, {'type_name': type_name})
 
     @property
@@ -330,7 +330,7 @@ class Template:
         if attr != '_vol':
             if attr in self._vol:
                 return self._vol[attr]
-        raise AttributeError("{} object has no attribute {}".format(self.__class__.__name__, attr))
+        raise AttributeError(f"{self.__class__.__name__} object has no attribute {attr}")
 
     def __call__(self, context: 'interfaces.context.ContextInterface',
                  object_info: ObjectInformation) -> ObjectInterface:

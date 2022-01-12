@@ -3,7 +3,9 @@
 #
 """A module containing a collection of plugins that produce data typically
 found in Mac's lsmod command."""
-from volatility3.framework import renderers, interfaces, contexts
+from typing import Set
+
+from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
 from volatility3.framework.objects import utility
@@ -13,21 +15,19 @@ from volatility3.framework.renderers import format_hints
 class Lsmod(plugins.PluginInterface):
     """Lists loaded kernel modules."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
-    _version = (1, 0, 0)
+    _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel")
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
         ]
 
     @classmethod
-    def list_modules(cls, context: interfaces.context.ContextInterface, layer_name: str, darwin_symbols: str):
+    def list_modules(cls, context: interfaces.context.ContextInterface, darwin_module_name: str):
         """Lists all the modules in the primary layer.
 
         Args:
@@ -38,18 +38,45 @@ class Lsmod(plugins.PluginInterface):
         Returns:
             A list of modules from the `layer_name` layer
         """
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        kernel = context.modules[darwin_module_name]
+        kernel_layer = context.layers[kernel.layer_name]
 
         kmod_ptr = kernel.object_from_symbol(symbol_name = "kmod")
 
-        # TODO - use smear-proof list walking API after dev release
-        kmod = kmod_ptr.dereference().cast("kmod_info")
-        while kmod != 0:
-            yield kmod
+        try:
+            kmod = kmod_ptr.dereference().cast("kmod_info")
+        except exceptions.InvalidAddressException:
+            return []
+
+        yield kmod
+
+        try:
             kmod = kmod.next
+        except exceptions.InvalidAddressException:
+            return []
+
+        seen: Set = set()
+
+        while kmod != 0 and \
+                kmod not in seen and \
+                len(seen) < 1024:
+
+            kmod_obj = kmod.dereference()
+
+            if not kernel_layer.is_valid(kmod_obj.vol.offset, kmod_obj.vol.size):
+                break
+
+            seen.add(kmod)
+
+            yield kmod
+
+            try:
+                kmod = kmod.next
+            except exceptions.InvalidAddressException:
+                return
 
     def _generator(self):
-        for module in self.list_modules(self.context, self.config['primary'], self.config['darwin']):
+        for module in self.list_modules(self.context, self.config['kernel']):
 
             mod_name = utility.array_to_string(module.name)
             mod_size = module.size

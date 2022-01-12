@@ -39,7 +39,7 @@ class Intel(linear.LinearlyMappedLayer):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
         self._base_layer = self.config["memory_layer"]
-        self._swap_layers = []  # type: List[str]
+        self._swap_layers: List[str] = []
         self._page_map_offset = self.config["page_map_offset"]
 
         # Assign constants
@@ -52,6 +52,7 @@ class Intel(linear.LinearlyMappedLayer):
         self._index_shift = int(math.ceil(math.log2(struct.calcsize(self._entry_format))))
 
     @classproperty
+    @functools.lru_cache()
     def page_size(cls) -> int:
         """Page size for the intel memory layers.
 
@@ -60,16 +61,19 @@ class Intel(linear.LinearlyMappedLayer):
         return 1 << cls._page_size_in_bits
 
     @classproperty
+    @functools.lru_cache()
     def bits_per_register(cls) -> int:
         """Returns the bits_per_register to determine the range of an
         IntelTranslationLayer."""
         return cls._bits_per_register
 
     @classproperty
+    @functools.lru_cache()
     def minimum_address(cls) -> int:
         return 0
 
     @classproperty
+    @functools.lru_cache()
     def maximum_address(cls) -> int:
         return (1 << cls._maxvirtaddr) - 1
 
@@ -103,7 +107,7 @@ class Intel(linear.LinearlyMappedLayer):
         # Now we're done
         if not self._page_is_valid(entry):
             raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
-                                                          "Page Fault at entry {} in page entry".format(hex(entry)))
+                                                          f"Page Fault at entry {hex(entry)} in page entry")
         page = self._mask(entry, self._maxphyaddr - 1, position + 1) | self._mask(offset, position, 0)
 
         return page, 1 << (position + 1), self._base_layer
@@ -119,6 +123,10 @@ class Intel(linear.LinearlyMappedLayer):
         position = self._initial_position
         entry = self._initial_entry
 
+        if self.minimum_address > offset > self.maximum_address:
+            raise exceptions.PagedInvalidAddressException(self.name, offset, position + 1, entry,
+                                                          "Entry outside virtual address range: " + hex(entry))
+
         # Run through the offset in various chunks
         for (name, size, large_page) in self._structure:
             # Check we're valid
@@ -127,6 +135,9 @@ class Intel(linear.LinearlyMappedLayer):
                                                               "Page Fault at entry " + hex(entry) + " in table " + name)
             # Check if we're a large page
             if large_page and (entry & (1 << 7)):
+                # Mask off the PAT bit
+                if entry & (1 << 12):
+                    entry -= (1 << 12)
                 # We're a large page, the rest is finished below
                 # If we want to implement PSE-36, it would need to be done here
                 break
@@ -182,6 +193,38 @@ class Intel(linear.LinearlyMappedLayer):
                 offset: int,
                 length: int,
                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+        """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
+        mappings.
+
+        This allows translation layers to provide maps of contiguous
+        regions in one layer
+        """
+        stashed_offset = stashed_mapped_offset = stashed_size = stashed_mapped_size = stashed_map_layer = None
+        for offset, size, mapped_offset, mapped_size, map_layer in self._mapping(offset, length, ignore_errors):
+            if stashed_offset is None or (stashed_offset + stashed_size != offset) or (
+                    stashed_mapped_offset + stashed_mapped_size != mapped_offset) or (stashed_map_layer != map_layer):
+                # The block isn't contiguous
+                if stashed_offset is not None:
+                    yield stashed_offset, stashed_size, stashed_mapped_offset, stashed_mapped_size, stashed_map_layer
+                # Update all the stashed values after output
+                stashed_offset = offset
+                stashed_mapped_offset = mapped_offset
+                stashed_size = size
+                stashed_mapped_size = mapped_size
+                stashed_map_layer = map_layer
+            else:
+                # Part of an existing block
+                stashed_size += size
+                stashed_mapped_size += mapped_size
+        # Yield whatever's left
+        if (stashed_offset is not None and stashed_mapped_offset is not None and stashed_size is not None
+                and stashed_mapped_size is not None and stashed_map_layer is not None):
+            yield stashed_offset, stashed_size, stashed_mapped_offset, stashed_mapped_size, stashed_map_layer
+
+    def _mapping(self,
+                 offset: int,
+                 length: int,
+                 ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
         """Returns a sorted iterable of (offset, sublength, mapped_offset, mapped_length, layer)
         mappings.
 
@@ -320,6 +363,11 @@ class WindowsIntelPAE(WindowsMixin, IntelPAE):
 
 
 class WindowsIntel32e(WindowsMixin, Intel32e):
+    # TODO: Fix appropriately in a future release.
+    # Currently just a temporary workaround to deal with custom bit flag
+    # in the PFN field for pages in transition state.
+    # See https://github.com/volatilityfoundation/volatility3/pull/475
+    _maxphyaddr = 45
 
     def _translate(self, offset: int) -> Tuple[int, int, str]:
         return self._translate_swap(self, offset, self._bits_per_register // 2)

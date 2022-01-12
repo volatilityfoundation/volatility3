@@ -44,7 +44,8 @@ ${DWARF2JSON}
 popd
 rm -fr tmp
 
-${DWARF2JSON} mac --macho "${UNPACK_DIR}/${KERNEL_DIR}/kernel.dSYM" --macho-symbols "${UNPACK_DIRECTORY}/${KERNEL_DIR}/kernel" | xz -9 > ${JSON_DIR}/${KERNEL_DIR}.json.xz
-if [ $? == 0 ]; then
-  ${DWARF2JSON} mac --arch i386 --macho "${UNPACK_DIR}/${KERNEL_DIR}/kernel.dSYM" --macho-symbols "${UNPACK_DIRECTORY}/${KERNEL_DIR}/kernel" | xz -9 > ${JSON_DIR}/${KERNEL_DIR}.json.xz
+echo "Running ${DWARF2JSON} mac --macho "${UNPACK_DIR}/${KERNEL_DIR}/kernel.dSYM" --macho-symbols "${UNPACK_DIR}/${KERNEL_DIR}/kernel" | xz -9 > ${JSON_DIR}/${KERNEL_DIR}.json.xz"
+${DWARF2JSON} mac --macho "${UNPACK_DIR}/${KERNEL_DIR}/kernel.dSYM" --macho-symbols "${UNPACK_DIR}/${KERNEL_DIR}/kernel" | xz -9 > ${JSON_DIR}/${KERNEL_DIR}.json.xz
+if [ $? != 0 ]; then
+  ${DWARF2JSON} mac --arch i386 --macho "${UNPACK_DIR}/${KERNEL_DIR}/kernel.dSYM" --macho-symbols "${UNPACK_DIR}/${KERNEL_DIR}/kernel" | xz -9 > ${JSON_DIR}/${KERNEL_DIR}.json.xz
 fi

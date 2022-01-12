@@ -15,16 +15,14 @@ from volatility3.plugins.linux import pslist
 class Malfind(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -48,7 +46,8 @@ class Malfind(interfaces.plugins.PluginInterface):
 
     def _generator(self, tasks):
         # determine if we're on a 32 or 64 bit kernel
-        if self.context.symbol_space.get_type(self.config["vmlinux"] + constants.BANG + "pointer").size == 4:
+        vmlinux = self.context.modules[self.config['kernel']]
+        if self.context.symbol_space.get_type(vmlinux.symbol_table_name + constants.BANG + "pointer").size == 4:
             is_32bit_arch = True
         else:
             is_32bit_arch = False
@@ -75,6 +74,5 @@ class Malfind(interfaces.plugins.PluginInterface):
                                    ("Disasm", interfaces.renderers.Disassembly)],
                                   self._generator(
                                       pslist.PsList.list_tasks(self.context,
-                                                               self.config['primary'],
-                                                               self.config['vmlinux'],
+                                                               self.config['kernel'],
                                                                filter_func = filter_func)))

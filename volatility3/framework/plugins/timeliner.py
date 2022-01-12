@@ -42,13 +42,13 @@ class Timeliner(interfaces.plugins.PluginInterface):
     """Runs all relevant plugins that provide time related information and
     orders the results by time."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.timeline = {}
         self.usable_plugins = None
-        self.automagics = None
+        self.automagics: Optional[List[interfaces.automagic.AutomagicInterface]] = None
 
     @classmethod
     def get_usable_plugins(cls, selected_list: List[str] = None) -> List[Type]:
@@ -113,9 +113,9 @@ class Timeliner(interfaces.plugins.PluginInterface):
         for plugin in runable_plugins:
             plugin_name = plugin.__class__.__name__
             self._progress_callback((runable_plugins.index(plugin) * 100) // len(runable_plugins),
-                                    "Running plugin {}...".format(plugin_name))
+                                    f"Running plugin {plugin_name}...")
             try:
-                vollog.log(logging.INFO, "Running {}".format(plugin_name))
+                vollog.log(logging.INFO, f"Running {plugin_name}")
                 for (item, timestamp_type, timestamp) in plugin.generate_timeline():
                     times = self.timeline.get((plugin_name, item), {})
                     if times.get(timestamp_type, None) is not None:
@@ -131,7 +131,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                         times.get(TimeLinerType.CHANGED, renderers.NotApplicableValue())
                     ]))
             except Exception:
-                vollog.log(logging.INFO, "Exception occurred running plugin: {}".format(plugin_name))
+                vollog.log(logging.INFO, f"Exception occurred running plugin: {plugin_name}")
                 vollog.log(logging.DEBUG, traceback.format_exc())
         for data_item in sorted(data, key = self._sort_function):
             yield data_item
@@ -176,6 +176,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
         self.usable_plugins = self.usable_plugins or self.get_usable_plugins()
         self.automagics = self.automagics or automagic.available(self._context)
         plugins_to_run = []
+        requirement_configs = {}
 
         filter_list = self.config['plugin-filter']
         # Identify plugins that we can run which output datetimes
@@ -183,8 +184,21 @@ class Timeliner(interfaces.plugins.PluginInterface):
             try:
                 automagics = automagic.choose_automagic(self.automagics, plugin_class)
 
+                for requirement in plugin_class.get_requirements():
+                    if requirement.name in requirement_configs:
+                        config_req, config_value = requirement_configs[requirement.name]
+                        if requirement == config_req:
+                            self.context.config[interfaces.configuration.path_join(
+                                self.config_path, plugin_class.__name__)] = config_value
+
                 plugin = plugins.construct_plugin(self.context, automagics, plugin_class, self.config_path,
                                                   self._progress_callback, self.open)
+
+                for requirement in plugin.get_requirements():
+                    if requirement.name not in requirement_configs:
+                        config_value = plugin.config.get(requirement.name, None)
+                        if config_value:
+                            requirement_configs[requirement.name] = (requirement, config_value)
 
                 if isinstance(plugin, TimeLinerInterface):
                     if not len(filter_list) or any(
@@ -192,7 +206,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                         plugins_to_run.append(plugin)
             except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue
-                vollog.debug("Unable to satisfy {}: {}".format(plugin_class.__name__, excp.unsatisfied))
+                vollog.debug(f"Unable to satisfy {plugin_class.__name__}: {excp.unsatisfied}")
                 continue
 
         if self.config.get('record-config', False):

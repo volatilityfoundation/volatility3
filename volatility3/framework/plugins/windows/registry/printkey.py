@@ -19,16 +19,14 @@ vollog = logging.getLogger(__name__)
 class PrintKey(interfaces.plugins.PluginInterface):
     """Lists the registry keys under a hive or specific key value."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0)),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
             requirements.StringRequirement(name = 'key',
@@ -123,23 +121,23 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     value_node_name = renderers.UnreadableValue()
 
                 try:
-                    value_type = RegValueTypes.get(node.Type).name
+                    value_type = RegValueTypes(node.Type).name
                 except (exceptions.InvalidAddressException, RegistryFormatException) as excp:
                     vollog.debug(excp)
                     value_type = renderers.UnreadableValue()
 
                 if isinstance(value_type, renderers.UnreadableValue):
                     vollog.debug("Couldn't read registry value type, so data is unreadable")
-                    value_data = renderers.UnreadableValue()  # type: Union[interfaces.renderers.BaseAbsentValue, bytes]
+                    value_data: Union[interfaces.renderers.BaseAbsentValue, bytes] = renderers.UnreadableValue()
                 else:
                     try:
                         value_data = node.decode_data()
 
                         if isinstance(value_data, int):
                             value_data = format_hints.MultiTypeData(value_data, encoding = 'utf-8')
-                        elif RegValueTypes.get(node.Type) == RegValueTypes.REG_BINARY:
+                        elif RegValueTypes(node.Type) == RegValueTypes.REG_BINARY:
                             value_data = format_hints.MultiTypeData(value_data, show_hex = True)
-                        elif RegValueTypes.get(node.Type) == RegValueTypes.REG_MULTI_SZ:
+                        elif RegValueTypes(node.Type) == RegValueTypes.REG_MULTI_SZ:
                             value_data = format_hints.MultiTypeData(value_data,
                                                                     encoding = 'utf-16-le',
                                                                     split_nulls = True)
@@ -176,11 +174,11 @@ class PrintKey(interfaces.plugins.PluginInterface):
                     yield (x - len(node_path), y)
             except (exceptions.InvalidAddressException, KeyError, RegistryFormatException) as excp:
                 if isinstance(excp, KeyError):
-                    vollog.debug("Key '{}' not found in Hive at offset {}.".format(key, hex(hive.hive_offset)))
+                    vollog.debug(f"Key '{key}' not found in Hive at offset {hex(hive.hive_offset)}.")
                 elif isinstance(excp, RegistryFormatException):
                     vollog.debug(excp)
                 elif isinstance(excp, exceptions.InvalidAddressException):
-                    vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
+                    vollog.debug(f"Invalid address identified in Hive: {hex(excp.invalid_address)}")
                 result = (0, (renderers.UnreadableValue(), format_hints.Hex(hive.hive_offset), "Key",
                               '?\\' + (key or ''), renderers.UnreadableValue(), renderers.UnreadableValue(),
                               renderers.UnreadableValue()))
@@ -188,12 +186,13 @@ class PrintKey(interfaces.plugins.PluginInterface):
 
     def run(self):
         offset = self.config.get('offset', None)
+        kernel = self.context.modules[self.config['kernel']]
 
         return TreeGrid(columns = [('Last Write Time', datetime.datetime), ('Hive Offset', format_hints.Hex),
                                    ('Type', str), ('Key', str), ('Name', str), ('Data', format_hints.MultiTypeData),
                                    ('Volatile', bool)],
-                        generator = self._registry_walker(self.config['primary'],
-                                                          self.config['nt_symbols'],
+                        generator = self._registry_walker(kernel.layer_name,
+                                                          kernel.symbol_table_name,
                                                           hive_offsets = None if offset is None else [offset],
                                                           key = self.config.get('key', None),
                                                           recurse = self.config.get('recurse', None)))

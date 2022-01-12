@@ -3,6 +3,7 @@
 #
 
 import logging
+import os
 from typing import List, Optional, Tuple, Iterator
 
 from volatility3.framework import interfaces, renderers, exceptions, symbols
@@ -19,17 +20,15 @@ vollog = logging.getLogger(__name__)
 class BigPools(interfaces.plugins.PluginInterface):
     """List big page pools."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.StringRequirement(name = 'tags',
                                            description = "Comma separated list of pool tags to filter pools returned",
                                            optional = True,
@@ -83,7 +82,7 @@ class BigPools(interfaces.plugins.PluginInterface):
             new_table_name = intermed.IntermediateSymbolTable.create(
                 context = context,
                 config_path = configuration.path_join(context.symbol_space[symbol_table].config_path, "bigpools"),
-                sub_path = "windows",
+                sub_path = os.path.join("windows", "bigpools"),
                 filename = big_pools_json_filename,
                 table_mapping = {'nt_symbols': symbol_table},
                 class_types = {'_POOL_TRACKER_BIG_PAGES': extensions.pool.POOL_TRACKER_BIG_PAGES})
@@ -106,10 +105,11 @@ class BigPools(interfaces.plugins.PluginInterface):
             tags = [tag for tag in self.config["tags"].split(',')]
         else:
             tags = None
+        kernel = self.context.modules[self.config['kernel']]
 
         for big_pool in self.list_big_pools(context = self.context,
-                                            layer_name = self.config["primary"],
-                                            symbol_table = self.config["nt_symbols"],
+                                            layer_name = kernel.layer_name,
+                                            symbol_table = kernel.symbol_table_name,
                                             tags = tags):
 
             num_bytes = big_pool.get_number_of_bytes()

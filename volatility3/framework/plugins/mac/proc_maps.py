@@ -12,16 +12,14 @@ from volatility3.plugins.mac import pslist
 class Maps(interfaces.plugins.PluginInterface):
     """Lists process memory ranges that potentially contain injected code."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0)),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -34,7 +32,7 @@ class Maps(interfaces.plugins.PluginInterface):
             process_pid = task.p_pid
 
             for vma in task.get_map_iter():
-                path = vma.get_path(self.context, self.config['darwin'])
+                path = vma.get_path(self.context, self.context.modules[self.config['kernel']].symbol_table_name)
                 if path == "":
                     path = vma.get_special_path()
 
@@ -49,6 +47,5 @@ class Maps(interfaces.plugins.PluginInterface):
                                    ("End", format_hints.Hex), ("Protection", str), ("Map Name", str)],
                                   self._generator(
                                       list_tasks(self.context,
-                                                 self.config['primary'],
-                                                 self.config['darwin'],
+                                                 self.config['kernel'],
                                                  filter_func = filter_func)))

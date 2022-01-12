@@ -13,7 +13,7 @@ class PsTree(plugins.PluginInterface):
     """Plugin for listing processes in a tree based on their parent process
     ID."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -24,11 +24,9 @@ class PsTree(plugins.PluginInterface):
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0))
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (3, 0, 0))
         ]
 
     def _find_level(self, pid):
@@ -50,7 +48,7 @@ class PsTree(plugins.PluginInterface):
         """Generates the tree list of processes"""
         list_tasks = pslist.PsList.get_list_tasks(self.config.get('pslist_method', pslist.PsList.pslist_methods[0]))
 
-        for proc in list_tasks(self.context, self.config['primary'], self.config['darwin']):
+        for proc in list_tasks(self.context, self.config['kernel']):
             self._processes[proc.p_pid] = proc
 
         # Build the child/level maps

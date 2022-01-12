@@ -26,6 +26,8 @@ class YaraScanner(interfaces.layers.ScannerInterface):
     # yara.Rules isn't exposed, so we can't type this properly
     def __init__(self, rules) -> None:
         super().__init__()
+        if rules is None:
+            raise ValueError("No rules provided to YaraScanner")
         self._rules = rules
 
     def __call__(self, data: bytes, data_offset: int) -> Iterable[Tuple[int, str, str, bytes]]:
@@ -37,7 +39,7 @@ class YaraScanner(interfaces.layers.ScannerInterface):
 class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
@@ -58,6 +60,11 @@ class YaraScan(plugins.PluginInterface):
                                            description = "Yara rules (as a string)",
                                            optional = True),
             requirements.URIRequirement(name = "yara_file", description = "Yara rules (as a file)", optional = True),
+            # This additional requirement is to follow suit with upstream, who feel that compiled rules could potentially be used to execute malicious code
+            # As such, there's a separate option to run compiled files, as happened with yara-3.9 and later
+            requirements.URIRequirement(name = "yara_compiled_file",
+                                        description = "Yara compiled rules (as a file)",
+                                        optional = True),
             requirements.IntRequirement(name = "max_size",
                                         default = 0x40000000,
                                         description = "Set the maximum size (default is 1GB)",
@@ -70,14 +77,16 @@ class YaraScan(plugins.PluginInterface):
         if config.get('yara_rules', None) is not None:
             rule = config['yara_rules']
             if rule[0] not in ["{", "/"]:
-                rule = '"{}"'.format(rule)
+                rule = f'"{rule}"'
             if config.get('case', False):
                 rule += " nocase"
             if config.get('wide', False):
                 rule += " wide ascii"
-            rules = yara.compile(sources = {'n': 'rule r1 {{strings: $a = {} condition: $a}}'.format(rule)})
+            rules = yara.compile(sources = {'n': f'rule r1 {{strings: $a = {rule} condition: $a}}'})
         elif config.get('yara_file', None) is not None:
             rules = yara.compile(file = resources.ResourceAccessor().open(config['yara_file'], "rb"))
+        elif config.get('yara_compiled_file', None) is not None:
+            rules = yara.load(file = resources.ResourceAccessor().open(config['yara_compiled_file'], "rb"))
         else:
             vollog.error("No yara rules, nor yara rules file were specified")
         return rules

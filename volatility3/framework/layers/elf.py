@@ -46,7 +46,7 @@ class Elf64Layer(segmented.SegmentedLayer):
                 segments.append((int(phdr.p_paddr), int(phdr.p_offset), int(phdr.p_memsz), int(phdr.p_memsz)))
 
         if len(segments) == 0:
-            raise ElfFormatException(self.name, "No ELF segments defined in {}".format(self._base_layer))
+            raise ElfFormatException(self.name, f"No ELF segments defined in {self._base_layer}")
 
         self._segments = segments
 
@@ -56,12 +56,12 @@ class Elf64Layer(segmented.SegmentedLayer):
             header_data = base_layer.read(offset, cls._header_struct.size)
         except exceptions.InvalidAddressException:
             raise ElfFormatException(base_layer.name,
-                                     "Offset 0x{:0x} does not exist within the base layer".format(offset))
+                                     f"Offset 0x{offset:0x} does not exist within the base layer")
         (magic, elf_class, elf_data_encoding, elf_version) = cls._header_struct.unpack(header_data)
         if magic != cls.MAGIC:
-            raise ElfFormatException(base_layer.name, "Bad magic 0x{:x} at file offset 0x{:x}".format(magic, offset))
+            raise ElfFormatException(base_layer.name, f"Bad magic 0x{magic:x} at file offset 0x{offset:x}")
         if elf_class != cls.ELF_CLASS:
-            raise ElfFormatException(base_layer.name, "ELF class is not 64-bit (2): {:d}".format(elf_class))
+            raise ElfFormatException(base_layer.name, f"ELF class is not 64-bit (2): {elf_class:d}")
         # Virtualbox uses an ELF version of 0, which isn't to specification, but is ok to deal with
         return True
 
@@ -78,7 +78,7 @@ class Elf64Stacker(interfaces.automagic.StackerLayerInterface):
             if not Elf64Layer._check_header(context.layers[layer_name]):
                 return None
         except ElfFormatException as excp:
-            vollog.log(constants.LOGLEVEL_VVVV, "Exception: {}".format(excp))
+            vollog.log(constants.LOGLEVEL_VVVV, f"Exception: {excp}")
             return None
         new_name = context.layers.free_layer_name("Elf64Layer")
         context.config[interfaces.configuration.path_join(new_name, "base_layer")] = layer_name

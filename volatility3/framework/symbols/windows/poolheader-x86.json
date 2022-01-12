@@ -55,7 +55,7 @@
         }
       },
       "kind": "struct",
-      "size": 16
+      "size": 8
     }
   },
   "symbols": {

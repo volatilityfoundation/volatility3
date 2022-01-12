@@ -11,11 +11,12 @@ convenience functions, most notably the object constructor function,
 `object`, which will construct a symbol on a layer at a particular
 offset.
 """
+import collections
 import copy
 from abc import ABCMeta, abstractmethod
-from typing import Optional, Union
+from typing import Optional, Union, Dict, List, Iterable
 
-from volatility3.framework import interfaces
+from volatility3.framework import interfaces, exceptions
 
 
 class ContextInterface(metaclass = ABCMeta):
@@ -43,6 +44,24 @@ class ContextInterface(metaclass = ABCMeta):
         """
 
     # ## Memory Functions
+
+    @property
+    @abstractmethod
+    def modules(self) -> 'ModuleContainer':
+        """Returns the memory object for the context."""
+        raise NotImplementedError("ModuleContainer has not been implemented.")
+
+    def add_module(self, module: 'interfaces.context.ModuleInterface'):
+        """Adds a named module to the context.
+
+        Args:
+            module: The module to be added to the module object collection
+
+        Raises:
+            volatility3.framework.exceptions.VolatilityException: if the module is already present, or has
+                unmet dependencies
+        """
+        self.modules.add_module(module)
 
     @property
     @abstractmethod
@@ -117,7 +136,7 @@ class ContextInterface(metaclass = ABCMeta):
         """
 
 
-class ModuleInterface(metaclass = ABCMeta):
+class ModuleInterface(interfaces.configuration.ConfigurableInterface):
     """Maintains state concerning a particular loaded module in memory.
 
     This object is OS-independent.
@@ -125,30 +144,51 @@ class ModuleInterface(metaclass = ABCMeta):
 
     def __init__(self,
                  context: ContextInterface,
-                 module_name: str,
-                 layer_name: str,
-                 offset: int,
-                 symbol_table_name: Optional[str] = None,
-                 native_layer_name: Optional[str] = None) -> None:
+                 config_path: str,
+                 name: str) -> None:
         """Constructs a new os-independent module.
 
         Args:
             context: The context within which this module will exist
-            module_name: The name of the module
-            layer_name: The layer within the context in which the module exists
-            offset: The offset at which the module exists in the layer
-            symbol_table_name: The name of an associated symbol table
-            native_layer_name: The default native layer for objects constructed by the module
+            config_path: The path within the context's configuration tree
+            name: The name of the module
         """
-        self._context = context
-        self._module_name = module_name
-        self._layer_name = layer_name
-        self._offset = offset
-        self._native_layer_name = None
-        if native_layer_name:
-            self._native_layer_name = native_layer_name
-        self.symbol_table_name = symbol_table_name or self._module_name
-        super().__init__()
+        super().__init__(context, config_path)
+        self._module_name = name
+
+    @property
+    def _layer_name(self) -> str:
+        return self.config['layer_name']
+
+    @property
+    def _offset(self) -> int:
+        return self.config['offset']
+
+    @property
+    def _native_layer_name(self) -> str:
+        return self.config.get('native_layer_name', self._layer_name)
+
+    @property
+    def _symbol_table_name(self) -> str:
+        return self.config.get('symbol_table_name', self._module_name)
+
+    def build_configuration(self) -> 'interfaces.configuration.HierarchicalDict':
+        """Builds the configuration dictionary for this specific Module"""
+
+        config = super().build_configuration()
+
+        config['offset'] = self.config['offset']
+        subconfigs = {'symbol_table_name': self.context.symbol_space[self.symbol_table_name].build_configuration(),
+                      'layer_name': self.context.layers[self.layer_name].build_configuration()}
+
+        if self.layer_name != self._native_layer_name:
+            subconfigs['native_layer_name'] = self.context.layers[self._native_layer_name].build_configuration()
+
+        for subconfig in subconfigs:
+            for req in subconfigs[subconfig]:
+                config[interfaces.configuration.path_join(subconfig, req)] = subconfigs[subconfig][req]
+
+        return config
 
     @property
     def name(self) -> str:
@@ -170,6 +210,11 @@ class ModuleInterface(metaclass = ABCMeta):
     def context(self) -> ContextInterface:
         """Context that the module uses."""
         return self._context
+
+    @property
+    def symbol_table_name(self) -> str:
+        """The name of the symbol table associated with this module"""
+        return self._symbol_table_name
 
     @abstractmethod
     def object(self,
@@ -209,20 +254,82 @@ class ModuleInterface(metaclass = ABCMeta):
             The constructed object
         """
 
+    def get_absolute_symbol_address(self, name: str) -> int:
+        """Returns the absolute address of the symbol within this module"""
+        symbol = self.get_symbol(name)
+        return self.offset + symbol.address
+
     def get_type(self, name: str) -> 'interfaces.objects.Template':
-        """Returns a type from the module."""
+        """Returns a type from the module's symbol table."""
 
     def get_symbol(self, name: str) -> 'interfaces.symbols.SymbolInterface':
-        """Returns a symbol from the module."""
+        """Returns a symbol object from the module's symbol table."""
 
     def get_enumeration(self, name: str) -> 'interfaces.objects.Template':
-        """Returns an enumeration from the module."""
+        """Returns an enumeration from the module's symbol table."""
 
     def has_type(self, name: str) -> bool:
-        """Determines whether a type is present in the module."""
+        """Determines whether a type is present in the module's symbol table."""
 
     def has_symbol(self, name: str) -> bool:
-        """Determines whether a symbol is present in the module."""
+        """Determines whether a symbol is present in the module's symbol table."""
 
     def has_enumeration(self, name: str) -> bool:
-        """Determines whether an enumeration is present in the module."""
+        """Determines whether an enumeration is present in the module's symbol table."""
+
+    def symbols(self) -> List:
+        """Lists the symbols contained in the symbol table for this module"""
+
+    def get_symbols_by_absolute_location(self, offset: int, size: int = 0) -> List[str]:
+        """Returns the symbols within table_name (or this module if not specified) that live at the specified
+        absolute offset provided."""
+
+
+class ModuleContainer(collections.abc.Mapping):
+    """Container for multiple layers of data."""
+
+    def __init__(self, modules: Optional[List[ModuleInterface]] = None) -> None:
+        self._modules: Dict[str, ModuleInterface] = {}
+        if modules is not None:
+            for module in modules:
+                self.add_module(module)
+
+    def __eq__(self, other):
+        return dict(self) == dict(other)
+
+    def add_module(self, module: ModuleInterface) -> None:
+        """Adds a module to the module collection
+
+        This will throw an exception if the required dependencies are not met
+
+        Args:
+            module: the module to add to the list of modules (based on module.name)
+        """
+        if module.name in self._modules:
+            raise exceptions.VolatilityException(f"Module already exists: {module.name}")
+        self._modules[module.name] = module
+
+    def __delitem__(self, name: str) -> None:
+        """Removes a module from the module list"""
+        del self._modules[name]
+
+    def __getitem__(self, name: str) -> ModuleInterface:
+        """Returns the layer of specified name."""
+        return self._modules[name]
+
+    def __len__(self) -> int:
+        return len(self._modules)
+
+    def __iter__(self):
+        return iter(self._modules)
+
+    def free_module_name(self, prefix: str = "module") -> str:
+        """Returns an unused table name to ensure no collision occurs when
+        inserting a symbol table."""
+
+    def get_modules_by_symbol_tables(self, symbol_table: str) -> Iterable[str]:
+        """Returns the modules which use the specified symbol table name"""
+        for module_name in self._modules:
+            module = self._modules[module_name]
+            if module.symbol_table_name == symbol_table:
+                yield module_name

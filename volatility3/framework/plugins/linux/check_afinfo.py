@@ -6,7 +6,7 @@ found in Linux's /proc file system."""
 import logging
 from typing import List
 
-from volatility3.framework import exceptions, interfaces, contexts
+from volatility3.framework import exceptions, interfaces
 from volatility3.framework import renderers
 from volatility3.framework.configuration import requirements
 from volatility3.framework.interfaces import plugins
@@ -18,15 +18,13 @@ vollog = logging.getLogger(__name__)
 class Check_afinfo(plugins.PluginInterface):
     """Verifies the operation function pointers of network protocols."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols")
+            requirements.ModuleRequirement(name = 'kernel', description = 'Linux kernel',
+                                           architectures = ["Intel32", "Intel64"]),
         ]
 
     # returns whether the symbol is found within the kernel (system.map) or not
@@ -63,7 +61,8 @@ class Check_afinfo(plugins.PluginInterface):
             yield var_name, "show", var.seq_show
 
     def _generator(self):
-        vmlinux = contexts.Module(self.context, self.config['vmlinux'], self.config['primary'], 0)
+
+        vmlinux = self.context.modules[self.config['kernel']]
 
         op_members = vmlinux.get_type('file_operations').members
         seq_members = vmlinux.get_type('seq_operations').members

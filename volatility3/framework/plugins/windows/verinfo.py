@@ -4,10 +4,12 @@
 
 import io
 import logging
-from typing import Generator, List, Tuple
+import struct
+from typing import Generator, List, Tuple, Optional
 
 from volatility3.framework import exceptions, renderers, constants, interfaces
 from volatility3.framework.configuration import requirements
+from volatility3.framework.layers import scanners
 from volatility3.framework.renderers import format_hints
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows.extensions import pe
@@ -25,21 +27,44 @@ except ImportError:
 class VerInfo(interfaces.plugins.PluginInterface):
     """Lists version information from PE files."""
 
-    _required_framework_version = (1, 0, 0)
+    _version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         ## TODO: we might add a regex option on the name later, but otherwise we're good
         ## TODO: and we don't want any CLI options from pslist, modules, or moddump
         return [
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
             requirements.VersionRequirement(name = 'dlllist', component = dlllist.DllList, version = (2, 0, 0)),
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
+            requirements.BooleanRequirement(name = "extensive",
+                                            description = "Search physical layer for version information",
+                                            optional = True,
+                                            default = False),
         ]
+
+    @classmethod
+    def find_version_info(cls, context: interfaces.context.ContextInterface, layer_name: str,
+                          filename: str) -> Optional[Tuple[int, int, int, int]]:
+        """Searches for an original filename, then tracks back to find the VS_VERSION_INFO and read the fixed
+        version information structure"""
+        premable_max_distance = 0x500
+        filename = "OriginalFilename\x00" + filename
+        iterator = context.layers[layer_name].scan(context = context,
+                                                   scanner = scanners.BytesScanner(bytes(filename, 'utf-16be')))
+        for offset in iterator:
+            data = context.layers[layer_name].read(offset - premable_max_distance, premable_max_distance)
+            vs_ver_info = b"\xbd\x04\xef\xfe"
+            verinfo_offset = data.find(vs_ver_info) + len(vs_ver_info)
+            if verinfo_offset >= 0:
+                structure = '<IHHHHHHHH'
+                struct_version, FV2, FV1, FV4, FV3, PV2, PV1, PV4, PV3 = struct.unpack(
+                    structure, data[verinfo_offset:verinfo_offset + struct.calcsize(structure)])
+                return (FV1, FV2, FV3, FV4)
+        return None
 
     @classmethod
     def get_version_information(cls, context: interfaces.context.ContextInterface, pe_table_name: str, layer_name: str,
@@ -96,12 +121,16 @@ class VerInfo(interfaces.plugins.PluginInterface):
             mods: <generator> of modules
             session_layers: <generator> of layers in the session to be checked
         """
+        kernel = self.context.modules[self.config['kernel']]
 
         pe_table_name = intermed.IntermediateSymbolTable.create(self.context,
                                                                 self.config_path,
                                                                 "windows",
                                                                 "pe",
                                                                 class_types = pe.class_types)
+
+        # TODO: Fix this so it works with more than just intel layers
+        physical_layer_name = self.context.layers[kernel.layer_name].config.get('memory_layer', None)
 
         for mod in mods:
             try:
@@ -115,6 +144,11 @@ class VerInfo(interfaces.plugins.PluginInterface):
                                                                               session_layer_name, mod.DllBase)
             except (exceptions.InvalidAddressException, TypeError, AttributeError):
                 (major, minor, product, build) = [renderers.UnreadableValue()] * 4
+                if (not isinstance(BaseDllName, renderers.UnreadableValue) and physical_layer_name is not None
+                        and self.config['extensive']):
+                    result = self.find_version_info(self._context, physical_layer_name, BaseDllName)
+                    if result is not None:
+                        (major, minor, product, build) = result
 
             # the pid and process are not applicable for kernel modules
             yield (0, (renderers.NotApplicableValue(), renderers.NotApplicableValue(), format_hints.Hex(mod.DllBase),
@@ -156,13 +190,14 @@ class VerInfo(interfaces.plugins.PluginInterface):
                            build))
 
     def run(self):
-        procs = pslist.PsList.list_processes(self.context, self.config["primary"], self.config["nt_symbols"])
+        kernel = self.context.modules[self.config['kernel']]
 
-        mods = modules.Modules.list_modules(self.context, self.config["primary"], self.config["nt_symbols"])
+        procs = pslist.PsList.list_processes(self.context, kernel.layer_name, kernel.symbol_table_name)
+
+        mods = modules.Modules.list_modules(self.context, kernel.layer_name, kernel.symbol_table_name)
 
         # populate the session layers for kernel modules
-        session_layers = modules.Modules.get_session_layers(self.context, self.config['primary'],
-                                                            self.config['nt_symbols'])
+        session_layers = modules.Modules.get_session_layers(self.context, kernel.layer_name, kernel.symbol_table_name)
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex), ("Name", str),
                                    ("Major", int), ("Minor", int), ("Product", int), ("Build", int)],

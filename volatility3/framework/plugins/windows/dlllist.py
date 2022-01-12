@@ -20,17 +20,15 @@ vollog = logging.getLogger(__name__)
 class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Lists the loaded modules in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.VersionRequirement(name = 'pslist', component = pslist.PsList, version = (2, 0, 0)),
             requirements.VersionRequirement(name = 'info', component = info.Info, version = (1, 0, 0)),
             requirements.ListRequirement(name = 'pid',
@@ -83,7 +81,7 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 file_handle.seek(offset)
                 file_handle.write(data)
         except (IOError, exceptions.VolatilityException, OverflowError, ValueError) as excp:
-            vollog.debug("Unable to dump dll at offset {}: {}".format(dll_entry.DllBase, excp))
+            vollog.debug(f"Unable to dump dll at offset {dll_entry.DllBase}: {excp}")
             return None
         return file_handle
 
@@ -94,7 +92,9 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                                 "pe",
                                                                 class_types = pe.class_types)
 
-        kuser = info.Info.get_kuser_structure(self.context, self.config['primary'], self.config['nt_symbols'])
+        kernel = self.context.modules[self.config['kernel']]
+
+        kuser = info.Info.get_kuser_structure(self.context, kernel.layer_name, kernel.symbol_table_name)
         nt_major_version = int(kuser.NtMajorVersion)
         nt_minor_version = int(kuser.NtMinorVersion)
         # LoadTime only applies to versions higher or equal to Window 7 (6.1 and higher)
@@ -131,23 +131,33 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                entry,
                                                self.open,
                                                proc_layer_name,
-                                               prefix = "pid.{}.".format(proc_id))
+                                               prefix = f"pid.{proc_id}.")
                     file_output = "Error outputting file"
                     if file_handle:
                         file_handle.close()
                         file_output = file_handle.preferred_filename
+                try:
+                    dllbase = format_hints.Hex(entry.DllBase)
+                except exceptions.InvalidAddressException:
+                    dllbase = renderers.NotAvailableValue()
+
+                try:
+                    size_of_image = format_hints.Hex(entry.SizeOfImage)
+                except exceptions.InvalidAddressException:
+                    size_of_image = renderers.NotAvailableValue()
 
                 yield (0, (proc.UniqueProcessId,
                            proc.ImageFileName.cast("string",
                                                    max_length = proc.ImageFileName.vol.count,
-                                                   errors = 'replace'), format_hints.Hex(entry.DllBase),
-                           format_hints.Hex(entry.SizeOfImage), BaseDllName, FullDllName, DllLoadTime, file_output))
+                                                   errors = 'replace'), dllbase, size_of_image, BaseDllName,
+                           FullDllName, DllLoadTime, file_output))
 
     def generate_timeline(self):
+        kernel = self.context.modules[self.config['kernel']]
         for row in self._generator(
                 pslist.PsList.list_processes(context = self.context,
-                                             layer_name = self.config['primary'],
-                                             symbol_table = self.config['nt_symbols'])):
+                                             layer_name = kernel.layer_name,
+                                             symbol_table = kernel.symbol_table_name)):
             _depth, row_data = row
             if not isinstance(row_data[6], datetime.datetime):
                 continue
@@ -157,12 +167,13 @@ class DllList(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def run(self):
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        kernel = self.context.modules[self.config['kernel']]
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Base", format_hints.Hex),
                                    ("Size", format_hints.Hex), ("Name", str), ("Path", str),
                                    ("LoadTime", datetime.datetime), ("File output", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   layer_name = kernel.layer_name,
+                                                                   symbol_table = kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

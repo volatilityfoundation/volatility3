@@ -3,6 +3,7 @@
 #
 
 import collections
+import collections.abc
 import logging
 import struct
 from typing import Any, ClassVar, Dict, List, Iterable, Optional, Tuple, Type, Union as TUnion, overload
@@ -30,7 +31,7 @@ def convert_data_to_value(data: bytes, struct_type: Type[TUnion[int, float, byte
     elif struct_type in [bytes, str]:
         struct_format = str(data_format.length) + "s"
     else:
-        raise TypeError("Cannot construct struct format for type {}".format(type(struct_type)))
+        raise TypeError(f"Cannot construct struct format for type {type(struct_type)}")
 
     return struct.unpack(struct_format, data)[0]
 
@@ -40,7 +41,7 @@ def convert_value_to_data(value: TUnion[int, float, bytes, str, bool], struct_ty
                           data_format: DataFormatInfo) -> bytes:
     """Converts a particular value to a series of bytes."""
     if not isinstance(value, struct_type):
-        raise TypeError("Written value is not of the correct type for {}".format(struct_type.__class__.__name__))
+        raise TypeError(f"Written value is not of the correct type for {struct_type.__name__}")
 
     if struct_type == int and isinstance(value, int):
         # Doubling up on the isinstance is for mypy
@@ -56,9 +57,11 @@ def convert_value_to_data(value: TUnion[int, float, bytes, str, bool], struct_ty
             raise ValueError("Invalid float size")
         struct_format = ("<" if data_format.byteorder == 'little' else ">") + float_vals[data_format.length]
     elif struct_type in [bytes, str]:
+        if isinstance(value, str):
+            value = bytes(value, 'latin-1')
         struct_format = str(data_format.length) + "s"
     else:
-        raise TypeError("Cannot construct struct format for type {}".format(type(struct_type)))
+        raise TypeError(f"Cannot construct struct format for type {type(struct_type)}")
 
     return struct.pack(struct_format, value)
 
@@ -92,7 +95,7 @@ class Function(interfaces.objects.ObjectInterface):
 class PrimitiveObject(interfaces.objects.ObjectInterface):
     """PrimitiveObject is an interface for any objects that should simulate a
     Python primitive."""
-    _struct_type = int  # type: ClassVar[Type]
+    _struct_type: ClassVar[Type] = int
 
     def __init__(self, context: interfaces.context.ContextInterface, type_name: str,
                  object_info: interfaces.objects.ObjectInformation, data_format: DataFormatInfo) -> None:
@@ -109,7 +112,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         """Creates the appropriate class and returns it so that the native type
         is inherited.
 
-        The only reason the kwargs is added, is so that the inherriting types can override __init__
+        The only reason the kwargs is added, is so that the inheriting types can override __init__
         without needing to override __new__
 
         We also sneak in new_value, so that we don't have to do expensive (read: impossible) context reads
@@ -126,7 +129,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
         return result
 
     def __getnewargs_ex__(self):
-        """Make sure that when pickling, all appropiate parameters for new are
+        """Make sure that when pickling, all appropriate parameters for new are
         provided."""
         kwargs = {}
         for k, v in self._vol.maps[-1].items():
@@ -148,11 +151,12 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
             """Returns the size of the templated object."""
             return template.vol.data_format.length
 
-    def write(self, value: TUnion[int, float, bool, bytes, str]) -> None:
+    def write(self, value: TUnion[int, float, bool, bytes, str]) -> interfaces.objects.ObjectInterface:
         """Writes the object into the layer of the context at the current
         offset."""
         data = convert_value_to_data(value, self._struct_type, self._data_format)
-        return self._context.layers.write(self.vol.layer_name, self.vol.offset, data)
+        self._context.layers.write(self.vol.layer_name, self.vol.offset, data)
+        return self.cast(self.vol.type_name)
 
 
 # This must be int (and the _struct_type must be int) because bool cannot be inherited from:
@@ -160,7 +164,7 @@ class PrimitiveObject(interfaces.objects.ObjectInterface):
 # https://mail.python.org/pipermail/python-dev/2004-February/042537.html
 class Boolean(PrimitiveObject, int):
     """Primitive Object that handles boolean types."""
-    _struct_type = int  # type: ClassVar[Type]
+    _struct_type: ClassVar[Type] = int
 
 
 class Integer(PrimitiveObject, int):
@@ -169,17 +173,17 @@ class Integer(PrimitiveObject, int):
 
 class Float(PrimitiveObject, float):
     """Primitive Object that handles double or floating point numbers."""
-    _struct_type = float  # type: ClassVar[Type]
+    _struct_type: ClassVar[Type] = float
 
 
 class Char(PrimitiveObject, int):
     """Primitive Object that handles characters."""
-    _struct_type = int  # type: ClassVar[Type]
+    _struct_type: ClassVar[Type] = int
 
 
 class Bytes(PrimitiveObject, bytes):
     """Primitive Object that handles specific series of bytes."""
-    _struct_type = bytes  # type: ClassVar[Type]
+    _struct_type: ClassVar[Type] = bytes
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -202,7 +206,7 @@ class Bytes(PrimitiveObject, bytes):
         is inherritted.
 
         The only reason the kwargs is added, is so that the
-        inherriting types can override __init__ without needing to
+        inheriting types can override __init__ without needing to
         override __new__
         """
         return cls._struct_type.__new__(
@@ -223,7 +227,7 @@ class String(PrimitiveObject, str):
         max_length: specifies the maximum possible length that the string could hold within memory
             (for multibyte characters, this will not be the maximum length of the string)
     """
-    _struct_type = str  # type: ClassVar[Type]
+    _struct_type: ClassVar[Type] = str
 
     def __init__(self,
                  context: interfaces.context.ContextInterface,
@@ -252,7 +256,7 @@ class String(PrimitiveObject, str):
         is inherited.
 
         The only reason the kwargs is added, is so that the
-        inherriting types can override __init__ without needing to
+        inheriting types can override __init__ without needing to
         override __new__
         """
         params = {}
@@ -288,6 +292,7 @@ class Pointer(Integer):
                  subtype: Optional[templates.ObjectTemplate] = None) -> None:
         super().__init__(context = context, object_info = object_info, type_name = type_name, data_format = data_format)
         self._vol['subtype'] = subtype
+        self._cache: Dict[str, interfaces.objects.ObjectInterface] = {}
 
     @classmethod
     def _unmarshall(cls, context: interfaces.context.ContextInterface, data_format: DataFormatInfo,
@@ -315,14 +320,22 @@ class Pointer(Integer):
         defaults to the same layer that the pointer is currently
         instantiated in.
         """
-        layer_name = layer_name or self.vol.native_layer_name
-        mask = self._context.layers[layer_name].address_mask
-        offset = self & mask
-        return self.vol.subtype(context = self._context,
-                                object_info = interfaces.objects.ObjectInformation(layer_name = layer_name,
-                                                                                   offset = offset,
-                                                                                   parent = self,
-                                                                                   size = self.vol.subtype.size))
+        # Do our own caching because lru_cache doesn't seem to memoize correctly across multiple uses
+        # Cache clearing should be done by a cast (we can add a specific method to reset a pointer,
+        # but hopefully it's not necessary)
+        if layer_name is None:
+            layer_name = self.vol.native_layer_name
+        if self._cache.get(layer_name, None) is None:
+            layer_name = layer_name or self.vol.native_layer_name
+            mask = self._context.layers[layer_name].address_mask
+            offset = self & mask
+            self._cache[layer_name] = self.vol.subtype(context = self._context,
+                                                       object_info = interfaces.objects.ObjectInformation(
+                                                           layer_name = layer_name,
+                                                           offset = offset,
+                                                           parent = self,
+                                                           size = self.vol.subtype.size))
+        return self._cache[layer_name]
 
     def is_readable(self, layer_name: Optional[str] = None) -> bool:
         """Determines whether the address of this pointer can be read from
@@ -333,7 +346,7 @@ class Pointer(Integer):
     def __getattr__(self, attr: str) -> Any:
         """Convenience function to access unknown attributes by getting them
         from the subtype object."""
-        if attr in ['vol', '_vol']:
+        if attr in ['vol', '_vol', '_cache']:
             raise AttributeError("Pointer not initialized before use")
         return getattr(self.dereference(), attr)
 
@@ -448,13 +461,13 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
     @classmethod
     def _generate_inverse_choices(cls, choices: Dict[str, int]) -> Dict[int, str]:
         """Generates the inverse choices for the object."""
-        inverse_choices = {}  # type: Dict[int, str]
+        inverse_choices: Dict[int, str] = {}
         for k, v in choices.items():
             if v in inverse_choices:
                 # Technically this shouldn't be a problem, but since we inverse cache
                 # and can't map one value to two possibilities we throw an exception during build
                 # We can remove/work around this if it proves a common issue
-                raise ValueError("Enumeration value {} duplicated as {} and {}".format(v, k, inverse_choices[v]))
+                raise ValueError(f"Enumeration value {v} duplicated as {k} and {inverse_choices[v]}")
             inverse_choices[v] = k
         return inverse_choices
 
@@ -484,7 +497,7 @@ class Enumeration(interfaces.objects.ObjectInterface, int):
         """Returns the value for a specific name."""
         if attr in self._vol['choices']:
             return self._vol['choices'][attr]
-        raise AttributeError("Unknown attribute {} for Enumeration {}".format(attr, self._vol['type_name']))
+        raise AttributeError(f"Unknown attribute {attr} for Enumeration {self._vol['type_name']}")
 
     def write(self, value: bytes):
         raise NotImplementedError("Writing to Enumerations is not yet implemented")
@@ -549,6 +562,10 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
         self._vol['count'] = value
         self._vol['size'] = value * self._vol['subtype'].size
 
+    def __repr__(self) -> str:
+        """Describes the object appropriately"""
+        return AggregateType.__repr__(self)
+
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
 
         @classmethod
@@ -580,7 +597,7 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
             the child member."""
             if 'subtype' in template.vol and child == 'subtype':
                 return 0
-            raise IndexError("Member not present in array template: {}".format(child))
+            raise IndexError(f"Member not present in array template: {child}")
 
     @overload
     def __getitem__(self, i: int) -> interfaces.objects.Template:
@@ -592,7 +609,7 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
 
     def __getitem__(self, i):
         """Returns the i-th item from the array."""
-        result = []  # type: List[interfaces.objects.Template]
+        result: List[interfaces.objects.Template] = []
         mask = self._context.layers[self.vol.layer_name].address_mask
         # We use the range function to deal with slices for us
         series = range(self.vol.count)[i]
@@ -617,7 +634,11 @@ class Array(interfaces.objects.ObjectInterface, collections.abc.Sequence):
         return self.vol.count
 
     def write(self, value) -> None:
-        raise NotImplementedError("Writing to Arrays is not yet implemented")
+        if not isinstance(value, collections.abc.Sequence):
+            raise TypeError("Only Sequences can be written to arrays")
+        self.count = len(value)
+        for index in range(len(value)):
+            self[index].write(value[index])
 
 
 class AggregateType(interfaces.objects.ObjectInterface):
@@ -636,12 +657,21 @@ class AggregateType(interfaces.objects.ObjectInterface):
                          size = size,
                          members = members)
         # self._check_members(members)
-        self._concrete_members = {}  # type: Dict[str, Dict]
+        self._concrete_members: Dict[str, Dict] = {}
 
     def has_member(self, member_name: str) -> bool:
         """Returns whether the object would contain a member called
         member_name."""
         return member_name in self.vol.members
+
+    def __repr__(self) -> str:
+        """Describes the object appropriately"""
+        extras = member_name = ''
+        if self.vol.native_layer_name != self.vol.layer_name:
+            extras += f" (Native: {self.vol.native_layer_name})"
+        if self.vol.member_name:
+            member_name = f" (.{self.vol.member_name})"
+        return f"<{self.__class__.__name__} {self.vol.type_name}{member_name}: {self.vol.layer_name} @ 0x{self.vol.offset:x} #{self.vol.size}{extras}>"
 
     class VolTemplateProxy(interfaces.objects.ObjectInterface.VolTemplateProxy):
 
@@ -679,7 +709,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
             """Returns the relative offset of a child to its parent."""
             retlist = template.vol.members.get(child, None)
             if retlist is None:
-                raise IndexError("Member not present in template: {}".format(child))
+                raise IndexError(f"Member not present in template: {child}")
             return retlist[0]
 
         @classmethod
@@ -700,9 +730,9 @@ class AggregateType(interfaces.objects.ObjectInterface):
                 agg_name = agg_type.__name__
 
         assert isinstance(members, collections.abc.Mapping)
-        "{} members parameter must be a mapping: {}".format(agg_name, type(members))
+        f"{agg_name} members parameter must be a mapping: {type(members)}"
         assert all([(isinstance(member, tuple) and len(member) == 2) for member in members.values()])
-        "{} members must be a tuple of relative_offsets and templates".format(agg_name)
+        f"{agg_name} members must be a tuple of relative_offsets and templates"
 
     def member(self, attr: str = 'member') -> object:
         """Specifically named method for retrieving members."""
@@ -710,11 +740,14 @@ class AggregateType(interfaces.objects.ObjectInterface):
 
     def __getattr__(self, attr: str) -> Any:
         """Method for accessing members of the type."""
+
         if attr in ['_concrete_members', 'vol']:
             raise AttributeError("Object has not been properly initialized")
         if attr in self._concrete_members:
             return self._concrete_members[attr]
-        elif attr in self.vol.members:
+        if attr.startswith("_") and not attr.startswith("__") and "__" in attr:
+            attr = attr[attr.find("__", 1):]  # See issue #522
+        if attr in self.vol.members:
             mask = self._context.layers[self.vol.layer_name].address_mask
             relative_offset, template = self.vol.members[attr]
             if isinstance(template, templates.ReferenceTemplate):
@@ -733,7 +766,18 @@ class AggregateType(interfaces.objects.ObjectInterface):
         for agg_type in AggregateTypes:
             if isinstance(self, agg_type):
                 agg_name = agg_type.__name__
-        raise AttributeError("{} has no attribute: {}.{}".format(agg_name, self.vol.type_name, attr))
+        raise AttributeError(f"{agg_name} has no attribute: {self.vol.type_name}.{attr}")
+
+    # Disable messing around with setattr until the consequences have been considered properly
+    # For example pdbutil constructs objects and then sets values for them
+    # Some don't always match the type (for example, the data read is encoded and interpreted)
+    #
+    # def __setattr__(self, name, value):
+    #     """Method for writing specific members of a structure"""
+    #     if name in ['_concrete_members', 'vol', '_vol'] or not self.has_member(name):
+    #         return super().__setattr__(name, value)
+    #     attr = self.__getattr__(name)
+    #     return attr.write(value)
 
     def __dir__(self) -> Iterable[str]:
         """Returns a complete list of members when dir is called."""
@@ -746,7 +790,7 @@ class AggregateType(interfaces.objects.ObjectInterface):
             if isinstance(self, agg_type):
                 agg_name = agg_type.__name__
         raise TypeError(
-            "{}s cannot be written to directly, individual members must be written instead".format(agg_name))
+            f"{agg_name}s cannot be written to directly, individual members must be written instead")
 
 
 class StructType(AggregateType):

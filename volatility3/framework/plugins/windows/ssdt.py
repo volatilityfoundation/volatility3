@@ -18,16 +18,14 @@ from volatility3.plugins.windows import modules
 class SSDT(plugins.PluginInterface):
     """Lists the system call table."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.PluginRequirement(name = 'modules', plugin = modules.Modules, version = (1, 0, 0)),
         ]
 
@@ -62,12 +60,12 @@ class SSDT(plugins.PluginInterface):
             if module_name in constants.windows.KERNEL_MODULE_NAMES:
                 symbol_table_name = symbol_table
 
-            context_module = contexts.SizedModule(context,
-                                                  module_name,
-                                                  layer_name,
-                                                  mod.DllBase,
-                                                  mod.SizeOfImage,
-                                                  symbol_table_name = symbol_table_name)
+            context_module = contexts.SizedModule.create(context = context,
+                                                         module_name = module_name,
+                                                         layer_name = layer_name,
+                                                         offset = mod.DllBase,
+                                                         size = mod.SizeOfImage,
+                                                         symbol_table_name = symbol_table_name)
 
             context_modules.append(context_module)
 
@@ -75,11 +73,13 @@ class SSDT(plugins.PluginInterface):
 
     def _generator(self) -> Iterator[Tuple[int, Tuple[int, int, Any, Any]]]:
 
-        layer_name = self.config['primary']
-        collection = self.build_module_collection(self.context, self.config["primary"], self.config["nt_symbols"])
+        kernel = self.context.modules[self.config['kernel']]
+
+        layer_name = kernel.layer_name
+        collection = self.build_module_collection(self.context, layer_name, kernel.symbol_table_name)
 
         kvo = self.context.layers[layer_name].config['kernel_virtual_offset']
-        ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = layer_name, offset = kvo)
+        ntkrnlmp = self.context.module(kernel.symbol_table_name, layer_name = layer_name, offset = kvo)
 
         # this is just one way to enumerate the native (NT) service table.
         # to do the same thing for the Win32K service table, we would need Win32K.sys symbol support
@@ -91,7 +91,7 @@ class SSDT(plugins.PluginInterface):
         # on 32-bit systems the table indexes are 32-bits and contain pointers (unsigned)
         # on 64-bit systems the indexes are also 32-bits but they're offsets from the
         # base address of the table and can be negative, so we need a signed data type
-        is_kernel_64 = symbols.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
+        is_kernel_64 = symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name)
         if is_kernel_64:
             array_subtype = "long"
 

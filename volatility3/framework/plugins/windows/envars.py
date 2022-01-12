@@ -16,16 +16,14 @@ class Envars(interfaces.plugins.PluginInterface):
     "Display process environment variables"
 
     _version = (1, 0, 0)
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.ListRequirement(name = 'pid',
                                          description = 'Filter on specific process IDs',
                                          element_type = int,
@@ -48,11 +46,12 @@ class Envars(interfaces.plugins.PluginInterface):
         """
 
         values = []
+        kernel = self.context.modules[self.config['kernel']]
 
         for hive in hivelist.HiveList.list_hives(context = self.context,
                                                  base_config_path = self.config_path,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols'],
+                                                 layer_name = kernel.layer_name,
+                                                 symbol_table = kernel.symbol_table_name,
                                                  hive_offsets = None):
             sys = False
             ntuser = False
@@ -192,10 +191,11 @@ class Envars(interfaces.plugins.PluginInterface):
     def run(self):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        kernel = self.context.modules[self.config['kernel']]
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Block", str), ("Variable", str), ("Value", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(context = self.context,
-                                                                   layer_name = self.config['primary'],
-                                                                   symbol_table = self.config['nt_symbols'],
+                                                                   layer_name = kernel.layer_name,
+                                                                   symbol_table = kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

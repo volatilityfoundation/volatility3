@@ -5,7 +5,7 @@
 import logging
 from typing import Callable, Iterable, List, Dict
 
-from volatility3.framework import renderers, interfaces, contexts, exceptions
+from volatility3.framework import renderers, interfaces, exceptions
 from volatility3.framework.configuration import requirements
 from volatility3.framework.objects import utility
 from volatility3.framework.symbols import mac
@@ -16,17 +16,15 @@ vollog = logging.getLogger(__name__)
 class PsList(interfaces.plugins.PluginInterface):
     """Lists the processes present in a particular mac memory image."""
 
-    _required_framework_version = (1, 0, 0)
-    _version = (2, 0, 0)
+    _required_framework_version = (2, 0, 0)
+    _version = (3, 0, 0)
     pslist_methods = ['tasks', 'allproc', 'process_group', 'sessions', 'pid_hash_table']
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
-                                                     architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "darwin", description = "Mac kernel symbols"),
+            requirements.ModuleRequirement(name = 'kernel', description = 'Kernel module for the OS',
+                                           architectures = ["Intel32", "Intel64"]),
             requirements.VersionRequirement(name = 'macutils', component = mac.MacUtilities, version = (1, 1, 0)),
             requirements.ChoiceRequirement(name = 'pslist_method',
                                            description = 'Method to determine for processes',
@@ -41,8 +39,8 @@ class PsList(interfaces.plugins.PluginInterface):
 
     @classmethod
     def get_list_tasks(
-        cls, method: str
-    ) -> Callable[[interfaces.context.ContextInterface, str, str, Callable[[int], bool]],
+            cls, method: str
+    ) -> Callable[[interfaces.context.ContextInterface, str, Callable[[int], bool]],
                   Iterable[interfaces.objects.ObjectInterface]]:
         """Returns the list_tasks method based on the selector
 
@@ -68,7 +66,7 @@ class PsList(interfaces.plugins.PluginInterface):
             list_tasks = cls.list_tasks_pid_hash_table
         else:
             raise ValueError("Impossible method choice chosen")
-        vollog.debug("Using method {}".format(method))
+        vollog.debug(f"Using method {method}")
 
         return list_tasks
 
@@ -91,8 +89,7 @@ class PsList(interfaces.plugins.PluginInterface):
         list_tasks = self.get_list_tasks(self.config.get('pslist_method', self.pslist_methods[0]))
 
         for task in list_tasks(self.context,
-                               self.config['primary'],
-                               self.config['darwin'],
+                               self.config['kernel'],
                                filter_func = self.create_pid_filter(self.config.get('pid', None))):
             pid = task.p_pid
             ppid = task.p_ppid
@@ -102,29 +99,27 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def list_tasks_allproc(cls,
                            context: interfaces.context.ContextInterface,
-                           layer_name: str,
-                           darwin_symbols: str,
+                           kernel_module_name: str,
                            filter_func: Callable[[int], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the processes in the primary layer based on the allproc method
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            darwin_symbols: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the the kernel module on which to operate
             filter_func: A function which takes a process object and returns True if the process should be ignored/filtered
 
         Returns:
             The list of process objects from the processes linked list after filtering
         """
 
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        kernel = context.modules[kernel_module_name]
 
-        kernel_layer = context.layers[layer_name]
+        kernel_layer = context.layers[kernel.layer_name]
 
         proc = kernel.object_from_symbol(symbol_name = "allproc").lh_first
 
-        seen = {}  # type: Dict[int, int]
+        seen: Dict[int, int] = {}
         while proc is not None and proc.vol.offset != 0:
             if proc.vol.offset in seen:
                 vollog.log(logging.INFO, "Recursive process list detected (a result of non-atomic acquisition).")
@@ -143,29 +138,26 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def list_tasks_tasks(cls,
                          context: interfaces.context.ContextInterface,
-                         layer_name: str,
-                         darwin_symbols: str,
+                         kernel_module_name: str,
                          filter_func: Callable[[int], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer based on the tasks queue
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            darwin_symbols: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the the kernel module on which to operate
             filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
 
         Returns:
             The list of task objects from the `layer_name` layer's `tasks` list after filtering
         """
+        kernel = context.modules[kernel_module_name]
 
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
-
-        kernel_layer = context.layers[layer_name]
+        kernel_layer = context.layers[kernel.layer_name]
 
         queue_entry = kernel.object_from_symbol(symbol_name = "tasks")
 
-        seen = {}  # type: Dict[int, int]
+        seen: Dict[int, int] = {}
         for task in queue_entry.walk_list(queue_entry, "tasks", "task"):
             if task.vol.offset in seen:
                 vollog.log(logging.INFO, "Recursive process list detected (a result of non-atomic acquisition).")
@@ -184,22 +176,20 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def list_tasks_sessions(cls,
                             context: interfaces.context.ContextInterface,
-                            layer_name: str,
-                            darwin_symbols: str,
+                            kernel_module_name: str,
                             filter_func: Callable[[int], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer using sessions
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            darwin_symbols: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the the kernel module on which to operate
             filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
 
         Returns:
             The list of task objects from the `layer_name` layer's `tasks` list after filtering
         """
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        kernel = context.modules[kernel_module_name]
 
         table_size = kernel.object_from_symbol(symbol_name = "sesshash")
 
@@ -218,23 +208,20 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def list_tasks_process_group(cls,
                                  context: interfaces.context.ContextInterface,
-                                 layer_name: str,
-                                 darwin_symbols: str,
+                                 kernel_module_name: str,
                                  filter_func: Callable[[int], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer using process groups
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            darwin_symbols: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the the kernel module on which to operate
             filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
 
         Returns:
             The list of task objects from the `layer_name` layer's `tasks` list after filtering
         """
-
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        kernel = context.modules[kernel_module_name]
 
         table_size = kernel.object_from_symbol(symbol_name = "pgrphash")
 
@@ -254,23 +241,21 @@ class PsList(interfaces.plugins.PluginInterface):
     @classmethod
     def list_tasks_pid_hash_table(cls,
                                   context: interfaces.context.ContextInterface,
-                                  layer_name: str,
-                                  darwin_symbols: str,
+                                  kernel_module_name: str,
                                   filter_func: Callable[[int], bool] = lambda _: False) -> \
             Iterable[interfaces.objects.ObjectInterface]:
         """Lists all the tasks in the primary layer using the pid hash table
 
         Args:
             context: The context to retrieve required elements (layers, symbol tables) from
-            layer_name: The name of the layer on which to operate
-            darwin_symbols: The name of the table containing the kernel symbols
+            kernel_module_name: The name of the the kernel module on which to operate
             filter_func: A function which takes a task object and returns True if the task should be ignored/filtered
 
         Returns:
             The list of task objects from the `layer_name` layer's `tasks` list after filtering
         """
 
-        kernel = contexts.Module(context, darwin_symbols, layer_name, 0)
+        kernel = context.modules[kernel_module_name]
 
         table_size = kernel.object_from_symbol(symbol_name = "pidhash")
 

@@ -1,6 +1,6 @@
 # Volatility 3: The volatile memory extraction framework
 
-Volatility is the world’s most widely used framework for extracting digital
+Volatility is the world's most widely used framework for extracting digital
 artifacts from volatile memory (RAM) samples. The extraction techniques are
 performed completely independent of the system being investigated but offer
 visibility into the runtime state of the system. The framework is intended
@@ -14,21 +14,34 @@ technical and performance challenges associated with the original
 code base that became apparent over the previous 10 years. Another benefit
 of the rewrite is that Volatility 3 could be released under a custom
 license that was more aligned with the goals of the Volatility community,
-the Volatility Software License (VSL). See the [LICENSE](LICENSE.txt) file for more details.
+the Volatility Software License (VSL). See the 
+[LICENSE](https://www.volatilityfoundation.org/license/vsl-v1.0) file for 
+more details.
 
 ## Requirements
 
-- Python 3.5.3 or later. <https://www.python.org>
-- Pefile 2017.8.1 or later. <https://pypi.org/project/pefile/>
+Volatility 3 requires Python 3.6.0 or later. To install the most minimal set of dependencies (some plugins will not work) use a command such as:
 
-## Optional Dependencies
+```shell
+pip3 install -r requirements-minimal.txt
+```
 
-- yara-python 3.8.0 or later. <https://github.com/VirusTotal/yara-python>
-- capstone 3.0.0 or later. <https://www.capstone-engine.org/download.html>
+Alternately, the minimal packages will be installed automatically when Volatility 3 is installed using setup.py. However, as noted in the Quick Start section below, Volatility 3 does not *need* to be installed via setup.py prior to using it.
+
+```shell
+python3 setup.py build 
+python3 setup.py install
+```
+
+To enable the full range of Volatility 3 functionality, use a command like the one below. For partial functionality, comment out any unnecessary packages in [requirements.txt](requirements.txt) prior to running the command.
+
+```shell
+pip3 install -r requirements.txt
+```
 
 ## Downloading Volatility
 
-The latest stable version of Volatility will always be the master branch of the GitHub repository. You can get the latest version of the code using the following command:
+The latest stable version of Volatility will always be the stable branch of the GitHub repository. You can get the latest version of the code using the following command:
 
 ```shell
 git clone https://github.com/volatilityfoundation/volatility3.git
@@ -45,7 +58,7 @@ git clone https://github.com/volatilityfoundation/volatility3.git
 2. See available options:
 
     ```shell
-    python3 vol.py —h
+    python3 vol.py -h
     ```
 
 3. To get more information on a Windows memory sample and to make sure
@@ -55,10 +68,10 @@ Volatility supports that sample type, run
    Example:
 
     ```shell
-    python3 vol.py —f /home/user/samples/stuxnet.vmem windows.info
+    python3 vol.py -f /home/user/samples/stuxnet.vmem windows.info
     ```
 
-4. Run some other plugins. The `-f` or `—-single-location` is not strictly
+4. Run some other plugins. The `-f` or `--single-location` is not strictly
 required, but most plugins expect a single sample. Some also
 require/accept other options.  Run `python3 vol.py <plugin> -h`
 for more information on a particular command.
@@ -91,7 +104,7 @@ The latest generated copy of the documentation can be found at: <https://volatil
 
 ## Licensing and Copyright
 
-Copyright (C) 2007-2020 Volatility Foundation
+Copyright (C) 2007-2022 Volatility Foundation
 
 All Rights Reserved
 

@@ -24,7 +24,7 @@ except ImportError:
 class Handles(interfaces.plugins.PluginInterface):
     """Lists process open handles."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     def __init__(self, *args, **kwargs):
@@ -38,10 +38,8 @@ class Handles(interfaces.plugins.PluginInterface):
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         # Since we're calling the plugin, make sure we have the plugin's requirements
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.ListRequirement(name = 'pid',
                                          element_type = int,
                                          description = "Process IDs to include (all other processes are excluded)",
@@ -69,7 +67,9 @@ class Handles(interfaces.plugins.PluginInterface):
         process' handle table, determine where the corresponding object's
         _OBJECT_HEADER can be found."""
 
-        virtual = self.config["primary"]
+        kernel = self.context.modules[self.config['kernel']]
+
+        virtual = kernel.layer_name
 
         try:
             # before windows 7
@@ -80,7 +80,7 @@ class Handles(interfaces.plugins.PluginInterface):
             object_header.GrantedAccess = handle_table_entry.GrantedAccess
         except AttributeError:
             # starting with windows 8
-            is_64bit = symbols.symbol_table_is_64bit(self.context, self.config["nt_symbols"])
+            is_64bit = symbols.symbol_table_is_64bit(self.context, kernel.symbol_table_name)
 
             if is_64bit:
                 if handle_table_entry.LowValue == 0:
@@ -104,8 +104,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 offset = handle_table_entry.InfoTable & ~7
 
             # print("LowValue: {0:#x} Magic: {1:#x} Offset: {2:#x}".format(handle_table_entry.InfoTable, magic, offset))
-            object_header = self.context.object(self.config["nt_symbols"] + constants.BANG + "_OBJECT_HEADER",
-                                                virtual,
+            object_header = self.context.object(kernel.symbol_table_name + constants.BANG + "_OBJECT_HEADER", virtual,
                                                 offset = offset)
             object_header.GrantedAccess = handle_table_entry.GrantedAccessBits
 
@@ -124,10 +123,11 @@ class Handles(interfaces.plugins.PluginInterface):
 
             if not has_capstone:
                 return None
+            kernel = self.context.modules[self.config['kernel']]
 
-            virtual_layer_name = self.config['primary']
+            virtual_layer_name = kernel.layer_name
             kvo = self.context.layers[virtual_layer_name].config['kernel_virtual_offset']
-            ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual_layer_name, offset = kvo)
+            ntkrnlmp = self.context.module(kernel.symbol_table_name, layer_name = virtual_layer_name, offset = kvo)
 
             try:
                 func_addr = ntkrnlmp.get_symbol("ObpCaptureHandleInformationEx").address
@@ -169,10 +169,10 @@ class Handles(interfaces.plugins.PluginInterface):
             symbol_table: The name of the table containing the kernel symbols
 
         Returns:
-            A mapping of type indicies to type names
+            A mapping of type indices to type names
         """
 
-        type_map = {}  # type: Dict[int, str]
+        type_map: Dict[int, str] = {}
 
         kvo = context.layers[layer_name].config['kernel_virtual_offset']
         ntkrnlmp = context.module(symbol_table, layer_name = layer_name, offset = kvo)
@@ -203,7 +203,7 @@ class Handles(interfaces.plugins.PluginInterface):
                 type_name = objt.Name.String
             except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
-                           "Cannot access _OBJECT_HEADER Name at {0:#x}".format(objt.vol.offset))
+                           f"Cannot access _OBJECT_HEADER Name at {objt.vol.offset:#x}")
                 continue
 
             type_map[i] = type_name
@@ -227,10 +227,12 @@ class Handles(interfaces.plugins.PluginInterface):
         """Parse a process' handle table and yield valid handle table entries,
         going as deep into the table "levels" as necessary."""
 
-        virtual = self.config["primary"]
+        kernel = self.context.modules[self.config['kernel']]
+
+        virtual = kernel.layer_name
         kvo = self.context.layers[virtual].config['kernel_virtual_offset']
 
-        ntkrnlmp = self.context.module(self.config["nt_symbols"], layer_name = virtual, offset = kvo)
+        ntkrnlmp = self.context.module(kernel.symbol_table_name, layer_name = virtual, offset = kvo)
 
         if level > 0:
             subtype = ntkrnlmp.get_type("pointer")
@@ -291,21 +293,22 @@ class Handles(interfaces.plugins.PluginInterface):
             yield handle_table_entry
 
     def _generator(self, procs):
+        kernel = self.context.modules[self.config['kernel']]
 
         type_map = self.get_type_map(context = self.context,
-                                     layer_name = self.config["primary"],
-                                     symbol_table = self.config["nt_symbols"])
+                                     layer_name = kernel.layer_name,
+                                     symbol_table = kernel.symbol_table_name)
 
         cookie = self.find_cookie(context = self.context,
-                                  layer_name = self.config["primary"],
-                                  symbol_table = self.config["nt_symbols"])
+                                  layer_name = kernel.layer_name,
+                                  symbol_table = kernel.symbol_table_name)
 
         for proc in procs:
             try:
                 object_table = proc.ObjectTable
             except exceptions.InvalidAddressException:
                 vollog.log(constants.LOGLEVEL_VVV,
-                           "Cannot access _EPROCESS.ObjectType at {0:#x}".format(proc.vol.offset))
+                           f"Cannot access _EPROCESS.ObjectType at {proc.vol.offset:#x}")
                 continue
 
             process_name = utility.array_to_string(proc.ImageFileName)
@@ -320,10 +323,10 @@ class Handles(interfaces.plugins.PluginInterface):
                         obj_name = item.file_name_with_device()
                     elif obj_type == "Process":
                         item = entry.Body.cast("_EPROCESS")
-                        obj_name = "{} Pid {}".format(utility.array_to_string(proc.ImageFileName), item.UniqueProcessId)
+                        obj_name = f"{utility.array_to_string(proc.ImageFileName)} Pid {item.UniqueProcessId}"
                     elif obj_type == "Thread":
                         item = entry.Body.cast("_ETHREAD")
-                        obj_name = "Tid {} Pid {}".format(item.Cid.UniqueThread, item.Cid.UniqueProcess)
+                        obj_name = f"Tid {item.Cid.UniqueThread} Pid {item.Cid.UniqueProcess}"
                     elif obj_type == "Key":
                         item = entry.Body.cast("_CM_KEY_BODY")
                         obj_name = item.get_full_key_name()
@@ -335,7 +338,7 @@ class Handles(interfaces.plugins.PluginInterface):
 
                 except (exceptions.InvalidAddressException):
                     vollog.log(constants.LOGLEVEL_VVV,
-                               "Cannot access _OBJECT_HEADER at {0:#x}".format(entry.vol.offset))
+                               f"Cannot access _OBJECT_HEADER at {entry.vol.offset:#x}")
                     continue
 
                 yield (0, (proc.UniqueProcessId, process_name, format_hints.Hex(entry.Body.vol.offset),
@@ -345,12 +348,13 @@ class Handles(interfaces.plugins.PluginInterface):
     def run(self):
 
         filter_func = pslist.PsList.create_pid_filter(self.config.get('pid', None))
+        kernel = self.context.modules[self.config['kernel']]
 
         return renderers.TreeGrid([("PID", int), ("Process", str), ("Offset", format_hints.Hex),
                                    ("HandleValue", format_hints.Hex), ("Type", str),
                                    ("GrantedAccess", format_hints.Hex), ("Name", str)],
                                   self._generator(
                                       pslist.PsList.list_processes(self.context,
-                                                                   self.config['primary'],
-                                                                   self.config['nt_symbols'],
+                                                                   kernel.layer_name,
+                                                                   kernel.symbol_table_name,
                                                                    filter_func = filter_func)))

@@ -1295,6 +1295,54 @@
       "kind": "struct",
       "size": 18
     },
+    "LF_STRUCTURE_VS19": {
+      "fields": {
+        "properties": {
+          "offset": 0,
+          "type": {
+            "kind": "struct",
+            "name": "Type_Properties"
+          }
+        },
+        "fields": {
+          "offset": 4,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "derived_from": {
+          "offset": 8,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "vtable_shape": {
+          "offset": 12,
+          "type": {
+            "kind": "base",
+            "name": "unsigned long"
+          }
+        },
+        "size": {
+          "offset": 18,
+          "type": {
+            "kind": "base",
+            "name": "unsigned short"
+          }
+        },
+        "name": {
+          "offset": 20,
+          "type": {
+            "kind": "base",
+            "name": "string"
+          }
+        }
+      },
+      "kind": "struct",
+      "size": 20
+    },
     "LF_UDT_SRC_LINE": {
       "fields": {
         "udt": {
@@ -1305,14 +1353,14 @@
           }
         },
         "source_file": {
-          "offset": 0,
+          "offset": 4,
           "type": {
             "kind": "base",
             "name": "unsigned long"
           }
         },
         "line": {
-          "offset": 0,
+          "offset": 8,
           "type": {
             "kind": "base",
             "name": "unsigned long"
@@ -1349,12 +1397,12 @@
           "offset": 12,
           "type": {
             "kind": "base",
-            "name": "string"
+            "name": "unsigned short"
           }
         }
       },
       "kind": "struct",
-      "size": 12
+      "size": 14
     },
     "LF_UNION": {
       "fields": {
@@ -1626,6 +1674,8 @@
         "LF_STRING_ID": 5637,
         "LF_UDT_SRC_LINE": 5638,
         "LF_UDT_MOD_SRC_LINE": 5639,
+        "LF_CLASS_VS19": 5640,
+        "LF_STRUCTURE_VS19": 5641,
         "LF_CHAR": 32768,
         "LF_SHORT": 32769,
         "LF_USHORT": 32770,

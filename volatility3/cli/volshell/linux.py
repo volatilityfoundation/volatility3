@@ -17,7 +17,7 @@ class Volshell(generic.Volshell):
     def get_requirements(cls):
         return (super().get_requirements() + [
             requirements.SymbolTableRequirement(name = "vmlinux", description = "Linux kernel symbols"),
-            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (1, 0, 0)),
+            requirements.PluginRequirement(name = 'pslist', plugin = pslist.PsList, version = (2, 0, 0)),
             requirements.IntRequirement(name = 'pid', description = "Process ID", optional = True)
         ])
 
@@ -30,9 +30,9 @@ class Volshell(generic.Volshell):
                 if process_layer is not None:
                     self.change_layer(process_layer)
                     return
-                print("Layer for task ID {} could not be constructed".format(pid))
+                print(f"Layer for task ID {pid} could not be constructed")
                 return
-        print("No task with task ID {} found".format(pid))
+        print(f"No task with task ID {pid} found")
 
     def list_tasks(self):
         """Returns a list of task objects from the primary layer"""

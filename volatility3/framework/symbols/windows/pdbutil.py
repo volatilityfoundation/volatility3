@@ -7,12 +7,13 @@ import json
 import logging
 import lzma
 import os
+import re
 import struct
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
-from urllib import request
+from urllib import request, parse
 
 from volatility3 import symbols
-from volatility3.framework import constants, interfaces
+from volatility3.framework import constants, interfaces, exceptions
 from volatility3.framework.configuration.requirements import SymbolTableRequirement
 from volatility3.framework.symbols import intermed
 from volatility3.framework.symbols.windows import pdbconv
@@ -20,8 +21,11 @@ from volatility3.framework.symbols.windows import pdbconv
 vollog = logging.getLogger(__name__)
 
 
-class PDBUtility:
+class PDBUtility(interfaces.configuration.VersionableInterface):
     """Class to handle and manage all getting symbols based on MZ header"""
+
+    _version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     @classmethod
     def symbol_table_from_offset(
@@ -64,11 +68,11 @@ class PDBUtility:
                                   symbol_table_class: str,
                                   config_path: str = 'pdbutility',
                                   progress_callback: constants.ProgressCallback = None):
-        """Loads (downlading if necessary) a windows symbol table"""
+        """Loads (downloading if necessary) a windows symbol table"""
 
         filter_string = os.path.join(pdb_name.strip('\x00'), guid.upper() + "-" + str(age))
 
-        isf_path = False
+        isf_path = None
         # Take the first result of search for the intermediate file
         for value in intermed.IntermediateSymbolTable.file_symbol_url("windows", filter_string):
             isf_path = value
@@ -82,10 +86,13 @@ class PDBUtility:
                 break
 
         if not isf_path:
-            vollog.debug("Required symbol library path not found: {}".format(filter_string))
+            vollog.debug(f"Required symbol library path not found: {filter_string}")
+            vollog.info("The symbols can be downloaded later using pdbconv.py -p {} -g {}".format(
+                pdb_name.strip('\x00'),
+                guid.upper() + str(age)))
             return None
 
-        vollog.debug("Using symbol library: {}".format(filter_string))
+        vollog.debug(f"Using symbol library: {filter_string}")
 
         # Set the discovered options
         join = interfaces.configuration.path_join
@@ -163,9 +170,9 @@ class PDBUtility:
 
         pdb_name = debug_entry.PdbFileName.decode("utf-8").strip('\x00')
         age = debug_entry.Age
-        guid = "{:x}{:x}{:x}{}".format(debug_entry.Signature_Data1, debug_entry.Signature_Data2,
-                                       debug_entry.Signature_Data3,
-                                       binascii.hexlify(debug_entry.Signature_Data4).decode('utf-8'))
+        guid = "{:08x}{:04x}{:04x}{}".format(debug_entry.Signature_Data1, debug_entry.Signature_Data2,
+                                             debug_entry.Signature_Data3,
+                                             binascii.hexlify(debug_entry.Signature_Data4).decode('utf-8'))
         return guid, age, pdb_name
 
     @classmethod
@@ -193,14 +200,18 @@ class PDBUtility:
                                                                    file_name = pdb_name,
                                                                    progress_callback = progress_callback)
                     if filename:
-                        tmp_files.append(filename)
-                        location = "file:" + request.pathname2url(tmp_files[-1])
+                        url = parse.urlparse(filename, scheme = 'file')
+                        if url.scheme == 'file' or len(url.scheme) == 1:
+                            tmp_files.append(filename)
+                            location = "file:" + request.pathname2url(os.path.abspath(tmp_files[-1]))
+                        else:
+                            location = filename
                         json_output = pdbconv.PdbReader(context, location, pdb_name, progress_callback).get_json()
                         of.write(bytes(json.dumps(json_output, indent = 2, sort_keys = True), 'utf-8'))
                         # After we've successfully written it out, record the fact so we don't clear it out
                         data_written = True
                     else:
-                        vollog.warning("Symbol file could not be found on remote server" + (" " * 100))
+                        vollog.warning("Symbol file could not be downloaded from remote server" + (" " * 100))
                 break
             except PermissionError:
                 vollog.warning("Cannot write necessary symbol file, please check permissions on {}".format(
@@ -215,7 +226,7 @@ class PDBUtility:
                     try:
                         os.remove(filename)
                     except PermissionError:
-                        vollog.warning("Temporary file could not be removed: {}".format(filename))
+                        vollog.warning(f"Temporary file could not be removed: {filename}")
         else:
             vollog.warning("Cannot write downloaded symbols, please add the appropriate symbols"
                            " or add/modify a symbols directory that is writable")
@@ -272,6 +283,47 @@ class PDBUtility:
                 'mz_offset': mz_offset
             }
 
+    @classmethod
+    def symbol_table_from_pdb(cls, context: interfaces.context.ContextInterface, config_path: str, layer_name: str,
+                              pdb_name: str, module_offset: int, module_size: int) -> str:
+        """Creates symbol table for a module in the specified layer_name.
+
+        Searches the memory section of the loaded module for its PDB GUID
+        and loads the associated symbol table into the symbol space.
+
+        Args:
+            context: The context to retrieve required elements (layers, symbol tables) from
+            config_path: The config path where to find symbol files
+            layer_name: The name of the layer on which to operate
+            module_offset: This memory dump's module image offset
+            module_size: The size of the module for this dump
+
+        Returns:
+            The name of the constructed and loaded symbol table
+        """
+
+        guids = list(
+            cls.pdbname_scan(context,
+                             layer_name,
+                             context.layers[layer_name].page_size, [bytes(pdb_name, 'latin-1')],
+                             start = module_offset,
+                             end = module_offset + module_size))
+
+        if not guids:
+            raise exceptions.VolatilityException(
+                f"Did not find GUID of {pdb_name} in module @ 0x{module_offset:x}!")
+
+        guid = guids[0]
+
+        vollog.debug(f"Found {guid['pdb_name']}: {guid['GUID']}-{guid['age']}")
+
+        return cls.load_windows_symbol_table(context,
+                                             guid["GUID"],
+                                             guid["age"],
+                                             guid["pdb_name"],
+                                             "volatility3.framework.symbols.intermed.IntermediateSymbolTable",
+                                             config_path = config_path)
+
 
 class PdbSignatureScanner(interfaces.layers.ScannerInterface):
     """A :class:`~volatility3.framework.interfaces.layers.ScannerInterface`
@@ -294,20 +346,15 @@ class PdbSignatureScanner(interfaces.layers.ScannerInterface):
         self._pdb_names = pdb_names
 
     def __call__(self, data: bytes, data_offset: int) -> Generator[Tuple[str, Any, bytes, int], None, None]:
-        sig = data.find(b"RSDS")
-        while sig >= 0:
-            null = data.find(b'\0', sig + 4 + self._RSDS_format.size)
-            if null > -1:
-                if (null - sig - self._RSDS_format.size) <= 100:
-                    name_offset = sig + 4 + self._RSDS_format.size
-                    pdb_name = data[name_offset:null]
-                    if pdb_name in self._pdb_names:
+        pattern = b'RSDS' + (b'.' * self._RSDS_format.size) + b'(' + b'|'.join(
+            [re.escape(x) for x in self._pdb_names]) + b')\x00'
+        for match in re.finditer(pattern, data, flags = re.DOTALL):
+            pdb_name = data[match.start(0) + 4 + self._RSDS_format.size:match.start(0) + len(match.group()) - 1]
+            if pdb_name in self._pdb_names:
+                ## this ordering is intentional due to mixed endianness in the GUID
+                (g3, g2, g1, g0, g5, g4, g7, g6, g8, g9, ga, gb, gc, gd, ge, gf, a) = \
+                    self._RSDS_format.unpack(data[match.start(0) + 4:match.start(0) + 4 + self._RSDS_format.size])
 
-                        ## this ordering is intentional due to mixed endianness in the GUID
-                        (g3, g2, g1, g0, g5, g4, g7, g6, g8, g9, ga, gb, gc, gd, ge, gf, a) = \
-                            self._RSDS_format.unpack(data[sig + 4:name_offset])
-
-                        guid = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
-                        if sig < self.chunk_size:
-                            yield (guid, a, pdb_name, data_offset + sig)
-            sig = data.find(b"RSDS", sig + 1)
+                guid = (16 * '{:02X}').format(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, ga, gb, gc, gd, ge, gf)
+                if match.start(0) < self.chunk_size:
+                    yield (guid, a, pdb_name, match.start(0))

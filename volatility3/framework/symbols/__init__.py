@@ -31,15 +31,15 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 
     def __init__(self) -> None:
         super().__init__()
-        self._dict = collections.OrderedDict()  # type: Dict[str, interfaces.symbols.BaseSymbolTableInterface]
+        self._dict: Dict[str, interfaces.symbols.BaseSymbolTableInterface] = collections.OrderedDict()
         # Permanently cache all resolved symbols
-        self._resolved = {}  # type: Dict[str, interfaces.objects.Template]
-        self._resolved_symbols = {}  # type: Dict[str, interfaces.objects.Template]
+        self._resolved: Dict[str, interfaces.objects.Template] = {}
+        self._resolved_symbols: Dict[str, interfaces.objects.Template] = {}
 
     def clear_symbol_cache(self, table_name: str = None) -> None:
         """Clears the symbol cache for the specified table name. If no table
         name is specified, the caches of all symbol tables are cleared."""
-        table_list = list()  # type: List[interfaces.symbols.BaseSymbolTableInterface]
+        table_list: List[interfaces.symbols.BaseSymbolTableInterface] = list()
         if table_name is None:
             table_list = list(self._dict.values())
         else:
@@ -65,7 +65,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
 
     def get_symbols_by_location(self, offset: int, size: int = 0, table_name: str = None) -> Iterable[str]:
         """Returns all symbols that exist at a specific relative address."""
-        table_list = self._dict.values()  # type: Iterable[interfaces.symbols.BaseSymbolTableInterface]
+        table_list: Iterable[interfaces.symbols.BaseSymbolTableInterface] = self._dict.values()
         if table_name is not None:
             if table_name in self._dict:
                 table_list = [self._dict[table_name]]
@@ -117,7 +117,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
         """
 
         def __init__(self, type_name: str, **kwargs) -> None:
-            vollog.debug("Unresolved reference: {}".format(type_name))
+            vollog.debug(f"Unresolved reference: {type_name}")
             super().__init__(type_name = type_name, **kwargs)
 
     def _weak_resolve(self, resolve_type: SymbolType, name: str) -> SymbolSpaceReturnType:
@@ -139,8 +139,8 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
                 return getattr(self._dict[table_name], get_function)(component_name)
             except KeyError as e:
                 raise exceptions.SymbolError(component_name, table_name,
-                                             'Type {} references missing Type/Symbol/Enum: {}'.format(name, e))
-        raise exceptions.SymbolError(name, None, "Malformed name: {}".format(name))
+                                             f'Type {name} references missing Type/Symbol/Enum: {e}')
+        raise exceptions.SymbolError(name, None, f"Malformed name: {name}")
 
     def _iterative_resolve(self, traverse_list):
         """Iteratively resolves a type, populating linked child
@@ -185,7 +185,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             index = type_name.find(constants.BANG)
             if index > 0:
                 table_name, type_name = type_name[:index], type_name[index + 1:]
-            raise exceptions.SymbolError(type_name, table_name, "Unresolvable symbol requested: {}".format(type_name))
+            raise exceptions.SymbolError(type_name, table_name, f"Unresolvable symbol requested: {type_name}")
         return self._resolved[type_name]
 
     def get_symbol(self, symbol_name: str) -> interfaces.symbols.SymbolInterface:
@@ -198,7 +198,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             index = symbol_name.find(constants.BANG)
             if index > 0:
                 table_name, symbol_name = symbol_name[:index], symbol_name[index + 1:]
-            raise exceptions.SymbolError(symbol_name, table_name, "Unresolvable Symbol: {}".format(symbol_name))
+            raise exceptions.SymbolError(symbol_name, table_name, f"Unresolvable Symbol: {symbol_name}")
         return retval
 
     def _subresolve(self, object_template: interfaces.objects.Template) -> interfaces.objects.Template:
@@ -220,7 +220,7 @@ class SymbolSpace(interfaces.symbols.SymbolSpaceInterface):
             index = enum_name.find(constants.BANG)
             if index > 0:
                 table_name, enum_name = enum_name[:index], enum_name[index + 1:]
-            raise exceptions.SymbolError(enum_name, table_name, "Unresolvable Enumeration: {}".format(enum_name))
+            raise exceptions.SymbolError(enum_name, table_name, f"Unresolvable Enumeration: {enum_name}")
         return retval
 
     def _membership(self, member_type: SymbolType, name: str) -> bool:

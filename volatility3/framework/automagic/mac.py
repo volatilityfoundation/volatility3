@@ -6,7 +6,7 @@ import logging
 import struct
 from typing import Optional
 
-from volatility3.framework import interfaces, constants, layers
+from volatility3.framework import interfaces, constants, layers, exceptions
 from volatility3.framework.automagic import symbol_cache, symbol_finder
 from volatility3.framework.layers import intel, scanners
 from volatility3.framework.symbols import mac
@@ -15,7 +15,7 @@ vollog = logging.getLogger(__name__)
 
 
 class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
-    stack_order = 45
+    stack_order = 35
     exclusion_list = ['windows', 'linux']
 
     @classmethod
@@ -44,7 +44,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
         for banner_offset, banner in layer.scan(context = context, scanner = mss,
                                                 progress_callback = progress_callback):
             dtb = None
-            vollog.debug("Identified banner: {}".format(repr(banner)))
+            vollog.debug(f"Identified banner: {repr(banner)}")
 
             symbol_files = mac_banners.get(banner, None)
             if symbol_files:
@@ -63,7 +63,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                                             progress_callback = progress_callback)
 
                 if kaslr_shift == 0:
-                    vollog.log(constants.LOGLEVEL_VVV, "Invalid kalsr_shift found at offset: {}".format(banner_offset))
+                    vollog.log(constants.LOGLEVEL_VVV, f"Invalid kalsr_shift found at offset: {banner_offset}")
                     continue
 
                 bootpml4_addr = cls.virtual_to_physical_address(table.get_symbol("BootPML4").address + kaslr_shift)
@@ -79,13 +79,18 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                                               metadata = {'os': 'Mac'})
 
                 idlepml4_ptr = table.get_symbol("IdlePML4").address + kaslr_shift
-                idlepml4_str = layer.read(idlepml4_ptr, 4)
+                try:
+                    idlepml4_str = layer.read(idlepml4_ptr, 4)
+                except exceptions.InvalidAddressException:
+                    vollog.log(constants.LOGLEVEL_VVVV, f"Skipping invalid idlepml4_ptr: 0x{idlepml4_ptr:0x}")
+                    continue
+
                 idlepml4_addr = struct.unpack("<I", idlepml4_str)[0]
 
                 tmp_dtb = idlepml4_addr
 
                 if tmp_dtb % 4096:
-                    vollog.log(constants.LOGLEVEL_VVV, "Skipping non-page aligned DTB: 0x{:0x}".format(tmp_dtb))
+                    vollog.log(constants.LOGLEVEL_VVV, f"Skipping non-page aligned DTB: 0x{tmp_dtb:0x}")
                     continue
 
                 dtb = tmp_dtb
@@ -100,10 +105,11 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
                 new_layer = intel.Intel32e(context,
                                            config_path = config_path,
                                            name = new_layer_name,
-                                           metadata = {'kaslr_value': kaslr_shift})
+                                           metadata = {'os': 'mac'})
+                new_layer.config['kernel_virtual_offset'] = kaslr_shift
 
             if new_layer and dtb:
-                vollog.debug("DTB was found at: 0x{:0x}".format(dtb))
+                vollog.debug(f"DTB was found at: 0x{dtb:0x}")
                 return new_layer
         vollog.debug("No suitable mac banner could be matched")
         return None
@@ -159,7 +165,7 @@ class MacIntelStacker(interfaces.automagic.StackerLayerInterface):
             aslr_shift = tmp_aslr_shift & 0xffffffff
             break
 
-        vollog.log(constants.LOGLEVEL_VVVV, "Mac find_aslr returned: {:0x}".format(aslr_shift))
+        vollog.log(constants.LOGLEVEL_VVVV, f"Mac find_aslr returned: {aslr_shift:0x}")
 
         return aslr_shift
 

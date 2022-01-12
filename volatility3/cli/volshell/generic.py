@@ -8,13 +8,13 @@ import random
 import string
 import struct
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union, Type
-from urllib import request
+from typing import Any, Dict, List, Optional, Tuple, Union, Type, Iterable
+from urllib import request, parse
 
-from volatility3.cli import text_renderer
+from volatility3.cli import text_renderer, volshell
 from volatility3.framework import renderers, interfaces, objects, plugins, exceptions
 from volatility3.framework.configuration import requirements
-from volatility3.framework.layers import intel, physical
+from volatility3.framework.layers import intel, physical, resources
 
 try:
     import capstone
@@ -26,18 +26,29 @@ except ImportError:
 
 class Volshell(interfaces.plugins.PluginInterface):
     """Shell environment to directly interact with a memory image."""
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__current_layer = None  # type: Optional[str]
+        self.__current_layer: Optional[str] = None
+        self.__console = None
 
     def random_string(self, length: int = 32) -> str:
         return ''.join(random.sample(string.ascii_uppercase + string.digits, length))
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
-        return [requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer for the kernel')]
+        reqs: List[interfaces.configuration.RequirementInterface] = []
+        if cls == Volshell:
+            reqs = [
+                requirements.URIRequirement(name = 'script',
+                                            description = 'File to load and execute at start',
+                                            default = None,
+                                            optional = True)
+            ]
+        return reqs + [
+            requirements.TranslationLayerRequirement(name = 'primary', description = 'Memory layer for the kernel'),
+        ]
 
     def run(self, additional_locals: Dict[str, Any] = None) -> interfaces.renderers.TreeGrid:
         """Runs the interactive volshell plugin.
@@ -46,7 +57,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             Return a TreeGrid but this is always empty since the point of this plugin is to run interactively
         """
 
-        self._current_layer = self.config['primary']
+        self.__current_layer = self.config['primary']
 
         # Try to enable tab completion
         try:
@@ -65,15 +76,21 @@ class Volshell(interfaces.plugins.PluginInterface):
         mode = self.__module__.split('.')[-1]
         mode = mode[0].upper() + mode[1:]
 
-        banner = """
+        banner = f"""
     Call help() to see available functions
 
-    Volshell mode: {}
-    Current Layer: {}
-        """.format(mode, self.current_layer)
+    Volshell mode: {mode}
+    Current Layer: {self.current_layer}
+        """
 
-        sys.ps1 = "({}) >>> ".format(self.current_layer)
-        code.interact(banner = banner, local = self._construct_locals_dict())
+        sys.ps1 = f"({self.current_layer}) >>> "
+        self.__console = code.InteractiveConsole(locals = self._construct_locals_dict())
+        # Since we have to do work to add the option only once for all different modes of volshell, we can't
+        # rely on the default having been set
+        if self.config.get('script', None) is not None:
+            self.run_script(location = self.config['script'])
+
+        self.__console.interact(banner = banner)
 
         return renderers.TreeGrid([("Terminating", str)], None)
 
@@ -88,14 +105,14 @@ class Volshell(interfaces.plugins.PluginInterface):
         for aliases, item in self.construct_locals():
             name = ", ".join(aliases)
             if item.__doc__ and callable(item):
-                print("* {}".format(name))
-                print("    {}".format(item.__doc__))
+                print(f"* {name}")
+                print(f"    {item.__doc__}")
             else:
                 variables.append(name)
 
         print("\nVariables:")
         for var in variables:
-            print("  {}".format(var))
+            print(f"  {var}")
 
     def construct_locals(self) -> List[Tuple[List[str], Any]]:
         """Returns a dictionary listing the functions to be added to the
@@ -109,7 +126,8 @@ class Volshell(interfaces.plugins.PluginInterface):
                 (['gt', 'generate_treegrid'], self.generate_treegrid), (['rt',
                                                                          'render_treegrid'], self.render_treegrid),
                 (['ds', 'display_symbols'], self.display_symbols), (['hh', 'help'], self.help),
-                (['cc', 'create_configurable'], self.create_configurable), (['lf', 'load_file'], self.load_file)]
+                (['cc', 'create_configurable'], self.create_configurable), (['lf', 'load_file'], self.load_file),
+                (['rs', 'run_script'], self.run_script)]
 
     def _construct_locals_dict(self) -> Dict[str, Any]:
         """Returns a dictionary of the locals """
@@ -156,14 +174,14 @@ class Volshell(interfaces.plugins.PluginInterface):
 
     @property
     def current_layer(self):
-        return self._current_layer
+        return self.__current_layer
 
     def change_layer(self, layer_name = None):
         """Changes the current default layer"""
         if not layer_name:
             layer_name = self.config['primary']
-        self._current_layer = layer_name
-        sys.ps1 = "({}) >>> ".format(self.current_layer)
+        self.__current_layer = layer_name
+        sys.ps1 = f"({self.current_layer}) >>> "
 
     def display_bytes(self, offset, count = 128, layer_name = None):
         """Displays byte values and ASCII characters"""
@@ -203,7 +221,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             }
             if architecture is not None:
                 for i in disasm_types[architecture].disasm(remaining_data, offset):
-                    print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))
+                    print(f"0x{i.address:x}:\t{i.mnemonic}\t{i.op_str}")
 
     def display_type(self,
                      object: Union[str, interfaces.objects.ObjectInterface, interfaces.objects.Template],
@@ -227,7 +245,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             volobject = self.context.object(volobject.vol.type_name, layer_name = self.current_layer, offset = offset)
 
         if hasattr(volobject.vol, 'size'):
-            print("{} ({} bytes)".format(volobject.vol.type_name, volobject.vol.size))
+            print(f"{volobject.vol.type_name} ({volobject.vol.size} bytes)")
         elif hasattr(volobject.vol, 'data_format'):
             data_format = volobject.vol.data_format
             print("{} ({} bytes, {} endian, {})".format(volobject.vol.type_name, data_format.length,
@@ -283,7 +301,7 @@ class Volshell(interfaces.plugins.PluginInterface):
             constructed = plugins.construct_plugin(self.context, [], plugin, plugin_path, None, NullFileHandler)
             return constructed.run()
         except exceptions.UnsatisfiedException as excp:
-            print("Unable to validate the plugin requirements: {}\n".format([x for x in excp.unsatisfied]))
+            print(f"Unable to validate the plugin requirements: {[x for x in excp.unsatisfied]}\n")
         return None
 
     def render_treegrid(self,
@@ -318,11 +336,20 @@ class Volshell(interfaces.plugins.PluginInterface):
             len_offset = len(hex(symbol.address))
             print(" " * (longest_offset - len_offset), hex(symbol.address), " ", symbol.name)
 
-    def load_file(self, location: str = None, filename: str = ''):
+    def run_script(self, location: str):
+        """Runs a python script within the context of volshell"""
+        if not parse.urlparse(location).scheme:
+            location = "file:" + request.pathname2url(location)
+        print(f"Running code from {location}\n")
+        accessor = resources.ResourceAccessor()
+        with io.TextIOWrapper(accessor.open(url = location), encoding = 'utf-8') as fp:
+            self.__console.runsource(fp.read(), symbol = 'exec')
+        print("\nCode complete")
+
+    def load_file(self, location: str):
         """Loads a file into a Filelayer and returns the name of the layer"""
         layer_name = self.context.layers.free_layer_name()
-        if location is None:
-            location = "file:" + request.pathname2url(filename)
+        location = volshell.VolShell.location_from_file(location)
         current_config_path = 'volshell.layers.' + layer_name
         self.context.config[interfaces.configuration.path_join(current_config_path, "location")] = location
         layer = physical.FileLayer(self.context, current_config_path, layer_name)
@@ -371,10 +398,10 @@ class NullFileHandler(io.BytesIO, interfaces.plugins.FileHandlerInterface):
         interfaces.plugins.FileHandlerInterface.__init__(self, preferred_name)
         super().__init__()
 
-    def writelines(self, lines):
+    def writelines(self, lines: Iterable[bytes]):
         """Dummy method"""
         pass
 
-    def write(self, data):
+    def write(self, b: bytes):
         """Dummy method"""
-        return len(data)
+        return len(b)

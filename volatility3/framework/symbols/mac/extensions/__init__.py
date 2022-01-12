@@ -4,12 +4,15 @@
 
 from typing import Generator, Iterable, Optional, Set, Tuple
 
+import logging
+
 from volatility3.framework import constants, objects, renderers
 from volatility3.framework import exceptions, interfaces
 from volatility3.framework.objects import utility
 from volatility3.framework.renderers import conversion
 from volatility3.framework.symbols import generic
 
+vollog = logging.getLogger(__name__)
 
 class proc(generic.GenericIntelProcess):
 
@@ -32,7 +35,7 @@ class proc(generic.GenericIntelProcess):
             return None
 
         if preferred_name is None:
-            preferred_name = self.vol.layer_name + "_Process{}".format(self.p_pid)
+            preferred_name = self.vol.layer_name + f"_Process{self.p_pid}"
 
         # Add the constructed layer and return the name
         return self._add_process_layer(self._context, dtb, config_prefix, preferred_name)
@@ -48,10 +51,18 @@ class proc(generic.GenericIntelProcess):
         except exceptions.InvalidAddressException:
             return
 
-        seen = set()  # type: Set[int]
+        seen: Set[int] = set()
 
         for i in range(task.map.hdr.nentries):
-            if not current_map or current_map.vol.offset in seen:
+            if (not current_map or
+                current_map.vol.offset in seen or
+                not self._context.layers[task.vol.native_layer_name].is_valid(current_map.dereference().vol.offset, current_map.dereference().vol.size)):
+
+                vollog.log(constants.LOGLEVEL_VVV, "Breaking process maps iteration due to invalid state.")
+                break
+
+            # ZP_POISON value used to catch programming errors
+            if current_map.links.start == 0xdeadbeefdeadbeef or current_map.links.end == 0xdeadbeefdeadbeef:
                 break
 
             yield current_map
@@ -120,7 +131,10 @@ class vnode(objects.StructType):
             return
 
         if vname:
-            ret.append(utility.pointer_to_string(vname, 255))
+            try:
+                ret.append(utility.pointer_to_string(vname, 255))
+            except exceptions.InvalidAddressException:
+                return
 
         if int(vnodeobj.v_flag) & 0x000001 != 0 and int(vnodeobj.v_mount) != 0:
             if int(vnodeobj.v_mount.mnt_vnodecovered) != 0:
@@ -210,10 +224,21 @@ class vm_map_entry(objects.StructType):
             ret = node
         elif node:
             path = []
-            while node:
-                v_name = utility.pointer_to_string(node.v_name, 255)
+            seen: Set[int] = set()
+            while node and node.vol.offset not in seen:
+                try:
+                    v_name = utility.pointer_to_string(node.v_name, 255)
+                except exceptions.InvalidAddressException:
+                    break
+
                 path.append(v_name)
+                if len(path) > 1024:
+                    break
+
+                seen.add(node.vol.offset)
+
                 node = node.v_parent
+
             path.reverse()
             ret = "/" + "/".join(path)
         else:
@@ -243,9 +268,10 @@ class vm_map_entry(objects.StructType):
 
         # based on find_vnode_object
         vnode_object = self.get_object().get_map_object()
+        if vnode_object == 0:
+            return None
 
         found_end = False
-
         while not found_end:
             try:
                 tmp_vnode_object = vnode_object.shadow.dereference()
@@ -257,8 +283,15 @@ class vm_map_entry(objects.StructType):
             else:
                 vnode_object = tmp_vnode_object
 
+        if vnode_object.vol.offset == 0:
+            return None
+
         try:
-            ops = vnode_object.pager.mo_pager_ops.dereference()
+            pager = vnode_object.pager
+            if pager == 0:
+                return None
+
+            ops = pager.mo_pager_ops.dereference()
         except exceptions.InvalidAddressException:
             return None
 
@@ -478,7 +511,7 @@ class sockaddr_dl(objects.StructType):
 
             e = e.cast("unsigned char")
 
-            ret = ret + "{:02X}:".format(e)
+            ret = ret + f"{e:02X}:"
 
         if ret and ret[-1] == ":":
             ret = ret[:-1]

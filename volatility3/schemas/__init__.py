@@ -18,7 +18,7 @@ cached_validation_filepath = os.path.join(constants.CACHE_PATH, "valid_isf.hashc
 def load_cached_validations() -> Set[str]:
     """Loads up the list of successfully cached json objects, so we don't need
     to revalidate them."""
-    validhashes = set()  # type: Set
+    validhashes: Set = set()
     if os.path.exists(cached_validation_filepath):
         with open(cached_validation_filepath, "r") as f:
             validhashes.update(json.load(f))
@@ -44,7 +44,7 @@ def validate(input: Dict[str, Any], use_cache: bool = True) -> bool:
     basepath = os.path.abspath(os.path.dirname(__file__))
     schema_path = os.path.join(basepath, 'schema-' + format + '.json')
     if not os.path.exists(schema_path):
-        vollog.debug("Schema for format not found: {}".format(schema_path))
+        vollog.debug(f"Schema for format not found: {schema_path}")
         return False
     with open(schema_path, 'r') as s:
         schema = json.load(s)
@@ -53,7 +53,7 @@ def validate(input: Dict[str, Any], use_cache: bool = True) -> bool:
 
 def create_json_hash(input: Dict[str, Any], schema: Dict[str, Any]) -> str:
     """Constructs the hash of the input and schema to create a unique
-    indentifier for a particular JSON file."""
+    identifier for a particular JSON file."""
     return hashlib.sha1(bytes(json.dumps((input, schema), sort_keys = True), 'utf-8')).hexdigest()
 
 

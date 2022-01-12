@@ -5,13 +5,14 @@
 import argparse
 import gettext
 import re
-from typing import List
+from typing import List, Optional, Sequence, Any, Union
+
 
 # This effectively overrides/monkeypatches the core argparse module to provide more helpful output around choices
 # We shouldn't really steal a private member from argparse, but otherwise we're just duplicating code
 
 # HelpfulSubparserAction gives more information about the possible choices from a subparsed choice
-# HelpfulArgParser gives the list of choices when no arguments are provided to a choice option whilst still using a METAVAR
+# HelpfulArgParser gives the list of choices when no arguments are provided to a choice option whilst still using a
 
 
 class HelpfulSubparserAction(argparse._SubParsersAction):
@@ -24,12 +25,19 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         self.choices = None
 
     def __call__(self,
-                 parser: 'HelpfulArgParser',
+                 parser: argparse.ArgumentParser,
                  namespace: argparse.Namespace,
-                 values: List[str],
-                 option_string: None = None) -> None:
-        parser_name = values[0]
-        arg_strings = values[1:]
+                 values: Union[str, Sequence[Any], None],
+                 option_string: Optional[str] = None) -> None:
+
+        parser_name = ''
+        arg_strings = []  # type: List[str]
+        if values is not None:
+            for value in values:
+                if not parser_name:
+                    parser_name = value
+                else:
+                    arg_strings += [value]
 
         # set the parser name if requested
         if self.dest != argparse.SUPPRESS:
@@ -38,10 +46,10 @@ class HelpfulSubparserAction(argparse._SubParsersAction):
         matched_parsers = [name for name in self._name_parser_map if parser_name in name]
 
         if len(matched_parsers) < 1:
-            msg = 'invalid choice {} (choose from {})'.format(parser_name, ', '.join(self._name_parser_map))
+            msg = f"invalid choice {parser_name} (choose from {', '.join(self._name_parser_map)})"
             raise argparse.ArgumentError(self, msg)
         if len(matched_parsers) > 1:
-            msg = 'plugin {} matches multiple plugins ({})'.format(parser_name, ', '.join(matched_parsers))
+            msg = f"plugin {parser_name} matches multiple plugins ({', '.join(matched_parsers)})"
             raise argparse.ArgumentError(self, msg)
         parser = self._name_parser_map[matched_parsers[0]]
         setattr(namespace, 'plugin', matched_parsers[0])
@@ -80,7 +88,7 @@ class HelpfulArgParser(argparse.ArgumentParser):
             if msg is None:
                 msg = gettext.ngettext('expected %s argument', 'expected %s arguments', action.nargs) % action.nargs
             if action.choices:
-                msg = "{} (from: {})".format(msg, ", ".join(action.choices))
+                msg = f"{msg} (from: {', '.join(action.choices)})"
             raise argparse.ArgumentError(action, msg)
 
         # return the number of arguments matched

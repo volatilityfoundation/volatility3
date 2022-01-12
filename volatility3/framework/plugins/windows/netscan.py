@@ -4,7 +4,8 @@
 
 import datetime
 import logging
-from typing import Iterable, List, Optional
+import os
+from typing import Iterable, List, Optional, Tuple, Type
 
 from volatility3.framework import constants, exceptions, interfaces, renderers, symbols
 from volatility3.framework.configuration import requirements
@@ -21,16 +22,14 @@ vollog = logging.getLogger(__name__)
 class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for network objects present in a particular windows memory image."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
     _version = (1, 0, 0)
 
     @classmethod
     def get_requirements(cls):
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.VersionRequirement(name = 'poolscanner',
                                             component = poolscanner.PoolScanner,
                                             version = (1, 0, 0)),
@@ -82,7 +81,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     @classmethod
     def determine_tcpip_version(cls, context: interfaces.context.ContextInterface, layer_name: str,
-                                nt_symbol_table: str) -> str:
+                                nt_symbol_table: str) -> Tuple[str, Type]:
         """Tries to determine which symbol filename to use for the image's tcpip driver. The logic is partially taken from the info plugin.
 
         Args:
@@ -151,8 +150,8 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (6, 1, 8400): "netscan-win7-x86",
                 (6, 2, 9200): "netscan-win8-x86",
                 (6, 3, 9600): "netscan-win81-x86",
-                (10, 0, 10240): "netscan-win10-x86",
-                (10, 0, 10586): "netscan-win10-x86",
+                (10, 0, 10240): "netscan-win10-10240-x86",
+                (10, 0, 10586): "netscan-win10-10586-x86",
                 (10, 0, 14393): "netscan-win10-14393-x86",
                 (10, 0, 15063): "netscan-win10-15063-x86",
                 (10, 0, 16299): "netscan-win10-15063-x86",
@@ -179,7 +178,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 (10, 0, 16299): "netscan-win10-16299-x64",
                 (10, 0, 17134): "netscan-win10-17134-x64",
                 (10, 0, 17763): "netscan-win10-17763-x64",
-                (10, 0, 18362): "netscan-win10-17763-x64",
+                (10, 0, 18362): "netscan-win10-18362-x64",
                 (10, 0, 18363): "netscan-win10-18363-x64",
                 (10, 0, 19041): "netscan-win10-19041-x64"
             }
@@ -211,12 +210,12 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 latest_version = current_versions[-1]
 
                 filename = version_dict.get(latest_version)
-                vollog.debug("Unable to find exact matching symbol file, going with latest: {}".format(filename))
+                vollog.debug(f"Unable to find exact matching symbol file, going with latest: {filename}")
             else:
                 raise NotImplementedError("This version of Windows is not supported: {}.{} {}.{}!".format(
                     nt_major_version, nt_minor_version, vers.MajorVersion, vers_minor_version))
 
-        vollog.debug("Determined symbol filename: {}".format(filename))
+        vollog.debug(f"Determined symbol filename: {filename}")
 
         return filename, class_types
 
@@ -244,7 +243,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         return intermed.IntermediateSymbolTable.create(context,
                                                        config_path,
-                                                       "windows",
+                                                       os.path.join("windows", "netscan"),
                                                        symbol_filename,
                                                        class_types = class_types,
                                                        table_mapping = table_mapping)
@@ -278,19 +277,21 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     def _generator(self, show_corrupt_results: Optional[bool] = None):
         """ Generates the network objects for use in rendering. """
 
-        netscan_symbol_table = self.create_netscan_symbol_table(self.context, self.config["primary"],
-                                                                self.config["nt_symbols"], self.config_path)
+        kernel = self.context.modules[self.config['kernel']]
 
-        for netw_obj in self.scan(self.context, self.config['primary'], self.config['nt_symbols'],
-                                  netscan_symbol_table):
+        netscan_symbol_table = self.create_netscan_symbol_table(self.context, kernel.layer_name,
+                                                                kernel.symbol_table_name,
+                                                                self.config_path)
 
-            vollog.debug("Found netw obj @ 0x{:2x} of assumed type {}".format(netw_obj.vol.offset, type(netw_obj)))
+        for netw_obj in self.scan(self.context, kernel.layer_name, kernel.symbol_table_name, netscan_symbol_table):
+
+            vollog.debug(f"Found netw obj @ 0x{netw_obj.vol.offset:2x} of assumed type {type(netw_obj)}")
             # objects passed pool header constraints. check for additional constraints if strict flag is set.
             if not show_corrupt_results and not netw_obj.is_valid():
                 continue
 
             if isinstance(netw_obj, network._UDP_ENDPOINT):
-                vollog.debug("Found UDP_ENDPOINT @ 0x{:2x}".format(netw_obj.vol.offset))
+                vollog.debug(f"Found UDP_ENDPOINT @ 0x{netw_obj.vol.offset:2x}")
 
                 # For UdpA, the state is always blank and the remote end is asterisks
                 for ver, laddr, _ in netw_obj.dual_stack_sockets():
@@ -300,7 +301,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                or renderers.UnreadableValue()))
 
             elif isinstance(netw_obj, network._TCP_ENDPOINT):
-                vollog.debug("Found _TCP_ENDPOINT @ 0x{:2x}".format(netw_obj.vol.offset))
+                vollog.debug(f"Found _TCP_ENDPOINT @ 0x{netw_obj.vol.offset:2x}")
                 if netw_obj.get_address_family() == network.AF_INET:
                     proto = "TCPv4"
                 elif netw_obj.get_address_family() == network.AF_INET6:
@@ -321,7 +322,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
             # check for isinstance of tcp listener last, because all other objects are inherited from here
             elif isinstance(netw_obj, network._TCP_LISTENER):
-                vollog.debug("Found _TCP_LISTENER @ 0x{:2x}".format(netw_obj.vol.offset))
+                vollog.debug(f"Found _TCP_LISTENER @ 0x{netw_obj.vol.offset:2x}")
 
                 # For TcpL, the state is always listening and the remote port is zero
                 for ver, laddr, raddr in netw_obj.dual_stack_sockets():
@@ -331,7 +332,7 @@ class NetScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                or renderers.UnreadableValue()))
             else:
                 # this should not happen therefore we log it.
-                vollog.debug("Found network object unsure of its type: {} of type {}".format(netw_obj, type(netw_obj)))
+                vollog.debug(f"Found network object unsure of its type: {netw_obj} of type {type(netw_obj)}")
 
     def generate_timeline(self):
         for row in self._generator():

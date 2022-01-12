@@ -44,7 +44,7 @@ def construct_plugin(context: interfaces.context.ContextInterface,
     if unsatisfied:
         for error in errors:
             error_string = [x for x in error.format_exception_only()][-1]
-            vollog.warning("Automagic exception occurred: {}".format(error_string[:-1]))
+            vollog.warning(f"Automagic exception occurred: {error_string[:-1]}")
             vollog.log(constants.LOGLEVEL_V, "".join(error.format(chain = True)))
         raise exceptions.UnsatisfiedException(unsatisfied)
 

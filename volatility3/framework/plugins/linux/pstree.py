@@ -10,8 +10,6 @@ class PsTree(pslist.PsList):
     """Plugin for listing processes in a tree based on their parent process
     ID."""
 
-    _required_framework_version = (1, 0, 0)
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._processes = {}
@@ -36,7 +34,8 @@ class PsTree(pslist.PsList):
 
     def _generator(self):
         """Generates the."""
-        for proc in self.list_tasks(self.context, self.config['primary'], self.config['vmlinux']):
+        vmlinux = self.context.modules[self.config['kernel']]
+        for proc in self.list_tasks(self.context, vmlinux.name):
             self._processes[proc.pid] = proc
 
         # Build the child/level maps

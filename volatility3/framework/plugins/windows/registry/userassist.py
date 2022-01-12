@@ -23,7 +23,7 @@ vollog = logging.getLogger(__name__)
 class UserAssist(interfaces.plugins.PluginInterface):
     """Print userassist registry keys and information."""
 
-    _required_framework_version = (1, 0, 0)
+    _required_framework_version = (2, 0, 0)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -37,10 +37,8 @@ class UserAssist(interfaces.plugins.PluginInterface):
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
         return [
-            requirements.TranslationLayerRequirement(name = 'primary',
-                                                     description = 'Memory layer for the kernel',
+            requirements.ModuleRequirement(name = 'kernel', description = 'Windows kernel',
                                                      architectures = ["Intel32", "Intel64"]),
-            requirements.SymbolTableRequirement(name = "nt_symbols", description = "Windows kernel symbols"),
             requirements.IntRequirement(name = 'offset', description = "Hive Offset", default = None, optional = True),
             requirements.PluginRequirement(name = 'hivelist', plugin = hivelist.HiveList, version = (1, 0, 0))
         ]
@@ -115,13 +113,17 @@ class UserAssist(interfaces.plugins.PluginInterface):
     def _win7_or_later(self) -> bool:
         # TODO: change this if there is a better way of determining the OS version
         # _KUSER_SHARED_DATA.CookiePad is in Windows 6.1 (Win7) and later
-        return self.context.symbol_space.get_type(self.config['nt_symbols'] + constants.BANG +
+        kernel = self.context.modules[self.config['kernel']]
+
+        return self.context.symbol_space.get_type(kernel.symbol_table_name + constants.BANG +
                                                   "_KUSER_SHARED_DATA").has_member('CookiePad')
 
     def list_userassist(self, hive: RegistryHive) -> Generator[Tuple[int, Tuple], None, None]:
         """Generate userassist data for a registry hive."""
 
-        hive_name = hive.hive.cast(self.config["nt_symbols"] + constants.BANG + "_CMHIVE").get_name()
+        kernel = self.context.modules[self.config['kernel']]
+
+        hive_name = hive.hive.cast(kernel.symbol_table_name + constants.BANG + "_CMHIVE").get_name()
 
         if self._win7 is None:
             try:
@@ -151,12 +153,12 @@ class UserAssist(interfaces.plugins.PluginInterface):
                 countkey_last_write_time = conversion.wintime_to_datetime(countkey.LastWriteTime.QuadPart)
 
                 # output the parent Count key
-                result = (
+                result: Tuple[int, Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]] = (
                     0, (renderers.format_hints.Hex(hive.hive_offset), hive_name, countkey_path,
                         countkey_last_write_time, "Key", renderers.NotApplicableValue(), renderers.NotApplicableValue(),
                         renderers.NotApplicableValue(), renderers.NotApplicableValue(), renderers.NotApplicableValue(),
                         renderers.NotApplicableValue(), renderers.NotApplicableValue())
-                )  # type: Tuple[int, Tuple[format_hints.Hex, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any]]
+                )
                 yield result
 
                 # output any subkeys under Count
@@ -215,19 +217,20 @@ class UserAssist(interfaces.plugins.PluginInterface):
         hive_offsets = None
         if self.config.get('offset', None) is not None:
             hive_offsets = [self.config.get('offset', None)]
+        kernel = self.context.modules[self.config['kernel']]
 
         # get all the user hive offsets or use the one specified
         for hive in hivelist.HiveList.list_hives(context = self.context,
                                                  base_config_path = self.config_path,
-                                                 layer_name = self.config['primary'],
-                                                 symbol_table = self.config['nt_symbols'],
+                                                 layer_name = kernel.layer_name,
+                                                 symbol_table = kernel.symbol_table_name,
                                                  filter_string = 'ntuser.dat',
                                                  hive_offsets = hive_offsets):
             try:
                 yield from self.list_userassist(hive)
                 continue
             except exceptions.PagedInvalidAddressException as excp:
-                vollog.debug("Invalid address identified in Hive: {}".format(hex(excp.invalid_address)))
+                vollog.debug(f"Invalid address identified in Hive: {hex(excp.invalid_address)}")
             except exceptions.InvalidAddressException as excp:
                 vollog.debug("Invalid address identified in lower layer {}: {}".format(
                     excp.layer_name, excp.invalid_address))

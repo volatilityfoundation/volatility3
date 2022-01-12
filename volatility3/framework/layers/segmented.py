@@ -25,9 +25,9 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
         self._base_layer = self.config["base_layer"]
-        self._segments = []  # type: List[Tuple[int, int, int, int]]
-        self._minaddr = None  # type: Optional[int]
-        self._maxaddr = None  # type: Optional[int]
+        self._segments: List[Tuple[int, int, int, int]] = []
+        self._minaddr: Optional[int] = None
+        self._maxaddr: Optional[int] = None
 
         self._load_segments()
 
@@ -35,7 +35,7 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
     def _load_segments(self) -> None:
         """Populates the _segments variable.
 
-        Segments must be (address, mapped address, length) and must be
+        Segments must be (address, mapped address, length, mapped_length) and must be
         sorted by address when this method exits
         """
 
@@ -67,7 +67,11 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
         if next:
             if i < len(self._segments):
                 return self._segments[i]
-        raise exceptions.InvalidAddressException(self.name, offset, "Invalid address at {:0x}".format(offset))
+        raise exceptions.InvalidAddressException(self.name, offset, f"Invalid address at {offset:0x}")
+
+    # Determines whether larger segments are in use and the offsets within them should be tracked linearly
+    # When no decoding of the data occurs, this should be set to true
+    _track_offset = False
 
     def mapping(self,
                 offset: int,
@@ -85,7 +89,8 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
                 if current_offset > logical_offset:
                     difference = current_offset - logical_offset
                     logical_offset += difference
-                    mapped_offset += difference
+                    if self._track_offset:
+                        mapped_offset += difference
                     size -= difference
             except exceptions.InvalidAddressException:
                 if not ignore_errors:
@@ -103,7 +108,7 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
                     return
             # Crop it to the amount we need left
             chunk_size = min(size, length + offset - logical_offset)
-            yield logical_offset, chunk_size, mapped_offset, chunk_size, self._base_layer
+            yield logical_offset, chunk_size, mapped_offset, mapped_size, self._base_layer
             current_offset += chunk_size
             # Terminate if we've gone (or reached) our required limit
             if current_offset >= offset + length:
@@ -139,4 +144,12 @@ class NonLinearlySegmentedLayer(interfaces.layers.TranslationLayerInterface, met
 
 
 class SegmentedLayer(NonLinearlySegmentedLayer, linear.LinearlyMappedLayer, metaclass = ABCMeta):
-    pass
+    _track_offset = True
+
+    def mapping(self,
+                offset: int,
+                length: int,
+                ignore_errors: bool = False) -> Iterable[Tuple[int, int, int, int, str]]:
+        # Linear mappings must return the same length of segment as that requested
+        for offset, length, mapped_offset, mapped_length, layer in super().mapping(offset, length, ignore_errors):
+            yield offset, length, mapped_offset, length, layer

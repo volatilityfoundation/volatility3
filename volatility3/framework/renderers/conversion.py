@@ -24,7 +24,7 @@ def wintime_to_datetime(wintime: int) -> Union[interfaces.renderers.BaseAbsentVa
 
 
 def unixtime_to_datetime(unixtime: int) -> Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]:
-    ret = renderers.UnparsableValue()  # type: Union[interfaces.renderers.BaseAbsentValue, datetime.datetime]
+    ret: Union[interfaces.renderers.BaseAbsentValue, datetime.datetime] = renderers.UnparsableValue()
 
     if unixtime > 0:
         try:
@@ -96,7 +96,7 @@ def convert_network_four_tuple(family, four_tuple):
     dest port)
 
     into their string equivalents. IP addresses are expected as a tuple
-    of unsigned shorts Ports are converted to proper endianess as well
+    of unsigned shorts Ports are converted to proper endianness as well
     """
 
     if family == socket.AF_INET:

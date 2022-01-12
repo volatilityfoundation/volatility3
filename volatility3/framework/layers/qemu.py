@@ -1,6 +1,7 @@
 # This file is Copyright 2020 Volatility Foundation and licensed under the Volatility Software License 1.0
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
+import bisect
 import functools
 import json
 import math
@@ -40,7 +41,7 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                  metadata: Optional[Dict[str, Any]] = None) -> None:
         self._qemu_table_name = intermed.IntermediateSymbolTable.create(context, config_path, 'generic', 'qemu')
         self._configuration = None
-        self._compressed = set()  # type: Set[int]
+        self._compressed: Set[int] = set()
         self._current_segment_name = b''
         super().__init__(context = context, config_path = config_path, name = name, metadata = metadata)
 
@@ -58,12 +59,15 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         data = b''
         for i in range(base_layer.maximum_address, base_layer.minimum_address, -chunk_size):
             if i != base_layer.maximum_address:
-                data = base_layer.read(i, chunk_size) + data
+                data = (base_layer.read(i, chunk_size) + data).rstrip(b'\x00')
                 if b'\x00' in data:
-                    start = data.rfind(b'\x00')
-                    data = data[data.find(b'{', start):]
-                    return json.loads(data)
-        raise exceptions.LayerException(name, "Could not load JSON configuration from the end of the file")
+                    last_null_byte = data.rfind(b'\x00')
+                    start_of_json = data.find(b'{', last_null_byte)
+                    if start_of_json >= 0:
+                        data = data[start_of_json:]
+                        return json.loads(data)
+                    return dict()
+        raise exceptions.LayerException(name, "Invalid JSON configuration at the end of the file")
 
     def _get_ram_segments(self, index: int, page_size: int) -> Tuple[List[Tuple[int, int, int, int]], int]:
         """Recovers the new index and any sections of memory from a ram section"""
@@ -176,21 +180,21 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
                 index += 4
                 if section_id != current_section_id:
                     raise exceptions.LayerException(
-                        self._name, 'QEMU section footer mismatch: {} and {}'.format(current_section_id, section_id))
+                        self._name, f'QEMU section footer mismatch: {current_section_id} and {section_id}')
             elif section_byte == self.QEVM_EOF:
                 pass
             else:
-                raise exceptions.LayerException(self._name, 'QEMU unknown section encountered: {}'.format(section_byte))
+                raise exceptions.LayerException(self._name, f'QEMU unknown section encountered: {section_byte}')
 
     def extract_data(self, index, name, version_id):
         if name == 'ram':
             if version_id != 4:
-                raise exceptions.LayerException("QEMU unknown RAM version_id {}".format(version_id))
+                raise exceptions.LayerException(f"QEMU unknown RAM version_id {version_id}")
             new_segments, index = self._get_ram_segments(index, self._configuration.get('page_size', None) or 4096)
             self._segments += new_segments
         elif name == 'spapr/htab':
             if version_id != 1:
-                raise exceptions.LayerException("QEMU unknown HTAB version_id {}".format(version_id))
+                raise exceptions.LayerException(f"QEMU unknown HTAB version_id {version_id}")
             header = self.context.object(self._qemu_table_name + constants.BANG + 'unsigned long',
                                          offset = index,
                                          layer_name = self._base_layer)
@@ -208,9 +212,18 @@ class QemuSuspendLayer(segmented.NonLinearlySegmentedLayer):
         return index
 
     def _decode_data(self, data: bytes, mapped_offset: int, offset: int, output_length: int) -> bytes:
-        if mapped_offset in self._compressed:
-            return (data * 0x1000)[:output_length]
-        return data
+        """Takes the full segment from the base_layer that the data occurs in, checks whether it's compressed
+        (by locating it in the segment list and verifying if that address is compressed), then reading/expanding the
+        data, and finally cutting it to the right size.  Offset may be the address requested rather than the location
+        of the starting data.  It is the responsibility of the layer to turn the provided data chunk into the right
+        portion of data necessary.
+        """
+        start_offset, _, start_mapped_offset, _ = self._segments[
+            bisect.bisect_right(self._segments, (offset, 0xffffffffffffff,)) - 1]
+        if start_mapped_offset in self._compressed:
+            data = (data * 0x1000)
+        result = data[offset - start_offset:output_length + offset - start_offset]
+        return result
 
     @functools.lru_cache(maxsize = 512)
     def read(self, offset: int, length: int, pad: bool = False) -> bytes:

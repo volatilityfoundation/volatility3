@@ -14,7 +14,6 @@ import os
 from abc import ABCMeta, abstractmethod
 from typing import List, Tuple, Type
 
-from volatility3 import framework
 from volatility3.framework import exceptions, constants, interfaces
 
 vollog = logging.getLogger(__name__)
@@ -65,7 +64,7 @@ class FileHandlerInterface(io.RawIOBase):
         if exc_type is None and exc_value is None and traceback is None:
             self.close()
         else:
-            vollog.warning("File {} could not be written: {}".format(self._preferred_filename, str(exc_value)))
+            vollog.warning(f"File {self._preferred_filename} could not be written: {str(exc_value)}")
             self.close()
 
 
@@ -95,7 +94,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
     """
 
     # Be careful with inheritance around this (We default to requiring a version which doesn't exist, so it must be set)
-    _required_framework_version = (0, 0, 0)  # type: Tuple[int, int, int]
+    _required_framework_version: Tuple[int, int, int] = (0, 0, 0)
     """The _version variable is a quick way for plugins to define their current interface, it should follow SemVer rules"""
 
     def __init__(self,
@@ -121,9 +120,7 @@ class PluginInterface(interfaces.configuration.ConfigurableInterface,
             if requirement.name not in self.config:
                 self.config[requirement.name] = requirement.default
 
-        self._file_handler = FileHandlerInterface  # type: Type[FileHandlerInterface]
-
-        framework.require_interface_version(*self._required_framework_version)
+        self._file_handler: Type[FileHandlerInterface] = FileHandlerInterface
 
     @property
     def open(self):
