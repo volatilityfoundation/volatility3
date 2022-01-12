@@ -41,7 +41,7 @@ pip3 install -r requirements.txt
 
 ## Downloading Volatility
 
-The latest stable version of Volatility will always be the master branch of the GitHub repository. You can get the latest version of the code using the following command:
+The latest stable version of Volatility will always be the stable branch of the GitHub repository. You can get the latest version of the code using the following command:
 
 ```shell
 git clone https://github.com/volatilityfoundation/volatility3.git
