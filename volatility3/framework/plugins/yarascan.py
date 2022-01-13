@@ -3,7 +3,7 @@
 #
 
 import logging
-from typing import Iterable, Tuple, List, Dict, Any
+from typing import Any, Dict, Iterable, List, Tuple
 
 from volatility3.framework import interfaces, renderers
 from volatility3.framework.configuration import requirements
@@ -40,7 +40,10 @@ class YaraScan(plugins.PluginInterface):
     """Scans kernel memory using yara rules (string or file)."""
 
     _required_framework_version = (2, 0, 0)
-    _version = (1, 0, 0)
+    _version = (1, 1, 0)
+
+    # TODO: When the major version is bumped, take the opportunity to rename the yara_rules config to yara_string
+    # or something that makes more sense
 
     @classmethod
     def get_requirements(cls) -> List[interfaces.configuration.RequirementInterface]:
@@ -83,6 +86,8 @@ class YaraScan(plugins.PluginInterface):
             if config.get('wide', False):
                 rule += " wide ascii"
             rules = yara.compile(sources = {'n': f'rule r1 {{strings: $a = {rule} condition: $a}}'})
+        elif config.get('yara_source', None) is not None:
+            rules = yara.compile(source = config['yara_source'])
         elif config.get('yara_file', None) is not None:
             rules = yara.compile(file = resources.ResourceAccessor().open(config['yara_file'], "rb"))
         elif config.get('yara_compiled_file', None) is not None:
