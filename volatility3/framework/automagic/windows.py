@@ -238,6 +238,8 @@ class WinSwapLayers(interfaces.automagic.AutomagicInterface):
     """Class to read swap_layers filenames from single-swap-layers, create the
     layers and populate the single-layers swap_layers."""
 
+    exclusion_list = ['linux', 'mac']
+
     def __call__(self,
                  context: interfaces.context.ContextInterface,
                  config_path: str,
