@@ -11,7 +11,6 @@ from volatility3.framework import constants, renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework import exceptions
 from volatility3.framework.renderers import conversion, format_hints
-from volatility3.framework.symbols.windows.extensions.mft import AttributeTypes, NameSpace, PermissionFlags, MFTFlags
 from volatility3.framework.symbols.windows.mft import MFTIntermedSymbols
 
 from volatility3.plugins import timeliner, yarascan
@@ -53,6 +52,12 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         header_object = symbol_table + constants.BANG + "ATTR_HEADER"
         si_object = symbol_table + constants.BANG + "STANDARD_INFORMATION_ENTRY"
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
+
+        # Get the Enums
+        attr_types = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "AttrTypeEnum")
+        namespave_enum = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "NameSpaceEnum")
+        mft_flags = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "MFTFlagsEnum")
+        permission_flags = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "PermissionFlagEnum")
         
         # Scan the layer for Raw MFT records and parse the fields
         for offset, rule_name, name, value in layer.scan(context = self.context, scanner = yarascan.YaraScanner(rules = rules)):
@@ -70,14 +75,20 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     vollog.debug(f"Attr Type: {attr_header.AttrType}")
 
                     # If this is not a valid type then exit the loop
-                    if not AttributeTypes(attr_header.AttrType).value:
+                    if attr_header.AttrType not in attr_types.choices.values():
                         break
 
                     # Offset past the headers to the attribute data
                     attr_data_offset = offset+attr_base_offset+24
+
+                    # MFT Flags determine the file type or dir
+                    if mft_record.Flags in mft_flags.choices.values():
+                        mft_flag = mft_flags.lookup(mft_record.Flags)
+                    else:
+                        mft_flag = hex(mft_record.Flags)
                     
                     # Standard Information Attribute
-                    if attr_header.AttrType == 0x10:
+                    if attr_header.AttrType == attr_types.choices.get('STANDARD_INFORMATION'):
                         attr_data = self.context.object(si_object, offset=attr_data_offset, layer_name=layer.name)
 
                         yield 0, (
@@ -85,9 +96,9 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                             mft_record.get_signature(),
                             mft_record.RecordNumber,
                             mft_record.LinkCount,
-                            MFTFlags(mft_record.Flags).name,
+                            mft_flag,
                             renderers.NotApplicableValue(),
-                            AttributeTypes(attr_header.AttrType).name,
+                            attr_types.lookup(attr_header.AttrType),
                             conversion.wintime_to_datetime(attr_data.CreationTime),
                             conversion.wintime_to_datetime(attr_data.ModifiedTime),
                             conversion.wintime_to_datetime(attr_data.UpdatedTime),
@@ -96,18 +107,22 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         )
 
                     # File Name Attribute
-                    if attr_header.AttrType == 0x30:
+                    if attr_header.AttrType == attr_types.choices.get('FILE_NAME'):
                         attr_data = self.context.object(fn_object, offset=attr_data_offset, layer_name=layer.name)
                         file_name = attr_data.get_full_name()
+                        if attr_data.Flags in permission_flags.choices.values():
+                            permissions = permission_flags.lookup(attr_data.Flags)
+                        else:
+                            permissions = hex(attr_data.Flags)
 
                         yield 1, (
                             format_hints.Hex(attr_data_offset),
                             mft_record.get_signature(),
                             mft_record.RecordNumber,
                             mft_record.LinkCount,
-                            MFTFlags(mft_record.Flags).name,
-                            PermissionFlags(attr_data.Flags).name,
-                            AttributeTypes(attr_header.AttrType).name,
+                            mft_flag,
+                            permissions,
+                            attr_types.lookup(attr_header.AttrType),
                             conversion.wintime_to_datetime(attr_data.CreationTime),
                             conversion.wintime_to_datetime(attr_data.ModifiedTime),
                             conversion.wintime_to_datetime(attr_data.UpdatedTime),

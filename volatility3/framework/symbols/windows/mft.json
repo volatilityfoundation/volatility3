@@ -53,7 +53,75 @@
       }
     },
     "symbols": {},
-    "enums": {},
+    "enums": {
+        "AttrTypeEnum": {
+            "base": "unsigned char",
+            "constants": {
+              "STANDARD_INFORMATION": 16,
+              "ATTRIBUTE_LIST": 32,
+              "FILE_NAME": 48,
+              "OBJECT_ID": 64,
+              "SECURITY_DESCRIPTOR": 80,
+              "VOLUME_NAME": 96,
+              "VOLUME_INFORMATION": 112,
+              "DATA": 128,
+              "INDEX_ROOT": 114,
+              "INDEX_ALLOCATION": 160,
+              "BITMAP": 176,
+              "REPARSE_POINT": 192,
+              "EA_INFORMATION": 208,
+              "EA": 224,
+              "PROPERTY_SET": 240,
+              "LOGGED_UTILITY_STREAM": 256
+            },
+            "size": 1
+          },
+        "NameSpaceEnum": {
+            "base":"unsigned char",
+            "constants": {
+                "POSIX": 0,
+                "Win32": 1,
+                "DOS": 2,
+                "Win32 DOS": 3
+            },
+            "size": 1
+        },
+        "MFTFlagsEnum": {
+            "base":"unsigned char",
+            "constants": {
+                "Removed": 0,
+                "File": 1,
+                "Directory": 2,
+                "DirInUse": 3
+            },
+            "size": 1
+        },
+        "PermissionFlagEnum": {
+            "base":"unsigned char",
+            "constants": {
+                "ReadOnly": 1,
+                "Hidden": 2,
+                "System": 4,
+                "Archive": 32,
+                "ArchiveHidden": 34,
+                "ArchiveSystem": 36,
+                "ArchiveHiddenSystem": 38,
+                "Device": 60,
+                "Normal": 128,
+                "Temporary": 256,
+                "TempArchive": 288,
+                "SparseFile": 512,
+                "ReparsePoint": 1024,
+                "Compressed": 2048,
+                "Offline": 4096,
+                "NotIndexed": 8192,
+                "Encrypted": 16384,
+                "Directory": 268435456,
+                "IndexView": 536870912
+            },
+            "size": 1
+        }
+    },
     "user_types": {
         "MFT_ENTRY": {
             "fields": {
