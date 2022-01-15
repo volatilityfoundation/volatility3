@@ -84,6 +84,15 @@ def setup(app):
                     for line in submodule_lines:
                         contents.write(line.replace(b'volatility3.framework.plugins', b'volatility3.plugins'))
 
+    # Clear up the framework.plugins page
+    with open(os.path.join('source', 'volatility3.framework.plugins.rst'), "rb") as contents:
+        real_lines = contents.readlines()
+
+    with open(os.path.join('source', 'volatility3.framework.plugins.rst'), "wb") as contents:
+        for line in real_lines:
+            if b'volatility3.framework.plugins.' not in line:
+                contents.write(line)
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
