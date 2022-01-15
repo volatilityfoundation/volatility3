@@ -78,8 +78,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         break
 
                     # Offset past the headers to the attribute data
-                    attr_data_offset = offset + attr_base_offset + self.context.symbol_space.get_type(
-                        attribute_object).relative_child_offset("Attr_Data")
+                    attr_data_offset = offset + attr_base_offset + self.context.symbol_space.get_type(attribute_object).relative_child_offset("Attr_Data") 
 
                     # MFT Flags determine the file type or dir
                     if mft_record.Flags in mft_flags.choices.values():
@@ -130,13 +129,18 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 pass
 
     def generate_timeline(self):
+        print("MFT Timeline")
         for row in self._generator():
-            if row[-1] != 'N/A':
-                filename = row[-1]
-                yield (f'File {filename} created', timeliner.TimeLinerType.CREATED, row[7])
-                yield (f'File {filename} modified', timeliner.TimeLinerType.MODIFIED, row[8])
-                yield (f'File {filename} updated', timeliner.TimeLinerType.CHANGED, row[9])
-                yield (f'File {filename} accessed', timeliner.TimeLinerType.ACCESSED, row[10])
+            _depth, row_data = row
+
+            # Only Output FN Records
+            if row_data[6] == 'FILE_NAME':
+                filename = row_data[-1]
+                description = f"MFT FILE_NAME entry for {filename}"
+                yield (description, timeliner.TimeLinerType.CREATED, row_data[7])
+                yield (description, timeliner.TimeLinerType.MODIFIED, row_data[8])
+                yield (description, timeliner.TimeLinerType.CHANGED, row_data[9])
+                yield (description, timeliner.TimeLinerType.ACCESSED, row_data[10])
 
     def run(self):
         return renderers.TreeGrid([
