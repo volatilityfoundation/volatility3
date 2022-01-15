@@ -223,7 +223,35 @@
             },
             "kind": "struct",
             "size": 1024
-        },"ATTR_HEADER": {
+        },
+        "ATTRIBUTE": {
+            "fields":{
+                "Attr_Header": {
+                    "offset": 0,
+                    "type": {
+                        "kind": "struct",
+                        "name": "mft!ATTR_HEADER"
+                    }
+                },
+                "Resident_Header": {
+                    "offset": 16,
+                    "type": {
+                        "kind": "struct",
+                        "name": "mft!RESIDENT_HEADER"
+                    }
+                },
+                "Attr_Data": {
+                    "offset": 24,
+                    "type": {
+                        "kind": "struct",
+                        "name": "mft!ATTR_HEADER"
+                    }
+                }
+            },
+            "kind": "struct",
+            "size": 96
+        },
+        "ATTR_HEADER": {
             "fields": {
                 "AttrType": {
                     "offset": 0,

@@ -44,13 +44,14 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
         # get each of the individual Field Sets
         mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
+        attribute_object = symbol_table + constants.BANG + "ATTRIBUTE"
         header_object = symbol_table + constants.BANG + "ATTR_HEADER"
         si_object = symbol_table + constants.BANG + "STANDARD_INFORMATION_ENTRY"
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
 
         # Get the Enums
         attr_types = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "AttrTypeEnum")
-        namespave_enum = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "NameSpaceEnum")
+        namespace_enum = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "NameSpaceEnum")
         mft_flags = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "MFTFlagsEnum")
         permission_flags = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG +
                                                                      "PermissionFlagEnum")
@@ -69,9 +70,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                     attr_header = self.context.object(header_object,
                                                       offset = offset + attr_base_offset,
                                                       layer_name = layer.name)
-                    attr_resident_header = self.context.object(header_object,
-                                                               offset = offset + attr_base_offset + 16,
-                                                               layer_name = layer.name)
 
                     vollog.debug(f"Attr Type: {attr_header.AttrType}")
 
@@ -80,7 +78,8 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         break
 
                     # Offset past the headers to the attribute data
-                    attr_data_offset = offset + attr_base_offset + 24
+                    attr_data_offset = offset + attr_base_offset + self.context.symbol_space.get_type(
+                        attribute_object).relative_child_offset("Attr_Data")
 
                     # MFT Flags determine the file type or dir
                     if mft_record.Flags in mft_flags.choices.values():
@@ -134,10 +133,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         for row in self._generator():
             if row[-1] != 'N/A':
                 filename = row[-1]
-                created = f'File {row[-1]} Created'
-                updated = f'File {row[-1]} Updated'
-                modified = f'File {row[-1]} Modified'
-                accessed = f'File {row[-1]} Accessed'
                 yield (f'File {filename} created', timeliner.TimeLinerType.CREATED, row[7])
                 yield (f'File {filename} modified', timeliner.TimeLinerType.MODIFIED, row[8])
                 yield (f'File {filename} updated', timeliner.TimeLinerType.CHANGED, row[9])
