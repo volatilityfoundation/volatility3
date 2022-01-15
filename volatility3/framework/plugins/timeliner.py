@@ -12,7 +12,7 @@ import traceback
 from typing import Generator, Iterable, List, Optional, Tuple, Type
 
 from volatility3 import framework
-from volatility3.framework import renderers, automagic, interfaces, plugins, exceptions
+from volatility3.framework import automagic, exceptions, interfaces, plugins, renderers
 from volatility3.framework.configuration import requirements
 
 vollog = logging.getLogger(__name__)
@@ -145,7 +145,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
                         # Body format is: MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
 
                         if self._any_time_present(times):
-                            fp.write("|{} - {}||||||{}|{}|{}|{}\n".format(
+                            fp.write("|{} - {}|0|0|0|0|0|{}|{}|{}|{}\n".format(
                                 plugin_name, self._sanitize_body_format(item),
                                 self._text_format(times.get(TimeLinerType.ACCESSED, "")),
                                 self._text_format(times.get(TimeLinerType.MODIFIED, "")),
@@ -202,7 +202,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
 
                 if isinstance(plugin, TimeLinerInterface):
                     if not len(filter_list) or any(
-                        [filter in plugin.__module__ + '.' + plugin.__class__.__name__ for filter in filter_list]):
+                            [filter in plugin.__module__ + '.' + plugin.__class__.__name__ for filter in filter_list]):
                         plugins_to_run.append(plugin)
             except exceptions.UnsatisfiedException as excp:
                 # Remove the failed plugin from the list and continue
