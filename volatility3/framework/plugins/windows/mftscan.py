@@ -129,7 +129,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                 pass
 
     def generate_timeline(self):
-        print("MFT Timeline")
         for row in self._generator():
             _depth, row_data = row
 
