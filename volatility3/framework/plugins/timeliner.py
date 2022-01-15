@@ -164,7 +164,7 @@ class Timeliner(interfaces.plugins.PluginInterface):
     def _text_format(self, value):
         """Formats a value as text, in case it is an AbsentValue"""
         if isinstance(value, interfaces.renderers.BaseAbsentValue):
-            return ""
+            return "0"
         if isinstance(value, datetime.datetime):
             return int(value.timestamp())
         return value
