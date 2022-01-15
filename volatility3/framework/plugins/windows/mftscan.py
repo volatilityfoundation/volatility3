@@ -17,6 +17,7 @@ from volatility3.plugins import timeliner, yarascan
 
 vollog = logging.getLogger(__name__)
 
+
 class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
     """Scans for MFT FILE objects present in a particular windows memory image."""
 
@@ -32,7 +33,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                             version = (2, 0, 0)),
         ]
 
-
     def _generator(self):
         layer = self.context.layers[self.config['primary']]
 
@@ -40,12 +40,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         rules = yarascan.YaraScan.process_yara_options({'yara_rules': '/FILE0|FILE\*|BAAD/'})
 
         # Read in the Symbol File
-        symbol_table = MFTIntermedSymbols.create(
-            self.context,
-            self.config_path,
-            "windows",
-            "mft"
-        )
+        symbol_table = MFTIntermedSymbols.create(self.context, self.config_path, "windows", "mft")
 
         # get each of the individual Field Sets
         mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
@@ -57,20 +52,26 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         attr_types = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "AttrTypeEnum")
         namespave_enum = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "NameSpaceEnum")
         mft_flags = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "MFTFlagsEnum")
-        permission_flags = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "PermissionFlagEnum")
-        
+        permission_flags = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG +
+                                                                     "PermissionFlagEnum")
+
         # Scan the layer for Raw MFT records and parse the fields
-        for offset, rule_name, name, value in layer.scan(context = self.context, scanner = yarascan.YaraScanner(rules = rules)):
+        for offset, rule_name, name, value in layer.scan(context = self.context,
+                                                         scanner = yarascan.YaraScanner(rules = rules)):
             try:
-                mft_record = self.context.object(mft_object, offset=offset, layer_name=layer.name)
+                mft_record = self.context.object(mft_object, offset = offset, layer_name = layer.name)
                 # We will update this on each pass in the next loop and use it as the new offset.
                 attr_base_offset = mft_record.FirstAttrOffset
 
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
                 while True:
-                    attr_header = self.context.object(header_object, offset=offset+attr_base_offset, layer_name=layer.name)
-                    attr_resident_header = self.context.object(header_object, offset=offset+attr_base_offset+16, layer_name=layer.name)
+                    attr_header = self.context.object(header_object,
+                                                      offset = offset + attr_base_offset,
+                                                      layer_name = layer.name)
+                    attr_resident_header = self.context.object(header_object,
+                                                               offset = offset + attr_base_offset + 16,
+                                                               layer_name = layer.name)
 
                     vollog.debug(f"Attr Type: {attr_header.AttrType}")
 
@@ -79,17 +80,17 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         break
 
                     # Offset past the headers to the attribute data
-                    attr_data_offset = offset+attr_base_offset+24
+                    attr_data_offset = offset + attr_base_offset + 24
 
                     # MFT Flags determine the file type or dir
                     if mft_record.Flags in mft_flags.choices.values():
                         mft_flag = mft_flags.lookup(mft_record.Flags)
                     else:
                         mft_flag = hex(mft_record.Flags)
-                    
+
                     # Standard Information Attribute
                     if attr_header.AttrType == attr_types.choices.get('STANDARD_INFORMATION'):
-                        attr_data = self.context.object(si_object, offset=attr_data_offset, layer_name=layer.name)
+                        attr_data = self.context.object(si_object, offset = attr_data_offset, layer_name = layer.name)
 
                         yield 0, (
                             format_hints.Hex(attr_data_offset),
@@ -108,28 +109,21 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                     # File Name Attribute
                     if attr_header.AttrType == attr_types.choices.get('FILE_NAME'):
-                        attr_data = self.context.object(fn_object, offset=attr_data_offset, layer_name=layer.name)
+                        attr_data = self.context.object(fn_object, offset = attr_data_offset, layer_name = layer.name)
                         file_name = attr_data.get_full_name()
                         if attr_data.Flags in permission_flags.choices.values():
                             permissions = permission_flags.lookup(attr_data.Flags)
                         else:
                             permissions = hex(attr_data.Flags)
 
-                        yield 1, (
-                            format_hints.Hex(attr_data_offset),
-                            mft_record.get_signature(),
-                            mft_record.RecordNumber,
-                            mft_record.LinkCount,
-                            mft_flag,
-                            permissions,
-                            attr_types.lookup(attr_header.AttrType),
-                            conversion.wintime_to_datetime(attr_data.CreationTime),
-                            conversion.wintime_to_datetime(attr_data.ModifiedTime),
-                            conversion.wintime_to_datetime(attr_data.UpdatedTime),
-                            conversion.wintime_to_datetime(attr_data.AccessedTime),
-                            file_name
-                        )
-                    
+                        yield 1, (format_hints.Hex(attr_data_offset), mft_record.get_signature(),
+                                  mft_record.RecordNumber, mft_record.LinkCount, mft_flag, permissions,
+                                  attr_types.lookup(attr_header.AttrType),
+                                  conversion.wintime_to_datetime(attr_data.CreationTime),
+                                  conversion.wintime_to_datetime(attr_data.ModifiedTime),
+                                  conversion.wintime_to_datetime(attr_data.UpdatedTime),
+                                  conversion.wintime_to_datetime(attr_data.AccessedTime), file_name)
+
                     # Update the base offset to point to the next attribute
                     attr_base_offset += attr_header.Length
 
@@ -151,16 +145,16 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
     def run(self):
         return renderers.TreeGrid([
-                ('Offset', format_hints.Hex),
-                ('Record Type', str),
-                ('Record Number', int),
-                ('Link Count', int),
-                ('MFT Type', str),
-                ('Permissions', str),
-                ('Attribute Type', str),
-                ('Created', datetime.datetime),
-                ('Modified', datetime.datetime),
-                ('Updated', datetime.datetime),
-                ('Accessed', datetime.datetime),
-                ('Filename', str),
-            ],self._generator())
+            ('Offset', format_hints.Hex),
+            ('Record Type', str),
+            ('Record Number', int),
+            ('Link Count', int),
+            ('MFT Type', str),
+            ('Permissions', str),
+            ('Attribute Type', str),
+            ('Created', datetime.datetime),
+            ('Modified', datetime.datetime),
+            ('Updated', datetime.datetime),
+            ('Accessed', datetime.datetime),
+            ('Filename', str),
+        ], self._generator())

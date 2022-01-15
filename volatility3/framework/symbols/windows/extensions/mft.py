@@ -2,10 +2,7 @@
 # which is available at https://www.volatilityfoundation.org/license/vsl-v1.0
 #
 
-import enum
-
-from volatility3.framework import exceptions, objects, renderers
-from volatility3.framework.objects import utility
+from volatility3.framework import objects
 
 
 class MFTEntry(objects.StructType):
@@ -20,8 +17,5 @@ class MFTFileName(objects.StructType):
     """This represents an MFT $FILE_NAME Attribute"""
 
     def get_full_name(self) -> str:
-        output = self.Name.cast("string",
-                                    encoding = "utf16",
-                                    max_length = self.NameLength*2,
-                                    errors = "replace")
+        output = self.Name.cast("string", encoding = "utf16", max_length = self.NameLength * 2, errors = "replace")
         return output
