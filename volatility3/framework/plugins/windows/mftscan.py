@@ -5,13 +5,12 @@
 import datetime
 import logging
 
-from typing import Dict
-
 from volatility3.framework import constants, renderers, interfaces
 from volatility3.framework.configuration import requirements
 from volatility3.framework import exceptions
 from volatility3.framework.renderers import conversion, format_hints
-from volatility3.framework.symbols.windows.mft import MFTIntermedSymbols
+from volatility3.framework.symbols import intermed
+from volatility3.framework.symbols.windows.extensions import mft
 
 from volatility3.plugins import timeliner, yarascan
 
@@ -40,7 +39,14 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         rules = yarascan.YaraScan.process_yara_options({'yara_rules': '/FILE0|FILE\*|BAAD/'})
 
         # Read in the Symbol File
-        symbol_table = MFTIntermedSymbols.create(self.context, self.config_path, "windows", "mft")
+        symbol_table = intermed.IntermediateSymbolTable.create(context = self.context,
+                                                               config_path = self.config_path,
+                                                               sub_path = "windows",
+                                                               filename = "mft",
+                                                               class_types = {
+                                                                   'FILE_NAME_ENTRY': mft.MFTFileName,
+                                                                   'MFT_ENTRY': mft.MFTEntry
+                                                               })
 
         # get each of the individual Field Sets
         mft_object = symbol_table + constants.BANG + "MFT_ENTRY"
@@ -57,28 +63,25 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                                      "PermissionFlagEnum")
 
         # Scan the layer for Raw MFT records and parse the fields
-        for offset, rule_name, name, value in layer.scan(context = self.context,
-                                                         scanner = yarascan.YaraScanner(rules = rules)):
+        for offset, _rule_name, _name, _value in layer.scan(context = self.context,
+                                                            scanner = yarascan.YaraScanner(rules = rules)):
             try:
                 mft_record = self.context.object(mft_object, offset = offset, layer_name = layer.name)
                 # We will update this on each pass in the next loop and use it as the new offset.
                 attr_base_offset = mft_record.FirstAttrOffset
 
+                attr_header = self.context.object(header_object,
+                                                  offset = offset + attr_base_offset,
+                                                  layer_name = layer.name)
+
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
-                while True:
-                    attr_header = self.context.object(header_object,
-                                                      offset = offset + attr_base_offset,
-                                                      layer_name = layer.name)
-
+                while attr_header.AttrType in attr_types.choices.values():
                     vollog.debug(f"Attr Type: {attr_header.AttrType}")
 
-                    # If this is not a valid type then exit the loop
-                    if attr_header.AttrType not in attr_types.choices.values():
-                        break
-
                     # Offset past the headers to the attribute data
-                    attr_data_offset = offset + attr_base_offset + self.context.symbol_space.get_type(attribute_object).relative_child_offset("Attr_Data") 
+                    attr_data_offset = offset + attr_base_offset + self.context.symbol_space.get_type(
+                        attribute_object).relative_child_offset("Attr_Data")
 
                     # MFT Flags determine the file type or dir
                     if mft_record.Flags in mft_flags.choices.values():
@@ -124,9 +127,13 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
 
                     # Update the base offset to point to the next attribute
                     attr_base_offset += attr_header.Length
+                    # Get the next attribute
+                    attr_header = self.context.object(header_object,
+                                                      offset = offset + attr_base_offset,
+                                                      layer_name = layer.name)
 
-            except exceptions.PagedInvalidAddressException:
-                pass
+            except Exception as err:
+                vollog.debug(f'Error Parsing MFT Record: {err}')
 
     def generate_timeline(self):
         for row in self._generator():
