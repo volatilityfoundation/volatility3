@@ -55,12 +55,6 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
         si_object = symbol_table + constants.BANG + "STANDARD_INFORMATION_ENTRY"
         fn_object = symbol_table + constants.BANG + "FILE_NAME_ENTRY"
 
-        # Get the Enums
-        attr_types = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "AttrTypeEnum")
-        namespace_enum = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "NameSpaceEnum")
-        mft_flags = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG + "MFTFlagsEnum")
-        permission_flags = self.context.symbol_space.get_enumeration(symbol_table + constants.BANG +
-                                                                     "PermissionFlagEnum")
 
         # Scan the layer for Raw MFT records and parse the fields
         for offset, _rule_name, _name, _value in layer.scan(context = self.context,
@@ -74,23 +68,26 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                   offset = offset + attr_base_offset,
                                                   layer_name = layer.name)
 
+
                 # There is no field that has a count of Attributes
                 # Keep Attempting to read attributes until we get an invalid attr_header.AttrType
-                while attr_header.AttrType in attr_types.choices.values():
-                    vollog.debug(f"Attr Type: {attr_header.AttrType}")
+                
+                while attr_header.AttrType.is_valid_choice:
+                    vollog.debug(f"Attr Type: {attr_header.AttrType.lookup()}")
 
                     # Offset past the headers to the attribute data
                     attr_data_offset = offset + attr_base_offset + self.context.symbol_space.get_type(
                         attribute_object).relative_child_offset("Attr_Data")
 
                     # MFT Flags determine the file type or dir
-                    if mft_record.Flags in mft_flags.choices.values():
-                        mft_flag = mft_flags.lookup(mft_record.Flags)
-                    else:
+                    # If we don't have a valid enum, coerce to hex so we can keep the record
+                    try:
+                        mft_flag = mft_record.Flags.lookup()
+                    except ValueError:
                         mft_flag = hex(mft_record.Flags)
 
                     # Standard Information Attribute
-                    if attr_header.AttrType == attr_types.choices.get('STANDARD_INFORMATION'):
+                    if attr_header.AttrType.lookup() == 'STANDARD_INFORMATION':
                         attr_data = self.context.object(si_object, offset = attr_data_offset, layer_name = layer.name)
 
                         yield 0, (
@@ -100,7 +97,7 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                             mft_record.LinkCount,
                             mft_flag,
                             renderers.NotApplicableValue(),
-                            attr_types.lookup(attr_header.AttrType),
+                            attr_header.AttrType.lookup(),
                             conversion.wintime_to_datetime(attr_data.CreationTime),
                             conversion.wintime_to_datetime(attr_data.ModifiedTime),
                             conversion.wintime_to_datetime(attr_data.UpdatedTime),
@@ -109,17 +106,19 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                         )
 
                     # File Name Attribute
-                    if attr_header.AttrType == attr_types.choices.get('FILE_NAME'):
+                    if attr_header.AttrType.lookup() == 'FILE_NAME':
                         attr_data = self.context.object(fn_object, offset = attr_data_offset, layer_name = layer.name)
                         file_name = attr_data.get_full_name()
-                        if attr_data.Flags in permission_flags.choices.values():
-                            permissions = permission_flags.lookup(attr_data.Flags)
-                        else:
+
+                        # If we don't have a valid enum, coerce to hex so we can keep the record
+                        try:
+                            permissions = attr_data.Flags.lookup()
+                        except ValueError:
                             permissions = hex(attr_data.Flags)
 
                         yield 1, (format_hints.Hex(attr_data_offset), mft_record.get_signature(),
                                   mft_record.RecordNumber, mft_record.LinkCount, mft_flag, permissions,
-                                  attr_types.lookup(attr_header.AttrType),
+                                  attr_header.AttrType.lookup(),
                                   conversion.wintime_to_datetime(attr_data.CreationTime),
                                   conversion.wintime_to_datetime(attr_data.ModifiedTime),
                                   conversion.wintime_to_datetime(attr_data.UpdatedTime),
@@ -132,8 +131,8 @@ class MFTScan(interfaces.plugins.PluginInterface, timeliner.TimeLinerInterface):
                                                       offset = offset + attr_base_offset,
                                                       layer_name = layer.name)
 
-            except Exception as err:
-                vollog.debug(f'Error Parsing MFT Record: {err}')
+            except exceptions.PagedInvalidAddressException:
+                pass
 
     def generate_timeline(self):
         for row in self._generator():

@@ -181,8 +181,8 @@
                 "Flags": {
                     "offset": 22,
                     "type":{
-                        "kind": "base",
-                        "name": "unsigned short"
+                        "kind": "enum",
+                        "name": "MFTFlagsEnum"
                     }
                 },
                 "RealSize": {
@@ -256,8 +256,8 @@
                 "AttrType": {
                     "offset": 0,
                     "type": {
-                        "kind": "base",
-                        "name": "unsigned int"
+                        "kind": "enum",
+                        "name": "AttrTypeEnum"
                       }
                 },"Length": {
                     "offset": 4,
@@ -289,9 +289,9 @@
                 "Flags": {
                     "offset": 12,
                     "type": {
-                        "kind": "base",
-                        "name": "unsigned short"
-                      }
+                        "kind": "enum",
+                        "name": "MFTFlagsEnum"
+                    }
                 },
                 "AttributeID": {
                     "offset": 14,
@@ -361,8 +361,8 @@
                 "flags": {
                     "offset": 32,
                     "type": {
-                        "kind": "base",
-                        "name": "unsigned short"
+                        "kind": "enum",
+                        "name": "PermissionFlagEnum"
                       }
                 }
             },
@@ -423,8 +423,8 @@
                 "Flags": {
                     "offset": 56,
                     "type": {
-                        "kind": "base",
-                        "name": "unsigned int"
+                        "kind": "enum",
+                        "name": "PermissionFlagEnum"
                       }
                 },
                 "ReparseValue": {
