@@ -12,11 +12,9 @@ Here are some guidelines for using Volatility 3 effectively:
 .. toctree::
 
     basics
-    simple-plugin
-    vol2to3
-    complex-plugin
-    using-as-a-library
+    development
     symbol-tables
+    vol2to3
     volshell
     glossary
 
