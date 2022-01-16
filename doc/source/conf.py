@@ -85,10 +85,10 @@ def setup(app):
                         contents.write(line.replace(b'volatility3.framework.plugins', b'volatility3.plugins'))
 
     # Clear up the framework.plugins page
-    with open(os.path.join('source', 'volatility3.framework.plugins.rst'), "rb") as contents:
+    with open(os.path.join(os.path.dirname(__file__), 'volatility3.framework.plugins.rst'), "rb") as contents:
         real_lines = contents.readlines()
 
-    with open(os.path.join('source', 'volatility3.framework.plugins.rst'), "wb") as contents:
+    with open(os.path.join(os.path.dirname(__file__), 'volatility3.framework.plugins.rst'), "wb") as contents:
         for line in real_lines:
             if b'volatility3.framework.plugins.' not in line:
                 contents.write(line)
