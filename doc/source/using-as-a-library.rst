@@ -131,7 +131,8 @@ A suitable list of automagics for a particular plugin (based on operating system
     automagics = automagic.choose_automagic(available_automagics, plugin)
 
 This will take the plugin module, extract the operating system (first level of the hierarchy) and then return just
-the automagics which apply to the operating system.
+the automagics which apply to the operating system.  Each automagic can exclude itself from being used for specific
+operating systems, so that an automagic designed for linux is not used for windows or mac plugins.
 
 These automagics can then be run by providing the list, the context, the plugin to be run, the hierarchy name that
 the plugin will be constructed on ('plugins' by default) and a progress_callback.  This is a callable which takes

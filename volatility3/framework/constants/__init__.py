@@ -78,6 +78,7 @@ BUG_URL = "https://github.com/volatilityfoundation/volatility3/issues"
 ProgressCallback = Optional[Callable[[float, str], None]]
 """Type information for ProgressCallback objects"""
 
+OS_CATEGORIES = ['windows', 'mac', 'linux']
 
 class Parallelism(enum.IntEnum):
     """An enumeration listing the different types of parallelism applied to
